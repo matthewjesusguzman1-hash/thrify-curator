@@ -1045,6 +1045,106 @@ export default function AdminDashboard() {
               </motion.div>
             </motion.div>
           )}
+
+          {/* Add Time Entry Modal */}
+          {showAddEntry && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowAddEntry(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="add-entry-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Add Time Entry</h2>
+                  <button
+                    onClick={() => setShowAddEntry(false)}
+                    className="text-[#999] hover:text-[#666]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <p className="text-sm text-[#666] mb-4">
+                  Create a manual time entry for an employee who forgot to clock in or worked off-site.
+                </p>
+
+                <form onSubmit={handleAddEntry}>
+                  <div className="form-group">
+                    <Label className="form-label">Employee *</Label>
+                    <Select
+                      value={newEntryData.employee_id}
+                      onValueChange={(value) => setNewEntryData({ ...newEntryData, employee_id: value })}
+                    >
+                      <SelectTrigger className="form-input" data-testid="add-entry-employee-select">
+                        <SelectValue placeholder="Select employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.filter(e => e.role !== 'admin').map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="form-group">
+                    <Label className="form-label">Clock In *</Label>
+                    <Input
+                      type="datetime-local"
+                      value={newEntryData.clock_in}
+                      onChange={(e) => setNewEntryData({ ...newEntryData, clock_in: e.target.value })}
+                      required
+                      className="form-input"
+                      data-testid="add-entry-clock-in"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <Label className="form-label">Clock Out</Label>
+                    <Input
+                      type="datetime-local"
+                      value={newEntryData.clock_out}
+                      onChange={(e) => setNewEntryData({ ...newEntryData, clock_out: e.target.value })}
+                      className="form-input"
+                      data-testid="add-entry-clock-out"
+                    />
+                    <p className="text-xs text-[#888] mt-1">Leave empty to create an active shift</p>
+                  </div>
+
+                  <div className="p-3 bg-[#faf7f2] rounded-xl mb-4">
+                    <p className="text-xs text-[#888]">
+                      Total hours will be automatically calculated if clock out is provided.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowAddEntry(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={addingEntry || !newEntryData.employee_id || !newEntryData.clock_in}
+                      className="btn-primary flex-1"
+                      data-testid="submit-add-entry-btn"
+                    >
+                      {addingEntry ? "Creating..." : "Create Entry"}
+                    </Button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
         </motion.div>
       </main>
     </div>
