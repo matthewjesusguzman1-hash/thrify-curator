@@ -998,6 +998,7 @@ export default function AdminDashboard() {
                       <th>Name</th>
                       <th>Email</th>
                       <th>Role</th>
+                      <th>Hourly Rate</th>
                       <th>Joined</th>
                       <th>Actions</th>
                     </tr>
@@ -1028,6 +1029,61 @@ export default function AdminDashboard() {
                           }`}>
                             {emp.role}
                           </span>
+                        </td>
+                        <td>
+                          {emp.role !== 'admin' ? (
+                            editingRateId === emp.id ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[#888]">$</span>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={editingRateValue}
+                                  onChange={(e) => setEditingRateValue(e.target.value)}
+                                  className="w-20 h-7 text-sm"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleUpdateEmployeeRate(emp.id);
+                                    if (e.key === 'Escape') { setEditingRateId(null); setEditingRateValue(""); }
+                                  }}
+                                  data-testid={`rate-input-${emp.id}`}
+                                />
+                                <button
+                                  onClick={() => handleUpdateEmployeeRate(emp.id)}
+                                  className="text-green-500 hover:text-green-600 p-1"
+                                  title="Save"
+                                >
+                                  <CheckCheck className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => { setEditingRateId(null); setEditingRateValue(""); }}
+                                  className="text-red-400 hover:text-red-500 p-1"
+                                  title="Cancel"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div 
+                                className="flex items-center gap-1 cursor-pointer hover:bg-[#F9F6F7] rounded px-2 py-1 -mx-2"
+                                onClick={() => {
+                                  setEditingRateId(emp.id);
+                                  setEditingRateValue(emp.hourly_rate?.toString() || "");
+                                }}
+                                data-testid={`rate-display-${emp.id}`}
+                                title="Click to edit"
+                              >
+                                <DollarSign className="w-3 h-3 text-[#C5A065]" />
+                                <span className={emp.hourly_rate ? 'font-medium text-[#333]' : 'text-[#888] italic'}>
+                                  {emp.hourly_rate ? `${emp.hourly_rate.toFixed(2)}/hr` : 'Set rate'}
+                                </span>
+                                <Edit3 className="w-3 h-3 text-[#aaa] ml-1" />
+                              </div>
+                            )
+                          ) : (
+                            <span className="text-[#888]">-</span>
+                          )}
                         </td>
                         <td>{formatDateTime(emp.created_at)}</td>
                         <td>
