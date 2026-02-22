@@ -361,14 +361,14 @@ export default function AdminDashboard() {
                   <div>
                     <Label className="form-label">Employee (Optional)</Label>
                     <Select
-                      value={reportFilters.employee_id}
-                      onValueChange={(value) => setReportFilters({ ...reportFilters, employee_id: value })}
+                      value={reportFilters.employee_id || "all"}
+                      onValueChange={(value) => setReportFilters({ ...reportFilters, employee_id: value === "all" ? "" : value })}
                     >
                       <SelectTrigger className="form-input" data-testid="report-employee-select">
                         <SelectValue placeholder="All Employees" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Employees</SelectItem>
+                        <SelectItem value="all">All Employees</SelectItem>
                         {employees.filter(e => e.role !== 'admin').map((emp) => (
                           <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
                         ))}
