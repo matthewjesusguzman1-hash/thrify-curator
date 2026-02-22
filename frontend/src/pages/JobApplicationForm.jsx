@@ -299,7 +299,7 @@ export default function JobApplicationForm() {
         </div>
 
         <div className="form-group">
-          <Label className="form-label">Do you have any additional information to include?</Label>
+          <Label className="form-label">Is there any additional information you wish to include?</Label>
           <Textarea
             name="additional_info"
             value={formData.additional_info}
