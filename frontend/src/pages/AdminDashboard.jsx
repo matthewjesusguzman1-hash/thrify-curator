@@ -633,6 +633,15 @@ export default function AdminDashboard() {
             <h1 className="font-playfair text-2xl font-bold text-[#333]">Admin Dashboard</h1>
             <div className="flex gap-2">
               <Button 
+                onClick={() => setShowPayroll(true)}
+                variant="outline"
+                className="flex items-center gap-2 border-[#C5A065] text-[#C5A065] hover:bg-[#C5A065]/10"
+                data-testid="payroll-btn"
+              >
+                <DollarSign className="w-4 h-4" />
+                Payroll
+              </Button>
+              <Button 
                 onClick={() => setShowReport(true)}
                 variant="outline"
                 className="flex items-center gap-2"
