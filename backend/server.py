@@ -416,6 +416,23 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
             clock_in=now
         )
         await db.time_entries.insert_one(entry.model_dump())
+        
+        # Create in-app notification
+        await create_admin_notification(
+            notification_type="clock_in",
+            employee_id=user["id"],
+            employee_name=user["name"],
+            message=f"{user['name']} has clocked in",
+            details={"clock_in": now}
+        )
+        
+        # Send email notification (non-blocking)
+        asyncio.create_task(send_clock_notification_email(
+            action="in",
+            employee_name=user["name"],
+            timestamp=now
+        ))
+        
         return entry
     
     elif action.action == "out":
@@ -435,6 +452,35 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
             {"id": active["id"]},
             {"$set": {"clock_out": now, "total_hours": total_hours}}
         )
+        
+        # Get hours summary for notification
+        hours_summary = await get_employee_hours_summary(user["id"])
+        # Add this shift's hours to today (since it was just completed)
+        hours_summary["today_hours"] = round(hours_summary["today_hours"] + total_hours, 2)
+        hours_summary["week_hours"] = round(hours_summary["week_hours"] + total_hours, 2)
+        
+        # Create in-app notification
+        await create_admin_notification(
+            notification_type="clock_out",
+            employee_id=user["id"],
+            employee_name=user["name"],
+            message=f"{user['name']} has clocked out ({total_hours} hours)",
+            details={
+                "clock_in": active["clock_in"],
+                "clock_out": now,
+                "total_hours": total_hours,
+                "today_hours": hours_summary["today_hours"],
+                "week_hours": hours_summary["week_hours"]
+            }
+        )
+        
+        # Send email notification (non-blocking)
+        asyncio.create_task(send_clock_notification_email(
+            action="out",
+            employee_name=user["name"],
+            timestamp=now,
+            hours_summary=hours_summary
+        ))
         
         active["clock_out"] = now
         active["total_hours"] = total_hours
