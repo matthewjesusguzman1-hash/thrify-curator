@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, 
   Clock, 
@@ -14,7 +14,11 @@ import {
   X,
   Trash2,
   FileText,
-  Download
+  Download,
+  Bell,
+  CheckCheck,
+  LogIn,
+  LogOutIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +53,25 @@ export default function AdminDashboard() {
     end_date: new Date().toISOString().split('T')[0],
     employee_id: ""
   });
+  
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const getAuthHeader = useCallback(() => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+  }), []);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/notifications`, getAuthHeader());
+      setNotifications(response.data.notifications);
+      setUnreadCount(response.data.unread_count);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  }, [getAuthHeader]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
