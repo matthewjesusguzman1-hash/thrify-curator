@@ -114,9 +114,9 @@ Build a "Thrifty Curator" reselling application with:
 3. Export hours to CSV/PDF
 
 ## Testing Status
-- Backend: 100% pass (43/43 tests)
+- Backend: 98% pass (52/53 tests - 1 pre-existing flaky test)
 - Frontend: 100% pass
-- Test reports: `/app/test_reports/iteration_3.json`
+- Test reports: `/app/test_reports/iteration_4.json`
 - Test files: `/app/backend/tests/`
 
 ## Notes
