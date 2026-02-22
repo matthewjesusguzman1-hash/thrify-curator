@@ -1194,12 +1194,12 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     # Period info
     period_text = f"Period: {period_start.strftime('%B %d, %Y')} - {period_end.strftime('%B %d, %Y')}"
     elements.append(Paragraph(period_text, subtitle_style))
-    elements.append(Paragraph(f"Hourly Rate: ${hourly_rate:.2f}", subtitle_style))
+    elements.append(Paragraph(f"Default Hourly Rate: ${default_rate:.2f} (individual rates may vary)", subtitle_style))
     elements.append(Spacer(1, 20))
     
-    # Summary table
+    # Calculate total wages using individual rates
     total_hours = sum(e["total_hours"] for e in employee_data.values())
-    total_wages = total_hours * hourly_rate
+    total_wages = sum(e["total_hours"] * e["hourly_rate"] for e in employee_data.values())
     total_shifts = sum(e["total_shifts"] for e in employee_data.values())
     
     summary_data = [
