@@ -12,6 +12,8 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+const LOGO_URL = "https://customer-assets.emergentagent.com/job_reseller-dashboard-11/artifacts/jq229nou_IMG_0042.jpg";
+
 const TASK_OPTIONS = [
   { id: "photography", label: "Inventory photography" },
   { id: "listing", label: "Draft creation / Listing write-up" },
@@ -102,6 +104,14 @@ export default function JobApplicationForm() {
         <ArrowLeft className="w-4 h-4" />
         Back to Home
       </Link>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-32 h-32 mx-auto mb-6 rounded-xl overflow-hidden shadow-lg"
+      >
+        <img src={LOGO_URL} alt="Thrifty Curator Logo" className="w-full h-full object-cover" />
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
