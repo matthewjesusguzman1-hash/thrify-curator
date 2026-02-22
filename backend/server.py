@@ -1234,12 +1234,13 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         
         for uid, data in employee_data.items():
             hours = round(data["total_hours"], 2)
-            wages = round(hours * hourly_rate, 2)
+            emp_rate = data["hourly_rate"]
+            wages = round(hours * emp_rate, 2)
             emp_table_data.append([
                 data["name"],
                 f"{hours:.2f}",
                 str(data["total_shifts"]),
-                f"${hourly_rate:.2f}",
+                f"${emp_rate:.2f}",
                 f"${wages:.2f}"
             ])
         
@@ -1264,7 +1265,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         elements.append(Spacer(1, 10))
         
         for uid, data in employee_data.items():
-            elements.append(Paragraph(data["name"], styles['Heading3']))
+            elements.append(Paragraph(f"{data['name']} (${data['hourly_rate']:.2f}/hr)", styles['Heading3']))
             
             shift_data = [["Date", "Clock In", "Clock Out", "Hours"]]
             for shift in sorted(data["shifts"], key=lambda x: x["clock_in"]):
