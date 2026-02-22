@@ -27,37 +27,37 @@ const platforms = [
   { 
     name: "eBay", 
     icon: SiEbay, 
-    url: "https://www.ebay.com", 
+    url: "https://www.ebay.com/str/thriftycurator?mkcid=16&mkevt=1&mkrid=711-127632-2357-0&ssspo=hl_ypeykrc2&sssrc=3418065&ssuid=hl_ypeykrc2&stype=1&widget_ver=artemis&media=COPY", 
     color: "#E53238",
     description: "Shop our eBay store"
   },
   { 
     name: "Poshmark", 
     icon: Tag, 
-    url: "https://poshmark.com", 
+    url: "https://posh.mk/dZSDIxRJJ0b", 
     color: "#7F0353",
     description: "Follow us on Poshmark"
   },
   { 
     name: "Mercari", 
     icon: ShoppingBag, 
-    url: "https://www.mercari.com", 
+    url: "https://www.mercari.com/u/thriftycurator/?sv=0", 
     color: "#FF0211",
     description: "Shop on Mercari"
   },
   { 
     name: "Depop", 
     icon: Sparkles, 
-    url: "https://www.depop.com", 
+    url: "https://www.depop.com/thriftycurator/?utm_source=generic&utm_content=shop&utm_campaign=SHARE_SHOP_OWN_WEB_LANDING_ON&utm_medium=share&utm_term=thriftycurator&_branch_referrer=H4sIAAAAAAAAA8soKSkottLXT0ktyC%2FQSywo0MvJzMvWT68MLzVzyTEJDUuyrytKTUstKsrMS49PKsovL04tsvXNT8rMSVU1MghOTEssygQA9xU5%2FUUAAAA%3D&_branch_match_id=1366085332868029851", 
     color: "#FF2300",
     description: "Find us on Depop"
   },
   { 
-    name: "Facebook Marketplace", 
+    name: "Facebook", 
     icon: SiFacebook, 
-    url: "https://www.facebook.com/marketplace", 
+    url: "https://www.facebook.com/share/1DeqtsKL85/?mibextid=wwXIfr", 
     color: "#1877F2",
-    description: "Browse Facebook Marketplace"
+    description: "Follow us on Facebook"
   },
 ];
 
