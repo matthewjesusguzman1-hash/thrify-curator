@@ -16,7 +16,8 @@ import {
   ShoppingBag,
   Tag,
   Sparkles,
-  QrCode
+  QrCode,
+  Mail
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -233,7 +234,7 @@ export default function LandingPage() {
         ))}
       </motion.div>
 
-      {/* Social & Employee */}
+      {/* Connect */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -265,7 +266,37 @@ export default function LandingPage() {
           <ChevronRight className="w-5 h-5 text-[#ccc] group-hover:text-[#F8C8DC] group-hover:translate-x-1 transition-all" />
         </motion.a>
 
-        {/* Employee Login */}
+        {/* Email Link */}
+        <motion.a
+          variants={itemVariants}
+          href="mailto:euni.deleon1@gmail.com"
+          className="link-card group"
+          data-testid="email-link"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-[#D48C9E]/15 flex items-center justify-center">
+              <Mail className="w-5 h-5 text-[#D48C9E]" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-[#333] group-hover:text-[#5D4037] transition-colors">
+                Email
+              </p>
+              <p className="text-sm text-[#888]">euni.deleon1@gmail.com</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-[#ccc] group-hover:text-[#F8C8DC] group-hover:translate-x-1 transition-all" />
+        </motion.a>
+      </motion.div>
+
+      {/* Employee Portal */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="links-section"
+      >
+        <h2 className="section-title" data-testid="employee-section-title">Employee</h2>
+        
         <motion.div variants={itemVariants}>
           <Link
             to="/login"
