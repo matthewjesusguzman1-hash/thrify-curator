@@ -86,13 +86,12 @@ export default function AuthPage() {
               )}
             </Button>
 
-            <Link 
-              to="/admin" 
-              className="block text-center text-xs text-[#999] hover:text-[#D48C9E] mt-3 transition-colors"
+            <p 
+              className="block text-center text-xs text-[#999] mt-3"
               data-testid="admin-portal-link"
             >
               Admin? Sign in with your admin email above
-            </Link>
+            </p>
           </form>
 
           <p className="text-center text-sm text-[#888] mt-6">
