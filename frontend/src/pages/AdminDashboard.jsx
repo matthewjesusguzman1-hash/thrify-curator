@@ -243,6 +243,108 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Notification Bell */}
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-[#666] relative"
+              onClick={() => setShowNotifications(!showNotifications)}
+              data-testid="notification-bell"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium" data-testid="notification-badge">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+            
+            {/* Notification Dropdown */}
+            <AnimatePresence>
+              {showNotifications && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-[#eee] z-50 overflow-hidden"
+                  data-testid="notification-dropdown"
+                >
+                  <div className="p-3 border-b border-[#eee] flex items-center justify-between">
+                    <h3 className="font-semibold text-[#333] text-sm">Notifications</h3>
+                    <div className="flex gap-1">
+                      {unreadCount > 0 && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 text-xs text-[#666]"
+                          onClick={handleMarkAllRead}
+                          data-testid="mark-all-read-btn"
+                        >
+                          <CheckCheck className="w-3 h-3 mr-1" />
+                          Mark all read
+                        </Button>
+                      )}
+                      {notifications.length > 0 && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 text-xs text-red-500 hover:text-red-600"
+                          onClick={handleClearNotifications}
+                          data-testid="clear-notifications-btn"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center text-[#888] text-sm">
+                        No notifications yet
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <div 
+                          key={notification.id} 
+                          className={`p-3 border-b border-[#f5f5f5] last:border-0 hover:bg-[#faf7f2] transition-colors ${!notification.read ? 'bg-[#F8C8DC]/10' : ''}`}
+                          data-testid={`notification-item-${notification.id}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              notification.type === 'clock_in' 
+                                ? 'bg-green-100' 
+                                : 'bg-red-100'
+                            }`}>
+                              {notification.type === 'clock_in' 
+                                ? <LogIn className="w-4 h-4 text-green-600" />
+                                : <LogOutIcon className="w-4 h-4 text-red-600" />
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-[#333] font-medium">{notification.message}</p>
+                              {notification.details?.total_hours && (
+                                <p className="text-xs text-[#666] mt-1">
+                                  Today: {notification.details.today_hours}h • Week: {notification.details.week_hours}h
+                                </p>
+                              )}
+                              <p className="text-xs text-[#aaa] mt-1">
+                                {formatNotificationTime(notification.created_at)}
+                              </p>
+                            </div>
+                            {!notification.read && (
+                              <div className="w-2 h-2 bg-[#F8C8DC] rounded-full flex-shrink-0 mt-2"></div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <Link to="/">
             <Button variant="ghost" size="sm" className="text-[#666]" data-testid="home-btn">
               <Home className="w-4 h-4 mr-1" />
