@@ -1,0 +1,123 @@
+{
+  "summary": {
+    "total_tests": 16,
+    "passed": 16,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "test_results": [
+    {
+      "test": "API Health Check",
+      "status": "PASS",
+      "details": "Response: {'message': 'Thrifty Curator API'}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Employee Registration",
+      "status": "PASS",
+      "details": "Response: {'access_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlN2E2MDNkNS1lMzQyLTQ2MDgtYWNhMS1hYTY2MzlkMDAxMjYiLCJlbWFpbCI6ImVtcGxveWVlMTc3MTc5Mzg2MEB0ZXN0LmNvbSIsInJvbGUiOiJlbXBsb3llZSIsImV4cCI6MTc3MTg4MDI2MH0.8RYcAPQz2oxFnkD-xhT0hzES02748Rk9VPfkWDMXksY', 'token_type': 'bearer', 'user': {'id': 'e7a603d5-e342-4608-aca1-aa6639d00126', 'email': 'employee1771793860@test.com', 'name': 'Test Employee 1771793860', 'role': 'employee', 'created_at': '2026-02-22T20:57:40.442553+00:00'}}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Admin Registration",
+      "status": "PASS",
+      "details": "Response: {'access_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZTU1YzMwMy1mZDRmLTQ5MWMtOGIyYS02NGUwNGU2MGIxNDYiLCJlbWFpbCI6ImFkbWluMTc3MTc5Mzg2MEB0ZXN0LmNvbSIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc3MTg4MDI2MH0.GUw-tUQqcPjWKCoUXS95RIXBCbsWvbMyKxOBVfi7Qag', 'token_type': 'bearer', 'user': {'id': '9e55c303-fd4f-491c-8b2a-64e04e60b146', 'email': 'admin1771793860@test.com', 'name': 'Test Admin 1771793860', 'role': 'admin', 'created_at': '2026-02-22T20:57:40.859387+00:00'}}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "User Login",
+      "status": "PASS",
+      "details": "Response: {'access_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZTFkM2UyOS1iM2E3LTQ3ZTgtODg3Ni02MmExZjkwNTA5OGUiLCJlbWFpbCI6ImxvZ2luMTc3MTc5Mzg2MEB0ZXN0LmNvbSIsInJvbGUiOiJlbXBsb3llZSIsImV4cCI6MTc3MTg4MDI2MX0.0-jqfIDoVTM0gR_kCl1uYFyf2QIcljoxHHQbVIpiLxw', 'token_type': 'bearer', 'user': {'id': '9e1d3e29-b3a7-47e8-8876-62a1f905098e', 'email': 'login1771793860@test.com', 'name': 'Login Test User 1771793860', 'role': 'employee', 'created_at': '2026-02-22T20:57:41.274837+00:00'}}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Get Current User Info",
+      "status": "PASS",
+      "details": "Response: {'id': 'e7a603d5-e342-4608-aca1-aa6639d00126', 'email': 'employee1771793860@test.com', 'name': 'Test Employee 1771793860', 'role': 'employee', 'created_at': '2026-02-22T20:57:40.442553+00:00'}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Clock In",
+      "status": "PASS",
+      "details": "Response: {'id': '20fbe855-3875-482a-ba82-91c6bfcc430b', 'user_id': 'e7a603d5-e342-4608-aca1-aa6639d00126', 'user_name': 'Test Employee 1771793860', 'clock_in': '2026-02-22T20:57:41.885136+00:00', 'clock_out': None, 'total_hours': None}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Clock Status Check",
+      "status": "PASS",
+      "details": "Response: {'clocked_in': True, 'entry': {'id': '20fbe855-3875-482a-ba82-91c6bfcc430b', 'user_id': 'e7a603d5-e342-4608-aca1-aa6639d00126', 'user_name': 'Test Employee 1771793860', 'clock_in': '2026-02-22T20:57:41.885136+00:00', 'clock_out': None, 'total_hours': None}}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Clock Out",
+      "status": "PASS",
+      "details": "Response: {'id': '20fbe855-3875-482a-ba82-91c6bfcc430b', 'user_id': 'e7a603d5-e342-4608-aca1-aa6639d00126', 'user_name': 'Test Employee 1771793860', 'clock_in': '2026-02-22T20:57:41.885136+00:00', 'clock_out': '2026-02-22T20:57:42.270235+00:00', 'total_hours': 0.0}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Get Time Entries",
+      "status": "PASS",
+      "details": "Response: [{'id': '20fbe855-3875-482a-ba82-91c6bfcc430b', 'user_id': 'e7a603d5-e342-4608-aca1-aa6639d00126', 'user_name': 'Test Employee 1771793860', 'clock_in': '2026-02-22T20:57:41.885136+00:00', 'clock_out': '2026-02-22T20:57:42.270235+00:00', 'total_hours': 0.0}]",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Get Time Summary",
+      "status": "PASS",
+      "details": "Response: {'total_hours': 0.0, 'week_hours': 0.0, 'total_shifts': 1}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Job Application Submission",
+      "status": "PASS",
+      "details": "Response: {'id': '56af9501-33ba-4c2a-b635-6ff468147259', 'full_name': 'Test Applicant', 'email': 'applicant@test.com', 'phone': '555-123-4567', 'resume_text': 'Test resume experience', 'why_join': 'Test motivation', 'availability': 'Full-time', 'submitted_at': '2026-02-22T20:57:42.667018+00:00'}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Consignment Inquiry Submission",
+      "status": "PASS",
+      "details": "Response: {'id': '7d3f8900-4d32-4729-99d0-9dd62a252dff', 'full_name': 'Test Consigner', 'email': 'consigner@test.com', 'phone': '555-123-4567', 'item_description': 'Designer handbag, excellent condition', 'estimated_value': '100-250', 'item_condition': 'like-new', 'submitted_at': '2026-02-22T20:57:42.787009+00:00'}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Consignment Agreement Submission",
+      "status": "PASS",
+      "details": "Response: {'id': '25867e9c-2b71-40bb-b85c-d3f54338eebc', 'full_name': 'Test Agreement Signer', 'email': 'signer@test.com', 'phone': '555-123-4567', 'address': '123 Test St, Test City, TS 12345', 'items_description': 'Various designer items for consignment', 'agreed_percentage': '60-40', 'signature': 'Test Agreement Signer', 'agreed_to_terms': True, 'submitted_at': '2026-02-22T20:57:42.927168+00:00'}",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Get All Employees (Admin)",
+      "status": "PASS",
+      "details": "Response: [{'id': 'e7a603d5-e342-4608-aca1-aa6639d00126', 'email': 'employee1771793860@test.com', 'name': 'Test Employee 1771793860', 'role': 'employee', 'created_at': '2026-02-22T20:57:40.442553+00:00'}, {'id': '9e55c303-fd4f-491c-8b2a-64e04e60b146', 'email': 'admin1771793860@test.com', 'name': 'Test Admin 1771793860', 'role': 'admin', 'created_at': '2026-02-22T20:57:40.859387+00:00'}, {'id': '9e1d3e29-b3a7-47e8-8876-62a1f905098e', 'email': 'login1771793860@test.com', 'name': 'Login Test User 1771793860', 'role': 'employee', 'created_at': '2026-02-22T20:57:41.274837+00:00'}, {'id': '053643f7-0059-42a7-ac36-af433af334fc', 'email': 'admintest1771793862@test.com', 'name': 'Admin Test 1771793862', 'role': 'admin', 'created_at': '2026-02-22T20:57:43.278209+00:00'}]",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Get All Time Entries (Admin)",
+      "status": "PASS",
+      "details": "Response: [{'id': '20fbe855-3875-482a-ba82-91c6bfcc430b', 'user_id': 'e7a603d5-e342-4608-aca1-aa6639d00126', 'user_name': 'Test Employee 1771793860', 'clock_in': '2026-02-22T20:57:41.885136+00:00', 'clock_out': '2026-02-22T20:57:42.270235+00:00', 'total_hours': 0.0}]",
+      "expected_status": 200,
+      "actual_status": 200
+    },
+    {
+      "test": "Get Admin Summary",
+      "status": "PASS",
+      "details": "Response: {'total_employees': 4, 'total_hours': 0.0, 'total_shifts': 1, 'by_employee': [{'user_id': 'e7a603d5-e342-4608-aca1-aa6639d00126', 'name': 'Test Employee 1771793860', 'hours': 0.0, 'shifts': 1}]}",
+      "expected_status": 200,
+      "actual_status": 200
+    }
+  ],
+  "timestamp": "2026-02-22T20:57:43.632791"
+}
