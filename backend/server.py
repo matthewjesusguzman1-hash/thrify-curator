@@ -974,8 +974,6 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
     if not settings:
         settings = {"pay_period_start_date": "2026-01-06", "default_hourly_rate": 15.00}
     
-    hourly_rate = request.hourly_rate or settings.get("default_hourly_rate", 15.00)
-    
     # Determine period dates
     if request.period_type == "biweekly":
         period_start, period_end = get_biweekly_period(
