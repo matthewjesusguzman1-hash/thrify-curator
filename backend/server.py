@@ -670,6 +670,9 @@ async def get_admin_summary(admin: dict = Depends(get_admin_user)):
 
 # ==================== Admin Notifications Routes ====================
 
+class MarkReadRequest(BaseModel):
+    notification_ids: Optional[List[str]] = None
+
 @api_router.get("/admin/notifications")
 async def get_admin_notifications(admin: dict = Depends(get_admin_user), limit: int = 50):
     """Get recent notifications for admin"""
@@ -685,8 +688,9 @@ async def get_admin_notifications(admin: dict = Depends(get_admin_user), limit: 
     }
 
 @api_router.post("/admin/notifications/mark-read")
-async def mark_notifications_read(admin: dict = Depends(get_admin_user), notification_ids: List[str] = None):
+async def mark_notifications_read(request: MarkReadRequest = None, admin: dict = Depends(get_admin_user)):
     """Mark notifications as read"""
+    notification_ids = request.notification_ids if request else None
     if notification_ids:
         await db.admin_notifications.update_many(
             {"id": {"$in": notification_ids}},
@@ -713,6 +717,80 @@ async def clear_all_notifications(admin: dict = Depends(get_admin_user)):
     """Clear all notifications"""
     await db.admin_notifications.delete_many({})
     return {"message": "All notifications cleared"}
+
+# ==================== Admin Time Entry Management ====================
+
+class EditTimeEntryRequest(BaseModel):
+    clock_in: Optional[str] = None
+    clock_out: Optional[str] = None
+    total_hours: Optional[float] = None
+
+@api_router.get("/admin/time-entries/{entry_id}")
+async def get_time_entry(entry_id: str, admin: dict = Depends(get_admin_user)):
+    """Get a specific time entry"""
+    entry = await db.time_entries.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Time entry not found")
+    return entry
+
+@api_router.put("/admin/time-entries/{entry_id}")
+async def update_time_entry(entry_id: str, update_data: EditTimeEntryRequest, admin: dict = Depends(get_admin_user)):
+    """Update a time entry (edit employee hours)"""
+    # Check if entry exists
+    entry = await db.time_entries.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Time entry not found")
+    
+    update_fields = {}
+    
+    if update_data.clock_in:
+        try:
+            datetime.fromisoformat(update_data.clock_in.replace('Z', '+00:00'))
+            update_fields["clock_in"] = update_data.clock_in
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid clock_in format")
+    
+    if update_data.clock_out:
+        try:
+            datetime.fromisoformat(update_data.clock_out.replace('Z', '+00:00'))
+            update_fields["clock_out"] = update_data.clock_out
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid clock_out format")
+    
+    # Calculate total hours if both times are set
+    clock_in = update_data.clock_in or entry.get("clock_in")
+    clock_out = update_data.clock_out or entry.get("clock_out")
+    
+    if clock_in and clock_out:
+        try:
+            in_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
+            out_time = datetime.fromisoformat(clock_out.replace('Z', '+00:00'))
+            calculated_hours = round((out_time - in_time).total_seconds() / 3600, 2)
+            update_fields["total_hours"] = calculated_hours
+        except ValueError:
+            pass
+    elif update_data.total_hours is not None:
+        update_fields["total_hours"] = update_data.total_hours
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    await db.time_entries.update_one(
+        {"id": entry_id},
+        {"$set": update_fields}
+    )
+    
+    # Return updated entry
+    updated_entry = await db.time_entries.find_one({"id": entry_id}, {"_id": 0})
+    return updated_entry
+
+@api_router.delete("/admin/time-entries/{entry_id}")
+async def delete_time_entry(entry_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a time entry"""
+    result = await db.time_entries.delete_one({"id": entry_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Time entry not found")
+    return {"message": "Time entry deleted"}
 
 # ==================== Form Submission Routes ====================
 
