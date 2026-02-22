@@ -9,7 +9,7 @@ from pathlib import Path
 class ThriftyCuratorAPITester:
     def __init__(self):
         # Use the public endpoint from frontend .env
-        self.base_url = "https://reseller-dashboard-11.preview.emergentagent.com/api"
+        self.base_url = "https://resell-platform-11.preview.emergentagent.com/api"
         self.token = None
         self.test_user_id = None
         self.tests_run = 0
