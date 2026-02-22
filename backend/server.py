@@ -847,6 +847,414 @@ async def create_time_entry(entry_data: CreateTimeEntryRequest, admin: dict = De
     
     return entry
 
+# ==================== Payroll Period Reports ====================
+
+class PayrollSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = "payroll_settings"
+    pay_period_start_date: str  # ISO date string (e.g., "2026-01-06" for first Monday)
+    default_hourly_rate: float = 15.00
+
+class PayrollReportRequest(BaseModel):
+    period_type: str  # "biweekly", "monthly", "yearly", "custom"
+    start_date: Optional[str] = None  # Required for custom
+    end_date: Optional[str] = None    # Required for custom
+    period_index: Optional[int] = 0   # 0 = current, -1 = last, etc.
+    hourly_rate: Optional[float] = None  # Override default rate
+    employee_id: Optional[str] = None  # Filter by employee
+
+@api_router.get("/admin/payroll/settings")
+async def get_payroll_settings(admin: dict = Depends(get_admin_user)):
+    """Get payroll settings"""
+    settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
+    if not settings:
+        # Return default settings
+        return {
+            "id": "payroll_settings",
+            "pay_period_start_date": "2026-01-06",  # Default to a Monday
+            "default_hourly_rate": 15.00
+        }
+    return settings
+
+@api_router.put("/admin/payroll/settings")
+async def update_payroll_settings(settings: PayrollSettings, admin: dict = Depends(get_admin_user)):
+    """Update payroll settings"""
+    await db.payroll_settings.update_one(
+        {"id": "payroll_settings"},
+        {"$set": settings.model_dump()},
+        upsert=True
+    )
+    return settings
+
+def get_biweekly_period(start_date_str: str, period_index: int = 0):
+    """Calculate biweekly period dates based on configured start date"""
+    start_base = datetime.fromisoformat(start_date_str).replace(tzinfo=timezone.utc)
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Calculate how many complete biweekly periods since start
+    days_since_start = (today - start_base).days
+    current_period_num = days_since_start // 14
+    
+    # Adjust by period_index (0 = current, -1 = last, etc.)
+    target_period_num = current_period_num + period_index
+    
+    period_start = start_base + timedelta(days=target_period_num * 14)
+    period_end = period_start + timedelta(days=13, hours=23, minutes=59, seconds=59)
+    
+    return period_start, period_end
+
+def get_monthly_period(period_index: int = 0):
+    """Calculate monthly period dates"""
+    today = datetime.now(timezone.utc)
+    
+    # Calculate target month
+    target_month = today.month + period_index
+    target_year = today.year
+    
+    while target_month < 1:
+        target_month += 12
+        target_year -= 1
+    while target_month > 12:
+        target_month -= 12
+        target_year += 1
+    
+    period_start = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
+    
+    # Calculate end of month
+    if target_month == 12:
+        next_month = datetime(target_year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        next_month = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
+    
+    period_end = next_month - timedelta(seconds=1)
+    
+    return period_start, period_end
+
+def get_yearly_period(period_index: int = 0):
+    """Calculate yearly period dates"""
+    today = datetime.now(timezone.utc)
+    target_year = today.year + period_index
+    
+    period_start = datetime(target_year, 1, 1, tzinfo=timezone.utc)
+    period_end = datetime(target_year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+    
+    return period_start, period_end
+
+@api_router.post("/admin/payroll/report")
+async def generate_payroll_report(request: PayrollReportRequest, admin: dict = Depends(get_admin_user)):
+    """Generate payroll report for specified period"""
+    
+    # Get payroll settings
+    settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
+    if not settings:
+        settings = {"pay_period_start_date": "2026-01-06", "default_hourly_rate": 15.00}
+    
+    hourly_rate = request.hourly_rate or settings.get("default_hourly_rate", 15.00)
+    
+    # Determine period dates
+    if request.period_type == "biweekly":
+        period_start, period_end = get_biweekly_period(
+            settings["pay_period_start_date"], 
+            request.period_index or 0
+        )
+    elif request.period_type == "monthly":
+        period_start, period_end = get_monthly_period(request.period_index or 0)
+    elif request.period_type == "yearly":
+        period_start, period_end = get_yearly_period(request.period_index or 0)
+    elif request.period_type == "custom":
+        if not request.start_date or not request.end_date:
+            raise HTTPException(status_code=400, detail="Custom period requires start_date and end_date")
+        try:
+            period_start = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
+            period_end = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid period_type")
+    
+    # Build query
+    query = {
+        "clock_in": {"$gte": period_start.isoformat(), "$lte": period_end.isoformat()},
+        "total_hours": {"$ne": None}
+    }
+    
+    if request.employee_id:
+        query["user_id"] = request.employee_id
+    
+    # Fetch time entries
+    entries = await db.time_entries.find(query, {"_id": 0}).to_list(10000)
+    
+    # Group by employee and calculate daily totals
+    employee_data = {}
+    for entry in entries:
+        uid = entry["user_id"]
+        if uid not in employee_data:
+            employee_data[uid] = {
+                "user_id": uid,
+                "name": entry["user_name"],
+                "total_hours": 0,
+                "total_shifts": 0,
+                "shifts": [],
+                "daily_totals": {}
+            }
+        
+        hours = entry.get("total_hours", 0)
+        employee_data[uid]["total_hours"] += hours
+        employee_data[uid]["total_shifts"] += 1
+        
+        # Add shift details
+        employee_data[uid]["shifts"].append({
+            "clock_in": entry["clock_in"],
+            "clock_out": entry["clock_out"],
+            "hours": hours
+        })
+        
+        # Calculate daily totals
+        shift_date = entry["clock_in"][:10]  # Get YYYY-MM-DD
+        if shift_date not in employee_data[uid]["daily_totals"]:
+            employee_data[uid]["daily_totals"][shift_date] = 0
+        employee_data[uid]["daily_totals"][shift_date] += hours
+    
+    # Calculate wages for each employee
+    for uid, data in employee_data.items():
+        data["total_hours"] = round(data["total_hours"], 2)
+        data["hourly_rate"] = hourly_rate
+        data["gross_wages"] = round(data["total_hours"] * hourly_rate, 2)
+        # Sort daily totals
+        data["daily_totals"] = dict(sorted(data["daily_totals"].items()))
+        # Round daily totals
+        for date in data["daily_totals"]:
+            data["daily_totals"][date] = round(data["daily_totals"][date], 2)
+    
+    # Calculate totals
+    total_hours = sum(e["total_hours"] for e in employee_data.values())
+    total_wages = sum(e["gross_wages"] for e in employee_data.values())
+    total_shifts = sum(e["total_shifts"] for e in employee_data.values())
+    
+    return {
+        "period": {
+            "type": request.period_type,
+            "start": period_start.isoformat(),
+            "end": period_end.isoformat(),
+            "start_formatted": period_start.strftime("%B %d, %Y"),
+            "end_formatted": period_end.strftime("%B %d, %Y")
+        },
+        "settings": {
+            "hourly_rate": hourly_rate
+        },
+        "summary": {
+            "total_employees": len(employee_data),
+            "total_hours": round(total_hours, 2),
+            "total_shifts": total_shifts,
+            "total_wages": round(total_wages, 2)
+        },
+        "employees": list(employee_data.values())
+    }
+
+@api_router.post("/admin/payroll/report/pdf")
+async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depends(get_admin_user)):
+    """Generate PDF payroll report"""
+    
+    # Get the report data first
+    # Get payroll settings
+    settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
+    if not settings:
+        settings = {"pay_period_start_date": "2026-01-06", "default_hourly_rate": 15.00}
+    
+    hourly_rate = request.hourly_rate or settings.get("default_hourly_rate", 15.00)
+    
+    # Determine period dates
+    if request.period_type == "biweekly":
+        period_start, period_end = get_biweekly_period(
+            settings["pay_period_start_date"], 
+            request.period_index or 0
+        )
+    elif request.period_type == "monthly":
+        period_start, period_end = get_monthly_period(request.period_index or 0)
+    elif request.period_type == "yearly":
+        period_start, period_end = get_yearly_period(request.period_index or 0)
+    elif request.period_type == "custom":
+        if not request.start_date or not request.end_date:
+            raise HTTPException(status_code=400, detail="Custom period requires start_date and end_date")
+        period_start = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
+        period_end = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
+    else:
+        raise HTTPException(status_code=400, detail="Invalid period_type")
+    
+    # Build query
+    query = {
+        "clock_in": {"$gte": period_start.isoformat(), "$lte": period_end.isoformat()},
+        "total_hours": {"$ne": None}
+    }
+    
+    if request.employee_id:
+        query["user_id"] = request.employee_id
+    
+    entries = await db.time_entries.find(query, {"_id": 0}).to_list(10000)
+    
+    # Group by employee
+    employee_data = {}
+    for entry in entries:
+        uid = entry["user_id"]
+        if uid not in employee_data:
+            employee_data[uid] = {
+                "name": entry["user_name"],
+                "total_hours": 0,
+                "total_shifts": 0,
+                "shifts": []
+            }
+        
+        hours = entry.get("total_hours", 0)
+        employee_data[uid]["total_hours"] += hours
+        employee_data[uid]["total_shifts"] += 1
+        employee_data[uid]["shifts"].append({
+            "clock_in": entry["clock_in"],
+            "clock_out": entry["clock_out"],
+            "hours": hours
+        })
+    
+    # Generate PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        alignment=TA_CENTER,
+        spaceAfter=20
+    )
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        parent=styles['Normal'],
+        fontSize=12,
+        alignment=TA_CENTER,
+        spaceAfter=10
+    )
+    
+    # Title
+    elements.append(Paragraph("Thrifty Curator - Payroll Report", title_style))
+    
+    # Period info
+    period_text = f"Period: {period_start.strftime('%B %d, %Y')} - {period_end.strftime('%B %d, %Y')}"
+    elements.append(Paragraph(period_text, subtitle_style))
+    elements.append(Paragraph(f"Hourly Rate: ${hourly_rate:.2f}", subtitle_style))
+    elements.append(Spacer(1, 20))
+    
+    # Summary table
+    total_hours = sum(e["total_hours"] for e in employee_data.values())
+    total_wages = total_hours * hourly_rate
+    total_shifts = sum(e["total_shifts"] for e in employee_data.values())
+    
+    summary_data = [
+        ["Summary", ""],
+        ["Total Employees", str(len(employee_data))],
+        ["Total Hours", f"{total_hours:.2f}"],
+        ["Total Shifts", str(total_shifts)],
+        ["Total Wages", f"${total_wages:.2f}"]
+    ]
+    
+    summary_table = Table(summary_data, colWidths=[2*inch, 2*inch])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.97, 0.78, 0.86)),  # Pink header
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.Color(0.36, 0.25, 0.22)),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('SPAN', (0, 0), (1, 0)),
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 30))
+    
+    # Employee breakdown table
+    if employee_data:
+        elements.append(Paragraph("Employee Breakdown", styles['Heading2']))
+        elements.append(Spacer(1, 10))
+        
+        emp_table_data = [["Employee", "Hours", "Shifts", "Rate", "Gross Wages"]]
+        
+        for uid, data in employee_data.items():
+            hours = round(data["total_hours"], 2)
+            wages = round(hours * hourly_rate, 2)
+            emp_table_data.append([
+                data["name"],
+                f"{hours:.2f}",
+                str(data["total_shifts"]),
+                f"${hourly_rate:.2f}",
+                f"${wages:.2f}"
+            ])
+        
+        emp_table = Table(emp_table_data, colWidths=[2.5*inch, 1*inch, 0.8*inch, 1*inch, 1.2*inch])
+        emp_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.77, 0.63, 0.40)),  # Gold header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(0.98, 0.96, 0.95)]),
+        ]))
+        elements.append(emp_table)
+        elements.append(Spacer(1, 30))
+        
+        # Detailed shift breakdown for each employee
+        elements.append(Paragraph("Shift Details", styles['Heading2']))
+        elements.append(Spacer(1, 10))
+        
+        for uid, data in employee_data.items():
+            elements.append(Paragraph(data["name"], styles['Heading3']))
+            
+            shift_data = [["Date", "Clock In", "Clock Out", "Hours"]]
+            for shift in sorted(data["shifts"], key=lambda x: x["clock_in"]):
+                clock_in_dt = datetime.fromisoformat(shift["clock_in"].replace('Z', '+00:00'))
+                clock_out_dt = datetime.fromisoformat(shift["clock_out"].replace('Z', '+00:00')) if shift["clock_out"] else None
+                
+                shift_data.append([
+                    clock_in_dt.strftime("%m/%d/%Y"),
+                    clock_in_dt.strftime("%I:%M %p"),
+                    clock_out_dt.strftime("%I:%M %p") if clock_out_dt else "-",
+                    f"{shift['hours']:.2f}"
+                ])
+            
+            shift_table = Table(shift_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1*inch])
+            shift_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.85, 0.85, 0.85)),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ]))
+            elements.append(shift_table)
+            elements.append(Spacer(1, 15))
+    
+    # Footer
+    elements.append(Spacer(1, 20))
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER, textColor=colors.grey)
+    elements.append(Paragraph(f"Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", footer_style))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    # Generate filename
+    filename = f"payroll_report_{period_start.strftime('%Y%m%d')}_{period_end.strftime('%Y%m%d')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 # ==================== Form Submission Routes ====================
 
 @api_router.post("/forms/job-application", response_model=JobApplication)
