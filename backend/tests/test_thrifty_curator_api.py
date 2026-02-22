@@ -415,6 +415,155 @@ class TestFormSubmissions:
         print(f"Consignment agreement submitted: {data['id']}")
 
 
+class TestAdminNotifications:
+    """Admin in-app notifications tests"""
+    
+    @pytest.fixture
+    def admin_token(self):
+        """Get admin token"""
+        response = requests.post(f"{BASE_URL}/api/auth/login", json={
+            "email": TEST_ADMIN_EMAIL
+        })
+        if response.status_code == 200:
+            return response.json()["access_token"]
+        pytest.skip("Admin login failed")
+    
+    def test_get_notifications(self, admin_token):
+        """Admin can get notifications list"""
+        response = requests.get(f"{BASE_URL}/api/admin/notifications", headers={
+            "Authorization": f"Bearer {admin_token}"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify response structure
+        assert "notifications" in data
+        assert "unread_count" in data
+        assert isinstance(data["notifications"], list)
+        assert isinstance(data["unread_count"], int)
+        print(f"Notifications count: {len(data['notifications'])}, unread: {data['unread_count']}")
+        return data
+    
+    def test_clock_in_creates_notification(self, admin_token):
+        """Clock in creates a notification for admin"""
+        # Create employee
+        emp_email = f"notify_test_{uuid.uuid4().hex[:8]}@test.com"
+        requests.post(f"{BASE_URL}/api/admin/create-employee",
+            json={"name": "Notify Test Employee", "email": emp_email},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        
+        # Login as employee
+        emp_resp = requests.post(f"{BASE_URL}/api/auth/login", json={"email": emp_email})
+        emp_token = emp_resp.json()["access_token"]
+        
+        # Get initial notification count
+        initial_resp = requests.get(f"{BASE_URL}/api/admin/notifications", headers={
+            "Authorization": f"Bearer {admin_token}"
+        })
+        initial_count = len(initial_resp.json()["notifications"])
+        
+        # Clock in
+        requests.post(f"{BASE_URL}/api/time/clock",
+            json={"action": "in"},
+            headers={"Authorization": f"Bearer {emp_token}"}
+        )
+        
+        # Check for new notification
+        after_resp = requests.get(f"{BASE_URL}/api/admin/notifications", headers={
+            "Authorization": f"Bearer {admin_token}"
+        })
+        after_count = len(after_resp.json()["notifications"])
+        
+        assert after_count > initial_count, "Clock in should create notification"
+        
+        # Verify notification content
+        newest = after_resp.json()["notifications"][0]
+        assert newest["type"] == "clock_in"
+        assert "clocked in" in newest["message"].lower()
+        print(f"Clock in notification created: {newest['message']}")
+        
+        return emp_token
+    
+    def test_clock_out_creates_notification_with_hours(self, admin_token):
+        """Clock out creates notification with today/week hours"""
+        # Create employee
+        emp_email = f"notify_out_{uuid.uuid4().hex[:8]}@test.com"
+        requests.post(f"{BASE_URL}/api/admin/create-employee",
+            json={"name": "Notify Out Employee", "email": emp_email},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        
+        # Login as employee
+        emp_resp = requests.post(f"{BASE_URL}/api/auth/login", json={"email": emp_email})
+        emp_token = emp_resp.json()["access_token"]
+        
+        # Clock in
+        requests.post(f"{BASE_URL}/api/time/clock",
+            json={"action": "in"},
+            headers={"Authorization": f"Bearer {emp_token}"}
+        )
+        
+        # Clock out
+        requests.post(f"{BASE_URL}/api/time/clock",
+            json={"action": "out"},
+            headers={"Authorization": f"Bearer {emp_token}"}
+        )
+        
+        # Check notification
+        notif_resp = requests.get(f"{BASE_URL}/api/admin/notifications", headers={
+            "Authorization": f"Bearer {admin_token}"
+        })
+        notifications = notif_resp.json()["notifications"]
+        
+        # Find clock_out notification
+        clock_out_notifs = [n for n in notifications if n["type"] == "clock_out"]
+        assert len(clock_out_notifs) > 0, "Clock out notification should be created"
+        
+        newest = clock_out_notifs[0]
+        assert "clocked out" in newest["message"].lower()
+        assert "details" in newest
+        assert "today_hours" in newest["details"]
+        assert "week_hours" in newest["details"]
+        assert "total_hours" in newest["details"]
+        print(f"Clock out notification with hours: {newest['details']}")
+    
+    def test_mark_all_notifications_read(self, admin_token):
+        """Admin can mark all notifications as read"""
+        response = requests.post(f"{BASE_URL}/api/admin/notifications/mark-read", 
+            json={},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data
+        print(f"Mark all read response: {data}")
+        
+        # Verify unread count is 0
+        notif_resp = requests.get(f"{BASE_URL}/api/admin/notifications", headers={
+            "Authorization": f"Bearer {admin_token}"
+        })
+        assert notif_resp.json()["unread_count"] == 0
+        print("Verified all notifications marked as read")
+    
+    def test_clear_all_notifications(self, admin_token):
+        """Admin can clear all notifications"""
+        response = requests.delete(f"{BASE_URL}/api/admin/notifications", headers={
+            "Authorization": f"Bearer {admin_token}"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data
+        print(f"Clear all response: {data}")
+        
+        # Verify no notifications
+        notif_resp = requests.get(f"{BASE_URL}/api/admin/notifications", headers={
+            "Authorization": f"Bearer {admin_token}"
+        })
+        assert len(notif_resp.json()["notifications"]) == 0
+        print("Verified all notifications cleared")
+
+
 class TestAuthorizationRules:
     """Test that proper authorization rules are enforced"""
     
@@ -458,6 +607,14 @@ class TestAuthorizationRules:
         })
         assert response.status_code == 403
         print("Employee correctly denied access to admin summary")
+    
+    def test_employee_cannot_access_admin_notifications(self, employee_token):
+        """Employee should not access admin notifications"""
+        response = requests.get(f"{BASE_URL}/api/admin/notifications", headers={
+            "Authorization": f"Bearer {employee_token}"
+        })
+        assert response.status_code == 403
+        print("Employee correctly denied access to admin notifications")
 
 
 if __name__ == "__main__":
