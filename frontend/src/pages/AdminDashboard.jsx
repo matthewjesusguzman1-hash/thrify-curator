@@ -1543,7 +1543,12 @@ export default function AdminDashboard() {
                       <h3 className="font-semibold text-[#333]">
                         {payrollReport.period.start_formatted} - {payrollReport.period.end_formatted}
                       </h3>
-                      <p className="text-sm text-[#666]">Hourly Rate: ${payrollReport.settings.hourly_rate.toFixed(2)}</p>
+                      <p className="text-sm text-[#666]">
+                        Default Rate: ${payrollReport.settings.default_hourly_rate?.toFixed(2) || '15.00'}/hr
+                        {payrollReport.settings.uses_individual_rates && (
+                          <span className="ml-2 text-[#C5A065]">(individual rates applied)</span>
+                        )}
+                      </p>
                     </div>
 
                     {/* Summary Cards */}
@@ -1587,12 +1592,19 @@ export default function AdminDashboard() {
                                     <div className="w-8 h-8 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
                                       <User className="w-4 h-4 text-[#D48C9E]" />
                                     </div>
-                                    {emp.name}
+                                    <div>
+                                      <span>{emp.name}</span>
+                                      {emp.has_custom_rate && (
+                                        <span className="ml-1 text-xs text-[#C5A065]">★</span>
+                                      )}
+                                    </div>
                                   </div>
                                 </td>
                                 <td>{emp.total_hours.toFixed(2)} hrs</td>
                                 <td>{emp.total_shifts}</td>
-                                <td>${emp.hourly_rate.toFixed(2)}</td>
+                                <td className={emp.has_custom_rate ? 'text-[#C5A065] font-medium' : ''}>
+                                  ${emp.hourly_rate.toFixed(2)}
+                                </td>
                                 <td className="font-semibold text-[#C5A065]">${emp.gross_wages.toFixed(2)}</td>
                               </tr>
                             ))}
