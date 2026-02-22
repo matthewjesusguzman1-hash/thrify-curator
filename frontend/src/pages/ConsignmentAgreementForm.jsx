@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ClipboardCheck, Send, CheckCircle } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const LOGO_URL = "https://customer-assets.emergentagent.com/job_reseller-dashboard-11/artifacts/kxrcqk4y_IMG_0042.jpg";
 
 export default function ConsignmentAgreementForm() {
   const [formData, setFormData] = useState({
@@ -20,7 +20,7 @@ export default function ConsignmentAgreementForm() {
     phone: "",
     address: "",
     items_description: "",
-    agreed_percentage: "",
+    agreed_percentage: "50-50",
     signature: "",
     agreed_to_terms: false
   });
@@ -29,10 +29,6 @@ export default function ConsignmentAgreementForm() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSelectChange = (name, value) => {
-    setFormData({ ...formData, [name]: value });
   };
 
   const handleCheckboxChange = (checked) => {
@@ -95,13 +91,18 @@ export default function ConsignmentAgreementForm() {
       </Link>
 
       <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-32 h-32 mx-auto mb-6 rounded-xl overflow-hidden shadow-lg"
+      >
+        <img src={LOGO_URL} alt="Thrifty Curator Logo" className="w-full h-full object-cover" />
+      </motion.div>
+
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="form-header"
       >
-        <div className="w-16 h-16 bg-[#F8C8DC]/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <ClipboardCheck className="w-8 h-8 text-[#D48C9E]" />
-        </div>
         <h1 className="form-title">Consignment Agreement</h1>
         <p className="form-subtitle">Sign your consignment agreement</p>
       </motion.div>
@@ -170,46 +171,31 @@ export default function ConsignmentAgreementForm() {
         </div>
 
         <div className="form-group">
-          <Label className="form-label">Items to Consign *</Label>
-          <Textarea
+          <Label className="form-label">Number of Items to Consign *</Label>
+          <Input
+            type="number"
             name="items_description"
             value={formData.items_description}
             onChange={handleChange}
             required
-            placeholder="List all items you're consigning with descriptions"
-            className="form-input min-h-[120px]"
+            min="1"
+            placeholder="Enter number of items"
+            className="form-input"
             data-testid="input-items-description"
           />
-        </div>
-
-        <div className="form-group">
-          <Label className="form-label">Agreed Commission Split *</Label>
-          <Select
-            value={formData.agreed_percentage}
-            onValueChange={(value) => handleSelectChange("agreed_percentage", value)}
-            required
-          >
-            <SelectTrigger className="form-input" data-testid="select-percentage">
-              <SelectValue placeholder="Select commission split" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="60-40">60% You / 40% Thrifty Curator</SelectItem>
-              <SelectItem value="50-50">50% You / 50% Thrifty Curator</SelectItem>
-              <SelectItem value="70-30">70% You / 30% Thrifty Curator (Premium)</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Terms and Conditions */}
         <div className="form-group">
           <div className="bg-[#F9F6F7] rounded-xl p-4 mb-4 text-sm text-[#666]">
-            <h4 className="font-semibold text-[#333] mb-2">Terms & Conditions</h4>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Items will be listed for a minimum of 60 days</li>
-              <li>Thrifty Curator reserves the right to set final pricing</li>
-              <li>Payment will be issued within 14 days of item sale</li>
-              <li>Unsold items can be picked up or donated after 90 days</li>
-              <li>Items must be in the described condition upon receipt</li>
+            <h4 className="font-semibold text-[#333] mb-3">Terms & Conditions</h4>
+            <ul className="space-y-3">
+              <li>• The profit from the sale of your consigned item will be split evenly, with 50% going to you and 50% to the consignee.</li>
+              <li>• There is no guarantee that your item will be sold.</li>
+              <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
+              <li>• The consignee has the right to refuse any item for sale at any time and will return the item to the consignor.</li>
+              <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee for the purposes of sale until sold or released back to the consignor.</li>
+              <li>• The consignor accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee. All items are inspected prior to listing and its condition/defects are listed at the time the item is posted for sale.</li>
             </ul>
           </div>
         </div>
