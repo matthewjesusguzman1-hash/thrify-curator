@@ -236,6 +236,36 @@ export default function JobApplicationForm() {
           </div>
         </div>
 
+        <div className="form-group">
+          <Label className="form-label">Are you willing/able to submit to a background check? *</Label>
+          <div className="flex gap-6 mt-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="background_check"
+                value="yes"
+                checked={formData.background_check_consent === true}
+                onChange={() => setFormData({ ...formData, background_check_consent: true })}
+                className="w-4 h-4 text-[#F8C8DC]"
+                data-testid="background-check-yes"
+              />
+              <span className="text-sm text-[#4a4a4a]">Yes</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="background_check"
+                value="no"
+                checked={formData.background_check_consent === false}
+                onChange={() => setFormData({ ...formData, background_check_consent: false })}
+                className="w-4 h-4 text-[#F8C8DC]"
+                data-testid="background-check-no"
+              />
+              <span className="text-sm text-[#4a4a4a]">No</span>
+            </label>
+          </div>
+        </div>
+
         <Button
           type="submit"
           disabled={loading}
