@@ -209,7 +209,7 @@ export default function JobApplicationForm() {
             value={formData.availability}
             onChange={handleChange}
             required
-            placeholder="e.g., Full-time, Part-time, Weekends only"
+            placeholder="e.g., specify days of the week and time available"
             className="form-input"
             data-testid="input-availability"
           />
