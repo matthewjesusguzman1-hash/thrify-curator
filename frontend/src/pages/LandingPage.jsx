@@ -370,16 +370,6 @@ export default function LandingPage() {
           </div>
         </div>
       </motion.div>
-
-      {/* Footer */}
-      <motion.footer
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8, duration: 0.5 }}
-        className="text-center text-sm text-[#999] mt-8 pb-4"
-      >
-        <p>&copy; {new Date().getFullYear()} Thrifty Curator. All rights reserved.</p>
-      </motion.footer>
     </div>
   );
 }
