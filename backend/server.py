@@ -58,6 +58,7 @@ class UserBase(BaseModel):
     email: EmailStr
     name: str
     role: str = "employee"  # employee or admin
+    hourly_rate: Optional[float] = None  # Individual hourly rate
 
 class UserCreate(UserBase):
     password: str
@@ -71,6 +72,7 @@ class UserResponse(BaseModel):
     email: str
     name: str
     role: str
+    hourly_rate: Optional[float] = None
     created_at: str
 
 class TokenResponse(BaseModel):
