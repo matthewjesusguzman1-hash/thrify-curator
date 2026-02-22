@@ -1054,11 +1054,11 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
             employee_data[uid]["daily_totals"][shift_date] = 0
         employee_data[uid]["daily_totals"][shift_date] += hours
     
-    # Calculate wages for each employee
+    # Calculate wages for each employee using their individual rate
     for uid, data in employee_data.items():
         data["total_hours"] = round(data["total_hours"], 2)
-        data["hourly_rate"] = hourly_rate
-        data["gross_wages"] = round(data["total_hours"] * hourly_rate, 2)
+        emp_rate = data["hourly_rate"]
+        data["gross_wages"] = round(data["total_hours"] * emp_rate, 2)
         # Sort daily totals
         data["daily_totals"] = dict(sorted(data["daily_totals"].items()))
         # Round daily totals
@@ -1079,7 +1079,8 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
             "end_formatted": period_end.strftime("%B %d, %Y")
         },
         "settings": {
-            "hourly_rate": hourly_rate
+            "default_hourly_rate": default_rate,
+            "uses_individual_rates": True
         },
         "summary": {
             "total_employees": len(employee_data),
