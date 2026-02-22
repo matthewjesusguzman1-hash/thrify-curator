@@ -6,19 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const TASK_OPTIONS = [
+  { id: "photography", label: "Inventory photography" },
+  { id: "listing", label: "Draft creation / Listing write-up" },
+  { id: "shipping", label: "Shipping and packing" },
+  { id: "cleaning", label: "Items cleaning / prep" },
+];
 
 export default function JobApplicationForm() {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
     phone: "",
+    address: "",
     resume_text: "",
     why_join: "",
-    availability: ""
+    availability: "",
+    tasks_able_to_perform: []
   });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);

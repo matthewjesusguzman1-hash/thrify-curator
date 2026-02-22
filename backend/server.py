@@ -78,9 +78,11 @@ class JobApplication(BaseModel):
     full_name: str
     email: EmailStr
     phone: str
+    address: str
     resume_text: str
     why_join: str
     availability: str
+    tasks_able_to_perform: List[str] = []
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class ConsignmentInquiry(BaseModel):
