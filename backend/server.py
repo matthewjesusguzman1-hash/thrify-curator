@@ -296,6 +296,38 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
 
 # ==================== Admin Routes ====================
 
+class CreateEmployee(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+@api_router.post("/admin/create-employee", response_model=UserResponse)
+async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(get_admin_user)):
+    # Check if user exists
+    existing = await db.users.find_one({"email": employee_data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    user_id = str(uuid.uuid4())
+    user_doc = {
+        "id": user_id,
+        "email": employee_data.email,
+        "name": employee_data.name,
+        "role": "employee",
+        "password_hash": hash_password(employee_data.password),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(user_doc)
+    
+    return UserResponse(
+        id=user_id,
+        email=employee_data.email,
+        name=employee_data.name,
+        role="employee",
+        created_at=user_doc["created_at"]
+    )
+
 @api_router.get("/admin/employees", response_model=List[UserResponse])
 async def get_all_employees(admin: dict = Depends(get_admin_user)):
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(100)
