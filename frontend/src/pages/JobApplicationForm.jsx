@@ -163,6 +163,19 @@ export default function JobApplicationForm() {
         </div>
 
         <div className="form-group">
+          <Label className="form-label">Current Address *</Label>
+          <Textarea
+            name="address"
+            value={formData.address}
+            onChange={handleChange}
+            required
+            placeholder="Street Address, City, State, ZIP Code"
+            className="form-input min-h-[80px]"
+            data-testid="input-address"
+          />
+        </div>
+
+        <div className="form-group">
           <Label className="form-label">Tell us about your experience *</Label>
           <Textarea
             name="resume_text"
