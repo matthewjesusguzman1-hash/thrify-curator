@@ -56,6 +56,7 @@ Build a "Thrifty Curator" reselling application with:
 - [x] Admin can edit employee time entries (clock in/out times)
 - [x] Admin can delete employee time entries
 - [x] Auto-calculation of total hours when editing
+- [x] Admin can create manual time entries for employees (retroactive/off-site work)
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
