@@ -256,7 +256,7 @@ export default function AdminDashboard() {
         </div>
         <div className="flex items-center gap-2">
           {/* Notification Bell */}
-          <div className="relative">
+          <div className="relative" ref={notificationRef}>
             <Button 
               variant="ghost" 
               size="sm" 
