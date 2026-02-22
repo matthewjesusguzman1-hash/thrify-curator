@@ -294,61 +294,55 @@ export default function ConsignmentInquiryForm() {
         </div>
 
         <div className="form-group">
-          <Label className="form-label">Home Environment</Label>
+          <Label className="form-label">Environment</Label>
           <div className="space-y-3 mt-2">
-            <div>
-              <p className="text-sm text-[#666] mb-2">Smoke Environment:</p>
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="smoke_free"
-                    checked={formData.smoke_free === true}
-                    onChange={() => setFormData({ ...formData, smoke_free: true })}
-                    className="w-4 h-4 text-[#F8C8DC]"
-                    data-testid="smoke-free-yes"
-                  />
-                  <span className="text-sm text-[#4a4a4a]">Smoke Free</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="smoke_free"
-                    checked={formData.smoke_free === false}
-                    onChange={() => setFormData({ ...formData, smoke_free: false })}
-                    className="w-4 h-4 text-[#F8C8DC]"
-                    data-testid="smoke-free-no"
-                  />
-                  <span className="text-sm text-[#4a4a4a]">Not Smoke Free</span>
-                </label>
-              </div>
+            <div className="flex gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="smoke_free"
+                  checked={formData.smoke_free === true}
+                  onChange={() => setFormData({ ...formData, smoke_free: true })}
+                  className="w-4 h-4 text-[#F8C8DC]"
+                  data-testid="smoke-free-yes"
+                />
+                <span className="text-sm text-[#4a4a4a]">Smoke Free</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="smoke_free"
+                  checked={formData.smoke_free === false}
+                  onChange={() => setFormData({ ...formData, smoke_free: false })}
+                  className="w-4 h-4 text-[#F8C8DC]"
+                  data-testid="smoke-free-no"
+                />
+                <span className="text-sm text-[#4a4a4a]">Not Smoke Free</span>
+              </label>
             </div>
-            <div>
-              <p className="text-sm text-[#666] mb-2">Pet Environment:</p>
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="pet_free"
-                    checked={formData.pet_free === true}
-                    onChange={() => setFormData({ ...formData, pet_free: true })}
-                    className="w-4 h-4 text-[#F8C8DC]"
-                    data-testid="pet-free-yes"
-                  />
-                  <span className="text-sm text-[#4a4a4a]">Pet Free</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="pet_free"
-                    checked={formData.pet_free === false}
-                    onChange={() => setFormData({ ...formData, pet_free: false })}
-                    className="w-4 h-4 text-[#F8C8DC]"
-                    data-testid="pet-free-no"
-                  />
-                  <span className="text-sm text-[#4a4a4a]">Pet Friendly</span>
-                </label>
-              </div>
+            <div className="flex gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="pet_free"
+                  checked={formData.pet_free === true}
+                  onChange={() => setFormData({ ...formData, pet_free: true })}
+                  className="w-4 h-4 text-[#F8C8DC]"
+                  data-testid="pet-free-yes"
+                />
+                <span className="text-sm text-[#4a4a4a]">Pet Free</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="pet_free"
+                  checked={formData.pet_free === false}
+                  onChange={() => setFormData({ ...formData, pet_free: false })}
+                  className="w-4 h-4 text-[#F8C8DC]"
+                  data-testid="pet-free-no"
+                />
+                <span className="text-sm text-[#4a4a4a]">Pet Friendly</span>
+              </label>
             </div>
           </div>
         </div>
