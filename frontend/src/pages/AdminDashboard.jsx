@@ -1479,7 +1479,7 @@ export default function AdminDashboard() {
                   )}
 
                   <div className="form-group">
-                    <Label className="form-label">Hourly Rate ($)</Label>
+                    <Label className="form-label">Default Hourly Rate ($)</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -1490,6 +1490,7 @@ export default function AdminDashboard() {
                       placeholder="15.00"
                       data-testid="payroll-hourly-rate"
                     />
+                    <p className="text-xs text-[#888] mt-1">Used for employees without individual rates</p>
                   </div>
 
                   <div className="form-group">
