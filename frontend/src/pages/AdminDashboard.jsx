@@ -1288,6 +1288,321 @@ export default function AdminDashboard() {
               </motion.div>
             </motion.div>
           )}
+
+          {/* Payroll Modal */}
+          {showPayroll && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+              onClick={() => setShowPayroll(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-4xl shadow-xl my-8"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="payroll-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#C5A065]/20 rounded-full flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-[#C5A065]" />
+                    </div>
+                    <div>
+                      <h2 className="font-playfair text-xl font-bold text-[#333]">Payroll Reports</h2>
+                      <p className="text-sm text-[#888]">Generate payroll-ready reports</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPayrollSettings(true)}
+                      className="text-[#666]"
+                      data-testid="payroll-settings-btn"
+                    >
+                      <Settings className="w-4 h-4 mr-1" />
+                      Settings
+                    </Button>
+                    <button
+                      onClick={() => setShowPayroll(false)}
+                      className="text-[#999] hover:text-[#666]"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Period Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="form-group">
+                    <Label className="form-label">Period Type</Label>
+                    <Select
+                      value={payrollFilters.period_type}
+                      onValueChange={(value) => setPayrollFilters({ ...payrollFilters, period_type: value })}
+                    >
+                      <SelectTrigger className="form-input" data-testid="payroll-period-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="biweekly">Biweekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="custom">Custom Range</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {payrollFilters.period_type !== "custom" ? (
+                    <div className="form-group">
+                      <Label className="form-label">Period</Label>
+                      <Select
+                        value={payrollFilters.period_index.toString()}
+                        onValueChange={(value) => setPayrollFilters({ ...payrollFilters, period_index: parseInt(value) })}
+                      >
+                        <SelectTrigger className="form-input" data-testid="payroll-period-index">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">{getPeriodLabel(payrollFilters.period_type, 0)}</SelectItem>
+                          <SelectItem value="-1">{getPeriodLabel(payrollFilters.period_type, -1)}</SelectItem>
+                          <SelectItem value="-2">{getPeriodLabel(payrollFilters.period_type, -2)}</SelectItem>
+                          <SelectItem value="-3">{getPeriodLabel(payrollFilters.period_type, -3)}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <Label className="form-label">Start Date</Label>
+                        <Input
+                          type="date"
+                          value={payrollFilters.custom_start}
+                          onChange={(e) => setPayrollFilters({ ...payrollFilters, custom_start: e.target.value })}
+                          className="form-input"
+                          data-testid="payroll-custom-start"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <Label className="form-label">End Date</Label>
+                        <Input
+                          type="date"
+                          value={payrollFilters.custom_end}
+                          onChange={(e) => setPayrollFilters({ ...payrollFilters, custom_end: e.target.value })}
+                          className="form-input"
+                          data-testid="payroll-custom-end"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="form-group">
+                    <Label className="form-label">Hourly Rate ($)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={payrollFilters.hourly_rate}
+                      onChange={(e) => setPayrollFilters({ ...payrollFilters, hourly_rate: e.target.value })}
+                      className="form-input"
+                      placeholder="15.00"
+                      data-testid="payroll-hourly-rate"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <Label className="form-label">Employee (Optional)</Label>
+                    <Select
+                      value={payrollFilters.employee_id || "all"}
+                      onValueChange={(value) => setPayrollFilters({ ...payrollFilters, employee_id: value === "all" ? "" : value })}
+                    >
+                      <SelectTrigger className="form-input" data-testid="payroll-employee-filter">
+                        <SelectValue placeholder="All Employees" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Employees</SelectItem>
+                        {employees.filter(e => e.role !== 'admin').map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mb-6">
+                  <Button
+                    onClick={handleGeneratePayrollReport}
+                    disabled={payrollLoading || (payrollFilters.period_type === "custom" && (!payrollFilters.custom_start || !payrollFilters.custom_end))}
+                    className="btn-primary flex items-center gap-2"
+                    data-testid="generate-payroll-btn"
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                    {payrollLoading ? "Generating..." : "Generate Report"}
+                  </Button>
+                  {payrollReport && (
+                    <Button
+                      onClick={handleDownloadPayrollPDF}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      data-testid="download-payroll-pdf-btn"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download PDF
+                    </Button>
+                  )}
+                </div>
+
+                {/* Payroll Report Results */}
+                {payrollReport && (
+                  <div className="space-y-6" data-testid="payroll-report-results">
+                    {/* Period Header */}
+                    <div className="bg-gradient-to-r from-[#C5A065]/10 to-[#F8C8DC]/10 rounded-xl p-4">
+                      <h3 className="font-semibold text-[#333]">
+                        {payrollReport.period.start_formatted} - {payrollReport.period.end_formatted}
+                      </h3>
+                      <p className="text-sm text-[#666]">Hourly Rate: ${payrollReport.settings.hourly_rate.toFixed(2)}</p>
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-[#F9F6F7] rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-[#333]">{payrollReport.summary.total_employees}</p>
+                        <p className="text-sm text-[#888]">Employees</p>
+                      </div>
+                      <div className="bg-[#F9F6F7] rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-[#333]">{payrollReport.summary.total_hours.toFixed(2)}</p>
+                        <p className="text-sm text-[#888]">Total Hours</p>
+                      </div>
+                      <div className="bg-[#F9F6F7] rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-[#333]">{payrollReport.summary.total_shifts}</p>
+                        <p className="text-sm text-[#888]">Total Shifts</p>
+                      </div>
+                      <div className="bg-[#C5A065]/10 rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-[#C5A065]">${payrollReport.summary.total_wages.toFixed(2)}</p>
+                        <p className="text-sm text-[#888]">Total Wages</p>
+                      </div>
+                    </div>
+
+                    {/* Employee Breakdown */}
+                    {payrollReport.employees.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Employee</th>
+                              <th>Hours</th>
+                              <th>Shifts</th>
+                              <th>Rate</th>
+                              <th>Gross Wages</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {payrollReport.employees.map((emp) => (
+                              <tr key={emp.user_id}>
+                                <td>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
+                                      <User className="w-4 h-4 text-[#D48C9E]" />
+                                    </div>
+                                    {emp.name}
+                                  </div>
+                                </td>
+                                <td>{emp.total_hours.toFixed(2)} hrs</td>
+                                <td>{emp.total_shifts}</td>
+                                <td>${emp.hourly_rate.toFixed(2)}</td>
+                                <td className="font-semibold text-[#C5A065]">${emp.gross_wages.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-center text-[#888] py-8">No data found for this period</p>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Payroll Settings Modal */}
+          {showPayrollSettings && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+              onClick={() => setShowPayrollSettings(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="payroll-settings-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Payroll Settings</h2>
+                  <button
+                    onClick={() => setShowPayrollSettings(false)}
+                    className="text-[#999] hover:text-[#666]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSavePayrollSettings}>
+                  <div className="form-group">
+                    <Label className="form-label">Pay Period Start Date</Label>
+                    <Input
+                      type="date"
+                      value={payrollSettings.pay_period_start_date}
+                      onChange={(e) => setPayrollSettings({ ...payrollSettings, pay_period_start_date: e.target.value })}
+                      required
+                      className="form-input"
+                      data-testid="payroll-settings-start-date"
+                    />
+                    <p className="text-xs text-[#888] mt-1">
+                      This date is used to calculate biweekly pay periods. Choose the first day of any pay period.
+                    </p>
+                  </div>
+
+                  <div className="form-group">
+                    <Label className="form-label">Default Hourly Rate ($)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={payrollSettings.default_hourly_rate}
+                      onChange={(e) => setPayrollSettings({ ...payrollSettings, default_hourly_rate: parseFloat(e.target.value) || 0 })}
+                      required
+                      className="form-input"
+                      data-testid="payroll-settings-hourly-rate"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowPayrollSettings(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={savingSettings}
+                      className="btn-primary flex-1"
+                      data-testid="save-payroll-settings-btn"
+                    >
+                      {savingSettings ? "Saving..." : "Save Settings"}
+                    </Button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
         </motion.div>
       </main>
     </div>
