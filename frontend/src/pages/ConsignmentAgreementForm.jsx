@@ -22,6 +22,7 @@ export default function ConsignmentAgreementForm() {
     items_description: "",
     agreed_percentage: "50-50",
     signature: "",
+    signature_date: "",
     agreed_to_terms: false
   });
   const [loading, setLoading] = useState(false);
@@ -211,6 +212,19 @@ export default function ConsignmentAgreementForm() {
             placeholder="Type your full name as signature"
             className="form-input italic"
             data-testid="input-signature"
+          />
+        </div>
+
+        <div className="form-group">
+          <Label className="form-label">Date *</Label>
+          <Input
+            type="date"
+            name="signature_date"
+            value={formData.signature_date}
+            onChange={handleChange}
+            required
+            className="form-input"
+            data-testid="input-signature-date"
           />
         </div>
 
