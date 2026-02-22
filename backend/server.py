@@ -792,6 +792,53 @@ async def delete_time_entry(entry_id: str, admin: dict = Depends(get_admin_user)
         raise HTTPException(status_code=404, detail="Time entry not found")
     return {"message": "Time entry deleted"}
 
+class CreateTimeEntryRequest(BaseModel):
+    employee_id: str
+    clock_in: str
+    clock_out: Optional[str] = None
+
+@api_router.post("/admin/time-entries")
+async def create_time_entry(entry_data: CreateTimeEntryRequest, admin: dict = Depends(get_admin_user)):
+    """Create a manual time entry for an employee"""
+    # Verify employee exists
+    employee = await db.users.find_one({"id": entry_data.employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Validate and parse clock_in
+    try:
+        clock_in_dt = datetime.fromisoformat(entry_data.clock_in.replace('Z', '+00:00'))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid clock_in format")
+    
+    # Parse clock_out and calculate hours if provided
+    clock_out_str = None
+    total_hours = None
+    
+    if entry_data.clock_out:
+        try:
+            clock_out_dt = datetime.fromisoformat(entry_data.clock_out.replace('Z', '+00:00'))
+            clock_out_str = entry_data.clock_out
+            total_hours = round((clock_out_dt - clock_in_dt).total_seconds() / 3600, 2)
+            
+            if total_hours < 0:
+                raise HTTPException(status_code=400, detail="Clock out must be after clock in")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid clock_out format")
+    
+    # Create the time entry
+    entry = TimeEntry(
+        user_id=entry_data.employee_id,
+        user_name=employee["name"],
+        clock_in=entry_data.clock_in,
+        clock_out=clock_out_str,
+        total_hours=total_hours
+    )
+    
+    await db.time_entries.insert_one(entry.model_dump())
+    
+    return entry
+
 # ==================== Form Submission Routes ====================
 
 @api_router.post("/forms/job-application", response_model=JobApplication)
