@@ -45,7 +45,6 @@ class UserCreate(UserBase):
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -188,8 +187,8 @@ async def register(user_data: UserCreate):
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
-    if not user or not verify_password(credentials.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not user:
+        raise HTTPException(status_code=401, detail="Email not registered. Contact your administrator.")
     
     token = create_token(user["id"], user["email"], user["role"])
     
@@ -299,7 +298,6 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
 class CreateEmployee(BaseModel):
     name: str
     email: EmailStr
-    password: str
 
 @api_router.post("/admin/create-employee", response_model=UserResponse)
 async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(get_admin_user)):
@@ -314,7 +312,6 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
         "email": employee_data.email,
         "name": employee_data.name,
         "role": "employee",
-        "password_hash": hash_password(employee_data.password),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
