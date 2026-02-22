@@ -113,6 +113,7 @@ class ConsignmentAgreement(BaseModel):
     items_description: str
     agreed_percentage: str
     signature: str
+    signature_date: str = ""
     agreed_to_terms: bool
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
