@@ -263,13 +263,26 @@ export default function LandingPage() {
         </motion.div>
       </div>
 
-      {/* Share & QR Code Section */}
+      {/* QR Code & Share Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.5 }}
-        className="flex flex-col sm:flex-row items-center gap-6 mt-2"
+        className="flex flex-col items-center gap-4 mt-2"
       >
+        {/* QR Code - Above Share Button */}
+        <div className="flex flex-col items-center gap-2" data-testid="qr-code-section">
+          <div className="bg-white p-2 rounded-xl shadow-card" data-testid="qr-code">
+            <img 
+              src={QR_CODE_URL} 
+              alt="QR Code" 
+              className="w-20 h-20"
+            />
+          </div>
+          <p className="text-xs text-[#888]">Scan to visit</p>
+        </div>
+
+        {/* Share Button - Below QR Code */}
         <button
           onClick={handleShare}
           disabled={shareLoading}
@@ -279,17 +292,6 @@ export default function LandingPage() {
           <Share2 className="w-4 h-4" />
           {shareLoading ? "Sharing..." : "Share Thrifty Curator"}
         </button>
-
-        <div className="flex items-center gap-3">
-          <p className="text-xs text-[#888]">Scan to visit</p>
-          <div className="bg-white p-1.5 rounded-lg shadow-card" data-testid="qr-code">
-            <img 
-              src={QR_CODE_URL} 
-              alt="QR Code" 
-              className="w-16 h-16"
-            />
-          </div>
-        </div>
       </motion.div>
     </div>
   );
