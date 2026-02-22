@@ -6,11 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const ITEM_TYPES = [
+  { id: "dress", label: "Dress" },
+  { id: "top", label: "Top" },
+  { id: "jeans", label: "Jeans" },
+  { id: "outerwear", label: "Outerwear" },
+  { id: "shoes", label: "Shoes" },
+  { id: "accessories", label: "Accessories" },
+  { id: "other", label: "Other" },
+];
 
 const CLOTHING_BRANDS = "Spanx, Lululemon, Athleta, Beyond Yoga, Miss Me, Torrid, Tory Burch, Gymshark, Honeylove, Rock Revival, Eileen Fisher, Flax, Free People, Diane Von Furstenberg, Patagonia, The North Face, Harley Davidson, St. John, Everlane, Rag & Bone, Alice + Olivia, Nike, Coach, Michael Kors, Barefoot Dreams, Madewell, Lilly Pulitzer, Kate Spade, Anthropologie, Johnny Was, Farm Rio, Maeve, CVG, No Bull, Coach, ZYIA, Feed me fight me, Figs, Vuori, Alphalete, Buff Bunny, SheFit, Vineyard Vines, Kuhl, Carhartt, Skims, Boden, Levi, Mother Jeans, Agolde, 7 for all mankind, Men's Rock Revival, AYR jeans, Frank & Eileen, Veronica Beard, Birddogs, kerrits.";
 
@@ -21,6 +32,8 @@ export default function ConsignmentInquiryForm() {
     full_name: "",
     email: "",
     phone: "",
+    item_types: [],
+    other_item_type: "",
     item_description: "",
     item_condition: ""
   });
@@ -33,6 +46,21 @@ export default function ConsignmentInquiryForm() {
 
   const handleSelectChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
+  };
+
+  const handleItemTypeChange = (typeId, checked) => {
+    if (checked) {
+      setFormData({
+        ...formData,
+        item_types: [...formData.item_types, typeId]
+      });
+    } else {
+      setFormData({
+        ...formData,
+        item_types: formData.item_types.filter(t => t !== typeId),
+        other_item_type: typeId === "other" ? "" : formData.other_item_type
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -170,6 +198,39 @@ export default function ConsignmentInquiryForm() {
             className="form-input"
             data-testid="input-phone"
           />
+        </div>
+
+        <div className="form-group">
+          <Label className="form-label">Type of Clothing *</Label>
+          <p className="text-sm text-[#888] mb-3">Select all that apply</p>
+          <div className="grid grid-cols-2 gap-3">
+            {ITEM_TYPES.map((type) => (
+              <div key={type.id} className="flex items-center gap-3">
+                <Checkbox
+                  id={`type-${type.id}`}
+                  checked={formData.item_types.includes(type.id)}
+                  onCheckedChange={(checked) => handleItemTypeChange(type.id, checked)}
+                  data-testid={`item-type-${type.id}`}
+                />
+                <Label htmlFor={`type-${type.id}`} className="text-sm text-[#4a4a4a] cursor-pointer font-normal">
+                  {type.label}
+                </Label>
+              </div>
+            ))}
+          </div>
+          {formData.item_types.includes("other") && (
+            <div className="mt-3">
+              <Input
+                type="text"
+                name="other_item_type"
+                value={formData.other_item_type}
+                onChange={handleChange}
+                placeholder="Please specify other item type"
+                className="form-input"
+                data-testid="input-other-item-type"
+              />
+            </div>
+          )}
         </div>
 
         <div className="form-group">

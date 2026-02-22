@@ -94,6 +94,8 @@ class ConsignmentInquiry(BaseModel):
     full_name: str
     email: EmailStr
     phone: str
+    item_types: List[str] = []
+    other_item_type: str = ""
     item_description: str
     item_condition: str
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
