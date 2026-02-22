@@ -342,6 +342,104 @@ export default function AdminDashboard() {
     }
   };
 
+  // Payroll handlers
+  const handleGeneratePayrollReport = async () => {
+    setPayrollLoading(true);
+    try {
+      const payload = {
+        period_type: payrollFilters.period_type,
+        period_index: parseInt(payrollFilters.period_index) || 0,
+        hourly_rate: parseFloat(payrollFilters.hourly_rate) || null,
+        employee_id: payrollFilters.employee_id || null
+      };
+      
+      if (payrollFilters.period_type === "custom") {
+        payload.start_date = payrollFilters.custom_start;
+        payload.end_date = payrollFilters.custom_end;
+      }
+
+      const response = await axios.post(`${API}/admin/payroll/report`, payload, getAuthHeader());
+      setPayrollReport(response.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to generate payroll report");
+    } finally {
+      setPayrollLoading(false);
+    }
+  };
+
+  const handleDownloadPayrollPDF = async () => {
+    try {
+      const payload = {
+        period_type: payrollFilters.period_type,
+        period_index: parseInt(payrollFilters.period_index) || 0,
+        hourly_rate: parseFloat(payrollFilters.hourly_rate) || null,
+        employee_id: payrollFilters.employee_id || null
+      };
+      
+      if (payrollFilters.period_type === "custom") {
+        payload.start_date = payrollFilters.custom_start;
+        payload.end_date = payrollFilters.custom_end;
+      }
+
+      const response = await axios.post(`${API}/admin/payroll/report/pdf`, payload, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `payroll_report.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("PDF downloaded!");
+    } catch (error) {
+      toast.error("Failed to download PDF");
+    }
+  };
+
+  const handleSavePayrollSettings = async (e) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    try {
+      await axios.put(`${API}/admin/payroll/settings`, {
+        id: "payroll_settings",
+        pay_period_start_date: payrollSettings.pay_period_start_date,
+        default_hourly_rate: parseFloat(payrollSettings.default_hourly_rate) || 15.00
+      }, getAuthHeader());
+      
+      toast.success("Payroll settings saved!");
+      setShowPayrollSettings(false);
+    } catch (error) {
+      toast.error("Failed to save settings");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const getPeriodLabel = (periodType, periodIndex) => {
+    const index = parseInt(periodIndex);
+    if (periodType === "biweekly") {
+      if (index === 0) return "Current Pay Period";
+      if (index === -1) return "Last Pay Period";
+      if (index === -2) return "2 Periods Ago";
+      return `${Math.abs(index)} Periods ${index > 0 ? 'From Now' : 'Ago'}`;
+    }
+    if (periodType === "monthly") {
+      const date = new Date();
+      date.setMonth(date.getMonth() + index);
+      return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+    }
+    if (periodType === "yearly") {
+      return (new Date().getFullYear() + index).toString();
+    }
+    return "Custom Period";
+  };
+
   const handleGenerateReport = async () => {
     setReportLoading(true);
     try {
