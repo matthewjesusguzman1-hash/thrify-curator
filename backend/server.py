@@ -223,7 +223,7 @@ async def send_clock_notification_email(
 ):
     """Send email notification to admin for clock in/out events"""
     if not RESEND_API_KEY or RESEND_API_KEY == 're_123_placeholder':
-        logger.info(f"Email notification skipped - no valid Resend API key configured")
+        logger.info("Email notification skipped - no valid Resend API key configured")
         return None
     
     # Format timestamp
