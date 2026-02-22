@@ -53,11 +53,11 @@ const platforms = [
     description: "Find us on Depop"
   },
   { 
-    name: "Facebook", 
+    name: "Facebook Marketplace", 
     icon: SiFacebook, 
-    url: "https://www.facebook.com/share/1DeqtsKL85/?mibextid=wwXIfr", 
+    url: "https://www.facebook.com/marketplace/profile/517375094/?ref=permalink&mibextid=wwXIfr&rdid=zWeU8ozpYg7I0AC7&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1DeqtsKL85%2F%3Fmibextid%3DwwXIfr#", 
     color: "#1877F2",
-    description: "Follow us on Facebook"
+    description: "Shop on Facebook Marketplace"
   },
 ];
 
