@@ -33,7 +33,7 @@ export default function AdminDashboard() {
     by_employee: []
   });
   const [showAddEmployee, setShowAddEmployee] = useState(false);
-  const [newEmployee, setNewEmployee] = useState({ name: "", email: "", password: "" });
+  const [newEmployee, setNewEmployee] = useState({ name: "", email: "" });
   const [addingEmployee, setAddingEmployee] = useState(false);
 
   useEffect(() => {
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
     try {
       await axios.post(`${API}/admin/create-employee`, newEmployee, getAuthHeader());
       toast.success(`Employee ${newEmployee.name} created successfully!`);
-      setNewEmployee({ name: "", email: "", password: "" });
+      setNewEmployee({ name: "", email: "" });
       setShowAddEmployee(false);
       fetchData();
     } catch (error) {
@@ -222,20 +222,7 @@ export default function AdminDashboard() {
                       className="form-input"
                       data-testid="new-employee-email"
                     />
-                  </div>
-
-                  <div className="form-group">
-                    <Label className="form-label">Password *</Label>
-                    <Input
-                      type="text"
-                      value={newEmployee.password}
-                      onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
-                      required
-                      placeholder="Create a password"
-                      className="form-input"
-                      minLength={6}
-                      data-testid="new-employee-password"
-                    />
+                    <p className="text-xs text-[#888] mt-1">This email will be used for login</p>
                   </div>
 
                   <div className="flex gap-3 mt-6">

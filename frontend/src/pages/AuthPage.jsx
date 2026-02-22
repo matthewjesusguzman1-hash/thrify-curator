@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, LogIn, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const [loginData, setLoginData] = useState({ email: "", password: "" });
-  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
@@ -21,7 +20,7 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API}/auth/login`, loginData);
+      const response = await axios.post(`${API}/auth/login`, { email });
       const { access_token, user } = response.data;
       
       localStorage.setItem("token", access_token);
@@ -64,35 +63,13 @@ export default function AuthPage() {
               <Label className="form-label">Email</Label>
               <Input
                 type="email"
-                value={loginData.email}
-                onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="your@email.com"
                 className="form-input"
                 data-testid="login-email"
               />
-            </div>
-
-            <div className="form-group">
-              <Label className="form-label">Password</Label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={loginData.password}
-                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                  required
-                  placeholder="Enter your password"
-                  className="form-input pr-10"
-                  data-testid="login-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#666]"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
             </div>
 
             <Button
