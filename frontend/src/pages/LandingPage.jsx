@@ -15,12 +15,15 @@ import {
   Clock,
   ShoppingBag,
   Tag,
-  Sparkles
+  Sparkles,
+  QrCode
 } from "lucide-react";
 import { toast } from "sonner";
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_c38502d5-e3cd-4d12-bde1-7a8331411fc2/artifacts/calba8ly_IMG_0042.jpg";
 const TIKTOK_URL = "https://www.tiktok.com/@thrifty_curator?_r=1&_t=ZP-93ukKuigAtq";
+const APP_URL = typeof window !== 'undefined' ? window.location.origin : '';
+const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(APP_URL)}`;
 
 // Platform data
 const platforms = [
@@ -285,19 +288,34 @@ export default function LandingPage() {
         </motion.div>
       </motion.div>
 
-      {/* Share Button */}
-      <motion.button
+      {/* Share & QR Code Section */}
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.5 }}
-        onClick={handleShare}
-        disabled={shareLoading}
-        className="btn-primary flex items-center gap-2 mt-4"
-        data-testid="share-button"
+        className="flex flex-col items-center gap-4 mt-4"
       >
-        <Share2 className="w-4 h-4" />
-        {shareLoading ? "Sharing..." : "Share Thrifty Curator"}
-      </motion.button>
+        <button
+          onClick={handleShare}
+          disabled={shareLoading}
+          className="btn-primary flex items-center gap-2"
+          data-testid="share-button"
+        >
+          <Share2 className="w-4 h-4" />
+          {shareLoading ? "Sharing..." : "Share Thrifty Curator"}
+        </button>
+
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm text-[#888]">Scan to visit</p>
+          <div className="bg-white p-2 rounded-xl shadow-card" data-testid="qr-code">
+            <img 
+              src={QR_CODE_URL} 
+              alt="QR Code to Thrifty Curator" 
+              className="w-24 h-24"
+            />
+          </div>
+        </div>
+      </motion.div>
 
       {/* Footer */}
       <motion.footer
