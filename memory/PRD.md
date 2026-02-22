@@ -57,6 +57,11 @@ Build a "Thrifty Curator" reselling application with:
 - [x] Admin can delete employee time entries
 - [x] Auto-calculation of total hours when editing
 - [x] Admin can create manual time entries for employees (retroactive/off-site work)
+- [x] Biweekly work period tracker with payroll reports
+- [x] Payroll reports: biweekly, monthly, yearly, or custom date range
+- [x] PDF export for payroll reports
+- [x] Hourly rate configuration and wage calculations
+- [x] Configurable pay period start date
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
