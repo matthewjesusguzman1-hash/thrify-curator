@@ -588,6 +588,29 @@ async def delete_employee(employee_id: str, admin: dict = Depends(get_admin_user
     
     return {"message": "Employee deleted successfully"}
 
+class UpdateEmployeeRate(BaseModel):
+    hourly_rate: float
+
+@api_router.put("/admin/employees/{employee_id}/rate")
+async def update_employee_rate(employee_id: str, rate_data: UpdateEmployeeRate, admin: dict = Depends(get_admin_user)):
+    """Update an employee's individual hourly rate"""
+    # Check if employee exists
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if rate_data.hourly_rate < 0:
+        raise HTTPException(status_code=400, detail="Hourly rate cannot be negative")
+    
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": {"hourly_rate": rate_data.hourly_rate}}
+    )
+    
+    # Return updated employee
+    updated = await db.users.find_one({"id": employee_id}, {"_id": 0, "password_hash": 0})
+    return UserResponse(**updated)
+
 class ReportRequest(BaseModel):
     start_date: str
     end_date: str
