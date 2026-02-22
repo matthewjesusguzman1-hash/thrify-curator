@@ -60,6 +60,16 @@ export default function AdminDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+  
+  // Edit time entry state
+  const [showEditEntry, setShowEditEntry] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    clock_in: "",
+    clock_out: "",
+    total_hours: ""
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
