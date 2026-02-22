@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   SiEbay, 
-  SiPoshmark, 
   SiFacebook, 
   SiTiktok 
 } from "react-icons/si";
@@ -14,7 +13,9 @@ import {
   ClipboardCheck, 
   ChevronRight,
   Clock,
-  ShoppingBag
+  ShoppingBag,
+  Tag,
+  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,7 +33,7 @@ const platforms = [
   },
   { 
     name: "Poshmark", 
-    icon: SiPoshmark, 
+    icon: Tag, 
     url: "https://poshmark.com", 
     color: "#7F0353",
     description: "Follow us on Poshmark"
@@ -46,7 +47,7 @@ const platforms = [
   },
   { 
     name: "Depop", 
-    icon: ShoppingBag, 
+    icon: Sparkles, 
     url: "https://www.depop.com", 
     color: "#FF2300",
     description: "Find us on Depop"
