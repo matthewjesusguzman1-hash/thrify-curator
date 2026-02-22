@@ -155,7 +155,8 @@ class TestPayrollEndpoints:
         assert "end_formatted" in data["period"]
         
         # Settings
-        assert "hourly_rate" in data["settings"]
+        assert "default_hourly_rate" in data["settings"]
+        assert data["settings"].get("uses_individual_rates") == True
         
         # Summary
         assert "total_employees" in data["summary"]
@@ -275,15 +276,16 @@ class TestPayrollEndpoints:
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         
         data = response.json()
-        assert data["settings"]["hourly_rate"] == override_rate
+        assert data["settings"]["default_hourly_rate"] == override_rate
         
-        # Verify wages are calculated with override rate
+        # Verify wages are calculated correctly (individual rates override default)
         if len(data["employees"]) > 0:
             emp = data["employees"][0]
-            expected_wages = round(emp["total_hours"] * override_rate, 2)
-            assert emp["gross_wages"] == expected_wages, f"Wages should be calculated with override rate"
+            # Wages use employee's individual rate or the default rate
+            expected_wages = round(emp["total_hours"] * emp["hourly_rate"], 2)
+            assert emp["gross_wages"] == expected_wages, f"Wages should be calculated with employee rate"
         
-        print(f"Verified hourly rate override: ${override_rate}")
+        print(f"Verified default hourly rate override: ${override_rate}")
     
     def test_report_with_employee_filter(self):
         """POST /api/admin/payroll/report filters by employee_id"""
