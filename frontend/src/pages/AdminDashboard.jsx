@@ -444,6 +444,27 @@ export default function AdminDashboard() {
     return "Custom Period";
   };
 
+  const handleUpdateEmployeeRate = async (employeeId) => {
+    const rate = parseFloat(editingRateValue);
+    if (isNaN(rate) || rate < 0) {
+      toast.error("Please enter a valid hourly rate");
+      return;
+    }
+    
+    try {
+      await axios.put(`${API}/admin/employees/${employeeId}/rate`, {
+        hourly_rate: rate
+      }, getAuthHeader());
+      
+      toast.success("Hourly rate updated!");
+      setEditingRateId(null);
+      setEditingRateValue("");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to update rate");
+    }
+  };
+
   const handleGenerateReport = async () => {
     setReportLoading(true);
     try {
