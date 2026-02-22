@@ -159,11 +159,12 @@ export default function AdminDashboard() {
     setUser(parsedUser);
     fetchData();
     fetchNotifications();
+    fetchPayrollSettings();
     
     // Poll for new notifications every 30 seconds
     const pollInterval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(pollInterval);
-  }, [navigate, fetchNotifications]);
+  }, [navigate, fetchNotifications, fetchPayrollSettings]);
 
   const fetchData = async () => {
     try {
