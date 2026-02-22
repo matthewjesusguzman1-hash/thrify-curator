@@ -91,7 +91,7 @@ export default function AuthPage() {
               className="block text-center text-xs text-[#999] hover:text-[#D48C9E] mt-3 transition-colors"
               data-testid="admin-portal-link"
             >
-              Admin Portal
+              Admin? Sign in with your admin email above
             </Link>
           </form>
 
