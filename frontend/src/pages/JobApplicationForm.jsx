@@ -81,7 +81,7 @@ export default function JobApplicationForm() {
             Application Received!
           </h2>
           <p className="text-[#666] mb-6">
-            Thank you for your interest in joining Thrifty Curator. We'll review your application and get back to you soon.
+            Thank you for your interest in joining our team. We'll review your application and get back to you soon.
           </p>
           <Link to="/">
             <Button className="btn-primary" data-testid="back-to-home-btn">
@@ -109,7 +109,7 @@ export default function JobApplicationForm() {
           <Briefcase className="w-8 h-8 text-[#D48C9E]" />
         </div>
         <h1 className="form-title">Job Application</h1>
-        <p className="form-subtitle">Join the Thrifty Curator team</p>
+        <p className="form-subtitle">Join our team</p>
       </motion.div>
 
       <motion.form
@@ -189,7 +189,7 @@ export default function JobApplicationForm() {
         </div>
 
         <div className="form-group">
-          <Label className="form-label">Why do you want to join Thrifty Curator? *</Label>
+          <Label className="form-label">Why do you want to join our team? *</Label>
           <Textarea
             name="why_join"
             value={formData.why_join}
