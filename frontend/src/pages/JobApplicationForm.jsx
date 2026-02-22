@@ -37,6 +37,20 @@ export default function JobApplicationForm() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleTaskChange = (taskId, checked) => {
+    if (checked) {
+      setFormData({
+        ...formData,
+        tasks_able_to_perform: [...formData.tasks_able_to_perform, taskId]
+      });
+    } else {
+      setFormData({
+        ...formData,
+        tasks_able_to_perform: formData.tasks_able_to_perform.filter(t => t !== taskId)
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
