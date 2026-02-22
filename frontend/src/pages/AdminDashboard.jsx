@@ -91,11 +91,12 @@ export default function AdminDashboard() {
 
     setUser(parsedUser);
     fetchData();
-  }, [navigate]);
-
-  const getAuthHeader = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-  });
+    fetchNotifications();
+    
+    // Poll for new notifications every 30 seconds
+    const pollInterval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(pollInterval);
+  }, [navigate, fetchNotifications]);
 
   const fetchData = async () => {
     try {
@@ -115,6 +116,43 @@ export default function AdminDashboard() {
         navigate("/login");
       }
     }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await axios.post(`${API}/admin/notifications/mark-read`, {}, getAuthHeader());
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+      toast.success("All notifications marked as read");
+    } catch (error) {
+      toast.error("Failed to mark notifications as read");
+    }
+  };
+
+  const handleClearNotifications = async () => {
+    try {
+      await axios.delete(`${API}/admin/notifications`, getAuthHeader());
+      setNotifications([]);
+      setUnreadCount(0);
+      toast.success("All notifications cleared");
+    } catch (error) {
+      toast.error("Failed to clear notifications");
+    }
+  };
+
+  const formatNotificationTime = (isoString) => {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   };
 
   const handleAddEmployee = async (e) => {
