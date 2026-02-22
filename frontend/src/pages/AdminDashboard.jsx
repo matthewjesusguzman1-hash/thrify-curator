@@ -82,6 +82,25 @@ export default function AdminDashboard() {
     clock_out: ""
   });
   const [addingEntry, setAddingEntry] = useState(false);
+  
+  // Payroll state
+  const [showPayroll, setShowPayroll] = useState(false);
+  const [payrollSettings, setPayrollSettings] = useState({
+    pay_period_start_date: "",
+    default_hourly_rate: 15.00
+  });
+  const [payrollFilters, setPayrollFilters] = useState({
+    period_type: "biweekly",
+    period_index: 0,
+    hourly_rate: "",
+    employee_id: "",
+    custom_start: "",
+    custom_end: ""
+  });
+  const [payrollReport, setPayrollReport] = useState(null);
+  const [payrollLoading, setPayrollLoading] = useState(false);
+  const [showPayrollSettings, setShowPayrollSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
@@ -94,6 +113,19 @@ export default function AdminDashboard() {
       setUnreadCount(response.data.unread_count);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
+    }
+  }, [getAuthHeader]);
+
+  const fetchPayrollSettings = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/payroll/settings`, getAuthHeader());
+      setPayrollSettings(response.data);
+      setPayrollFilters(prev => ({
+        ...prev,
+        hourly_rate: response.data.default_hourly_rate?.toString() || "15.00"
+      }));
+    } catch (error) {
+      console.error("Failed to fetch payroll settings:", error);
     }
   }, [getAuthHeader]);
 
