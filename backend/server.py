@@ -330,6 +330,87 @@ async def get_all_employees(admin: dict = Depends(get_admin_user)):
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(100)
     return [UserResponse(**u) for u in users]
 
+@api_router.delete("/admin/employees/{employee_id}")
+async def delete_employee(employee_id: str, admin: dict = Depends(get_admin_user)):
+    # Don't allow deleting yourself
+    if employee_id == admin["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    # Check if employee exists
+    employee = await db.users.find_one({"id": employee_id})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Delete employee
+    await db.users.delete_one({"id": employee_id})
+    
+    # Also delete their time entries
+    await db.time_entries.delete_many({"user_id": employee_id})
+    
+    return {"message": "Employee deleted successfully"}
+
+class ReportRequest(BaseModel):
+    start_date: str
+    end_date: str
+    employee_id: Optional[str] = None
+
+@api_router.post("/admin/reports")
+async def generate_report(report_req: ReportRequest, admin: dict = Depends(get_admin_user)):
+    # Parse dates
+    try:
+        start = datetime.fromisoformat(report_req.start_date.replace('Z', '+00:00'))
+        end = datetime.fromisoformat(report_req.end_date.replace('Z', '+00:00'))
+    except:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    # Build query
+    query = {
+        "clock_in": {"$gte": start.isoformat(), "$lte": end.isoformat()},
+        "total_hours": {"$ne": None}
+    }
+    
+    if report_req.employee_id:
+        query["user_id"] = report_req.employee_id
+    
+    entries = await db.time_entries.find(query, {"_id": 0}).to_list(1000)
+    
+    # Group by employee
+    employee_data = {}
+    for entry in entries:
+        uid = entry["user_id"]
+        if uid not in employee_data:
+            employee_data[uid] = {
+                "user_id": uid,
+                "name": entry["user_name"],
+                "total_hours": 0,
+                "shifts": [],
+                "shift_count": 0
+            }
+        employee_data[uid]["total_hours"] += entry.get("total_hours", 0)
+        employee_data[uid]["shift_count"] += 1
+        employee_data[uid]["shifts"].append({
+            "clock_in": entry["clock_in"],
+            "clock_out": entry["clock_out"],
+            "hours": entry.get("total_hours", 0)
+        })
+    
+    # Calculate totals
+    total_hours = sum(e["total_hours"] for e in employee_data.values())
+    total_shifts = sum(e["shift_count"] for e in employee_data.values())
+    
+    return {
+        "period": {
+            "start": report_req.start_date,
+            "end": report_req.end_date
+        },
+        "summary": {
+            "total_hours": round(total_hours, 2),
+            "total_shifts": total_shifts,
+            "employee_count": len(employee_data)
+        },
+        "by_employee": list(employee_data.values())
+    }
+
 @api_router.get("/admin/time-entries", response_model=List[TimeEntry])
 async def get_all_time_entries(admin: dict = Depends(get_admin_user)):
     entries = await db.time_entries.find({}, {"_id": 0}).sort("clock_in", -1).to_list(500)
