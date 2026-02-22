@@ -96,6 +96,10 @@ Build a "Thrifty Curator" reselling application with:
 - `PUT /api/admin/time-entries/{id}` - Edit time entry
 - `DELETE /api/admin/time-entries/{id}` - Delete time entry
 - `POST /api/admin/reports` - Generate shift reports
+- `GET /api/admin/payroll/settings` - Get payroll settings
+- `PUT /api/admin/payroll/settings` - Update payroll settings
+- `POST /api/admin/payroll/report` - Generate payroll report (JSON)
+- `POST /api/admin/payroll/report/pdf` - Generate payroll report (PDF)
 
 ## Key Credentials
 - **Admin Email**: matthewjesusguzman1@gmail.com (no password needed)
