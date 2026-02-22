@@ -668,6 +668,52 @@ async def get_admin_summary(admin: dict = Depends(get_admin_user)):
         "by_employee": [{"user_id": k, **v} for k, v in user_hours.items()]
     }
 
+# ==================== Admin Notifications Routes ====================
+
+@api_router.get("/admin/notifications")
+async def get_admin_notifications(admin: dict = Depends(get_admin_user), limit: int = 50):
+    """Get recent notifications for admin"""
+    notifications = await db.admin_notifications.find(
+        {}, {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    
+    unread_count = await db.admin_notifications.count_documents({"read": False})
+    
+    return {
+        "notifications": notifications,
+        "unread_count": unread_count
+    }
+
+@api_router.post("/admin/notifications/mark-read")
+async def mark_notifications_read(admin: dict = Depends(get_admin_user), notification_ids: List[str] = None):
+    """Mark notifications as read"""
+    if notification_ids:
+        await db.admin_notifications.update_many(
+            {"id": {"$in": notification_ids}},
+            {"$set": {"read": True}}
+        )
+    else:
+        # Mark all as read
+        await db.admin_notifications.update_many(
+            {"read": False},
+            {"$set": {"read": True}}
+        )
+    return {"message": "Notifications marked as read"}
+
+@api_router.delete("/admin/notifications/{notification_id}")
+async def delete_notification(notification_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a specific notification"""
+    result = await db.admin_notifications.delete_one({"id": notification_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification deleted"}
+
+@api_router.delete("/admin/notifications")
+async def clear_all_notifications(admin: dict = Depends(get_admin_user)):
+    """Clear all notifications"""
+    await db.admin_notifications.delete_many({})
+    return {"message": "All notifications cleared"}
+
 # ==================== Form Submission Routes ====================
 
 @api_router.post("/forms/job-application", response_model=JobApplication)
