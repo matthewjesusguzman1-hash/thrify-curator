@@ -70,6 +70,15 @@ export default function AdminDashboard() {
     total_hours: ""
   });
   const [savingEdit, setSavingEdit] = useState(false);
+  
+  // Add time entry state
+  const [showAddEntry, setShowAddEntry] = useState(false);
+  const [newEntryData, setNewEntryData] = useState({
+    employee_id: "",
+    clock_in: "",
+    clock_out: ""
+  });
+  const [addingEntry, setAddingEntry] = useState(false);
 
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
