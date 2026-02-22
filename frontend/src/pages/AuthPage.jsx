@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, LogIn } from "lucide-react";
@@ -14,6 +14,39 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const token = localStorage.getItem("token");
+      const userData = localStorage.getItem("user");
+      
+      if (token && userData) {
+        try {
+          // Verify token is still valid
+          await axios.get(`${API}/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          const user = JSON.parse(userData);
+          if (user.role === "admin") {
+            navigate("/admin");
+          } else {
+            navigate("/dashboard");
+          }
+          return;
+        } catch (error) {
+          // Token invalid, clear storage
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+        }
+      }
+      setCheckingSession(false);
+    };
+
+    checkExistingSession();
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -39,6 +72,17 @@ export default function AuthPage() {
       setLoading(false);
     }
   };
+
+  // Show loading while checking session
+  if (checkingSession) {
+    return (
+      <div className="auth-container">
+        <div className="text-center">
+          <p className="text-[#888]">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-container" data-testid="auth-page">
