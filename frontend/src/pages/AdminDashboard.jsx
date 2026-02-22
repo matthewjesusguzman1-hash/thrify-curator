@@ -209,6 +209,67 @@ export default function AdminDashboard() {
     }
   };
 
+  // Edit time entry handlers
+  const handleEditEntry = (entry) => {
+    setEditingEntry(entry);
+    // Convert ISO strings to local datetime-local input format
+    const formatForInput = (isoString) => {
+      if (!isoString) return "";
+      const date = new Date(isoString);
+      return date.toISOString().slice(0, 16);
+    };
+    setEditFormData({
+      clock_in: formatForInput(entry.clock_in),
+      clock_out: formatForInput(entry.clock_out),
+      total_hours: entry.total_hours?.toString() || ""
+    });
+    setShowEditEntry(true);
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    setSavingEdit(true);
+
+    try {
+      const updateData = {};
+      if (editFormData.clock_in) {
+        updateData.clock_in = new Date(editFormData.clock_in).toISOString();
+      }
+      if (editFormData.clock_out) {
+        updateData.clock_out = new Date(editFormData.clock_out).toISOString();
+      }
+
+      await axios.put(
+        `${API}/admin/time-entries/${editingEntry.id}`,
+        updateData,
+        getAuthHeader()
+      );
+      
+      toast.success("Time entry updated successfully!");
+      setShowEditEntry(false);
+      setEditingEntry(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to update time entry");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteEntry = async (entryId) => {
+    if (!window.confirm("Are you sure you want to delete this time entry?")) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API}/admin/time-entries/${entryId}`, getAuthHeader());
+      toast.success("Time entry deleted");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete time entry");
+    }
+  };
+
   const handleGenerateReport = async () => {
     setReportLoading(true);
     try {
