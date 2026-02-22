@@ -9,9 +9,13 @@ import {
   Calendar,
   User,
   Home,
-  Shield
+  Shield,
+  UserPlus,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -28,6 +32,9 @@ export default function AdminDashboard() {
     total_shifts: 0,
     by_employee: []
   });
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [newEmployee, setNewEmployee] = useState({ name: "", email: "", password: "" });
+  const [addingEmployee, setAddingEmployee] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -70,6 +77,23 @@ export default function AdminDashboard() {
         localStorage.removeItem("user");
         navigate("/login");
       }
+    }
+  };
+
+  const handleAddEmployee = async (e) => {
+    e.preventDefault();
+    setAddingEmployee(true);
+
+    try {
+      await axios.post(`${API}/admin/create-employee`, newEmployee, getAuthHeader());
+      toast.success(`Employee ${newEmployee.name} created successfully!`);
+      setNewEmployee({ name: "", email: "", password: "" });
+      setShowAddEmployee(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to create employee");
+    } finally {
+      setAddingEmployee(false);
     }
   };
 
@@ -136,7 +160,106 @@ export default function AdminDashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          <h1 className="font-playfair text-2xl font-bold text-[#333]">Admin Dashboard</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="font-playfair text-2xl font-bold text-[#333]">Admin Dashboard</h1>
+            <Button 
+              onClick={() => setShowAddEmployee(true)}
+              className="btn-primary flex items-center gap-2"
+              data-testid="add-employee-btn"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Employee
+            </Button>
+          </div>
+
+          {/* Add Employee Modal */}
+          {showAddEmployee && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowAddEmployee(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="add-employee-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Add New Employee</h2>
+                  <button
+                    onClick={() => setShowAddEmployee(false)}
+                    className="text-[#999] hover:text-[#666]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAddEmployee}>
+                  <div className="form-group">
+                    <Label className="form-label">Full Name *</Label>
+                    <Input
+                      type="text"
+                      value={newEmployee.name}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                      required
+                      placeholder="Employee name"
+                      className="form-input"
+                      data-testid="new-employee-name"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <Label className="form-label">Email *</Label>
+                    <Input
+                      type="email"
+                      value={newEmployee.email}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                      required
+                      placeholder="employee@email.com"
+                      className="form-input"
+                      data-testid="new-employee-email"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <Label className="form-label">Password *</Label>
+                    <Input
+                      type="text"
+                      value={newEmployee.password}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                      required
+                      placeholder="Create a password"
+                      className="form-input"
+                      minLength={6}
+                      data-testid="new-employee-password"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowAddEmployee(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={addingEmployee}
+                      className="btn-primary flex-1"
+                      data-testid="submit-new-employee-btn"
+                    >
+                      {addingEmployee ? "Creating..." : "Create Employee"}
+                    </Button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
