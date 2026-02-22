@@ -11,11 +11,15 @@ import {
   Home,
   Shield,
   UserPlus,
-  X
+  X,
+  Trash2,
+  FileText,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -35,6 +39,16 @@ export default function AdminDashboard() {
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [newEmployee, setNewEmployee] = useState({ name: "", email: "" });
   const [addingEmployee, setAddingEmployee] = useState(false);
+  
+  // Report state
+  const [showReport, setShowReport] = useState(false);
+  const [reportData, setReportData] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportFilters, setReportFilters] = useState({
+    start_date: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+    end_date: new Date().toISOString().split('T')[0],
+    employee_id: ""
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -97,6 +111,36 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteEmployee = async (employeeId, employeeName) => {
+    if (!window.confirm(`Are you sure you want to delete ${employeeName}? This will also delete all their time entries.`)) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API}/admin/employees/${employeeId}`, getAuthHeader());
+      toast.success(`${employeeName} has been removed`);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete employee");
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    setReportLoading(true);
+    try {
+      const response = await axios.post(`${API}/admin/reports`, {
+        start_date: reportFilters.start_date,
+        end_date: reportFilters.end_date,
+        employee_id: reportFilters.employee_id || null
+      }, getAuthHeader());
+      setReportData(response.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to generate report");
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -111,6 +155,14 @@ export default function AdminDashboard() {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
+    });
+  };
+
+  const formatDate = (isoString) => {
+    return new Date(isoString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 
@@ -160,16 +212,27 @@ export default function AdminDashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="font-playfair text-2xl font-bold text-[#333]">Admin Dashboard</h1>
-            <Button 
-              onClick={() => setShowAddEmployee(true)}
-              className="btn-primary flex items-center gap-2"
-              data-testid="add-employee-btn"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add Employee
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowReport(true)}
+                variant="outline"
+                className="flex items-center gap-2"
+                data-testid="run-report-btn"
+              >
+                <FileText className="w-4 h-4" />
+                Run Report
+              </Button>
+              <Button 
+                onClick={() => setShowAddEmployee(true)}
+                className="btn-primary flex items-center gap-2"
+                data-testid="add-employee-btn"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Employee
+              </Button>
+            </div>
           </div>
 
           {/* Add Employee Modal */}
@@ -244,6 +307,148 @@ export default function AdminDashboard() {
                     </Button>
                   </div>
                 </form>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Report Modal */}
+          {showReport && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+              onClick={() => { setShowReport(false); setReportData(null); }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-xl my-8"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="report-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Shift Report</h2>
+                  <button
+                    onClick={() => { setShowReport(false); setReportData(null); }}
+                    className="text-[#999] hover:text-[#666]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Report Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div>
+                    <Label className="form-label">Start Date</Label>
+                    <Input
+                      type="date"
+                      value={reportFilters.start_date}
+                      onChange={(e) => setReportFilters({ ...reportFilters, start_date: e.target.value })}
+                      className="form-input"
+                      data-testid="report-start-date"
+                    />
+                  </div>
+                  <div>
+                    <Label className="form-label">End Date</Label>
+                    <Input
+                      type="date"
+                      value={reportFilters.end_date}
+                      onChange={(e) => setReportFilters({ ...reportFilters, end_date: e.target.value })}
+                      className="form-input"
+                      data-testid="report-end-date"
+                    />
+                  </div>
+                  <div>
+                    <Label className="form-label">Employee (Optional)</Label>
+                    <Select
+                      value={reportFilters.employee_id}
+                      onValueChange={(value) => setReportFilters({ ...reportFilters, employee_id: value })}
+                    >
+                      <SelectTrigger className="form-input" data-testid="report-employee-select">
+                        <SelectValue placeholder="All Employees" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Employees</SelectItem>
+                        {employees.filter(e => e.role !== 'admin').map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleGenerateReport}
+                  disabled={reportLoading}
+                  className="btn-primary w-full mb-6"
+                  data-testid="generate-report-btn"
+                >
+                  {reportLoading ? "Generating..." : "Generate Report"}
+                </Button>
+
+                {/* Report Results */}
+                {reportData && (
+                  <div className="space-y-6">
+                    {/* Summary */}
+                    <div className="bg-[#F9F6F7] rounded-xl p-4">
+                      <h3 className="font-semibold text-[#333] mb-3">Report Summary</h3>
+                      <p className="text-sm text-[#666] mb-2">
+                        Period: {formatDate(reportData.period.start)} - {formatDate(reportData.period.end)}
+                      </p>
+                      <div className="grid grid-cols-3 gap-4 mt-4">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-[#333]">{reportData.summary.total_hours}</p>
+                          <p className="text-xs text-[#888]">Total Hours</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-[#333]">{reportData.summary.total_shifts}</p>
+                          <p className="text-xs text-[#888]">Total Shifts</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-[#333]">{reportData.summary.employee_count}</p>
+                          <p className="text-xs text-[#888]">Employees</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* By Employee Breakdown */}
+                    {reportData.by_employee.length > 0 ? (
+                      <div>
+                        <h3 className="font-semibold text-[#333] mb-3">By Employee</h3>
+                        <div className="space-y-4">
+                          {reportData.by_employee.map((emp) => (
+                            <div key={emp.user_id} className="border border-[#F8C8DC]/30 rounded-xl p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
+                                    <User className="w-4 h-4 text-[#D48C9E]" />
+                                  </div>
+                                  <span className="font-medium text-[#333]">{emp.name}</span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold text-[#333]">{emp.total_hours.toFixed(2)} hrs</p>
+                                  <p className="text-xs text-[#888]">{emp.shift_count} shifts</p>
+                                </div>
+                              </div>
+                              <div className="space-y-2 max-h-40 overflow-y-auto">
+                                {emp.shifts.map((shift, idx) => (
+                                  <div key={idx} className="flex justify-between text-sm bg-[#F9F6F7] rounded-lg px-3 py-2">
+                                    <span className="text-[#666]">
+                                      {formatDateTime(shift.clock_in)} → {formatDateTime(shift.clock_out)}
+                                    </span>
+                                    <span className="font-medium text-[#333]">{shift.hours.toFixed(2)} hrs</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-center text-[#888] py-4">No shifts found for this period</p>
+                    )}
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           )}
@@ -343,6 +548,7 @@ export default function AdminDashboard() {
                       <th>Email</th>
                       <th>Role</th>
                       <th>Joined</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -373,6 +579,18 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td>{formatDateTime(emp.created_at)}</td>
+                        <td>
+                          {emp.role !== 'admin' && (
+                            <button
+                              onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                              className="text-red-400 hover:text-red-600 transition-colors p-1"
+                              data-testid={`delete-employee-${emp.id}`}
+                              title="Delete employee"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
