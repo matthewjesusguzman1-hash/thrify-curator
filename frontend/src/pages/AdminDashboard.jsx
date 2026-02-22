@@ -98,6 +98,10 @@ export default function AdminDashboard() {
     custom_end: ""
   });
   const [payrollReport, setPayrollReport] = useState(null);
+  
+  // Employee rate editing state
+  const [editingRateId, setEditingRateId] = useState(null);
+  const [editingRateValue, setEditingRateValue] = useState("");
   const [payrollLoading, setPayrollLoading] = useState(false);
   const [showPayrollSettings, setShowPayrollSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
