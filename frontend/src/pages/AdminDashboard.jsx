@@ -279,6 +279,33 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAddEntry = async (e) => {
+    e.preventDefault();
+    setAddingEntry(true);
+
+    try {
+      const entryPayload = {
+        employee_id: newEntryData.employee_id,
+        clock_in: new Date(newEntryData.clock_in).toISOString()
+      };
+      
+      if (newEntryData.clock_out) {
+        entryPayload.clock_out = new Date(newEntryData.clock_out).toISOString();
+      }
+
+      await axios.post(`${API}/admin/time-entries`, entryPayload, getAuthHeader());
+      
+      toast.success("Time entry created successfully!");
+      setShowAddEntry(false);
+      setNewEntryData({ employee_id: "", clock_in: "", clock_out: "" });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to create time entry");
+    } finally {
+      setAddingEntry(false);
+    }
+  };
+
   const handleGenerateReport = async () => {
     setReportLoading(true);
     try {
