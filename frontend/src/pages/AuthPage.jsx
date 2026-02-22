@@ -85,6 +85,14 @@ export default function AuthPage() {
                 </>
               )}
             </Button>
+
+            <Link 
+              to="/admin" 
+              className="block text-center text-xs text-[#999] hover:text-[#D48C9E] mt-3 transition-colors"
+              data-testid="admin-portal-link"
+            >
+              Admin Portal
+            </Link>
           </form>
 
           <p className="text-center text-sm text-[#888] mt-6">
