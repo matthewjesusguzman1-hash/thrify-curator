@@ -12,13 +12,16 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+const CLOTHING_BRANDS = "Spanx, Lululemon, Athleta, Beyond Yoga, Miss Me, Torrid, Tory Burch, Gymshark, Honeylove, Rock Revival, Eileen Fisher, Flax, Free People, Diane Von Furstenberg, Patagonia, The North Face, Harley Davidson, St. John, Everlane, Rag & Bone, Alice + Olivia, Nike, Coach, Michael Kors, Barefoot Dreams, Madewell, Lilly Pulitzer, Kate Spade, Anthropologie, Johnny Was, Farm Rio, Maeve, CVG, No Bull, Coach, ZYIA, Feed me fight me, Figs, Vuori, Alphalete, Buff Bunny, SheFit, Vineyard Vines, Kuhl, Carhartt, Skims, Boden, Levi, Mother Jeans, Agolde, 7 for all mankind, Men's Rock Revival, AYR jeans, Frank & Eileen, Veronica Beard, Birddogs, kerrits.";
+
+const SHOE_BRANDS = "Red Wings, Dr Marten, Rothy's, Nike, Frye, Ugg, Cole Haan, Merrell, Keen, Chaco, Hey Dudes, Sorel, Hoka, On Running, Dansko, No Bull, Teva, Birkenstock, Ariat, Crocs, Betsy Johnson, Ecco, Brooks, New Balance, Vans.";
+
 export default function ConsignmentInquiryForm() {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
     phone: "",
     item_description: "",
-    estimated_value: "",
     item_condition: ""
   });
   const [loading, setLoading] = useState(false);
@@ -93,6 +96,32 @@ export default function ConsignmentInquiryForm() {
         <p className="form-subtitle">Tell us about your items</p>
       </motion.div>
 
+      {/* Brands Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="form-card mb-6"
+        data-testid="brands-section"
+      >
+        <h2 className="font-playfair text-xl font-bold text-[#333] mb-2">
+          Brands Heavily Considered for Consignment Sale
+        </h2>
+        <p className="text-[#666] mb-4">
+          Review the brands below and see if you have any items we are looking for!
+        </p>
+        
+        <div className="mb-4">
+          <h3 className="font-semibold text-[#5D4037] mb-2">Clothing Brands:</h3>
+          <p className="text-sm text-[#666] leading-relaxed">{CLOTHING_BRANDS}</p>
+        </div>
+        
+        <div>
+          <h3 className="font-semibold text-[#5D4037] mb-2">Shoe Brands:</h3>
+          <p className="text-sm text-[#666] leading-relaxed">{SHOE_BRANDS}</p>
+        </div>
+      </motion.div>
+
       <motion.form
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -154,27 +183,6 @@ export default function ConsignmentInquiryForm() {
             className="form-input min-h-[120px]"
             data-testid="input-item-description"
           />
-        </div>
-
-        <div className="form-group">
-          <Label className="form-label">Estimated Value *</Label>
-          <Select
-            value={formData.estimated_value}
-            onValueChange={(value) => handleSelectChange("estimated_value", value)}
-            required
-          >
-            <SelectTrigger className="form-input" data-testid="select-estimated-value">
-              <SelectValue placeholder="Select estimated value range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="under-50">Under $50</SelectItem>
-              <SelectItem value="50-100">$50 - $100</SelectItem>
-              <SelectItem value="100-250">$100 - $250</SelectItem>
-              <SelectItem value="250-500">$250 - $500</SelectItem>
-              <SelectItem value="500-1000">$500 - $1,000</SelectItem>
-              <SelectItem value="over-1000">Over $1,000</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="form-group">
