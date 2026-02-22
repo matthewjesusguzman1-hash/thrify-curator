@@ -215,6 +215,26 @@ export default function JobApplicationForm() {
           />
         </div>
 
+        <div className="form-group">
+          <Label className="form-label">Which tasks are you able to perform? *</Label>
+          <p className="text-sm text-[#888] mb-3">Select all that apply</p>
+          <div className="space-y-3">
+            {TASK_OPTIONS.map((task) => (
+              <div key={task.id} className="flex items-center gap-3">
+                <Checkbox
+                  id={task.id}
+                  checked={formData.tasks_able_to_perform.includes(task.id)}
+                  onCheckedChange={(checked) => handleTaskChange(task.id, checked)}
+                  data-testid={`task-${task.id}`}
+                />
+                <Label htmlFor={task.id} className="text-sm text-[#4a4a4a] cursor-pointer font-normal">
+                  {task.label}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <Button
           type="submit"
           disabled={loading}
