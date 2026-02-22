@@ -84,6 +84,8 @@ class JobApplication(BaseModel):
     availability: str
     tasks_able_to_perform: List[str] = []
     background_check_consent: bool = False
+    has_reliable_transportation: bool = False
+    additional_info: str = ""
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class ConsignmentInquiry(BaseModel):

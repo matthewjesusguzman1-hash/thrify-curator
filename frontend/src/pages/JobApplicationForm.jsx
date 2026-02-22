@@ -29,7 +29,9 @@ export default function JobApplicationForm() {
     why_join: "",
     availability: "",
     tasks_able_to_perform: [],
-    background_check_consent: false
+    background_check_consent: false,
+    has_reliable_transportation: false,
+    additional_info: ""
   });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -264,6 +266,48 @@ export default function JobApplicationForm() {
               <span className="text-sm text-[#4a4a4a]">No</span>
             </label>
           </div>
+        </div>
+
+        <div className="form-group">
+          <Label className="form-label">Do you have reliable transportation? *</Label>
+          <div className="flex gap-6 mt-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="transportation"
+                value="yes"
+                checked={formData.has_reliable_transportation === true}
+                onChange={() => setFormData({ ...formData, has_reliable_transportation: true })}
+                className="w-4 h-4 text-[#F8C8DC]"
+                data-testid="transportation-yes"
+              />
+              <span className="text-sm text-[#4a4a4a]">Yes</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="transportation"
+                value="no"
+                checked={formData.has_reliable_transportation === false}
+                onChange={() => setFormData({ ...formData, has_reliable_transportation: false })}
+                className="w-4 h-4 text-[#F8C8DC]"
+                data-testid="transportation-no"
+              />
+              <span className="text-sm text-[#4a4a4a]">No</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <Label className="form-label">Do you have any additional information to include?</Label>
+          <Textarea
+            name="additional_info"
+            value={formData.additional_info}
+            onChange={handleChange}
+            placeholder="Any other information you'd like to share..."
+            className="form-input min-h-[100px]"
+            data-testid="input-additional-info"
+          />
         </div>
 
         <Button
