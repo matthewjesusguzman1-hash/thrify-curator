@@ -1009,18 +1009,32 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
     # Fetch time entries
     entries = await db.time_entries.find(query, {"_id": 0}).to_list(10000)
     
+    # Fetch all employees to get their individual hourly rates
+    all_employees = await db.users.find({}, {"_id": 0}).to_list(1000)
+    employee_rates = {e["id"]: e.get("hourly_rate") for e in all_employees}
+    
+    # Default hourly rate from settings (used when employee has no individual rate)
+    default_rate = request.hourly_rate or settings.get("default_hourly_rate", 15.00)
+    
     # Group by employee and calculate daily totals
     employee_data = {}
     for entry in entries:
         uid = entry["user_id"]
         if uid not in employee_data:
+            # Get individual rate or fall back to default
+            emp_rate = employee_rates.get(uid)
+            if emp_rate is None:
+                emp_rate = default_rate
+            
             employee_data[uid] = {
                 "user_id": uid,
                 "name": entry["user_name"],
                 "total_hours": 0,
                 "total_shifts": 0,
                 "shifts": [],
-                "daily_totals": {}
+                "daily_totals": {},
+                "hourly_rate": emp_rate,
+                "has_custom_rate": employee_rates.get(uid) is not None
             }
         
         hours = entry.get("total_hours", 0)
