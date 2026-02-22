@@ -118,9 +118,6 @@ export default function JobApplicationForm() {
         animate={{ opacity: 1, y: 0 }}
         className="form-header"
       >
-        <div className="w-16 h-16 bg-[#F8C8DC]/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Briefcase className="w-8 h-8 text-[#D48C9E]" />
-        </div>
         <h1 className="form-title">Job Application</h1>
         <p className="form-subtitle">Join our team</p>
       </motion.div>
