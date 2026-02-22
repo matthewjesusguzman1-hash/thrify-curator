@@ -83,6 +83,7 @@ class JobApplication(BaseModel):
     why_join: str
     availability: str
     tasks_able_to_perform: List[str] = []
+    background_check_consent: bool = False
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class ConsignmentInquiry(BaseModel):

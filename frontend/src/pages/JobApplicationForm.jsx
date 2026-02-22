@@ -28,7 +28,8 @@ export default function JobApplicationForm() {
     resume_text: "",
     why_join: "",
     availability: "",
-    tasks_able_to_perform: []
+    tasks_able_to_perform: [],
+    background_check_consent: false
   });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
