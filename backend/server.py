@@ -98,6 +98,9 @@ class ConsignmentInquiry(BaseModel):
     other_item_type: str = ""
     item_description: str
     item_condition: str
+    smoke_free: bool = True
+    pet_free: bool = True
+    image_urls: List[str] = []
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class ConsignmentAgreement(BaseModel):

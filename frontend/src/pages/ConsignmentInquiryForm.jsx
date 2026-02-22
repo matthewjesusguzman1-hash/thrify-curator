@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, FileText, Send, CheckCircle } from "lucide-react";
+import { ArrowLeft, FileText, Send, CheckCircle, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,8 +37,12 @@ export default function ConsignmentInquiryForm() {
     item_types: [],
     other_item_type: "",
     item_description: "",
-    item_condition: ""
+    item_condition: "",
+    smoke_free: true,
+    pet_free: true,
+    image_urls: []
   });
+  const [selectedImages, setSelectedImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -63,6 +67,21 @@ export default function ConsignmentInquiryForm() {
         other_item_type: typeId === "other" ? "" : formData.other_item_type
       });
     }
+  };
+
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImages(prev => [...prev, { file, preview: reader.result }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -127,9 +146,6 @@ export default function ConsignmentInquiryForm() {
         animate={{ opacity: 1, y: 0 }}
         className="form-header"
       >
-        <div className="w-16 h-16 bg-[#F8C8DC]/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <FileText className="w-8 h-8 text-[#D48C9E]" />
-        </div>
         <h1 className="form-title">Consignment Inquiry</h1>
         <p className="form-subtitle">Tell us about your items</p>
       </motion.div>
@@ -275,6 +291,108 @@ export default function ConsignmentInquiryForm() {
               <SelectItem value="fair">Fair Condition</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="form-group">
+          <Label className="form-label">Home Environment</Label>
+          <div className="space-y-3 mt-2">
+            <div>
+              <p className="text-sm text-[#666] mb-2">Smoke Environment:</p>
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="smoke_free"
+                    checked={formData.smoke_free === true}
+                    onChange={() => setFormData({ ...formData, smoke_free: true })}
+                    className="w-4 h-4 text-[#F8C8DC]"
+                    data-testid="smoke-free-yes"
+                  />
+                  <span className="text-sm text-[#4a4a4a]">Smoke Free</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="smoke_free"
+                    checked={formData.smoke_free === false}
+                    onChange={() => setFormData({ ...formData, smoke_free: false })}
+                    className="w-4 h-4 text-[#F8C8DC]"
+                    data-testid="smoke-free-no"
+                  />
+                  <span className="text-sm text-[#4a4a4a]">Not Smoke Free</span>
+                </label>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm text-[#666] mb-2">Pet Environment:</p>
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="pet_free"
+                    checked={formData.pet_free === true}
+                    onChange={() => setFormData({ ...formData, pet_free: true })}
+                    className="w-4 h-4 text-[#F8C8DC]"
+                    data-testid="pet-free-yes"
+                  />
+                  <span className="text-sm text-[#4a4a4a]">Pet Free</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="pet_free"
+                    checked={formData.pet_free === false}
+                    onChange={() => setFormData({ ...formData, pet_free: false })}
+                    className="w-4 h-4 text-[#F8C8DC]"
+                    data-testid="pet-free-no"
+                  />
+                  <span className="text-sm text-[#4a4a4a]">Pet Friendly</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <Label className="form-label">Upload Pictures (Optional)</Label>
+          <p className="text-sm text-[#888] mb-3">Add photos of your items to help us evaluate them</p>
+          <div className="border-2 border-dashed border-[#F8C8DC]/50 rounded-xl p-6 text-center hover:border-[#F8C8DC] transition-colors">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="hidden"
+              id="image-upload"
+              data-testid="image-upload"
+            />
+            <label htmlFor="image-upload" className="cursor-pointer">
+              <Upload className="w-8 h-8 text-[#D48C9E] mx-auto mb-2" />
+              <p className="text-sm text-[#666]">Click to upload images</p>
+              <p className="text-xs text-[#999] mt-1">PNG, JPG up to 10MB each</p>
+            </label>
+          </div>
+          {selectedImages.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 mt-4">
+              {selectedImages.map((img, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={img.preview}
+                    alt={`Upload ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    data-testid={`remove-image-${index}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <Button
