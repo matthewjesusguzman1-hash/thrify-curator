@@ -589,7 +589,7 @@ async def generate_report(report_req: ReportRequest, admin: dict = Depends(get_a
     try:
         start = datetime.fromisoformat(report_req.start_date.replace('Z', '+00:00'))
         end = datetime.fromisoformat(report_req.end_date.replace('Z', '+00:00'))
-    except:
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format")
     
     # Build query
