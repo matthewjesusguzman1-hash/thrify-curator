@@ -884,7 +884,17 @@ export default function AdminDashboard() {
 
           {/* Recent Time Entries */}
           <div className="dashboard-card">
-            <h2 className="font-playfair text-xl font-semibold text-[#333] mb-4">Recent Time Entries</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-playfair text-xl font-semibold text-[#333]">Recent Time Entries</h2>
+              <Button 
+                onClick={() => setShowAddEntry(true)}
+                className="btn-secondary flex items-center gap-2"
+                data-testid="add-time-entry-btn"
+              >
+                <Clock className="w-4 h-4" />
+                Add Time Entry
+              </Button>
+            </div>
             {timeEntries.length === 0 ? (
               <p className="text-center text-[#888] py-8">No time entries yet</p>
             ) : (
