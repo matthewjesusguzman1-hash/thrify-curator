@@ -279,9 +279,9 @@ export default function LandingPage() {
             </div>
             <div className="text-left">
               <p className="font-semibold text-[#333] group-hover:text-[#5D4037] transition-colors">
-                Email
+                Message Me Directly
               </p>
-              <p className="text-sm text-[#888]">euni.deleon1@gmail.com</p>
+              <p className="text-sm text-[#888]">Send us an email</p>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-[#ccc] group-hover:text-[#F8C8DC] group-hover:translate-x-1 transition-all" />
