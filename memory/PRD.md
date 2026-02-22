@@ -87,6 +87,7 @@ Build a "Thrifty Curator" reselling application with:
 - `POST /api/time/clock` - Clock in/out (triggers notifications)
 - `GET /api/admin/notifications` - Get admin notifications
 - `POST /api/admin/notifications/mark-read` - Mark notifications as read
+- `POST /api/admin/time-entries` - Create manual time entry
 - `PUT /api/admin/time-entries/{id}` - Edit time entry
 - `DELETE /api/admin/time-entries/{id}` - Delete time entry
 - `POST /api/admin/reports` - Generate shift reports
