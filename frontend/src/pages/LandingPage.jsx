@@ -266,6 +266,29 @@ export default function LandingPage() {
           <ChevronRight className="w-5 h-5 text-[#ccc] group-hover:text-[#F8C8DC] group-hover:translate-x-1 transition-all" />
         </motion.a>
 
+        {/* Facebook Page Link */}
+        <motion.a
+          variants={itemVariants}
+          href="https://www.facebook.com/people/Thrifty-Curator/100070158913020/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="link-card group"
+          data-testid="facebook-page-link"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-[#1877F2]/10 flex items-center justify-center">
+              <SiFacebook className="w-5 h-5 text-[#1877F2]" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-[#333] group-hover:text-[#5D4037] transition-colors">
+                Facebook
+              </p>
+              <p className="text-sm text-[#888]">Follow our page</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-[#ccc] group-hover:text-[#F8C8DC] group-hover:translate-x-1 transition-all" />
+        </motion.a>
+
         {/* Email Link */}
         <motion.a
           variants={itemVariants}
