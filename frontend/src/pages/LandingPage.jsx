@@ -72,9 +72,10 @@ const platforms = [
   },
   { 
     name: "Facebook Marketplace", 
-    Icon: SiFacebook, 
+    logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/664sn2pn_IMG_0052.PNG",
     url: "https://www.facebook.com/marketplace/profile/517375094/", 
-    color: "#1877F2"
+    color: "#3b5998",
+    useImage: true
   },
 ];
 
