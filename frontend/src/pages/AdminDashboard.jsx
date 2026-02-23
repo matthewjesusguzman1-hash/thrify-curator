@@ -653,9 +653,35 @@ export default function AdminDashboard() {
     setAddingEmployee(true);
 
     try {
-      await axios.post(`${API}/admin/create-employee`, newEmployee, getAuthHeader());
-      toast.success(`Employee ${newEmployee.name} created successfully!`);
+      const response = await axios.post(`${API}/admin/create-employee`, newEmployee, getAuthHeader());
+      const newEmployeeId = response.data.id;
+      
+      // If W-9 file was attached, upload it
+      if (newEmployeeW9File && newEmployeeId) {
+        const formData = new FormData();
+        formData.append('file', newEmployeeW9File);
+        try {
+          await axios.post(
+            `${API}/admin/employees/${newEmployeeId}/w9`,
+            formData,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                'Content-Type': 'multipart/form-data'
+              }
+            }
+          );
+          toast.success(`Employee ${newEmployee.name} created with W-9!`);
+        } catch (w9Error) {
+          toast.success(`Employee ${newEmployee.name} created! W-9 upload failed.`);
+        }
+      } else {
+        toast.success(`Employee ${newEmployee.name} created successfully!`);
+      }
+      
       setNewEmployee({ name: "", email: "" });
+      setNewEmployeeW9File(null);
+      setSelectedJobApp("");
       setShowAddEmployee(false);
       fetchData();
     } catch (error) {
