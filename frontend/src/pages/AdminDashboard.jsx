@@ -1102,7 +1102,7 @@ export default function AdminDashboard() {
                     <div className="form-group">
                       <Label className="form-label">Hourly Rate</Label>
                       <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888] text-sm font-medium">$</span>
                         <Input
                           type="number"
                           step="0.01"
@@ -1110,7 +1110,7 @@ export default function AdminDashboard() {
                           value={editEmployeeData.hourly_rate}
                           onChange={(e) => setEditEmployeeData({ ...editEmployeeData, hourly_rate: e.target.value })}
                           placeholder={payrollSettings.default_hourly_rate?.toFixed(2) || "15.00"}
-                          className="form-input pl-10"
+                          className="form-input pl-8"
                           data-testid="edit-employee-rate"
                         />
                       </div>
