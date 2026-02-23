@@ -21,7 +21,6 @@ import {
   Bell,
   CheckCheck,
   LogIn,
-  LogOutIcon,
   Edit3,
   DollarSign,
   Settings,
@@ -39,20 +38,14 @@ import {
   AlertCircle,
   Archive,
   ArrowUpDown,
-  Monitor,
   PlayCircle,
   StopCircle,
   Upload,
-  File,
-  Save,
   Camera,
   Image as ImageIcon,
   Pencil,
   Search,
-  Filter,
-  Car,
-  Navigation,
-  MapPinned
+  Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
