@@ -207,6 +207,10 @@ export default function AdminDashboard() {
     clock_out: "",
   });
 
+  // W-9 upload state
+  const [uploadingW9, setUploadingW9] = useState(null);
+  const w9InputRef = useRef(null);
+
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   }), []);
