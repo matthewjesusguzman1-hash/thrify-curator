@@ -588,7 +588,7 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
             in_time = datetime.fromisoformat(last_clock_in.replace('Z', '+00:00'))
             session_hours = (now - in_time).total_seconds() / 3600
             total_hours = round(accumulated + session_hours, 2)
-        except:
+        except (ValueError, TypeError, AttributeError):
             total_hours = accumulated
         
         await db.time_entries.update_one(
