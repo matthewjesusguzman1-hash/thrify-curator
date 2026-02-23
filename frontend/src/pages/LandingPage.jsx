@@ -58,15 +58,17 @@ const platforms = [
   },
   { 
     name: "Mercari", 
-    Icon: MercariIcon,
+    logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/uppn4q39_IMG_0077.PNG",
     url: "https://www.mercari.com/u/thriftycurator/?sv=0", 
-    color: "#FF0211"
+    color: "#6B7AED",
+    useImage: true
   },
   { 
     name: "Depop", 
-    Icon: DepopIcon,
+    logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/96fdtiq0_IMG_0078.PNG",
     url: "https://www.depop.com/thriftycurator/", 
-    color: "#FF2300"
+    color: "#E60023",
+    useImage: true
   },
   { 
     name: "Facebook Marketplace", 
