@@ -1955,69 +1955,103 @@ export default function AdminDashboard() {
                           ) : (
                             <span className="text-[#888]">-</span>
                           )}
-                        </td>
-                        <td>{formatDateTime(emp.created_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                                </td>
+                                <td>{formatDateTime(emp.created_at)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Recent Time Entries */}
+          {/* Recent Time Entries - Collapsible */}
           <div className="dashboard-card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-playfair text-xl font-semibold text-[#333]">Recent Time Entries</h2>
-              <Button 
-                onClick={() => setShowAddEntry(true)}
-                className="btn-secondary flex items-center gap-2"
-                data-testid="add-time-entry-btn"
-              >
-                <Clock className="w-4 h-4" />
-                Add Time Entry
-              </Button>
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowTimeEntries(!showTimeEntries)}
+              data-testid="time-entries-section-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-playfair text-xl font-semibold text-[#333]">Recent Time Entries</h2>
+                  <p className="text-sm text-[#888]">{timeEntries.length} entries</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={(e) => { e.stopPropagation(); setShowAddEntry(true); }}
+                  size="sm"
+                  className="btn-secondary flex items-center gap-2"
+                  data-testid="add-time-entry-btn"
+                >
+                  <Clock className="w-4 h-4" />
+                  Add Entry
+                </Button>
+                {showTimeEntries ? (
+                  <ChevronUp className="w-5 h-5 text-[#888]" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-[#888]" />
+                )}
+              </div>
             </div>
-            {timeEntries.length === 0 ? (
-              <p className="text-center text-[#888] py-8">No time entries yet</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="data-table" data-testid="time-entries-table">
-                  <thead>
-                    <tr>
-                      <th>Employee</th>
-                      <th>Clock In</th>
-                      <th>Clock Out</th>
-                      <th>Hours</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {timeEntries.slice(0, 20).map((entry) => (
-                      <tr key={entry.id} data-testid={`time-entry-row-${entry.id}`}>
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
-                              <User className="w-4 h-4 text-[#D48C9E]" />
-                            </div>
-                            {entry.user_name}
-                          </div>
-                        </td>
-                        <td>{formatDateTime(entry.clock_in)}</td>
-                        <td>{entry.clock_out ? formatDateTime(entry.clock_out) : '-'}</td>
-                        <td>
-                          {entry.total_hours ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#F8C8DC]/20 rounded-full text-sm font-medium text-[#5D4037]">
-                              <Clock className="w-3 h-3" />
-                              {entry.total_hours} hrs
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#8BA88E]/20 rounded-full text-sm font-medium text-[#5A8A5E]">
-                              Active
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+            <AnimatePresence>
+              {showTimeEntries && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-4 pt-4 border-t border-[#eee]">
+                    {timeEntries.length === 0 ? (
+                      <p className="text-center text-[#888] py-8">No time entries yet</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="data-table" data-testid="time-entries-table">
+                          <thead>
+                            <tr>
+                              <th>Employee</th>
+                              <th>Clock In</th>
+                              <th>Clock Out</th>
+                              <th>Hours</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {timeEntries.slice(0, 20).map((entry) => (
+                              <tr key={entry.id} data-testid={`time-entry-row-${entry.id}`}>
+                                <td>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
+                                      <User className="w-4 h-4 text-[#D48C9E]" />
+                                    </div>
+                                    {entry.user_name}
+                                  </div>
+                                </td>
+                                <td>{formatDateTime(entry.clock_in)}</td>
+                                <td>{entry.clock_out ? formatDateTime(entry.clock_out) : '-'}</td>
+                                <td>
+                                  {entry.total_hours ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#F8C8DC]/20 rounded-full text-sm font-medium text-[#5D4037]">
+                                      <Clock className="w-3 h-3" />
+                                      {entry.total_hours} hrs
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#8BA88E]/20 rounded-full text-sm font-medium text-[#5A8A5E]">
+                                      Active
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
                   </tbody>
                 </table>
               </div>
