@@ -2773,6 +2773,157 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
+          {/* Employee Portal View Modal */}
+          {showEmployeePortal && viewingEmployee && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+              onClick={() => setShowEmployeePortal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-2xl w-full max-w-3xl shadow-xl my-8 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="employee-portal-modal"
+              >
+                {/* Portal Header */}
+                <div className="p-6 border-b border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center">
+                        <User className="w-7 h-7 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="font-playfair text-2xl font-bold text-white">{viewingEmployee.name}</h2>
+                        <p className="text-[#00D4FF] text-sm">Employee Portal View</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowEmployeePortal(false)}
+                      className="text-white/60 hover:text-white transition-colors"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Portal Content */}
+                <div className="p-6">
+                  {loadingPortal ? (
+                    <div className="text-center py-12">
+                      <div className="w-12 h-12 border-4 border-[#00D4FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-white/60">Loading employee data...</p>
+                    </div>
+                  ) : employeePortalData ? (
+                    <div className="space-y-6">
+                      {/* Clock Status Card */}
+                      <div className="bg-white rounded-2xl overflow-hidden">
+                        <div className="h-1 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6]" />
+                        <div className="p-6 text-center">
+                          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-600 mb-4">
+                            <StopCircle className="w-4 h-4" />
+                            Not Clocked In
+                          </div>
+                          <div className="flex justify-center">
+                            <div className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white font-semibold flex items-center gap-2">
+                              <PlayCircle className="w-5 h-5" />
+                              Clock In
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Pay Period Summary */}
+                      <div className="bg-white rounded-2xl overflow-hidden">
+                        <div className="h-1 bg-gradient-to-r from-[#FF1493] to-[#E91E8C]" />
+                        <div className="p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-playfair text-lg font-semibold text-[#333]">Current Pay Period</h3>
+                            <span className="text-sm text-[#888]">
+                              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="bg-[#F0F9FF] rounded-xl p-4 text-center">
+                              <Clock className="w-6 h-6 text-[#00D4FF] mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-[#333]">{employeePortalData.summary?.period_hours?.toFixed(1) || 0}</p>
+                              <p className="text-xs text-[#888]">Hours</p>
+                            </div>
+                            <div className="bg-[#FFF0F5] rounded-xl p-4 text-center">
+                              <Calendar className="w-6 h-6 text-[#FF1493] mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-[#333]">{employeePortalData.summary?.period_shifts || 0}</p>
+                              <p className="text-xs text-[#888]">Shifts</p>
+                            </div>
+                            <div className="bg-[#F5F0FF] rounded-xl p-4 text-center">
+                              <DollarSign className="w-6 h-6 text-[#8B5CF6] mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-[#333]">${employeePortalData.summary?.estimated_pay?.toFixed(2) || '0.00'}</p>
+                              <p className="text-xs text-[#888]">Est. Pay</p>
+                            </div>
+                          </div>
+                          <div className="mt-4 pt-4 border-t border-[#eee] text-center text-sm text-[#888]">
+                            Rate: <span className="font-medium text-[#333]">${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'}/hr</span>
+                            <span className="mx-2">•</span>
+                            Calculation: {employeePortalData.summary?.period_hours?.toFixed(1) || 0} hrs × ${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Recent Shifts */}
+                      <div className="bg-white rounded-2xl overflow-hidden">
+                        <div className="h-1 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
+                        <div className="p-6">
+                          <h3 className="font-playfair text-lg font-semibold text-[#333] mb-4">Recent Shifts</h3>
+                          {employeePortalData.entries && employeePortalData.entries.length > 0 ? (
+                            <div className="space-y-3">
+                              {employeePortalData.entries.slice(0, 5).map((entry, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-[#F9F6F7] rounded-xl">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-[#8B5CF6]/20 rounded-lg flex items-center justify-center">
+                                      <Clock className="w-5 h-5 text-[#8B5CF6]" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-[#333]">{formatDateTime(entry.clock_in)}</p>
+                                      <p className="text-sm text-[#888]">
+                                        {entry.clock_out ? `→ ${formatDateTime(entry.clock_out)}` : 'Still active'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                    entry.total_hours 
+                                      ? 'bg-[#8B5CF6]/20 text-[#6D28D9]' 
+                                      : 'bg-green-100 text-green-700'
+                                  }`}>
+                                    {entry.total_hours ? `${entry.total_hours} hrs` : 'Active'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-center text-[#888] py-4">No shifts recorded yet</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-white/60 py-12">No data available</p>
+                  )}
+                </div>
+
+                {/* Portal Footer */}
+                <div className="p-4 border-t border-white/10 flex justify-end">
+                  <Button
+                    onClick={() => setShowEmployeePortal(false)}
+                    className="bg-white/10 hover:bg-white/20 text-white border-0"
+                  >
+                    Close Portal View
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
           {/* Edit Time Entry Modal */}
           {showEditEntry && editingEntry && (
             <motion.div
