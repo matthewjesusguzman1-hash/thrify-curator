@@ -24,21 +24,24 @@ const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&da
 
 // Custom SVG Icons for platforms without react-icons support
 const PoshmarkIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-13h4c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V9c0-1.1.9-2 2-2z"/>
+  <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="currentColor"/>
+    <path d="M9 7h4.5c1.38 0 2.5 1.12 2.5 2.5S14.88 12 13.5 12H9V7z" fill="white"/>
+    <path d="M9 12h4.5v5H9v-5z" fill="white"/>
   </svg>
 );
 
 const MercariIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+    <rect width="24" height="24" rx="4" fill="currentColor"/>
+    <text x="12" y="17" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="Arial">m</text>
   </svg>
 );
 
 const DepopIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <circle cx="12" cy="12" r="10"/>
-    <text x="12" y="16" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">D</text>
+    <circle cx="12" cy="12" r="11" fill="currentColor"/>
+    <circle cx="12" cy="12" r="6" fill="white"/>
   </svg>
 );
 
