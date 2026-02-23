@@ -1702,7 +1702,7 @@ export default function AdminDashboard() {
                               }`}>
                                 {notification.type === 'clock_in' 
                                   ? <LogIn className="w-5 h-5 text-white" />
-                                  : <LogOutIcon className="w-5 h-5 text-white" />
+                                  : <LogOut className="w-5 h-5 text-white" />
                                 }
                               </div>
                               
