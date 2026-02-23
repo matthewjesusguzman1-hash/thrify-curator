@@ -566,7 +566,7 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
 
 @api_router.get("/admin/employees", response_model=List[UserResponse])
 async def get_all_employees(admin: dict = Depends(get_admin_user)):
-    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(100)
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(500)
     return [UserResponse(**u) for u in users]
 
 @api_router.delete("/admin/employees/{employee_id}")
