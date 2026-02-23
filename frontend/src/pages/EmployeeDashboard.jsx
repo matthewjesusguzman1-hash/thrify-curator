@@ -427,6 +427,15 @@ export default function EmployeeDashboard() {
                     <p className="text-sm font-medium text-green-700">W-9 Approved</p>
                     <p className="text-xs text-green-600">Your W-9 has been reviewed and approved</p>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`${API}/time/w9/download`, '_blank')}
+                    className="text-green-600 border-green-400 hover:bg-green-50"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    View
+                  </Button>
                 </div>
               ) : w9Status?.status === 'pending_review' ? (
                 <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
@@ -437,6 +446,15 @@ export default function EmployeeDashboard() {
                     <p className="text-sm font-medium text-amber-700">Pending Review</p>
                     <p className="text-xs text-amber-600">Your W-9 is being reviewed by admin</p>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`${API}/time/w9/download`, '_blank')}
+                    className="text-amber-600 border-amber-400 hover:bg-amber-50"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    View
+                  </Button>
                 </div>
               ) : w9Status?.status === 'needs_correction' ? (
                 <div className="space-y-3">
