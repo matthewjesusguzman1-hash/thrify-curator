@@ -25,7 +25,7 @@ class TestMileagePauseResume:
         })
         assert login_response.status_code == 200, f"Login failed: {login_response.text}"
         
-        token = login_response.json().get("token")
+        token = login_response.json().get("access_token")
         assert token, "No token received from login"
         self.session.headers.update({"Authorization": f"Bearer {token}"})
         
