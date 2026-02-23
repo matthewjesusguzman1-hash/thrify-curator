@@ -245,6 +245,25 @@ async def get_w9_status(user: dict = Depends(get_current_user)):
     }
 
 
+@router.get("/w9/download")
+async def download_own_w9(user: dict = Depends(get_current_user)):
+    """Employee downloads their own submitted W-9"""
+    from fastapi.responses import Response
+    
+    w9_doc = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0})
+    
+    if not w9_doc:
+        raise HTTPException(status_code=404, detail="No W-9 document found")
+    
+    return Response(
+        content=base64.b64decode(w9_doc["content"]),
+        media_type=w9_doc.get("content_type", "application/pdf"),
+        headers={
+            "Content-Disposition": f"inline; filename={w9_doc.get('filename', 'w9.pdf')}"
+        }
+    )
+
+
 @router.post("/w9/upload")
 async def upload_w9_employee(user: dict = Depends(get_current_user)):
     """Employee uploads their W-9 - uses form data"""
