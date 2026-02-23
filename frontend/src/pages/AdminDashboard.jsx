@@ -3136,13 +3136,15 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                {/* Portal Footer */}
-                <div className="p-4 border-t border-white/10 flex justify-end">
+                {/* Portal Footer - More visible close button */}
+                <div className="p-6 border-t border-white/10 bg-black/20">
                   <Button
                     onClick={() => setShowEmployeePortal(false)}
-                    className="bg-white/10 hover:bg-white/20 text-white border-0"
+                    className="w-full bg-gradient-to-r from-[#FF1493] to-[#E91E8C] hover:from-[#E91E8C] hover:to-[#C91E7C] text-white font-semibold py-3 shadow-lg shadow-[#FF1493]/30 flex items-center justify-center gap-2"
+                    data-testid="close-portal-btn"
                   >
-                    Close Portal View
+                    <X className="w-5 h-5" />
+                    Close Employee Portal
                   </Button>
                 </div>
               </motion.div>
