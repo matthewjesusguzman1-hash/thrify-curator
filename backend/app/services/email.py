@@ -15,7 +15,9 @@ if RESEND_API_KEY and RESEND_API_KEY != 're_123_placeholder':
 
 
 async def get_employee_hours_summary(user_id: str) -> dict:
-    """Get today's and weekly hours for an employee"""
+    """Get hours summary for an employee including pay period data"""
+    from app.services.helpers import get_biweekly_period
+    
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = today - timedelta(days=today.weekday())
     
@@ -25,16 +27,55 @@ async def get_employee_hours_summary(user_id: str) -> dict:
     
     today_hours = sum(
         e.get("total_hours", 0) for e in entries 
-        if datetime.fromisoformat(e["clock_in"]) >= today
+        if datetime.fromisoformat(e["clock_in"].replace('Z', '+00:00')) >= today
     )
     week_hours = sum(
         e.get("total_hours", 0) for e in entries 
-        if datetime.fromisoformat(e["clock_in"]) >= week_start
+        if datetime.fromisoformat(e["clock_in"].replace('Z', '+00:00')) >= week_start
     )
+    
+    total_hours = sum(e.get("total_hours", 0) for e in entries)
+    total_shifts = len(entries)
+    
+    # Get pay period settings
+    payroll_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
+    pay_period_start_date = "2026-01-06"  # Default fallback
+    
+    if payroll_settings:
+        pay_period_start_date = payroll_settings.get("pay_period_start_date", "2026-01-06")
+    
+    # Calculate current pay period using shared helper
+    period_start, period_end = get_biweekly_period(pay_period_start_date, 0)
+    
+    # Ensure period_start and period_end are timezone-aware
+    if hasattr(period_start, 'tzinfo') and period_start.tzinfo is None:
+        period_start = period_start.replace(tzinfo=timezone.utc)
+    if hasattr(period_end, 'tzinfo') and period_end.tzinfo is None:
+        period_end = period_end.replace(tzinfo=timezone.utc)
+    
+    # Filter entries for current pay period
+    period_entries = []
+    for e in entries:
+        try:
+            clock_in_str = e["clock_in"]
+            clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
+            if period_start <= clock_in_dt <= period_end:
+                period_entries.append(e)
+        except (ValueError, KeyError, TypeError):
+            pass
+    
+    period_hours = sum(e.get("total_hours", 0) for e in period_entries)
+    period_shifts = len(period_entries)
     
     return {
         "today_hours": round(today_hours, 2),
-        "week_hours": round(week_hours, 2)
+        "week_hours": round(week_hours, 2),
+        "total_hours": round(total_hours, 2),
+        "total_shifts": total_shifts,
+        "period_hours": round(period_hours, 2),
+        "period_shifts": period_shifts,
+        "period_start": period_start.isoformat() if hasattr(period_start, 'isoformat') else str(period_start),
+        "period_end": period_end.isoformat() if hasattr(period_end, 'isoformat') else str(period_end)
     }
 
 
