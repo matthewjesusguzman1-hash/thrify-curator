@@ -282,6 +282,56 @@ export default function AdminDashboard() {
     }
   };
 
+  // Helper to get report date range based on period type
+  const getReportDateRange = () => {
+    const { period_type, period_index, month, year, start_date, end_date } = reportFilters;
+    
+    if (period_type === "custom") {
+      return { start: start_date, end: end_date };
+    }
+    
+    if (period_type === "pay_period") {
+      // Use payroll settings to calculate pay period
+      if (!payrollSettings.pay_period_start_date) {
+        return { start: start_date, end: end_date };
+      }
+      
+      const startDateStr = payrollSettings.pay_period_start_date;
+      const baseStart = new Date(startDateStr + 'T00:00:00');
+      const today = new Date();
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const daysDiff = Math.floor((today - baseStart) / msPerDay);
+      const currentPeriodNum = Math.floor(daysDiff / 14);
+      const targetPeriodNum = currentPeriodNum - period_index;
+      
+      const periodStart = new Date(baseStart.getTime() + (targetPeriodNum * 14 * msPerDay));
+      const periodEnd = new Date(periodStart.getTime() + (13 * msPerDay));
+      
+      return {
+        start: periodStart.toISOString().split('T')[0],
+        end: periodEnd.toISOString().split('T')[0]
+      };
+    }
+    
+    if (period_type === "month") {
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
+      return {
+        start: monthStart.toISOString().split('T')[0],
+        end: monthEnd.toISOString().split('T')[0]
+      };
+    }
+    
+    if (period_type === "year") {
+      return {
+        start: `${year}-01-01`,
+        end: `${year}-12-31`
+      };
+    }
+    
+    return { start: start_date, end: end_date };
+  };
+
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   }), []);
