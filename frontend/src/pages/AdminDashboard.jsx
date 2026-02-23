@@ -5542,16 +5542,6 @@ export default function AdminDashboard() {
                         <Download className="w-4 h-4" />
                         Download PDF
                       </Button>
-                      <Button
-                        onClick={handleEmailPayrollReport}
-                        disabled={emailingPayroll}
-                        variant="outline"
-                        className="flex items-center gap-2 border-[#8BA88E] text-[#8BA88E]"
-                        data-testid="email-payroll-report-btn"
-                      >
-                        <Mail className="w-4 h-4" />
-                        {emailingPayroll ? "Sending..." : "Email Report"}
-                      </Button>
                     </>
                   )}
                 </div>
