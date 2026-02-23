@@ -497,6 +497,140 @@ async def delete_time_entry(entry_id: str, admin: dict = Depends(get_admin_user)
     return {"message": "Time entry deleted"}
 
 
+@router.post("/employee/{employee_id}/clock")
+async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Depends(get_admin_user)):
+    """Admin endpoint to clock in/out an employee"""
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    clock_action = action.get("action")
+    if clock_action not in ["in", "out"]:
+        raise HTTPException(status_code=400, detail="Invalid action. Must be 'in' or 'out'")
+    
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    if clock_action == "in":
+        # Check if already clocked in
+        active = await db.time_entries.find_one(
+            {"user_id": employee_id, "clock_out": None}, {"_id": 0}
+        )
+        if active:
+            raise HTTPException(status_code=400, detail="Employee is already clocked in")
+        
+        # Check for existing entry today
+        today_entry = await db.time_entries.find_one(
+            {
+                "user_id": employee_id,
+                "shift_date": today_start.strftime("%Y-%m-%d")
+            },
+            {"_id": 0}
+        )
+        
+        if today_entry:
+            # Resume existing shift
+            await db.time_entries.update_one(
+                {"id": today_entry["id"]},
+                {
+                    "$set": {
+                        "clock_out": None,
+                        "last_clock_in": now_iso
+                    }
+                }
+            )
+            return {
+                "message": f"Clocked in {employee['name']} (resumed shift)",
+                "action": "in",
+                "timestamp": now_iso,
+                "employee_name": employee["name"]
+            }
+        else:
+            # Create new entry
+            entry_id = str(uuid.uuid4())
+            entry = {
+                "id": entry_id,
+                "user_id": employee_id,
+                "user_name": employee["name"],
+                "clock_in": now_iso,
+                "clock_out": None,
+                "shift_date": today_start.strftime("%Y-%m-%d"),
+                "last_clock_in": now_iso,
+                "accumulated_hours": 0.0,
+                "total_hours": None,
+                "admin_clocked": True,
+                "admin_id": admin["id"],
+                "admin_name": admin["name"]
+            }
+            await db.time_entries.insert_one(entry)
+            return {
+                "message": f"Clocked in {employee['name']}",
+                "action": "in",
+                "timestamp": now_iso,
+                "employee_name": employee["name"],
+                "entry_id": entry_id
+            }
+    
+    else:  # clock_action == "out"
+        # Find active shift
+        active = await db.time_entries.find_one(
+            {"user_id": employee_id, "clock_out": None}, {"_id": 0}
+        )
+        if not active:
+            raise HTTPException(status_code=400, detail="Employee is not clocked in")
+        
+        # Calculate hours
+        last_clock_in = active.get("last_clock_in") or active.get("clock_in")
+        accumulated = active.get("accumulated_hours", 0.0)
+        
+        try:
+            in_time = datetime.fromisoformat(last_clock_in.replace('Z', '+00:00'))
+            session_hours = (now - in_time).total_seconds() / 3600
+            total_hours = round(accumulated + session_hours, 2)
+        except:
+            total_hours = accumulated
+        
+        await db.time_entries.update_one(
+            {"id": active["id"]},
+            {
+                "$set": {
+                    "clock_out": now_iso,
+                    "total_hours": total_hours,
+                    "admin_clocked_out": True,
+                    "admin_out_id": admin["id"],
+                    "admin_out_name": admin["name"]
+                }
+            }
+        )
+        
+        return {
+            "message": f"Clocked out {employee['name']}",
+            "action": "out",
+            "timestamp": now_iso,
+            "employee_name": employee["name"],
+            "total_hours": total_hours
+        }
+
+
+@router.get("/employee/{employee_id}/clock-status")
+async def get_employee_clock_status(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Get current clock status for an employee"""
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    active = await db.time_entries.find_one(
+        {"user_id": employee_id, "clock_out": None}, {"_id": 0}
+    )
+    
+    return {
+        "is_clocked_in": active is not None,
+        "clock_in_time": active.get("last_clock_in") or active.get("clock_in") if active else None,
+        "entry_id": active.get("id") if active else None
+    }
+
+
 @router.post("/time-entries")
 async def create_time_entry(entry_data: CreateTimeEntryRequest, admin: dict = Depends(get_admin_user)):
     employee = await db.users.find_one({"id": entry_data.employee_id}, {"_id": 0})
