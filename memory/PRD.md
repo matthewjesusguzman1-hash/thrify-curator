@@ -518,3 +518,21 @@ Build a "Thrifty Curator" reselling application with:
 - **Test Results**: 100% pass rate (10 frontend feature checks)
 - **Test Report**: `/app/test_reports/iteration_23.json`
 - **Data-testid attributes**: `header-start-trip-btn`, `header-pause-resume-btn`, `header-end-trip-btn`
+
+### UI Improvements (COMPLETED)
+
+- **Recent Trips Section Collapsible** (MileageTrackingSection.jsx):
+  - Changed default state to collapsed (`showMileageEntries: false`)
+  - Click header "Recent Trips (count)" to expand/collapse
+  - Uses AnimatePresence for smooth animations
+
+- **Back to Top Button** (AdminDashboard.jsx):
+  - Fixed position button at bottom-right corner
+  - Appears when scrollY > 400px
+  - Cyan-purple gradient matching app theme
+  - Smooth scroll animation to top
+  - Fades in/out with framer-motion
+  - Data-testid: `back-to-top-btn`
+
+- **Test Results**: 100% pass rate (7/7 feature checks)
+- **Test Report**: `/app/test_reports/iteration_24.json`
