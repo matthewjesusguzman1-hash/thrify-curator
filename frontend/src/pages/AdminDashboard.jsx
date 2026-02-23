@@ -1205,7 +1205,12 @@ export default function AdminDashboard() {
       await axios.post(`${API}/admin/payroll/check-records`, payload, getAuthHeader());
       
       toast.success("Check image uploaded successfully!");
-      setCheckUploadData({ description: "", check_date: "", amount: "", employee_name: "" });
+      setCheckUploadData({ 
+        description: "", 
+        check_date: new Date().toISOString().split('T')[0], 
+        amount: "", 
+        employee_name: "" 
+      });
       fetchCheckRecords();
     } catch (error) {
       toast.error("Failed to upload check image");
