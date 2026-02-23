@@ -1834,6 +1834,43 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
+                    {/* Import from Job Application */}
+                    {formSubmissions.jobApplications && formSubmissions.jobApplications.length > 0 && (
+                      <div className="form-group mb-4">
+                        <Label className="form-label flex items-center gap-2">
+                          <Briefcase className="w-4 h-4 text-[#C5A065]" />
+                          Import from Job Application
+                        </Label>
+                        <Select 
+                          onValueChange={(value) => {
+                            if (value && value !== "none") {
+                              const app = formSubmissions.jobApplications.find(a => a.id === value);
+                              if (app) {
+                                setEditEmployeeData({
+                                  ...editEmployeeData,
+                                  name: app.full_name,
+                                  email: app.email
+                                });
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="form-input">
+                            <SelectValue placeholder="Select a job applicant..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">-- No import --</SelectItem>
+                            {formSubmissions.jobApplications.map((app) => (
+                              <SelectItem key={app.id} value={app.id}>
+                                {app.full_name} ({app.email})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-[#888] mt-1">Replace employee info with data from a job application</p>
+                      </div>
+                    )}
+
                     <div className="form-group">
                       <Label className="form-label">Full Name *</Label>
                       <Input
