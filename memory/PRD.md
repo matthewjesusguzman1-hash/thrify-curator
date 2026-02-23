@@ -234,6 +234,12 @@ Build a "Thrifty Curator" reselling application with:
 - Test files: `/app/backend/tests/`
 
 ## Recent Updates (Feb 23, 2026)
+- **Employee Pay Period Sync Fix**: Fixed employee portal pay period calculation to match admin dashboard
+  - Now uses the same `pay_period_start_date` from settings as admin
+  - Uses the shared `get_biweekly_period` helper function for consistency
+  - Fixed timezone comparison bug that was excluding entries on the last day of pay period
+  - Employee estimated pay now correctly calculated based on all hours in the pay period
+
 - **Search & Navigation Enhancements**:
   - **Payroll Check Records Search**: Added search bar to filter records by employee name, description, date, or amount
   - **Form Submissions Search & Filter**: Added search by name/email/phone and status filter dropdown (All, New, Reviewed, Contacted, Archived)
