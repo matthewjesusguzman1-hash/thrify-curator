@@ -3612,6 +3612,204 @@ export default function AdminDashboard() {
             </AnimatePresence>
           </div>
 
+          {/* Payroll Check Records Section */}
+          <div className="dashboard-card">
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => {
+                const willOpen = !showCheckRecordsSection;
+                setShowCheckRecordsSection(willOpen);
+                if (willOpen) {
+                  fetchCheckRecords();
+                }
+              }}
+              data-testid="check-records-section-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-[#333]">Payroll Check Records</h2>
+                  <p className="text-xs text-[#888]">{checkRecords.length} records stored</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); fetchCheckRecords(); }}
+                  className="text-[#888]"
+                >
+                  Refresh
+                </Button>
+                {showCheckRecordsSection ? (
+                  <ChevronUp className="w-5 h-5 text-[#888]" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-[#888]" />
+                )}
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {showCheckRecordsSection && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-4 pt-4 border-t border-[#eee]">
+                    {/* Upload Section */}
+                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl mb-4">
+                      <h3 className="font-medium text-[#333] mb-3 flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-purple-600" />
+                        Upload Check Photo
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                        <div>
+                          <Label className="text-xs text-[#666]">Employee Name</Label>
+                          <Input
+                            type="text"
+                            placeholder="John Doe"
+                            value={checkUploadData.employee_name}
+                            onChange={(e) => setCheckUploadData({ ...checkUploadData, employee_name: e.target.value })}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-[#666]">Check Date</Label>
+                          <Input
+                            type="date"
+                            value={checkUploadData.check_date}
+                            onChange={(e) => setCheckUploadData({ ...checkUploadData, check_date: e.target.value })}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-[#666]">Amount ($)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={checkUploadData.amount}
+                            onChange={(e) => setCheckUploadData({ ...checkUploadData, amount: e.target.value })}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-[#666]">Description</Label>
+                          <Input
+                            type="text"
+                            placeholder="Weekly pay, Bonus, etc."
+                            value={checkUploadData.description}
+                            onChange={(e) => setCheckUploadData({ ...checkUploadData, description: e.target.value })}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="file"
+                          ref={checkInputRef}
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={(e) => handleCheckImageUpload(e.target.files[0])}
+                        />
+                        <Button
+                          onClick={() => checkInputRef.current?.click()}
+                          disabled={uploadingCheck}
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                        >
+                          {uploadingCheck ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                          ) : (
+                            <Camera className="w-4 h-4 mr-2" />
+                          )}
+                          {uploadingCheck ? "Uploading..." : "Take Photo / Upload"}
+                        </Button>
+                        <p className="text-xs text-[#888]">Accepts images up to 10MB</p>
+                      </div>
+                    </div>
+
+                    {/* Records List */}
+                    {loadingCheckRecords ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                      </div>
+                    ) : checkRecords.length === 0 ? (
+                      <div className="text-center py-8">
+                        <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-[#888]">No check records yet</p>
+                        <p className="text-xs text-[#aaa]">Upload photos of payroll checks to keep for your records</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {checkRecords.map((record) => (
+                          <div key={record.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                            <div 
+                              className="h-40 bg-gray-100 flex items-center justify-center cursor-pointer"
+                              onClick={() => handleViewCheckImage(record.id)}
+                            >
+                              <div className="text-center">
+                                <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                                <p className="text-xs text-[#888]">Click to view</p>
+                              </div>
+                            </div>
+                            <div className="p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                {record.employee_name && (
+                                  <p className="font-medium text-[#333] text-sm">{record.employee_name}</p>
+                                )}
+                                {record.amount && (
+                                  <span className="text-green-600 font-semibold">${record.amount.toFixed(2)}</span>
+                                )}
+                              </div>
+                              {record.check_date && (
+                                <p className="text-xs text-[#888] mb-1">
+                                  <Calendar className="w-3 h-3 inline mr-1" />
+                                  {new Date(record.check_date).toLocaleDateString()}
+                                </p>
+                              )}
+                              {record.description && (
+                                <p className="text-xs text-[#666] mb-2">{record.description}</p>
+                              )}
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <p className="text-xs text-[#aaa]">
+                                  {new Date(record.uploaded_at).toLocaleDateString()}
+                                </p>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleViewCheckImage(record.id)}
+                                    className="h-7 px-2 text-purple-600"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteCheckRecord(record.id)}
+                                    className="h-7 px-2 text-red-500"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* W-9 Rejection Modal */}
           {reviewingW9 && (
             <motion.div
