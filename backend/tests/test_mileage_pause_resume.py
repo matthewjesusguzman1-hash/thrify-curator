@@ -18,8 +18,11 @@ class TestMileagePauseResume:
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
         
-        # Login to get auth token
-        login_response = self.session.post(f"{BASE_URL}/api/auth/login", json={"code": "4399"})
+        # Login to get auth token - Admin login with email + admin_code
+        login_response = self.session.post(f"{BASE_URL}/api/auth/login", json={
+            "email": "matthewjesusguzman1@gmail.com",
+            "admin_code": "4399"
+        })
         assert login_response.status_code == 200, f"Login failed: {login_response.text}"
         
         token = login_response.json().get("token")
