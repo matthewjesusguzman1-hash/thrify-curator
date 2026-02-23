@@ -11,12 +11,13 @@ Build a "Thrifty Curator" reselling application with:
 - Admin dashboard (matthewjesusguzman1@gmail.com) - add/remove employees, run shift reports, edit employee hours
 - Employee dashboard - clock in/out, view own hours
 - In-app + email notifications when employees clock in/out
+- Admin interface to view and manage form submissions
 
 ## User Personas
 1. **Customers** - Browse platform links, submit consignment inquiries
 2. **Job Seekers** - Submit job applications
 3. **Employees** - Clock in/out, track work hours (passwordless email login)
-4. **Admin** - Manage employees, view shift reports, edit hours, receive notifications (matthewjesusguzman1@gmail.com)
+4. **Admin** - Manage employees, view shift reports, edit hours, receive notifications, manage form submissions (matthewjesusguzman1@gmail.com)
 
 ## Core Requirements (Static)
 - Landing page with logo, two-column grid layout
@@ -35,6 +36,7 @@ Build a "Thrifty Curator" reselling application with:
 - Admin ability to edit/delete employee time entries
 - In-app notifications for admin (clock in/out)
 - Email notifications via Resend (requires API key)
+- Admin form submissions management (view, update status, delete)
 
 ## What's Been Implemented (Dec 2025 - Feb 2026)
 - [x] Landing page with Thrifty Curator logo
@@ -84,6 +86,15 @@ Build a "Thrifty Curator" reselling application with:
 - [x] Splash screen on mobile app launch
 - [x] Home screen icon support (iOS/Android)
 - [x] Reusable admin components (StatCard, EmployeeTable, Modals, NotificationBell)
+- [x] **Form Submissions Management** (Feb 23, 2026):
+  - Collapsible section in Admin Dashboard
+  - Three tabs: Job Applications, Consignment Inquiries, Consignment Agreements
+  - Table view with Name, Email, Phone/Item Types/Percentage, Submitted date, Status, Actions
+  - View details modal with all submission fields
+  - Status update (New, Reviewed, Contacted, Archived)
+  - Delete submissions functionality
+  - Refresh button to reload data
+  - Summary showing total submissions and new count
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
@@ -110,7 +121,7 @@ Build a "Thrifty Curator" reselling application with:
     ├── pages/
     │   ├── LandingPage.jsx        # Two-column layout with Black Bold theme
     │   ├── AuthPage.jsx           # Passwordless login
-    │   ├── AdminDashboard.jsx     # Admin features + notifications
+    │   ├── AdminDashboard.jsx     # Admin features + notifications + form submissions
     │   ├── EmployeeDashboard.jsx  # Employee clock in/out with pay period
     │   ├── JobApplicationForm.jsx
     │   ├── ConsignmentInquiryForm.jsx
@@ -133,16 +144,24 @@ Build a "Thrifty Curator" reselling application with:
 - `POST /api/admin/payroll/report/pdf` - Generate payroll report (PDF)
 - `PUT /api/admin/employees/{id}/rate` - Update employee hourly rate
 - `PUT /api/admin/employees/{id}` - Update employee details (name, email, role)
+- `GET /api/admin/forms/summary` - Get form submissions summary (counts)
+- `GET /api/admin/forms/job-applications` - Get all job applications
+- `GET /api/admin/forms/consignment-inquiries` - Get all consignment inquiries
+- `GET /api/admin/forms/consignment-agreements` - Get all consignment agreements
+- `PUT /api/admin/forms/{type}/{id}/status` - Update submission status
+- `DELETE /api/admin/forms/{type}/{id}` - Delete submission
 
 ## Key Credentials
 - **Admin Email**: matthewjesusguzman1@gmail.com (no password needed)
 
 ## Prioritized Backlog
 ### P0 (Critical)
-- All complete ✅
+- [x] Form Submissions Management ✅ (Feb 23, 2026)
+- Refactoring backend/frontend (server.py 2000+ lines, AdminDashboard.jsx 2300+ lines)
 
 ### P1 (High Priority)
 - Add Resend API key for email notifications to work in production
+- Deploy the application
 - Employee schedule/shift management
 
 ### P2 (Medium Priority)
@@ -151,22 +170,28 @@ Build a "Thrifty Curator" reselling application with:
 - Inventory integration with platforms
 
 ## Next Tasks
-1. Configure Resend API key for production email notifications
-2. Employee schedule/shift management
-3. Export hours to CSV/PDF
+1. **Refactor backend/server.py** - Break into modular structure (routers, models, services)
+2. **Refactor AdminDashboard.jsx** - Decompose into smaller components
+3. Deploy the application
+4. Configure Resend API key for production email notifications
 
 ## Testing Status
-- Backend: 100% pass (93/93 tests)
+- Backend: 100% pass (93 tests + 16 form submission tests)
+- Frontend: 100% pass (12 form submission tests)
 - Test reports: `/app/test_reports/`
 - Test files: `/app/backend/tests/`
 
-## Recent Fixes (Feb 2026)
-- Fixed BASE_URL configuration in all test files (was causing test failures when env var not set)
-- Fixed flaky `test_create_new_employee` test (was using stale email variable)
-- Increased employee list limit from 100 to 500 and added sorting by created_at
+## Recent Updates (Feb 23, 2026)
+- **Form Submissions UI**: Added admin interface to view and manage all form submissions
+  - Collapsible section at bottom of Admin Dashboard
+  - Three tabs for different form types
+  - View details modal with status update buttons
+  - Delete functionality with confirmation
+  - 100% test coverage (backend and frontend)
 
 ## Notes
 - Email notifications are configured but require a valid Resend API key (currently placeholder)
 - PDF generation uses reportlab library
 - Individual employee rates shown with ★ indicator in payroll reports
 - Minor React hydration warning in console (cosmetic, does not affect functionality)
+- **REFACTORING NEEDED**: server.py and AdminDashboard.jsx are monolithic files that need to be broken down
