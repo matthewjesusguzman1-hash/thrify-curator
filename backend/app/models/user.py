@@ -49,3 +49,7 @@ class UpdateEmployeeDetails(BaseModel):
     email: Optional[EmailStr] = None
     hourly_rate: Optional[float] = None
     role: Optional[str] = None
+
+
+class W9RejectRequest(BaseModel):
+    reason: str
