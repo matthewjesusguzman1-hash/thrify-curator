@@ -176,14 +176,22 @@ export default function LandingPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#00D4FF]/10 hover:to-[#8B5CF6]/10 transition-all duration-300 group"
-                      data-testid={`platform-link-${platform.name.toLowerCase()}`}
+                      data-testid={`platform-link-${platform.name.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       <div className="flex items-center gap-3">
                         <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center"
+                          className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden"
                           style={{ backgroundColor: platform.color }}
                         >
-                          <platform.icon className="w-5 h-5 text-white" />
+                          {platform.useIcon ? (
+                            <platform.icon className="w-5 h-5 text-white" />
+                          ) : (
+                            <img 
+                              src={platform.logoUrl} 
+                              alt={`${platform.name} logo`}
+                              className="w-6 h-6 object-contain brightness-0 invert"
+                            />
+                          )}
                         </div>
                         <span className="font-semibold text-[#1A1A2E] group-hover:text-[#00D4FF] transition-colors">
                           {platform.name}
