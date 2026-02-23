@@ -2907,9 +2907,9 @@ export default function AdminDashboard() {
                                 {emp.shifts.map((shift, idx) => (
                                   <div key={idx} className="flex justify-between text-sm bg-[#F9F6F7] rounded-lg px-3 py-2">
                                     <span className="text-[#666]">
-                                      {formatDateTime(shift.clock_in)} → {formatDateTime(shift.clock_out)}
+                                      {formatDateTime(shift.clock_in)} → {shift.clock_out ? formatDateTime(shift.clock_out) : 'In Progress'}
                                     </span>
-                                    <span className="font-medium text-[#333]">{shift.hours.toFixed(2)} hrs</span>
+                                    <span className="font-medium text-[#333]">{(shift.hours || 0).toFixed(2)} hrs</span>
                                   </div>
                                 ))}
                               </div>
