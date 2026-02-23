@@ -1184,6 +1184,11 @@ export default function AdminDashboard() {
     }
   }, [getAuthHeader]);
 
+  // Auto-fetch payroll check records on page load
+  useEffect(() => {
+    fetchCheckRecords();
+  }, [fetchCheckRecords]);
+
   const handleCheckImageUpload = async (file) => {
     if (!file) return;
     
