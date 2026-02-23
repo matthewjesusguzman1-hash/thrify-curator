@@ -741,6 +741,15 @@ export default function AdminDashboard() {
                 <UserPlus className="w-4 h-4" />
                 Add Employee
               </Button>
+              <Button 
+                onClick={() => setShowRemoveEmployee(true)}
+                variant="outline"
+                className="flex items-center gap-2 border-red-300 text-red-500 hover:bg-red-50"
+                data-testid="remove-employee-btn"
+              >
+                <UserMinus className="w-4 h-4" />
+                Remove Employee
+              </Button>
             </div>
           </div>
 
