@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from datetime import datetime, timezone, timedelta
-import asyncio
 import base64
 
 from app.database import db
@@ -26,40 +25,17 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
             raise HTTPException(status_code=400, detail="Already clocked in")
         
         today_entry = await db.time_entries.find_one(
-            {
-                "user_id": user["id"],
-                "shift_date": today_start.strftime("%Y-%m-%d")
-            },
+            {"user_id": user["id"], "shift_date": today_start.strftime("%Y-%m-%d")},
             {"_id": 0}
         )
         
         if today_entry:
             await db.time_entries.update_one(
                 {"id": today_entry["id"]},
-                {
-                    "$set": {
-                        "clock_out": None,
-                        "last_clock_in": now_iso
-                    }
-                }
+                {"$set": {"clock_out": None, "last_clock_in": now_iso}}
             )
             today_entry["clock_out"] = None
             today_entry["last_clock_in"] = now_iso
-            
-            await create_admin_notification(
-                notification_type="clock_in",
-                employee_id=user["id"],
-                employee_name=user["name"],
-                message=f"{user['name']} has clocked in (resuming shift)",
-                details={"clock_in": now_iso, "shift_date": today_start.strftime("%Y-%m-%d")}
-            )
-            
-            asyncio.create_task(send_clock_notification_email(
-                action="in",
-                employee_name=user["name"],
-                timestamp=now_iso
-            ))
-            
             return TimeEntry(**today_entry)
         else:
             entry = TimeEntry(
@@ -72,21 +48,6 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
             entry_dict["last_clock_in"] = now_iso
             entry_dict["accumulated_hours"] = 0.0
             await db.time_entries.insert_one(entry_dict)
-            
-            await create_admin_notification(
-                notification_type="clock_in",
-                employee_id=user["id"],
-                employee_name=user["name"],
-                message=f"{user['name']} has clocked in",
-                details={"clock_in": now_iso}
-            )
-            
-            asyncio.create_task(send_clock_notification_email(
-                action="in",
-                employee_name=user["name"],
-                timestamp=now_iso
-            ))
-            
             return entry
     
     elif action.action == "out":
@@ -106,40 +67,8 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         
         await db.time_entries.update_one(
             {"id": active["id"]},
-            {
-                "$set": {
-                    "clock_out": now_iso,
-                    "total_hours": total_hours,
-                    "accumulated_hours": accumulated_hours
-                }
-            }
+            {"$set": {"clock_out": now_iso, "total_hours": total_hours, "accumulated_hours": accumulated_hours}}
         )
-        
-        hours_summary = await get_employee_hours_summary(user["id"])
-        hours_summary["today_hours"] = round(hours_summary["today_hours"] + session_hours, 2)
-        hours_summary["week_hours"] = round(hours_summary["week_hours"] + session_hours, 2)
-        
-        await create_admin_notification(
-            notification_type="clock_out",
-            employee_id=user["id"],
-            employee_name=user["name"],
-            message=f"{user['name']} has clocked out ({session_hours} hrs this session, {total_hours} hrs total today)",
-            details={
-                "clock_in": active["clock_in"],
-                "clock_out": now_iso,
-                "session_hours": session_hours,
-                "total_hours": total_hours,
-                "today_hours": hours_summary["today_hours"],
-                "week_hours": hours_summary["week_hours"]
-            }
-        )
-        
-        asyncio.create_task(send_clock_notification_email(
-            action="out",
-            employee_name=user["name"],
-            timestamp=now_iso,
-            hours_summary=hours_summary
-        ))
         
         active["clock_out"] = now_iso
         active["total_hours"] = total_hours
@@ -179,25 +108,21 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     week_entries = [e for e in entries if datetime.fromisoformat(e["clock_in"].replace('Z', '+00:00')) >= week_start]
     week_hours = sum(e.get("total_hours", 0) for e in week_entries)
     
-    # Get payroll settings - use same key as admin dashboard
     payroll_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     default_rate = 15.00
-    pay_period_start_date = "2026-01-06"  # Default fallback
+    pay_period_start_date = "2026-01-06"
     
     if payroll_settings:
         default_rate = payroll_settings.get("default_hourly_rate", 15.00)
         pay_period_start_date = payroll_settings.get("pay_period_start_date", "2026-01-06")
     
-    # Use the same biweekly period calculation as admin dashboard
     period_start, period_end = get_biweekly_period(pay_period_start_date, 0)
     
-    # Ensure period_start and period_end are timezone-aware datetime objects
     if hasattr(period_start, 'tzinfo') and period_start.tzinfo is None:
         period_start = period_start.replace(tzinfo=timezone.utc)
     if hasattr(period_end, 'tzinfo') and period_end.tzinfo is None:
         period_end = period_end.replace(tzinfo=timezone.utc)
     
-    # Filter entries for current pay period
     period_entries = []
     for e in entries:
         try:
@@ -211,7 +136,6 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     period_hours = sum(e.get("total_hours", 0) for e in period_entries)
     period_shifts = len(period_entries)
     
-    # Get employee's individual hourly rate (if set)
     user_doc = await db.users.find_one({"id": user["id"]}, {"_id": 0})
     hourly_rate = user_doc.get("hourly_rate") if user_doc else None
     if hourly_rate is None:
@@ -239,11 +163,7 @@ async def get_w9_status(user: dict = Depends(get_current_user)):
     w9_doc = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0, "content": 0})
     
     if not w9_doc:
-        return {
-            "status": "not_submitted",
-            "has_w9": False,
-            "can_edit": True
-        }
+        return {"status": "not_submitted", "has_w9": False, "can_edit": True}
     
     return {
         "status": w9_doc.get("status", "submitted"),
@@ -269,16 +189,13 @@ async def download_own_w9(user: dict = Depends(get_current_user)):
     return Response(
         content=base64.b64decode(w9_doc["content"]),
         media_type=w9_doc.get("content_type", "application/pdf"),
-        headers={
-            "Content-Disposition": f"inline; filename={w9_doc.get('filename', 'w9.pdf')}"
-        }
+        headers={"Content-Disposition": f"inline; filename={w9_doc.get('filename', 'w9.pdf')}"}
     )
 
 
 @router.post("/w9/upload")
 async def upload_w9_employee(user: dict = Depends(get_current_user)):
     """Employee uploads their W-9 - uses form data"""
-    from fastapi import UploadFile, File
     raise HTTPException(status_code=400, detail="Use multipart form upload endpoint")
 
 
