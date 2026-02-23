@@ -116,16 +116,20 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       if (activeTripRes.data) {
         setActiveTripData(activeTripRes.data);
         setIsTracking(true);
+        setIsPaused(activeTripRes.data.is_paused || false);
         // Store in localStorage for persistence
         localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(activeTripRes.data));
-        // Resume tracking
-        resumeTracking();
+        // Resume tracking only if not paused
+        if (!activeTripRes.data.is_paused) {
+          resumeTracking();
+        }
         // Fetch current distance
         fetchCumulativeDistance();
       } else {
         // Clear localStorage if no active trip on server
         localStorage.removeItem(ACTIVE_TRIP_KEY);
         setIsTracking(false);
+        setIsPaused(false);
         setActiveTripData(null);
       }
     } catch (error) {
