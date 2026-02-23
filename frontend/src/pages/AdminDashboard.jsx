@@ -590,7 +590,8 @@ export default function AdminDashboard() {
       await axios.delete(`${API}/admin/time-entries/${shiftId}`, getAuthHeader());
       setEmployeeShifts(prev => prev.filter(s => s.id !== shiftId));
       toast.success("Shift deleted successfully");
-      fetchData(); // Refresh summary data
+      fetchData();
+      fetchPayrollSummary();
     } catch (error) {
       toast.error("Failed to delete shift");
     }
@@ -608,8 +609,9 @@ export default function AdminDashboard() {
       await axios.post(`${API}/admin/time-entries`, payload, getAuthHeader());
       toast.success("Shift added successfully");
       setShowAddShiftModal(false);
-      handleViewEmployeeShifts(showEmployeeShiftsModal); // Refresh shifts
-      fetchData(); // Refresh summary data
+      handleViewEmployeeShifts(showEmployeeShiftsModal);
+      fetchData();
+      fetchPayrollSummary();
     } catch (error) {
       toast.error("Failed to add shift");
     }
@@ -627,8 +629,9 @@ export default function AdminDashboard() {
       toast.success("Shift updated successfully");
       setShowEditShiftModal(false);
       setEditingShift(null);
-      handleViewEmployeeShifts(showEmployeeShiftsModal); // Refresh shifts
-      fetchData(); // Refresh summary data
+      handleViewEmployeeShifts(showEmployeeShiftsModal);
+      fetchData();
+      fetchPayrollSummary();
     } catch (error) {
       toast.error("Failed to update shift");
     }
