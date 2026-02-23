@@ -25,6 +25,8 @@ class UserResponse(BaseModel):
     role: str
     hourly_rate: Optional[float] = None
     created_at: str
+    has_w9: Optional[bool] = None
+    w9_uploaded_at: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
