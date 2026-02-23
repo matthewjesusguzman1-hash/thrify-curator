@@ -1632,8 +1632,7 @@ export default function AdminDashboard() {
                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  className="absolute right-0 md:right-0 -right-4 top-full mt-2 w-[calc(100vw-2rem)] md:w-96 max-w-[400px] bg-white rounded-2xl shadow-2xl border border-[#eee] z-50 overflow-hidden"
-                  style={{ maxWidth: 'min(400px, calc(100vw - 2rem))', right: 'max(-1rem, calc(-50vw + 50%))' }}
+                  className="fixed md:absolute left-1 right-1 md:left-auto md:right-0 top-[120px] md:top-full md:mt-2 w-auto md:w-96 max-w-[400px] bg-white rounded-2xl shadow-2xl border border-[#eee] z-50 overflow-hidden"
                   data-testid="notification-dropdown"
                 >
                   {/* Header */}
