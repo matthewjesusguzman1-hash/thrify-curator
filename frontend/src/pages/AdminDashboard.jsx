@@ -1172,16 +1172,15 @@ export default function AdminDashboard() {
                   <DollarSign className="w-4 h-4" />
                   Payroll
                 </Button>
-                <Button 
+                <button 
                   onClick={() => setShowReport(true)}
-                  variant="ghost"
-                  size="sm"
-                  className="btn-dark-gradient flex items-center gap-2 font-semibold shadow-md hover:shadow-lg hover:shadow-[#1A1A2E]/30 transition-all"
+                  className="h-8 rounded-md px-3 text-xs flex items-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all"
+                  style={{ background: 'linear-gradient(to right, #1A1A2E, #16213E)', color: 'white' }}
                   data-testid="run-report-btn"
                 >
                   <FileText className="w-4 h-4" />
                   Run Report
-                </Button>
+                </button>
               </div>
               {/* Employee Management Stack */}
               <div className="flex flex-col gap-1">
