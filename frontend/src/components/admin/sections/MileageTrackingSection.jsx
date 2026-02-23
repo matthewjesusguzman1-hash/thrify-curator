@@ -395,6 +395,12 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       }
       
       setIsPaused(true);
+      
+      // Notify parent component
+      if (onTripStatusChange) {
+        onTripStatusChange({ isActive: true, isPaused: true });
+      }
+      
       toast.success("Trip paused - GPS tracking stopped");
       
     } catch (error) {
@@ -412,6 +418,11 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       
       // Resume GPS tracking
       resumeTracking();
+      
+      // Notify parent component
+      if (onTripStatusChange) {
+        onTripStatusChange({ isActive: true, isPaused: false });
+      }
       
       toast.success("Trip resumed - GPS tracking restarted");
       
