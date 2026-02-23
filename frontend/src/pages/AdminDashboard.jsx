@@ -55,6 +55,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import axios from "axios";
 import MileageTrackingSection from "@/components/admin/sections/MileageTrackingSection";
+import PayrollCheckRecordsSection from "@/components/admin/sections/PayrollCheckRecordsSection";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
