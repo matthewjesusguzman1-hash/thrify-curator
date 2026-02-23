@@ -1342,7 +1342,11 @@ export default function AdminDashboard() {
                     {employees.map((emp) => (
                       <tr key={emp.id} data-testid={`all-employee-row-${emp.id}`}>
                         <td>
-                          <div className="flex items-center gap-2">
+                          <div 
+                            className="flex items-center gap-2 cursor-pointer hover:bg-[#F9F6F7] rounded-lg px-2 py-1 -mx-2 transition-colors"
+                            onClick={() => handleViewEmployeeDetails(emp)}
+                            data-testid={`employee-name-${emp.id}`}
+                          >
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                               emp.role === 'admin' ? 'bg-[#C5A065]/20' : 'bg-[#F8C8DC]/30'
                             }`}>
@@ -1352,7 +1356,8 @@ export default function AdminDashboard() {
                                 <User className="w-4 h-4 text-[#D48C9E]" />
                               )}
                             </div>
-                            {emp.name}
+                            <span className="text-[#333] hover:text-[#C5A065] font-medium">{emp.name}</span>
+                            <Eye className="w-3 h-3 text-[#aaa] opacity-0 group-hover:opacity-100" />
                           </div>
                         </td>
                         <td>{emp.email}</td>
