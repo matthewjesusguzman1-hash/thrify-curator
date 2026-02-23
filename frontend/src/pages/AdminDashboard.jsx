@@ -198,6 +198,13 @@ export default function AdminDashboard() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch form submissions when section is opened
+  useEffect(() => {
+    if (showFormsSection) {
+      fetchFormSubmissions();
+    }
+  }, [showFormsSection, fetchFormSubmissions]);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
