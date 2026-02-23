@@ -1066,7 +1066,7 @@ export default function AdminDashboard() {
                                   )}
                                 </div>
                                 
-                                <p className="text-sm font-medium leading-snug">
+                                <p style={{ color: '#111111', fontWeight: 500 }} className="text-sm leading-snug">
                                   {notification.message}
                                 </p>
                                 
