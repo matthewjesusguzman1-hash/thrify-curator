@@ -234,6 +234,16 @@ Build a "Thrifty Curator" reselling application with:
 - Test files: `/app/backend/tests/`
 
 ## Recent Updates (Feb 23, 2026)
+- **Collapsible Payroll Check Records**: Made check records collapsible for easier navigation
+  - Each record shows as a collapsed row with thumbnail, name, date, and amount
+  - Click to expand and see full image and details
+  - "Expand All" / "Collapse All" button to toggle all records at once
+  - Action buttons (view, edit, delete) visible in collapsed state
+
+- **W-9 Corrections Handling Fix**: When employee resubmits corrected W-9, rejection reason is cleared
+  - Previously the rejection_reason field persisted after resubmission
+  - Now properly clears when status changes to pending_review
+
 - **Employee Pay Period Sync Fix**: Fixed employee portal pay period calculation to match admin dashboard
   - Now uses the same `pay_period_start_date` from settings as admin
   - Uses the shared `get_biweekly_period` helper function for consistency
