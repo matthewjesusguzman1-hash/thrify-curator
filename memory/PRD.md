@@ -441,4 +441,25 @@ Build a "Thrifty Curator" reselling application with:
 - Modified: `/app/frontend/src/pages/AdminDashboard.jsx` - Added `Save` to lucide-react imports
 - Modified: `/app/frontend/src/components/admin/sections/MileageTrackingSection.jsx` - Improved report modal mobile UX
 
+### Refactoring: PayrollCheckRecordsSection Extraction (COMPLETED)
+
+- **Extracted**: PayrollCheckRecordsSection from AdminDashboard.jsx to standalone component
+- **New Component**: `/app/frontend/src/components/admin/sections/PayrollCheckRecordsSection.jsx` (703 lines)
+- **AdminDashboard.jsx reduced**: From 6030 lines to 5333 lines (~700 lines removed)
+- **Features preserved**:
+  - Upload check photos with preview
+  - Employee name, check date, amount, description fields
+  - View/Edit/Delete functionality for records
+  - Search and filter records
+  - Expand/Collapse individual records
+  - Full image viewer modal
+- **Test Report**: `/app/test_reports/iteration_17.json` - All features verified working
+
+### W-9 Viewing Bug Investigation
+
+- **Status**: NOT REPRODUCIBLE (Feb 23, 2026)
+- **Testing Result**: W-9 Viewer Modal opens correctly without forcing download
+- **Tested**: Lisa Martinez and James Wilson W-9s - both display in iframe correctly
+- **Modal Features**: Close button, Download button, PDF preview all functional
+- **Test Report**: `/app/test_reports/iteration_16.json`
 
