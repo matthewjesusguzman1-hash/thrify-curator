@@ -22,45 +22,57 @@ const TIKTOK_URL = "https://www.tiktok.com/@thrifty_curator?_r=1&_t=ZP-93ukKuigA
 const APP_URL = typeof window !== 'undefined' ? window.location.origin : '';
 const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(APP_URL)}`;
 
+// Custom SVG Icons for platforms without react-icons support
+const PoshmarkIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-13h4c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V9c0-1.1.9-2 2-2z"/>
+  </svg>
+);
+
+const MercariIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+  </svg>
+);
+
+const DepopIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <circle cx="12" cy="12" r="10"/>
+    <text x="12" y="16" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">D</text>
+  </svg>
+);
+
 // Platform data with brand logos
 const platforms = [
   { 
     name: "eBay", 
-    icon: SiEbay, 
+    Icon: SiEbay, 
     url: "https://www.ebay.com/str/thriftycurator", 
-    color: "#E53238",
-    useIcon: true
+    color: "#E53238"
   },
   { 
     name: "Poshmark", 
-    logoUrl: "https://cdn.brandfetch.io/poshmark.com/w/512/h/512/logo",
+    Icon: PoshmarkIcon,
     url: "https://posh.mk/dZSDIxRJJ0b", 
-    color: "#7F0353",
-    useIcon: false,
-    letterFallback: "P"
+    color: "#7F0353"
   },
   { 
     name: "Mercari", 
-    logoUrl: "https://cdn.brandfetch.io/mercari.com/w/512/h/512/logo",
+    Icon: MercariIcon,
     url: "https://www.mercari.com/u/thriftycurator/?sv=0", 
-    color: "#FF0211",
-    useIcon: false,
-    letterFallback: "M"
+    color: "#FF0211"
   },
   { 
     name: "Depop", 
-    logoUrl: "https://cdn.brandfetch.io/depop.com/w/512/h/512/logo",
+    Icon: DepopIcon,
     url: "https://www.depop.com/thriftycurator/", 
-    color: "#FF2300",
-    useIcon: false,
-    letterFallback: "D"
+    color: "#FF2300"
   },
   { 
     name: "Facebook Marketplace", 
-    icon: SiFacebook, 
+    Icon: SiFacebook, 
     url: "https://www.facebook.com/marketplace/profile/517375094/", 
-    color: "#1877F2",
-    useIcon: true
+    color: "#1877F2"
   },
 ];
 
