@@ -11,6 +11,7 @@ import {
   Home,
   Shield,
   UserPlus,
+  UserMinus,
   X,
   Trash2,
   FileText,
@@ -22,7 +23,9 @@ import {
   Edit3,
   DollarSign,
   Settings,
-  CalendarDays
+  CalendarDays,
+  Mail,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
