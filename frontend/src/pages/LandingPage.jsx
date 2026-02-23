@@ -87,8 +87,8 @@ const formLinks = [
 
 // Connect links
 const connectLinks = [
-  { name: "TikTok", icon: SiTiktok, url: TIKTOK_URL, color: "#00D4FF" },
-  { name: "Facebook", icon: SiFacebook, url: "https://www.facebook.com/people/Thrifty-Curator/100070158913020/", color: "#8B5CF6" },
+  { name: "TikTok", logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/nd3tqh8m_IMG_0081.PNG", url: TIKTOK_URL, color: "#000000", useImage: true },
+  { name: "Facebook", logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/ghir53y9_IMG_0052.PNG", url: "https://www.facebook.com/people/Thrifty-Curator/100070158913020/", color: "#3b5998", useImage: true },
   { name: "Message Me", icon: Mail, url: "mailto:euni.deleon1@gmail.com", color: "#FF1493" },
 ];
 
