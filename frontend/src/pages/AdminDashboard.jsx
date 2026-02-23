@@ -238,25 +238,6 @@ export default function AdminDashboard() {
   const [uploadingW9, setUploadingW9] = useState(null);
   const w9InputRef = useRef(null);
 
-  // Payroll Check Records state
-  const [showCheckRecordsSection, setShowCheckRecordsSection] = useState(false);
-  const [checkRecords, setCheckRecords] = useState([]);
-  const [checkThumbnails, setCheckThumbnails] = useState({});
-  const [loadingCheckRecords, setLoadingCheckRecords] = useState(false);
-  const [uploadingCheck, setUploadingCheck] = useState(false);
-  const [viewingCheckImage, setViewingCheckImage] = useState(null);
-  const [checkUploadData, setCheckUploadData] = useState({
-    description: "",
-    check_date: new Date().toISOString().split('T')[0],
-    amount: "",
-    employee_name: ""
-  });
-  const [pendingCheckImage, setPendingCheckImage] = useState(null); // Holds image before submission
-  const [editingCheckRecord, setEditingCheckRecord] = useState(null); // For editing existing records
-  const [checkSearchQuery, setCheckSearchQuery] = useState(""); // Search for check records
-  const [expandedCheckRecords, setExpandedCheckRecords] = useState({}); // Track expanded/collapsed state per record
-  const checkInputRef = useRef(null);
-
   // Helper function to calculate biweekly period from a start date
   const calculateBiweeklyPeriod = (startDateStr) => {
     if (!startDateStr) return null;
