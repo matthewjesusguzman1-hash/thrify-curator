@@ -381,6 +381,44 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     }
   };
 
+  // Pause trip tracking
+  const pauseTrip = async () => {
+    try {
+      await axios.post(`${API}/admin/mileage/pause-trip`, {}, getAuthHeader());
+      
+      // Stop watching position while paused
+      if (trackingWatchId) {
+        navigator.geolocation.clearWatch(trackingWatchId);
+        setTrackingWatchId(null);
+      }
+      
+      setIsPaused(true);
+      toast.success("Trip paused - GPS tracking stopped");
+      
+    } catch (error) {
+      console.error("Failed to pause trip:", error);
+      toast.error(error.response?.data?.detail || "Failed to pause trip");
+    }
+  };
+
+  // Resume trip tracking
+  const resumeTripFromPause = async () => {
+    try {
+      await axios.post(`${API}/admin/mileage/resume-trip`, {}, getAuthHeader());
+      
+      setIsPaused(false);
+      
+      // Resume GPS tracking
+      resumeTracking();
+      
+      toast.success("Trip resumed - GPS tracking restarted");
+      
+    } catch (error) {
+      console.error("Failed to resume trip:", error);
+      toast.error(error.response?.data?.detail || "Failed to resume trip");
+    }
+  };
+
   // Add manual mileage entry
   const handleAddMileageEntry = async () => {
     if (!mileageFormData.total_miles || !mileageFormData.start_address || !mileageFormData.end_address) {
