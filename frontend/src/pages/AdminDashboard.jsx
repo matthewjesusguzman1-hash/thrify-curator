@@ -1714,6 +1714,31 @@ export default function AdminDashboard() {
                       </p>
                     </div>
 
+                    {/* W-9 Form Download Section */}
+                    <div className="form-group">
+                      <Label className="form-label">W-9 Tax Form</Label>
+                      <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
+                        <div className="w-10 h-10 bg-[#C5A065]/20 rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-[#C5A065]" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-[#333]">IRS W-9 Form</p>
+                          <p className="text-xs text-[#888]">Download blank form for employee</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadBlankW9}
+                          className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
+                          data-testid="edit-download-w9-form-btn"
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+
                     <div className="flex gap-3 mt-6">
                       <Button
                         type="button"
