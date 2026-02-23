@@ -40,7 +40,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
   const [isPaused, setIsPaused] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [trackingWatchId, setTrackingWatchId] = useState(null);
-  const [showMileageEntries, setShowMileageEntries] = useState(true);
+  const [showMileageEntries, setShowMileageEntries] = useState(false);
   const [cumulativeMiles, setCumulativeMiles] = useState(0);
   const [waypointCount, setWaypointCount] = useState(0);
   
