@@ -234,6 +234,13 @@ Build a "Thrifty Curator" reselling application with:
 - Test files: `/app/backend/tests/`
 
 ## Recent Updates (Feb 23, 2026)
+- **Phone Number Support for Employees**: Added phone number field throughout the employee management system
+  - New "Phone" column in All Employees table (sortable)
+  - Phone field in "Add Employee" modal - can be imported from job applications
+  - Phone field in "Edit Employee" modal - editable with placeholder formatting
+  - Backend updated to store and retrieve phone numbers
+  - Job application import now includes phone number
+
 - **Collapsible Payroll Check Records**: Made check records collapsible for easier navigation
   - Each record shows as a collapsed row with thumbnail, name, date, and amount
   - Click to expand and see full image and details
