@@ -4667,7 +4667,13 @@ export default function AdminDashboard() {
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="font-playfair text-lg font-semibold text-[#333]">Current Pay Period</h3>
                             <span className="text-sm text-[#888]">
-                              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {employeePortalData.summary?.period_start ? 
+                                new Date(employeePortalData.summary.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 
+                                '-'
+                              } - {employeePortalData.summary?.period_end ? 
+                                new Date(employeePortalData.summary.period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 
+                                '-'
+                              }
                             </span>
                           </div>
                           <div className="grid grid-cols-3 gap-4">
