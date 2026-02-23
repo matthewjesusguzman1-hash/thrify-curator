@@ -260,40 +260,6 @@ export default function AdminDashboard() {
   const [expandedCheckRecords, setExpandedCheckRecords] = useState({}); // Track expanded/collapsed state per record
   const checkInputRef = useRef(null);
 
-  // Mileage Tracking state
-  const [showMileageSection, setShowMileageSection] = useState(false);
-  const [mileageEntries, setMileageEntries] = useState([]);
-  const [loadingMileage, setLoadingMileage] = useState(false);
-  const [activeTripData, setActiveTripData] = useState(null);
-  const [isTracking, setIsTracking] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [trackingWatchId, setTrackingWatchId] = useState(null);
-  const [showAddMileageModal, setShowAddMileageModal] = useState(false);
-  const [showEditMileageModal, setShowEditMileageModal] = useState(false);
-  const [editingMileageEntry, setEditingMileageEntry] = useState(null);
-  const [mileageFormData, setMileageFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    start_address: "",
-    end_address: "",
-    total_miles: "",
-    purpose: "thrifting",
-    purpose_other: "",
-    notes: ""
-  });
-  const [mileageSummary, setMileageSummary] = useState({
-    total_miles: 0,
-    total_trips: 0,
-    by_purpose: {},
-    monthly_totals: {}
-  });
-  const [endTripData, setEndTripData] = useState({
-    purpose: "thrifting",
-    purpose_other: "",
-    notes: ""
-  });
-  const [showEndTripModal, setShowEndTripModal] = useState(false);
-  const [showMileageEntries, setShowMileageEntries] = useState(true); // Collapsible mileage entries
-
   // Helper function to calculate biweekly period from a start date
   const calculateBiweeklyPeriod = (startDateStr) => {
     if (!startDateStr) return null;
