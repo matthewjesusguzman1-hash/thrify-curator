@@ -4020,7 +4020,10 @@ export default function AdminDashboard() {
 
 
           {/* Mileage Tracking Section */}
-          <MileageTrackingSection getAuthHeader={getAuthHeader} />
+          <MileageTrackingSection 
+            getAuthHeader={getAuthHeader} 
+            onTripStatusChange={(isActive) => setHeaderTripActive(isActive)}
+          />
 
           {/* W-9 Rejection Modal */}
           {reviewingW9 && (
