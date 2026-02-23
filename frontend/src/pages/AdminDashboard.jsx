@@ -252,6 +252,22 @@ export default function AdminDashboard() {
   const [forceMileageExpand, setForceMileageExpand] = useState(false);
   const mileageSectionRef = useRef(null);
 
+  // Back to top button state
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Handle scroll for back to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Helper function to calculate biweekly period from a start date
   const calculateBiweeklyPeriod = (startDateStr) => {
     if (!startDateStr) return null;
