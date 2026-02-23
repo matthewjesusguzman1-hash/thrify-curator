@@ -1566,42 +1566,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDownloadPayrollReportPDF = async () => {
-    if (!payrollReport) return;
-    
-    try {
-      const payload = {
-        period_type: payrollFilters.period_type,
-        period_index: parseInt(payrollFilters.period_index) || 0,
-        hourly_rate: parseFloat(payrollFilters.hourly_rate) || null,
-        employee_id: payrollFilters.employee_id || null
-      };
-      
-      if (payrollFilters.period_type === "custom") {
-        payload.start_date = payrollFilters.custom_start;
-        payload.end_date = payrollFilters.custom_end;
-      }
-
-      const response = await axios.post(`${API}/admin/payroll/report/pdf`, payload, {
-        ...getAuthHeader(),
-        responseType: 'blob'
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `payroll_report.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
-      toast.success("Payroll report PDF downloaded!");
-    } catch (error) {
-      toast.error("Failed to download payroll report PDF");
-    }
-  };
-
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
