@@ -4805,7 +4805,34 @@ export default function AdminDashboard() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <h3 className="font-medium text-[#333]">Recent Trips</h3>
+                        {/* Collapsible Recent Trips Header */}
+                        <div 
+                          className="flex items-center justify-between cursor-pointer p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                          onClick={() => setShowMileageEntries(!showMileageEntries)}
+                          data-testid="mileage-entries-toggle"
+                        >
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-[#333]">Recent Trips</h3>
+                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                              {mileageEntries.length} entries
+                            </span>
+                          </div>
+                          {showMileageEntries ? (
+                            <ChevronUp className="w-4 h-4 text-[#888]" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-[#888]" />
+                          )}
+                        </div>
+                        
+                        {/* Collapsible Entries List */}
+                        <AnimatePresence>
+                          {showMileageEntries && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="space-y-3 overflow-hidden"
+                            >
                         {mileageEntries.slice(0, 10).map((entry) => (
                           <div key={entry.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
                             <div className="flex items-start justify-between">
