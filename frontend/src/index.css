@@ -481,8 +481,8 @@ table tbody tr:hover {
 }
 
 .dashboard-header {
-    background: linear-gradient(90deg, #1A1A2E 0%, #16213E 100%);
-    border-bottom: 2px solid #00D4FF;
+    background: linear-gradient(90deg, #1A1A2E 0%, #16213E 100%) !important;
+    border-bottom: 2px solid #00D4FF !important;
     padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
