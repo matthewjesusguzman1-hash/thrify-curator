@@ -774,7 +774,7 @@ export default function AdminDashboard() {
         toast.success(`Employee ${newEmployee.name} created successfully!`);
       }
       
-      setNewEmployee({ name: "", email: "" });
+      setNewEmployee({ name: "", email: "", phone: "" });
       setNewEmployeeW9File(null);
       setSelectedJobApp("");
       setShowAddEmployee(false);
