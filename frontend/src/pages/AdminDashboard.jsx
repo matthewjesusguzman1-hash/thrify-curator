@@ -4202,7 +4202,7 @@ export default function AdminDashboard() {
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-2xl w-full max-w-3xl shadow-xl my-8 overflow-hidden"
+                className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-2xl w-full max-w-3xl shadow-xl my-4 sm:my-8 max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
                 data-testid="employee-portal-modal"
               >
