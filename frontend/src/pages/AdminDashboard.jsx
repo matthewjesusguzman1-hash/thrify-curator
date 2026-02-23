@@ -5763,7 +5763,7 @@ export default function AdminDashboard() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             onClick={scrollToTop}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-12 h-12 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white rounded-full shadow-lg hover:shadow-xl hover:shadow-[#00D4FF]/30 transition-all flex items-center justify-center"
+            className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 w-12 h-12 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white rounded-full shadow-lg hover:shadow-xl hover:shadow-[#00D4FF]/30 transition-all flex items-center justify-center"
             data-testid="back-to-top-btn"
             aria-label="Back to top"
           >
