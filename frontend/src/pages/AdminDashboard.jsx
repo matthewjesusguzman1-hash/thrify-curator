@@ -687,24 +687,33 @@ export default function AdminDashboard() {
       
       toast.success(response.data.message);
       
-      // Refresh clock status
-      const clockRes = await axios.get(`${API}/admin/employee/${viewingEmployee.id}/clock-status`, getAuthHeader());
-      setEmployeeClockStatus(clockRes.data);
+      // Refresh clock status (with error handling)
+      try {
+        const clockRes = await axios.get(`${API}/admin/employee/${viewingEmployee.id}/clock-status`, getAuthHeader());
+        setEmployeeClockStatus(clockRes.data);
+      } catch (e) {
+        console.error("Failed to refresh clock status:", e);
+      }
       
-      // Refresh employee portal data
-      const [entriesRes, summaryRes] = await Promise.all([
-        axios.get(`${API}/admin/employee/${viewingEmployee.id}/entries`, getAuthHeader()),
-        axios.get(`${API}/admin/employee/${viewingEmployee.id}/summary`, getAuthHeader())
-      ]);
-      setEmployeePortalData(prev => ({
-        ...prev,
-        entries: entriesRes.data,
-        summary: summaryRes.data
-      }));
+      // Refresh employee portal data (with error handling)
+      try {
+        const [entriesRes, summaryRes] = await Promise.all([
+          axios.get(`${API}/admin/employee/${viewingEmployee.id}/entries`, getAuthHeader()),
+          axios.get(`${API}/admin/employee/${viewingEmployee.id}/summary`, getAuthHeader())
+        ]);
+        setEmployeePortalData(prev => ({
+          ...prev,
+          entries: entriesRes.data,
+          summary: summaryRes.data
+        }));
+      } catch (e) {
+        console.error("Failed to refresh portal data:", e);
+      }
       
       // Also refresh main dashboard data
       fetchTimeEntries();
     } catch (error) {
+      console.error("Clock action failed:", error);
       toast.error(error.response?.data?.detail || `Failed to clock ${action}`);
     } finally {
       setClockingEmployee(false);
