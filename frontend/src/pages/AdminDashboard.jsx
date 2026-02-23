@@ -91,6 +91,10 @@ export default function AdminDashboard() {
   const [reportData, setReportData] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportFilters, setReportFilters] = useState({
+    period_type: "custom",
+    period_index: 0,
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
     start_date: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     end_date: new Date().toISOString().split('T')[0],
     employee_id: ""
