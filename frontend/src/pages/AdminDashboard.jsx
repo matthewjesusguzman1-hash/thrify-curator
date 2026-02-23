@@ -1453,7 +1453,7 @@ export default function AdminDashboard() {
                         disabled={emailingReport}
                         variant="outline"
                         size="sm"
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 border-[#8BA88E] text-[#8BA88E]"
                         data-testid="email-shift-report-btn"
                       >
                         <Mail className="w-4 h-4" />
