@@ -763,11 +763,25 @@ export default function AdminDashboard() {
   const checkActiveTripStatus = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/mileage/active-trip`, getAuthHeader());
-      setHeaderTripActive(response.data.has_active_trip);
+      if (response.data) {
+        setHeaderTripActive(true);
+        setHeaderTripPaused(response.data.is_paused || false);
+      } else {
+        setHeaderTripActive(false);
+        setHeaderTripPaused(false);
+      }
     } catch (error) {
       // Check localStorage as fallback
       const storedTrip = localStorage.getItem("thrifty_curator_active_trip");
       setHeaderTripActive(!!storedTrip);
+      if (storedTrip) {
+        try {
+          const tripData = JSON.parse(storedTrip);
+          setHeaderTripPaused(tripData.is_paused || false);
+        } catch (e) {
+          setHeaderTripPaused(false);
+        }
+      }
     }
   }, [getAuthHeader]);
 
