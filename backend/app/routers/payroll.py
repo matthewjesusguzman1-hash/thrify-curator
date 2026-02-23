@@ -46,49 +46,60 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     employees = await db.users.find({"role": "employee"}, {"_id": 0, "id": 1, "hourly_rate": 1}).to_list(100)
     employee_rates = {emp["id"]: emp.get("hourly_rate") or default_rate for emp in employees}
     
-    period_entries = await db.time_entries.find({
-        "clock_in": {
-            "$gte": datetime.combine(period_start, datetime.min.time()).replace(tzinfo=timezone.utc),
-            "$lt": datetime.combine(period_end + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
-        }
-    }, {"_id": 0}).to_list(1000)
+    # Get all time entries and filter manually since clock_in might be stored as string
+    all_entries = await db.time_entries.find({}, {"_id": 0}).to_list(10000)
+    
+    # Helper function to parse clock_in to datetime
+    def parse_clock_in(entry):
+        clock_in = entry.get("clock_in")
+        if isinstance(clock_in, str):
+            try:
+                # Handle ISO format string
+                return datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
+            except:
+                return None
+        return clock_in
+    
+    # Filter entries for current period
+    period_start_dt = datetime.combine(period_start, datetime.min.time()).replace(tzinfo=timezone.utc)
+    period_end_dt = datetime.combine(period_end + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
     
     current_period_hours = 0
     current_period_amount = 0
-    for entry in period_entries:
-        hours = entry.get("total_hours") or 0
-        current_period_hours += hours
-        emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
-        current_period_amount += hours * emp_rate
+    for entry in all_entries:
+        clock_in_dt = parse_clock_in(entry)
+        if clock_in_dt and period_start_dt <= clock_in_dt < period_end_dt:
+            hours = entry.get("total_hours") or 0
+            current_period_hours += hours
+            emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
+            current_period_amount += hours * emp_rate
     
+    # Filter entries for current month
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     if now.month == 12:
         month_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     else:
         month_end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    month_entries = await db.time_entries.find({
-        "clock_in": {"$gte": month_start, "$lt": month_end}
-    }, {"_id": 0}).to_list(1000)
-    
     month_total = 0
-    for entry in month_entries:
-        hours = entry.get("total_hours") or 0
-        emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
-        month_total += hours * emp_rate
+    for entry in all_entries:
+        clock_in_dt = parse_clock_in(entry)
+        if clock_in_dt and month_start <= clock_in_dt < month_end:
+            hours = entry.get("total_hours") or 0
+            emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
+            month_total += hours * emp_rate
     
+    # Filter entries for current year
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     year_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    year_entries = await db.time_entries.find({
-        "clock_in": {"$gte": year_start, "$lt": year_end}
-    }, {"_id": 0}).to_list(10000)
-    
     year_total = 0
-    for entry in year_entries:
-        hours = entry.get("total_hours") or 0
-        emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
-        year_total += hours * emp_rate
+    for entry in all_entries:
+        clock_in_dt = parse_clock_in(entry)
+        if clock_in_dt and year_start <= clock_in_dt < year_end:
+            hours = entry.get("total_hours") or 0
+            emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
+            year_total += hours * emp_rate
     
     return {
         "current_period": {
