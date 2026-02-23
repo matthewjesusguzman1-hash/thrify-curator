@@ -1792,9 +1792,9 @@ export default function AdminDashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-            <h1 className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
-            <div className="flex gap-2 justify-end items-start">
+          <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4">
+            <h1 className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white w-full sm:w-auto text-left">Admin Dashboard</h1>
+            <div className="flex gap-2 items-start">
               {/* Reports Stack */}
               <div className="flex flex-col gap-1">
                 <Button 
