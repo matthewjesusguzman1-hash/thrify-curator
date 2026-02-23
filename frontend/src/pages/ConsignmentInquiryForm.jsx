@@ -281,6 +281,20 @@ export default function ConsignmentInquiryForm() {
             </div>
 
             <div>
+              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Brand *</Label>
+              <Input
+                type="text"
+                name="brand"
+                value={formData.brand}
+                onChange={handleChange}
+                required
+                placeholder="Enter the brand name (e.g., Lululemon, Nike, Coach)"
+                className="border-2 border-gray-200 focus:border-[#FF1493] rounded-lg"
+                data-testid="input-brand"
+              />
+            </div>
+
+            <div>
               <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Item Description *</Label>
               <Textarea
                 name="item_description"
