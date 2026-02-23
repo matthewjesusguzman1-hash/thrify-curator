@@ -157,7 +157,11 @@ Build a "Thrifty Curator" reselling application with:
 ## Prioritized Backlog
 ### P0 (Critical)
 - [x] Form Submissions Management ✅ (Feb 23, 2026)
-- Refactoring backend/frontend (server.py 2000+ lines, AdminDashboard.jsx 2300+ lines)
+- [x] Notification Dropdown Readability Fix ✅ (Feb 23, 2026)
+  - Fixed CSS inheritance issue causing white text on white background
+  - Added targeted CSS selectors to override inherited dashboard-header styles
+  - Notification messages, timestamps, and badges now clearly visible
+- [ ] Refactoring backend/frontend (server.py 2000+ lines, AdminDashboard.jsx 2500+ lines)
 
 ### P1 (High Priority)
 - Add Resend API key for email notifications to work in production
