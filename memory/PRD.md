@@ -98,15 +98,24 @@ Build a "Thrifty Curator" reselling application with:
 │   ├── server.py         # FastAPI backend with all API endpoints
 │   └── tests/            # pytest tests for API
 └── frontend/src/
+    ├── components/
+    │   ├── admin/        # Reusable admin components
+    │   │   ├── StatCard.jsx
+    │   │   ├── EmployeeTable.jsx
+    │   │   ├── AddEmployeeModal.jsx
+    │   │   ├── EditEmployeeModal.jsx
+    │   │   └── NotificationBell.jsx
+    │   ├── ui/           # Shadcn UI components
+    │   └── SplashScreen.jsx
     ├── pages/
-    │   ├── LandingPage.jsx        # Two-column layout
+    │   ├── LandingPage.jsx        # Two-column layout with Black Bold theme
     │   ├── AuthPage.jsx           # Passwordless login
-    │   ├── AdminDashboard.jsx     # Admin features + notifications + edit hours
-    │   ├── EmployeeDashboard.jsx  # Employee clock in/out
+    │   ├── AdminDashboard.jsx     # Admin features + notifications
+    │   ├── EmployeeDashboard.jsx  # Employee clock in/out with pay period
     │   ├── JobApplicationForm.jsx
     │   ├── ConsignmentInquiryForm.jsx
     │   └── ConsignmentAgreementForm.jsx
-    └── App.js                     # Router
+    └── App.js                     # Router with splash screen
 ```
 
 ## Key API Endpoints
