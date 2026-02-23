@@ -247,3 +247,218 @@ async def get_mileage_summary(
         by_purpose=by_purpose,
         monthly_totals=monthly_totals
     )
+
+
+@router.get("/export/csv")
+async def export_mileage_csv(
+    year: Optional[int] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Export mileage entries as CSV for tax filing"""
+    from fastapi.responses import StreamingResponse
+    import io
+    import csv
+    
+    if not year:
+        year = datetime.now(timezone.utc).year
+    
+    query = {"date": {"$gte": f"{year}-01-01", "$lt": f"{year + 1}-01-01"}}
+    entries = await db.mileage_entries.find(query, {"_id": 0}).sort("date", 1).to_list(10000)
+    
+    # IRS standard mileage rate for 2026
+    IRS_RATE = 0.725
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header row
+    writer.writerow([
+        "Date", "Start Location", "End Location", "Miles", 
+        "Business Purpose", "Notes", "Deduction Amount"
+    ])
+    
+    total_miles = 0
+    total_deduction = 0
+    
+    for entry in entries:
+        purpose = entry.get("purpose", "other")
+        if purpose == "thrifting":
+            purpose_display = "Business - Thrifting/Sourcing"
+        elif purpose == "post_office":
+            purpose_display = "Business - Post Office/Shipping"
+        elif purpose == "other":
+            purpose_display = f"Business - {entry.get('purpose_other', 'Other')}"
+        else:
+            purpose_display = f"Business - {purpose}"
+        
+        miles = entry.get("total_miles", 0)
+        deduction = round(miles * IRS_RATE, 2)
+        total_miles += miles
+        total_deduction += deduction
+        
+        writer.writerow([
+            entry.get("date", ""),
+            entry.get("start_address", ""),
+            entry.get("end_address", ""),
+            f"{miles:.1f}",
+            purpose_display,
+            entry.get("notes", ""),
+            f"${deduction:.2f}"
+        ])
+    
+    # Summary rows
+    writer.writerow([])
+    writer.writerow(["SUMMARY", "", "", "", "", "", ""])
+    writer.writerow(["Total Miles", "", "", f"{total_miles:.1f}", "", "", ""])
+    writer.writerow(["IRS Rate (2026)", "", "", "", "", "", f"${IRS_RATE}/mile"])
+    writer.writerow(["Total Deduction", "", "", "", "", "", f"${total_deduction:.2f}"])
+    writer.writerow([])
+    writer.writerow(["Generated for tax year:", year, "", "", "", "", ""])
+    writer.writerow(["Generated on:", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"), "", "", "", "", ""])
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=mileage_log_{year}.csv"
+        }
+    )
+
+
+@router.get("/export/pdf")
+async def export_mileage_pdf(
+    year: Optional[int] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Export mileage entries as PDF for tax filing"""
+    from fastapi.responses import StreamingResponse
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    import io
+    
+    if not year:
+        year = datetime.now(timezone.utc).year
+    
+    query = {"date": {"$gte": f"{year}-01-01", "$lt": f"{year + 1}-01-01"}}
+    entries = await db.mileage_entries.find(query, {"_id": 0}).sort("date", 1).to_list(10000)
+    
+    # IRS standard mileage rate for 2026
+    IRS_RATE = 0.725
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        alignment=TA_CENTER,
+        spaceAfter=20
+    )
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        parent=styles['Normal'],
+        fontSize=12,
+        alignment=TA_CENTER,
+        textColor=colors.gray,
+        spaceAfter=30
+    )
+    
+    elements = []
+    
+    # Title
+    elements.append(Paragraph("Business Mileage Log", title_style))
+    elements.append(Paragraph(f"Tax Year {year} - IRS Standard Mileage Rate: ${IRS_RATE}/mile", subtitle_style))
+    
+    # Prepare table data
+    table_data = [["Date", "From", "To", "Miles", "Purpose", "Deduction"]]
+    
+    total_miles = 0
+    total_deduction = 0
+    
+    for entry in entries:
+        purpose = entry.get("purpose", "other")
+        if purpose == "thrifting":
+            purpose_display = "Thrifting"
+        elif purpose == "post_office":
+            purpose_display = "Post Office"
+        elif purpose == "other":
+            purpose_display = entry.get('purpose_other', 'Other')[:15]
+        else:
+            purpose_display = purpose[:15]
+        
+        miles = entry.get("total_miles", 0)
+        deduction = round(miles * IRS_RATE, 2)
+        total_miles += miles
+        total_deduction += deduction
+        
+        # Truncate addresses for table
+        start_addr = (entry.get("start_address", "") or "")[:20]
+        end_addr = (entry.get("end_address", "") or "")[:20]
+        
+        table_data.append([
+            entry.get("date", ""),
+            start_addr,
+            end_addr,
+            f"{miles:.1f}",
+            purpose_display,
+            f"${deduction:.2f}"
+        ])
+    
+    # Add totals row
+    table_data.append(["", "", "TOTAL:", f"{total_miles:.1f}", "", f"${total_deduction:.2f}"])
+    
+    # Create table
+    col_widths = [0.9*inch, 1.3*inch, 1.3*inch, 0.7*inch, 1.1*inch, 0.9*inch]
+    table = Table(table_data, colWidths=col_widths)
+    
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0, 0.5, 0.5)),  # Teal header
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.Color(0.9, 0.95, 0.95)),  # Light teal total row
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -2), 0.5, colors.gray),
+        ('BOX', (0, -1), (-1, -1), 1, colors.Color(0, 0.5, 0.5)),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+    ]))
+    
+    elements.append(table)
+    elements.append(Spacer(1, 30))
+    
+    # Summary section
+    summary_style = ParagraphStyle(
+        'Summary',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.gray
+    )
+    elements.append(Paragraph(f"Total Business Miles: {total_miles:.1f}", styles['Normal']))
+    elements.append(Paragraph(f"IRS Standard Mileage Rate (2026): ${IRS_RATE} per mile", styles['Normal']))
+    elements.append(Paragraph(f"<b>Total Deduction: ${total_deduction:.2f}</b>", styles['Normal']))
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", summary_style))
+    elements.append(Paragraph("Thrifty Curator - Business Mileage Tracking", summary_style))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=mileage_log_{year}.pdf"
+        }
+    )
