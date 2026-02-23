@@ -2226,7 +2226,8 @@ export default function AdminDashboard() {
                                 setEditEmployeeData({
                                   ...editEmployeeData,
                                   name: app.full_name,
-                                  email: app.email
+                                  email: app.email,
+                                  phone: app.phone || ""
                                 });
                               }
                             }
