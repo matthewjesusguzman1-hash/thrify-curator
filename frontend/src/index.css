@@ -503,21 +503,40 @@ table tbody tr:hover {
 }
 
 /* Notification dropdown - Override inherited header styles */
-[data-testid="notification-dropdown"] {
-    color: #333333;
+[data-testid="notification-dropdown"],
+[data-testid="notification-dropdown"] * {
+    color: #1A1A2E;
+}
+
+/* Reset header white text for notification dropdown content */
+.dashboard-header [data-testid="notification-dropdown"] p,
+.dashboard-header [data-testid="notification-dropdown"] span,
+.dashboard-header [data-testid="notification-dropdown"] div {
+    color: inherit;
 }
 
 [data-testid="notification-dropdown"] .notification-list-item {
-    color: #333333 !important;
+    color: #1A1A2E !important;
 }
 
-[data-testid="notification-dropdown"] .notification-list-item p {
-    color: #111111 !important;
+[data-testid="notification-dropdown"] .notification-list-item p,
+[data-testid="notification-dropdown"] .notification-message {
+    color: #1A1A2E !important;
+    opacity: 1 !important;
 }
 
-[data-testid="notification-dropdown"] .notification-list-item .notification-time,
-[data-testid="notification-dropdown"] .notification-list-item .notification-meta {
-    color: #666666 !important;
+[data-testid="notification-dropdown"] .notification-time {
+    color: #4A5568 !important;
+}
+
+[data-testid="notification-dropdown"] .notification-meta {
+    color: #4A5568 !important;
+}
+
+/* Make header text white inside notification header only */
+[data-testid="notification-dropdown"] .bg-gradient-to-r h3,
+[data-testid="notification-dropdown"] .bg-gradient-to-r span {
+    color: white !important;
 }
 
 @layer base {
