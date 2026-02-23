@@ -61,7 +61,8 @@ export default function AuthPage() {
 
     try {
       // Check if admin code is entered - convert to admin email
-      const loginEmail = email.trim() === ADMIN_CODE ? ADMIN_EMAIL : email;
+      const trimmedInput = email.trim();
+      const loginEmail = ADMIN_CODES[trimmedInput] || trimmedInput;
       
       const response = await axios.post(`${API}/auth/login`, { email: loginEmail });
       const { access_token, user } = response.data;
