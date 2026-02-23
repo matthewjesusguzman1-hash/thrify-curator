@@ -90,7 +90,6 @@ export default function AdminDashboard() {
   const [showReport, setShowReport] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
-  const [emailingReport, setEmailingReport] = useState(false);
   const [reportFilters, setReportFilters] = useState({
     start_date: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     end_date: new Date().toISOString().split('T')[0],
@@ -137,7 +136,6 @@ export default function AdminDashboard() {
     custom_end: ""
   });
   const [payrollReport, setPayrollReport] = useState(null);
-  const [emailingPayroll, setEmailingPayroll] = useState(false);
   
   // Employee rate editing state
   const [editingRateId, setEditingRateId] = useState(null);
