@@ -790,6 +790,12 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDownloadBlankW9 = () => {
+    // Open IRS W-9 form in new tab
+    window.open("https://www.irs.gov/pub/irs-pdf/fw9.pdf", "_blank");
+    toast.success("Opening W-9 form...");
+  };
+
   // Edit time entry handlers
   const handleEditEntry = (entry) => {
     setEditingEntry(entry);
