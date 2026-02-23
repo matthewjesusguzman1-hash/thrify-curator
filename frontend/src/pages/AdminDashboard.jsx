@@ -1030,7 +1030,7 @@ export default function AdminDashboard() {
                         {notifications.map((notification) => (
                           <div 
                             key={notification.id} 
-                            className={`p-4 hover:bg-[#faf9f7] transition-all ${
+                            className={`notification-list-item p-4 hover:bg-[#faf9f7] transition-all ${
                               !notification.read ? 'bg-[#FFF5F8] border-l-4 border-l-[#FF1493]' : 'bg-white'
                             }`}
                             data-testid={`notification-item-${notification.id}`}
@@ -1058,7 +1058,7 @@ export default function AdminDashboard() {
                                   }`}>
                                     {notification.type === 'clock_in' ? 'IN' : 'OUT'}
                                   </span>
-                                  <span className="notification-text-secondary text-xs">
+                                  <span className="notification-time text-xs">
                                     {formatNotificationTime(notification.created_at)}
                                   </span>
                                   {!notification.read && (
@@ -1066,20 +1066,20 @@ export default function AdminDashboard() {
                                   )}
                                 </div>
                                 
-                                <p className="notification-text text-sm font-medium leading-snug">
+                                <p className="text-sm font-medium leading-snug">
                                   {notification.message}
                                 </p>
                                 
                                 {notification.details && (notification.details.today_hours !== undefined || notification.details.week_hours !== undefined) && (
                                   <div className="flex items-center gap-2 mt-2">
                                     {notification.details.today_hours !== undefined && (
-                                      <span className="notification-text-secondary inline-flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
+                                      <span className="notification-meta inline-flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
                                         <Clock className="w-3 h-3" />
                                         Today: {notification.details.today_hours}h
                                       </span>
                                     )}
                                     {notification.details.week_hours !== undefined && (
-                                      <span className="notification-text-secondary inline-flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
+                                      <span className="notification-meta inline-flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
                                         <Calendar className="w-3 h-3" />
                                         Week: {notification.details.week_hours}h
                                       </span>
