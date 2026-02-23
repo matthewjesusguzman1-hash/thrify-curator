@@ -165,15 +165,54 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
-    summary = await get_employee_hours_summary(employee_id)
+    # Get employee time entries for summary calculation
+    now = datetime.now(timezone.utc)
+    
+    # Calculate period start (biweekly from settings or default)
+    settings = await db.payroll_settings.find_one({}, {"_id": 0})
+    if settings and settings.get("pay_period_start_date"):
+        start_str = settings["pay_period_start_date"]
+        period_start = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+        while period_start + timedelta(days=14) < now:
+            period_start += timedelta(days=14)
+    else:
+        period_start = now - timedelta(days=14)
+    
+    period_end = period_start + timedelta(days=14)
+    
+    # Get time entries in period
+    entries = await db.time_entries.find({
+        "employee_id": employee_id
+    }, {"_id": 0}).to_list(500)
+    
+    period_hours = 0
+    total_hours = 0
+    
+    for entry in entries:
+        hours = entry.get("hours", 0)
+        total_hours += hours
+        
+        clock_in = entry.get("clock_in", "")
+        if clock_in:
+            try:
+                entry_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
+                if period_start <= entry_time < period_end:
+                    period_hours += hours
+            except (ValueError, TypeError):
+                pass
     
     hourly_rate = employee.get("hourly_rate")
     if not hourly_rate:
-        settings = await db.payroll_settings.find_one({}, {"_id": 0})
         hourly_rate = settings.get("default_hourly_rate", 15.0) if settings else 15.0
     
-    summary["hourly_rate"] = hourly_rate
-    summary["estimated_pay"] = summary.get("period_hours", 0) * hourly_rate
+    summary = {
+        "period_hours": period_hours,
+        "total_hours": total_hours,
+        "hourly_rate": hourly_rate,
+        "estimated_pay": period_hours * hourly_rate,
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat()
+    }
     
     return summary
 
