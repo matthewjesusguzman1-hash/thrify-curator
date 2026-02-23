@@ -3820,7 +3820,45 @@ export default function AdminDashboard() {
                           />
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      
+                      {/* Image Preview */}
+                      {(pendingCheckImage || (editingCheckRecord && checkThumbnails[editingCheckRecord.id])) && (
+                        <div className="mb-3 p-3 bg-white rounded-lg border border-purple-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                              <img
+                                src={pendingCheckImage?.previewUrl || checkThumbnails[editingCheckRecord?.id]}
+                                alt="Preview"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-[#333]">
+                                {pendingCheckImage ? "New Image Ready" : "Current Image"}
+                              </p>
+                              <p className="text-xs text-[#888]">
+                                {pendingCheckImage ? pendingCheckImage.filename : "Upload a new image to replace"}
+                              </p>
+                            </div>
+                            {pendingCheckImage && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  URL.revokeObjectURL(pendingCheckImage.previewUrl);
+                                  setPendingCheckImage(null);
+                                  if (checkInputRef.current) checkInputRef.current.value = "";
+                                }}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-3 flex-wrap">
                         <input
                           type="file"
                           ref={checkInputRef}
@@ -3832,16 +3870,42 @@ export default function AdminDashboard() {
                         <Button
                           onClick={() => checkInputRef.current?.click()}
                           disabled={uploadingCheck}
+                          variant="outline"
+                          className="border-purple-300 text-purple-600 hover:bg-purple-50"
+                        >
+                          <Camera className="w-4 h-4 mr-2" />
+                          {editingCheckRecord ? "Change Photo" : "Select Photo"}
+                        </Button>
+                        
+                        <Button
+                          onClick={handleSubmitCheckRecord}
+                          disabled={uploadingCheck || (!pendingCheckImage && !editingCheckRecord)}
                           className="bg-purple-600 hover:bg-purple-700 text-white"
+                          data-testid="submit-check-record-btn"
                         >
                           {uploadingCheck ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                           ) : (
-                            <Camera className="w-4 h-4 mr-2" />
+                            <Save className="w-4 h-4 mr-2" />
                           )}
-                          {uploadingCheck ? "Uploading..." : "Take Photo / Upload"}
+                          {uploadingCheck ? "Saving..." : (editingCheckRecord ? "Update Record" : "Submit Record")}
                         </Button>
-                        <p className="text-xs text-[#888]">Accepts images up to 10MB</p>
+                        
+                        {editingCheckRecord && (
+                          <Button
+                            onClick={handleCancelCheckEdit}
+                            variant="outline"
+                            className="text-gray-600"
+                          >
+                            Cancel Edit
+                          </Button>
+                        )}
+                        
+                        <p className="text-xs text-[#888]">
+                          {editingCheckRecord 
+                            ? "Editing: " + (editingCheckRecord.employee_name || "Unnamed record")
+                            : "Select an image, fill details, then click Submit"}
+                        </p>
                       </div>
                     </div>
 
