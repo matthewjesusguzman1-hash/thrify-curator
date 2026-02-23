@@ -88,6 +88,9 @@ class TimeEntry(BaseModel):
     clock_in: str
     clock_out: Optional[str] = None
     total_hours: Optional[float] = None
+    shift_date: Optional[str] = None  # YYYY-MM-DD format, one entry per day
+    last_clock_in: Optional[str] = None  # Track the most recent clock in for session calculation
+    accumulated_hours: Optional[float] = None  # Total accumulated hours for the day
 
 class ClockInOut(BaseModel):
     action: str  # "in" or "out"
