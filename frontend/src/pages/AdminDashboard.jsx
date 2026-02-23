@@ -2381,16 +2381,16 @@ export default function AdminDashboard() {
                             <table className="data-table">
                               <thead>
                                 <tr>
-                                  <th>Name</th>
-                                  <th>Email</th>
+                                  <SortableHeader table="consignmentInquiries" sortKey="full_name">Name</SortableHeader>
+                                  <SortableHeader table="consignmentInquiries" sortKey="email">Email</SortableHeader>
                                   <th>Item Types</th>
-                                  <th>Submitted</th>
-                                  <th>Status</th>
+                                  <SortableHeader table="consignmentInquiries" sortKey="submitted_at">Submitted</SortableHeader>
+                                  <SortableHeader table="consignmentInquiries" sortKey="status">Status</SortableHeader>
                                   <th>Actions</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {formSubmissions.consignmentInquiries.map((inquiry) => (
+                                {getSortedData(formSubmissions.consignmentInquiries, 'consignmentInquiries').map((inquiry) => (
                                   <tr key={inquiry.id} data-testid={`inquiry-row-${inquiry.id}`}>
                                     <td className="font-medium">{inquiry.full_name}</td>
                                     <td>{inquiry.email}</td>
@@ -2446,8 +2446,8 @@ export default function AdminDashboard() {
                             <table className="data-table">
                               <thead>
                                 <tr>
-                                  <th>Name</th>
-                                  <th>Email</th>
+                                  <SortableHeader table="consignmentAgreements" sortKey="full_name">Name</SortableHeader>
+                                  <SortableHeader table="consignmentAgreements" sortKey="email">Email</SortableHeader>
                                   <th>Percentage</th>
                                   <th>Signed</th>
                                   <th>Status</th>
