@@ -3037,7 +3037,6 @@ export default function AdminDashboard() {
                                         Clocked In
                                       </span>
                                     )}
-                                    <Eye className="w-3 h-3 text-[#aaa] opacity-0 group-hover:opacity-100" />
                                   </div>
                                 </td>
                                 <td>{emp.email}</td>
