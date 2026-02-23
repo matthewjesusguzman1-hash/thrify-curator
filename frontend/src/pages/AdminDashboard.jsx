@@ -1819,27 +1819,6 @@ export default function AdminDashboard() {
               </div>
               {/* Employee Management + Start Trip */}
               <div className="flex flex-col gap-1">
-                {/* Start/End Trip Button - spans full width */}
-                <Button 
-                  onClick={headerTripActive ? handleHeaderEndTrip : handleHeaderStartTrip}
-                  disabled={headerTripLoading}
-                  size="sm"
-                  className={`flex items-center justify-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 w-full ${
-                    headerTripActive 
-                      ? 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30 text-white' 
-                      : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30 text-white'
-                  }`}
-                  data-testid="header-trip-btn"
-                >
-                  {headerTripLoading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : headerTripActive ? (
-                    <StopCircle className="w-4 h-4" />
-                  ) : (
-                    <Car className="w-4 h-4" />
-                  )}
-                  <span>{headerTripActive ? 'End Trip' : 'Start Trip'}</span>
-                </Button>
                 {/* Add, Edit, Remove row */}
                 <div className="flex gap-1">
                   <Button 
@@ -1871,6 +1850,27 @@ export default function AdminDashboard() {
                     <span className="hidden sm:inline">Remove</span>
                   </Button>
                 </div>
+                {/* Start/End Trip Button - spans full width below Add/Edit/Remove */}
+                <Button 
+                  onClick={headerTripActive ? handleHeaderEndTrip : handleHeaderStartTrip}
+                  disabled={headerTripLoading}
+                  size="sm"
+                  className={`flex items-center justify-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 w-full ${
+                    headerTripActive 
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30 text-white' 
+                      : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30 text-white'
+                  }`}
+                  data-testid="header-trip-btn"
+                >
+                  {headerTripLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : headerTripActive ? (
+                    <StopCircle className="w-4 h-4" />
+                  ) : (
+                    <Car className="w-4 h-4" />
+                  )}
+                  <span>{headerTripActive ? 'End Trip' : 'Start Trip'}</span>
+                </Button>
               </div>
             </div>
           </div>
