@@ -49,6 +49,16 @@ export default function MileageTrackingSection({ getAuthHeader }) {
   const [showEditMileageModal, setShowEditMileageModal] = useState(false);
   const [editingMileageEntry, setEditingMileageEntry] = useState(null);
   const [showEndTripModal, setShowEndTripModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  
+  // Export report state
+  const [exportOptions, setExportOptions] = useState({
+    period: "month",
+    format: "pdf",
+    customStart: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+    customEnd: new Date().toISOString().split('T')[0]
+  });
+  const [exporting, setExporting] = useState(false);
   
   // Form data
   const [mileageFormData, setMileageFormData] = useState({
