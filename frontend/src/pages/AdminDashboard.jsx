@@ -2765,18 +2765,17 @@ export default function AdminDashboard() {
                 {/* Report Results */}
                 {reportData && (
                   <div className="space-y-6">
-                    {/* Email Button */}
+                    {/* Download PDF Button */}
                     <div className="flex justify-end">
                       <Button
-                        onClick={handleEmailShiftReport}
-                        disabled={emailingReport}
+                        onClick={handleDownloadShiftReportPDF}
                         variant="outline"
                         size="sm"
                         className="flex items-center gap-2 border-[#8BA88E] text-[#8BA88E]"
-                        data-testid="email-shift-report-btn"
+                        data-testid="download-shift-report-btn"
                       >
-                        <Mail className="w-4 h-4" />
-                        {emailingReport ? "Sending..." : "Email Report"}
+                        <Download className="w-4 h-4" />
+                        Download PDF
                       </Button>
                     </div>
                     
