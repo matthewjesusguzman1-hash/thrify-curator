@@ -808,13 +808,16 @@ export default function AdminDashboard() {
       </header>
 
       <main className="dashboard-content">
+        {/* Bold Accent Bar */}
+        <div className="accent-bar mb-6" />
+        
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <h1 className="font-playfair text-2xl font-bold text-[#333]">Admin Dashboard</h1>
+            <h1 className="font-archivo text-2xl md:text-3xl text-[#1A1A1A] tracking-tight uppercase">Admin Dashboard</h1>
             <div className="flex gap-3">
               {/* Reports Stack */}
               <div className="flex flex-col gap-1">
@@ -822,7 +825,7 @@ export default function AdminDashboard() {
                   onClick={() => setShowPayroll(true)}
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 border-[#C5A065] text-[#C5A065] hover:bg-[#C5A065]/10"
+                  className="flex items-center gap-2 border-2 border-[#1A1A1A] bg-[#FACC15] text-[#1A1A1A] font-bold uppercase tracking-wide hover:translate-y-[-1px] hover:shadow-bold-sm transition-all"
                   data-testid="payroll-btn"
                 >
                   <DollarSign className="w-4 h-4" />
@@ -832,7 +835,7 @@ export default function AdminDashboard() {
                   onClick={() => setShowReport(true)}
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 border-2 border-[#1A1A1A] font-bold uppercase tracking-wide hover:bg-[#FACC15] hover:translate-y-[-1px] hover:shadow-bold-sm transition-all"
                   data-testid="run-report-btn"
                 >
                   <FileText className="w-4 h-4" />
@@ -844,7 +847,7 @@ export default function AdminDashboard() {
                 <Button 
                   onClick={() => setShowAddEmployee(true)}
                   size="sm"
-                  className="btn-primary flex items-center gap-2"
+                  className="flex items-center gap-2 border-2 border-[#1A1A1A] bg-[#FF5A5F] text-white font-bold uppercase tracking-wide shadow-bold-sm hover:translate-y-[-1px] hover:shadow-bold transition-all"
                   data-testid="add-employee-btn"
                 >
                   <UserPlus className="w-4 h-4" />
@@ -854,7 +857,7 @@ export default function AdminDashboard() {
                   onClick={() => setShowRemoveEmployee(true)}
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 border-red-300 text-red-500 hover:bg-red-50"
+                  className="flex items-center gap-2 border-2 border-[#1A1A1A] text-[#1A1A1A] font-bold uppercase tracking-wide hover:bg-red-500 hover:text-white hover:translate-y-[-1px] hover:shadow-bold-sm transition-all"
                   data-testid="remove-employee-btn"
                 >
                   <UserMinus className="w-4 h-4" />
