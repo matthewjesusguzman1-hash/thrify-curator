@@ -1306,10 +1306,12 @@ export default function AdminDashboard() {
 
   const handleEditCheckRecord = (record) => {
     setEditingCheckRecord(record);
+    // Format the amount with $ and .00 when loading for edit
+    const formattedAmount = record.amount ? `$${parseFloat(record.amount).toFixed(2)}` : "";
     setCheckUploadData({
       description: record.description || "",
       check_date: record.check_date || new Date().toISOString().split('T')[0],
-      amount: record.amount?.toString() || "",
+      amount: formattedAmount,
       employee_name: record.employee_name || ""
     });
     // Clear any pending image
