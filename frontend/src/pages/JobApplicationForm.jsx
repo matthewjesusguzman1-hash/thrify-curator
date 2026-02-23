@@ -286,26 +286,26 @@ export default function JobApplicationForm() {
             <div>
               <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Do you have reliable transportation? *</Label>
               <div className="flex gap-6 mt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="radio"
                     name="transportation"
                     value="yes"
                     checked={formData.has_reliable_transportation === true}
                     onChange={() => setFormData({ ...formData, has_reliable_transportation: true })}
-                    className="w-4 h-4 accent-[#00D4FF]"
+                    className="w-6 h-6 accent-[#00D4FF]"
                     data-testid="transportation-yes"
                   />
                   <span className="text-sm text-[#1A1A2E]">Yes</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="radio"
                     name="transportation"
                     value="no"
                     checked={formData.has_reliable_transportation === false}
                     onChange={() => setFormData({ ...formData, has_reliable_transportation: false })}
-                    className="w-4 h-4 accent-[#00D4FF]"
+                    className="w-6 h-6 accent-[#00D4FF]"
                     data-testid="transportation-no"
                   />
                   <span className="text-sm text-[#1A1A2E]">No</span>
