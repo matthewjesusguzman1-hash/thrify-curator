@@ -530,6 +530,17 @@ async def email_payroll_report(email_req: EmailPayrollRequest, admin: dict = Dep
 # Payroll Check Records endpoints
 import base64
 import uuid
+from pydantic import BaseModel
+from typing import Optional
+
+class CheckRecordUpload(BaseModel):
+    image_data: str  # base64 encoded
+    filename: str
+    content_type: str
+    description: Optional[str] = None
+    check_date: Optional[str] = None
+    amount: Optional[float] = None
+    employee_name: Optional[str] = None
 
 @router.get("/check-records")
 async def get_check_records(admin: dict = Depends(get_admin_user)):
@@ -538,17 +549,30 @@ async def get_check_records(admin: dict = Depends(get_admin_user)):
     return records
 
 @router.post("/check-records")
-async def upload_check_record(admin: dict = Depends(get_admin_user), data: dict = None):
+async def upload_check_record(data: CheckRecordUpload, admin: dict = Depends(get_admin_user)):
     """Upload a payroll check image"""
-    from fastapi import Body
+    record = {
+        "id": str(uuid.uuid4()),
+        "image_data": data.image_data,
+        "filename": data.filename,
+        "content_type": data.content_type,
+        "description": data.description,
+        "check_date": data.check_date,
+        "amount": data.amount,
+        "employee_name": data.employee_name,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "uploaded_by": admin.get("name", "Admin")
+    }
     
-@router.post("/check-records/upload")
-async def upload_check_record_file(
-    admin: dict = Depends(get_admin_user)
-):
-    """Upload a payroll check image - expects JSON with base64 image"""
-    from fastapi import Request
+    await db.payroll_check_records.insert_one(record)
     
+    # Return without image_data
+    del record["image_data"]
+    if "_id" in record:
+        del record["_id"]
+    
+    return record
+
 @router.delete("/check-records/{record_id}")
 async def delete_check_record(record_id: str, admin: dict = Depends(get_admin_user)):
     """Delete a payroll check record"""
