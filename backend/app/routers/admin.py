@@ -10,10 +10,7 @@ from app.database import db
 from app.dependencies import get_admin_user
 from app.models.user import UserResponse, CreateEmployee, UpdateEmployeeDetails, UpdateEmployeeRate
 from app.models.time_entry import TimeEntry, EditTimeEntryRequest, CreateTimeEntryRequest
-from app.models.payroll import ReportRequest, EmailReportRequest
-from app.config import RESEND_API_KEY, SENDER_EMAIL
-from app.services.email import get_employee_hours_summary
-import resend
+from app.models.payroll import ReportRequest
 
 # W-9 upload directory
 W9_UPLOAD_DIR = "/app/backend/uploads/w9"
