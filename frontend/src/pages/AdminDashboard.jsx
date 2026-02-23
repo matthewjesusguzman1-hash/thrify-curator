@@ -2046,179 +2046,6 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
-          {/* Payroll Summary - Collapsible */}
-          <div className="dashboard-card">
-            <div 
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => setShowStatsSection(!showStatsSection)}
-              data-testid="stats-section-toggle"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-white" />
-                </div>
-                <h2 className="font-playfair text-xl font-semibold text-[#333]">Payroll Summary</h2>
-              </div>
-              {showStatsSection ? (
-                <ChevronUp className="w-5 h-5 text-[#888]" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-[#888]" />
-              )}
-            </div>
-            <AnimatePresence>
-              {showStatsSection && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-[#eee]">
-                    {/* Current Pay Period */}
-                    <div className="p-5 bg-gradient-to-br from-[#00D4FF]/10 to-[#00A8CC]/5 rounded-xl border border-[#00D4FF]/20">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center shadow-lg shadow-[#00D4FF]/30">
-                          <DollarSign className="w-7 h-7 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-3xl font-bold text-[#00A8CC]" data-testid="period-payroll">
-                            ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
-                          </p>
-                          <p className="text-sm font-medium text-[#666]">Current Pay Period</p>
-                          <p className="text-xs text-[#888]">
-                            {payrollSummary.current_period?.hours?.toFixed(1) || '0'} hrs worked
-                          </p>
-                        </div>
-                      </div>
-                      {payrollSummary.current_period?.start && payrollSummary.current_period?.end && (
-                        <p className="text-xs text-[#888] mt-3 pt-3 border-t border-[#00D4FF]/10">
-                          {new Date(payrollSummary.current_period.start).toLocaleDateString()} - {new Date(payrollSummary.current_period.end).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    
-                    {/* Month Total */}
-                    <div className="p-5 bg-gradient-to-br from-[#8B5CF6]/10 to-[#6D28D9]/5 rounded-xl border border-[#8B5CF6]/20">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] rounded-xl flex items-center justify-center shadow-lg shadow-[#8B5CF6]/30">
-                          <Calendar className="w-7 h-7 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-3xl font-bold text-[#6D28D9]" data-testid="month-total">
-                            ${payrollSummary.month_total?.toFixed(2) || '0.00'}
-                          </p>
-                          <p className="text-sm font-medium text-[#666]">This Month</p>
-                          <p className="text-xs text-[#888]">
-                            {new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Year Total */}
-                    <div className="p-5 bg-gradient-to-br from-[#FF1493]/10 to-[#E91E8C]/5 rounded-xl border border-[#FF1493]/20">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF1493]/30">
-                          <TrendingUp className="w-7 h-7 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-3xl font-bold text-[#E91E8C]" data-testid="year-total">
-                            ${payrollSummary.year_total?.toFixed(2) || '0.00'}
-                          </p>
-                          <p className="text-sm font-medium text-[#666]">This Year</p>
-                          <p className="text-xs text-[#888]">
-                            {new Date().getFullYear()} Total
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Hours by Employee - Collapsible */}
-          <div className="dashboard-card">
-            <div 
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => setShowHoursByEmployee(!showHoursByEmployee)}
-              data-testid="hours-section-toggle"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-[#8BA88E] to-[#6B8E6B] rounded-xl flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-white" />
-                </div>
-                <h2 className="font-playfair text-xl font-semibold text-[#333]">Hours by Employee</h2>
-              </div>
-              {showHoursByEmployee ? (
-                <ChevronUp className="w-5 h-5 text-[#888]" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-[#888]" />
-              )}
-            </div>
-            <AnimatePresence>
-              {showHoursByEmployee && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-4 pt-4 border-t border-[#eee]">
-                    {summary.by_employee.length === 0 ? (
-                      <p className="text-center text-[#888] py-8">No employee data yet</p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="data-table" data-testid="employee-hours-table">
-                          <thead>
-                            <tr>
-                              <SortableHeader table="hoursByEmployee" sortKey="name">Employee</SortableHeader>
-                              <SortableHeader table="hoursByEmployee" sortKey="hours">Total Hours</SortableHeader>
-                              <SortableHeader table="hoursByEmployee" sortKey="shifts">Shifts</SortableHeader>
-                              <th className="text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {getSortedData(summary.by_employee, 'hoursByEmployee').map((emp) => (
-                              <tr key={emp.user_id} data-testid={`employee-row-${emp.user_id}`}>
-                                <td>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
-                                      <User className="w-4 h-4 text-[#D48C9E]" />
-                                    </div>
-                                    {emp.name}
-                                  </div>
-                                </td>
-                                <td className="font-medium">{emp.hours.toFixed(2)} hrs</td>
-                                <td>{emp.shifts}</td>
-                                <td>
-                                  <div className="flex items-center justify-end">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleViewEmployeeShifts(emp)}
-                                      className="h-8 px-3 text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10 flex items-center gap-1"
-                                      data-testid={`view-shifts-${emp.user_id}`}
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                      View Shifts
-                                    </Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
           {/* All Employees - Collapsible */}
           <div className="dashboard-card">
@@ -2384,6 +2211,101 @@ export default function AdminDashboard() {
             </AnimatePresence>
           </div>
 
+
+          {/* Payroll Summary - Collapsible */}
+          <div className="dashboard-card">
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowStatsSection(!showStatsSection)}
+              data-testid="stats-section-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="font-playfair text-xl font-semibold text-[#333]">Payroll Summary</h2>
+              </div>
+              {showStatsSection ? (
+                <ChevronUp className="w-5 h-5 text-[#888]" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-[#888]" />
+              )}
+            </div>
+            <AnimatePresence>
+              {showStatsSection && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-[#eee]">
+                    {/* Current Pay Period */}
+                    <div className="p-5 bg-gradient-to-br from-[#00D4FF]/10 to-[#00A8CC]/5 rounded-xl border border-[#00D4FF]/20">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center shadow-lg shadow-[#00D4FF]/30">
+                          <DollarSign className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-3xl font-bold text-[#00A8CC]" data-testid="period-payroll">
+                            ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
+                          </p>
+                          <p className="text-sm font-medium text-[#666]">Current Pay Period</p>
+                          <p className="text-xs text-[#888]">
+                            {payrollSummary.current_period?.hours?.toFixed(1) || '0'} hrs worked
+                          </p>
+                        </div>
+                      </div>
+                      {payrollSummary.current_period?.start && payrollSummary.current_period?.end && (
+                        <p className="text-xs text-[#888] mt-3 pt-3 border-t border-[#00D4FF]/10">
+                          {new Date(payrollSummary.current_period.start).toLocaleDateString()} - {new Date(payrollSummary.current_period.end).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Month Total */}
+                    <div className="p-5 bg-gradient-to-br from-[#8B5CF6]/10 to-[#6D28D9]/5 rounded-xl border border-[#8B5CF6]/20">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] rounded-xl flex items-center justify-center shadow-lg shadow-[#8B5CF6]/30">
+                          <Calendar className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-3xl font-bold text-[#6D28D9]" data-testid="month-total">
+                            ${payrollSummary.month_total?.toFixed(2) || '0.00'}
+                          </p>
+                          <p className="text-sm font-medium text-[#666]">This Month</p>
+                          <p className="text-xs text-[#888]">
+                            {new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Year Total */}
+                    <div className="p-5 bg-gradient-to-br from-[#FF1493]/10 to-[#E91E8C]/5 rounded-xl border border-[#FF1493]/20">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF1493]/30">
+                          <TrendingUp className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-3xl font-bold text-[#E91E8C]" data-testid="year-total">
+                            ${payrollSummary.year_total?.toFixed(2) || '0.00'}
+                          </p>
+                          <p className="text-sm font-medium text-[#666]">This Year</p>
+                          <p className="text-xs text-[#888]">
+                            {new Date().getFullYear()} Total
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+
           {/* Recent Time Entries - Collapsible */}
           <div className="dashboard-card">
             <div 
@@ -2499,6 +2421,89 @@ export default function AdminDashboard() {
               )}
             </AnimatePresence>
           </div>
+
+
+          {/* Hours by Employee - Collapsible */}
+          <div className="dashboard-card">
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowHoursByEmployee(!showHoursByEmployee)}
+              data-testid="hours-section-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#8BA88E] to-[#6B8E6B] rounded-xl flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="font-playfair text-xl font-semibold text-[#333]">Hours by Employee</h2>
+              </div>
+              {showHoursByEmployee ? (
+                <ChevronUp className="w-5 h-5 text-[#888]" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-[#888]" />
+              )}
+            </div>
+            <AnimatePresence>
+              {showHoursByEmployee && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-4 pt-4 border-t border-[#eee]">
+                    {summary.by_employee.length === 0 ? (
+                      <p className="text-center text-[#888] py-8">No employee data yet</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="data-table" data-testid="employee-hours-table">
+                          <thead>
+                            <tr>
+                              <SortableHeader table="hoursByEmployee" sortKey="name">Employee</SortableHeader>
+                              <SortableHeader table="hoursByEmployee" sortKey="hours">Total Hours</SortableHeader>
+                              <SortableHeader table="hoursByEmployee" sortKey="shifts">Shifts</SortableHeader>
+                              <th className="text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {getSortedData(summary.by_employee, 'hoursByEmployee').map((emp) => (
+                              <tr key={emp.user_id} data-testid={`employee-row-${emp.user_id}`}>
+                                <td>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
+                                      <User className="w-4 h-4 text-[#D48C9E]" />
+                                    </div>
+                                    {emp.name}
+                                  </div>
+                                </td>
+                                <td className="font-medium">{emp.hours.toFixed(2)} hrs</td>
+                                <td>{emp.shifts}</td>
+                                <td>
+                                  <div className="flex items-center justify-end">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleViewEmployeeShifts(emp)}
+                                      className="h-8 px-3 text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10 flex items-center gap-1"
+                                      data-testid={`view-shifts-${emp.user_id}`}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      View Shifts
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
 
           {/* Form Submissions Section */}
           <div className="dashboard-card">
