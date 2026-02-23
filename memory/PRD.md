@@ -73,6 +73,11 @@ Build a "Thrifty Curator" reselling application with:
 - [x] Edit Employee button in header (next to Remove Employee)
 - [x] Edit Employee modal: name, email, and role editing
 - [x] Role change support (Employee ↔ Admin)
+- [x] "Black Bold" UI redesign with dark gradient background and vibrant accents (cyan, pink, purple)
+- [x] Brand-colored logos for each selling platform on landing page
+- [x] Custom eBay logo (user-provided image) on landing page
+- [x] Email reports functionality (send shift/payroll reports via Resend)
+- [x] Hourly rate editing in Edit Employee modal
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
