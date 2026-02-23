@@ -166,9 +166,51 @@ async def update_trip_location(location_data: UpdateTripLocationRequest, admin: 
 @router.post("/end-trip", response_model=MileageEntryResponse)
 async def end_trip(trip_data: EndTripRequest, admin: dict = Depends(get_admin_user)):
     """End the active trip and save it as a mileage entry"""
+    import math
+    
     trip = await db.active_trips.find_one({"user_id": admin["id"]}, {"_id": 0})
     if not trip:
         raise HTTPException(status_code=404, detail="No active trip found")
+    
+    # Calculate cumulative distance from all waypoints
+    def haversine_distance(lat1, lon1, lat2, lon2):
+        """Calculate distance in miles between two GPS coordinates"""
+        R = 3959  # Earth's radius in miles
+        d_lat = math.radians(lat2 - lat1)
+        d_lon = math.radians(lon2 - lon1)
+        a = math.sin(d_lat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon/2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        return R * c
+    
+    # Build the complete path: start -> waypoints -> end
+    waypoints = trip.get("waypoints", [])
+    path_points = []
+    
+    # Add start location
+    start_loc = trip.get("start_location", {})
+    if start_loc:
+        path_points.append((start_loc.get("latitude"), start_loc.get("longitude")))
+    
+    # Add all waypoints
+    for wp in waypoints:
+        if wp.get("latitude") and wp.get("longitude"):
+            path_points.append((wp.get("latitude"), wp.get("longitude")))
+    
+    # Add end location
+    end_loc = trip_data.end_location
+    if end_loc:
+        path_points.append((end_loc.latitude, end_loc.longitude))
+    
+    # Calculate cumulative distance along the route
+    cumulative_miles = 0.0
+    for i in range(1, len(path_points)):
+        prev = path_points[i-1]
+        curr = path_points[i]
+        if prev[0] and prev[1] and curr[0] and curr[1]:
+            cumulative_miles += haversine_distance(prev[0], prev[1], curr[0], curr[1])
+    
+    # Use the calculated cumulative distance (override client-side calculation)
+    total_miles = round(cumulative_miles, 1) if cumulative_miles > 0 else trip_data.total_miles
     
     entry_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -183,12 +225,13 @@ async def end_trip(trip_data: EndTripRequest, admin: dict = Depends(get_admin_us
         "end_location": trip_data.end_location.model_dump(),
         "start_address": trip.get("start_address"),
         "end_address": trip_data.end_address,
-        "total_miles": trip_data.total_miles,
+        "total_miles": total_miles,
         "purpose": trip_data.purpose.value,
         "purpose_other": trip_data.purpose_other if trip_data.purpose == "other" else None,
         "notes": trip_data.notes,
         "is_tracking": False,
-        "waypoints": trip.get("waypoints", []),
+        "waypoints": waypoints,
+        "waypoint_count": len(waypoints),
         "created_at": now,
         "updated_at": None
     }
