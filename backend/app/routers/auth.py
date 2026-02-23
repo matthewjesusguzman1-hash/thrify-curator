@@ -48,6 +48,24 @@ async def login(credentials: UserLogin):
     if not user:
         raise HTTPException(status_code=401, detail="Email not registered. Contact your administrator.")
     
+    # Admin users must use their admin code to login
+    if user["role"] == "admin":
+        # Define valid admin codes
+        ADMIN_CODES = {
+            "4399": "matthewjesusguzman1@gmail.com",
+            "0826": "euniceguzman@thriftycurator.com"
+        }
+        
+        # Check if this admin requires code-based login
+        if credentials.email in ADMIN_CODES.values():
+            if not credentials.admin_code:
+                raise HTTPException(status_code=401, detail="Admin access requires an access code")
+            
+            # Verify the code matches the email
+            expected_email = ADMIN_CODES.get(credentials.admin_code)
+            if expected_email != credentials.email:
+                raise HTTPException(status_code=401, detail="Invalid access code")
+    
     token = create_token(user["id"], user["email"], user["role"])
     
     return TokenResponse(
