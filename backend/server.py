@@ -420,6 +420,21 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         if active:
             raise HTTPException(status_code=400, detail="Already clocked in")
         
+        # Check if employee already had a shift in the last 24 hours
+        twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        recent_entry = await db.time_entries.find_one(
+            {
+                "user_id": user["id"],
+                "clock_in": {"$gte": twenty_four_hours_ago}
+            },
+            {"_id": 0}
+        )
+        if recent_entry:
+            raise HTTPException(
+                status_code=400, 
+                detail="You can only clock in once per 24-hour period. Please wait until your next shift."
+            )
+        
         entry = TimeEntry(
             user_id=user["id"],
             user_name=user["name"],
