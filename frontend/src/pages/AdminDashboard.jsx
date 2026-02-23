@@ -527,7 +527,8 @@ export default function AdminDashboard() {
           period_shifts: employeeStats.shifts,
           hourly_rate: employee.hourly_rate || payrollSettings.default_hourly_rate || 15,
           estimated_pay: employeeStats.hours * (employee.hourly_rate || payrollSettings.default_hourly_rate || 15)
-        }
+        },
+        w9Status: { has_w9: false, status: 'not_submitted' }
       });
     } finally {
       setLoadingPortal(false);
