@@ -590,6 +590,40 @@ async def delete_check_record(record_id: str, admin: dict = Depends(get_admin_us
         raise HTTPException(status_code=404, detail="Record not found")
     return {"message": "Check record deleted successfully"}
 
+@router.put("/check-records/{record_id}")
+async def update_check_record(record_id: str, data: CheckRecordUpdate, admin: dict = Depends(get_admin_user)):
+    """Update a payroll check record"""
+    # Find existing record
+    existing = await db.payroll_check_records.find_one({"id": record_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    # Build update dict with only provided fields
+    update_data = {}
+    if data.description is not None:
+        update_data["description"] = data.description
+    if data.check_date is not None:
+        update_data["check_date"] = data.check_date
+    if data.amount is not None:
+        update_data["amount"] = data.amount
+    if data.employee_name is not None:
+        update_data["employee_name"] = data.employee_name
+    if data.image_data is not None:
+        update_data["image_data"] = data.image_data
+        update_data["filename"] = data.filename
+        update_data["content_type"] = data.content_type
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.payroll_check_records.update_one(
+        {"id": record_id},
+        {"$set": update_data}
+    )
+    
+    # Return updated record without image_data
+    updated = await db.payroll_check_records.find_one({"id": record_id}, {"_id": 0, "image_data": 0})
+    return updated
+
 @router.get("/check-records/{record_id}/image")
 async def get_check_image(record_id: str, admin: dict = Depends(get_admin_user)):
     """Get a specific check record image"""
