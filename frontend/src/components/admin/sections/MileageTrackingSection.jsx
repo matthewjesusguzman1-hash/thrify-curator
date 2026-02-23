@@ -344,6 +344,12 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       setCurrentLocation(null);
       setCumulativeMiles(0);
       setWaypointCount(0);
+      
+      // Notify parent component
+      if (onTripStatusChange) {
+        onTripStatusChange(false);
+      }
+      
       toast.info("Trip cancelled");
       
     } catch (error) {
