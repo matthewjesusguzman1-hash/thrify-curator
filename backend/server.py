@@ -526,10 +526,52 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     week_entries = [e for e in entries if datetime.fromisoformat(e["clock_in"]) >= week_start]
     week_hours = sum(e.get("total_hours", 0) for e in week_entries)
     
+    # Get payroll settings for pay period calculation
+    payroll_settings = await db.payroll_settings.find_one({}, {"_id": 0})
+    default_rate = 15.00
+    period_length = 14  # biweekly by default
+    
+    if payroll_settings:
+        default_rate = payroll_settings.get("default_hourly_rate", 15.00)
+        period_length = payroll_settings.get("period_length", 14)
+        start_date_str = payroll_settings.get("start_date")
+        if start_date_str:
+            start_date = datetime.fromisoformat(start_date_str).replace(tzinfo=timezone.utc)
+        else:
+            start_date = today - timedelta(days=period_length)
+    else:
+        start_date = today - timedelta(days=period_length)
+    
+    # Calculate current pay period
+    days_since_start = (today - start_date).days
+    periods_elapsed = days_since_start // period_length
+    current_period_start = start_date + timedelta(days=periods_elapsed * period_length)
+    current_period_end = current_period_start + timedelta(days=period_length)
+    
+    # Get entries for current pay period
+    period_entries = [e for e in entries if datetime.fromisoformat(e["clock_in"]).replace(tzinfo=timezone.utc) >= current_period_start]
+    period_hours = sum(e.get("total_hours", 0) for e in period_entries)
+    period_shifts = len(period_entries)
+    
+    # Get employee's hourly rate
+    user_doc = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    hourly_rate = user_doc.get("hourly_rate") if user_doc else None
+    if hourly_rate is None:
+        hourly_rate = default_rate
+    
+    # Calculate estimated pay
+    estimated_pay = round(period_hours * hourly_rate, 2)
+    
     return {
         "total_hours": round(total_hours, 2),
         "week_hours": round(week_hours, 2),
-        "total_shifts": len(entries)
+        "total_shifts": len(entries),
+        "period_hours": round(period_hours, 2),
+        "period_shifts": period_shifts,
+        "hourly_rate": hourly_rate,
+        "estimated_pay": estimated_pay,
+        "period_start": current_period_start.isoformat(),
+        "period_end": current_period_end.isoformat()
     }
 
 # ==================== Admin Routes ====================
