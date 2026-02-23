@@ -1980,15 +1980,16 @@ export default function AdminDashboard() {
                         <table className="data-table" data-testid="employees-table">
                           <thead>
                             <tr>
-                              <th>Name</th>
-                              <th>Email</th>
-                              <th>Role</th>
-                              <th>Hourly Rate</th>
-                              <th>Joined</th>
+                              <SortableHeader table="allEmployees" sortKey="name">Name</SortableHeader>
+                              <SortableHeader table="allEmployees" sortKey="email">Email</SortableHeader>
+                              <SortableHeader table="allEmployees" sortKey="role">Role</SortableHeader>
+                              <SortableHeader table="allEmployees" sortKey="hourly_rate">Hourly Rate</SortableHeader>
+                              <SortableHeader table="allEmployees" sortKey="created_at">Joined</SortableHeader>
+                              <th>Portal</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {employees.map((emp) => (
+                            {getSortedData(employees, 'allEmployees').map((emp) => (
                               <tr key={emp.id} data-testid={`all-employee-row-${emp.id}`}>
                                 <td>
                                   <div 
