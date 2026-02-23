@@ -1,0 +1,26 @@
+{
+  "short_name": "Thrifty Curator",
+  "name": "Thrifty Curator - Curated Resale Finds",
+  "description": "Shop curated resale finds across multiple platforms",
+  "icons": [
+    {
+      "src": "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/tariw3lj_IMG_0042.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/tariw3lj_IMG_0042.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1A1A2E",
+  "background_color": "#1A1A2E",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["shopping", "lifestyle"]
+}
