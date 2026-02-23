@@ -166,6 +166,22 @@ export default function AdminDashboard() {
   const [showAllEmployees, setShowAllEmployees] = useState(true);
   const [showTimeEntries, setShowTimeEntries] = useState(true);
 
+  // Sorting state for all tables
+  const [sortConfig, setSortConfig] = useState({
+    hoursByEmployee: { key: 'hours', direction: 'desc' },
+    allEmployees: { key: 'created_at', direction: 'desc' },
+    timeEntries: { key: 'clock_in', direction: 'desc' },
+    jobApplications: { key: 'submitted_at', direction: 'desc' },
+    consignmentInquiries: { key: 'submitted_at', direction: 'desc' },
+    consignmentAgreements: { key: 'submitted_at', direction: 'desc' }
+  });
+
+  // Employee portal view state
+  const [showEmployeePortal, setShowEmployeePortal] = useState(false);
+  const [viewingEmployee, setViewingEmployee] = useState(null);
+  const [employeePortalData, setEmployeePortalData] = useState(null);
+  const [loadingPortal, setLoadingPortal] = useState(false);
+
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   }), []);
