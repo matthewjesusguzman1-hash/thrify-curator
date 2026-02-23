@@ -1097,7 +1097,7 @@ export default function MileageTrackingSection({ getAuthHeader }) {
 
             {!reportPreview ? (
               <div className="p-6 pt-0">
-              // Step 1: Select options
+              {/* Step 1: Select options */}
               <div className="space-y-4">
                 {/* Period Selection */}
                 <div>
