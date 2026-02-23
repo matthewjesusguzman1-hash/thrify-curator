@@ -36,11 +36,13 @@ export default function ConsignmentInquiryForm() {
     phone: "",
     item_types: [],
     other_item_type: "",
+    brand: "",
     item_description: "",
     item_condition: "",
     smoke_free: true,
     pet_free: true,
-    image_urls: []
+    image_urls: [],
+    additional_info: ""
   });
   const [selectedImages, setSelectedImages] = useState([]);
   const [loading, setLoading] = useState(false);
