@@ -62,6 +62,9 @@ Build a "Thrifty Curator" reselling application with:
 - [x] PDF export for payroll reports
 - [x] Hourly rate configuration and wage calculations
 - [x] Configurable pay period start date
+- [x] Individual hourly rates per employee (inline editing in employees table)
+- [x] Payroll reports use individual rates with fallback to default
+- [x] Star indicator (★) for employees with custom rates in reports
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
