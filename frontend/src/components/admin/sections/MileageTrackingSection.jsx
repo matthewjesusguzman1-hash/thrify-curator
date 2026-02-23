@@ -792,7 +792,7 @@ export default function MileageTrackingSection({ getAuthHeader }) {
                     data-testid="export-report-btn"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Export Report
+                    Download Report
                   </Button>
                   <Button
                     onClick={() => setShowAddMileageModal(true)}
