@@ -167,6 +167,8 @@ async def get_my_entries(user: dict = Depends(get_current_user)):
 
 @router.get("/summary")
 async def get_time_summary(user: dict = Depends(get_current_user)):
+    from app.services.helpers import get_biweekly_period
+    
     entries = await db.time_entries.find(
         {"user_id": user["id"], "total_hours": {"$ne": None}}, {"_id": 0}
     ).to_list(1000)
@@ -175,33 +177,42 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     
     today = datetime.now(timezone.utc)
     week_start = today - timedelta(days=today.weekday())
-    week_entries = [e for e in entries if datetime.fromisoformat(e["clock_in"]) >= week_start]
+    week_entries = [e for e in entries if datetime.fromisoformat(e["clock_in"].replace('Z', '+00:00')) >= week_start]
     week_hours = sum(e.get("total_hours", 0) for e in week_entries)
     
-    payroll_settings = await db.payroll_settings.find_one({}, {"_id": 0})
+    # Get payroll settings - use same key as admin dashboard
+    payroll_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     default_rate = 15.00
-    period_length = 14
+    pay_period_start_date = "2026-01-06"  # Default fallback
     
     if payroll_settings:
         default_rate = payroll_settings.get("default_hourly_rate", 15.00)
-        period_length = payroll_settings.get("period_length", 14)
-        start_date_str = payroll_settings.get("start_date")
-        if start_date_str:
-            start_date = datetime.fromisoformat(start_date_str).replace(tzinfo=timezone.utc)
-        else:
-            start_date = today - timedelta(days=period_length)
-    else:
-        start_date = today - timedelta(days=period_length)
+        pay_period_start_date = payroll_settings.get("pay_period_start_date", "2026-01-06")
     
-    days_since_start = (today - start_date).days
-    periods_elapsed = days_since_start // period_length
-    current_period_start = start_date + timedelta(days=periods_elapsed * period_length)
-    current_period_end = current_period_start + timedelta(days=period_length)
+    # Use the same biweekly period calculation as admin dashboard
+    period_start, period_end = get_biweekly_period(pay_period_start_date, 0)
     
-    period_entries = [e for e in entries if datetime.fromisoformat(e["clock_in"]).replace(tzinfo=timezone.utc) >= current_period_start]
+    # Convert to datetime for comparison
+    period_start_dt = datetime.combine(period_start.date() if hasattr(period_start, 'date') else period_start, 
+                                       datetime.min.time()).replace(tzinfo=timezone.utc)
+    period_end_dt = datetime.combine(period_end.date() if hasattr(period_end, 'date') else period_end + timedelta(days=1), 
+                                     datetime.min.time()).replace(tzinfo=timezone.utc)
+    
+    # Filter entries for current pay period
+    period_entries = []
+    for e in entries:
+        try:
+            clock_in_str = e["clock_in"]
+            clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
+            if period_start_dt <= clock_in_dt < period_end_dt:
+                period_entries.append(e)
+        except:
+            pass
+    
     period_hours = sum(e.get("total_hours", 0) for e in period_entries)
     period_shifts = len(period_entries)
     
+    # Get employee's individual hourly rate (if set)
     user_doc = await db.users.find_one({"id": user["id"]}, {"_id": 0})
     hourly_rate = user_doc.get("hourly_rate") if user_doc else None
     if hourly_rate is None:
@@ -217,8 +228,8 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
         "period_shifts": period_shifts,
         "hourly_rate": hourly_rate,
         "estimated_pay": estimated_pay,
-        "period_start": current_period_start.isoformat(),
-        "period_end": current_period_end.isoformat()
+        "period_start": period_start.isoformat() if hasattr(period_start, 'isoformat') else str(period_start),
+        "period_end": period_end.isoformat() if hasattr(period_end, 'isoformat') else str(period_end)
     }
 
 
