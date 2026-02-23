@@ -4192,7 +4192,7 @@ export default function AdminDashboard() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleW9Download(w9.employee_id, w9.employee_name)}
+                                onClick={() => handleViewW9(w9.employee_id, w9.employee_name)}
                                 className="text-[#C5A065] border-[#C5A065]"
                               >
                                 <Eye className="w-4 h-4 mr-1" />
