@@ -194,6 +194,18 @@ export default function AdminDashboard() {
   const [employeePortalData, setEmployeePortalData] = useState(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
 
+  // Employee shifts management state
+  const [showEmployeeShifts, setShowEmployeeShifts] = useState(null);
+  const [employeeShifts, setEmployeeShifts] = useState([]);
+  const [loadingShifts, setLoadingShifts] = useState(false);
+  const [showAddShiftModal, setShowAddShiftModal] = useState(false);
+  const [showEditShiftModal, setShowEditShiftModal] = useState(false);
+  const [editingShift, setEditingShift] = useState(null);
+  const [shiftFormData, setShiftFormData] = useState({
+    clock_in: "",
+    clock_out: "",
+  });
+
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   }), []);
