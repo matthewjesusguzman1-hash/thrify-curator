@@ -3790,6 +3790,107 @@ export default function AdminDashboard() {
                           )}
                         </div>
                       </div>
+
+                      {/* W-9 Tax Form Section */}
+                      <div className="bg-white rounded-2xl overflow-hidden">
+                        <div className="h-1 bg-gradient-to-r from-[#f97316] to-[#ea580c]" />
+                        <div className="p-6">
+                          <div className="flex items-center gap-2 mb-4">
+                            <FileText className="w-5 h-5 text-[#f97316]" />
+                            <h3 className="font-playfair text-lg font-semibold text-[#333]">W-9 Tax Form</h3>
+                          </div>
+                          
+                          {/* Blank W-9 Download */}
+                          <div className="flex items-center justify-between p-3 bg-[#F9F6F7] rounded-xl mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <FileText className="w-5 h-5 text-gray-500" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-[#333]">IRS W-9 Form</p>
+                                <p className="text-xs text-[#888]">Download blank form to fill out</p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(`${API}/forms/w9`, '_blank')}
+                              className="text-[#888] hover:text-[#666]"
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Download
+                            </Button>
+                          </div>
+
+                          {/* W-9 Status Display */}
+                          {employeePortalData.w9Status && (
+                            <div className={`p-4 rounded-xl border ${
+                              employeePortalData.w9Status.status === 'approved' 
+                                ? 'bg-green-50 border-green-200' 
+                                : employeePortalData.w9Status.status === 'pending_review'
+                                ? 'bg-yellow-50 border-yellow-200'
+                                : employeePortalData.w9Status.status === 'needs_correction'
+                                ? 'bg-red-50 border-red-200'
+                                : 'bg-gray-50 border-gray-200'
+                            }`}>
+                              <div className="flex items-center gap-3">
+                                {employeePortalData.w9Status.status === 'approved' ? (
+                                  <CheckCircle className="w-5 h-5 text-green-600" />
+                                ) : employeePortalData.w9Status.status === 'pending_review' ? (
+                                  <Clock className="w-5 h-5 text-yellow-600" />
+                                ) : employeePortalData.w9Status.status === 'needs_correction' ? (
+                                  <AlertCircle className="w-5 h-5 text-red-600" />
+                                ) : (
+                                  <FileText className="w-5 h-5 text-gray-400" />
+                                )}
+                                <div className="flex-1">
+                                  <p className={`font-medium ${
+                                    employeePortalData.w9Status.status === 'approved' 
+                                      ? 'text-green-700' 
+                                      : employeePortalData.w9Status.status === 'pending_review'
+                                      ? 'text-yellow-700'
+                                      : employeePortalData.w9Status.status === 'needs_correction'
+                                      ? 'text-red-700'
+                                      : 'text-gray-600'
+                                  }`}>
+                                    {employeePortalData.w9Status.status === 'approved' 
+                                      ? 'W-9 Approved' 
+                                      : employeePortalData.w9Status.status === 'pending_review'
+                                      ? 'Pending Review'
+                                      : employeePortalData.w9Status.status === 'needs_correction'
+                                      ? 'Needs Correction'
+                                      : 'Not Submitted'}
+                                  </p>
+                                  {employeePortalData.w9Status.has_w9 && (
+                                    <p className="text-xs text-[#888]">
+                                      {employeePortalData.w9Status.filename} • Uploaded {new Date(employeePortalData.w9Status.uploaded_at).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                  {employeePortalData.w9Status.status === 'needs_correction' && employeePortalData.w9Status.rejection_reason && (
+                                    <p className="text-xs text-red-600 mt-1">
+                                      Reason: {employeePortalData.w9Status.rejection_reason}
+                                    </p>
+                                  )}
+                                  {!employeePortalData.w9Status.has_w9 && (
+                                    <p className="text-xs text-[#888]">Employee has not submitted a W-9 form yet</p>
+                                  )}
+                                </div>
+                                {employeePortalData.w9Status.has_w9 && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(`${API}/admin/employees/${viewingEmployee.id}/w9`, '_blank')}
+                                    className="text-[#888] hover:text-[#666]"
+                                  >
+                                    <Download className="w-4 h-4 mr-1" />
+                                    View
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-center text-white/60 py-12">No data available</p>
