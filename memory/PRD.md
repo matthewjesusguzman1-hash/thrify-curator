@@ -102,6 +102,11 @@ Build a "Thrifty Curator" reselling application with:
 - [x] **Frontend Components Refactoring** (Feb 23, 2026):
   - Created reusable components in `/app/frontend/src/components/admin/`
   - PayrollSummaryCard, EmployeePortalModal, EmployeeShiftsModal, SortableTableHeader
+- [x] **Admin Dashboard Improvements** (Feb 23, 2026):
+  - Reordered sections: All Employees → Payroll Summary → Recent Time Entries → Hours by Employee → Form Submissions
+  - Form Submissions auto-refreshes on page load
+  - W-9 document upload/download functionality for each employee
+  - W-9 stored in MongoDB as base64-encoded content
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
