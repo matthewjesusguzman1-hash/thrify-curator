@@ -3643,8 +3643,13 @@ export default function AdminDashboard() {
                           <p className="text-center text-[#888] py-8">Loading...</p>
                         ) : formSubmissions.consignmentAgreements.length === 0 ? (
                           <p className="text-center text-[#888] py-8">No consignment agreements yet</p>
+                        ) : getFilteredFormSubmissions(formSubmissions.consignmentAgreements).length === 0 ? (
+                          <p className="text-center text-[#888] py-8">No matching results found</p>
                         ) : (
                           <div className="overflow-x-auto">
+                            <p className="text-xs text-[#888] mb-2">
+                              Showing {getFilteredFormSubmissions(formSubmissions.consignmentAgreements).length} of {formSubmissions.consignmentAgreements.length} agreements
+                            </p>
                             <table className="data-table">
                               <thead>
                                 <tr>
@@ -3657,7 +3662,7 @@ export default function AdminDashboard() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {getSortedData(formSubmissions.consignmentAgreements, 'consignmentAgreements').map((agreement) => (
+                                {getSortedData(getFilteredFormSubmissions(formSubmissions.consignmentAgreements), 'consignmentAgreements').map((agreement) => (
                                   <tr key={agreement.id} data-testid={`agreement-row-${agreement.id}`}>
                                     <td className="font-medium">{agreement.full_name}</td>
                                     <td>{agreement.email}</td>
