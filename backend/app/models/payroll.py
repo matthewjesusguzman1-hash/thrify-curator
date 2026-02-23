@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 
@@ -22,13 +22,3 @@ class ReportRequest(BaseModel):
     start_date: str
     end_date: str
     employee_id: Optional[str] = None
-
-
-class EmailReportRequest(BaseModel):
-    recipient_email: EmailStr
-    report_data: dict
-
-
-class EmailPayrollRequest(BaseModel):
-    recipient_email: EmailStr
-    report_data: dict
