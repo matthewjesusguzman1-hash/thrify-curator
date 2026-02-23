@@ -1072,28 +1072,31 @@ export default function MileageTrackingSection({ getAuthHeader }) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
           onClick={handleCloseReportModal}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className={`bg-white rounded-2xl p-6 shadow-xl my-8 ${reportPreview ? 'w-full max-w-4xl' : 'w-full max-w-md'}`}
+            className={`bg-white rounded-2xl shadow-xl my-4 sm:my-8 ${reportPreview ? 'w-full max-w-4xl max-h-[95vh] flex flex-col' : 'w-full max-w-md p-6'}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
+            {/* Header - always visible with prominent close button */}
+            <div className={`flex items-center justify-between ${reportPreview ? 'p-4 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl z-10' : 'mb-4'}`}>
               <h3 className="text-lg font-semibold text-[#333]">
                 {reportPreview ? 'Mileage Report' : 'Generate Report'}
               </h3>
               <button 
                 onClick={handleCloseReportModal}
-                className="text-[#888] hover:text-[#333]"
+                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                data-testid="close-report-modal-btn"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-gray-700" />
               </button>
             </div>
 
             {!reportPreview ? (
+              <div className="p-6 pt-0">
               // Step 1: Select options
               <div className="space-y-4">
                 {/* Period Selection */}
