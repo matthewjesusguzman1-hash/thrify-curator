@@ -27,9 +27,16 @@ import axios from "axios";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ACTIVE_TRIP_KEY = "thrifty_curator_active_trip";
 
-export default function MileageTrackingSection({ getAuthHeader, onTripStatusChange }) {
+export default function MileageTrackingSection({ getAuthHeader, onTripStatusChange, forceExpand }) {
   // Section visibility
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Auto-expand when forceExpand prop changes to true
+  useEffect(() => {
+    if (forceExpand) {
+      setIsExpanded(true);
+    }
+  }, [forceExpand]);
   
   // Mileage tracking state
   const [mileageEntries, setMileageEntries] = useState([]);
