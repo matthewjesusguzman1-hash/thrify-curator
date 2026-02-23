@@ -1206,43 +1206,125 @@ export default function AdminDashboard() {
       return;
     }
     
+    // Convert to base64 and store for preview
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result.split(',')[1]);
+      reader.readAsDataURL(file);
+    });
+    
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    
+    setPendingCheckImage({
+      base64,
+      filename: file.name,
+      content_type: file.type,
+      previewUrl
+    });
+    
+    toast.success("Image ready for upload. Fill in details and click Submit.");
+  };
+
+  const handleSubmitCheckRecord = async () => {
+    if (!pendingCheckImage && !editingCheckRecord) {
+      toast.error("Please select an image first");
+      return;
+    }
+    
     setUploadingCheck(true);
     
     try {
-      // Convert to base64
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result.split(',')[1]);
-        reader.readAsDataURL(file);
-      });
+      if (editingCheckRecord) {
+        // Update existing record
+        const payload = {
+          description: checkUploadData.description || null,
+          check_date: checkUploadData.check_date || null,
+          amount: checkUploadData.amount ? parseFloat(checkUploadData.amount) : null,
+          employee_name: checkUploadData.employee_name || null
+        };
+        
+        // If new image was selected, include it
+        if (pendingCheckImage) {
+          payload.image_data = pendingCheckImage.base64;
+          payload.filename = pendingCheckImage.filename;
+          payload.content_type = pendingCheckImage.content_type;
+        }
+        
+        await axios.put(`${API}/admin/payroll/check-records/${editingCheckRecord.id}`, payload, getAuthHeader());
+        toast.success("Check record updated successfully!");
+        setEditingCheckRecord(null);
+      } else {
+        // Create new record
+        const payload = {
+          image_data: pendingCheckImage.base64,
+          filename: pendingCheckImage.filename,
+          content_type: pendingCheckImage.content_type,
+          description: checkUploadData.description || null,
+          check_date: checkUploadData.check_date || null,
+          amount: checkUploadData.amount ? parseFloat(checkUploadData.amount) : null,
+          employee_name: checkUploadData.employee_name || null
+        };
+        
+        await axios.post(`${API}/admin/payroll/check-records`, payload, getAuthHeader());
+        toast.success("Check record saved successfully!");
+      }
       
-      const payload = {
-        image_data: base64,
-        filename: file.name,
-        content_type: file.type,
-        description: checkUploadData.description || null,
-        check_date: checkUploadData.check_date || null,
-        amount: checkUploadData.amount ? parseFloat(checkUploadData.amount) : null,
-        employee_name: checkUploadData.employee_name || null
-      };
-      
-      await axios.post(`${API}/admin/payroll/check-records`, payload, getAuthHeader());
-      
-      toast.success("Check image uploaded successfully!");
+      // Reset form
       setCheckUploadData({ 
         description: "", 
         check_date: new Date().toISOString().split('T')[0], 
         amount: "", 
         employee_name: "" 
       });
+      
+      // Cleanup preview URL
+      if (pendingCheckImage?.previewUrl) {
+        URL.revokeObjectURL(pendingCheckImage.previewUrl);
+      }
+      setPendingCheckImage(null);
+      
       fetchCheckRecords();
     } catch (error) {
-      toast.error("Failed to upload check image");
+      toast.error(editingCheckRecord ? "Failed to update check record" : "Failed to save check record");
     } finally {
       setUploadingCheck(false);
       if (checkInputRef.current) {
         checkInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleEditCheckRecord = (record) => {
+    setEditingCheckRecord(record);
+    setCheckUploadData({
+      description: record.description || "",
+      check_date: record.check_date || new Date().toISOString().split('T')[0],
+      amount: record.amount?.toString() || "",
+      employee_name: record.employee_name || ""
+    });
+    // Clear any pending image
+    if (pendingCheckImage?.previewUrl) {
+      URL.revokeObjectURL(pendingCheckImage.previewUrl);
+    }
+    setPendingCheckImage(null);
+    toast.info("Edit mode: Update the fields and click Submit to save changes.");
+  };
+
+  const handleCancelCheckEdit = () => {
+    setEditingCheckRecord(null);
+    setCheckUploadData({
+      description: "",
+      check_date: new Date().toISOString().split('T')[0],
+      amount: "",
+      employee_name: ""
+    });
+    if (pendingCheckImage?.previewUrl) {
+      URL.revokeObjectURL(pendingCheckImage.previewUrl);
+    }
+    setPendingCheckImage(null);
+    if (checkInputRef.current) {
+      checkInputRef.current.value = "";
     }
   };
 
