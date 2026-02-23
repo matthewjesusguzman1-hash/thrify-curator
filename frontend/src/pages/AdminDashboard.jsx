@@ -239,7 +239,7 @@ export default function AdminDashboard() {
   const [viewingCheckImage, setViewingCheckImage] = useState(null);
   const [checkUploadData, setCheckUploadData] = useState({
     description: "",
-    check_date: "",
+    check_date: new Date().toISOString().split('T')[0],
     amount: "",
     employee_name: ""
   });
