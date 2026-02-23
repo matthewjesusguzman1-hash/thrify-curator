@@ -1770,19 +1770,7 @@ export default function AdminDashboard() {
                   <FileText className="w-4 h-4" />
                   Shift Report
                 </Button>
-              </div>
-              {/* Employee Management: Add, Edit, Remove */}
-              <div className="flex flex-col gap-1">
-                <Button 
-                  onClick={() => setShowAddEmployee(true)}
-                  size="sm"
-                  className="flex items-center gap-2 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0 text-xs sm:text-sm h-9"
-                  data-testid="add-employee-btn"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Add</span>
-                </Button>
-                {/* Start/End Trip Button */}
+                {/* Start/End Trip Button - next to Shift Report */}
                 <Button 
                   onClick={headerTripActive ? handleHeaderEndTrip : handleHeaderStartTrip}
                   disabled={headerTripLoading}
@@ -1801,7 +1789,19 @@ export default function AdminDashboard() {
                   ) : (
                     <Car className="w-4 h-4" />
                   )}
-                  <span className="hidden sm:inline">{headerTripActive ? 'End Trip' : 'Start Trip'}</span>
+                  <span>{headerTripActive ? 'End Trip' : 'Start Trip'}</span>
+                </Button>
+              </div>
+              {/* Employee Management: Add, Edit, Remove */}
+              <div className="flex flex-col gap-1">
+                <Button 
+                  onClick={() => setShowAddEmployee(true)}
+                  size="sm"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0 text-xs sm:text-sm h-9"
+                  data-testid="add-employee-btn"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Add</span>
                 </Button>
               </div>
               <Button 
