@@ -6300,6 +6300,313 @@ export default function AdminDashboard() {
               </motion.div>
             </motion.div>
           )}
+
+          {/* Add Mileage Entry Modal */}
+          {showAddMileageModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowAddMileageModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-[#333]">Add Mileage Entry</h3>
+                  <button 
+                    onClick={() => setShowAddMileageModal(false)}
+                    className="text-[#888] hover:text-[#333]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={mileageFormData.date}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, date: e.target.value })}
+                      data-testid="mileage-date-input"
+                    />
+                  </div>
+                  <div>
+                    <Label>Start Location</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g., Home, 123 Main St"
+                      value={mileageFormData.start_address}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, start_address: e.target.value })}
+                      data-testid="mileage-start-input"
+                    />
+                  </div>
+                  <div>
+                    <Label>End Location</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g., Goodwill, Thrift Store"
+                      value={mileageFormData.end_address}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, end_address: e.target.value })}
+                      data-testid="mileage-end-input"
+                    />
+                  </div>
+                  <div>
+                    <Label>Total Miles</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder="0.0"
+                      value={mileageFormData.total_miles}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, total_miles: e.target.value })}
+                      data-testid="mileage-miles-input"
+                    />
+                  </div>
+                  <div>
+                    <Label>Purpose</Label>
+                    <Select
+                      value={mileageFormData.purpose}
+                      onValueChange={(value) => setMileageFormData({ ...mileageFormData, purpose: value })}
+                    >
+                      <SelectTrigger data-testid="mileage-purpose-select">
+                        <SelectValue placeholder="Select purpose" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="thrifting">Thrifting</SelectItem>
+                        <SelectItem value="post_office">Post Office</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {mileageFormData.purpose === "other" && (
+                    <div>
+                      <Label>Specify Purpose</Label>
+                      <Input
+                        type="text"
+                        placeholder="Enter purpose"
+                        value={mileageFormData.purpose_other}
+                        onChange={(e) => setMileageFormData({ ...mileageFormData, purpose_other: e.target.value })}
+                        data-testid="mileage-purpose-other-input"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <Label>Notes (optional)</Label>
+                    <Input
+                      type="text"
+                      placeholder="Any additional notes"
+                      value={mileageFormData.notes}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, notes: e.target.value })}
+                      data-testid="mileage-notes-input"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleAddMileageEntry}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                    data-testid="save-mileage-btn"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Entry
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Edit Mileage Entry Modal */}
+          {showEditMileageModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowEditMileageModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-[#333]">Edit Mileage Entry</h3>
+                  <button 
+                    onClick={() => setShowEditMileageModal(false)}
+                    className="text-[#888] hover:text-[#333]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={mileageFormData.date}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, date: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Start Location</Label>
+                    <Input
+                      type="text"
+                      value={mileageFormData.start_address}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, start_address: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>End Location</Label>
+                    <Input
+                      type="text"
+                      value={mileageFormData.end_address}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, end_address: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Total Miles</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={mileageFormData.total_miles}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, total_miles: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Purpose</Label>
+                    <Select
+                      value={mileageFormData.purpose}
+                      onValueChange={(value) => setMileageFormData({ ...mileageFormData, purpose: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select purpose" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="thrifting">Thrifting</SelectItem>
+                        <SelectItem value="post_office">Post Office</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {mileageFormData.purpose === "other" && (
+                    <div>
+                      <Label>Specify Purpose</Label>
+                      <Input
+                        type="text"
+                        value={mileageFormData.purpose_other}
+                        onChange={(e) => setMileageFormData({ ...mileageFormData, purpose_other: e.target.value })}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <Label>Notes (optional)</Label>
+                    <Input
+                      type="text"
+                      value={mileageFormData.notes}
+                      onChange={(e) => setMileageFormData({ ...mileageFormData, notes: e.target.value })}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleEditMileageEntry}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Update Entry
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* End Trip Modal */}
+          {showEndTripModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowEndTripModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-[#333]">End Trip</h3>
+                  <button 
+                    onClick={() => setShowEndTripModal(false)}
+                    className="text-[#888] hover:text-[#333]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <p className="text-sm text-[#666]">
+                    Please select the purpose of this trip before ending.
+                  </p>
+                  <div>
+                    <Label>Purpose</Label>
+                    <Select
+                      value={endTripData.purpose}
+                      onValueChange={(value) => setEndTripData({ ...endTripData, purpose: value })}
+                    >
+                      <SelectTrigger data-testid="end-trip-purpose-select">
+                        <SelectValue placeholder="Select purpose" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="thrifting">Thrifting</SelectItem>
+                        <SelectItem value="post_office">Post Office</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {endTripData.purpose === "other" && (
+                    <div>
+                      <Label>Specify Purpose</Label>
+                      <Input
+                        type="text"
+                        placeholder="Enter purpose"
+                        value={endTripData.purpose_other}
+                        onChange={(e) => setEndTripData({ ...endTripData, purpose_other: e.target.value })}
+                        data-testid="end-trip-purpose-other-input"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <Label>Notes (optional)</Label>
+                    <Input
+                      type="text"
+                      placeholder="Any additional notes"
+                      value={endTripData.notes}
+                      onChange={(e) => setEndTripData({ ...endTripData, notes: e.target.value })}
+                      data-testid="end-trip-notes-input"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowEndTripModal(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={confirmEndTrip}
+                      className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 text-white"
+                      data-testid="confirm-end-trip-btn"
+                    >
+                      <StopCircle className="w-4 h-4 mr-2" />
+                      End Trip
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
         </motion.div>
       </main>
     </div>
