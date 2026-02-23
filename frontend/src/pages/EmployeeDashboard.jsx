@@ -142,6 +142,21 @@ export default function EmployeeDashboard() {
     window.open("https://www.irs.gov/pub/irs-pdf/fw9.pdf", "_blank");
   };
 
+  const handleViewMyW9 = async () => {
+    try {
+      const response = await axios.get(`${API}/time/w9/download`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      toast.error("Failed to view W-9");
+    }
+  };
+
   const handleClock = async (action) => {
     setLoading(true);
     try {
