@@ -195,14 +195,10 @@ export default function LandingPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden"
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
                           style={{ backgroundColor: platform.color }}
                         >
-                          {platform.useIcon ? (
-                            <platform.icon className="w-5 h-5 text-white" />
-                          ) : (
-                            <span className="text-white font-bold text-lg">{platform.letterFallback}</span>
-                          )}
+                          <platform.Icon />
                         </div>
                         <span className="font-semibold text-[#1A1A2E] group-hover:text-[#00D4FF] transition-colors">
                           {platform.name}
