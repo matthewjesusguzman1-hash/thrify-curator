@@ -463,3 +463,16 @@ Build a "Thrifty Curator" reselling application with:
 - **Modal Features**: Close button, Download button, PDF preview all functional
 - **Test Report**: `/app/test_reports/iteration_16.json`
 
+
+## Recent Updates (Feb 23, 2026 - Session 6)
+
+### UI/UX Improvements
+
+- **Mobile Header Button Alignment (COMPLETED)**:
+  - **Issue**: User requested header buttons (Payroll, Add, Edit, Remove, Shift Report, Start Trip) to be right-aligned on mobile view
+  - **Fix**: Updated AdminDashboard.jsx header section:
+    - Changed parent container from `items-start` to `items-end` for mobile
+    - Added `text-left` and `w-full sm:w-auto` to title for proper alignment
+    - Buttons container now uses `items-start` without flex-wrap for cleaner alignment
+  - **Result**: On mobile, "Admin Dashboard" title stays left, all action buttons align to the right edge
+  - **Desktop view**: Unchanged, buttons remain on the right side of the title row
