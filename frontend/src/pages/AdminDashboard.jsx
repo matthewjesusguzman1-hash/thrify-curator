@@ -721,6 +721,76 @@ export default function AdminDashboard() {
     return { totalHours: totalHours.toFixed(2), totalShifts };
   };
 
+  // W-9 upload/download handlers
+  const handleW9Upload = async (employeeId, file) => {
+    if (!file) return;
+    
+    setUploadingW9(employeeId);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      await axios.post(
+        `${API}/admin/employees/${employeeId}/w9`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      toast.success("W-9 uploaded successfully!");
+      fetchData(); // Refresh employee list to show W-9 status
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to upload W-9");
+    } finally {
+      setUploadingW9(null);
+    }
+  };
+
+  const handleW9Download = async (employeeId, employeeName) => {
+    try {
+      const response = await axios.get(
+        `${API}/admin/employees/${employeeId}/w9`,
+        {
+          ...getAuthHeader(),
+          responseType: 'blob'
+        }
+      );
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const contentDisposition = response.headers['content-disposition'];
+      const filename = contentDisposition 
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') 
+        : `w9_${employeeName.replace(/\s+/g, '_')}.pdf`;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("Failed to download W-9");
+    }
+  };
+
+  const handleW9Delete = async (employeeId) => {
+    if (!window.confirm("Are you sure you want to delete this W-9 document?")) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/admin/employees/${employeeId}/w9`, getAuthHeader());
+      toast.success("W-9 deleted successfully");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to delete W-9");
+    }
+  };
+
   // Edit time entry handlers
   const handleEditEntry = (entry) => {
     setEditingEntry(entry);
