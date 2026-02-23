@@ -142,6 +142,24 @@ export default function AdminDashboard() {
   });
   const [savingEmployee, setSavingEmployee] = useState(false);
 
+  // Form submissions state
+  const [formSubmissions, setFormSubmissions] = useState({
+    jobApplications: [],
+    consignmentInquiries: [],
+    consignmentAgreements: []
+  });
+  const [formsSummary, setFormsSummary] = useState({
+    job_applications: { total: 0, new: 0 },
+    consignment_inquiries: { total: 0, new: 0 },
+    consignment_agreements: { total: 0, new: 0 }
+  });
+  const [activeFormTab, setActiveFormTab] = useState("job_applications");
+  const [loadingForms, setLoadingForms] = useState(false);
+  const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showFormsSection, setShowFormsSection] = useState(false);
+
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   }), []);
