@@ -95,6 +95,13 @@ Build a "Thrifty Curator" reselling application with:
   - Delete submissions functionality
   - Refresh button to reload data
   - Summary showing total submissions and new count
+- [x] **Backend Refactoring** (Feb 23, 2026):
+  - Refactored monolithic server.py (1946 lines) into modular structure
+  - Created `/app/backend/app/` with routers, models, services
+  - All 18 API tests pass (100%)
+- [x] **Frontend Components Refactoring** (Feb 23, 2026):
+  - Created reusable components in `/app/frontend/src/components/admin/`
+  - PayrollSummaryCard, EmployeePortalModal, EmployeeShiftsModal, SortableTableHeader
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
