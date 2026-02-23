@@ -795,6 +795,15 @@ export default function AdminDashboard() {
                 <UserMinus className="w-4 h-4" />
                 Remove Employee
               </Button>
+              <Button 
+                onClick={() => setShowEditEmployee(true)}
+                variant="outline"
+                className="flex items-center gap-2 border-[#8BA88E] text-[#8BA88E] hover:bg-[#8BA88E]/10"
+                data-testid="edit-employee-btn"
+              >
+                <UserCog className="w-4 h-4" />
+                Edit Employee
+              </Button>
             </div>
           </div>
 
