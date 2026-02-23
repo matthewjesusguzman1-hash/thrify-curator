@@ -292,6 +292,33 @@ export default function AdminDashboard() {
   });
   const [showEndTripModal, setShowEndTripModal] = useState(false);
 
+  // Helper function to calculate biweekly period from a start date
+  const calculateBiweeklyPeriod = (startDateStr) => {
+    if (!startDateStr) return null;
+    try {
+      const startDate = new Date(startDateStr + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Calculate how many complete 14-day periods have passed
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const daysDiff = Math.floor((today - startDate) / msPerDay);
+      const periodNumber = Math.floor(daysDiff / 14);
+      
+      // Calculate the current period's start and end
+      const periodStart = new Date(startDate.getTime() + (periodNumber * 14 * msPerDay));
+      const periodEnd = new Date(periodStart.getTime() + (13 * msPerDay));
+      
+      return {
+        start: periodStart,
+        end: periodEnd,
+        periodNumber: periodNumber + 1
+      };
+    } catch (e) {
+      return null;
+    }
+  };
+
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   }), []);
