@@ -534,6 +534,40 @@ export default function AdminDashboard() {
     }
   };
 
+  // Edit employee handlers
+  const handleOpenEditEmployee = (employee) => {
+    setEditingEmployee(employee);
+    setEditEmployeeData({
+      name: employee.name,
+      email: employee.email,
+      role: employee.role
+    });
+    setShowEditEmployee(true);
+  };
+
+  const handleUpdateEmployee = async (e) => {
+    e.preventDefault();
+    if (!editingEmployee) return;
+    
+    setSavingEmployee(true);
+    try {
+      await axios.put(`${API}/admin/employees/${editingEmployee.id}`, {
+        name: editEmployeeData.name,
+        email: editEmployeeData.email,
+        role: editEmployeeData.role
+      }, getAuthHeader());
+      
+      toast.success(`${editEmployeeData.name}'s details updated successfully!`);
+      setShowEditEmployee(false);
+      setEditingEmployee(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to update employee");
+    } finally {
+      setSavingEmployee(false);
+    }
+  };
+
   const handleGenerateReport = async () => {
     setReportLoading(true);
     try {
