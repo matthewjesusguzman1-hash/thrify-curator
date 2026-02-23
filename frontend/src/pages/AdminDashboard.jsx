@@ -3149,6 +3149,244 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
+          {/* Employee Shifts Modal */}
+          {showEmployeeShifts && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowEmployeeShifts(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl w-full max-w-2xl shadow-xl max-h-[80vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="employee-shifts-modal"
+              >
+                {/* Header */}
+                <div className="p-6 border-b border-[#eee]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center">
+                        <Clock className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="font-playfair text-xl font-bold text-[#333]">{showEmployeeShifts.name}'s Shifts</h2>
+                        <p className="text-sm text-[#888]">{showEmployeeShifts.shifts} total shifts • {showEmployeeShifts.hours?.toFixed(2)} hours</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowEmployeeShifts(null)}
+                      className="text-[#999] hover:text-[#666]"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="px-6 py-3 bg-[#F9F6F7] border-b border-[#eee]">
+                  <Button
+                    onClick={handleAddShift}
+                    size="sm"
+                    className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
+                    data-testid="add-shift-btn"
+                  >
+                    <Clock className="w-4 h-4 mr-2" />
+                    Add Shift
+                  </Button>
+                </div>
+
+                {/* Shifts List */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  {loadingShifts ? (
+                    <div className="flex items-center justify-center py-12">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-8 h-8 border-2 border-[#00D4FF] border-t-transparent rounded-full"
+                      />
+                    </div>
+                  ) : employeeShifts.length === 0 ? (
+                    <p className="text-center text-[#888] py-12">No shifts recorded</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {employeeShifts.map((shift) => (
+                        <div key={shift.id} className="flex items-center justify-between p-4 bg-[#F9F6F7] rounded-xl" data-testid={`shift-row-${shift.id}`}>
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-[#00D4FF]/20 rounded-lg flex items-center justify-center">
+                              <Clock className="w-5 h-5 text-[#00D4FF]" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-[#333]">{formatDateTime(shift.clock_in)}</p>
+                              <p className="text-sm text-[#888]">
+                                {shift.clock_out ? `→ ${formatDateTime(shift.clock_out)}` : 'Still active'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              shift.total_hours 
+                                ? 'bg-[#00D4FF]/20 text-[#00A8CC]' 
+                                : 'bg-green-100 text-green-700'
+                            }`}>
+                              {shift.total_hours ? `${shift.total_hours} hrs` : 'Active'}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditShift(shift)}
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                data-testid={`edit-shift-${shift.id}`}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteShift(shift.id)}
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`delete-shift-${shift.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-[#eee] flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowEmployeeShifts(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Add Shift Modal */}
+          {showAddShiftModal && showEmployeeShifts && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+              onClick={() => setShowAddShiftModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="add-shift-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Add Shift for {showEmployeeShifts.name}</h2>
+                  <button onClick={() => setShowAddShiftModal(false)} className="text-[#999] hover:text-[#666]">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <form onSubmit={handleSaveNewShift}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[#333] mb-1">Clock In *</label>
+                      <input
+                        type="datetime-local"
+                        value={shiftFormData.clock_in}
+                        onChange={(e) => setShiftFormData(prev => ({ ...prev, clock_in: e.target.value }))}
+                        required
+                        className="w-full px-4 py-2 border border-[#ddd] rounded-lg focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#333] mb-1">Clock Out</label>
+                      <input
+                        type="datetime-local"
+                        value={shiftFormData.clock_out}
+                        onChange={(e) => setShiftFormData(prev => ({ ...prev, clock_out: e.target.value }))}
+                        className="w-full px-4 py-2 border border-[#ddd] rounded-lg focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF]"
+                      />
+                      <p className="text-xs text-[#888] mt-1">Leave empty if still active</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <Button type="button" variant="outline" onClick={() => setShowAddShiftModal(false)} className="flex-1">
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="flex-1 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white">
+                      Add Shift
+                    </Button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Edit Shift Modal */}
+          {showEditShiftModal && editingShift && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+              onClick={() => setShowEditShiftModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="edit-shift-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Edit Shift</h2>
+                  <button onClick={() => setShowEditShiftModal(false)} className="text-[#999] hover:text-[#666]">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <form onSubmit={handleSaveEditedShift}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[#333] mb-1">Clock In *</label>
+                      <input
+                        type="datetime-local"
+                        value={shiftFormData.clock_in}
+                        onChange={(e) => setShiftFormData(prev => ({ ...prev, clock_in: e.target.value }))}
+                        required
+                        className="w-full px-4 py-2 border border-[#ddd] rounded-lg focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#333] mb-1">Clock Out</label>
+                      <input
+                        type="datetime-local"
+                        value={shiftFormData.clock_out}
+                        onChange={(e) => setShiftFormData(prev => ({ ...prev, clock_out: e.target.value }))}
+                        className="w-full px-4 py-2 border border-[#ddd] rounded-lg focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF]"
+                      />
+                      <p className="text-xs text-[#888] mt-1">Leave empty if still active</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <Button type="button" variant="outline" onClick={() => setShowEditShiftModal(false)} className="flex-1">
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="flex-1 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white">
+                      Save Changes
+                    </Button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+
           {/* Edit Time Entry Modal */}
           {showEditEntry && editingEntry && (
             <motion.div
