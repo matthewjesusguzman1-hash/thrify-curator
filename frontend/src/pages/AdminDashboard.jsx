@@ -172,6 +172,13 @@ export default function AdminDashboard() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showFormsSection, setShowFormsSection] = useState(false);
 
+  // W-9 Review state
+  const [pendingW9s, setPendingW9s] = useState([]);
+  const [loadingPendingW9s, setLoadingPendingW9s] = useState(false);
+  const [reviewingW9, setReviewingW9] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showW9ReviewSection, setShowW9ReviewSection] = useState(false);
+
   // Collapsible sections state - all collapsed by default
   const [showStatsSection, setShowStatsSection] = useState(false);
   const [showHoursByEmployee, setShowHoursByEmployee] = useState(false);
