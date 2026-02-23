@@ -3202,6 +3202,180 @@ export default function AdminDashboard() {
             </AnimatePresence>
           </div>
 
+          {/* W-9 Review Section */}
+          <div className="dashboard-card">
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowW9ReviewSection(!showW9ReviewSection)}
+              data-testid="w9-review-section-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#f97316] to-[#ea580c] rounded-xl flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-playfair text-xl font-semibold text-[#333]">W-9 Review</h2>
+                  <p className="text-sm text-[#888]">
+                    {pendingW9s.length > 0 ? (
+                      <span className="text-orange-500 font-medium">{pendingW9s.length} pending review</span>
+                    ) : (
+                      "No pending reviews"
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fetchPendingW9s();
+                  }}
+                  disabled={loadingPendingW9s}
+                  className="text-[#888] hover:text-[#666]"
+                >
+                  {loadingPendingW9s ? "Loading..." : "Refresh"}
+                </Button>
+                {showW9ReviewSection ? (
+                  <ChevronUp className="w-5 h-5 text-[#888]" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-[#888]" />
+                )}
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {showW9ReviewSection && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-4 pt-4 border-t border-[#eee]">
+                    {loadingPendingW9s ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f97316] mx-auto"></div>
+                        <p className="text-[#888] mt-2">Loading pending W-9s...</p>
+                      </div>
+                    ) : pendingW9s.length === 0 ? (
+                      <div className="text-center py-8">
+                        <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-2" />
+                        <p className="text-[#888]">No W-9s pending review</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {pendingW9s.map((w9) => (
+                          <div 
+                            key={w9.employee_id}
+                            className="flex items-center justify-between p-4 bg-orange-50 rounded-xl border border-orange-200"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-medium">
+                                {w9.employee_name?.charAt(0) || '?'}
+                              </div>
+                              <div>
+                                <p className="font-medium text-[#333]">{w9.employee_name}</p>
+                                <p className="text-sm text-[#888]">{w9.employee_email}</p>
+                                <p className="text-xs text-orange-600">Submitted: {new Date(w9.uploaded_at).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleW9Download(w9.employee_id, w9.employee_name)}
+                                className="text-[#C5A065] border-[#C5A065]"
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleApproveW9(w9.employee_id)}
+                                className="bg-green-500 hover:bg-green-600 text-white"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setReviewingW9(w9)}
+                                className="text-red-500 border-red-300 hover:bg-red-50"
+                              >
+                                <AlertCircle className="w-4 h-4 mr-1" />
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* W-9 Rejection Modal */}
+          {reviewingW9 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setReviewingW9(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-playfair text-lg font-bold text-[#333]">Request Corrections</h3>
+                    <p className="text-sm text-[#888]">{reviewingW9.employee_name}'s W-9</p>
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <Label className="form-label">Reason for Rejection *</Label>
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Please describe the issues with the W-9..."
+                    className="w-full p-3 border border-[#ddd] rounded-xl resize-none h-24 focus:outline-none focus:ring-2 focus:ring-red-300"
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setReviewingW9(null);
+                      setRejectReason("");
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleRejectW9(reviewingW9.employee_id)}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                  >
+                    Send for Corrections
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
           {/* Submission Details Modal */}
           {showSubmissionDetails && selectedSubmission && (
             <motion.div
