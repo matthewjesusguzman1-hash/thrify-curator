@@ -217,7 +217,6 @@ async def email_shift_report(email_req: EmailReportRequest, admin: dict = Depend
     
     report = email_req.report_data
     period = report.get("period", {})
-    summary = report.get("summary", {})
     by_employee = report.get("by_employee", [])
     
     html_content = f"""
