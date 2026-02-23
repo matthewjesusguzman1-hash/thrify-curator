@@ -1461,7 +1461,8 @@ export default function AdminDashboard() {
       name: employee.name,
       email: employee.email,
       role: employee.role,
-      hourly_rate: employee.hourly_rate?.toString() || ""
+      hourly_rate: employee.hourly_rate?.toString() || "",
+      phone: employee.phone || ""
     });
     setShowEditEmployee(true);
   };
