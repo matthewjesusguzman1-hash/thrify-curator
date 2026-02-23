@@ -6,6 +6,7 @@ import pytest
 import requests
 import os
 import uuid
+import time
 from datetime import datetime, timedelta
 
 # Try multiple sources for BASE_URL
