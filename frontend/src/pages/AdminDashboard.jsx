@@ -220,6 +220,15 @@ export default function AdminDashboard() {
     }
   }, [getAuthHeader]);
 
+  const fetchPayrollSummary = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/payroll/summary`, getAuthHeader());
+      setPayrollSummary(response.data);
+    } catch (error) {
+      console.error("Failed to fetch payroll summary:", error);
+    }
+  }, [getAuthHeader]);
+
   // Close notification dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
