@@ -483,10 +483,12 @@ table tbody tr:hover {
 .dashboard-header {
     background: linear-gradient(90deg, #1A1A2E 0%, #16213E 100%) !important;
     border-bottom: 2px solid #00D4FF !important;
-    padding: 3.5rem 2rem 1rem 2rem;
+    padding: 3.5rem 1rem 1rem 1rem;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 0.75rem;
+    justify-content: flex-start;
+    align-items: stretch;
     position: sticky;
     top: 0;
     z-index: 40;
@@ -496,6 +498,9 @@ table tbody tr:hover {
 @media (min-width: 640px) {
     .dashboard-header {
         padding: 1rem 2rem;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
     }
 }
 
@@ -512,7 +517,13 @@ table tbody tr:hover {
 .dashboard-content {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 1rem;
+}
+
+@media (min-width: 640px) {
+    .dashboard-content {
+        padding: 2rem;
+    }
 }
 
 /* Notification dropdown - Override inherited header styles */
