@@ -2188,6 +2188,64 @@ export default function AdminDashboard() {
                                 <td>{formatDateTime(emp.created_at)}</td>
                                 <td>
                                   {emp.role !== 'admin' && (
+                                    <div className="flex items-center gap-1">
+                                      {emp.has_w9 ? (
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => { e.stopPropagation(); handleW9Download(emp.id, emp.name); }}
+                                            className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 px-2"
+                                            data-testid={`download-w9-${emp.id}`}
+                                            title="Download W-9"
+                                          >
+                                            <Download className="w-4 h-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => { e.stopPropagation(); handleW9Delete(emp.id); }}
+                                            className="text-red-400 hover:text-red-500 hover:bg-red-50 h-8 px-2"
+                                            data-testid={`delete-w9-${emp.id}`}
+                                            title="Delete W-9"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <input
+                                            type="file"
+                                            accept=".pdf,.jpg,.jpeg,.png"
+                                            className="hidden"
+                                            id={`w9-upload-${emp.id}`}
+                                            onChange={(e) => handleW9Upload(emp.id, e.target.files[0])}
+                                          />
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              document.getElementById(`w9-upload-${emp.id}`).click();
+                                            }}
+                                            className="text-[#888] hover:text-[#666] hover:bg-[#F9F6F7] h-8 px-2"
+                                            disabled={uploadingW9 === emp.id}
+                                            data-testid={`upload-w9-${emp.id}`}
+                                            title="Upload W-9"
+                                          >
+                                            {uploadingW9 === emp.id ? (
+                                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#C5A065]"></div>
+                                            ) : (
+                                              <Upload className="w-4 h-4" />
+                                            )}
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+                                <td>
+                                  {emp.role !== 'admin' && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
