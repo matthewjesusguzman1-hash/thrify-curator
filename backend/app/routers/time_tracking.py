@@ -206,7 +206,7 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
             clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
             if period_start_dt <= clock_in_dt < period_end_dt:
                 period_entries.append(e)
-        except:
+        except (ValueError, KeyError, TypeError):
             pass
     
     period_hours = sum(e.get("total_hours", 0) for e in period_entries)
