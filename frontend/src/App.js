@@ -1,6 +1,8 @@
 import "@/App.css";
+import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
+import SplashScreen from "@/components/SplashScreen";
 import LandingPage from "@/pages/LandingPage";
 import JobApplicationForm from "@/pages/JobApplicationForm";
 import ConsignmentInquiryForm from "@/pages/ConsignmentInquiryForm";
@@ -10,8 +12,11 @@ import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 
 function App() {
+  const [splashComplete, setSplashComplete] = useState(false);
+
   return (
     <div className="app-background">
+      <SplashScreen onComplete={() => setSplashComplete(true)} />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
