@@ -473,8 +473,8 @@ export default function MileageTrackingSection({ getAuthHeader }) {
     }
   };
 
-  // Unified export function
-  const handleExportReport = async () => {
+  // View report - generates and shows preview
+  const handleViewReport = async () => {
     setExporting(true);
     try {
       const dateRange = getExportDateRange();
@@ -490,23 +490,47 @@ export default function MileageTrackingSection({ getAuthHeader }) {
       );
       
       const mimeType = format === "csv" ? "text/csv" : "application/pdf";
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: mimeType }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `mileage_report_${dateRange.start}_${dateRange.end}.${format}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      const blob = new Blob([response.data], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
       
-      toast.success(`${format.toUpperCase()} report downloaded!`);
-      setShowExportModal(false);
+      setReportBlobUrl(url);
+      setReportPreview({
+        format,
+        dateRange,
+        blob
+      });
+      
     } catch (error) {
-      console.error('Export failed:', error);
-      toast.error('Failed to export report');
+      console.error('Failed to generate report:', error);
+      toast.error('Failed to generate report');
     } finally {
       setExporting(false);
     }
+  };
+
+  // Download the viewed report
+  const handleDownloadReport = () => {
+    if (!reportPreview || !reportBlobUrl) return;
+    
+    const { format, dateRange } = reportPreview;
+    const link = document.createElement('a');
+    link.href = reportBlobUrl;
+    link.setAttribute('download', `mileage_report_${dateRange.start}_${dateRange.end}.${format}`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    
+    toast.success(`${format.toUpperCase()} report downloaded!`);
+  };
+
+  // Close report modal and cleanup
+  const handleCloseReportModal = () => {
+    if (reportBlobUrl) {
+      window.URL.revokeObjectURL(reportBlobUrl);
+    }
+    setReportBlobUrl(null);
+    setReportPreview(null);
+    setShowExportModal(false);
   };
 
   // Check for active trip on mount and when section is expanded
