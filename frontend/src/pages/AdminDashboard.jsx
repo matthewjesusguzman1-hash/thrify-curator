@@ -1407,27 +1407,69 @@ export default function AdminDashboard() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto"
               onClick={() => setShowAddEmployee(false)}
             >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-xl overflow-hidden w-full max-w-md shadow-2xl"
+                className="bg-white rounded-xl overflow-hidden w-full max-w-md shadow-2xl my-4"
                 onClick={(e) => e.stopPropagation()}
                 data-testid="add-employee-modal"
               >
                 <div className="h-1.5 bg-gradient-to-r from-[#FF1493] to-[#E91E8C]" />
-                <div className="p-6">
+                <div className="p-6 max-h-[80vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-playfair text-xl font-bold text-[#333]">Add New Employee</h2>
                   <button
-                    onClick={() => setShowAddEmployee(false)}
+                    onClick={() => {
+                      setShowAddEmployee(false);
+                      setSelectedJobApp("");
+                      setNewEmployeeW9File(null);
+                    }}
                     className="text-[#999] hover:text-[#666]"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
+
+                {/* Import from Job Application */}
+                {formSubmissions.jobApplications && formSubmissions.jobApplications.length > 0 && (
+                  <div className="form-group mb-4">
+                    <Label className="form-label flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-[#C5A065]" />
+                      Import from Job Application
+                    </Label>
+                    <Select 
+                      value={selectedJobApp} 
+                      onValueChange={(value) => {
+                        setSelectedJobApp(value);
+                        if (value) {
+                          const app = formSubmissions.jobApplications.find(a => a.id === value);
+                          if (app) {
+                            setNewEmployee({
+                              name: app.full_name,
+                              email: app.email
+                            });
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="form-input">
+                        <SelectValue placeholder="Select a job applicant..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">-- No import --</SelectItem>
+                        {formSubmissions.jobApplications.map((app) => (
+                          <SelectItem key={app.id} value={app.id}>
+                            {app.full_name} ({app.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-[#888] mt-1">Pre-fill employee info from a submitted job application</p>
+                  </div>
+                )}
 
                 <form onSubmit={handleAddEmployee}>
                   <div className="form-group">
@@ -1460,25 +1502,73 @@ export default function AdminDashboard() {
                   {/* W-9 Form Download Section */}
                   <div className="form-group">
                     <Label className="form-label">W-9 Tax Form</Label>
-                    <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
-                      <div className="w-10 h-10 bg-[#C5A065]/20 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-[#C5A065]" />
+                    <div className="space-y-2">
+                      {/* Download blank form */}
+                      <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
+                        <div className="w-10 h-10 bg-[#C5A065]/20 rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-[#C5A065]" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-[#333]">Blank W-9 Form</p>
+                          <p className="text-xs text-[#888]">Download for employee to complete</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadBlankW9}
+                          className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
+                          data-testid="download-w9-form-btn"
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Download
+                        </Button>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-[#333]">IRS W-9 Form</p>
-                        <p className="text-xs text-[#888]">Download for employee to complete</p>
+                      
+                      {/* Upload completed W-9 */}
+                      <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-200">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Upload className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-[#333]">Attach Completed W-9</p>
+                          {newEmployeeW9File ? (
+                            <p className="text-xs text-green-600">{newEmployeeW9File.name}</p>
+                          ) : (
+                            <p className="text-xs text-[#888]">Upload employee's filled W-9</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            className="hidden"
+                            id="new-employee-w9-upload"
+                            onChange={(e) => setNewEmployeeW9File(e.target.files[0])}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => document.getElementById('new-employee-w9-upload').click()}
+                            className="text-green-600 border-green-400 hover:bg-green-50"
+                          >
+                            <Upload className="w-4 h-4 mr-1" />
+                            {newEmployeeW9File ? 'Change' : 'Upload'}
+                          </Button>
+                          {newEmployeeW9File && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setNewEmployeeW9File(null)}
+                              className="text-red-500 hover:bg-red-50"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDownloadBlankW9}
-                        className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
-                        data-testid="download-w9-form-btn"
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        Download
-                      </Button>
                     </div>
                   </div>
 
@@ -1486,7 +1576,11 @@ export default function AdminDashboard() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setShowAddEmployee(false)}
+                      onClick={() => {
+                        setShowAddEmployee(false);
+                        setSelectedJobApp("");
+                        setNewEmployeeW9File(null);
+                      }}
                       className="flex-1"
                     >
                       Cancel
