@@ -502,14 +502,25 @@ table tbody tr:hover {
     padding: 2rem;
 }
 
-/* Notification text visibility fix */
-.notification-text {
-    color: #1a1a1a !important;
+/* Notification dropdown styles */
+[data-testid="notification-dropdown"],
+[data-testid="notification-dropdown"] * {
+    color: inherit;
+}
+
+[data-testid="notification-dropdown"] .notification-text {
+    color: #111111 !important;
+    opacity: 1 !important;
+    font-weight: 500 !important;
+}
+
+[data-testid="notification-dropdown"] .notification-text-secondary {
+    color: #555555 !important;
     opacity: 1 !important;
 }
 
-.notification-text-secondary {
-    color: #666666 !important;
+[data-testid="notification-dropdown"] p,
+[data-testid="notification-dropdown"] span {
     opacity: 1 !important;
 }
 
