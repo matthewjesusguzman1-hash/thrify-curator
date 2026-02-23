@@ -3027,7 +3027,8 @@ export default function AdminDashboard() {
                     </div>
                     <button
                       onClick={() => setShowEmployeePortal(false)}
-                      className="text-white/60 hover:text-white transition-colors"
+                      className="w-10 h-10 bg-white/10 hover:bg-[#FF1493] rounded-full flex items-center justify-center text-white transition-all"
+                      data-testid="close-portal-x"
                     >
                       <X className="w-6 h-6" />
                     </button>
