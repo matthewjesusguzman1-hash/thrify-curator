@@ -110,9 +110,11 @@ class TestAdminFeatures:
     
     def test_create_new_employee(self, admin_token):
         """Admin can create new employee"""
+        # Generate a unique email for this test run
+        test_email = f"test_employee_{uuid.uuid4().hex[:8]}@test.com"
         employee_data = {
             "name": TEST_EMPLOYEE_NAME,
-            "email": TEST_EMPLOYEE_EMAIL
+            "email": test_email
         }
         response = requests.post(f"{BASE_URL}/api/admin/create-employee", 
             json=employee_data,
@@ -121,8 +123,8 @@ class TestAdminFeatures:
         assert response.status_code == 200, f"Failed to create employee: {response.text}"
         data = response.json()
         
-        # Verify employee was created
-        assert data["email"] == TEST_EMPLOYEE_EMAIL
+        # Verify employee was created with correct data
+        assert data["email"] == test_email
         assert data["name"] == TEST_EMPLOYEE_NAME
         assert data["role"] == "employee"
         print(f"Created employee: {data}")
@@ -130,13 +132,13 @@ class TestAdminFeatures:
         # Small delay to ensure database consistency
         time.sleep(0.5)
         
-        # Verify employee exists via GET
+        # Verify employee exists via GET using the email from the response
         get_resp = requests.get(f"{BASE_URL}/api/admin/employees", headers={
             "Authorization": f"Bearer {admin_token}"
         })
         employees = get_resp.json()
-        created_emp = next((e for e in employees if e["email"] == TEST_EMPLOYEE_EMAIL), None)
-        assert created_emp is not None, f"Created employee not found in list. Employees: {[e['email'] for e in employees]}"
+        created_emp = next((e for e in employees if e["email"] == data["email"]), None)
+        assert created_emp is not None, f"Created employee not found in list. Looking for: {data['email']}"
         print(f"Verified employee in list: {created_emp['id']}")
         
         return data["id"]
