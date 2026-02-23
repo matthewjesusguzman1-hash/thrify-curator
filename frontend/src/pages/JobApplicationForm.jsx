@@ -242,7 +242,7 @@ export default function JobApplicationForm() {
                       id={task.id}
                       checked={formData.tasks_able_to_perform.includes(task.id)}
                       onCheckedChange={(checked) => handleTaskChange(task.id, checked)}
-                      className="border-2 border-gray-300 data-[state=checked]:bg-[#00D4FF] data-[state=checked]:border-[#00D4FF]"
+                      className="w-6 h-6 border-2 border-gray-300 data-[state=checked]:bg-[#00D4FF] data-[state=checked]:border-[#00D4FF]"
                       data-testid={`task-${task.id}`}
                     />
                     <Label htmlFor={task.id} className="text-sm text-[#1A1A2E] cursor-pointer font-normal">
@@ -256,26 +256,26 @@ export default function JobApplicationForm() {
             <div>
               <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Are you willing/able to submit to a background check? *</Label>
               <div className="flex gap-6 mt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="radio"
                     name="background_check"
                     value="yes"
                     checked={formData.background_check_consent === true}
                     onChange={() => setFormData({ ...formData, background_check_consent: true })}
-                    className="w-4 h-4 accent-[#00D4FF]"
+                    className="w-6 h-6 accent-[#00D4FF]"
                     data-testid="background-check-yes"
                   />
                   <span className="text-sm text-[#1A1A2E]">Yes</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="radio"
                     name="background_check"
                     value="no"
                     checked={formData.background_check_consent === false}
                     onChange={() => setFormData({ ...formData, background_check_consent: false })}
-                    className="w-4 h-4 accent-[#00D4FF]"
+                    className="w-6 h-6 accent-[#00D4FF]"
                     data-testid="background-check-no"
                   />
                   <span className="text-sm text-[#1A1A2E]">No</span>
