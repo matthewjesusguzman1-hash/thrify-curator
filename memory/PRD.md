@@ -580,3 +580,28 @@ Build a "Thrifty Curator" reselling application with:
 - API endpoints verified working
 - Test data cleaned
 - Ready for production deployment
+
+## Email Functionality Removed (Feb 23, 2026)
+
+### Removed Components
+- `/api/admin/reports/email` endpoint (shift report emailing)
+- `/api/admin/payroll/report/email` endpoint (payroll report emailing)
+- `app/services/email.py` service file
+- `resend` package from requirements.txt
+- Email config from `.env` (RESEND_API_KEY, SENDER_EMAIL)
+- Email models (EmailReportRequest, EmailPayrollRequest)
+
+### Preserved Functionality
+- All report generation (PDF downloads)
+- All form submission viewing
+- All data export capabilities
+- Report downloading (Shift, Payroll, Mileage PDFs)
+
+### Files Modified
+- `/app/backend/app/routers/admin.py` - Removed email import and endpoint
+- `/app/backend/app/routers/payroll.py` - Removed email import and endpoint  
+- `/app/backend/app/routers/time_tracking.py` - Removed email notifications from clock in/out
+- `/app/backend/app/models/payroll.py` - Removed email request models
+- `/app/backend/app/models/__init__.py` - Removed email model exports
+- `/app/backend/app/config.py` - Removed email configuration
+- `/app/backend/.env` - Removed email environment variables
