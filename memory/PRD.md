@@ -102,25 +102,46 @@ Build a "Thrifty Curator" reselling application with:
 - Auth: Passwordless JWT (email only, 24-hour expiry)
 - Email: Resend (configured, requires API key for production)
 
-## Architecture
+## Architecture (Updated Feb 23, 2026 - REFACTORED)
 ```
 /app/
 ├── backend/
-│   ├── server.py         # FastAPI backend with all API endpoints
-│   └── tests/            # pytest tests for API
+│   ├── server.py              # FastAPI entry point (minimal, ~50 lines)
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── config.py          # Environment configuration
+│   │   ├── database.py        # MongoDB connection
+│   │   ├── dependencies.py    # Auth helpers (JWT, get_current_user)
+│   │   ├── models/
+│   │   │   ├── user.py        # User models
+│   │   │   ├── time_entry.py  # Time entry models
+│   │   │   ├── notifications.py
+│   │   │   ├── forms.py       # Form submission models
+│   │   │   └── payroll.py     # Payroll models
+│   │   ├── routers/
+│   │   │   ├── auth.py        # Auth routes (/api/auth/*)
+│   │   │   ├── time_tracking.py # Time routes (/api/time/*)
+│   │   │   ├── admin.py       # Admin routes (/api/admin/*)
+│   │   │   ├── notifications.py # Notification routes
+│   │   │   ├── payroll.py     # Payroll routes (/api/admin/payroll/*)
+│   │   │   └── forms.py       # Form routes (/api/forms/*, /api/admin/forms/*)
+│   │   └── services/
+│   │       ├── email.py       # Email notification helpers
+│   │       └── helpers.py     # Period calculation helpers
+│   └── tests/                 # pytest tests for API
 └── frontend/src/
     ├── components/
-    │   ├── admin/        # Reusable admin components
-    │   │   ├── StatCard.jsx
-    │   │   ├── EmployeeTable.jsx
-    │   │   ├── AddEmployeeModal.jsx
-    │   │   ├── EditEmployeeModal.jsx
-    │   │   └── NotificationBell.jsx
-    │   ├── ui/           # Shadcn UI components
+    │   ├── admin/             # Reusable admin components (NEW)
+    │   │   ├── PayrollSummaryCard.jsx
+    │   │   ├── EmployeePortalModal.jsx
+    │   │   ├── EmployeeShiftsModal.jsx
+    │   │   ├── SortableTableHeader.jsx
+    │   │   └── index.js
+    │   ├── ui/                # Shadcn UI components
     │   └── SplashScreen.jsx
     ├── pages/
     │   ├── LandingPage.jsx        # Two-column layout with Black Bold theme
-    │   ├── AuthPage.jsx           # Passwordless login
+    │   ├── AuthPage.jsx           # Passwordless login (with admin code 4399)
     │   ├── AdminDashboard.jsx     # Admin features + notifications + form submissions
     │   ├── EmployeeDashboard.jsx  # Employee clock in/out with pay period
     │   ├── JobApplicationForm.jsx
