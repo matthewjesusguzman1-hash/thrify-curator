@@ -5592,6 +5592,16 @@ export default function AdminDashboard() {
                     )}
                   </div>
                 )}
+                
+                {/* Close Button */}
+                <div className="flex justify-end mt-6 pt-4 border-t border-[#eee]">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPayroll(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
               </motion.div>
             </motion.div>
           )}
