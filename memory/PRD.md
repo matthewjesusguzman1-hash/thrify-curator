@@ -241,9 +241,14 @@ Build a "Thrifty Curator" reselling application with:
   - Delete functionality with confirmation
   - 100% test coverage (backend and frontend)
 
+## Recent Updates (Dec 2025)
+- **Consignment Agreement 50/50 Clause**: Added default profit split clause to Terms & Conditions
+  - Updated first bullet point to include: "Unless otherwise specified on this form, the profit split will be considered 50/50."
+  - Provides legal clarity for consignment arrangements
+
 ## Notes
 - Email notifications are configured but require a valid Resend API key (currently placeholder)
 - PDF generation uses reportlab library
 - Individual employee rates shown with ★ indicator in payroll reports
 - Minor React hydration warning in console (cosmetic, does not affect functionality)
-- **REFACTORING NEEDED**: server.py and AdminDashboard.jsx are monolithic files that need to be broken down
+- **REFACTORING NEEDED**: AdminDashboard.jsx is still a large monolithic file that needs to be broken down further
