@@ -78,7 +78,8 @@ async def employee_upload_w9(file: UploadFile = File(...), user: dict = Depends(
         "content": base64.b64encode(content).decode('utf-8'),
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": "employee",
-        "status": "pending_review"
+        "status": "pending_review",
+        "rejection_reason": None  # Clear any previous rejection reason when resubmitting
     }
     
     await db.w9_documents.update_one(
