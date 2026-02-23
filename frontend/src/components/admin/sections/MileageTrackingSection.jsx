@@ -823,9 +823,28 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                         </Button>
                       ) : (
                         <>
+                          {isPaused ? (
+                            <Button
+                              onClick={resumeTripFromPause}
+                              className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
+                              data-testid="resume-tracking-btn"
+                            >
+                              <PlayCircle className="w-4 h-4 mr-2" />
+                              Resume
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={pauseTrip}
+                              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
+                              data-testid="pause-tracking-btn"
+                            >
+                              <PauseCircle className="w-4 h-4 mr-2" />
+                              Pause
+                            </Button>
+                          )}
                           <Button
                             onClick={stopMileageTracking}
-                            className="bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-600 hover:to-orange-600"
+                            className="bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600"
                             data-testid="stop-tracking-btn"
                           >
                             <StopCircle className="w-4 h-4 mr-2" />
@@ -845,25 +864,33 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                   
                   {/* Active Trip Info */}
                   {isTracking && (
-                    <div className="mt-4 p-3 bg-white/60 rounded-lg space-y-2">
+                    <div className={`mt-4 p-3 rounded-lg space-y-2 ${isPaused ? 'bg-amber-50' : 'bg-white/60'}`}>
+                      {isPaused && (
+                        <div className="flex items-center gap-2 text-amber-600 font-medium mb-2">
+                          <PauseCircle className="w-4 h-4" />
+                          <span>Trip Paused</span>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Route className="w-4 h-4 text-emerald-600" />
+                          <Route className={`w-4 h-4 ${isPaused ? 'text-amber-600' : 'text-emerald-600'}`} />
                           <span className="text-sm font-medium text-[#333]">Route Distance:</span>
                         </div>
-                        <span className="text-lg font-bold text-emerald-600">{cumulativeMiles.toFixed(2)} mi</span>
+                        <span className={`text-lg font-bold ${isPaused ? 'text-amber-600' : 'text-emerald-600'}`}>{cumulativeMiles.toFixed(2)} mi</span>
                       </div>
                       <div className="flex items-center justify-between text-xs text-[#666]">
                         <span>Waypoints recorded: {waypointCount}</span>
-                        {currentLocation && (
+                        {currentLocation && !isPaused && (
                           <span>
                             <MapPinned className="w-3 h-3 inline mr-1" />
                             {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-emerald-600 bg-emerald-50 p-2 rounded">
-                        Tracking continues in background. Return to this page to end your trip.
+                      <p className={`text-xs p-2 rounded ${isPaused ? 'text-amber-600 bg-amber-100' : 'text-emerald-600 bg-emerald-50'}`}>
+                        {isPaused 
+                          ? 'GPS tracking paused. Click Resume to continue tracking your route.'
+                          : 'Tracking continues in background. Return to this page to end your trip.'}
                       </p>
                     </div>
                   )}
