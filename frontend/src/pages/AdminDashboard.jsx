@@ -3506,8 +3506,13 @@ export default function AdminDashboard() {
                           <p className="text-center text-[#888] py-8">Loading...</p>
                         ) : formSubmissions.jobApplications.length === 0 ? (
                           <p className="text-center text-[#888] py-8">No job applications yet</p>
+                        ) : getFilteredFormSubmissions(formSubmissions.jobApplications).length === 0 ? (
+                          <p className="text-center text-[#888] py-8">No matching results found</p>
                         ) : (
                           <div className="overflow-x-auto">
+                            <p className="text-xs text-[#888] mb-2">
+                              Showing {getFilteredFormSubmissions(formSubmissions.jobApplications).length} of {formSubmissions.jobApplications.length} applications
+                            </p>
                             <table className="data-table">
                               <thead>
                                 <tr>
@@ -3520,7 +3525,7 @@ export default function AdminDashboard() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {getSortedData(formSubmissions.jobApplications, 'jobApplications').map((app) => (
+                                {getSortedData(getFilteredFormSubmissions(formSubmissions.jobApplications), 'jobApplications').map((app) => (
                                   <tr key={app.id} data-testid={`job-app-row-${app.id}`}>
                                     <td className="font-medium">{app.full_name}</td>
                                     <td>{app.email}</td>
