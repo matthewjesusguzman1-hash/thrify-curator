@@ -1000,6 +1000,7 @@ export default function AdminDashboard() {
       await axios.delete(`${API}/admin/time-entries/${entryId}`, getAuthHeader());
       toast.success("Time entry deleted");
       fetchData();
+      fetchPayrollSummary();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to delete time entry");
     }
@@ -1025,6 +1026,7 @@ export default function AdminDashboard() {
       setShowAddEntry(false);
       setNewEntryData({ employee_id: "", clock_in: "", clock_out: "" });
       fetchData();
+      fetchPayrollSummary();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to create time entry");
     } finally {
