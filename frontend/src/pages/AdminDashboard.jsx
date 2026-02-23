@@ -3455,6 +3455,50 @@ export default function AdminDashboard() {
                       </button>
                     </div>
 
+                    {/* Search and Filter Bar */}
+                    <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-[#F9F6F7] rounded-xl">
+                      <div className="relative flex-1 min-w-[200px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" />
+                        <Input
+                          type="text"
+                          placeholder="Search by name, email, or phone..."
+                          value={formSearchQuery}
+                          onChange={(e) => setFormSearchQuery(e.target.value)}
+                          className="pl-9 h-9 text-sm bg-white"
+                          data-testid="form-search-input"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-[#888]" />
+                        <Select value={formStatusFilter} onValueChange={setFormStatusFilter}>
+                          <SelectTrigger className="w-[140px] h-9 text-sm bg-white">
+                            <SelectValue placeholder="All Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="new">New</SelectItem>
+                            <SelectItem value="reviewed">Reviewed</SelectItem>
+                            <SelectItem value="contacted">Contacted</SelectItem>
+                            <SelectItem value="archived">Archived</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {(formSearchQuery || formStatusFilter !== 'all') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setFormSearchQuery("");
+                            setFormStatusFilter("all");
+                          }}
+                          className="text-[#888] hover:text-[#333]"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+
                     {/* Job Applications Tab */}
                     {activeFormTab === "job_applications" && (
                       <div data-testid="job-applications-list">
