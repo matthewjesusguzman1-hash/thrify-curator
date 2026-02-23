@@ -4793,9 +4793,9 @@ export default function AdminDashboard() {
                   <h2 className="font-playfair text-xl font-bold text-[#333]">Add Time Entry</h2>
                   <button
                     onClick={() => setShowAddEntry(false)}
-                    className="text-[#999] hover:text-[#666]"
+                    className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5 text-gray-600" />
                   </button>
                 </div>
 
