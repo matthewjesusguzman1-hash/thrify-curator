@@ -965,7 +965,7 @@ export default function AdminDashboard() {
           className="space-y-6"
         >
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <h1 className="font-poppins text-2xl md:text-3xl font-bold text-[#1A1A2E]">Admin Dashboard</h1>
+            <h1 className="font-poppins text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
             <div className="flex gap-3">
               {/* Reports Stack */}
               <div className="flex flex-col gap-1">
