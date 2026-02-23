@@ -628,13 +628,16 @@ export default function AdminDashboard() {
     setViewingEmployee(employee);
     setShowEmployeePortal(true);
     setLoadingPortal(true);
+    setEmployeeClockStatus(null);
+    setShowClockConfirm(null);
     
     try {
-      // Fetch employee's time entries, summary, and W-9 status
-      const [entriesRes, summaryRes, w9Res] = await Promise.all([
+      // Fetch employee's time entries, summary, W-9 status, and clock status
+      const [entriesRes, summaryRes, w9Res, clockRes] = await Promise.all([
         axios.get(`${API}/admin/employee/${employee.id}/entries`, getAuthHeader()),
         axios.get(`${API}/admin/employee/${employee.id}/summary`, getAuthHeader()),
-        axios.get(`${API}/admin/employees/${employee.id}/w9/status`, getAuthHeader()).catch(() => ({ data: { has_w9: false, status: 'not_submitted' } }))
+        axios.get(`${API}/admin/employees/${employee.id}/w9/status`, getAuthHeader()).catch(() => ({ data: { has_w9: false, status: 'not_submitted' } })),
+        axios.get(`${API}/admin/employee/${employee.id}/clock-status`, getAuthHeader()).catch(() => ({ data: { is_clocked_in: false } }))
       ]);
       
       setEmployeePortalData({
@@ -642,6 +645,7 @@ export default function AdminDashboard() {
         summary: summaryRes.data,
         w9Status: w9Res.data
       });
+      setEmployeeClockStatus(clockRes.data);
     } catch (error) {
       console.error("Failed to fetch employee portal data:", error);
       // Use fallback data from existing state
@@ -663,8 +667,48 @@ export default function AdminDashboard() {
         },
         w9Status: { has_w9: false, status: 'not_submitted' }
       });
+      setEmployeeClockStatus({ is_clocked_in: false });
     } finally {
       setLoadingPortal(false);
+    }
+  };
+
+  // Admin clock in/out employee
+  const handleAdminClockEmployee = async (action) => {
+    if (!viewingEmployee) return;
+    
+    setClockingEmployee(true);
+    try {
+      const response = await axios.post(
+        `${API}/admin/employee/${viewingEmployee.id}/clock`,
+        { action },
+        getAuthHeader()
+      );
+      
+      toast.success(response.data.message);
+      
+      // Refresh clock status
+      const clockRes = await axios.get(`${API}/admin/employee/${viewingEmployee.id}/clock-status`, getAuthHeader());
+      setEmployeeClockStatus(clockRes.data);
+      
+      // Refresh employee portal data
+      const [entriesRes, summaryRes] = await Promise.all([
+        axios.get(`${API}/admin/employee/${viewingEmployee.id}/entries`, getAuthHeader()),
+        axios.get(`${API}/admin/employee/${viewingEmployee.id}/summary`, getAuthHeader())
+      ]);
+      setEmployeePortalData(prev => ({
+        ...prev,
+        entries: entriesRes.data,
+        summary: summaryRes.data
+      }));
+      
+      // Also refresh main dashboard data
+      fetchTimeEntries();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || `Failed to clock ${action}`);
+    } finally {
+      setClockingEmployee(false);
+      setShowClockConfirm(null);
     }
   };
 
