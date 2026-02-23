@@ -249,6 +249,7 @@ export default function AdminDashboard() {
   });
   const [pendingCheckImage, setPendingCheckImage] = useState(null); // Holds image before submission
   const [editingCheckRecord, setEditingCheckRecord] = useState(null); // For editing existing records
+  const [checkSearchQuery, setCheckSearchQuery] = useState(""); // Search for check records
   const checkInputRef = useRef(null);
 
   const getAuthHeader = useCallback(() => ({
