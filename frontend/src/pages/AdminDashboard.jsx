@@ -264,6 +264,14 @@ export default function AdminDashboard() {
     }
   }, [getAuthHeader]);
 
+  // Combined refresh function for data that affects payroll
+  const refreshAllData = useCallback(async () => {
+    await Promise.all([
+      fetchData(),
+      fetchPayrollSummary()
+    ]);
+  }, [fetchPayrollSummary]);
+
   const fetchFormSubmissions = useCallback(async () => {
     setLoadingForms(true);
     try {
