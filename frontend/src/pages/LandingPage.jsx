@@ -195,10 +195,14 @@ export default function LandingPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-white overflow-hidden"
                           style={{ backgroundColor: platform.color }}
                         >
-                          <platform.Icon />
+                          {platform.useImage ? (
+                            <img src={platform.logoUrl} alt={platform.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <platform.Icon />
+                          )}
                         </div>
                         <span className="font-semibold text-[#1A1A2E] group-hover:text-[#00D4FF] transition-colors">
                           {platform.name}
