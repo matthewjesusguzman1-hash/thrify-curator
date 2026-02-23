@@ -26,6 +26,13 @@
     --warning: #FFB800;
 }
 
+/* Custom button class for Run Report */
+.btn-dark-gradient {
+    background: linear-gradient(to right, #1A1A2E, #16213E) !important;
+    color: white !important;
+    border: none !important;
+}
+
 body {
     margin: 0;
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
