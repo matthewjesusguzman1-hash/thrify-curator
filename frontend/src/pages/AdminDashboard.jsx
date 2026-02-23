@@ -1842,25 +1842,110 @@ export default function AdminDashboard() {
                     {/* W-9 Form Download Section */}
                     <div className="form-group">
                       <Label className="form-label">W-9 Tax Form</Label>
-                      <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
-                        <div className="w-10 h-10 bg-[#C5A065]/20 rounded-lg flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-[#C5A065]" />
+                      <div className="space-y-2">
+                        {/* Download blank form */}
+                        <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
+                          <div className="w-10 h-10 bg-[#C5A065]/20 rounded-lg flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-[#C5A065]" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-[#333]">Blank W-9 Form</p>
+                            <p className="text-xs text-[#888]">Download for employee to complete</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDownloadBlankW9}
+                            className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
+                            data-testid="edit-download-w9-form-btn"
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            Download
+                          </Button>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-[#333]">IRS W-9 Form</p>
-                          <p className="text-xs text-[#888]">Download blank form for employee</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDownloadBlankW9}
-                          className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
-                          data-testid="edit-download-w9-form-btn"
-                        >
-                          <Download className="w-4 h-4 mr-1" />
-                          Download
-                        </Button>
+                        
+                        {/* Current W-9 status or upload */}
+                        {editEmployeeData.has_w9 ? (
+                          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-200">
+                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-700">W-9 On File</p>
+                              <p className="text-xs text-green-600">
+                                {editEmployeeData.w9_status === 'pending_review' && 'Pending Review'}
+                                {editEmployeeData.w9_status === 'approved' && 'Approved'}
+                                {editEmployeeData.w9_status === 'needs_correction' && 'Needs Correction'}
+                                {!editEmployeeData.w9_status && 'Uploaded'}
+                              </p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleW9Download(editEmployeeData.id, editEmployeeData.name)}
+                                className="text-green-600 border-green-400 hover:bg-green-50"
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleW9Delete(editEmployeeData.id)}
+                                className="text-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                              <Upload className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-[#333]">Attach Completed W-9</p>
+                              {editEmployeeW9File ? (
+                                <p className="text-xs text-green-600">{editEmployeeW9File.name}</p>
+                              ) : (
+                                <p className="text-xs text-[#888]">Upload employee's filled W-9</p>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                className="hidden"
+                                id="edit-employee-w9-upload"
+                                onChange={(e) => setEditEmployeeW9File(e.target.files[0])}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => document.getElementById('edit-employee-w9-upload').click()}
+                                className="text-amber-600 border-amber-400 hover:bg-amber-50"
+                              >
+                                <Upload className="w-4 h-4 mr-1" />
+                                {editEmployeeW9File ? 'Change' : 'Upload'}
+                              </Button>
+                              {editEmployeeW9File && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditEmployeeW9File(null)}
+                                  className="text-red-500 hover:bg-red-50"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
