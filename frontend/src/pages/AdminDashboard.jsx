@@ -1771,15 +1771,38 @@ export default function AdminDashboard() {
                 </Button>
               </div>
               {/* Employee Management: Add, Edit, Remove */}
-              <Button 
-                onClick={() => setShowAddEmployee(true)}
-                size="sm"
-                className="flex items-center gap-2 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0 text-xs sm:text-sm h-9"
-                data-testid="add-employee-btn"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add</span>
-              </Button>
+              <div className="flex flex-col gap-1">
+                <Button 
+                  onClick={() => setShowAddEmployee(true)}
+                  size="sm"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0 text-xs sm:text-sm h-9"
+                  data-testid="add-employee-btn"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Add</span>
+                </Button>
+                {/* Start/End Trip Button */}
+                <Button 
+                  onClick={headerTripActive ? handleHeaderEndTrip : handleHeaderStartTrip}
+                  disabled={headerTripLoading}
+                  size="sm"
+                  className={`flex items-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 ${
+                    headerTripActive 
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30 text-white' 
+                      : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30 text-white'
+                  }`}
+                  data-testid="header-trip-btn"
+                >
+                  {headerTripLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : headerTripActive ? (
+                    <StopCircle className="w-4 h-4" />
+                  ) : (
+                    <Car className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">{headerTripActive ? 'End Trip' : 'Start Trip'}</span>
+                </Button>
+              </div>
               <Button 
                 onClick={() => setShowEditEmployee(true)}
                 size="sm"
