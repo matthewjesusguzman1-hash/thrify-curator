@@ -14,7 +14,8 @@ from app.routers import (
     admin_router,
     notifications_router,
     payroll_router,
-    forms_router
+    forms_router,
+    mileage_router
 )
 
 # Configure logging
