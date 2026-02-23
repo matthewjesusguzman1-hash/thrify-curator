@@ -234,6 +234,7 @@ export default function AdminDashboard() {
   // Payroll Check Records state
   const [showCheckRecordsSection, setShowCheckRecordsSection] = useState(false);
   const [checkRecords, setCheckRecords] = useState([]);
+  const [checkThumbnails, setCheckThumbnails] = useState({});
   const [loadingCheckRecords, setLoadingCheckRecords] = useState(false);
   const [uploadingCheck, setUploadingCheck] = useState(false);
   const [viewingCheckImage, setViewingCheckImage] = useState(null);
