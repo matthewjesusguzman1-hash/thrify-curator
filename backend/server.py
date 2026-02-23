@@ -591,6 +591,57 @@ async def delete_employee(employee_id: str, admin: dict = Depends(get_admin_user
 class UpdateEmployeeRate(BaseModel):
     hourly_rate: float
 
+class UpdateEmployeeDetails(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    hourly_rate: Optional[float] = None
+
+@api_router.put("/admin/employees/{employee_id}")
+async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, admin: dict = Depends(get_admin_user)):
+    """Update employee details (name, email, hourly rate)"""
+    # Check if employee exists
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Don't allow editing admin
+    if employee.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Cannot edit admin account")
+    
+    update_fields = {}
+    
+    if update_data.name:
+        update_fields["name"] = update_data.name
+        # Also update name in time entries
+        await db.time_entries.update_many(
+            {"user_id": employee_id},
+            {"$set": {"user_name": update_data.name}}
+        )
+    
+    if update_data.email:
+        # Check if email already exists for another user
+        existing = await db.users.find_one({"email": update_data.email, "id": {"$ne": employee_id}})
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already in use")
+        update_fields["email"] = update_data.email
+    
+    if update_data.hourly_rate is not None:
+        if update_data.hourly_rate < 0:
+            raise HTTPException(status_code=400, detail="Hourly rate cannot be negative")
+        update_fields["hourly_rate"] = update_data.hourly_rate
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": update_fields}
+    )
+    
+    # Return updated employee
+    updated = await db.users.find_one({"id": employee_id}, {"_id": 0, "password_hash": 0})
+    return UserResponse(**updated)
+
 @api_router.put("/admin/employees/{employee_id}/rate")
 async def update_employee_rate(employee_id: str, rate_data: UpdateEmployeeRate, admin: dict = Depends(get_admin_user)):
     """Update an employee's individual hourly rate"""
