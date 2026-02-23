@@ -4747,9 +4747,26 @@ export default function AdminDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            const year = new Date().getFullYear();
-                            window.open(`${API}/admin/mileage/export/csv?year=${year}`, '_blank');
+                          onClick={async () => {
+                            try {
+                              const year = new Date().getFullYear();
+                              const response = await axios.get(`${API}/admin/mileage/export/csv?year=${year}`, {
+                                ...getAuthHeader(),
+                                responseType: 'blob'
+                              });
+                              const url = window.URL.createObjectURL(new Blob([response.data]));
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.setAttribute('download', `mileage_log_${year}.csv`);
+                              document.body.appendChild(link);
+                              link.click();
+                              link.remove();
+                              window.URL.revokeObjectURL(url);
+                              toast.success('CSV exported successfully!');
+                            } catch (error) {
+                              console.error('Export failed:', error);
+                              toast.error('Failed to export CSV');
+                            }
                           }}
                           className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                           data-testid="export-csv-btn"
@@ -4760,9 +4777,26 @@ export default function AdminDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            const year = new Date().getFullYear();
-                            window.open(`${API}/admin/mileage/export/pdf?year=${year}`, '_blank');
+                          onClick={async () => {
+                            try {
+                              const year = new Date().getFullYear();
+                              const response = await axios.get(`${API}/admin/mileage/export/pdf?year=${year}`, {
+                                ...getAuthHeader(),
+                                responseType: 'blob'
+                              });
+                              const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.setAttribute('download', `mileage_log_${year}.pdf`);
+                              document.body.appendChild(link);
+                              link.click();
+                              link.remove();
+                              window.URL.revokeObjectURL(url);
+                              toast.success('PDF exported successfully!');
+                            } catch (error) {
+                              console.error('Export failed:', error);
+                              toast.error('Failed to export PDF');
+                            }
                           }}
                           className="text-teal-600 border-teal-200 hover:bg-teal-50"
                           data-testid="export-pdf-btn"
