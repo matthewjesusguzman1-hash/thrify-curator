@@ -1822,82 +1822,111 @@ export default function AdminDashboard() {
 
           {/* All Employees - Collapsible */}
           <div className="dashboard-card">
-            <h2 className="font-playfair text-xl font-semibold text-[#333] mb-4">All Employees</h2>
-            {employees.length === 0 ? (
-              <p className="text-center text-[#888] py-8">No employees registered</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="data-table" data-testid="employees-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                      <th>Hourly Rate</th>
-                      <th>Joined</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employees.map((emp) => (
-                      <tr key={emp.id} data-testid={`all-employee-row-${emp.id}`}>
-                        <td>
-                          <div 
-                            className="flex items-center gap-2 cursor-pointer hover:bg-[#F9F6F7] rounded-lg px-2 py-1 -mx-2 transition-colors"
-                            onClick={() => handleViewEmployeeDetails(emp)}
-                            data-testid={`employee-name-${emp.id}`}
-                          >
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              emp.role === 'admin' ? 'bg-[#C5A065]/20' : 'bg-[#F8C8DC]/30'
-                            }`}>
-                              {emp.role === 'admin' ? (
-                                <Shield className="w-4 h-4 text-[#C5A065]" />
-                              ) : (
-                                <User className="w-4 h-4 text-[#D48C9E]" />
-                              )}
-                            </div>
-                            <span className="text-[#333] hover:text-[#C5A065] font-medium">{emp.name}</span>
-                            <Eye className="w-3 h-3 text-[#aaa] opacity-0 group-hover:opacity-100" />
-                          </div>
-                        </td>
-                        <td>{emp.email}</td>
-                        <td>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            emp.role === 'admin' 
-                              ? 'bg-[#C5A065]/20 text-[#9A7B4F]' 
-                              : 'bg-[#F8C8DC]/30 text-[#5D4037]'
-                          }`}>
-                            {emp.role}
-                          </span>
-                        </td>
-                        <td>
-                          {emp.role !== 'admin' ? (
-                            editingRateId === emp.id ? (
-                              <div className="flex items-center gap-1">
-                                <span className="text-[#888]">$</span>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={editingRateValue}
-                                  onChange={(e) => setEditingRateValue(e.target.value)}
-                                  className="w-20 h-7 text-sm"
-                                  autoFocus
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleUpdateEmployeeRate(emp.id);
-                                    if (e.key === 'Escape') { setEditingRateId(null); setEditingRateValue(""); }
-                                  }}
-                                  data-testid={`rate-input-${emp.id}`}
-                                />
-                                <button
-                                  onClick={() => handleUpdateEmployeeRate(emp.id)}
-                                  className="text-green-500 hover:text-green-600 p-1"
-                                  title="Save"
-                                >
-                                  <CheckCheck className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => { setEditingRateId(null); setEditingRateValue(""); }}
-                                  className="text-red-400 hover:text-red-500 p-1"
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowAllEmployees(!showAllEmployees)}
+              data-testid="employees-section-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#C5A065] to-[#9A7B4F] rounded-xl flex items-center justify-center">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-playfair text-xl font-semibold text-[#333]">All Employees</h2>
+                  <p className="text-sm text-[#888]">{employees.length} total</p>
+                </div>
+              </div>
+              {showAllEmployees ? (
+                <ChevronUp className="w-5 h-5 text-[#888]" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-[#888]" />
+              )}
+            </div>
+            <AnimatePresence>
+              {showAllEmployees && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-4 pt-4 border-t border-[#eee]">
+                    {employees.length === 0 ? (
+                      <p className="text-center text-[#888] py-8">No employees registered</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="data-table" data-testid="employees-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Email</th>
+                              <th>Role</th>
+                              <th>Hourly Rate</th>
+                              <th>Joined</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {employees.map((emp) => (
+                              <tr key={emp.id} data-testid={`all-employee-row-${emp.id}`}>
+                                <td>
+                                  <div 
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-[#F9F6F7] rounded-lg px-2 py-1 -mx-2 transition-colors"
+                                    onClick={(e) => { e.stopPropagation(); handleViewEmployeeDetails(emp); }}
+                                    data-testid={`employee-name-${emp.id}`}
+                                  >
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                      emp.role === 'admin' ? 'bg-[#C5A065]/20' : 'bg-[#F8C8DC]/30'
+                                    }`}>
+                                      {emp.role === 'admin' ? (
+                                        <Shield className="w-4 h-4 text-[#C5A065]" />
+                                      ) : (
+                                        <User className="w-4 h-4 text-[#D48C9E]" />
+                                      )}
+                                    </div>
+                                    <span className="text-[#333] hover:text-[#C5A065] font-medium">{emp.name}</span>
+                                    <Eye className="w-3 h-3 text-[#aaa] opacity-0 group-hover:opacity-100" />
+                                  </div>
+                                </td>
+                                <td>{emp.email}</td>
+                                <td>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    emp.role === 'admin' 
+                                      ? 'bg-[#C5A065]/20 text-[#9A7B4F]' 
+                                      : 'bg-[#F8C8DC]/30 text-[#5D4037]'
+                                  }`}>
+                                    {emp.role}
+                                  </span>
+                                </td>
+                                <td onClick={(e) => e.stopPropagation()}>
+                                  {emp.role !== 'admin' ? (
+                                    editingRateId === emp.id ? (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[#888]">$</span>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={editingRateValue}
+                                          onChange={(e) => setEditingRateValue(e.target.value)}
+                                          className="w-20 h-7 text-sm"
+                                          autoFocus
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleUpdateEmployeeRate(emp.id);
+                                            if (e.key === 'Escape') { setEditingRateId(null); setEditingRateValue(""); }
+                                          }}
+                                          data-testid={`rate-input-${emp.id}`}
+                                        />
+                                        <button
+                                          onClick={() => handleUpdateEmployeeRate(emp.id)}
+                                          className="text-green-500 hover:text-green-600 p-1"
+                                          title="Save"
+                                        >
+                                          <CheckCheck className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => { setEditingRateId(null); setEditingRateValue(""); }}
+                                          className="text-red-400 hover:text-red-500 p-1"
                                   title="Cancel"
                                 >
                                   <X className="w-3 h-3" />
