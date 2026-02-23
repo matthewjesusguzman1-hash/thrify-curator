@@ -4396,12 +4396,6 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       )}
-                            >
-                              {clockingEmployee ? 'Processing...' : `Yes, Clock ${showClockConfirm === 'in' ? 'In' : 'Out'}`}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
 
                       {/* Pay Period Summary */}
                       <div className="bg-white rounded-2xl overflow-hidden">
