@@ -349,7 +349,7 @@ export default function ConsignmentInquiryForm() {
                       name="pet_free"
                       checked={formData.pet_free === false}
                       onChange={() => setFormData({ ...formData, pet_free: false })}
-                      className="w-4 h-4 accent-[#FF1493]"
+                      className="w-6 h-6 accent-[#FF1493]"
                       data-testid="pet-free-no"
                     />
                     <span className="text-sm text-[#1A1A2E]">Pet Friendly</span>
