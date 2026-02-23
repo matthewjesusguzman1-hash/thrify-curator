@@ -33,24 +33,27 @@ const platforms = [
   },
   { 
     name: "Poshmark", 
-    logoUrl: "https://cdn.worldvectorlogo.com/logos/poshmark.svg",
+    logoUrl: "https://cdn.brandfetch.io/poshmark.com/w/512/h/512/logo",
     url: "https://posh.mk/dZSDIxRJJ0b", 
     color: "#7F0353",
-    useIcon: false
+    useIcon: false,
+    letterFallback: "P"
   },
   { 
     name: "Mercari", 
-    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Mercari_logo.svg/512px-Mercari_logo.svg.png",
+    logoUrl: "https://cdn.brandfetch.io/mercari.com/w/512/h/512/logo",
     url: "https://www.mercari.com/u/thriftycurator/?sv=0", 
     color: "#FF0211",
-    useIcon: false
+    useIcon: false,
+    letterFallback: "M"
   },
   { 
     name: "Depop", 
-    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Depop_logo.svg/512px-Depop_logo.svg.png",
+    logoUrl: "https://cdn.brandfetch.io/depop.com/w/512/h/512/logo",
     url: "https://www.depop.com/thriftycurator/", 
     color: "#FF2300",
-    useIcon: false
+    useIcon: false,
+    letterFallback: "D"
   },
   { 
     name: "Facebook Marketplace", 
