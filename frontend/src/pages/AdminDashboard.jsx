@@ -164,11 +164,18 @@ export default function AdminDashboard() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showFormsSection, setShowFormsSection] = useState(false);
 
-  // Collapsible sections state
-  const [showStatsSection, setShowStatsSection] = useState(true);
-  const [showHoursByEmployee, setShowHoursByEmployee] = useState(true);
-  const [showAllEmployees, setShowAllEmployees] = useState(true);
-  const [showTimeEntries, setShowTimeEntries] = useState(true);
+  // Collapsible sections state - all collapsed by default
+  const [showStatsSection, setShowStatsSection] = useState(false);
+  const [showHoursByEmployee, setShowHoursByEmployee] = useState(false);
+  const [showAllEmployees, setShowAllEmployees] = useState(false);
+  const [showTimeEntries, setShowTimeEntries] = useState(false);
+
+  // Payroll summary state for overview
+  const [payrollSummary, setPayrollSummary] = useState({
+    current_period: { amount: 0, hours: 0, start: '', end: '' },
+    month_total: 0,
+    year_total: 0
+  });
 
   // Sorting state for all tables
   const [sortConfig, setSortConfig] = useState({
