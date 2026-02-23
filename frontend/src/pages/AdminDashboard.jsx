@@ -4686,8 +4686,36 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    {/* Manual Entry Button */}
-                    <div className="flex justify-end">
+                    {/* Action Buttons */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const year = new Date().getFullYear();
+                            window.open(`${API}/admin/mileage/export/csv?year=${year}`, '_blank');
+                          }}
+                          className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                          data-testid="export-csv-btn"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Export CSV
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const year = new Date().getFullYear();
+                            window.open(`${API}/admin/mileage/export/pdf?year=${year}`, '_blank');
+                          }}
+                          className="text-teal-600 border-teal-200 hover:bg-teal-50"
+                          data-testid="export-pdf-btn"
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          Export PDF
+                        </Button>
+                      </div>
                       <Button
                         onClick={() => {
                           setMileageFormData({
