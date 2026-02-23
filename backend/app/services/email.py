@@ -37,12 +37,20 @@ async def get_employee_hours_summary(user_id: str) -> dict:
     total_hours = sum(e.get("total_hours", 0) for e in entries)
     total_shifts = len(entries)
     
-    # Get pay period settings
+    # Get pay period settings and default rate
     payroll_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     pay_period_start_date = "2026-01-06"  # Default fallback
+    default_rate = 15.00
     
     if payroll_settings:
         pay_period_start_date = payroll_settings.get("pay_period_start_date", "2026-01-06")
+        default_rate = payroll_settings.get("default_hourly_rate", 15.00)
+    
+    # Get employee's individual hourly rate
+    user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+    hourly_rate = user_doc.get("hourly_rate") if user_doc else None
+    if hourly_rate is None:
+        hourly_rate = default_rate
     
     # Calculate current pay period using shared helper
     period_start, period_end = get_biweekly_period(pay_period_start_date, 0)
@@ -66,6 +74,7 @@ async def get_employee_hours_summary(user_id: str) -> dict:
     
     period_hours = sum(e.get("total_hours", 0) for e in period_entries)
     period_shifts = len(period_entries)
+    estimated_pay = round(period_hours * hourly_rate, 2)
     
     return {
         "today_hours": round(today_hours, 2),
@@ -74,6 +83,8 @@ async def get_employee_hours_summary(user_id: str) -> dict:
         "total_shifts": total_shifts,
         "period_hours": round(period_hours, 2),
         "period_shifts": period_shifts,
+        "hourly_rate": hourly_rate,
+        "estimated_pay": estimated_pay,
         "period_start": period_start.isoformat() if hasattr(period_start, 'isoformat') else str(period_start),
         "period_end": period_end.isoformat() if hasattr(period_end, 'isoformat') else str(period_end)
     }
