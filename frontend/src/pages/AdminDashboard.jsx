@@ -4220,10 +4220,10 @@ export default function AdminDashboard() {
                     </div>
                     <button
                       onClick={() => setShowEmployeePortal(false)}
-                      className="w-10 h-10 bg-white/10 hover:bg-[#FF1493] rounded-full flex items-center justify-center text-white transition-all"
+                      className="w-12 h-12 bg-white/20 hover:bg-[#FF1493] rounded-full flex items-center justify-center text-white transition-all shadow-lg border border-white/20"
                       data-testid="close-portal-x"
                     >
-                      <X className="w-6 h-6" />
+                      <X className="w-7 h-7" />
                     </button>
                   </div>
                 </div>
