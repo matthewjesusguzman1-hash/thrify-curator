@@ -4286,20 +4286,89 @@ export default function AdminDashboard() {
                     <div className="space-y-6">
                       {/* Clock Status Card */}
                       <div className="bg-white rounded-2xl overflow-hidden">
-                        <div className="h-1 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6]" />
+                        <div className={`h-1 bg-gradient-to-r ${employeeClockStatus?.is_clocked_in ? 'from-green-500 to-emerald-500' : 'from-[#00D4FF] to-[#8B5CF6]'}`} />
                         <div className="p-6 text-center">
-                          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-600 mb-4">
-                            <StopCircle className="w-4 h-4" />
-                            Not Clocked In
-                          </div>
-                          <div className="flex justify-center">
-                            <div className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white font-semibold flex items-center gap-2">
-                              <PlayCircle className="w-5 h-5" />
-                              Clock In
+                          {employeeClockStatus?.is_clocked_in ? (
+                            <>
+                              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 mb-4">
+                                <PlayCircle className="w-4 h-4" />
+                                Currently Clocked In
+                              </div>
+                              {employeeClockStatus.clock_in_time && (
+                                <p className="text-sm text-gray-500 mb-4">
+                                  Since {new Date(employeeClockStatus.clock_in_time).toLocaleTimeString()}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-600 mb-4">
+                              <StopCircle className="w-4 h-4" />
+                              Not Clocked In
                             </div>
+                          )}
+                          
+                          {/* Clock In/Out Button */}
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => setShowClockConfirm(employeeClockStatus?.is_clocked_in ? 'out' : 'in')}
+                              disabled={clockingEmployee}
+                              className={`px-8 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all ${
+                                employeeClockStatus?.is_clocked_in
+                                  ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                                  : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white'
+                              }`}
+                              data-testid="admin-clock-btn"
+                            >
+                              {clockingEmployee ? (
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ) : employeeClockStatus?.is_clocked_in ? (
+                                <>
+                                  <StopCircle className="w-5 h-5" />
+                                  Clock Out
+                                </>
+                              ) : (
+                                <>
+                                  <PlayCircle className="w-5 h-5" />
+                                  Clock In
+                                </>
+                              )}
+                            </button>
                           </div>
                         </div>
                       </div>
+
+                      {/* Clock Confirmation Dialog */}
+                      {showClockConfirm && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <AlertCircle className="w-5 h-5 text-amber-600" />
+                            <p className="font-medium text-amber-800">
+                              Are you sure you want to clock {showClockConfirm} {viewingEmployee?.name}?
+                            </p>
+                          </div>
+                          <div className="flex gap-3 justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowClockConfirm(null)}
+                              disabled={clockingEmployee}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAdminClockEmployee(showClockConfirm)}
+                              disabled={clockingEmployee}
+                              className={showClockConfirm === 'out' 
+                                ? 'bg-red-600 hover:bg-red-700 text-white' 
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                              }
+                            >
+                              {clockingEmployee ? 'Processing...' : `Yes, Clock ${showClockConfirm === 'in' ? 'In' : 'Out'}`}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Pay Period Summary */}
                       <div className="bg-white rounded-2xl overflow-hidden">
