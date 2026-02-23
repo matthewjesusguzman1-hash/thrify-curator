@@ -1745,48 +1745,82 @@ export default function AdminDashboard() {
                           <p className="text-sm text-[#888]">Total Shifts</p>
                         </div>
                       </div>
-            </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Hours by Employee */}
+          {/* Hours by Employee - Collapsible */}
           <div className="dashboard-card">
-            <h2 className="font-playfair text-xl font-semibold text-[#333] mb-4">Hours by Employee</h2>
-            {summary.by_employee.length === 0 ? (
-              <p className="text-center text-[#888] py-8">No employee data yet</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="data-table" data-testid="employee-hours-table">
-                  <thead>
-                    <tr>
-                      <th>Employee</th>
-                      <th>Total Hours</th>
-                      <th>Shifts</th>
-                      <th>Avg Hours/Shift</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.by_employee.map((emp) => (
-                      <tr key={emp.user_id} data-testid={`employee-row-${emp.user_id}`}>
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
-                              <User className="w-4 h-4 text-[#D48C9E]" />
-                            </div>
-                            {emp.name}
-                          </div>
-                        </td>
-                        <td className="font-medium">{emp.hours.toFixed(2)} hrs</td>
-                        <td>{emp.shifts}</td>
-                        <td>{(emp.hours / emp.shifts).toFixed(2)} hrs</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowHoursByEmployee(!showHoursByEmployee)}
+              data-testid="hours-section-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#8BA88E] to-[#6B8E6B] rounded-xl flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="font-playfair text-xl font-semibold text-[#333]">Hours by Employee</h2>
               </div>
-            )}
+              {showHoursByEmployee ? (
+                <ChevronUp className="w-5 h-5 text-[#888]" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-[#888]" />
+              )}
+            </div>
+            <AnimatePresence>
+              {showHoursByEmployee && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-4 pt-4 border-t border-[#eee]">
+                    {summary.by_employee.length === 0 ? (
+                      <p className="text-center text-[#888] py-8">No employee data yet</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="data-table" data-testid="employee-hours-table">
+                          <thead>
+                            <tr>
+                              <th>Employee</th>
+                              <th>Total Hours</th>
+                              <th>Shifts</th>
+                              <th>Avg Hours/Shift</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {summary.by_employee.map((emp) => (
+                              <tr key={emp.user_id} data-testid={`employee-row-${emp.user_id}`}>
+                                <td>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
+                                      <User className="w-4 h-4 text-[#D48C9E]" />
+                                    </div>
+                                    {emp.name}
+                                  </div>
+                                </td>
+                                <td className="font-medium">{emp.hours.toFixed(2)} hrs</td>
+                                <td>{emp.shifts}</td>
+                                <td>{(emp.hours / emp.shifts).toFixed(2)} hrs</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* All Employees */}
+          {/* All Employees - Collapsible */}
           <div className="dashboard-card">
             <h2 className="font-playfair text-xl font-semibold text-[#333] mb-4">All Employees</h2>
             {employees.length === 0 ? (
