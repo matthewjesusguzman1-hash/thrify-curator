@@ -14,7 +14,7 @@ import os
 import uuid
 
 # Try multiple sources for BASE_URL
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '') or os.environ.get('BASE_URL', '') or 'https://thrifty-curator.preview.emergentagent.com'
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '') or os.environ.get('BASE_URL', '') or 'https://shift-sync-8.preview.emergentagent.com'
 BASE_URL = BASE_URL.rstrip('/')
 
 class TestEmployeeRates:
