@@ -1236,12 +1236,20 @@ export default function AdminDashboard() {
     setUploadingCheck(true);
     
     try {
+      // Helper to parse amount (strip $ and parse as float)
+      const parseAmount = (value) => {
+        if (!value) return null;
+        const cleaned = value.toString().replace(/[^0-9.]/g, '');
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? null : num;
+      };
+      
       if (editingCheckRecord) {
         // Update existing record
         const payload = {
           description: checkUploadData.description || null,
           check_date: checkUploadData.check_date || null,
-          amount: checkUploadData.amount ? parseFloat(checkUploadData.amount) : null,
+          amount: parseAmount(checkUploadData.amount),
           employee_name: checkUploadData.employee_name || null
         };
         
@@ -1263,7 +1271,7 @@ export default function AdminDashboard() {
           content_type: pendingCheckImage.content_type,
           description: checkUploadData.description || null,
           check_date: checkUploadData.check_date || null,
-          amount: checkUploadData.amount ? parseFloat(checkUploadData.amount) : null,
+          amount: parseAmount(checkUploadData.amount),
           employee_name: checkUploadData.employee_name || null
         };
         
