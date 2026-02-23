@@ -820,12 +820,12 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="dashboard-header">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#C5A065]/20 rounded-full flex items-center justify-center">
-            <Shield className="w-5 h-5 text-[#C5A065]" />
+          <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center">
+            <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-[#333]" data-testid="admin-name">{user.name}</p>
-            <p className="text-sm text-[#C5A065] font-medium">Administrator</p>
+            <p className="font-semibold text-white" data-testid="admin-name">{user.name}</p>
+            <p className="text-sm text-[#00D4FF] font-medium">Administrator</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -834,13 +834,13 @@ export default function AdminDashboard() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="text-[#666] relative"
+              className="text-white/70 hover:text-white hover:bg-white/10 relative"
               onClick={() => setShowNotifications(!showNotifications)}
               data-testid="notification-bell"
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium" data-testid="notification-badge">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF1493] text-white text-xs rounded-full flex items-center justify-center font-medium" data-testid="notification-badge">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
