@@ -71,12 +71,17 @@ export default function AdminDashboard() {
   const [newEmployee, setNewEmployee] = useState({ name: "", email: "" });
   const [addingEmployee, setAddingEmployee] = useState(false);
   const [removingEmployee, setRemovingEmployee] = useState(false);
+  const [selectedJobApp, setSelectedJobApp] = useState("");
+  const [newEmployeeW9File, setNewEmployeeW9File] = useState(null);
+  const [uploadingNewEmployeeW9, setUploadingNewEmployeeW9] = useState(false);
   
   // Employee details modal state
   const [showEmployeeDetails, setShowEmployeeDetails] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeShifts, setEmployeeShifts] = useState([]);
   const [loadingEmployeeDetails, setLoadingEmployeeDetails] = useState(false);
+  const [editEmployeeW9File, setEditEmployeeW9File] = useState(null);
+  const [uploadingEditW9, setUploadingEditW9] = useState(false);
   
   // Report state
   const [showReport, setShowReport] = useState(false);
