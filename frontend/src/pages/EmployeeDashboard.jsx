@@ -387,6 +387,143 @@ export default function EmployeeDashboard() {
               )}
             </div>
           </div>
+
+          {/* W-9 Tax Form Section */}
+          <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-[#C5A065] to-[#9A7B4F]" />
+            <div className="p-6">
+              <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E] mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#C5A065]" />
+                W-9 Tax Form
+              </h2>
+              
+              {/* Download Blank Form */}
+              <div className="flex items-center gap-3 p-4 bg-[#F9F6F7] rounded-xl mb-4">
+                <div className="w-10 h-10 bg-[#C5A065]/20 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-[#C5A065]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#1A1A2E]">IRS W-9 Form</p>
+                  <p className="text-xs text-gray-500">Download blank form to fill out</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadBlankW9}
+                  className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Download
+                </Button>
+              </div>
+
+              {/* W-9 Status / Upload Section */}
+              {w9Status?.status === 'approved' ? (
+                <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-200">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-700">W-9 Approved</p>
+                    <p className="text-xs text-green-600">Your W-9 has been reviewed and approved</p>
+                  </div>
+                </div>
+              ) : w9Status?.status === 'pending_review' ? (
+                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-700">Pending Review</p>
+                    <p className="text-xs text-amber-600">Your W-9 is being reviewed by admin</p>
+                  </div>
+                </div>
+              ) : w9Status?.status === 'needs_correction' ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
+                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                      <AlertCircle className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-700">Corrections Needed</p>
+                      <p className="text-xs text-red-600">{w9Status.rejection_reason || "Please review and resubmit your W-9"}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Upload corrected form */}
+                  <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Upload className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-[#1A1A2E]">Upload Corrected W-9</p>
+                      <p className="text-xs text-gray-500">Submit your corrected W-9 form</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <input
+                        type="file"
+                        ref={w9InputRef}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleW9Upload(e.target.files[0])}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => w9InputRef.current?.click()}
+                        disabled={uploadingW9}
+                        className="text-blue-600 border-blue-400 hover:bg-blue-50"
+                      >
+                        {uploadingW9 ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-1" />
+                            Upload
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Upload className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-[#1A1A2E]">Submit Your W-9</p>
+                    <p className="text-xs text-gray-500">Upload your completed W-9 form for review</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <input
+                      type="file"
+                      ref={w9InputRef}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="hidden"
+                      onChange={(e) => handleW9Upload(e.target.files[0])}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => w9InputRef.current?.click()}
+                      disabled={uploadingW9}
+                      className="text-blue-600 border-blue-400 hover:bg-blue-50"
+                    >
+                      {uploadingW9 ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-1" />
+                          Upload
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </motion.div>
       </main>
     </div>
