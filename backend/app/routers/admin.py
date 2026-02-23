@@ -54,13 +54,17 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
 async def get_all_employees(admin: dict = Depends(get_admin_user)):
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(500)
     
-    # Enrich with W-9 status from w9_documents collection
+    # Batch fetch W-9 status for all users (optimized - single query instead of N+1)
+    user_ids = [u["id"] for u in users]
+    w9_docs = await db.w9_documents.find(
+        {"employee_id": {"$in": user_ids}}, 
+        {"_id": 0, "employee_id": 1, "status": 1}
+    ).to_list(500)
+    w9_map = {doc["employee_id"]: doc.get("status", "submitted") for doc in w9_docs}
+    
+    # Enrich users with W-9 status
     for user in users:
-        w9_doc = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0, "content": 0})
-        if w9_doc:
-            user["w9_status"] = w9_doc.get("status", "submitted")
-        else:
-            user["w9_status"] = None
+        user["w9_status"] = w9_map.get(user["id"])
     
     return [UserResponse(**u) for u in users]
 
