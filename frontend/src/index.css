@@ -306,10 +306,16 @@ input:focus, textarea:focus, select:focus {
 .dashboard-card {
     background: white;
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     position: relative;
     overflow: hidden;
+}
+
+@media (min-width: 640px) {
+    .dashboard-card {
+        padding: 1.5rem;
+    }
 }
 
 .dashboard-card::before {
@@ -326,11 +332,17 @@ input:focus, textarea:focus, select:focus {
 .stats-card {
     background: white;
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
+}
+
+@media (min-width: 640px) {
+    .stats-card {
+        padding: 1.5rem;
+    }
 }
 
 .stats-card:hover {
