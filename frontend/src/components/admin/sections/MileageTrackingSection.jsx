@@ -245,6 +245,12 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       );
       
       setTrackingWatchId(watchId);
+      
+      // Notify parent component
+      if (onTripStatusChange) {
+        onTripStatusChange(true);
+      }
+      
       toast.success("Trip tracking started! Route will be tracked even if you leave the app.");
       
     } catch (error) {
