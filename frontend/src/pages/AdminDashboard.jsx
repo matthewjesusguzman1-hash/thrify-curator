@@ -3206,7 +3206,13 @@ export default function AdminDashboard() {
           <div className="dashboard-card">
             <div 
               className="flex items-center justify-between cursor-pointer"
-              onClick={() => setShowW9ReviewSection(!showW9ReviewSection)}
+              onClick={() => {
+                const willOpen = !showW9ReviewSection;
+                setShowW9ReviewSection(willOpen);
+                if (willOpen) {
+                  fetchPendingW9s();
+                }
+              }}
               data-testid="w9-review-section-toggle"
             >
               <div className="flex items-center gap-3">
