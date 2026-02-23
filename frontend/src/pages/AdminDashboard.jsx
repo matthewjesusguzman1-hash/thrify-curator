@@ -842,6 +842,49 @@ export default function AdminDashboard() {
     toast.success("Opening W-9 form...");
   };
 
+  // View W-9 in modal (without downloading)
+  const handleViewW9 = async (employeeId, employeeName) => {
+    setLoadingW9Viewer(true);
+    setShowW9ViewerModal(true);
+    
+    try {
+      // Get W-9 status info first
+      const statusRes = await axios.get(`${API}/admin/employees/${employeeId}/w9/status`, getAuthHeader());
+      
+      // Get the W-9 file as blob
+      const response = await axios.get(`${API}/admin/employees/${employeeId}/w9`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      
+      setViewingW9({
+        employeeId,
+        employeeName,
+        url,
+        contentType: response.headers['content-type'],
+        filename: statusRes.data.filename,
+        status: statusRes.data.status,
+        uploadedAt: statusRes.data.uploaded_at
+      });
+    } catch (error) {
+      toast.error("Failed to load W-9");
+      setShowW9ViewerModal(false);
+    } finally {
+      setLoadingW9Viewer(false);
+    }
+  };
+
+  const closeW9Viewer = () => {
+    if (viewingW9?.url) {
+      window.URL.revokeObjectURL(viewingW9.url);
+    }
+    setViewingW9(null);
+    setShowW9ViewerModal(false);
+  };
+
   // W-9 Review functions
   const fetchPendingW9s = useCallback(async () => {
     setLoadingPendingW9s(true);
