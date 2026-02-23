@@ -4036,6 +4036,34 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
+                    {/* Search Bar for Check Records */}
+                    {checkRecords.length > 0 && (
+                      <div className="flex items-center gap-3 mb-4 p-3 bg-[#F9F6F7] rounded-xl">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" />
+                          <Input
+                            type="text"
+                            placeholder="Search by employee name, description, date, or amount..."
+                            value={checkSearchQuery}
+                            onChange={(e) => setCheckSearchQuery(e.target.value)}
+                            className="pl-9 h-9 text-sm bg-white"
+                            data-testid="check-search-input"
+                          />
+                        </div>
+                        {checkSearchQuery && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCheckSearchQuery("")}
+                            className="text-[#888] hover:text-[#333]"
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
                     {/* Records List */}
                     {loadingCheckRecords ? (
                       <div className="flex items-center justify-center py-8">
@@ -4047,9 +4075,19 @@ export default function AdminDashboard() {
                         <p className="text-[#888]">No check records yet</p>
                         <p className="text-xs text-[#aaa]">Upload photos of payroll checks to keep for your records</p>
                       </div>
+                    ) : getFilteredCheckRecords().length === 0 ? (
+                      <div className="text-center py-8">
+                        <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-[#888]">No matching check records found</p>
+                        <p className="text-xs text-[#aaa]">Try a different search term</p>
+                      </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {checkRecords.map((record) => (
+                      <>
+                        <p className="text-xs text-[#888] mb-2">
+                          Showing {getFilteredCheckRecords().length} of {checkRecords.length} records
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {getFilteredCheckRecords().map((record) => (
                           <div key={record.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             <div 
                               className="h-40 bg-gray-100 flex items-center justify-center cursor-pointer overflow-hidden relative group"
