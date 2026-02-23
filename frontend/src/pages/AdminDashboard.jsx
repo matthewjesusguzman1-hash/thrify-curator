@@ -252,6 +252,7 @@ export default function AdminDashboard() {
   const [pendingCheckImage, setPendingCheckImage] = useState(null); // Holds image before submission
   const [editingCheckRecord, setEditingCheckRecord] = useState(null); // For editing existing records
   const [checkSearchQuery, setCheckSearchQuery] = useState(""); // Search for check records
+  const [expandedCheckRecords, setExpandedCheckRecords] = useState({}); // Track expanded/collapsed state per record
   const checkInputRef = useRef(null);
 
   const getAuthHeader = useCallback(() => ({
