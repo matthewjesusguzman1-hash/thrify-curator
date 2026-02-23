@@ -516,6 +516,40 @@ export default function AdminDashboard() {
     });
   };
 
+  // Filter functions for search
+  const getFilteredCheckRecords = () => {
+    if (!checkSearchQuery.trim()) return checkRecords;
+    const query = checkSearchQuery.toLowerCase();
+    return checkRecords.filter(record => 
+      (record.employee_name && record.employee_name.toLowerCase().includes(query)) ||
+      (record.description && record.description.toLowerCase().includes(query)) ||
+      (record.check_date && record.check_date.includes(query)) ||
+      (record.amount && record.amount.toString().includes(query))
+    );
+  };
+
+  const getFilteredFormSubmissions = (submissions) => {
+    let filtered = submissions;
+    
+    // Apply search filter
+    if (formSearchQuery.trim()) {
+      const query = formSearchQuery.toLowerCase();
+      filtered = filtered.filter(item => {
+        const name = (item.full_name || item.name || '').toLowerCase();
+        const email = (item.email || '').toLowerCase();
+        const phone = (item.phone || '').toLowerCase();
+        return name.includes(query) || email.includes(query) || phone.includes(query);
+      });
+    }
+    
+    // Apply status filter
+    if (formStatusFilter !== 'all') {
+      filtered = filtered.filter(item => item.status === formStatusFilter);
+    }
+    
+    return filtered;
+  };
+
   const SortableHeader = ({ table, sortKey, children, className = "" }) => {
     const isActive = sortConfig[table]?.key === sortKey;
     const direction = sortConfig[table]?.direction;
