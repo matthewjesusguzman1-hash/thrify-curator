@@ -192,11 +192,11 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     # Use the same biweekly period calculation as admin dashboard
     period_start, period_end = get_biweekly_period(pay_period_start_date, 0)
     
-    # Convert to datetime for comparison
-    period_start_dt = datetime.combine(period_start.date() if hasattr(period_start, 'date') else period_start, 
-                                       datetime.min.time()).replace(tzinfo=timezone.utc)
-    period_end_dt = datetime.combine(period_end.date() if hasattr(period_end, 'date') else period_end + timedelta(days=1), 
-                                     datetime.min.time()).replace(tzinfo=timezone.utc)
+    # Ensure period_start and period_end are timezone-aware datetime objects
+    if hasattr(period_start, 'tzinfo') and period_start.tzinfo is None:
+        period_start = period_start.replace(tzinfo=timezone.utc)
+    if hasattr(period_end, 'tzinfo') and period_end.tzinfo is None:
+        period_end = period_end.replace(tzinfo=timezone.utc)
     
     # Filter entries for current pay period
     period_entries = []
@@ -204,7 +204,7 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
         try:
             clock_in_str = e["clock_in"]
             clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
-            if period_start_dt <= clock_in_dt < period_end_dt:
+            if period_start <= clock_in_dt <= period_end:
                 period_entries.append(e)
         except (ValueError, KeyError, TypeError):
             pass
