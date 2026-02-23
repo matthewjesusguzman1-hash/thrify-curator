@@ -4760,6 +4760,119 @@ export default function AdminDashboard() {
               </motion.div>
             </motion.div>
           )}
+
+          {/* W-9 Viewer Modal */}
+          {showW9ViewerModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4"
+              onClick={closeW9Viewer}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] shadow-xl overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-[#1A1A2E] to-[#16213E]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold">
+                        {viewingW9?.employeeName}'s W-9 Form
+                      </h3>
+                      {viewingW9 && (
+                        <p className="text-white/60 text-xs">
+                          {viewingW9.filename} • Uploaded {new Date(viewingW9.uploadedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {viewingW9?.status === 'approved' && (
+                      <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Approved
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={closeW9Viewer}
+                      className="text-white/70 hover:text-white hover:bg-white/10"
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-auto p-4 bg-gray-100">
+                  {loadingW9Viewer ? (
+                    <div className="flex items-center justify-center h-64">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00D4FF]"></div>
+                    </div>
+                  ) : viewingW9 ? (
+                    <div className="w-full h-full min-h-[500px]">
+                      {viewingW9.contentType?.includes('pdf') ? (
+                        <iframe
+                          src={viewingW9.url}
+                          className="w-full h-full min-h-[500px] rounded-lg border border-gray-200"
+                          title="W-9 Document"
+                        />
+                      ) : viewingW9.contentType?.includes('image') ? (
+                        <div className="flex items-center justify-center">
+                          <img
+                            src={viewingW9.url}
+                            alt="W-9 Document"
+                            className="max-w-full max-h-[600px] rounded-lg shadow-lg"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-center py-10">
+                          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                          <p className="text-gray-600">Preview not available for this file type</p>
+                          <Button
+                            onClick={() => window.open(viewingW9.url, '_blank')}
+                            className="mt-4"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Download to View
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10">
+                      <p className="text-gray-500">Failed to load document</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-gray-200 flex justify-between items-center bg-white">
+                  <Button
+                    variant="outline"
+                    onClick={closeW9Viewer}
+                  >
+                    Close
+                  </Button>
+                  {viewingW9 && (
+                    <Button
+                      onClick={() => handleW9Download(viewingW9.employeeId, viewingW9.employeeName)}
+                      className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
         </motion.div>
       </main>
     </div>
