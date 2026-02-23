@@ -711,7 +711,7 @@ export default function AdminDashboard() {
       }
       
       // Also refresh main dashboard data
-      fetchTimeEntries();
+      fetchData();
     } catch (error) {
       console.error("Clock action failed:", error);
       toast.error(error.response?.data?.detail || `Failed to clock ${action}`);
