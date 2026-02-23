@@ -3421,14 +3421,40 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Pay Period Settings */}
+                  {/* Pay Period Settings - Enhanced */}
                   <div className="mt-4 pt-4 border-t border-[#eee]">
+                    {/* Current Pay Period Display - Prominent */}
+                    <div className="bg-gradient-to-r from-[#00D4FF]/10 to-[#00A8CC]/10 rounded-xl p-4 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-lg flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-[#666]">Current Pay Period</p>
+                            <p className="text-lg font-bold text-[#333]" data-testid="current-pay-period-display">
+                              {payrollSummary.current_period?.start && payrollSummary.current_period?.end ? 
+                                `${new Date(payrollSummary.current_period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(payrollSummary.current_period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 
+                                'Not configured'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-[#888]">Bi-weekly Period</p>
+                          <p className="text-sm font-medium text-[#00A8CC]">
+                            {payrollSummary.current_period?.hours?.toFixed(1) || '0'} hrs tracked
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Settings Row */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Settings className="w-5 h-5 text-[#888]" />
                         <div>
                           <p className="text-sm font-medium text-[#333]">Pay Period Settings</p>
-                          <p className="text-xs text-[#888]">Bi-weekly pay period for all employees</p>
+                          <p className="text-xs text-[#888]">Set the start date for bi-weekly pay periods</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -3453,11 +3479,6 @@ export default function AdminDashboard() {
                         </Button>
                       </div>
                     </div>
-                    <p className="text-xs text-[#888] mt-2">
-                      Current Period: {payrollSummary.current_period?.start && payrollSummary.current_period?.end ? 
-                        `${new Date(payrollSummary.current_period.start).toLocaleDateString()} - ${new Date(payrollSummary.current_period.end).toLocaleDateString()}` : 
-                        'Not set'}
-                    </p>
                   </div>
                 </motion.div>
               )}
