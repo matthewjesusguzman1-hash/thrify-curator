@@ -31,23 +31,6 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
   // Section visibility
   const [isExpanded, setIsExpanded] = useState(false);
   
-  // Auto-expand when forceExpand prop changes to true
-  useEffect(() => {
-    if (forceExpand) {
-      setIsExpanded(true);
-      // Refresh data when forced to expand (e.g., when End Trip clicked in header)
-      fetchMileageEntries();
-    }
-  }, [forceExpand]);
-  
-  // Sync with header trip state
-  useEffect(() => {
-    if (headerTripActive && !isTracking) {
-      // Header says there's an active trip, refresh our data
-      fetchMileageEntries();
-    }
-  }, [headerTripActive]);
-  
   // Mileage tracking state
   const [mileageEntries, setMileageEntries] = useState([]);
   const [loadingMileage, setLoadingMileage] = useState(false);
