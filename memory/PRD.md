@@ -414,3 +414,31 @@ Build a "Thrifty Curator" reselling application with:
   - The biweekly date range that will result from that start date
   - Period number (e.g., "Period #3")
   - Updates dynamically as the date is changed
+
+## Recent Updates (Feb 23, 2026 - Session 5)
+
+### Bug Fixes
+
+- **P0: Payroll Summary Section Error (FIXED)**:
+  - **Root Cause**: Missing `Save` icon import from lucide-react
+  - **Fix**: Added `Save` to the import statement in AdminDashboard.jsx (line 49)
+  - **Verified**: Section now expands without JavaScript errors, showing Current Pay Period ($225.00, 11.3 hrs), Month Total ($225.00), and Year Total ($225.00)
+
+- **P0: Mileage Report PDF Viewer Broken (FIXED)**:
+  - **Issue**: Download button missing, X exit button not visible on mobile
+  - **Fix**: Updated MileageTrackingSection.jsx (lines 1070-1260):
+    - X close button now has gray background (`bg-gray-100`) making it clearly visible
+    - Modal header is sticky on report preview view
+    - Download button moved to sticky footer - always visible on all screen sizes
+    - Responsive padding/sizing for mobile viewports
+  - **Verified**: Tested on both desktop (1920x1080) and mobile (390x844) viewports
+
+### Test Report
+- `/app/test_reports/iteration_15.json` - All bug fixes verified
+- Success rate: 100% frontend
+
+### Files Changed
+- Modified: `/app/frontend/src/pages/AdminDashboard.jsx` - Added `Save` to lucide-react imports
+- Modified: `/app/frontend/src/components/admin/sections/MileageTrackingSection.jsx` - Improved report modal mobile UX
+
+
