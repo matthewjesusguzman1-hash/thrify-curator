@@ -445,7 +445,7 @@ export default function EmployeeDashboard() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`${API}/time/w9/download`, '_blank')}
+                    onClick={handleViewMyW9}
                     className="text-green-600 border-green-400 hover:bg-green-50"
                   >
                     <Download className="w-4 h-4 mr-1" />
@@ -464,7 +464,7 @@ export default function EmployeeDashboard() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`${API}/time/w9/download`, '_blank')}
+                    onClick={handleViewMyW9}
                     className="text-amber-600 border-amber-400 hover:bg-amber-50"
                   >
                     <Download className="w-4 h-4 mr-1" />
