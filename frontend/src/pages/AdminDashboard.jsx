@@ -112,6 +112,7 @@ export default function AdminDashboard() {
     custom_end: ""
   });
   const [payrollReport, setPayrollReport] = useState(null);
+  const [emailingPayroll, setEmailingPayroll] = useState(false);
   
   // Employee rate editing state
   const [editingRateId, setEditingRateId] = useState(null);
