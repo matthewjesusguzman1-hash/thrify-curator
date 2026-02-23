@@ -217,6 +217,9 @@ export default function AdminDashboard() {
   const [viewingEmployee, setViewingEmployee] = useState(null);
   const [employeePortalData, setEmployeePortalData] = useState(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
+  const [employeeClockStatus, setEmployeeClockStatus] = useState(null);
+  const [showClockConfirm, setShowClockConfirm] = useState(null); // 'in' or 'out'
+  const [clockingEmployee, setClockingEmployee] = useState(false);
 
   // W-9 Viewer Modal state
   const [showW9ViewerModal, setShowW9ViewerModal] = useState(false);
