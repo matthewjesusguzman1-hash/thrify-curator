@@ -133,6 +133,23 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     }
   }, [getAuthHeader, fetchCumulativeDistance]);
 
+  // Auto-expand when forceExpand prop changes to true
+  useEffect(() => {
+    if (forceExpand) {
+      setIsExpanded(true);
+      // Refresh data when forced to expand (e.g., when End Trip clicked in header)
+      fetchMileageEntries();
+    }
+  }, [forceExpand, fetchMileageEntries]);
+  
+  // Sync with header trip state
+  useEffect(() => {
+    if (headerTripActive) {
+      // Header says there's an active trip, refresh our data
+      fetchMileageEntries();
+    }
+  }, [headerTripActive, fetchMileageEntries]);
+
   // Resume tracking for an existing trip
   const resumeTracking = useCallback(() => {
     if (!navigator.geolocation) {
