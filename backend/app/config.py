@@ -16,9 +16,7 @@ if not JWT_SECRET:
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
-# Email Configuration
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
+# Admin Configuration
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'matthewjesusguzman1@gmail.com')
 
 # CORS Configuration
