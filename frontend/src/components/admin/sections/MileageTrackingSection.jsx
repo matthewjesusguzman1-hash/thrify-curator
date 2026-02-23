@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Car,
@@ -13,7 +13,8 @@ import {
   X,
   Save,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Route
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const ACTIVE_TRIP_KEY = "thrifty_curator_active_trip";
 
 export default function MileageTrackingSection({ getAuthHeader }) {
   // Section visibility
@@ -36,6 +38,11 @@ export default function MileageTrackingSection({ getAuthHeader }) {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [trackingWatchId, setTrackingWatchId] = useState(null);
   const [showMileageEntries, setShowMileageEntries] = useState(true);
+  const [cumulativeMiles, setCumulativeMiles] = useState(0);
+  const [waypointCount, setWaypointCount] = useState(0);
+  
+  // Refs for tracking
+  const locationUpdateInterval = useRef(null);
   
   // Modal states
   const [showAddMileageModal, setShowAddMileageModal] = useState(false);
@@ -67,6 +74,17 @@ export default function MileageTrackingSection({ getAuthHeader }) {
     notes: ""
   });
 
+  // Fetch current cumulative distance from server
+  const fetchCumulativeDistance = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/mileage/active-trip/distance`, getAuthHeader());
+      setCumulativeMiles(response.data.cumulative_miles || 0);
+      setWaypointCount(response.data.waypoint_count || 0);
+    } catch (error) {
+      console.error("Failed to fetch cumulative distance:", error);
+    }
+  }, [getAuthHeader]);
+
   // Fetch mileage entries
   const fetchMileageEntries = useCallback(async () => {
     setLoadingMileage(true);
@@ -78,16 +96,80 @@ export default function MileageTrackingSection({ getAuthHeader }) {
       ]);
       setMileageEntries(entriesRes.data);
       setMileageSummary(summaryRes.data);
+      
+      // Check for active trip from server
       if (activeTripRes.data) {
         setActiveTripData(activeTripRes.data);
         setIsTracking(true);
+        // Store in localStorage for persistence
+        localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(activeTripRes.data));
+        // Resume tracking
+        resumeTracking();
+        // Fetch current distance
+        fetchCumulativeDistance();
+      } else {
+        // Clear localStorage if no active trip on server
+        localStorage.removeItem(ACTIVE_TRIP_KEY);
+        setIsTracking(false);
+        setActiveTripData(null);
       }
     } catch (error) {
       console.error("Failed to fetch mileage data:", error);
     } finally {
       setLoadingMileage(false);
     }
-  }, [getAuthHeader]);
+  }, [getAuthHeader, fetchCumulativeDistance]);
+
+  // Resume tracking for an existing trip
+  const resumeTracking = useCallback(() => {
+    if (!navigator.geolocation) {
+      console.error("Geolocation not supported");
+      return;
+    }
+
+    // Get current position first
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const newLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          timestamp: new Date().toISOString()
+        };
+        setCurrentLocation(newLocation);
+        
+        // Send to server
+        axios.post(`${API}/admin/mileage/update-location`, {
+          location: newLocation
+        }, getAuthHeader()).catch(console.error);
+      },
+      (error) => console.error("Failed to get current position:", error),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+
+    // Start watching position
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const newLocation = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          timestamp: new Date().toISOString()
+        };
+        setCurrentLocation(newLocation);
+        
+        // Send waypoint to server
+        axios.post(`${API}/admin/mileage/update-location`, {
+          location: newLocation
+        }, getAuthHeader()).then(() => {
+          // Update cumulative distance
+          fetchCumulativeDistance();
+        }).catch(console.error);
+      },
+      (error) => console.error("Location tracking error:", error),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+    );
+    
+    setTrackingWatchId(watchId);
+  }, [getAuthHeader, fetchCumulativeDistance]);
 
   // Start GPS tracking
   const startMileageTracking = async () => {
@@ -118,9 +200,15 @@ export default function MileageTrackingSection({ getAuthHeader }) {
         start_address: startAddress
       }, getAuthHeader());
       
-      setActiveTripData(response.data);
+      const tripData = response.data;
+      setActiveTripData(tripData);
       setIsTracking(true);
       setCurrentLocation(startLocation);
+      setCumulativeMiles(0);
+      setWaypointCount(0);
+      
+      // Store in localStorage for persistence across sessions
+      localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(tripData));
       
       // Start watching position
       const watchId = navigator.geolocation.watchPosition(
@@ -131,16 +219,20 @@ export default function MileageTrackingSection({ getAuthHeader }) {
             timestamp: new Date().toISOString()
           };
           setCurrentLocation(newLocation);
+          
+          // Send waypoint to server
           axios.post(`${API}/admin/mileage/update-location`, {
             location: newLocation
-          }, getAuthHeader()).catch(console.error);
+          }, getAuthHeader()).then(() => {
+            fetchCumulativeDistance();
+          }).catch(console.error);
         },
         (error) => console.error("Location tracking error:", error),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
       );
       
       setTrackingWatchId(watchId);
-      toast.success("Trip tracking started!");
+      toast.success("Trip tracking started! Route will be tracked even if you leave the app.");
       
     } catch (error) {
       console.error("Failed to start tracking:", error);
@@ -156,56 +248,48 @@ export default function MileageTrackingSection({ getAuthHeader }) {
   // Confirm end trip
   const confirmEndTrip = async () => {
     if (!currentLocation) {
-      toast.error("Unable to get current location");
+      toast.error("Unable to get current location. Please wait for GPS.");
       return;
-    }
-    
-    // Calculate distance using haversine formula
-    const calculateDistance = (lat1, lon1, lat2, lon2) => {
-      const R = 3959; // Earth's radius in miles
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
-    };
-    
-    let totalMiles = 0;
-    if (activeTripData?.start_location && currentLocation) {
-      totalMiles = calculateDistance(
-        activeTripData.start_location.latitude,
-        activeTripData.start_location.longitude,
-        currentLocation.latitude,
-        currentLocation.longitude
-      );
     }
     
     try {
       const endAddress = `${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`;
       
-      await axios.post(`${API}/admin/mileage/end-trip`, {
+      // Server will calculate the actual cumulative distance from waypoints
+      const response = await axios.post(`${API}/admin/mileage/end-trip`, {
         end_location: currentLocation,
         end_address: endAddress,
-        total_miles: Math.round(totalMiles * 10) / 10,
+        total_miles: cumulativeMiles, // Server will override with actual calculation
         purpose: endTripData.purpose,
         purpose_other: endTripData.purpose === "other" ? endTripData.purpose_other : null,
         notes: endTripData.notes
       }, getAuthHeader());
       
+      // Stop watching position
       if (trackingWatchId) {
         navigator.geolocation.clearWatch(trackingWatchId);
         setTrackingWatchId(null);
       }
       
+      // Clear interval
+      if (locationUpdateInterval.current) {
+        clearInterval(locationUpdateInterval.current);
+        locationUpdateInterval.current = null;
+      }
+      
+      // Clear localStorage
+      localStorage.removeItem(ACTIVE_TRIP_KEY);
+      
       setIsTracking(false);
       setActiveTripData(null);
       setCurrentLocation(null);
+      setCumulativeMiles(0);
+      setWaypointCount(0);
       setShowEndTripModal(false);
       setEndTripData({ purpose: "thrifting", purpose_other: "", notes: "" });
       
-      toast.success(`Trip ended! ${totalMiles.toFixed(1)} miles recorded.`);
+      const totalMiles = response.data.total_miles || cumulativeMiles;
+      toast.success(`Trip ended! ${totalMiles.toFixed(1)} miles recorded from route tracking.`);
       fetchMileageEntries();
       
     } catch (error) {
@@ -224,9 +308,18 @@ export default function MileageTrackingSection({ getAuthHeader }) {
         setTrackingWatchId(null);
       }
       
+      if (locationUpdateInterval.current) {
+        clearInterval(locationUpdateInterval.current);
+        locationUpdateInterval.current = null;
+      }
+      
+      localStorage.removeItem(ACTIVE_TRIP_KEY);
+      
       setIsTracking(false);
       setActiveTripData(null);
       setCurrentLocation(null);
+      setCumulativeMiles(0);
+      setWaypointCount(0);
       toast.info("Trip cancelled");
       
     } catch (error) {
@@ -373,18 +466,36 @@ export default function MileageTrackingSection({ getAuthHeader }) {
     }
   };
 
-  // Fetch data when section is expanded
+  // Check for active trip on mount and when section is expanded
   useEffect(() => {
     if (isExpanded) {
       fetchMileageEntries();
     }
   }, [isExpanded, fetchMileageEntries]);
 
+  // Check localStorage for active trip on initial mount
+  useEffect(() => {
+    const storedTrip = localStorage.getItem(ACTIVE_TRIP_KEY);
+    if (storedTrip) {
+      try {
+        const tripData = JSON.parse(storedTrip);
+        setActiveTripData(tripData);
+        setIsTracking(true);
+        // Will be verified against server when section is expanded
+      } catch (e) {
+        localStorage.removeItem(ACTIVE_TRIP_KEY);
+      }
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (trackingWatchId) {
         navigator.geolocation.clearWatch(trackingWatchId);
+      }
+      if (locationUpdateInterval.current) {
+        clearInterval(locationUpdateInterval.current);
       }
     };
   }, [trackingWatchId]);
@@ -541,15 +652,15 @@ export default function MileageTrackingSection({ getAuthHeader }) {
               <div className="pt-6 space-y-6">
                 {/* GPS Tracking Controls */}
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
                     <div className="flex items-center gap-3">
                       <Navigation className="w-6 h-6 text-emerald-600" />
                       <div>
-                        <p className="font-medium text-[#333]">GPS Trip Tracking</p>
+                        <p className="font-medium text-[#333]">GPS Route Tracking</p>
                         <p className="text-sm text-[#888]">
                           {isTracking 
-                            ? `Tracking active since ${activeTripData?.start_time ? new Date(activeTripData.start_time).toLocaleTimeString() : 'N/A'}`
-                            : 'Start tracking to automatically log your trip'}
+                            ? `Tracking since ${activeTripData?.start_time ? new Date(activeTripData.start_time).toLocaleTimeString() : 'N/A'}`
+                            : 'Tracks actual route traveled, not just start/end points'}
                         </p>
                       </div>
                     </div>
@@ -584,11 +695,28 @@ export default function MileageTrackingSection({ getAuthHeader }) {
                       )}
                     </div>
                   </div>
-                  {isTracking && currentLocation && (
-                    <div className="mt-3 p-3 bg-white/60 rounded-lg">
-                      <p className="text-xs text-[#666]">
-                        <MapPinned className="w-3 h-3 inline mr-1" />
-                        Current: {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                  
+                  {/* Active Trip Info */}
+                  {isTracking && (
+                    <div className="mt-4 p-3 bg-white/60 rounded-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Route className="w-4 h-4 text-emerald-600" />
+                          <span className="text-sm font-medium text-[#333]">Route Distance:</span>
+                        </div>
+                        <span className="text-lg font-bold text-emerald-600">{cumulativeMiles.toFixed(2)} mi</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-[#666]">
+                        <span>Waypoints recorded: {waypointCount}</span>
+                        {currentLocation && (
+                          <span>
+                            <MapPinned className="w-3 h-3 inline mr-1" />
+                            {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-emerald-600 bg-emerald-50 p-2 rounded">
+                        Tracking continues in background. Return to this page to end your trip.
                       </p>
                     </div>
                   )}
@@ -685,6 +813,12 @@ export default function MileageTrackingSection({ getAuthHeader }) {
                                   <div className="flex items-center gap-2 mb-1">
                                     {getPurposeBadge(entry.purpose, entry.purpose_other)}
                                     <span className="text-xs text-[#888]">{entry.date}</span>
+                                    {entry.waypoint_count > 0 && (
+                                      <span className="text-xs text-emerald-600 flex items-center gap-1">
+                                        <Route className="w-3 h-3" />
+                                        {entry.waypoint_count} pts
+                                      </span>
+                                    )}
                                   </div>
                                   <p className="text-sm text-[#666]">
                                     {entry.start_address} → {entry.end_address}
@@ -808,9 +942,15 @@ export default function MileageTrackingSection({ getAuthHeader }) {
               </button>
             </div>
             <div className="space-y-4">
-              <p className="text-sm text-[#666]">
-                Please select the purpose of this trip before ending.
-              </p>
+              <div className="bg-emerald-50 p-3 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-emerald-700">Route Distance:</span>
+                  <span className="text-xl font-bold text-emerald-600">{cumulativeMiles.toFixed(2)} mi</span>
+                </div>
+                <p className="text-xs text-emerald-600 mt-1">
+                  Calculated from {waypointCount} GPS waypoints along your route
+                </p>
+              </div>
               <div>
                 <Label>Purpose</Label>
                 <Select
