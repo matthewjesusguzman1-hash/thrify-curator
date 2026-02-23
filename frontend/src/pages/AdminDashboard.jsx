@@ -346,11 +346,12 @@ export default function AdminDashboard() {
     fetchPayrollSettings();
     fetchPayrollSummary();
     fetchFormSubmissions(); // Auto-fetch form submissions on page load
+    fetchCheckRecords(); // Auto-fetch payroll check records on page load
     
     // Poll for new notifications every 30 seconds
     const pollInterval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(pollInterval);
-  }, [navigate, fetchNotifications, fetchPayrollSettings, fetchPayrollSummary, fetchFormSubmissions]);
+  }, [navigate, fetchNotifications, fetchPayrollSettings, fetchPayrollSummary, fetchFormSubmissions, fetchCheckRecords]);
 
   const fetchData = async () => {
     try {
