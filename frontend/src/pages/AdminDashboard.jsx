@@ -2079,6 +2079,20 @@ export default function AdminDashboard() {
                           )}
                                 </td>
                                 <td>{formatDateTime(emp.created_at)}</td>
+                                <td>
+                                  {emp.role !== 'admin' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => { e.stopPropagation(); handleViewEmployeePortal(emp); }}
+                                      className="text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10"
+                                      data-testid={`view-portal-${emp.id}`}
+                                    >
+                                      <Monitor className="w-4 h-4 mr-1" />
+                                      View Portal
+                                    </Button>
+                                  )}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
