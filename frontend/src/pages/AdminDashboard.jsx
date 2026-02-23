@@ -4887,10 +4887,10 @@ export default function AdminDashboard() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => window.open(`${API}/admin/employees/${viewingEmployee.id}/w9`, '_blank')}
+                                    onClick={() => handleViewW9(viewingEmployee.id, viewingEmployee.name)}
                                     className="text-[#888] hover:text-[#666]"
                                   >
-                                    <Download className="w-4 h-4 mr-1" />
+                                    <Eye className="w-4 h-4 mr-1" />
                                     View
                                   </Button>
                                 )}
