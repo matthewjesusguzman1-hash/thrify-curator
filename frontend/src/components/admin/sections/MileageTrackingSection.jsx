@@ -59,6 +59,8 @@ export default function MileageTrackingSection({ getAuthHeader }) {
     customEnd: new Date().toISOString().split('T')[0]
   });
   const [exporting, setExporting] = useState(false);
+  const [reportPreview, setReportPreview] = useState(null);
+  const [reportBlobUrl, setReportBlobUrl] = useState(null);
   
   // Form data
   const [mileageFormData, setMileageFormData] = useState({
