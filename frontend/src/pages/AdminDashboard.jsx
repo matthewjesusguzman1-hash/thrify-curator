@@ -726,6 +726,80 @@ export default function AdminDashboard() {
     }
   };
 
+  // Header Trip Button Functions
+  const checkActiveTripStatus = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/mileage/active-trip`, getAuthHeader());
+      setHeaderTripActive(response.data.has_active_trip);
+    } catch (error) {
+      // Check localStorage as fallback
+      const storedTrip = localStorage.getItem("thrifty_curator_active_trip");
+      setHeaderTripActive(!!storedTrip);
+    }
+  }, [getAuthHeader]);
+
+  useEffect(() => {
+    if (user) {
+      checkActiveTripStatus();
+    }
+  }, [user, checkActiveTripStatus]);
+
+  const handleHeaderStartTrip = async () => {
+    setHeaderTripLoading(true);
+    try {
+      // Get current location
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
+      const startLocation = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        timestamp: new Date().toISOString()
+      };
+
+      const startAddress = `${startLocation.latitude.toFixed(4)}, ${startLocation.longitude.toFixed(4)}`;
+
+      const response = await axios.post(`${API}/admin/mileage/start-trip`, {
+        start_location: startLocation,
+        start_address: startAddress
+      }, getAuthHeader());
+
+      // Store in localStorage for persistence
+      localStorage.setItem("thrifty_curator_active_trip", JSON.stringify(response.data));
+      setHeaderTripActive(true);
+      toast.success("Trip started! GPS tracking is now active.");
+    } catch (error) {
+      console.error("Failed to start trip:", error);
+      if (error.code === 1) {
+        toast.error("Location access denied. Please enable location services.");
+      } else {
+        toast.error(error.response?.data?.detail || "Failed to start trip");
+      }
+    } finally {
+      setHeaderTripLoading(false);
+    }
+  };
+
+  const handleHeaderEndTrip = () => {
+    // Scroll to mileage section and expand it
+    const mileageSection = document.querySelector('[data-testid="mileage-section"]');
+    if (mileageSection) {
+      mileageSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Trigger expand via the section's toggle
+      const toggleBtn = mileageSection.querySelector('[data-testid="mileage-section-toggle"]');
+      if (toggleBtn) {
+        toggleBtn.click();
+      }
+    }
+    // The MileageTrackingSection will handle showing the end trip modal
+    toast.info("Complete your trip details in the Mileage Tracking section below.");
+  };
+
   // Employee Shifts Management Functions
   const handleViewEmployeeShifts = async (employee) => {
     setShowEmployeeShiftsModal(employee);
