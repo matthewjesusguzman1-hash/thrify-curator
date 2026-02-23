@@ -234,6 +234,13 @@ Build a "Thrifty Curator" reselling application with:
 - Test files: `/app/backend/tests/`
 
 ## Recent Updates (Feb 23, 2026)
+- **Payroll Check Records Submit & Edit Feature**: Enhanced the payroll check records workflow
+  - Added two-step process: select image first, then fill details and click Submit
+  - Image preview shows before submission with ability to remove/change
+  - Added Edit functionality - click pencil icon on any record to modify its details
+  - Backend PUT endpoint added for updating existing records
+  - Records can be updated with or without changing the image
+
 - **Payroll Check Records Auto-Refresh**: Added auto-refresh for Payroll Check Records section on page load
   - Records count now displays immediately when admin dashboard loads
   - No need to manually expand section to see count
