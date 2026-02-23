@@ -476,3 +476,24 @@ Build a "Thrifty Curator" reselling application with:
     - Buttons container now uses `items-start` without flex-wrap for cleaner alignment
   - **Result**: On mobile, "Admin Dashboard" title stays left, all action buttons align to the right edge
   - **Desktop view**: Unchanged, buttons remain on the right side of the title row
+
+### Mileage Trip Pause/Resume Feature (COMPLETED)
+
+- **Backend API Endpoints**:
+  - `POST /api/admin/mileage/pause-trip` - Pauses active trip, stops recording waypoints
+  - `POST /api/admin/mileage/resume-trip` - Resumes paused trip, calculates total paused duration
+  - `POST /api/admin/mileage/update-location` - Updated to ignore waypoints when trip is paused
+
+- **Frontend UI Changes** (MileageTrackingSection.jsx):
+  - Added `isPaused` state to track pause status
+  - New **Pause** button (amber/orange) - appears when trip is actively tracking
+  - New **Resume** button (green) - appears when trip is paused
+  - Section header shows "Paused" badge (amber) instead of "Tracking" (green) when paused
+  - Trip info panel background changes to amber when paused with appropriate message
+  - GPS tracking stops on pause and resumes on resume
+
+- **Data Model Updates** (mileage.py):
+  - `ActiveTripResponse` now includes: `is_paused`, `paused_at`, `total_paused_duration`
+
+- **Test Results**: 100% pass rate (8 backend tests, full frontend verification)
+- **Test Report**: `/app/test_reports/iteration_22.json`
