@@ -288,11 +288,35 @@ Build a "Thrifty Curator" reselling application with:
   - Provides legal clarity for consignment arrangements
 
 ## Notes
-- Email notifications are configured but require a valid Resend API key (currently placeholder)
-- PDF generation uses reportlab library
+- **Email functionality REMOVED**: Reports now use downloadable PDFs instead of email delivery
+- PDF generation uses fpdf2 library
 - Individual employee rates shown with ★ indicator in payroll reports
 - Minor React hydration warning in console (cosmetic, does not affect functionality)
-- **REFACTORING IN PROGRESS**: AdminDashboard.jsx has been reduced from 6787 lines to ~5880 lines by extracting MileageTrackingSection. Further refactoring is planned.
+- **REFACTORING IN PROGRESS**: AdminDashboard.jsx has been reduced from 6787 lines to ~5850 lines by extracting MileageTrackingSection. Further refactoring is planned.
+
+## Recent Updates (Feb 23, 2026 - Session 4)
+
+### W-9 Viewing Bug Fixed
+- **W-9 View Button**: Now opens W-9 Viewer Modal instead of forcing download
+- Modal displays PDF in iframe with filename, upload date, and approval status
+- Download button available in modal footer for users who want to save the file
+
+### Report Download Functionality (Replaced Email)
+- **Removed Email Report buttons** (was blocked on Resend API key)
+- **Added Download PDF buttons** for both Shift Report and Payroll Report
+- **New API endpoint**: `POST /api/admin/reports/pdf` generates shift report PDFs
+- PDF includes period, summary stats, and employee breakdown table
+- fpdf2 library installed for PDF generation
+
+### Refactoring Progress
+- AdminDashboard.jsx reduced from 6787 lines to ~5850 lines
+- MileageTrackingSection component extracted and working
+- Removed unused email-related state variables and imports
+
+### Files Changed
+- Modified: `/app/frontend/src/pages/AdminDashboard.jsx` - Replaced email with download, fixed W-9 view
+- Modified: `/app/backend/app/routers/admin.py` - Added /reports/pdf endpoint
+- Updated: `/app/backend/requirements.txt` - Added fpdf2
 
 ## Recent Updates (Feb 23, 2026 - Session 3)
 
