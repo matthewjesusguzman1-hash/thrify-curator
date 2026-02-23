@@ -1541,45 +1541,66 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleEmailShiftReport = async () => {
+  const handleDownloadShiftReportPDF = async () => {
     if (!reportData) return;
     
-    const email = prompt("Enter email address to send the report:", user?.email || ADMIN_EMAIL);
-    if (!email) return;
-    
-    setEmailingReport(true);
     try {
-      await axios.post(`${API}/admin/reports/email`, {
-        recipient_email: email,
-        report_data: reportData
-      }, getAuthHeader());
+      const response = await axios.post(`${API}/admin/reports/pdf`, {
+        start_date: reportData.period.start,
+        end_date: reportData.period.end
+      }, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
       
-      toast.success(`Report sent to ${email}`);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `shift_report.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Shift report PDF downloaded!");
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to send report");
-    } finally {
-      setEmailingReport(false);
+      toast.error("Failed to download shift report PDF");
     }
   };
 
-  const handleEmailPayrollReport = async () => {
+  const handleDownloadPayrollReportPDF = async () => {
     if (!payrollReport) return;
     
-    const email = prompt("Enter email address to send the report:", user?.email || ADMIN_EMAIL);
-    if (!email) return;
-    
-    setEmailingPayroll(true);
     try {
-      await axios.post(`${API}/admin/payroll/report/email`, {
-        recipient_email: email,
-        report_data: payrollReport
-      }, getAuthHeader());
+      const payload = {
+        period_type: payrollFilters.period_type,
+        period_index: parseInt(payrollFilters.period_index) || 0,
+        hourly_rate: parseFloat(payrollFilters.hourly_rate) || null,
+        employee_id: payrollFilters.employee_id || null
+      };
       
-      toast.success(`Payroll report sent to ${email}`);
+      if (payrollFilters.period_type === "custom") {
+        payload.start_date = payrollFilters.custom_start;
+        payload.end_date = payrollFilters.custom_end;
+      }
+
+      const response = await axios.post(`${API}/admin/payroll/report/pdf`, payload, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `payroll_report.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Payroll report PDF downloaded!");
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to send payroll report");
-    } finally {
-      setEmailingPayroll(false);
+      toast.error("Failed to download payroll report PDF");
     }
   };
 
