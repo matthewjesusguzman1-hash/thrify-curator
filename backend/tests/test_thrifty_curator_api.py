@@ -127,13 +127,16 @@ class TestAdminFeatures:
         assert data["role"] == "employee"
         print(f"Created employee: {data}")
         
+        # Small delay to ensure database consistency
+        time.sleep(0.5)
+        
         # Verify employee exists via GET
         get_resp = requests.get(f"{BASE_URL}/api/admin/employees", headers={
             "Authorization": f"Bearer {admin_token}"
         })
         employees = get_resp.json()
         created_emp = next((e for e in employees if e["email"] == TEST_EMPLOYEE_EMAIL), None)
-        assert created_emp is not None, "Created employee not found in list"
+        assert created_emp is not None, f"Created employee not found in list. Employees: {[e['email'] for e in employees]}"
         print(f"Verified employee in list: {created_emp['id']}")
         
         return data["id"]
