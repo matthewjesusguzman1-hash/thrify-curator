@@ -13,7 +13,9 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+# Try multiple sources for BASE_URL
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '') or os.environ.get('BASE_URL', '') or 'https://thrifty-curator.preview.emergentagent.com'
+BASE_URL = BASE_URL.rstrip('/')
 
 class TestEmployeeRates:
     """Test employee individual hourly rate functionality"""
