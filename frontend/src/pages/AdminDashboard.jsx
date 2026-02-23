@@ -12,6 +12,7 @@ import {
   Shield,
   UserPlus,
   UserMinus,
+  UserCog,
   X,
   Trash2,
   FileText,
