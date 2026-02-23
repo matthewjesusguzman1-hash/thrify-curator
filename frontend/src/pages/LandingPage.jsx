@@ -25,13 +25,13 @@ const TIKTOK_URL = "https://www.tiktok.com/@thrifty_curator?_r=1&_t=ZP-93ukKuigA
 const APP_URL = typeof window !== 'undefined' ? window.location.origin : '';
 const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(APP_URL)}`;
 
-// Platform data
+// Platform data with brand icons
 const platforms = [
-  { name: "eBay", icon: SiEbay, url: "https://www.ebay.com/str/thriftycurator", color: "#E53238" },
-  { name: "Poshmark", icon: Tag, url: "https://posh.mk/dZSDIxRJJ0b", color: "#7F0353" },
-  { name: "Mercari", icon: ShoppingBag, url: "https://www.mercari.com/u/thriftycurator/?sv=0", color: "#FF0211" },
-  { name: "Depop", icon: Sparkles, url: "https://www.depop.com/thriftycurator/", color: "#FF2300" },
-  { name: "Facebook", icon: SiFacebook, url: "https://www.facebook.com/marketplace/profile/517375094/", color: "#1877F2" },
+  { name: "eBay", icon: SiEbay, url: "https://www.ebay.com/str/thriftycurator", color: "#E53238", iconColor: "#FFFFFF" },
+  { name: "Poshmark", icon: SiPoshmark, url: "https://posh.mk/dZSDIxRJJ0b", color: "#7F0353", iconColor: "#FFFFFF" },
+  { name: "Mercari", icon: SiMercari, url: "https://www.mercari.com/u/thriftycurator/?sv=0", color: "#4DC3FF", iconColor: "#FFFFFF" },
+  { name: "Depop", icon: SiDepop, url: "https://www.depop.com/thriftycurator/", color: "#FF2300", iconColor: "#FFFFFF" },
+  { name: "Facebook", icon: SiFacebook, url: "https://www.facebook.com/marketplace/profile/517375094/", color: "#1877F2", iconColor: "#FFFFFF" },
 ];
 
 // Form links
