@@ -1816,12 +1816,15 @@ export default function AdminDashboard() {
                   <FileText className="w-4 h-4" />
                   Shift Report
                 </Button>
-                {/* Start/End Trip Button - next to Shift Report */}
+              </div>
+              {/* Employee Management + Start Trip */}
+              <div className="flex flex-col gap-1">
+                {/* Start/End Trip Button - spans full width */}
                 <Button 
                   onClick={headerTripActive ? handleHeaderEndTrip : handleHeaderStartTrip}
                   disabled={headerTripLoading}
                   size="sm"
-                  className={`flex items-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 ${
+                  className={`flex items-center justify-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 w-full ${
                     headerTripActive 
                       ? 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30 text-white' 
                       : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30 text-white'
@@ -1837,38 +1840,38 @@ export default function AdminDashboard() {
                   )}
                   <span>{headerTripActive ? 'End Trip' : 'Start Trip'}</span>
                 </Button>
+                {/* Add, Edit, Remove row */}
+                <div className="flex gap-1">
+                  <Button 
+                    onClick={() => setShowAddEmployee(true)}
+                    size="sm"
+                    className="flex items-center gap-1 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0 text-xs sm:text-sm h-9 flex-1"
+                    data-testid="add-employee-btn"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Add</span>
+                  </Button>
+                  <Button 
+                    onClick={() => setShowEditEmployee(true)}
+                    size="sm"
+                    className="flex items-center gap-1 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#8B5CF6]/30 transition-all border-0 text-xs sm:text-sm h-9 flex-1"
+                    data-testid="edit-employee-btn"
+                  >
+                    <UserCog className="w-4 h-4" />
+                    <span className="hidden sm:inline">Edit</span>
+                  </Button>
+                  <Button 
+                    onClick={() => setShowRemoveEmployee(true)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1 border-red-400/50 text-red-400 font-semibold hover:bg-red-500/10 transition-all text-xs sm:text-sm h-9 flex-1"
+                    data-testid="remove-employee-btn"
+                  >
+                    <UserMinus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Remove</span>
+                  </Button>
+                </div>
               </div>
-              {/* Employee Management: Add, Edit, Remove */}
-              <div className="flex flex-col gap-1">
-                <Button 
-                  onClick={() => setShowAddEmployee(true)}
-                  size="sm"
-                  className="flex items-center gap-2 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0 text-xs sm:text-sm h-9"
-                  data-testid="add-employee-btn"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Add</span>
-                </Button>
-              </div>
-              <Button 
-                onClick={() => setShowEditEmployee(true)}
-                size="sm"
-                className="flex items-center gap-2 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#8B5CF6]/30 transition-all border-0 text-xs sm:text-sm h-9"
-                data-testid="edit-employee-btn"
-              >
-                <UserCog className="w-4 h-4" />
-                <span className="hidden sm:inline">Edit</span>
-              </Button>
-              <Button 
-                onClick={() => setShowRemoveEmployee(true)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 border-red-400/50 text-red-400 font-semibold hover:bg-red-500/10 transition-all text-xs sm:text-sm h-9"
-                data-testid="remove-employee-btn"
-              >
-                <UserMinus className="w-4 h-4" />
-                <span className="hidden sm:inline">Remove</span>
-              </Button>
             </div>
           </div>
 
