@@ -679,7 +679,7 @@ export default function MileageTrackingSection({ getAuthHeader }) {
   return (
     <>
       {/* Main Section */}
-      <div className="dashboard-card">
+      <div className="dashboard-card" data-testid="mileage-section">
         <div 
           className="flex items-center justify-between cursor-pointer"
           onClick={() => setIsExpanded(!isExpanded)}
