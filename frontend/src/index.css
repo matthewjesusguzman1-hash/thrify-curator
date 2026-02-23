@@ -502,6 +502,17 @@ table tbody tr:hover {
     padding: 2rem;
 }
 
+/* Notification text visibility fix */
+.notification-text {
+    color: #1a1a1a !important;
+    opacity: 1 !important;
+}
+
+.notification-text-secondary {
+    color: #666666 !important;
+    opacity: 1 !important;
+}
+
 @layer base {
     :root {
         --background: 0 0% 98%;
