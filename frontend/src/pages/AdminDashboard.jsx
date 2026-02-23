@@ -866,8 +866,8 @@ export default function AdminDashboard() {
               {/* Edit Employee */}
               <Button 
                 onClick={() => setShowEditEmployee(true)}
-                variant="outline"
-                className="flex items-center gap-2 border-2 border-[#1A1A1A] bg-[#8B5CF6] text-white font-bold uppercase tracking-wide hover:translate-y-[-1px] hover:shadow-bold-sm transition-all self-start"
+                size="sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#8B5CF6]/30 transition-all border-0 self-start"
                 data-testid="edit-employee-btn"
               >
                 <UserCog className="w-4 h-4" />
@@ -881,16 +881,18 @@ export default function AdminDashboard() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
               onClick={() => setShowAddEmployee(false)}
             >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="bg-white border-3 border-[#1A1A1A] p-6 w-full max-w-md shadow-bold-lg"
+                className="bg-white rounded-xl overflow-hidden w-full max-w-md shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
                 data-testid="add-employee-modal"
               >
+                <div className="h-1.5 bg-gradient-to-r from-[#FF1493] to-[#E91E8C]" />
+                <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-playfair text-xl font-bold text-[#333]">Add New Employee</h2>
                   <button
