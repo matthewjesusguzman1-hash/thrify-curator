@@ -2155,14 +2155,14 @@ export default function AdminDashboard() {
                         <table className="data-table" data-testid="time-entries-table">
                           <thead>
                             <tr>
-                              <th>Employee</th>
-                              <th>Clock In</th>
-                              <th>Clock Out</th>
-                              <th>Hours</th>
+                              <SortableHeader table="timeEntries" sortKey="user_name">Employee</SortableHeader>
+                              <SortableHeader table="timeEntries" sortKey="clock_in">Clock In</SortableHeader>
+                              <SortableHeader table="timeEntries" sortKey="clock_out">Clock Out</SortableHeader>
+                              <SortableHeader table="timeEntries" sortKey="total_hours">Hours</SortableHeader>
                             </tr>
                           </thead>
                           <tbody>
-                            {timeEntries.slice(0, 20).map((entry) => (
+                            {getSortedData(timeEntries, 'timeEntries').slice(0, 20).map((entry) => (
                               <tr key={entry.id} data-testid={`time-entry-row-${entry.id}`}>
                                 <td>
                                   <div className="flex items-center gap-2">
