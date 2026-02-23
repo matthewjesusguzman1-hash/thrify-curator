@@ -268,6 +268,13 @@ export default function AdminDashboard() {
     }
   }, [getAuthHeader]);
 
+  // Fetch form submissions when section is opened
+  useEffect(() => {
+    if (showFormsSection) {
+      fetchFormSubmissions();
+    }
+  }, [showFormsSection, fetchFormSubmissions]);
+
   const handleUpdateSubmissionStatus = async (formType, submissionId, newStatus) => {
     setUpdatingStatus(true);
     try {
