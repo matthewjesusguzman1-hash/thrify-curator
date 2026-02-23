@@ -416,3 +416,102 @@ async def create_time_entry(entry_data: CreateTimeEntryRequest, admin: dict = De
     await db.time_entries.insert_one(entry.model_dump())
     
     return entry
+
+
+# W-9 Document Management
+@router.post("/employees/{employee_id}/w9")
+async def upload_w9(employee_id: str, file: UploadFile = File(...), admin: dict = Depends(get_admin_user)):
+    """Upload W-9 document for an employee"""
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Validate file type
+    allowed_types = ["application/pdf", "image/jpeg", "image/png", "image/jpg"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only PDF, JPEG, and PNG files are allowed")
+    
+    # Read file content
+    content = await file.read()
+    
+    # Size limit: 10MB
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+    
+    # Store file info in database
+    w9_doc = {
+        "employee_id": employee_id,
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "content": base64.b64encode(content).decode('utf-8'),
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "uploaded_by": admin["id"]
+    }
+    
+    # Update or insert W-9 document
+    await db.w9_documents.update_one(
+        {"employee_id": employee_id},
+        {"$set": w9_doc},
+        upsert=True
+    )
+    
+    # Update employee record to indicate W-9 is on file
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": {"has_w9": True, "w9_uploaded_at": w9_doc["uploaded_at"]}}
+    )
+    
+    return {
+        "message": "W-9 uploaded successfully",
+        "filename": file.filename,
+        "uploaded_at": w9_doc["uploaded_at"]
+    }
+
+
+@router.get("/employees/{employee_id}/w9")
+async def download_w9(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Download W-9 document for an employee"""
+    w9_doc = await db.w9_documents.find_one({"employee_id": employee_id}, {"_id": 0})
+    if not w9_doc:
+        raise HTTPException(status_code=404, detail="No W-9 document found for this employee")
+    
+    content = base64.b64decode(w9_doc["content"])
+    
+    return Response(
+        content=content,
+        media_type=w9_doc["content_type"],
+        headers={
+            "Content-Disposition": f'attachment; filename="{w9_doc["filename"]}"'
+        }
+    )
+
+
+@router.delete("/employees/{employee_id}/w9")
+async def delete_w9(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete W-9 document for an employee"""
+    result = await db.w9_documents.delete_one({"employee_id": employee_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="No W-9 document found for this employee")
+    
+    # Update employee record
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$unset": {"has_w9": "", "w9_uploaded_at": ""}}
+    )
+    
+    return {"message": "W-9 document deleted successfully"}
+
+
+@router.get("/employees/{employee_id}/w9/status")
+async def get_w9_status(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Check if an employee has a W-9 on file"""
+    w9_doc = await db.w9_documents.find_one({"employee_id": employee_id}, {"_id": 0, "content": 0})
+    if not w9_doc:
+        return {"has_w9": False}
+    
+    return {
+        "has_w9": True,
+        "filename": w9_doc["filename"],
+        "content_type": w9_doc["content_type"],
+        "uploaded_at": w9_doc["uploaded_at"]
+    }
