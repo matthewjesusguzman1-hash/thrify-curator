@@ -8,7 +8,9 @@ import os
 import uuid
 from datetime import datetime, timedelta
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+# Try multiple sources for BASE_URL
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '') or os.environ.get('BASE_URL', '') or 'https://thrifty-curator.preview.emergentagent.com'
+BASE_URL = BASE_URL.rstrip('/')
 
 # Test data
 TEST_ADMIN_EMAIL = "matthewjesusguzman1@gmail.com"
