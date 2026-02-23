@@ -2528,28 +2528,16 @@ export default function AdminDashboard() {
                                   {emp.role !== 'admin' && (
                                     <div className="flex items-center gap-1">
                                       {emp.has_w9 ? (
-                                        <>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => { e.stopPropagation(); handleW9Download(emp.id, emp.name); }}
-                                            className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 px-2"
-                                            data-testid={`download-w9-${emp.id}`}
-                                            title="Download W-9"
-                                          >
-                                            <Download className="w-4 h-4" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => { e.stopPropagation(); handleW9Delete(emp.id); }}
-                                            className="text-red-400 hover:text-red-500 hover:bg-red-50 h-8 px-2"
-                                            data-testid={`delete-w9-${emp.id}`}
-                                            title="Delete W-9"
-                                          >
-                                            <Trash2 className="w-3 h-3" />
-                                          </Button>
-                                        </>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => { e.stopPropagation(); handleW9Download(emp.id, emp.name); }}
+                                          className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 px-2"
+                                          data-testid={`download-w9-${emp.id}`}
+                                          title="Download W-9"
+                                        >
+                                          <Download className="w-4 h-4" />
+                                        </Button>
                                       ) : (
                                         <>
                                           <input
