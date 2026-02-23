@@ -2273,6 +2273,18 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="form-group">
+                      <Label className="form-label">Phone Number</Label>
+                      <Input
+                        type="tel"
+                        value={editEmployeeData.phone}
+                        onChange={(e) => setEditEmployeeData({ ...editEmployeeData, phone: e.target.value })}
+                        placeholder="(555) 123-4567"
+                        className="form-input"
+                        data-testid="edit-employee-phone"
+                      />
+                    </div>
+
+                    <div className="form-group">
                       <Label className="form-label">Role *</Label>
                       <Select
                         value={editEmployeeData.role}
