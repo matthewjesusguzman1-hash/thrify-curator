@@ -497,3 +497,24 @@ Build a "Thrifty Curator" reselling application with:
 
 - **Test Results**: 100% pass rate (8 backend tests, full frontend verification)
 - **Test Report**: `/app/test_reports/iteration_22.json`
+
+### Header Trip Button Split Feature (COMPLETED)
+
+- **Feature**: When Start Trip is clicked in the header, the single button splits into two equal-sized buttons:
+  1. **Pause/Resume Button** (amber when active, green when paused) - Pauses or resumes GPS tracking
+  2. **End Trip Button** (red) - Scrolls to mileage section and shows guidance toast
+
+- **UI Changes** (AdminDashboard.jsx):
+  - Added `headerTripPaused` state to track pause status from header
+  - Added `handleHeaderPauseTrip` and `handleHeaderResumeTrip` handlers
+  - Split buttons use `flex-1` class for equal width
+  - Updated `checkActiveTripStatus` to also check `is_paused` status
+
+- **State Synchronization**:
+  - `onTripStatusChange` callback now passes object with `{isActive, isPaused}` 
+  - MileageTrackingSection receives and syncs `headerTripPaused` prop
+  - Both header and section buttons stay in sync
+
+- **Test Results**: 100% pass rate (10 frontend feature checks)
+- **Test Report**: `/app/test_reports/iteration_23.json`
+- **Data-testid attributes**: `header-start-trip-btn`, `header-pause-resume-btn`, `header-end-trip-btn`
