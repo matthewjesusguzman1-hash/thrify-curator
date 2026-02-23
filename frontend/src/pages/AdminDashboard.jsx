@@ -956,7 +956,7 @@ export default function AdminDashboard() {
   return (
     <div className="dashboard-container" data-testid="admin-dashboard">
       {/* Header */}
-      <header className="dashboard-header">
+      <header className="dashboard-header" style={{ background: 'linear-gradient(90deg, #1A1A2E 0%, #16213E 100%)' }}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
