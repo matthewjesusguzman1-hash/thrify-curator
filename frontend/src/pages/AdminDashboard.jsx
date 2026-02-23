@@ -2096,28 +2096,30 @@ export default function AdminDashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h1 className="font-poppins text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
-            <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <h1 className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
+            <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
               {/* Reports Stack */}
               <div className="flex flex-col gap-1">
                 <Button 
                   onClick={() => setShowPayroll(true)}
                   size="sm"
-                  className="flex items-center gap-2 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#00D4FF]/30 transition-all border-0"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#00D4FF]/30 transition-all border-0 text-xs sm:text-sm"
                   data-testid="payroll-btn"
                 >
                   <DollarSign className="w-4 h-4" />
-                  Payroll
+                  <span className="hidden xs:inline">Payroll</span>
+                  <span className="xs:hidden">$</span>
                 </Button>
                 <button 
                   onClick={() => setShowReport(true)}
-                  className="h-8 rounded-md px-3 text-xs flex items-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all border border-[#00D4FF]/30"
+                  className="h-8 rounded-md px-2 sm:px-3 text-xs flex items-center gap-1 sm:gap-2 font-semibold shadow-md hover:shadow-lg transition-all border border-[#00D4FF]/30"
                   style={{ background: 'linear-gradient(to right, #2D2D4A, #3D3D6A)', color: 'white' }}
                   data-testid="run-report-btn"
                 >
                   <FileText className="w-4 h-4" />
-                  Run Report
+                  <span className="hidden xs:inline">Run Report</span>
+                  <span className="xs:hidden">Report</span>
                 </button>
               </div>
               {/* Employee Management Stack */}
@@ -2125,32 +2127,35 @@ export default function AdminDashboard() {
                 <Button 
                   onClick={() => setShowAddEmployee(true)}
                   size="sm"
-                  className="flex items-center gap-2 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0"
+                  className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0 text-xs sm:text-sm"
                   data-testid="add-employee-btn"
                 >
                   <UserPlus className="w-4 h-4" />
-                  Add Employee
+                  <span className="hidden xs:inline">Add Employee</span>
+                  <span className="xs:hidden">Add</span>
                 </Button>
                 <Button 
                   onClick={() => setShowRemoveEmployee(true)}
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 border-2 border-red-500 text-red-500 font-semibold hover:bg-red-500 hover:text-white transition-all"
+                  className="flex items-center gap-1 sm:gap-2 border-2 border-red-500 text-red-500 font-semibold hover:bg-red-500 hover:text-white transition-all text-xs sm:text-sm"
                   data-testid="remove-employee-btn"
                 >
                   <UserMinus className="w-4 h-4" />
-                  Remove Employee
+                  <span className="hidden xs:inline">Remove Employee</span>
+                  <span className="xs:hidden">Remove</span>
                 </Button>
               </div>
               {/* Edit Employee */}
               <Button 
                 onClick={() => setShowEditEmployee(true)}
                 size="sm"
-                className="flex items-center gap-2 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#8B5CF6]/30 transition-all border-0 self-start"
+                className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#8B5CF6]/30 transition-all border-0 self-start text-xs sm:text-sm"
                 data-testid="edit-employee-btn"
               >
                 <UserCog className="w-4 h-4" />
-                Edit Employee
+                <span className="hidden xs:inline">Edit Employee</span>
+                <span className="xs:hidden">Edit</span>
               </Button>
             </div>
           </div>
