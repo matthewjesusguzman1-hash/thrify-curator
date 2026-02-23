@@ -4148,9 +4148,18 @@ export default function AdminDashboard() {
           {/* Mileage Tracking Section */}
           <MileageTrackingSection 
             getAuthHeader={getAuthHeader} 
-            onTripStatusChange={(isActive) => setHeaderTripActive(isActive)}
+            onTripStatusChange={(status) => {
+              if (typeof status === 'object') {
+                setHeaderTripActive(status.isActive);
+                setHeaderTripPaused(status.isPaused);
+              } else {
+                // Backward compatibility for boolean
+                setHeaderTripActive(status);
+              }
+            }}
             forceExpand={forceMileageExpand}
             headerTripActive={headerTripActive}
+            headerTripPaused={headerTripPaused}
           />
 
           {/* W-9 Rejection Modal */}
