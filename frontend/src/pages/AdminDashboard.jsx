@@ -361,6 +361,13 @@ export default function AdminDashboard() {
     }
   }, [showFormsSection, fetchFormSubmissions]);
 
+  // Refresh payroll summary when section is opened
+  useEffect(() => {
+    if (showStatsSection) {
+      fetchPayrollSummary();
+    }
+  }, [showStatsSection, fetchPayrollSummary]);
+
   const handleUpdateSubmissionStatus = async (formType, submissionId, newStatus) => {
     setUpdatingStatus(true);
     try {
