@@ -15,6 +15,7 @@ import {
   UserCog,
   X,
   Trash2,
+  Edit2,
   FileText,
   Download,
   Bell,
