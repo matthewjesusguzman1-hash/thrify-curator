@@ -1470,7 +1470,7 @@ export default function AdminDashboard() {
                       value={selectedJobApp} 
                       onValueChange={(value) => {
                         setSelectedJobApp(value);
-                        if (value) {
+                        if (value && value !== "none") {
                           const app = formSubmissions.jobApplications.find(a => a.id === value);
                           if (app) {
                             setNewEmployee({
@@ -1485,7 +1485,7 @@ export default function AdminDashboard() {
                         <SelectValue placeholder="Select a job applicant..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">-- No import --</SelectItem>
+                        <SelectItem value="none">-- No import --</SelectItem>
                         {formSubmissions.jobApplications.map((app) => (
                           <SelectItem key={app.id} value={app.id}>
                             {app.full_name} ({app.email})
