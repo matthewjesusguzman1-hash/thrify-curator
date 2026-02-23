@@ -2853,6 +2853,7 @@ export default function AdminDashboard() {
                             <tr>
                               <SortableHeader table="allEmployees" sortKey="name">Name</SortableHeader>
                               <SortableHeader table="allEmployees" sortKey="email">Email</SortableHeader>
+                              <SortableHeader table="allEmployees" sortKey="phone">Phone</SortableHeader>
                               <SortableHeader table="allEmployees" sortKey="role">Role</SortableHeader>
                               <SortableHeader table="allEmployees" sortKey="hourly_rate">Hourly Rate</SortableHeader>
                               <SortableHeader table="allEmployees" sortKey="created_at">Joined</SortableHeader>
@@ -2883,6 +2884,16 @@ export default function AdminDashboard() {
                                   </div>
                                 </td>
                                 <td>{emp.email}</td>
+                                <td>
+                                  {emp.phone ? (
+                                    <div className="flex items-center gap-1 text-sm">
+                                      <Phone className="w-3 h-3 text-[#888]" />
+                                      <span>{emp.phone}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[#aaa] text-sm">-</span>
+                                  )}
+                                </td>
                                 <td>
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                     emp.role === 'admin' 
