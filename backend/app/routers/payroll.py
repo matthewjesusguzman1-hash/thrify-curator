@@ -542,6 +542,15 @@ class CheckRecordUpload(BaseModel):
     amount: Optional[float] = None
     employee_name: Optional[str] = None
 
+class CheckRecordUpdate(BaseModel):
+    description: Optional[str] = None
+    check_date: Optional[str] = None
+    amount: Optional[float] = None
+    employee_name: Optional[str] = None
+    image_data: Optional[str] = None  # base64 encoded, optional for update
+    filename: Optional[str] = None
+    content_type: Optional[str] = None
+
 @router.get("/check-records")
 async def get_check_records(admin: dict = Depends(get_admin_user)):
     """Get all payroll check records"""
