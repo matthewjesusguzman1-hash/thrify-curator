@@ -301,6 +301,11 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       setShowEndTripModal(false);
       setEndTripData({ purpose: "thrifting", purpose_other: "", notes: "" });
       
+      // Notify parent component
+      if (onTripStatusChange) {
+        onTripStatusChange(false);
+      }
+      
       const totalMiles = response.data.total_miles || cumulativeMiles;
       toast.success(`Trip ended! ${totalMiles.toFixed(1)} miles recorded from route tracking.`);
       fetchMileageEntries();
