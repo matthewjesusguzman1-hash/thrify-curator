@@ -868,7 +868,7 @@ export default function AdminDashboard() {
               <Button 
                 onClick={() => setShowEditEmployee(true)}
                 variant="outline"
-                className="flex items-center gap-2 border-[#8BA88E] text-[#8BA88E] hover:bg-[#8BA88E]/10 self-start"
+                className="flex items-center gap-2 border-2 border-[#1A1A1A] bg-[#8B5CF6] text-white font-bold uppercase tracking-wide hover:translate-y-[-1px] hover:shadow-bold-sm transition-all self-start"
                 data-testid="edit-employee-btn"
               >
                 <UserCog className="w-4 h-4" />
@@ -882,13 +882,13 @@ export default function AdminDashboard() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
               onClick={() => setShowAddEmployee(false)}
             >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                className="bg-white border-3 border-[#1A1A1A] p-6 w-full max-w-md shadow-bold-lg"
                 onClick={(e) => e.stopPropagation()}
                 data-testid="add-employee-modal"
               >
