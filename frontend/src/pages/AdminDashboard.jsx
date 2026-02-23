@@ -4593,8 +4593,8 @@ export default function AdminDashboard() {
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-playfair text-xl font-bold text-[#333]">Add Shift for {showEmployeeShiftsModal.name}</h2>
-                  <button onClick={() => setShowAddShiftModal(false)} className="text-[#999] hover:text-[#666]">
-                    <X className="w-5 h-5" />
+                  <button onClick={() => setShowAddShiftModal(false)} className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors">
+                    <X className="w-5 h-5 text-gray-600" />
                   </button>
                 </div>
                 <form onSubmit={handleSaveNewShift}>
