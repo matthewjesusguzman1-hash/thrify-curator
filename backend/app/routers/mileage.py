@@ -337,6 +337,8 @@ async def get_mileage_summary(
 @router.get("/export/csv")
 async def export_mileage_csv(
     year: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     admin: dict = Depends(get_admin_user)
 ):
     """Export mileage entries as CSV for tax filing"""
@@ -344,10 +346,15 @@ async def export_mileage_csv(
     import io
     import csv
     
-    if not year:
+    # Build date query based on provided parameters
+    if start_date and end_date:
+        query = {"date": {"$gte": start_date, "$lte": end_date}}
+    elif year:
+        query = {"date": {"$gte": f"{year}-01-01", "$lt": f"{year + 1}-01-01"}}
+    else:
         year = datetime.now(timezone.utc).year
+        query = {"date": {"$gte": f"{year}-01-01", "$lt": f"{year + 1}-01-01"}}
     
-    query = {"date": {"$gte": f"{year}-01-01", "$lt": f"{year + 1}-01-01"}}
     entries = await db.mileage_entries.find(query, {"_id": 0}).sort("date", 1).to_list(10000)
     
     # IRS standard mileage rate for 2026
