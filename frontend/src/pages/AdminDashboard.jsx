@@ -1895,7 +1895,8 @@ export default function AdminDashboard() {
                           if (app) {
                             setNewEmployee({
                               name: app.full_name,
-                              email: app.email
+                              email: app.email,
+                              phone: app.phone || ""
                             });
                           }
                         }
@@ -1943,6 +1944,18 @@ export default function AdminDashboard() {
                       data-testid="new-employee-email"
                     />
                     <p className="text-xs text-[#888] mt-1">This email will be used for login</p>
+                  </div>
+
+                  <div className="form-group">
+                    <Label className="form-label">Phone Number</Label>
+                    <Input
+                      type="tel"
+                      value={newEmployee.phone}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
+                      placeholder="(555) 123-4567"
+                      className="form-input"
+                      data-testid="new-employee-phone"
+                    />
                   </div>
 
                   {/* W-9 Form Download Section */}
