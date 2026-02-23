@@ -1800,17 +1800,30 @@ export default function AdminDashboard() {
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end">
-              {/* Reports */}
-              <Button 
-                onClick={() => setShowPayroll(true)}
-                size="sm"
-                className="flex items-center gap-2 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#00D4FF]/30 transition-all border-0 text-xs sm:text-sm h-9"
-                data-testid="payroll-btn"
-              >
-                <DollarSign className="w-4 h-4" />
-                <span className="hidden sm:inline">$</span>
-              </Button>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end items-start">
+              {/* Reports Stack */}
+              <div className="flex flex-col gap-1">
+                <Button 
+                  onClick={() => setShowPayroll(true)}
+                  size="sm"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#00D4FF]/30 transition-all border-0 text-xs sm:text-sm h-9"
+                  data-testid="payroll-btn"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Payroll
+                </Button>
+                <Button 
+                  onClick={() => setShowReport(true)}
+                  size="sm"
+                  variant="outline"
+                  className="flex items-center gap-2 border-white/30 text-white font-semibold hover:bg-white/10 transition-all text-xs sm:text-sm h-9"
+                  data-testid="run-report-btn"
+                >
+                  <FileText className="w-4 h-4" />
+                  Shift Report
+                </Button>
+              </div>
+              {/* Employee Management: Add, Edit, Remove */}
               <Button 
                 onClick={() => setShowAddEmployee(true)}
                 size="sm"
@@ -1828,16 +1841,6 @@ export default function AdminDashboard() {
               >
                 <UserCog className="w-4 h-4" />
                 <span className="hidden sm:inline">Edit</span>
-              </Button>
-              <Button 
-                onClick={() => setShowReport(true)}
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2 border-white/30 text-white font-semibold hover:bg-white/10 transition-all text-xs sm:text-sm h-9"
-                data-testid="run-report-btn"
-              >
-                <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">Report</span>
               </Button>
               <Button 
                 onClick={() => setShowRemoveEmployee(true)}
