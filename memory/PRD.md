@@ -292,7 +292,28 @@ Build a "Thrifty Curator" reselling application with:
 - PDF generation uses reportlab library
 - Individual employee rates shown with ★ indicator in payroll reports
 - Minor React hydration warning in console (cosmetic, does not affect functionality)
-- **CRITICAL REFACTORING NEEDED**: AdminDashboard.jsx is now over 6,000 lines and urgently needs to be broken down into smaller, manageable components to reduce technical debt and maintenance risk.
+- **REFACTORING IN PROGRESS**: AdminDashboard.jsx has been reduced from 6787 lines to ~5880 lines by extracting MileageTrackingSection. Further refactoring is planned.
+
+## Recent Updates (Feb 23, 2026 - Session 3)
+
+### Refactoring Completed
+- **MileageTrackingSection Extraction**: Successfully extracted the entire mileage tracking feature (~900 lines) into a standalone component at `/app/frontend/src/components/admin/sections/MileageTrackingSection.jsx`
+- AdminDashboard.jsx reduced from 6787 lines to 5880 lines
+- All tests pass (17 backend API tests, full frontend verification)
+- No regressions introduced
+- Features preserved:
+  - Section expand/collapse animation
+  - GPS trip tracking with Start Trip button
+  - Manual mileage entry form with all fields
+  - Purpose dropdown (thrifting, post_office, other)
+  - CSV and PDF export with IRS deduction calculations
+  - Recent trips list with edit/delete actions
+  - Summary cards (Total Miles, Total Trips, IRS Rate, Est. Deduction)
+
+### Files Changed
+- Modified: `/app/frontend/src/pages/AdminDashboard.jsx` - Removed mileage state/functions/JSX, added import
+- Created: `/app/frontend/src/components/admin/sections/MileageTrackingSection.jsx` - Self-contained mileage component
+- Modified: `/app/frontend/src/components/admin/index.js` - Added export for MileageTrackingSection
 
 ## Recent Updates (Feb 23, 2026 - Session 2)
 
