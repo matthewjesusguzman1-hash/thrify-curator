@@ -47,7 +47,7 @@ const platforms = [
     name: "eBay", 
     logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/9qw758ny_IMG_0080.PNG",
     url: "https://www.ebay.com/str/thriftycurator", 
-    color: "#000000",
+    color: "#FFFFFF",
     useImage: true
   },
   { 
