@@ -950,6 +950,7 @@ export default function AdminDashboard() {
                     </Button>
                   </div>
                 </form>
+                </div>
               </motion.div>
             </motion.div>
           )}
