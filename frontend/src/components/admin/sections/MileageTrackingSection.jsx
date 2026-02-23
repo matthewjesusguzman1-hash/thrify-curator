@@ -27,7 +27,7 @@ import axios from "axios";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ACTIVE_TRIP_KEY = "thrifty_curator_active_trip";
 
-export default function MileageTrackingSection({ getAuthHeader }) {
+export default function MileageTrackingSection({ getAuthHeader, onTripStatusChange }) {
   // Section visibility
   const [isExpanded, setIsExpanded] = useState(false);
   
