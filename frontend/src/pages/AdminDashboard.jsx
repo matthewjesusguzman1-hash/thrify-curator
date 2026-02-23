@@ -1678,46 +1678,73 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="dashboard-card">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#F8C8DC]/30 rounded-xl flex items-center justify-center">
-                  <Users className="w-6 h-6 text-[#D48C9E]" />
+          {/* Stats Grid - Collapsible */}
+          <div className="dashboard-card">
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowStatsSection(!showStatsSection)}
+              data-testid="stats-section-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#F8C8DC] to-[#D48C9E] rounded-xl flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-white" />
                 </div>
-                <div>
-                  <p className="text-3xl font-bold text-[#333]" data-testid="total-employees">
-                    {summary.total_employees}
-                  </p>
-                  <p className="text-sm text-[#888]">Total Employees</p>
-                </div>
+                <h2 className="font-playfair text-xl font-semibold text-[#333]">Overview Stats</h2>
               </div>
+              {showStatsSection ? (
+                <ChevronUp className="w-5 h-5 text-[#888]" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-[#888]" />
+              )}
             </div>
-            <div className="dashboard-card">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#8BA88E]/20 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-[#8BA88E]" />
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-[#333]" data-testid="total-hours">
-                    {summary.total_hours}
-                  </p>
-                  <p className="text-sm text-[#888]">Total Hours</p>
-                </div>
-              </div>
-            </div>
-            <div className="dashboard-card">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#C5A065]/20 rounded-xl flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-[#C5A065]" />
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-[#333]" data-testid="total-shifts">
-                    {summary.total_shifts}
-                  </p>
-                  <p className="text-sm text-[#888]">Total Shifts</p>
-                </div>
-              </div>
+            <AnimatePresence>
+              {showStatsSection && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-[#eee]">
+                    <div className="p-4 bg-[#F9F6F7] rounded-xl">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#F8C8DC]/30 rounded-xl flex items-center justify-center">
+                          <Users className="w-6 h-6 text-[#D48C9E]" />
+                        </div>
+                        <div>
+                          <p className="text-3xl font-bold text-[#333]" data-testid="total-employees">
+                            {summary.total_employees}
+                          </p>
+                          <p className="text-sm text-[#888]">Total Employees</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-[#F9F6F7] rounded-xl">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#8BA88E]/20 rounded-xl flex items-center justify-center">
+                          <TrendingUp className="w-6 h-6 text-[#8BA88E]" />
+                        </div>
+                        <div>
+                          <p className="text-3xl font-bold text-[#333]" data-testid="total-hours">
+                            {summary.total_hours}
+                          </p>
+                          <p className="text-sm text-[#888]">Total Hours</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-[#F9F6F7] rounded-xl">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#C5A065]/20 rounded-xl flex items-center justify-center">
+                          <Calendar className="w-6 h-6 text-[#C5A065]" />
+                        </div>
+                        <div>
+                          <p className="text-3xl font-bold text-[#333]" data-testid="total-shifts">
+                            {summary.total_shifts}
+                          </p>
+                          <p className="text-sm text-[#888]">Total Shifts</p>
+                        </div>
+                      </div>
             </div>
           </div>
 
