@@ -3755,12 +3755,26 @@ export default function AdminDashboard() {
                         {checkRecords.map((record) => (
                           <div key={record.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             <div 
-                              className="h-40 bg-gray-100 flex items-center justify-center cursor-pointer"
+                              className="h-40 bg-gray-100 flex items-center justify-center cursor-pointer overflow-hidden relative group"
                               onClick={() => handleViewCheckImage(record.id)}
                             >
-                              <div className="text-center">
-                                <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                                <p className="text-xs text-[#888]">Click to view</p>
+                              <img
+                                src={`${API}/admin/payroll/check-records/${record.id}/image`}
+                                alt={record.description || "Payroll check"}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                              <div className="hidden text-center absolute inset-0 items-center justify-center bg-gray-100">
+                                <div>
+                                  <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                                  <p className="text-xs text-[#888]">Click to view</p>
+                                </div>
+                              </div>
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                               </div>
                             </div>
                             <div className="p-3">
