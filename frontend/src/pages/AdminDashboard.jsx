@@ -4084,21 +4084,145 @@ export default function AdminDashboard() {
                       </div>
                     ) : (
                       <>
-                        <p className="text-xs text-[#888] mb-2">
-                          Showing {getFilteredCheckRecords().length} of {checkRecords.length} records
-                        </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs text-[#888]">
+                            Showing {getFilteredCheckRecords().length} of {checkRecords.length} records
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const allExpanded = Object.keys(expandedCheckRecords).length === getFilteredCheckRecords().length && 
+                                                  Object.values(expandedCheckRecords).every(v => v);
+                              if (allExpanded) {
+                                setExpandedCheckRecords({});
+                              } else {
+                                const newExpanded = {};
+                                getFilteredCheckRecords().forEach(r => newExpanded[r.id] = true);
+                                setExpandedCheckRecords(newExpanded);
+                              }
+                            }}
+                            className="text-xs text-purple-600 hover:text-purple-800"
+                          >
+                            {Object.keys(expandedCheckRecords).length === getFilteredCheckRecords().length && 
+                             Object.values(expandedCheckRecords).every(v => v) ? "Collapse All" : "Expand All"}
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
                         {getFilteredCheckRecords().map((record) => (
                           <div key={record.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                            {/* Collapsed Header - Always visible */}
                             <div 
-                              className="h-40 bg-gray-100 flex items-center justify-center cursor-pointer overflow-hidden relative group"
-                              onClick={() => handleViewCheckImage(record.id)}
+                              className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                              onClick={() => setExpandedCheckRecords(prev => ({ ...prev, [record.id]: !prev[record.id] }))}
                             >
-                              {checkThumbnails[record.id] ? (
-                                <>
-                                  <img
-                                    src={checkThumbnails[record.id]}
-                                    alt={record.description || "Payroll check"}
+                              <div className="flex items-center gap-3">
+                                {/* Thumbnail preview */}
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                  {checkThumbnails[record.id] ? (
+                                    <img
+                                      src={checkThumbnails[record.id]}
+                                      alt={record.description || "Check"}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <ImageIcon className="w-5 h-5 text-gray-300" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-[#333] text-sm">
+                                    {record.employee_name || "Unnamed"}
+                                  </p>
+                                  <div className="flex items-center gap-2 text-xs text-[#888]">
+                                    <span>{record.check_date || "No date"}</span>
+                                    {record.amount && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="text-green-600 font-medium">${parseFloat(record.amount).toFixed(2)}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {/* Quick action buttons */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => { e.stopPropagation(); handleViewCheckImage(record.id); }}
+                                  className="h-8 w-8 p-0 text-purple-600"
+                                  title="View"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => { e.stopPropagation(); handleEditCheckRecord(record); }}
+                                  className="h-8 w-8 p-0 text-blue-600"
+                                  title="Edit"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteCheckRecord(record.id); }}
+                                  className="h-8 w-8 p-0 text-red-500"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                                {expandedCheckRecords[record.id] ? (
+                                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                                ) : (
+                                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Expanded Content */}
+                            {expandedCheckRecords[record.id] && (
+                              <div className="border-t border-gray-100">
+                                <div 
+                                  className="h-48 bg-gray-100 flex items-center justify-center cursor-pointer overflow-hidden relative group"
+                                  onClick={() => handleViewCheckImage(record.id)}
+                                >
+                                  {checkThumbnails[record.id] ? (
+                                    <>
+                                      <img
+                                        src={checkThumbnails[record.id]}
+                                        alt={record.description || "Payroll check"}
+                                        className="w-full h-full object-contain"
+                                      />
+                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                        <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="text-center">
+                                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                                      <p className="text-xs text-[#888]">Loading...</p>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="p-3 bg-gray-50">
+                                  {record.description && (
+                                    <p className="text-sm text-[#666] mb-2">{record.description}</p>
+                                  )}
+                                  <p className="text-xs text-[#aaa]">
+                                    Uploaded: {new Date(record.uploaded_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        </div>
+                      </>
+                    )}
                                     className="w-full h-full object-cover"
                                   />
                                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
