@@ -4,6 +4,7 @@ from app.routers.admin import router as admin_router
 from app.routers.notifications import router as notifications_router
 from app.routers.payroll import router as payroll_router
 from app.routers.forms import router as forms_router
+from app.routers.mileage import router as mileage_router
 
 __all__ = [
     "auth_router",
@@ -11,5 +12,6 @@ __all__ = [
     "admin_router",
     "notifications_router",
     "payroll_router",
-    "forms_router"
+    "forms_router",
+    "mileage_router"
 ]
