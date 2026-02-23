@@ -1446,6 +1446,21 @@ export default function AdminDashboard() {
                 {/* Report Results */}
                 {reportData && (
                   <div className="space-y-6">
+                    {/* Email Button */}
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleEmailShiftReport}
+                        disabled={emailingReport}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                        data-testid="email-shift-report-btn"
+                      >
+                        <Mail className="w-4 h-4" />
+                        {emailingReport ? "Sending..." : "Email Report"}
+                      </Button>
+                    </div>
+                    
                     {/* Summary */}
                     <div className="bg-[#F9F6F7] rounded-xl p-4">
                       <h3 className="font-semibold text-[#333] mb-3">Report Summary</h3>
