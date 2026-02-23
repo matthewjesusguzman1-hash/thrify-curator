@@ -2250,6 +2250,7 @@ export default function AdminDashboard() {
                               <SortableHeader table="timeEntries" sortKey="clock_in">Clock In</SortableHeader>
                               <SortableHeader table="timeEntries" sortKey="clock_out">Clock Out</SortableHeader>
                               <SortableHeader table="timeEntries" sortKey="total_hours">Hours</SortableHeader>
+                              <th className="text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2276,6 +2277,28 @@ export default function AdminDashboard() {
                                       Active
                                     </span>
                                   )}
+                                </td>
+                                <td>
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEditEntry(entry)}
+                                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                      data-testid={`edit-entry-${entry.id}`}
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteEntry(entry.id)}
+                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      data-testid={`delete-entry-${entry.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
