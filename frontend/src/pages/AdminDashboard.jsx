@@ -839,6 +839,34 @@ export default function AdminDashboard() {
     }, 100);
   };
 
+  const handleHeaderPauseTrip = async () => {
+    setHeaderTripLoading(true);
+    try {
+      await axios.post(`${API}/admin/mileage/pause-trip`, {}, getAuthHeader());
+      setHeaderTripPaused(true);
+      toast.success("Trip paused - GPS tracking stopped");
+    } catch (error) {
+      console.error("Failed to pause trip:", error);
+      toast.error(error.response?.data?.detail || "Failed to pause trip");
+    } finally {
+      setHeaderTripLoading(false);
+    }
+  };
+
+  const handleHeaderResumeTrip = async () => {
+    setHeaderTripLoading(true);
+    try {
+      await axios.post(`${API}/admin/mileage/resume-trip`, {}, getAuthHeader());
+      setHeaderTripPaused(false);
+      toast.success("Trip resumed - GPS tracking restarted");
+    } catch (error) {
+      console.error("Failed to resume trip:", error);
+      toast.error(error.response?.data?.detail || "Failed to resume trip");
+    } finally {
+      setHeaderTripLoading(false);
+    }
+  };
+
   // Employee Shifts Management Functions
   const handleViewEmployeeShifts = async (employee) => {
     setShowEmployeeShiftsModal(employee);
