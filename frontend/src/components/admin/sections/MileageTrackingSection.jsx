@@ -733,6 +733,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
+              data-testid="mileage-section-content"
             >
               <div className="pt-6 space-y-6">
                 {/* GPS Tracking Controls */}
