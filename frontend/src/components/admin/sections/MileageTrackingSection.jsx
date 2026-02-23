@@ -329,10 +329,11 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       setWaypointCount(0);
       setShowEndTripModal(false);
       setEndTripData({ purpose: "thrifting", purpose_other: "", notes: "" });
+      setIsPaused(false);
       
       // Notify parent component
       if (onTripStatusChange) {
-        onTripStatusChange(false);
+        onTripStatusChange({ isActive: false, isPaused: false });
       }
       
       const totalMiles = response.data.total_miles || cumulativeMiles;
