@@ -255,12 +255,25 @@ export default function AdminDashboard() {
   // Back to top button state
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  // Handle scroll for back to top button
+  // Handle scroll for back to top button with hysteresis to prevent flickering
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setShowBackToTop(window.scrollY > 400);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollY = window.scrollY;
+          setShowBackToTop(prev => {
+            // Show at 400px, hide at 300px (hysteresis buffer)
+            if (!prev && scrollY > 400) return true;
+            if (prev && scrollY < 300) return false;
+            return prev;
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
