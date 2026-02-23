@@ -807,9 +807,9 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="dashboard-content">
-        {/* Bold Accent Bar */}
-        <div className="accent-bar mb-6" />
+      <main className="dashboard-content bg-[#F8F9FA] min-h-screen">
+        {/* Bold Gradient Accent Bar */}
+        <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493] -mx-8 -mt-8 mb-6" />
         
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -817,15 +817,14 @@ export default function AdminDashboard() {
           className="space-y-6"
         >
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <h1 className="font-archivo text-2xl md:text-3xl text-[#1A1A1A] tracking-tight uppercase">Admin Dashboard</h1>
+            <h1 className="font-poppins text-2xl md:text-3xl font-bold text-[#1A1A2E]">Admin Dashboard</h1>
             <div className="flex gap-3">
               {/* Reports Stack */}
               <div className="flex flex-col gap-1">
                 <Button 
                   onClick={() => setShowPayroll(true)}
-                  variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 border-2 border-[#1A1A1A] bg-[#FACC15] text-[#1A1A1A] font-bold uppercase tracking-wide hover:translate-y-[-1px] hover:shadow-bold-sm transition-all"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#00D4FF]/30 transition-all border-0"
                   data-testid="payroll-btn"
                 >
                   <DollarSign className="w-4 h-4" />
@@ -835,7 +834,7 @@ export default function AdminDashboard() {
                   onClick={() => setShowReport(true)}
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 border-2 border-[#1A1A1A] font-bold uppercase tracking-wide hover:bg-[#FACC15] hover:translate-y-[-1px] hover:shadow-bold-sm transition-all"
+                  className="flex items-center gap-2 border-2 border-[#1A1A2E] text-[#1A1A2E] font-semibold hover:bg-[#1A1A2E] hover:text-white transition-all"
                   data-testid="run-report-btn"
                 >
                   <FileText className="w-4 h-4" />
@@ -847,7 +846,7 @@ export default function AdminDashboard() {
                 <Button 
                   onClick={() => setShowAddEmployee(true)}
                   size="sm"
-                  className="flex items-center gap-2 border-2 border-[#1A1A1A] bg-[#FF5A5F] text-white font-bold uppercase tracking-wide shadow-bold-sm hover:translate-y-[-1px] hover:shadow-bold transition-all"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0"
                   data-testid="add-employee-btn"
                 >
                   <UserPlus className="w-4 h-4" />
@@ -857,7 +856,7 @@ export default function AdminDashboard() {
                   onClick={() => setShowRemoveEmployee(true)}
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 border-2 border-[#1A1A1A] text-[#1A1A1A] font-bold uppercase tracking-wide hover:bg-red-500 hover:text-white hover:translate-y-[-1px] hover:shadow-bold-sm transition-all"
+                  className="flex items-center gap-2 border-2 border-red-500 text-red-500 font-semibold hover:bg-red-500 hover:text-white transition-all"
                   data-testid="remove-employee-btn"
                 >
                   <UserMinus className="w-4 h-4" />
