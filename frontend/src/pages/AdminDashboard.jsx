@@ -515,6 +515,91 @@ export default function AdminDashboard() {
     }
   };
 
+  // Employee Shifts Management Functions
+  const handleViewEmployeeShifts = async (employee) => {
+    setShowEmployeeShifts(employee);
+    setLoadingShifts(true);
+    try {
+      const response = await axios.get(`${API}/admin/employee/${employee.user_id}/shifts`, getAuthHeader());
+      setEmployeeShifts(response.data.shifts || []);
+    } catch (error) {
+      console.error("Failed to fetch employee shifts:", error);
+      // Fallback to filtering from timeEntries
+      const shifts = timeEntries.filter(e => e.employee_id === employee.user_id);
+      setEmployeeShifts(shifts);
+    } finally {
+      setLoadingShifts(false);
+    }
+  };
+
+  const handleAddShift = () => {
+    setShiftFormData({ clock_in: "", clock_out: "" });
+    setShowAddShiftModal(true);
+  };
+
+  const handleEditShift = (shift) => {
+    const clockIn = new Date(shift.clock_in);
+    const clockOut = shift.clock_out ? new Date(shift.clock_out) : null;
+    
+    setEditingShift(shift);
+    setShiftFormData({
+      clock_in: clockIn.toISOString().slice(0, 16),
+      clock_out: clockOut ? clockOut.toISOString().slice(0, 16) : "",
+    });
+    setShowEditShiftModal(true);
+  };
+
+  const handleDeleteShift = async (shiftId) => {
+    if (!window.confirm("Are you sure you want to delete this shift?")) return;
+    
+    try {
+      await axios.delete(`${API}/admin/time-entries/${shiftId}`, getAuthHeader());
+      setEmployeeShifts(prev => prev.filter(s => s.id !== shiftId));
+      toast.success("Shift deleted successfully");
+      fetchData(); // Refresh summary data
+    } catch (error) {
+      toast.error("Failed to delete shift");
+    }
+  };
+
+  const handleSaveNewShift = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        employee_id: showEmployeeShifts.user_id,
+        clock_in: new Date(shiftFormData.clock_in).toISOString(),
+        clock_out: shiftFormData.clock_out ? new Date(shiftFormData.clock_out).toISOString() : null,
+      };
+      
+      await axios.post(`${API}/admin/time-entries`, payload, getAuthHeader());
+      toast.success("Shift added successfully");
+      setShowAddShiftModal(false);
+      handleViewEmployeeShifts(showEmployeeShifts); // Refresh shifts
+      fetchData(); // Refresh summary data
+    } catch (error) {
+      toast.error("Failed to add shift");
+    }
+  };
+
+  const handleSaveEditedShift = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        clock_in: new Date(shiftFormData.clock_in).toISOString(),
+        clock_out: shiftFormData.clock_out ? new Date(shiftFormData.clock_out).toISOString() : null,
+      };
+      
+      await axios.put(`${API}/admin/time-entries/${editingShift.id}`, payload, getAuthHeader());
+      toast.success("Shift updated successfully");
+      setShowEditShiftModal(false);
+      setEditingShift(null);
+      handleViewEmployeeShifts(showEmployeeShifts); // Refresh shifts
+      fetchData(); // Refresh summary data
+    } catch (error) {
+      toast.error("Failed to update shift");
+    }
+  };
+
   const handleMarkAllRead = async () => {
     try {
       await axios.post(`${API}/admin/notifications/mark-read`, {}, getAuthHeader());
