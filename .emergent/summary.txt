@@ -3,80 +3,87 @@ The user wants to build a Thrifty Curator reselling application.
 
 **PRODUCT REQUIREMENTS (Consolidated):**
 *   **Landing Page:** A Black Bold themed home page with a logo, QR code, and links to selling platforms (eBay, Poshmark).
-*   **Forms:** In-app forms for Job Applications, Consignment Inquiries, and Consignment Agreements, all matching the app's theme. The Consignment Agreement must state that the profit split is 50/50 unless otherwise specified on the form.
+*   **Forms:** In-app forms for Job Applications, Consignment Inquiries, and Consignment Agreements, all matching the app's theme. The Consignment Agreement must state that the profit split is 50/50 unless otherwise specified.
 *   **Authentication:** Passwordless JWT-based authentication for employees/admins, with a hidden admin access code ().
 *   **Employee Portal:**
     *   Employees can clock in/out, view hours, and see pay estimates.
-    *   Employees can download a blank W-9 form, submit their completed W-9, and view its status (pending, approved, or rejected with a correction reason). The submission option is available until a form is approved.
+    *   Employees can download a blank W-9, submit their completed W-9, view its status (pending, approved, or rejected), and view their submitted form.
 *   **Admin Dashboard:**
-    *   A specific section order: All Employees, Payroll Summary, Recent Time Entries, Hours by Employees, Form Submissions, and a new W-9 Review section.
-    *   Manage employees (add/edit/remove) with the ability to pre-fill data from submitted job applications.
-    *   Manage time entries and individual employee shifts.
-    *   View a dynamic Payroll Summary.
-    *   View and manage form submissions, which should auto-refresh when the dashboard loads.
+    *   A specific section order: All Employees, Payroll Summary, Recent Time Entries, Hours by Employees, Form Submissions, W-9 Review, and Payroll Check Records.
+    *   Manage employees (add/edit/remove) with the ability to pre-fill data from submitted job applications in both Add and Edit modals.
     *   **W-9 Management:**
-        *   Admins can upload a completed W-9 on behalf of an employee via the All Employees table.
-        *   Admins can download a blank W-9 form from the Add/Edit employee modals and the All Employees section header.
-        *   A W-9 Review section to view, approve, or reject employee-submitted W-9s, with the ability to provide a reason for rejection.
-*   **General UI/UX:** A consistent Black Bold theme, themed splash screen, and custom home screen icon.
+        *   Admins can upload/download a W-9 on behalf of an employee. The delete functionality has been removed.
+        *   Admins can view approved W-9s in an in-app modal.
+        *   A W-9 Review section to view, approve, or reject employee-submitted W-9s. This section auto-refreshes when opened.
+    *   **Employee Portal View:** Admins can open a modal that shows a complete view of the employee's portal, including their W-9 status.
+    *   **Payroll Summary:**
+        *   View a dynamic Payroll Summary that accurately reflects time entries.
+        *   The summary auto-refreshes when opened or when time entries are modified.
+        *   Admins can edit the company-wide bi-weekly pay period start date.
+    *   **Payroll Check Records:**
+        *   A section to upload photos of physical payroll checks for record-keeping.
+        *   The check date is auto-populated to the current date but remains editable.
+        *   Displays a thumbnail preview of the uploaded check image.
+        *   The section should auto-refresh when the page opens.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack React/FastAPI application. The backend has been refactored from a monolith () into a modular structure with routers, models, and services. The frontend  remains a large component but has been updated to support numerous features.
+A full-stack React/FastAPI application with a MongoDB database. The application provides a complete workflow for employee and admin management for a reselling business. Key features include JWT authentication, employee time tracking, form submissions, and a comprehensive admin dashboard.
 
-The application features a complete authentication system, employee time tracking, and a highly functional admin dashboard with collapsible sections, sortable tables, and dynamic data. A full W-9 submission and review workflow is implemented, allowing employees to submit forms via their portal and admins to approve/reject them. Admins can also manage W-9s directly, pre-fill new employee data from job applications, and download blank W-9 templates.
+Recent additions have significantly enhanced the admin capabilities, including a dynamic and editable payroll summary, a full W-9 submission and review cycle with an in-app PDF viewer, and a new section for uploading and managing payroll check photos. The backend has been expanded with a dedicated payroll router, and the monolithic  on the frontend has been heavily modified to support these new features.
 
 **Last working item**:
-    - Last item agent was working: Implementing a user request to add a specific clause to the Consignment Agreement form. The agent was in the process of locating the relevant file to make the text change.
-    - Status: NOT STARTED
+    - Last item agent was working: The user requested that the Payroll Check Records section should auto-refresh when the admin dashboard page is opened. The agent had started investigating the  file to implement this.
+    - Status: IN PROGRESS
     - Agent Testing Done: N
     - Which testing method agent to use? screenshot tool
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Add terms and conditions text to the Consignment Agreement form (P0)
-  
+  - Issue 1: Auto-refresh Payroll Check Records upon page load (P0)
+
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: Agent has started to locate the file containing the form.
-     - Next debug checklist: 
-        1. Use  to find the file containing Consignment Agreement.
-        2. View the file to identify where the bullet points are rendered.
-        3. Use  to add the new clause: unless otherwise included on this form the profit split will be considered 50/50.
-        4. Take a screenshot of the Consignment Agreement form to verify the text has been added.
-     - Why fix this issue and what will be achieved with the fix? This fulfills a direct user requirement for a legal clarification on the form.
-     - Status: NOT STARTED
+     - Attempted fixes: The agent acknowledged the request and was about to modify .
+     - Next debug checklist:
+        1. In , locate the main  hook that runs on initial component mount (the one with an empty dependency array ).
+        2. Add the  function call inside this  hook. This will ensure the data is fetched when the dashboard first loads.
+        3. Take a screenshot of the admin dashboard after loading to verify that the Payroll Check Records section shows the correct count and data without needing to be manually expanded.
+     - Why fix this issue and what will be achieved with the fix? This improves user experience by ensuring the admin always sees the most up-to-date check records immediately upon loading the dashboard.
+     - Status: IN PROGRESS
      - Is recurring issue? N
      - Should Test frontend/backend/both after fix? frontend
-     - Blocked on other issue: none
+     - Blocked on other issue: None
 
 **In progress Task List**:
   - None.
 
 **Upcoming and Future Tasks**
 *   **Future Tasks:**
-    *   **Deployment (P1):** Deploy the application once all pending features are complete and verified.
-    *   **Frontend Refactoring (P1):** Continue decomposing the monolithic  into smaller, reusable components to improve maintainability.
+    *   **Frontend Refactoring (P1):** Continue decomposing the monolithic  into smaller, reusable components to improve maintainability and reduce technical debt.
+    *   **Unused Component Cleanup (P2):** Remove the likely unused  and  files from .
+    *   **Deployment (P2):** Deploy the application once all pending features are complete and verified by the user.
 
 **Completed work in this session**
-- **Bug Fixes Verified:**
-  - Fixed and verified the View Shifts button, which now correctly loads shift data for the selected employee.
-  - Fixed and verified the Employee Portal View modal, which now has two clearly visible exit buttons.
-- **Major Code Refactoring:**
-  - **Backend:** Successfully refactored the monolithic  into a modular architecture (, , ). Verified with API tests and the testing agent.
-  - **Frontend:** Performed initial refactoring of  by extracting , , and  into separate components.
-- **Admin Dashboard Feature Enhancements:**
-  - **Section Reordering:** Reordered dashboard sections to: All Employees, Payroll Summary, Recent Time Entries, Hours by Employee, Form Submissions.
-  - **Auto-Refresh:** Implemented auto-refresh for the Form Submissions section on page load.
-  - **Job Application Import:** Added a dropdown in the Add Employee modal to pre-fill name and email from submitted job applications.
-- **Complete W-9 Management Workflow:**
-  - **Admin-Side:**
-    - Added a W-9 column to the All Employees table to upload/download/delete forms for each employee.
-    - Added buttons to download a blank W-9 PDF from the Add/Edit Employee modals and the All Employees section header.
-    - Created a W-9 Review section for admins to approve or reject employee submissions with a correction reason.
-  - **Employee-Side:**
-    - Created a W-9 Tax Form section in the  for employees to download a blank form, upload their completed form, and view the submission status (pending, approved, or rejected with reason).
+- **Payroll & Time Tracking:**
+  - **Payroll Summary Fix:** Corrected a backend bug preventing time entries from appearing in the payroll summary.
+  - **Dynamic Payroll Summary:** The payroll summary now updates automatically when the section is opened or when time entries are modified.
+  - **Editable Pay Periods:** Admins can now edit the company-wide pay period start date directly from the payroll summary section.
+- **Payroll Check Records Feature:**
+  - **New Section:** Created a Payroll Check Records section for admins to upload, store, and view photos of payroll checks.
+  - **Date Auto-Population:** The Check Date field now defaults to the current date for new uploads.
+  - **Image Previews:** The records list now shows a thumbnail preview of the uploaded check image.
+- **W-9 Workflow Enhancements:**
+  - **In-App PDF Viewer:** Admins can now view submitted W-9 forms in a modal directly within the app, instead of being forced to download them.
+  - **Employee View Button:** Employees can now view their own submitted W-9s from their dashboard.
+  - **Admin View Button:** Added a View button (eye icon) to the All Employees table for admins to view approved W-9s.
+  - **Admin Portal View:** The View Employee Portal modal now includes the employee's full W-9 status information.
+  - **W-9 Review Auto-Refresh:** The W-9 Review section now automatically fetches the latest pending submissions when opened.
+- **General UI/UX Improvements:**
+  - **Job Application Import:** Added the ability to import data from job applications to the Edit Employee modal (previously only available for adding new employees).
+  - **Removed Delete Icon:** The trash icon for deleting W-9 forms in the All Employees table was removed as requested.
+  - **Consignment Agreement Update:** Added the required 50/50 profit split clause to the terms and conditions.
 
 **Earlier issues found/mentioned but not fixed**
    - **Unused Components:** The files  and  in  are likely unused and should be removed during future refactoring of .
@@ -88,63 +95,68 @@ The application features a complete authentication system, employee time trackin
 
 
 **Key Technical Concepts**
-- **Frontend**: React, TailwindCSS, Shadcn/UI, .
+- **Frontend**: React, TailwindCSS, Shadcn/UI, , .
 - **Backend**: FastAPI, PyMongo, JWT for authentication.
 - **Database**: MongoDB.
 
 **key DB schema**
-  - **users**: 
+  - **users**:  (Note:  and  are derived properties, not stored here).
   - **time_entries**: 
   - **form_submissions**: 
+  - **w9_documents**: 
+  - **payroll_checks**: 
+  - **settings**: 
 
 **changes in tech stack**
   - None.
 
 **All files of reference**
-*   : The main file for all dashboard logic. Heavily modified to add W-9 features, reorder sections, and auto-refresh forms.
-*   : Modified to add the W-9 submission workflow for employees.
-*   : Modified to add all W-9 management and form download endpoints.
-*   : Modified to add the employee-facing W-9 submission endpoint.
-*   : Updated to include W-9 status fields in the Pydantic models.
+*   : The primary file for almost all work in this session. It has grown significantly larger and more complex.
+*   : Updated to include W-9 status in the employee list and add the W-9 viewer endpoint.
+*   : New router created to handle the payroll summary, settings, and payroll check record endpoints.
+*   : Updated to add an endpoint for employees to view their own submitted W-9.
+*   : Updated the  model to include optional .
+*   : Modified to add the View button for submitted W-9s.
 
 **Areas that need refactoring**:
-- ** (CRITICAL):** Despite initial component extraction, this file remains extremely large and complex. Further decomposition is required to improve maintainability and prevent future bugs.
+- ** (CRITICAL):** This file is now over 5,000 lines long. Its size and complexity make it extremely difficult to maintain and a high risk for introducing new bugs. It urgently needs to be broken down into smaller, manageable components.
 
 **key api endpoints**
-*   : Serves a blank W-9 PDF form.
-*   : (Admin) Uploads a W-9 for an employee.
-*   : (Employee) Gets their current W-9 submission status.
-*   : (Employee) Submits a completed W-9 form for review.
-*   : (Admin) Gets a list of all W-9s awaiting review.
-*   : (Admin) Approves a W-9 submission.
-*   : (Admin) Rejects a W-9 submission with a reason.
+*   : (Employee) Views their own submitted W-9.
+*   : (Admin) Views a specific employee's submitted W-9.
+*   : Returns aggregated payroll data.
+*   : Updates the company-wide pay period start date.
+*   : Gets all payroll check records.
+*   : Uploads a new payroll check photo.
+*   : Gets a specific payroll check image for viewing.
 
 **Critical Info for New Agent**
-- Your first task is to implement the text change on the Consignment Agreement form, as detailed in the Pending Issue list.
-- After completing and verifying this small change, the next logical step is to propose a plan to the user. This plan should include either deploying the application or continuing the critical refactoring of .
-- Be mindful that  is a very large and brittle file. Be cautious when making changes.
+- Your immediate task is to complete the implementation of auto-refreshing the Payroll Check Records when the page loads, as detailed in the Pending Issue list.
+- After fixing and verifying, you should propose a plan to the user. Given the state of the  file, strongly recommend prioritizing its refactoring to reduce technical debt before adding more features.
+- Be extremely cautious when making any further changes to . It is a brittle, monolithic component.
 
 **documents and test reports created in this job**
-  -  (updated)
-  -  (from the successful post-refactoring test run)
+  -  (updated multiple times)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1.   - **Completed**.
-2.   - **Completed**.
-3.   - **Completed**.
-4.   - **Completed**.
-5.   - **Completed**.
-6.   - **Completed**.
-7.   - **Completed**.
-8.   - **Completed**.
-9.   - **In Progress (Last working item)**.
-10.  - All previous features were approved and are now implemented.
+1.  - **Completed**.
+2.  - **Completed**.
+3.  - **Completed**.
+4.  - **Completed**.
+5.  - **Completed**.
+6.  - **Completed**.
+7.  - **Completed**.
+8.  - **Completed**.
+9.  - **Completed**.
+10.  - **Completed**.
+11.  - **Completed**.
+12.  - **In Progress**.
 
 **Project Health Check:**
-- **Working**: The application is highly functional. The refactored backend is stable. The new W-9 workflow is fully implemented and tested end-to-end.
+- **Working**: The application is highly functional, with all requested features from this session implemented and several bugs fixed.
 - **Broken**: None.
 - **Needs Improvement**:
-    -  is a significant technical debt and a maintenance risk due to its size and complexity.
+    - The  file has accumulated significant technical debt and is a critical maintenance risk.
 
 **3rd Party Integrations**
 *   **qrcode.react**: For the QR code on the landing page.
@@ -152,7 +164,7 @@ The application features a complete authentication system, employee time trackin
 *   **fpdf2**: For generating PDF reports.
 
 **Testing status**
-  - Testing agent used after significant changes: YES (After backend/frontend refactoring, with 100% pass rate).
+  - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
   - Known regressions: None
@@ -165,4 +177,4 @@ The application features a complete authentication system, employee time trackin
     - Email:  (or create a new one)
 
 **What agent forgot to execute**
-- The agent has not yet addressed the cleanup of unused component files (, ), which was noted as a pending task for the refactoring phase.</analysis>
+- The agent did not address the cleanup of unused component files (, ), which was noted in the previous handoff as a task for the refactoring phase.</analysis>

@@ -7,7 +7,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://bold-thrift.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://resale-admin-hub.preview.emergentagent.com')
 
 class TestEditEmployee:
     """Tests for PUT /api/admin/employees/{employee_id}"""
