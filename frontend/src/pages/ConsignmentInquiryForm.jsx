@@ -246,7 +246,7 @@ export default function ConsignmentInquiryForm() {
                       id={`type-${type.id}`}
                       checked={formData.item_types.includes(type.id)}
                       onCheckedChange={(checked) => handleItemTypeChange(type.id, checked)}
-                      className="border-2 border-gray-300 data-[state=checked]:bg-[#FF1493] data-[state=checked]:border-[#FF1493]"
+                      className="w-6 h-6 border-2 border-gray-300 data-[state=checked]:bg-[#FF1493] data-[state=checked]:border-[#FF1493]"
                       data-testid={`item-type-${type.id}`}
                     />
                     <Label htmlFor={`type-${type.id}`} className="text-sm text-[#1A1A2E] cursor-pointer font-normal">
