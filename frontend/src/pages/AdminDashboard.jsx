@@ -955,9 +955,9 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="dashboard-content bg-[#F8F9FA] min-h-screen">
+      <main className="dashboard-content min-h-screen">
         {/* Bold Gradient Accent Bar */}
-        <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493] -mx-8 -mt-8 mb-6" />
+        <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493] -mx-8 -mt-8 mb-6 rounded-b-lg" />
         
         <motion.div
           initial={{ opacity: 0, y: 20 }}
