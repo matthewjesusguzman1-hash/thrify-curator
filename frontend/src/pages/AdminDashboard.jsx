@@ -2794,6 +2794,16 @@ export default function AdminDashboard() {
                     )}
                   </div>
                 )}
+                
+                {/* Close Button */}
+                <div className="flex justify-end mt-6 pt-4 border-t border-[#eee]">
+                  <Button
+                    variant="outline"
+                    onClick={() => { setShowReport(false); setReportData(null); }}
+                  >
+                    Close
+                  </Button>
+                </div>
               </motion.div>
             </motion.div>
           )}
