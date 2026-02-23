@@ -495,6 +495,34 @@ export default function AdminDashboard() {
     }
   };
 
+  // Fetch clock status for all employees
+  const fetchEmployeeClockStatuses = useCallback(async () => {
+    try {
+      const statuses = {};
+      // Fetch clock status for each employee
+      await Promise.all(
+        employees.map(async (emp) => {
+          try {
+            const response = await axios.get(`${API}/admin/employee/${emp.id}/clock-status`, getAuthHeader());
+            statuses[emp.id] = response.data.is_clocked_in;
+          } catch {
+            statuses[emp.id] = false;
+          }
+        })
+      );
+      setEmployeeClockStatuses(statuses);
+    } catch (error) {
+      console.error("Failed to fetch employee clock statuses:", error);
+    }
+  }, [employees, getAuthHeader]);
+
+  // Fetch clock statuses when employees section is expanded
+  useEffect(() => {
+    if (showAllEmployees && employees.length > 0) {
+      fetchEmployeeClockStatuses();
+    }
+  }, [showAllEmployees, employees.length, fetchEmployeeClockStatuses]);
+
   const handleDeleteSubmission = async (formType, submissionId) => {
     if (!window.confirm("Are you sure you want to delete this submission? This action cannot be undone.")) {
       return;
