@@ -229,6 +229,20 @@ export default function AdminDashboard() {
   const [uploadingW9, setUploadingW9] = useState(null);
   const w9InputRef = useRef(null);
 
+  // Payroll Check Records state
+  const [showCheckRecordsSection, setShowCheckRecordsSection] = useState(false);
+  const [checkRecords, setCheckRecords] = useState([]);
+  const [loadingCheckRecords, setLoadingCheckRecords] = useState(false);
+  const [uploadingCheck, setUploadingCheck] = useState(false);
+  const [viewingCheckImage, setViewingCheckImage] = useState(null);
+  const [checkUploadData, setCheckUploadData] = useState({
+    description: "",
+    check_date: "",
+    amount: "",
+    employee_name: ""
+  });
+  const checkInputRef = useRef(null);
+
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   }), []);
