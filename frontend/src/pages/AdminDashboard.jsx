@@ -2580,8 +2580,8 @@ export default function AdminDashboard() {
                         <tbody>
                           {employeeShifts.slice(0, 10).map((shift) => (
                             <tr key={shift.id}>
-                              <td>{new Date(shift.clock_in).toLocaleDateString()}</td>
-                              <td>{new Date(shift.clock_in).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                              <td>{shift.clock_in ? new Date(shift.clock_in).toLocaleDateString() : 'N/A'}</td>
+                              <td>{shift.clock_in ? new Date(shift.clock_in).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
                               <td>
                                 {shift.clock_out 
                                   ? new Date(shift.clock_out).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
