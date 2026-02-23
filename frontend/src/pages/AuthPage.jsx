@@ -132,13 +132,13 @@ export default function AuthPage() {
 
           <form onSubmit={handleLogin} data-testid="login-form">
             <div className="space-y-2">
-              <Label className="text-white/80 text-sm">Email or Admin Code</Label>
+              <Label className="text-white/80 text-sm">Email</Label>
               <Input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="your@email.com or admin code"
+                placeholder="your@email.com"
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00D4FF] focus:ring-[#00D4FF]/20"
                 data-testid="login-email"
               />
@@ -166,13 +166,6 @@ export default function AuthPage() {
                 </>
               )}
             </Button>
-
-            <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
-              <p className="flex items-center gap-2 text-xs text-white/50 text-center justify-center">
-                <Shield className="w-3 h-3" />
-                Admin? Enter code <span className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-[#00D4FF]">4399</span> or admin email
-              </p>
-            </div>
           </form>
 
           <p className="text-center text-sm text-white/40 mt-6">
