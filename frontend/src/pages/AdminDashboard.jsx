@@ -195,7 +195,7 @@ export default function AdminDashboard() {
   const [loadingPortal, setLoadingPortal] = useState(false);
 
   // Employee shifts management state (for Hours by Employee section)
-  const [showEmployeeShiftsModal, setShowEmployeeShiftsModal] = useState(null);
+  const [showEmployeeShiftsModalModal, setShowEmployeeShiftsModal] = useState(null);
   const [loadingShifts, setLoadingShifts] = useState(false);
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
   const [showEditShiftModal, setShowEditShiftModal] = useState(false);
@@ -565,7 +565,7 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       const payload = {
-        employee_id: showEmployeeShifts.user_id,
+        employee_id: showEmployeeShiftsModal.user_id,
         clock_in: new Date(shiftFormData.clock_in).toISOString(),
         clock_out: shiftFormData.clock_out ? new Date(shiftFormData.clock_out).toISOString() : null,
       };
@@ -573,7 +573,7 @@ export default function AdminDashboard() {
       await axios.post(`${API}/admin/time-entries`, payload, getAuthHeader());
       toast.success("Shift added successfully");
       setShowAddShiftModal(false);
-      handleViewEmployeeShifts(showEmployeeShifts); // Refresh shifts
+      handleViewEmployeeShifts(showEmployeeShiftsModal); // Refresh shifts
       fetchData(); // Refresh summary data
     } catch (error) {
       toast.error("Failed to add shift");
@@ -592,7 +592,7 @@ export default function AdminDashboard() {
       toast.success("Shift updated successfully");
       setShowEditShiftModal(false);
       setEditingShift(null);
-      handleViewEmployeeShifts(showEmployeeShifts); // Refresh shifts
+      handleViewEmployeeShifts(showEmployeeShiftsModal); // Refresh shifts
       fetchData(); // Refresh summary data
     } catch (error) {
       toast.error("Failed to update shift");
@@ -3149,7 +3149,7 @@ export default function AdminDashboard() {
           )}
 
           {/* Employee Shifts Modal */}
-          {showEmployeeShifts && (
+          {showEmployeeShiftsModal && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -3171,8 +3171,8 @@ export default function AdminDashboard() {
                         <Clock className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h2 className="font-playfair text-xl font-bold text-[#333]">{showEmployeeShifts.name}'s Shifts</h2>
-                        <p className="text-sm text-[#888]">{showEmployeeShifts.shifts} total shifts • {showEmployeeShifts.hours?.toFixed(2)} hours</p>
+                        <h2 className="font-playfair text-xl font-bold text-[#333]">{showEmployeeShiftsModal.name}'s Shifts</h2>
+                        <p className="text-sm text-[#888]">{showEmployeeShiftsModal.shifts} total shifts • {showEmployeeShiftsModal.hours?.toFixed(2)} hours</p>
                       </div>
                     </div>
                     <button
@@ -3273,7 +3273,7 @@ export default function AdminDashboard() {
           )}
 
           {/* Add Shift Modal */}
-          {showAddShiftModal && showEmployeeShifts && (
+          {showAddShiftModal && showEmployeeShiftsModal && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -3288,7 +3288,7 @@ export default function AdminDashboard() {
                 data-testid="add-shift-modal"
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-playfair text-xl font-bold text-[#333]">Add Shift for {showEmployeeShifts.name}</h2>
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Add Shift for {showEmployeeShiftsModal.name}</h2>
                   <button onClick={() => setShowAddShiftModal(false)} className="text-[#999] hover:text-[#666]">
                     <X className="w-5 h-5" />
                   </button>
