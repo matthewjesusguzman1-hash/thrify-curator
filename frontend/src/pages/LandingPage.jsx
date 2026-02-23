@@ -22,13 +22,43 @@ const TIKTOK_URL = "https://www.tiktok.com/@thrifty_curator?_r=1&_t=ZP-93ukKuigA
 const APP_URL = typeof window !== 'undefined' ? window.location.origin : '';
 const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(APP_URL)}`;
 
-// Platform data with brand icons
+// Platform data with brand logos
 const platforms = [
-  { name: "eBay", icon: SiEbay, url: "https://www.ebay.com/str/thriftycurator", color: "#E53238", iconColor: "#FFFFFF" },
-  { name: "Poshmark", icon: SiPoshmark, url: "https://posh.mk/dZSDIxRJJ0b", color: "#7F0353", iconColor: "#FFFFFF" },
-  { name: "Mercari", icon: SiMercari, url: "https://www.mercari.com/u/thriftycurator/?sv=0", color: "#4DC3FF", iconColor: "#FFFFFF" },
-  { name: "Depop", icon: SiDepop, url: "https://www.depop.com/thriftycurator/", color: "#FF2300", iconColor: "#FFFFFF" },
-  { name: "Facebook", icon: SiFacebook, url: "https://www.facebook.com/marketplace/profile/517375094/", color: "#1877F2", iconColor: "#FFFFFF" },
+  { 
+    name: "eBay", 
+    icon: SiEbay, 
+    url: "https://www.ebay.com/str/thriftycurator", 
+    color: "#E53238",
+    useIcon: true
+  },
+  { 
+    name: "Poshmark", 
+    logoUrl: "https://cdn.worldvectorlogo.com/logos/poshmark.svg",
+    url: "https://posh.mk/dZSDIxRJJ0b", 
+    color: "#7F0353",
+    useIcon: false
+  },
+  { 
+    name: "Mercari", 
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Mercari_logo.svg/512px-Mercari_logo.svg.png",
+    url: "https://www.mercari.com/u/thriftycurator/?sv=0", 
+    color: "#FF0211",
+    useIcon: false
+  },
+  { 
+    name: "Depop", 
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Depop_logo.svg/512px-Depop_logo.svg.png",
+    url: "https://www.depop.com/thriftycurator/", 
+    color: "#FF2300",
+    useIcon: false
+  },
+  { 
+    name: "Facebook Marketplace", 
+    icon: SiFacebook, 
+    url: "https://www.facebook.com/marketplace/profile/517375094/", 
+    color: "#1877F2",
+    useIcon: true
+  },
 ];
 
 // Form links
