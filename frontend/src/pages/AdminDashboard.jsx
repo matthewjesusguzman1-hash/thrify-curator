@@ -291,6 +291,7 @@ export default function AdminDashboard() {
     notes: ""
   });
   const [showEndTripModal, setShowEndTripModal] = useState(false);
+  const [showMileageEntries, setShowMileageEntries] = useState(true); // Collapsible mileage entries
 
   // Helper function to calculate biweekly period from a start date
   const calculateBiweeklyPeriod = (startDateStr) => {
