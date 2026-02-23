@@ -2448,14 +2448,14 @@ export default function AdminDashboard() {
                                 <tr>
                                   <SortableHeader table="consignmentAgreements" sortKey="full_name">Name</SortableHeader>
                                   <SortableHeader table="consignmentAgreements" sortKey="email">Email</SortableHeader>
-                                  <th>Percentage</th>
-                                  <th>Signed</th>
-                                  <th>Status</th>
+                                  <SortableHeader table="consignmentAgreements" sortKey="agreed_percentage">Percentage</SortableHeader>
+                                  <SortableHeader table="consignmentAgreements" sortKey="submitted_at">Signed</SortableHeader>
+                                  <SortableHeader table="consignmentAgreements" sortKey="status">Status</SortableHeader>
                                   <th>Actions</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {formSubmissions.consignmentAgreements.map((agreement) => (
+                                {getSortedData(formSubmissions.consignmentAgreements, 'consignmentAgreements').map((agreement) => (
                                   <tr key={agreement.id} data-testid={`agreement-row-${agreement.id}`}>
                                     <td className="font-medium">{agreement.full_name}</td>
                                     <td>{agreement.email}</td>
