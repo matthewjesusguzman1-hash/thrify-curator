@@ -160,6 +160,12 @@ export default function AdminDashboard() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showFormsSection, setShowFormsSection] = useState(false);
 
+  // Collapsible sections state
+  const [showStatsSection, setShowStatsSection] = useState(true);
+  const [showHoursByEmployee, setShowHoursByEmployee] = useState(true);
+  const [showAllEmployees, setShowAllEmployees] = useState(true);
+  const [showTimeEntries, setShowTimeEntries] = useState(true);
+
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   }), []);
