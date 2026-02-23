@@ -70,6 +70,9 @@ Build a "Thrifty Curator" reselling application with:
 - [x] Employee Details modal with email, rate, join date, total hours, recent shifts
 - [x] Quick actions in details: Edit Rate, Add Shift, Delete employee
 - [x] Edit shifts directly from employee details modal
+- [x] Edit Employee button in header (next to Remove Employee)
+- [x] Edit Employee modal: name, email, and role editing
+- [x] Role change support (Employee ↔ Admin)
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
@@ -109,6 +112,7 @@ Build a "Thrifty Curator" reselling application with:
 - `POST /api/admin/payroll/report` - Generate payroll report (JSON)
 - `POST /api/admin/payroll/report/pdf` - Generate payroll report (PDF)
 - `PUT /api/admin/employees/{id}/rate` - Update employee hourly rate
+- `PUT /api/admin/employees/{id}` - Update employee details (name, email, role)
 
 ## Key Credentials
 - **Admin Email**: matthewjesusguzman1@gmail.com (no password needed)
@@ -132,9 +136,9 @@ Build a "Thrifty Curator" reselling application with:
 3. Export hours to CSV/PDF
 
 ## Testing Status
-- Backend: 100% pass
-- Frontend: 100% pass (11/11 UX tests)
-- Test reports: `/app/test_reports/iteration_7.json`
+- Backend: 100% pass (10/10 Edit Employee tests)
+- Frontend: 100% pass (13/13 Edit Employee UI tests)
+- Test reports: `/app/test_reports/iteration_8.json`
 - Test files: `/app/backend/tests/`
 
 ## Notes
