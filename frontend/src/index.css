@@ -502,26 +502,22 @@ table tbody tr:hover {
     padding: 2rem;
 }
 
-/* Notification dropdown styles */
-[data-testid="notification-dropdown"],
-[data-testid="notification-dropdown"] * {
-    color: inherit;
+/* Notification dropdown - Override inherited header styles */
+[data-testid="notification-dropdown"] {
+    color: #333333;
 }
 
-[data-testid="notification-dropdown"] .notification-text {
+[data-testid="notification-dropdown"] .notification-list-item {
+    color: #333333 !important;
+}
+
+[data-testid="notification-dropdown"] .notification-list-item p {
     color: #111111 !important;
-    opacity: 1 !important;
-    font-weight: 500 !important;
 }
 
-[data-testid="notification-dropdown"] .notification-text-secondary {
-    color: #555555 !important;
-    opacity: 1 !important;
-}
-
-[data-testid="notification-dropdown"] p,
-[data-testid="notification-dropdown"] span {
-    opacity: 1 !important;
+[data-testid="notification-dropdown"] .notification-list-item .notification-time,
+[data-testid="notification-dropdown"] .notification-list-item .notification-meta {
+    color: #666666 !important;
 }
 
 @layer base {
