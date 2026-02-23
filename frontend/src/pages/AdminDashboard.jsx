@@ -971,82 +971,139 @@ export default function AdminDashboard() {
             <AnimatePresence>
               {showNotifications && (
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-[#eee] z-50 overflow-hidden"
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-[#eee] z-50 overflow-hidden"
                   data-testid="notification-dropdown"
                 >
-                  <div className="p-3 border-b border-[#eee] flex items-center justify-between">
-                    <h3 className="font-semibold text-[#333] text-sm">Notifications</h3>
+                  {/* Header */}
+                  <div className="p-4 bg-gradient-to-r from-[#1A1A2E] to-[#16213E] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-5 h-5 text-[#00D4FF]" />
+                      <h3 className="font-semibold text-white">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <span className="px-2 py-0.5 bg-[#FF1493] text-white text-xs rounded-full font-medium">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
                     <div className="flex gap-1">
                       {unreadCount > 0 && (
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-7 text-xs text-[#666]"
+                          className="h-8 text-xs text-white/70 hover:text-white hover:bg-white/10"
                           onClick={handleMarkAllRead}
                           data-testid="mark-all-read-btn"
                         >
-                          <CheckCheck className="w-3 h-3 mr-1" />
-                          Mark all read
+                          <CheckCheck className="w-4 h-4 mr-1" />
+                          Mark read
                         </Button>
                       )}
                       {notifications.length > 0 && (
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-7 text-xs text-red-500 hover:text-red-600"
+                          className="h-8 text-xs text-red-400 hover:text-red-300 hover:bg-white/10"
                           onClick={handleClearNotifications}
                           data-testid="clear-notifications-btn"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
                     </div>
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
+
+                  {/* Notification List */}
+                  <div className="max-h-96 overflow-y-auto">
                     {notifications.length === 0 ? (
-                      <div className="p-6 text-center text-[#888] text-sm">
-                        No notifications yet
+                      <div className="p-8 text-center">
+                        <div className="w-16 h-16 bg-[#F9F6F7] rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Bell className="w-8 h-8 text-[#ccc]" />
+                        </div>
+                        <p className="text-[#888] text-sm font-medium">No notifications yet</p>
+                        <p className="text-[#aaa] text-xs mt-1">You'll see employee clock in/out events here</p>
                       </div>
                     ) : (
-                      notifications.map((notification) => (
-                        <div 
-                          key={notification.id} 
-                          className={`p-3 border-b border-[#f5f5f5] last:border-0 hover:bg-[#faf7f2] transition-colors ${!notification.read ? 'bg-[#F8C8DC]/10' : ''}`}
-                          data-testid={`notification-item-${notification.id}`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                              notification.type === 'clock_in' 
-                                ? 'bg-green-100' 
-                                : 'bg-red-100'
-                            }`}>
-                              {notification.type === 'clock_in' 
-                                ? <LogIn className="w-4 h-4 text-green-600" />
-                                : <LogOutIcon className="w-4 h-4 text-red-600" />
-                              }
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-[#333] font-medium">{notification.message}</p>
-                              {notification.details?.total_hours && (
-                                <p className="text-xs text-[#666] mt-1">
-                                  Today: {notification.details.today_hours}h • Week: {notification.details.week_hours}h
+                      <div className="divide-y divide-[#f0f0f0]">
+                        {notifications.map((notification) => (
+                          <div 
+                            key={notification.id} 
+                            className={`p-4 hover:bg-[#faf9f7] transition-all cursor-pointer ${
+                              !notification.read ? 'bg-gradient-to-r from-[#F8C8DC]/10 to-transparent border-l-4 border-l-[#FF1493]' : ''
+                            }`}
+                            data-testid={`notification-item-${notification.id}`}
+                          >
+                            <div className="flex items-start gap-4">
+                              {/* Icon */}
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${
+                                notification.type === 'clock_in' 
+                                  ? 'bg-gradient-to-br from-green-400 to-green-500' 
+                                  : 'bg-gradient-to-br from-red-400 to-red-500'
+                              }`}>
+                                {notification.type === 'clock_in' 
+                                  ? <LogIn className="w-6 h-6 text-white" />
+                                  : <LogOutIcon className="w-6 h-6 text-white" />
+                                }
+                              </div>
+                              
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                    notification.type === 'clock_in'
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-red-100 text-red-700'
+                                  }`}>
+                                    {notification.type === 'clock_in' ? 'CLOCK IN' : 'CLOCK OUT'}
+                                  </span>
+                                  {!notification.read && (
+                                    <span className="w-2 h-2 bg-[#FF1493] rounded-full animate-pulse"></span>
+                                  )}
+                                </div>
+                                
+                                <p className="text-sm text-[#333] font-semibold leading-tight">
+                                  {notification.message}
                                 </p>
-                              )}
-                              <p className="text-xs text-[#aaa] mt-1">
-                                {formatNotificationTime(notification.created_at)}
-                              </p>
+                                
+                                {notification.details && (
+                                  <div className="flex items-center gap-3 mt-2 text-xs">
+                                    {notification.details.today_hours !== undefined && (
+                                      <span className="flex items-center gap-1 text-[#666] bg-[#f5f5f5] px-2 py-1 rounded-lg">
+                                        <Clock className="w-3 h-3" />
+                                        Today: <strong className="text-[#333]">{notification.details.today_hours}h</strong>
+                                      </span>
+                                    )}
+                                    {notification.details.week_hours !== undefined && (
+                                      <span className="flex items-center gap-1 text-[#666] bg-[#f5f5f5] px-2 py-1 rounded-lg">
+                                        <Calendar className="w-3 h-3" />
+                                        Week: <strong className="text-[#333]">{notification.details.week_hours}h</strong>
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                <p className="text-xs text-[#999] mt-2 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {formatNotificationTime(notification.created_at)}
+                                </p>
+                              </div>
                             </div>
-                            {!notification.read && (
-                              <div className="w-2 h-2 bg-[#F8C8DC] rounded-full flex-shrink-0 mt-2"></div>
-                            )}
                           </div>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     )}
                   </div>
+
+                  {/* Footer */}
+                  {notifications.length > 0 && (
+                    <div className="p-3 bg-[#F9F6F7] border-t border-[#eee] text-center">
+                      <p className="text-xs text-[#888]">
+                        Showing {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
