@@ -45,9 +45,10 @@ const DepopIcon = () => (
 const platforms = [
   { 
     name: "eBay", 
-    Icon: SiEbay, 
+    logoUrl: "https://customer-assets.emergentagent.com/job_5664c81d-87dc-48ff-99fd-4adf6766fc96/artifacts/42llel9l_IMG_0051.jpg",
     url: "https://www.ebay.com/str/thriftycurator", 
-    color: "#E53238"
+    color: "#FFFFFF",
+    useImage: true
   },
   { 
     name: "Poshmark", 
