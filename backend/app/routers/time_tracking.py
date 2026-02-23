@@ -7,7 +7,6 @@ import base64
 from app.database import db
 from app.dependencies import get_current_user
 from app.models.time_entry import TimeEntry, ClockInOut
-from app.services.email import get_employee_hours_summary, create_admin_notification, send_clock_notification_email
 
 router = APIRouter(prefix="/time", tags=["Time Tracking"])
 
