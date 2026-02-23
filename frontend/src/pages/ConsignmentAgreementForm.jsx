@@ -241,7 +241,7 @@ export default function ConsignmentAgreementForm() {
                   id="terms"
                   checked={formData.agreed_to_terms}
                   onCheckedChange={handleCheckboxChange}
-                  className="mt-1 border-2 border-gray-300 data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
+                  className="w-6 h-6 mt-1 border-2 border-gray-300 data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
                   data-testid="checkbox-terms"
                 />
                 <Label htmlFor="terms" className="text-sm text-gray-600 cursor-pointer">
