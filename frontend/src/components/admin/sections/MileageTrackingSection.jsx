@@ -271,7 +271,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       
       // Notify parent component
       if (onTripStatusChange) {
-        onTripStatusChange(true);
+        onTripStatusChange({ isActive: true, isPaused: false });
       }
       
       toast.success("Trip tracking started! Route will be tracked even if you leave the app.");
