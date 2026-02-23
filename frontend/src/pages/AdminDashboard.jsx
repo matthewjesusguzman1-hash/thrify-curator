@@ -4207,23 +4207,23 @@ export default function AdminDashboard() {
                 data-testid="employee-portal-modal"
               >
                 {/* Portal Header */}
-                <div className="p-6 border-b border-white/10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center">
-                        <User className="w-7 h-7 text-white" />
+                <div className="p-4 sm:p-6 border-b border-white/10 sticky top-0 bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] z-10">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                      <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                       </div>
-                      <div>
-                        <h2 className="font-playfair text-2xl font-bold text-white">{viewingEmployee.name}</h2>
-                        <p className="text-[#00D4FF] text-sm">Employee Portal View</p>
+                      <div className="min-w-0">
+                        <h2 className="font-playfair text-lg sm:text-2xl font-bold text-white truncate">{viewingEmployee.name}</h2>
+                        <p className="text-[#00D4FF] text-xs sm:text-sm">Employee Portal View</p>
                       </div>
                     </div>
                     <button
-                      onClick={() => setShowEmployeePortal(false)}
-                      className="w-12 h-12 bg-white/20 hover:bg-[#FF1493] rounded-full flex items-center justify-center text-white transition-all shadow-lg border border-white/20"
+                      onClick={(e) => { e.stopPropagation(); setShowEmployeePortal(false); }}
+                      className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FF1493] hover:bg-[#E91E8C] rounded-full flex items-center justify-center text-white transition-all shadow-lg flex-shrink-0"
                       data-testid="close-portal-x"
                     >
-                      <X className="w-7 h-7" />
+                      <X className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                   </div>
                 </div>
