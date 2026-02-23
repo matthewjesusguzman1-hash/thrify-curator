@@ -10,7 +10,9 @@ MONGO_URL = os.environ['MONGO_URL']
 DB_NAME = os.environ['DB_NAME']
 
 # JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', 'thrifty-curator-secret-key-2024')
+JWT_SECRET = os.environ.get('JWT_SECRET')
+if not JWT_SECRET:
+    raise ValueError("JWT_SECRET environment variable is required")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
