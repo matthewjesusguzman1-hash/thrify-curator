@@ -154,7 +154,11 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       // Header says there's an active trip, refresh our data
       fetchMileageEntries();
     }
-  }, [headerTripActive, fetchMileageEntries]);
+    // Sync paused state from header
+    if (headerTripPaused !== undefined) {
+      setIsPaused(headerTripPaused);
+    }
+  }, [headerTripActive, headerTripPaused, fetchMileageEntries]);
 
   // Resume tracking for an existing trip
   const resumeTracking = useCallback(() => {
