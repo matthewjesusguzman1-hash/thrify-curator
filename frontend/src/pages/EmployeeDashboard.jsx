@@ -82,16 +82,18 @@ export default function EmployeeDashboard() {
 
   const fetchData = async () => {
     try {
-      const [statusRes, entriesRes, summaryRes] = await Promise.all([
+      const [statusRes, entriesRes, summaryRes, w9Res] = await Promise.all([
         axios.get(`${API}/time/status`, getAuthHeader()),
         axios.get(`${API}/time/entries`, getAuthHeader()),
-        axios.get(`${API}/time/summary`, getAuthHeader())
+        axios.get(`${API}/time/summary`, getAuthHeader()),
+        axios.get(`${API}/time/w9/status`, getAuthHeader())
       ]);
 
       setClockedIn(statusRes.data.clocked_in);
       setCurrentEntry(statusRes.data.entry);
       setEntries(entriesRes.data);
       setSummary(summaryRes.data);
+      setW9Status(w9Res.data);
     } catch (error) {
       if (error.response?.status === 401) {
         localStorage.removeItem("token");
@@ -99,6 +101,45 @@ export default function EmployeeDashboard() {
         navigate("/login");
       }
     }
+  };
+
+  const handleW9Upload = async (file) => {
+    if (!file) return;
+    
+    setUploadingW9(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      await axios.post(`${API}/time/w9/upload`, formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      toast.success("W-9 submitted successfully! Pending admin review.");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to upload W-9");
+    } finally {
+      setUploadingW9(false);
+    }
+  };
+
+  const handleW9Delete = async () => {
+    if (!window.confirm("Are you sure you want to delete your W-9?")) return;
+    
+    try {
+      await axios.delete(`${API}/time/w9`, getAuthHeader());
+      toast.success("W-9 deleted");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Cannot delete W-9");
+    }
+  };
+
+  const handleDownloadBlankW9 = () => {
+    window.open("https://www.irs.gov/pub/irs-pdf/fw9.pdf", "_blank");
   };
 
   const handleClock = async (action) => {
