@@ -525,3 +525,49 @@ async def email_payroll_report(email_req: EmailPayrollRequest, admin: dict = Dep
         return {"success": True, "message": f"Payroll report sent to {email_req.recipient_email}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
+# Payroll Check Records endpoints
+import base64
+import uuid
+
+@router.get("/check-records")
+async def get_check_records(admin: dict = Depends(get_admin_user)):
+    """Get all payroll check records"""
+    records = await db.payroll_check_records.find({}, {"_id": 0, "image_data": 0}).sort("uploaded_at", -1).to_list(500)
+    return records
+
+@router.post("/check-records")
+async def upload_check_record(admin: dict = Depends(get_admin_user), data: dict = None):
+    """Upload a payroll check image"""
+    from fastapi import Body
+    
+@router.post("/check-records/upload")
+async def upload_check_record_file(
+    admin: dict = Depends(get_admin_user)
+):
+    """Upload a payroll check image - expects JSON with base64 image"""
+    from fastapi import Request
+    
+@router.delete("/check-records/{record_id}")
+async def delete_check_record(record_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a payroll check record"""
+    result = await db.payroll_check_records.delete_one({"id": record_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"message": "Check record deleted successfully"}
+
+@router.get("/check-records/{record_id}/image")
+async def get_check_image(record_id: str, admin: dict = Depends(get_admin_user)):
+    """Get a specific check record image"""
+    from fastapi.responses import Response
+    record = await db.payroll_check_records.find_one({"id": record_id})
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    image_data = base64.b64decode(record["image_data"])
+    return Response(
+        content=image_data,
+        media_type=record.get("content_type", "image/jpeg"),
+        headers={"Content-Disposition": f"inline; filename={record.get('filename', 'check.jpg')}"}
+    )
