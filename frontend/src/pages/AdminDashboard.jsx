@@ -1794,7 +1794,7 @@ export default function AdminDashboard() {
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end items-start">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end items-start">
               {/* Reports Stack */}
               <div className="flex flex-col gap-1">
                 <Button 
