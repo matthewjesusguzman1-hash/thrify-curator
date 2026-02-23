@@ -2940,7 +2940,15 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <h2 className="font-playfair text-xl font-semibold text-[#333]">All Employees</h2>
-                  <p className="text-sm text-[#888]">{employees.length} total</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-[#888]">{employees.length} total</p>
+                    {Object.values(employeeClockStatuses).filter(Boolean).length > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                        {Object.values(employeeClockStatuses).filter(Boolean).length} clocked in
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
