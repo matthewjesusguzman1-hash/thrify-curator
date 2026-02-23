@@ -787,18 +787,30 @@ export default function AdminDashboard() {
   };
 
   const handleHeaderEndTrip = () => {
-    // Scroll to mileage section and expand it
+    // Scroll to mileage section
     const mileageSection = document.querySelector('[data-testid="mileage-section"]');
     if (mileageSection) {
-      mileageSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Trigger expand via the section's toggle
-      const toggleBtn = mileageSection.querySelector('[data-testid="mileage-section-toggle"]');
-      if (toggleBtn) {
-        toggleBtn.click();
-      }
+      // Scroll with offset for header
+      const yOffset = -100;
+      const y = mileageSection.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+      
+      // Wait for scroll, then ensure section is expanded
+      setTimeout(() => {
+        const toggleBtn = mileageSection.querySelector('[data-testid="mileage-section-toggle"]');
+        const isExpanded = mileageSection.querySelector('[data-testid="mileage-section-content"]');
+        
+        // Only click to expand if not already expanded
+        if (toggleBtn && !isExpanded) {
+          toggleBtn.click();
+        }
+        
+        // Highlight the end trip button area
+        toast.info("Click the 'End Trip' button below to complete your trip and enter the details.", {
+          duration: 5000
+        });
+      }, 500);
     }
-    // The MileageTrackingSection will handle showing the end trip modal
-    toast.info("Complete your trip details in the Mileage Tracking section below.");
   };
 
   // Employee Shifts Management Functions
