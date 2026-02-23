@@ -2091,6 +2091,7 @@ export default function AdminDashboard() {
                               <SortableHeader table="allEmployees" sortKey="role">Role</SortableHeader>
                               <SortableHeader table="allEmployees" sortKey="hourly_rate">Hourly Rate</SortableHeader>
                               <SortableHeader table="allEmployees" sortKey="created_at">Joined</SortableHeader>
+                              <th>W-9</th>
                               <th>Portal</th>
                             </tr>
                           </thead>
