@@ -27,7 +27,7 @@ import axios from "axios";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ACTIVE_TRIP_KEY = "thrifty_curator_active_trip";
 
-export default function MileageTrackingSection({ getAuthHeader, onTripStatusChange, forceExpand }) {
+export default function MileageTrackingSection({ getAuthHeader, onTripStatusChange, forceExpand, headerTripActive }) {
   // Section visibility
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -35,8 +35,18 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
   useEffect(() => {
     if (forceExpand) {
       setIsExpanded(true);
+      // Refresh data when forced to expand (e.g., when End Trip clicked in header)
+      fetchMileageEntries();
     }
   }, [forceExpand]);
+  
+  // Sync with header trip state
+  useEffect(() => {
+    if (headerTripActive && !isTracking) {
+      // Header says there's an active trip, refresh our data
+      fetchMileageEntries();
+    }
+  }, [headerTripActive]);
   
   // Mileage tracking state
   const [mileageEntries, setMileageEntries] = useState([]);
