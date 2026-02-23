@@ -4678,10 +4678,10 @@ export default function AdminDashboard() {
                         <p className="text-2xl font-bold text-teal-600">{mileageSummary.total_trips}</p>
                       </div>
                       <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-                        <p className="text-sm text-[#888]">IRS Rate (2024)</p>
-                        <p className="text-2xl font-bold text-[#333]">$0.67<span className="text-sm font-normal">/mile</span></p>
+                        <p className="text-sm text-[#888]">IRS Rate (2026)</p>
+                        <p className="text-2xl font-bold text-[#333]">$0.725<span className="text-sm font-normal">/mile</span></p>
                         <p className="text-xs text-emerald-600 mt-1">
-                          Est. Deduction: ${(mileageSummary.total_miles * 0.67).toFixed(2)}
+                          Est. Deduction: ${(mileageSummary.total_miles * 0.725).toFixed(2)}
                         </p>
                       </div>
                     </div>
