@@ -481,9 +481,9 @@ table tbody tr:hover {
 }
 
 .dashboard-header {
-    background: rgba(255, 255, 255, 0.05);
+    background: linear-gradient(90deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 212, 255, 0.2);
     padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
