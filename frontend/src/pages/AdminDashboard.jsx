@@ -175,6 +175,8 @@ export default function AdminDashboard() {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showFormsSection, setShowFormsSection] = useState(false);
+  const [formSearchQuery, setFormSearchQuery] = useState(""); // Search for form submissions
+  const [formStatusFilter, setFormStatusFilter] = useState("all"); // Filter by status
 
   // W-9 Review state
   const [pendingW9s, setPendingW9s] = useState([]);
