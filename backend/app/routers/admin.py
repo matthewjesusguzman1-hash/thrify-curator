@@ -34,6 +34,7 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
         "email": employee_data.email,
         "name": employee_data.name,
         "role": "employee",
+        "phone": employee_data.phone,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -44,6 +45,7 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
         email=employee_data.email,
         name=employee_data.name,
         role="employee",
+        phone=employee_data.phone,
         created_at=user_doc["created_at"]
     )
 
