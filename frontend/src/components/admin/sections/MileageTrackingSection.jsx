@@ -774,10 +774,17 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
           </div>
           <div className="flex items-center gap-2">
             {isTracking && (
-              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                Tracking
-              </span>
+              isPaused ? (
+                <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full flex items-center gap-1">
+                  <PauseCircle className="w-3 h-3" />
+                  Paused
+                </span>
+              ) : (
+                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  Tracking
+                </span>
+              )
             )}
             {isExpanded ? (
               <ChevronUp className="w-5 h-5 text-[#888]" />
