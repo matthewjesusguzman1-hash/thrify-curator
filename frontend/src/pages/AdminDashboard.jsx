@@ -3476,35 +3476,62 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Settings Row */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Settings className="w-5 h-5 text-[#888]" />
-                        <div>
-                          <p className="text-sm font-medium text-[#333]">Pay Period Settings</p>
-                          <p className="text-xs text-[#888]">Set the start date for bi-weekly pay periods</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Settings className="w-5 h-5 text-[#888]" />
+                          <div>
+                            <p className="text-sm font-medium text-[#333]">Pay Period Settings</p>
+                            <p className="text-xs text-[#888]">Set the start date for bi-weekly pay periods</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm text-[#666]">Start Date:</Label>
+                            <Input
+                              type="date"
+                              value={payrollSettings.pay_period_start_date}
+                              onChange={(e) => setPayrollSettings({ ...payrollSettings, pay_period_start_date: e.target.value })}
+                              className="w-40 h-9 text-sm"
+                              data-testid="pay-period-start-date"
+                            />
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={handleUpdatePayrollSettings}
+                            className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
+                            data-testid="save-pay-period-btn"
+                          >
+                            <Save className="w-4 h-4 mr-1" />
+                            Save
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-sm text-[#666]">Start Date:</Label>
-                          <Input
-                            type="date"
-                            value={payrollSettings.pay_period_start_date}
-                            onChange={(e) => setPayrollSettings({ ...payrollSettings, pay_period_start_date: e.target.value })}
-                            className="w-40 h-9 text-sm"
-                            data-testid="pay-period-start-date"
-                          />
+                      
+                      {/* Pay Period Preview */}
+                      {payrollSettings.pay_period_start_date && (
+                        <div className="bg-[#F9F6F7] rounded-lg p-3 border border-[#eee]">
+                          <p className="text-xs text-[#888] mb-1">If saved, the current bi-weekly period will be:</p>
+                          {(() => {
+                            const preview = calculateBiweeklyPeriod(payrollSettings.pay_period_start_date);
+                            if (preview) {
+                              return (
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-medium text-[#333]">
+                                    {preview.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
+                                    {' '}-{' '}
+                                    {preview.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </p>
+                                  <span className="text-xs bg-[#00D4FF]/10 text-[#00A8CC] px-2 py-1 rounded-full">
+                                    Period #{preview.periodNumber}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return <p className="text-sm text-[#888]">Invalid date</p>;
+                          })()}
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={handleUpdatePayrollSettings}
-                          className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
-                          data-testid="save-pay-period-btn"
-                        >
-                          <Save className="w-4 h-4 mr-1" />
-                          Save
-                        </Button>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
