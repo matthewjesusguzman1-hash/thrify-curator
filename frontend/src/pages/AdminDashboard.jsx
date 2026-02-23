@@ -2319,16 +2319,16 @@ export default function AdminDashboard() {
                             <table className="data-table">
                               <thead>
                                 <tr>
-                                  <th>Name</th>
-                                  <th>Email</th>
-                                  <th>Phone</th>
-                                  <th>Submitted</th>
-                                  <th>Status</th>
+                                  <SortableHeader table="jobApplications" sortKey="full_name">Name</SortableHeader>
+                                  <SortableHeader table="jobApplications" sortKey="email">Email</SortableHeader>
+                                  <SortableHeader table="jobApplications" sortKey="phone">Phone</SortableHeader>
+                                  <SortableHeader table="jobApplications" sortKey="submitted_at">Submitted</SortableHeader>
+                                  <SortableHeader table="jobApplications" sortKey="status">Status</SortableHeader>
                                   <th>Actions</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {formSubmissions.jobApplications.map((app) => (
+                                {getSortedData(formSubmissions.jobApplications, 'jobApplications').map((app) => (
                                   <tr key={app.id} data-testid={`job-app-row-${app.id}`}>
                                     <td className="font-medium">{app.full_name}</td>
                                     <td>{app.email}</td>
