@@ -834,6 +834,54 @@ export default function AdminDashboard() {
     toast.success("Opening W-9 form...");
   };
 
+  // W-9 Review functions
+  const fetchPendingW9s = useCallback(async () => {
+    setLoadingPendingW9s(true);
+    try {
+      const response = await axios.get(`${API}/admin/w9/pending`, getAuthHeader());
+      setPendingW9s(response.data);
+    } catch (error) {
+      console.error("Failed to fetch pending W-9s:", error);
+    } finally {
+      setLoadingPendingW9s(false);
+    }
+  }, [getAuthHeader]);
+
+  useEffect(() => {
+    if (showW9ReviewSection) {
+      fetchPendingW9s();
+    }
+  }, [showW9ReviewSection, fetchPendingW9s]);
+
+  const handleApproveW9 = async (employeeId) => {
+    try {
+      await axios.post(`${API}/admin/employees/${employeeId}/w9/approve`, {}, getAuthHeader());
+      toast.success("W-9 approved!");
+      setReviewingW9(null);
+      fetchPendingW9s();
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to approve W-9");
+    }
+  };
+
+  const handleRejectW9 = async (employeeId) => {
+    if (!rejectReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+    try {
+      await axios.post(`${API}/admin/employees/${employeeId}/w9/reject`, { reason: rejectReason }, getAuthHeader());
+      toast.success("W-9 returned for corrections");
+      setReviewingW9(null);
+      setRejectReason("");
+      fetchPendingW9s();
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to reject W-9");
+    }
+  };
+
   // Edit time entry handlers
   const handleEditEntry = (entry) => {
     setEditingEntry(entry);
