@@ -2101,7 +2101,7 @@ export default function AdminDashboard() {
                               <SortableHeader table="hoursByEmployee" sortKey="name">Employee</SortableHeader>
                               <SortableHeader table="hoursByEmployee" sortKey="hours">Total Hours</SortableHeader>
                               <SortableHeader table="hoursByEmployee" sortKey="shifts">Shifts</SortableHeader>
-                              <th>Avg Hours/Shift</th>
+                              <th className="text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2117,7 +2117,20 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="font-medium">{emp.hours.toFixed(2)} hrs</td>
                                 <td>{emp.shifts}</td>
-                                <td>{(emp.hours / emp.shifts).toFixed(2)} hrs</td>
+                                <td>
+                                  <div className="flex items-center justify-end">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleViewEmployeeShifts(emp)}
+                                      className="h-8 px-3 text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10 flex items-center gap-1"
+                                      data-testid={`view-shifts-${emp.user_id}`}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      View Shifts
+                                    </Button>
+                                  </div>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
