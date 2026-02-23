@@ -25,7 +25,6 @@ import {
   DollarSign,
   Settings,
   CalendarDays,
-  Mail,
   Eye,
   Briefcase,
   Package,
