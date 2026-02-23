@@ -36,19 +36,24 @@ Build a "Thrifty Curator" reselling application with:
 - In-app notifications for admin (clock in/out)
 - Email notifications via Resend (requires API key)
 
-## What's Been Implemented (Dec 2025)
+## What's Been Implemented (Dec 2025 - Feb 2026)
 - [x] Landing page with Thrifty Curator logo
 - [x] Two-column grid layout (Shop/Connect on left, Forms/Employee on right)
 - [x] All 5 platform links with actual store URLs
+- [x] Custom platform logos (eBay, Mercari, Depop, Facebook)
 - [x] Connect links: TikTok, Facebook Page, Message Me (email)
+- [x] Custom social logos (TikTok, Facebook)
 - [x] QR code above share button
 - [x] Native share API integration
 - [x] Job Application form with all required fields
 - [x] Consignment Inquiry form with brand list, clothing types, image upload
 - [x] Consignment Agreement form with e-signature
+- [x] All forms styled with "Black Bold" theme
 - [x] Passwordless JWT authentication (email only, no passwords)
 - [x] 24-hour session persistence
 - [x] Employee clock in/out with real-time timer
+- [x] Multiple clock in/out sessions per day (consolidated into one shift)
+- [x] Pay period summary with hours, shifts, and estimated pay
 - [x] Hours summary (weekly, total, shifts)
 - [x] Admin dashboard: add/remove employees, shift reports with date range filters
 - [x] Pre-seeded admin account (matthewjesusguzman1@gmail.com)
@@ -64,20 +69,21 @@ Build a "Thrifty Curator" reselling application with:
 - [x] Configurable pay period start date
 - [x] Individual hourly rates per employee (inline editing in employees table)
 - [x] Payroll reports use individual rates with fallback to default
-- [x] Star indicator (★) for employees with custom rates in reports
+- [x] Star indicator for employees with custom rates in reports
 - [x] Remove Employee button at top for quick removal
 - [x] Clickable employee names to view details modal
 - [x] Employee Details modal with email, rate, join date, total hours, recent shifts
 - [x] Quick actions in details: Edit Rate, Add Shift, Delete employee
 - [x] Edit shifts directly from employee details modal
 - [x] Edit Employee button in header (next to Remove Employee)
-- [x] Edit Employee modal: name, email, and role editing
+- [x] Edit Employee modal: name, email, role, and hourly rate editing
 - [x] Role change support (Employee ↔ Admin)
-- [x] "Black Bold" UI redesign with dark gradient background and vibrant accents (cyan, pink, purple)
-- [x] Brand-colored logos for each selling platform on landing page
-- [x] Custom eBay logo (user-provided image) on landing page
+- [x] "Black Bold" UI redesign with dark gradient background and vibrant accents
 - [x] Email reports functionality (send shift/payroll reports via Resend)
-- [x] Hourly rate editing in Edit Employee modal
+- [x] PWA support with app manifest
+- [x] Splash screen on mobile app launch
+- [x] Home screen icon support (iOS/Android)
+- [x] Reusable admin components (StatCard, EmployeeTable, Modals, NotificationBell)
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
