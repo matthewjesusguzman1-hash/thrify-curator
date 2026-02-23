@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     name: str
     role: str = "employee"
     hourly_rate: Optional[float] = None
+    phone: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -24,6 +25,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     hourly_rate: Optional[float] = None
+    phone: Optional[str] = None
     created_at: str
     has_w9: Optional[bool] = None
     w9_uploaded_at: Optional[str] = None
@@ -39,6 +41,7 @@ class TokenResponse(BaseModel):
 class CreateEmployee(BaseModel):
     name: str
     email: EmailStr
+    phone: Optional[str] = None
 
 
 class UpdateEmployeeRate(BaseModel):
@@ -50,6 +53,7 @@ class UpdateEmployeeDetails(BaseModel):
     email: Optional[EmailStr] = None
     hourly_rate: Optional[float] = None
     role: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class W9RejectRequest(BaseModel):
