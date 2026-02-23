@@ -2720,7 +2720,13 @@ export default function AdminDashboard() {
           <div className="dashboard-card">
             <div 
               className="flex items-center justify-between cursor-pointer"
-              onClick={() => setShowStatsSection(!showStatsSection)}
+              onClick={() => {
+                const willOpen = !showStatsSection;
+                setShowStatsSection(willOpen);
+                if (willOpen) {
+                  fetchPayrollSummary();
+                }
+              }}
               data-testid="stats-section-toggle"
             >
               <div className="flex items-center gap-3">
