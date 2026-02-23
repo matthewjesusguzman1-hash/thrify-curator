@@ -241,6 +241,11 @@ export default function AdminDashboard() {
   const [uploadingW9, setUploadingW9] = useState(null);
   const w9InputRef = useRef(null);
 
+  // Mileage trip state for header button
+  const [headerTripActive, setHeaderTripActive] = useState(false);
+  const [headerTripLoading, setHeaderTripLoading] = useState(false);
+  const mileageSectionRef = useRef(null);
+
   // Helper function to calculate biweekly period from a start date
   const calculateBiweeklyPeriod = (startDateStr) => {
     if (!startDateStr) return null;
