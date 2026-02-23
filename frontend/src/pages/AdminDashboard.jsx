@@ -156,7 +156,8 @@ export default function AdminDashboard() {
     name: "",
     email: "",
     role: "employee",
-    hourly_rate: ""
+    hourly_rate: "",
+    phone: ""
   });
   const [savingEmployee, setSavingEmployee] = useState(false);
 
