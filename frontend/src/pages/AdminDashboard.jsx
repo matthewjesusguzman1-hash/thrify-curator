@@ -1099,6 +1099,24 @@ export default function AdminDashboard() {
                       <p className="text-xs text-[#888] mt-1">Changing to Admin gives full dashboard access</p>
                     </div>
 
+                    <div className="form-group">
+                      <Label className="form-label">Hourly Rate</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editEmployeeData.hourly_rate}
+                          onChange={(e) => setEditEmployeeData({ ...editEmployeeData, hourly_rate: e.target.value })}
+                          placeholder="0.00"
+                          className="form-input pl-9"
+                          data-testid="edit-employee-rate"
+                        />
+                      </div>
+                      <p className="text-xs text-[#888] mt-1">Leave empty to use default rate in payroll</p>
+                    </div>
+
                     <div className="flex gap-3 mt-6">
                       <Button
                         type="button"
