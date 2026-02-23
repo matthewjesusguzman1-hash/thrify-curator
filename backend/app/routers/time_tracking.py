@@ -219,3 +219,54 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
         "period_start": current_period_start.isoformat(),
         "period_end": current_period_end.isoformat()
     }
+
+
+# Employee W-9 submission endpoints
+@router.get("/w9/status")
+async def get_w9_status(user: dict = Depends(get_current_user)):
+    """Get employee's W-9 submission status"""
+    w9_doc = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0, "content": 0})
+    
+    if not w9_doc:
+        return {
+            "status": "not_submitted",
+            "has_w9": False,
+            "can_edit": True
+        }
+    
+    return {
+        "status": w9_doc.get("status", "submitted"),
+        "has_w9": True,
+        "filename": w9_doc.get("filename"),
+        "uploaded_at": w9_doc.get("uploaded_at"),
+        "can_edit": w9_doc.get("status") in ["not_submitted", "needs_correction"],
+        "rejection_reason": w9_doc.get("rejection_reason"),
+        "reviewed_at": w9_doc.get("reviewed_at")
+    }
+
+
+@router.post("/w9/upload")
+async def upload_w9_employee(user: dict = Depends(get_current_user)):
+    """Employee uploads their W-9 - uses form data"""
+    from fastapi import UploadFile, File
+    raise HTTPException(status_code=400, detail="Use multipart form upload endpoint")
+
+
+@router.delete("/w9")
+async def delete_own_w9(user: dict = Depends(get_current_user)):
+    """Employee deletes their own W-9 (only if not yet approved)"""
+    w9_doc = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0})
+    
+    if not w9_doc:
+        raise HTTPException(status_code=404, detail="No W-9 document found")
+    
+    if w9_doc.get("status") == "approved":
+        raise HTTPException(status_code=400, detail="Cannot delete approved W-9")
+    
+    await db.w9_documents.delete_one({"employee_id": user["id"]})
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$unset": {"has_w9": "", "w9_uploaded_at": "", "w9_status": ""}}
+    )
+    
+    return {"message": "W-9 deleted successfully"}
