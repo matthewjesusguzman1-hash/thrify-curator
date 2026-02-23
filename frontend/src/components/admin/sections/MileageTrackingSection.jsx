@@ -6,6 +6,7 @@ import {
   MapPinned,
   PlayCircle,
   StopCircle,
+  PauseCircle,
   Download,
   Plus,
   Edit2,
