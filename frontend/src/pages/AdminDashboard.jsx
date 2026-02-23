@@ -3802,11 +3802,29 @@ export default function AdminDashboard() {
                         <div>
                           <Label className="text-xs text-[#666]">Amount ($)</Label>
                           <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
+                            type="text"
+                            placeholder="$0.00"
                             value={checkUploadData.amount}
-                            onChange={(e) => setCheckUploadData({ ...checkUploadData, amount: e.target.value })}
+                            onChange={(e) => {
+                              // Allow only numbers, decimal point, and dollar sign
+                              let value = e.target.value.replace(/[^0-9.]/g, '');
+                              setCheckUploadData({ ...checkUploadData, amount: value });
+                            }}
+                            onBlur={(e) => {
+                              // Format on blur: add $ and .00 if needed
+                              let value = e.target.value.replace(/[^0-9.]/g, '');
+                              if (value) {
+                                const num = parseFloat(value);
+                                if (!isNaN(num)) {
+                                  setCheckUploadData({ ...checkUploadData, amount: `$${num.toFixed(2)}` });
+                                }
+                              }
+                            }}
+                            onFocus={(e) => {
+                              // Remove formatting on focus for easier editing
+                              let value = e.target.value.replace(/[^0-9.]/g, '');
+                              setCheckUploadData({ ...checkUploadData, amount: value });
+                            }}
                             className="h-9 text-sm"
                           />
                         </div>
