@@ -1016,7 +1016,7 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Notification List */}
-                  <div className="max-h-96 overflow-y-auto">
+                  <div className="max-h-96 overflow-y-auto bg-white">
                     {notifications.length === 0 ? (
                       <div className="p-8 text-center">
                         <div className="w-16 h-16 bg-[#F9F6F7] rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1030,64 +1030,62 @@ export default function AdminDashboard() {
                         {notifications.map((notification) => (
                           <div 
                             key={notification.id} 
-                            className={`p-4 hover:bg-[#faf9f7] transition-all cursor-pointer ${
-                              !notification.read ? 'bg-gradient-to-r from-[#F8C8DC]/10 to-transparent border-l-4 border-l-[#FF1493]' : ''
+                            className={`p-4 hover:bg-[#faf9f7] transition-all ${
+                              !notification.read ? 'bg-[#FFF5F8] border-l-4 border-l-[#FF1493]' : 'bg-white'
                             }`}
                             data-testid={`notification-item-${notification.id}`}
                           >
-                            <div className="flex items-start gap-4">
+                            <div className="flex items-start gap-3">
                               {/* Icon */}
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                 notification.type === 'clock_in' 
-                                  ? 'bg-gradient-to-br from-green-400 to-green-500' 
-                                  : 'bg-gradient-to-br from-red-400 to-red-500'
+                                  ? 'bg-green-500' 
+                                  : 'bg-red-500'
                               }`}>
                                 {notification.type === 'clock_in' 
-                                  ? <LogIn className="w-6 h-6 text-white" />
-                                  : <LogOutIcon className="w-6 h-6 text-white" />
+                                  ? <LogIn className="w-5 h-5 text-white" />
+                                  : <LogOutIcon className="w-5 h-5 text-white" />
                                 }
                               </div>
                               
                               {/* Content */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                  <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
                                     notification.type === 'clock_in'
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-red-100 text-red-700'
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-red-100 text-red-800'
                                   }`}>
-                                    {notification.type === 'clock_in' ? 'CLOCK IN' : 'CLOCK OUT'}
+                                    {notification.type === 'clock_in' ? 'IN' : 'OUT'}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {formatNotificationTime(notification.created_at)}
                                   </span>
                                   {!notification.read && (
-                                    <span className="w-2 h-2 bg-[#FF1493] rounded-full animate-pulse"></span>
+                                    <span className="w-2 h-2 bg-[#FF1493] rounded-full"></span>
                                   )}
                                 </div>
                                 
-                                <p className="text-sm text-[#333] font-semibold leading-tight">
+                                <p className="text-sm text-gray-900 font-medium leading-snug">
                                   {notification.message}
                                 </p>
                                 
-                                {notification.details && (
-                                  <div className="flex items-center gap-3 mt-2 text-xs">
+                                {notification.details && (notification.details.today_hours !== undefined || notification.details.week_hours !== undefined) && (
+                                  <div className="flex items-center gap-2 mt-2">
                                     {notification.details.today_hours !== undefined && (
-                                      <span className="flex items-center gap-1 text-[#666] bg-[#f5f5f5] px-2 py-1 rounded-lg">
+                                      <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
                                         <Clock className="w-3 h-3" />
-                                        Today: <strong className="text-[#333]">{notification.details.today_hours}h</strong>
+                                        Today: {notification.details.today_hours}h
                                       </span>
                                     )}
                                     {notification.details.week_hours !== undefined && (
-                                      <span className="flex items-center gap-1 text-[#666] bg-[#f5f5f5] px-2 py-1 rounded-lg">
+                                      <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
                                         <Calendar className="w-3 h-3" />
-                                        Week: <strong className="text-[#333]">{notification.details.week_hours}h</strong>
+                                        Week: {notification.details.week_hours}h
                                       </span>
                                     )}
                                   </div>
                                 )}
-                                
-                                <p className="text-xs text-[#999] mt-2 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {formatNotificationTime(notification.created_at)}
-                                </p>
                               </div>
                             </div>
                           </div>
