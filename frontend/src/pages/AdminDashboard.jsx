@@ -2118,15 +2118,27 @@ export default function AdminDashboard() {
                     {payrollLoading ? "Generating..." : "Generate Report"}
                   </Button>
                   {payrollReport && (
-                    <Button
-                      onClick={handleDownloadPayrollPDF}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                      data-testid="download-payroll-pdf-btn"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download PDF
-                    </Button>
+                    <>
+                      <Button
+                        onClick={handleDownloadPayrollPDF}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        data-testid="download-payroll-pdf-btn"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download PDF
+                      </Button>
+                      <Button
+                        onClick={handleEmailPayrollReport}
+                        disabled={emailingPayroll}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        data-testid="email-payroll-report-btn"
+                      >
+                        <Mail className="w-4 h-4" />
+                        {emailingPayroll ? "Sending..." : "Email Report"}
+                      </Button>
+                    </>
                   )}
                 </div>
 
