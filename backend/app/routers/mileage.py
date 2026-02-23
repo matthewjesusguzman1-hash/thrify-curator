@@ -477,7 +477,7 @@ async def export_mileage_pdf(
     
     # Title
     elements.append(Paragraph("Business Mileage Log", title_style))
-    elements.append(Paragraph(f"Tax Year {year} - IRS Standard Mileage Rate: ${IRS_RATE}/mile", subtitle_style))
+    elements.append(Paragraph(f"{period_label} - IRS Standard Mileage Rate: ${IRS_RATE}/mile", subtitle_style))
     
     # Prepare table data
     table_data = [["Date", "From", "To", "Miles", "Purpose", "Deduction"]]
