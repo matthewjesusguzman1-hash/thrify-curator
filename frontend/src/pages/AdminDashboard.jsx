@@ -1580,6 +1580,9 @@ export default function AdminDashboard() {
         day: 'numeric',
         year: 'numeric'
       });
+    } catch {
+      return 'N/A';
+    }
   };
 
   if (!user) return null;
