@@ -410,89 +410,136 @@ async def get_me(user: dict = Depends(get_current_user)):
 
 @api_router.post("/time/clock", response_model=TimeEntry)
 async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user)):
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    
+    # Get today's date boundaries (midnight to midnight UTC)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
     
     if action.action == "in":
-        # Check if already clocked in
+        # Check if already clocked in (has an active session)
         active = await db.time_entries.find_one(
             {"user_id": user["id"], "clock_out": None}, {"_id": 0}
         )
         if active:
             raise HTTPException(status_code=400, detail="Already clocked in")
         
-        # Check if employee already had a shift in the last 24 hours
-        twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
-        recent_entry = await db.time_entries.find_one(
+        # Check if there's already a shift entry for today
+        today_entry = await db.time_entries.find_one(
             {
                 "user_id": user["id"],
-                "clock_in": {"$gte": twenty_four_hours_ago}
+                "shift_date": today_start.strftime("%Y-%m-%d")
             },
             {"_id": 0}
         )
-        if recent_entry:
-            raise HTTPException(
-                status_code=400, 
-                detail="You can only clock in once per 24-hour period. Please wait until your next shift."
+        
+        if today_entry:
+            # Resume today's shift - set clock_out to None to mark as active
+            await db.time_entries.update_one(
+                {"id": today_entry["id"]},
+                {
+                    "$set": {
+                        "clock_out": None,
+                        "last_clock_in": now_iso
+                    }
+                }
             )
-        
-        entry = TimeEntry(
-            user_id=user["id"],
-            user_name=user["name"],
-            clock_in=now
-        )
-        await db.time_entries.insert_one(entry.model_dump())
-        
-        # Create in-app notification
-        await create_admin_notification(
-            notification_type="clock_in",
-            employee_id=user["id"],
-            employee_name=user["name"],
-            message=f"{user['name']} has clocked in",
-            details={"clock_in": now}
-        )
-        
-        # Send email notification (non-blocking)
-        asyncio.create_task(send_clock_notification_email(
-            action="in",
-            employee_name=user["name"],
-            timestamp=now
-        ))
-        
-        return entry
+            today_entry["clock_out"] = None
+            today_entry["last_clock_in"] = now_iso
+            
+            # Create in-app notification
+            await create_admin_notification(
+                notification_type="clock_in",
+                employee_id=user["id"],
+                employee_name=user["name"],
+                message=f"{user['name']} has clocked in (resuming shift)",
+                details={"clock_in": now_iso, "shift_date": today_start.strftime("%Y-%m-%d")}
+            )
+            
+            # Send email notification (non-blocking)
+            asyncio.create_task(send_clock_notification_email(
+                action="in",
+                employee_name=user["name"],
+                timestamp=now_iso
+            ))
+            
+            return TimeEntry(**today_entry)
+        else:
+            # Create new shift entry for today
+            entry = TimeEntry(
+                user_id=user["id"],
+                user_name=user["name"],
+                clock_in=now_iso,
+                shift_date=today_start.strftime("%Y-%m-%d")
+            )
+            entry_dict = entry.model_dump()
+            entry_dict["last_clock_in"] = now_iso
+            entry_dict["accumulated_hours"] = 0.0
+            await db.time_entries.insert_one(entry_dict)
+            
+            # Create in-app notification
+            await create_admin_notification(
+                notification_type="clock_in",
+                employee_id=user["id"],
+                employee_name=user["name"],
+                message=f"{user['name']} has clocked in",
+                details={"clock_in": now_iso}
+            )
+            
+            # Send email notification (non-blocking)
+            asyncio.create_task(send_clock_notification_email(
+                action="in",
+                employee_name=user["name"],
+                timestamp=now_iso
+            ))
+            
+            return entry
     
     elif action.action == "out":
-        # Find active entry
+        # Find active entry (one without clock_out)
         active = await db.time_entries.find_one(
             {"user_id": user["id"], "clock_out": None}, {"_id": 0}
         )
         if not active:
             raise HTTPException(status_code=400, detail="Not clocked in")
         
-        # Calculate hours
-        clock_in_time = datetime.fromisoformat(active["clock_in"])
-        clock_out_time = datetime.fromisoformat(now)
-        total_hours = round((clock_out_time - clock_in_time).total_seconds() / 3600, 2)
+        # Calculate hours for this session
+        last_clock_in = active.get("last_clock_in", active["clock_in"])
+        clock_in_time = datetime.fromisoformat(last_clock_in)
+        clock_out_time = now
+        session_hours = round((clock_out_time - clock_in_time).total_seconds() / 3600, 2)
+        
+        # Add to accumulated hours
+        accumulated_hours = active.get("accumulated_hours", 0.0) + session_hours
+        total_hours = round(accumulated_hours, 2)
         
         await db.time_entries.update_one(
             {"id": active["id"]},
-            {"$set": {"clock_out": now, "total_hours": total_hours}}
+            {
+                "$set": {
+                    "clock_out": now_iso,
+                    "total_hours": total_hours,
+                    "accumulated_hours": accumulated_hours
+                }
+            }
         )
         
         # Get hours summary for notification
         hours_summary = await get_employee_hours_summary(user["id"])
-        # Add this shift's hours to today (since it was just completed)
-        hours_summary["today_hours"] = round(hours_summary["today_hours"] + total_hours, 2)
-        hours_summary["week_hours"] = round(hours_summary["week_hours"] + total_hours, 2)
+        hours_summary["today_hours"] = round(hours_summary["today_hours"] + session_hours, 2)
+        hours_summary["week_hours"] = round(hours_summary["week_hours"] + session_hours, 2)
         
         # Create in-app notification
         await create_admin_notification(
             notification_type="clock_out",
             employee_id=user["id"],
             employee_name=user["name"],
-            message=f"{user['name']} has clocked out ({total_hours} hours)",
+            message=f"{user['name']} has clocked out ({session_hours} hrs this session, {total_hours} hrs total today)",
             details={
                 "clock_in": active["clock_in"],
-                "clock_out": now,
+                "clock_out": now_iso,
+                "session_hours": session_hours,
                 "total_hours": total_hours,
                 "today_hours": hours_summary["today_hours"],
                 "week_hours": hours_summary["week_hours"]
