@@ -65,6 +65,11 @@ Build a "Thrifty Curator" reselling application with:
 - [x] Individual hourly rates per employee (inline editing in employees table)
 - [x] Payroll reports use individual rates with fallback to default
 - [x] Star indicator (★) for employees with custom rates in reports
+- [x] Remove Employee button at top for quick removal
+- [x] Clickable employee names to view details modal
+- [x] Employee Details modal with email, rate, join date, total hours, recent shifts
+- [x] Quick actions in details: Edit Rate, Add Shift, Delete employee
+- [x] Edit shifts directly from employee details modal
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn/UI, Framer Motion
