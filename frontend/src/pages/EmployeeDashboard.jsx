@@ -215,7 +215,7 @@ export default function EmployeeDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard">
       {/* Header */}
-      <header className="bg-white/10 backdrop-blur-md border-b border-white/10 px-4 py-3">
+      <header className="bg-white/10 backdrop-blur-md border-b border-white/10 px-4 pt-14 pb-3 sm:pt-6">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center">
