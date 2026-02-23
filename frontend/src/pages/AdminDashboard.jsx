@@ -2107,7 +2107,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 mb-6">
+                <div className="flex flex-wrap gap-2 mb-6">
                   <Button
                     onClick={handleGeneratePayrollReport}
                     disabled={payrollLoading || (payrollFilters.period_type === "custom" && (!payrollFilters.custom_start || !payrollFilters.custom_end))}
@@ -2122,7 +2122,7 @@ export default function AdminDashboard() {
                       <Button
                         onClick={handleDownloadPayrollPDF}
                         variant="outline"
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 border-[#C5A065] text-[#C5A065]"
                         data-testid="download-payroll-pdf-btn"
                       >
                         <Download className="w-4 h-4" />
@@ -2132,7 +2132,7 @@ export default function AdminDashboard() {
                         onClick={handleEmailPayrollReport}
                         disabled={emailingPayroll}
                         variant="outline"
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 border-[#8BA88E] text-[#8BA88E]"
                         data-testid="email-payroll-report-btn"
                       >
                         <Mail className="w-4 h-4" />
