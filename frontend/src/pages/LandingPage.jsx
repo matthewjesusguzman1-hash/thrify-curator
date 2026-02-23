@@ -195,11 +195,11 @@ export default function LandingPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center text-white overflow-hidden"
+                          className={`${platform.useImage ? 'w-14' : 'w-10'} h-10 rounded-lg flex items-center justify-center text-white overflow-hidden`}
                           style={{ backgroundColor: platform.color }}
                         >
                           {platform.useImage ? (
-                            <img src={platform.logoUrl} alt={platform.name} className="w-full h-full object-cover" />
+                            <img src={platform.logoUrl} alt={platform.name} className="w-full h-full object-contain p-1" />
                           ) : (
                             <platform.Icon />
                           )}
