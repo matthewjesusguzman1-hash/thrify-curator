@@ -1198,6 +1198,7 @@ export default function MileageTrackingSection({ getAuthHeader }) {
                   )}
                 </Button>
               </div>
+              </div>
             ) : (
               // Step 2: View report and download
               <div className="flex flex-col flex-1 overflow-hidden">
