@@ -103,6 +103,7 @@ Build a "Thrifty Curator" reselling application with:
 - `PUT /api/admin/payroll/settings` - Update payroll settings
 - `POST /api/admin/payroll/report` - Generate payroll report (JSON)
 - `POST /api/admin/payroll/report/pdf` - Generate payroll report (PDF)
+- `PUT /api/admin/employees/{id}/rate` - Update employee hourly rate
 
 ## Key Credentials
 - **Admin Email**: matthewjesusguzman1@gmail.com (no password needed)
