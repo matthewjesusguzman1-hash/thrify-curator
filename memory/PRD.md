@@ -296,6 +296,21 @@ Build a "Thrifty Curator" reselling application with:
 
 ## Recent Updates (Feb 23, 2026 - Session 4)
 
+### Multi-Admin Code Support
+- **Added Eunice Guzman as admin**: Email `euniceguzman@thriftycurator.com`, code `0826`
+- **Updated AuthPage**: Now supports multiple admin codes via `ADMIN_CODES` object
+- Both codes work: `4399` (Matthew) and `0826` (Eunice)
+
+### UI/UX Fixes
+- **Notification Dropdown**: Fixed off-screen issue in portrait/mobile mode
+  - Uses fixed positioning on mobile, absolute on desktop
+  - Dropdown now 100% visible on all screen sizes
+- **Admin Dashboard Top Buttons**: Cleaned up layout
+  - Single row with consistent button sizing: $, Add, Edit, Report, Remove
+  - Icons show on all screens, labels hidden on mobile
+- **Modal Close Buttons**: Added Close button at bottom of Report and Payroll modals
+  - All modals have: X button (top right), Cancel/Close button (bottom), click-outside-to-close
+
 ### W-9 Viewing Bug Fixed
 - **W-9 View Button**: Now opens W-9 Viewer Modal instead of forcing download
 - Modal displays PDF in iframe with filename, upload date, and approval status
@@ -309,12 +324,13 @@ Build a "Thrifty Curator" reselling application with:
 - fpdf2 library installed for PDF generation
 
 ### Refactoring Progress
-- AdminDashboard.jsx reduced from 6787 lines to ~5850 lines
+- AdminDashboard.jsx reduced from 6787 lines to ~5870 lines
 - MileageTrackingSection component extracted and working
 - Removed unused email-related state variables and imports
 
 ### Files Changed
-- Modified: `/app/frontend/src/pages/AdminDashboard.jsx` - Replaced email with download, fixed W-9 view
+- Modified: `/app/frontend/src/pages/AuthPage.jsx` - Multi-admin code support
+- Modified: `/app/frontend/src/pages/AdminDashboard.jsx` - UI fixes, modal improvements
 - Modified: `/app/backend/app/routers/admin.py` - Added /reports/pdf endpoint
 - Updated: `/app/backend/requirements.txt` - Added fpdf2
 
