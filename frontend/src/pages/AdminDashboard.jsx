@@ -1109,12 +1109,14 @@ export default function AdminDashboard() {
                           min="0"
                           value={editEmployeeData.hourly_rate}
                           onChange={(e) => setEditEmployeeData({ ...editEmployeeData, hourly_rate: e.target.value })}
-                          placeholder="0.00"
+                          placeholder={payrollSettings.default_hourly_rate?.toFixed(2) || "15.00"}
                           className="form-input pl-9"
                           data-testid="edit-employee-rate"
                         />
                       </div>
-                      <p className="text-xs text-[#888] mt-1">Leave empty to use default rate in payroll</p>
+                      <p className="text-xs text-[#888] mt-1">
+                        Default rate: ${payrollSettings.default_hourly_rate?.toFixed(2) || "15.00"}/hr (used if empty)
+                      </p>
                     </div>
 
                     <div className="flex gap-3 mt-6">
