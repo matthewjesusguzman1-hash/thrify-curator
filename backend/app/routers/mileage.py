@@ -138,19 +138,74 @@ async def start_trip(trip_data: StartTripRequest, admin: dict = Depends(get_admi
         "start_location": trip_data.start_location.model_dump(),
         "start_address": trip_data.start_address,
         "start_time": now,
-        "waypoints": []
+        "waypoints": [],
+        "is_paused": False,
+        "paused_at": None,
+        "total_paused_duration": 0.0
     }
     
     await db.active_trips.insert_one(trip_doc)
     return ActiveTripResponse(**trip_doc)
 
 
-@router.post("/update-location")
-async def update_trip_location(location_data: UpdateTripLocationRequest, admin: dict = Depends(get_admin_user)):
-    """Add a waypoint to the active trip"""
+@router.post("/pause-trip")
+async def pause_trip(admin: dict = Depends(get_admin_user)):
+    """Pause the active trip tracking"""
     trip = await db.active_trips.find_one({"user_id": admin["id"]})
     if not trip:
         raise HTTPException(status_code=404, detail="No active trip found")
+    
+    if trip.get("is_paused", False):
+        raise HTTPException(status_code=400, detail="Trip is already paused")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    await db.active_trips.update_one(
+        {"user_id": admin["id"]},
+        {"$set": {"is_paused": True, "paused_at": now}}
+    )
+    
+    return {"message": "Trip paused", "paused_at": now}
+
+
+@router.post("/resume-trip")
+async def resume_trip(admin: dict = Depends(get_admin_user)):
+    """Resume a paused trip"""
+    trip = await db.active_trips.find_one({"user_id": admin["id"]})
+    if not trip:
+        raise HTTPException(status_code=404, detail="No active trip found")
+    
+    if not trip.get("is_paused", False):
+        raise HTTPException(status_code=400, detail="Trip is not paused")
+    
+    # Calculate paused duration and add to total
+    paused_at = trip.get("paused_at")
+    total_paused = trip.get("total_paused_duration", 0.0)
+    
+    if paused_at:
+        paused_time = datetime.fromisoformat(paused_at.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        pause_duration = (now - paused_time).total_seconds()
+        total_paused += pause_duration
+    
+    await db.active_trips.update_one(
+        {"user_id": admin["id"]},
+        {"$set": {"is_paused": False, "paused_at": None, "total_paused_duration": total_paused}}
+    )
+    
+    return {"message": "Trip resumed", "total_paused_duration": total_paused}
+
+
+@router.post("/update-location")
+async def update_trip_location(location_data: UpdateTripLocationRequest, admin: dict = Depends(get_admin_user)):
+    """Add a waypoint to the active trip (only if not paused)"""
+    trip = await db.active_trips.find_one({"user_id": admin["id"]})
+    if not trip:
+        raise HTTPException(status_code=404, detail="No active trip found")
+    
+    # Don't record waypoints if trip is paused
+    if trip.get("is_paused", False):
+        return {"message": "Trip is paused, location not recorded"}
     
     waypoint = location_data.location.model_dump()
     waypoint["timestamp"] = datetime.now(timezone.utc).isoformat()
