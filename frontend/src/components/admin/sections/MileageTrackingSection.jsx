@@ -430,49 +430,80 @@ export default function MileageTrackingSection({ getAuthHeader }) {
     setShowEditMileageModal(true);
   };
 
-  // Export CSV
-  const handleExportCSV = async () => {
-    try {
-      const year = new Date().getFullYear();
-      const response = await axios.get(`${API}/admin/mileage/export/csv?year=${year}`, {
-        ...getAuthHeader(),
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `mileage_log_${year}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success('CSV exported successfully!');
-    } catch (error) {
-      console.error('Export failed:', error);
-      toast.error('Failed to export CSV');
+  // Get date range based on export period selection
+  const getExportDateRange = () => {
+    const { period, customStart, customEnd } = exportOptions;
+    const now = new Date();
+    
+    switch (period) {
+      case "week": {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - 7);
+        return {
+          start: weekStart.toISOString().split('T')[0],
+          end: now.toISOString().split('T')[0],
+          label: "Last 7 Days"
+        };
+      }
+      case "month": {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return {
+          start: monthStart.toISOString().split('T')[0],
+          end: monthEnd.toISOString().split('T')[0],
+          label: now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        };
+      }
+      case "year": {
+        return {
+          start: `${now.getFullYear()}-01-01`,
+          end: `${now.getFullYear()}-12-31`,
+          label: `Year ${now.getFullYear()}`
+        };
+      }
+      case "custom":
+      default:
+        return {
+          start: customStart,
+          end: customEnd,
+          label: `${customStart} to ${customEnd}`
+        };
     }
   };
 
-  // Export PDF
-  const handleExportPDF = async () => {
+  // Unified export function
+  const handleExportReport = async () => {
+    setExporting(true);
     try {
-      const year = new Date().getFullYear();
-      const response = await axios.get(`${API}/admin/mileage/export/pdf?year=${year}`, {
-        ...getAuthHeader(),
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const dateRange = getExportDateRange();
+      const { format } = exportOptions;
+      const endpoint = format === "csv" ? "csv" : "pdf";
+      
+      const response = await axios.get(
+        `${API}/admin/mileage/export/${endpoint}?start_date=${dateRange.start}&end_date=${dateRange.end}`,
+        {
+          ...getAuthHeader(),
+          responseType: 'blob'
+        }
+      );
+      
+      const mimeType = format === "csv" ? "text/csv" : "application/pdf";
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: mimeType }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `mileage_log_${year}.pdf`);
+      link.setAttribute('download', `mileage_report_${dateRange.start}_${dateRange.end}.${format}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('PDF exported successfully!');
+      
+      toast.success(`${format.toUpperCase()} report downloaded!`);
+      setShowExportModal(false);
     } catch (error) {
       console.error('Export failed:', error);
-      toast.error('Failed to export PDF');
+      toast.error('Failed to export report');
+    } finally {
+      setExporting(false);
     }
   };
 
