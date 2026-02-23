@@ -519,12 +519,13 @@ export default function AdminDashboard() {
     setShowEmployeeShiftsModal(employee);
     setLoadingShifts(true);
     try {
-      const response = await axios.get(`${API}/admin/employee/${employee.user_id}/shifts`, getAuthHeader());
-      setEmployeeShifts(response.data.shifts || []);
+      // Use the correct endpoint - /entries not /shifts
+      const response = await axios.get(`${API}/admin/employee/${employee.user_id}/entries`, getAuthHeader());
+      setEmployeeShifts(response.data || []);
     } catch (error) {
       console.error("Failed to fetch employee shifts:", error);
       // Fallback to filtering from timeEntries
-      const shifts = timeEntries.filter(e => e.employee_id === employee.user_id);
+      const shifts = timeEntries.filter(e => e.user_id === employee.user_id || e.employee_id === employee.user_id);
       setEmployeeShifts(shifts);
     } finally {
       setLoadingShifts(false);
