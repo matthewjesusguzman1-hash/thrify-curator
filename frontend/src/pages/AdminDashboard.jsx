@@ -2810,6 +2810,45 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Pay Period Settings */}
+                  <div className="mt-4 pt-4 border-t border-[#eee]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Settings className="w-5 h-5 text-[#888]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#333]">Pay Period Settings</p>
+                          <p className="text-xs text-[#888]">Bi-weekly pay period for all employees</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm text-[#666]">Start Date:</Label>
+                          <Input
+                            type="date"
+                            value={payrollSettings.pay_period_start_date}
+                            onChange={(e) => setPayrollSettings({ ...payrollSettings, pay_period_start_date: e.target.value })}
+                            className="w-40 h-9 text-sm"
+                            data-testid="pay-period-start-date"
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={handleUpdatePayrollSettings}
+                          className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
+                          data-testid="save-pay-period-btn"
+                        >
+                          <Save className="w-4 h-4 mr-1" />
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#888] mt-2">
+                      Current Period: {payrollSummary.current_period?.start && payrollSummary.current_period?.end ? 
+                        `${new Date(payrollSummary.current_period.start).toLocaleDateString()} - ${new Date(payrollSummary.current_period.end).toLocaleDateString()}` : 
+                        'Not set'}
+                    </p>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
