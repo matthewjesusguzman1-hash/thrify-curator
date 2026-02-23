@@ -103,6 +103,12 @@ export default function JobApplicationForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] py-8 px-4" data-testid="job-application-page">
       <div className="max-w-2xl mx-auto">
+        {/* Back Link - Top */}
+        <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-[#00D4FF] transition-colors mt-4 mb-8" data-testid="back-link-top">
+          <ArrowLeft className="w-5 h-5" />
+          Back to Home
+        </Link>
+
         {/* Logo */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
