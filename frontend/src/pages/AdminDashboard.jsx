@@ -1880,27 +1880,58 @@ export default function AdminDashboard() {
                     <span className="hidden sm:inline">Remove</span>
                   </Button>
                 </div>
-                {/* Start/End Trip Button - spans full width below Add/Edit/Remove */}
-                <Button 
-                  onClick={headerTripActive ? handleHeaderEndTrip : handleHeaderStartTrip}
-                  disabled={headerTripLoading}
-                  size="sm"
-                  className={`flex items-center justify-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 w-full ${
-                    headerTripActive 
-                      ? 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30 text-white' 
-                      : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30 text-white'
-                  }`}
-                  data-testid="header-trip-btn"
-                >
-                  {headerTripLoading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : headerTripActive ? (
-                    <StopCircle className="w-4 h-4" />
-                  ) : (
-                    <Car className="w-4 h-4" />
-                  )}
-                  <span>{headerTripActive ? 'End Trip' : 'Start Trip'}</span>
-                </Button>
+                {/* Trip Control Buttons - spans full width below Add/Edit/Remove */}
+                {!headerTripActive ? (
+                  <Button 
+                    onClick={handleHeaderStartTrip}
+                    disabled={headerTripLoading}
+                    size="sm"
+                    className="flex items-center justify-center gap-2 font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30 text-white"
+                    data-testid="header-start-trip-btn"
+                  >
+                    {headerTripLoading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Car className="w-4 h-4" />
+                    )}
+                    <span>Start Trip</span>
+                  </Button>
+                ) : (
+                  <div className="flex gap-1 w-full">
+                    {/* Pause/Resume Button */}
+                    <Button 
+                      onClick={headerTripPaused ? handleHeaderResumeTrip : handleHeaderPauseTrip}
+                      disabled={headerTripLoading}
+                      size="sm"
+                      className={`flex items-center justify-center gap-1 font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 flex-1 ${
+                        headerTripPaused 
+                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30 text-white' 
+                          : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-amber-500/30 text-white'
+                      }`}
+                      data-testid="header-pause-resume-btn"
+                    >
+                      {headerTripLoading ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : headerTripPaused ? (
+                        <PlayCircle className="w-4 h-4" />
+                      ) : (
+                        <PauseCircle className="w-4 h-4" />
+                      )}
+                      <span className="hidden sm:inline">{headerTripPaused ? 'Resume' : 'Pause'}</span>
+                    </Button>
+                    {/* End Trip Button */}
+                    <Button 
+                      onClick={handleHeaderEndTrip}
+                      disabled={headerTripLoading}
+                      size="sm"
+                      className="flex items-center justify-center gap-1 font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30 text-white"
+                      data-testid="header-end-trip-btn"
+                    >
+                      <StopCircle className="w-4 h-4" />
+                      <span className="hidden sm:inline">End Trip</span>
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
