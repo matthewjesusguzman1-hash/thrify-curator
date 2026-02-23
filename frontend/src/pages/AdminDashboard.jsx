@@ -49,7 +49,10 @@ import {
   Image as ImageIcon,
   Pencil,
   Search,
-  Filter
+  Filter,
+  Car,
+  Navigation,
+  MapPinned
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
