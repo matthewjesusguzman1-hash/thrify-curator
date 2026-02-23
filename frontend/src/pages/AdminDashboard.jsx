@@ -4030,6 +4030,7 @@ export default function AdminDashboard() {
           <MileageTrackingSection 
             getAuthHeader={getAuthHeader} 
             onTripStatusChange={(isActive) => setHeaderTripActive(isActive)}
+            forceExpand={forceMileageExpand}
           />
 
           {/* W-9 Rejection Modal */}
