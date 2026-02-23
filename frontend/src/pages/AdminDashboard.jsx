@@ -64,6 +64,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [employees, setEmployees] = useState([]);
+  const [employeeClockStatuses, setEmployeeClockStatuses] = useState({}); // Track which employees are clocked in
   const [timeEntries, setTimeEntries] = useState([]);
   const [summary, setSummary] = useState({ 
     total_employees: 0, 
