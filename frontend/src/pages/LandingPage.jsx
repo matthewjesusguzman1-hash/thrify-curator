@@ -237,10 +237,14 @@ export default function LandingPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center"
+                          className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden"
                           style={{ backgroundColor: link.color }}
                         >
-                          <link.icon className="w-5 h-5 text-white" />
+                          {link.useImage ? (
+                            <img src={link.logoUrl} alt={link.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <link.icon className="w-5 h-5 text-white" />
+                          )}
                         </div>
                         <span className="font-semibold text-[#1A1A2E] group-hover:text-[#FF1493] transition-colors">
                           {link.name}
