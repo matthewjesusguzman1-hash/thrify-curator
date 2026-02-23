@@ -10,8 +10,12 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_c38502d5-e3cd-4d12-bde1-7a8331411fc2/artifacts/calba8ly_IMG_0042.jpg";
-const ADMIN_CODE = "4399";
-const ADMIN_EMAIL = "matthewjesusguzman1@gmail.com";
+
+// Admin codes mapped to their emails
+const ADMIN_CODES = {
+  "4399": "matthewjesusguzman1@gmail.com",
+  "0826": "euniceguzman@thriftycurator.com"
+};
 
 export default function AuthPage() {
   const navigate = useNavigate();
