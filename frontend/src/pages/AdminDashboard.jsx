@@ -932,13 +932,13 @@ export default function AdminDashboard() {
           </div>
 
           <Link to="/">
-            <Button variant="ghost" size="sm" className="text-[#666]" data-testid="home-btn">
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="home-btn">
               <Home className="w-4 h-4 mr-1" />
               Home
             </Button>
           </Link>
           <Link to="/dashboard">
-            <Button variant="ghost" size="sm" className="text-[#666]" data-testid="my-dashboard-btn">
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="my-dashboard-btn">
               My Dashboard
             </Button>
           </Link>
@@ -946,7 +946,7 @@ export default function AdminDashboard() {
             variant="ghost" 
             size="sm" 
             onClick={handleLogout}
-            className="text-[#666]"
+            className="text-white/70 hover:text-white hover:bg-white/10"
             data-testid="logout-btn"
           >
             <LogOut className="w-4 h-4 mr-1" />
