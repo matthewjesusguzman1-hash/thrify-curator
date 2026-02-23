@@ -114,6 +114,9 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
             raise HTTPException(status_code=400, detail="Invalid role. Must be 'employee' or 'admin'")
         update_fields["role"] = update_data.role
     
+    if update_data.phone is not None:
+        update_fields["phone"] = update_data.phone
+    
     if not update_fields:
         raise HTTPException(status_code=400, detail="No valid fields to update")
     
