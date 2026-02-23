@@ -189,11 +189,7 @@ export default function LandingPage() {
                           {platform.useIcon ? (
                             <platform.icon className="w-5 h-5 text-white" />
                           ) : (
-                            <img 
-                              src={platform.logoUrl} 
-                              alt={`${platform.name} logo`}
-                              className="w-6 h-6 object-contain brightness-0 invert"
-                            />
+                            <span className="text-white font-bold text-lg">{platform.letterFallback}</span>
                           )}
                         </div>
                         <span className="font-semibold text-[#1A1A2E] group-hover:text-[#00D4FF] transition-colors">
