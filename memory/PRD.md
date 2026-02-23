@@ -340,3 +340,16 @@ Build a "Thrifty Curator" reselling application with:
 - All 14 backend API tests pass (100%)
 - All frontend features verified working
 - Test report: `/app/test_reports/iteration_11.json`
+
+### Additional Updates (Feb 23, 2026 - Continued)
+
+- **IRS Mileage Rate Updated**: Changed from $0.67 (2024) to $0.725 (2026) per mile
+- **Mileage Export Feature**:
+  - Export CSV button - generates IRS-ready CSV with all trip details
+  - Export PDF button - generates professional PDF mileage log for tax filing
+  - Both exports include: Date, Start/End locations, Miles, Purpose, Deduction amounts
+  - Summary section with total miles, IRS rate, and total deduction
+- **Pay Period Preview**: When selecting a pay period start date, a preview box now shows:
+  - The biweekly date range that will result from that start date
+  - Period number (e.g., "Period #3")
+  - Updates dynamically as the date is changed
