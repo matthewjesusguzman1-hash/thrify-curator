@@ -26,7 +26,17 @@ import {
   Settings,
   CalendarDays,
   Mail,
-  Eye
+  Eye,
+  Briefcase,
+  Package,
+  FileSignature,
+  ChevronDown,
+  ChevronUp,
+  Phone,
+  MapPin,
+  CheckCircle,
+  AlertCircle,
+  Archive
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
