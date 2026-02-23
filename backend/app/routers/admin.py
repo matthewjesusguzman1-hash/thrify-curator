@@ -1,0 +1,412 @@
+from fastapi import APIRouter, HTTPException, Depends
+from typing import List
+from datetime import datetime, timezone
+import uuid
+
+from app.database import db
+from app.dependencies import get_admin_user
+from app.models.user import UserResponse, CreateEmployee, UpdateEmployeeDetails, UpdateEmployeeRate
+from app.models.time_entry import TimeEntry, EditTimeEntryRequest, CreateTimeEntryRequest
+from app.models.payroll import ReportRequest, EmailReportRequest
+from app.config import RESEND_API_KEY, SENDER_EMAIL
+from app.services.email import get_employee_hours_summary
+import resend
+
+router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+@router.post("/create-employee", response_model=UserResponse)
+async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(get_admin_user)):
+    existing = await db.users.find_one({"email": employee_data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    user_id = str(uuid.uuid4())
+    user_doc = {
+        "id": user_id,
+        "email": employee_data.email,
+        "name": employee_data.name,
+        "role": "employee",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(user_doc)
+    
+    return UserResponse(
+        id=user_id,
+        email=employee_data.email,
+        name=employee_data.name,
+        role="employee",
+        created_at=user_doc["created_at"]
+    )
+
+
+@router.get("/employees", response_model=List[UserResponse])
+async def get_all_employees(admin: dict = Depends(get_admin_user)):
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(500)
+    return [UserResponse(**u) for u in users]
+
+
+@router.delete("/employees/{employee_id}")
+async def delete_employee(employee_id: str, admin: dict = Depends(get_admin_user)):
+    if employee_id == admin["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    employee = await db.users.find_one({"id": employee_id})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    await db.users.delete_one({"id": employee_id})
+    await db.time_entries.delete_many({"user_id": employee_id})
+    
+    return {"message": "Employee deleted successfully"}
+
+
+@router.put("/employees/{employee_id}")
+async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, admin: dict = Depends(get_admin_user)):
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if employee.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Cannot edit admin account")
+    
+    update_fields = {}
+    
+    if update_data.name:
+        update_fields["name"] = update_data.name
+        await db.time_entries.update_many(
+            {"user_id": employee_id},
+            {"$set": {"user_name": update_data.name}}
+        )
+    
+    if update_data.email:
+        existing = await db.users.find_one({"email": update_data.email, "id": {"$ne": employee_id}})
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already in use")
+        update_fields["email"] = update_data.email
+    
+    if update_data.hourly_rate is not None:
+        if update_data.hourly_rate < 0:
+            raise HTTPException(status_code=400, detail="Hourly rate cannot be negative")
+        update_fields["hourly_rate"] = update_data.hourly_rate
+    
+    if update_data.role:
+        if update_data.role not in ["employee", "admin"]:
+            raise HTTPException(status_code=400, detail="Invalid role. Must be 'employee' or 'admin'")
+        update_fields["role"] = update_data.role
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    await db.users.update_one({"id": employee_id}, {"$set": update_fields})
+    
+    updated = await db.users.find_one({"id": employee_id}, {"_id": 0, "password_hash": 0})
+    return UserResponse(**updated)
+
+
+@router.put("/employees/{employee_id}/rate")
+async def update_employee_rate(employee_id: str, rate_data: UpdateEmployeeRate, admin: dict = Depends(get_admin_user)):
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if rate_data.hourly_rate < 0:
+        raise HTTPException(status_code=400, detail="Hourly rate cannot be negative")
+    
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": {"hourly_rate": rate_data.hourly_rate}}
+    )
+    
+    updated = await db.users.find_one({"id": employee_id}, {"_id": 0, "password_hash": 0})
+    return UserResponse(**updated)
+
+
+@router.get("/employee/{employee_id}/entries")
+async def get_employee_entries(employee_id: str, admin: dict = Depends(get_admin_user)):
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    entries = await db.time_entries.find(
+        {"user_id": employee_id},
+        {"_id": 0}
+    ).sort("clock_in", -1).to_list(100)
+    
+    return entries
+
+
+@router.get("/employee/{employee_id}/summary")
+async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get_admin_user)):
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    summary = await get_employee_hours_summary(employee_id)
+    
+    hourly_rate = employee.get("hourly_rate")
+    if not hourly_rate:
+        settings = await db.payroll_settings.find_one({}, {"_id": 0})
+        hourly_rate = settings.get("default_hourly_rate", 15.0) if settings else 15.0
+    
+    summary["hourly_rate"] = hourly_rate
+    summary["estimated_pay"] = summary.get("period_hours", 0) * hourly_rate
+    
+    return summary
+
+
+@router.post("/reports")
+async def generate_report(report_req: ReportRequest, admin: dict = Depends(get_admin_user)):
+    try:
+        start = datetime.fromisoformat(report_req.start_date.replace('Z', '+00:00'))
+        end = datetime.fromisoformat(report_req.end_date.replace('Z', '+00:00'))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    query = {
+        "clock_in": {"$gte": start.isoformat(), "$lte": end.isoformat()},
+        "total_hours": {"$ne": None}
+    }
+    
+    if report_req.employee_id:
+        query["user_id"] = report_req.employee_id
+    
+    entries = await db.time_entries.find(query, {"_id": 0}).to_list(1000)
+    
+    employee_data = {}
+    for entry in entries:
+        uid = entry["user_id"]
+        if uid not in employee_data:
+            employee_data[uid] = {
+                "user_id": uid,
+                "name": entry["user_name"],
+                "total_hours": 0,
+                "shifts": [],
+                "shift_count": 0
+            }
+        employee_data[uid]["total_hours"] += entry.get("total_hours", 0)
+        employee_data[uid]["shift_count"] += 1
+        employee_data[uid]["shifts"].append({
+            "clock_in": entry["clock_in"],
+            "clock_out": entry["clock_out"],
+            "hours": entry.get("total_hours", 0)
+        })
+    
+    total_hours = sum(e["total_hours"] for e in employee_data.values())
+    total_shifts = sum(e["shift_count"] for e in employee_data.values())
+    
+    return {
+        "period": {
+            "start": report_req.start_date,
+            "end": report_req.end_date
+        },
+        "summary": {
+            "total_hours": round(total_hours, 2),
+            "total_shifts": total_shifts,
+            "employee_count": len(employee_data)
+        },
+        "by_employee": list(employee_data.values())
+    }
+
+
+@router.post("/reports/email")
+async def email_shift_report(email_req: EmailReportRequest, admin: dict = Depends(get_admin_user)):
+    if not RESEND_API_KEY or RESEND_API_KEY == 're_123_placeholder':
+        raise HTTPException(status_code=400, detail="Email service not configured. Please add a Resend API key.")
+    
+    report = email_req.report_data
+    period = report.get("period", {})
+    summary = report.get("summary", {})
+    by_employee = report.get("by_employee", [])
+    
+    html_content = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; color: #333; }}
+            .header {{ background: linear-gradient(135deg, #C5A065 0%, #F8C8DC 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; }}
+            .header h1 {{ color: white; margin: 0; }}
+            .summary {{ background: #f9f6f7; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+            th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #eee; }}
+            th {{ background: #f5f5f5; font-weight: 600; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Thrifty Curator - Shift Report</h1>
+        </div>
+        <div class="summary">
+            <p><strong>Period:</strong> {period.get('start', 'N/A')} to {period.get('end', 'N/A')}</p>
+        </div>
+        <h3>Employee Breakdown</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Hours</th>
+                    <th>Shifts</th>
+                </tr>
+            </thead>
+            <tbody>
+    """
+    
+    for emp in by_employee:
+        html_content += f"""
+                <tr>
+                    <td>{emp.get('name', 'Unknown')}</td>
+                    <td>{emp.get('total_hours', 0):.2f} hrs</td>
+                    <td>{emp.get('shift_count', 0)}</td>
+                </tr>
+        """
+    
+    html_content += """
+            </tbody>
+        </table>
+        <p style="margin-top: 30px; color: #888; font-size: 12px;">
+            This report was generated by Thrifty Curator Admin Dashboard.
+        </p>
+    </body>
+    </html>
+    """
+    
+    try:
+        resend.emails.send({
+            "from": SENDER_EMAIL,
+            "to": email_req.recipient_email,
+            "subject": f"Shift Report: {period.get('start', '')} - {period.get('end', '')}",
+            "html": html_content
+        })
+        return {"success": True, "message": f"Report sent to {email_req.recipient_email}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
+@router.get("/time-entries", response_model=List[TimeEntry])
+async def get_all_time_entries(admin: dict = Depends(get_admin_user)):
+    entries = await db.time_entries.find({}, {"_id": 0}).sort("clock_in", -1).to_list(500)
+    return entries
+
+
+@router.get("/summary")
+async def get_admin_summary(admin: dict = Depends(get_admin_user)):
+    users = await db.users.find({}, {"_id": 0}).to_list(100)
+    entries = await db.time_entries.find({"total_hours": {"$ne": None}}, {"_id": 0}).to_list(1000)
+    
+    total_hours = sum(e.get("total_hours", 0) for e in entries)
+    
+    user_hours = {}
+    for entry in entries:
+        uid = entry["user_id"]
+        if uid not in user_hours:
+            user_hours[uid] = {"name": entry["user_name"], "hours": 0, "shifts": 0}
+        user_hours[uid]["hours"] += entry.get("total_hours", 0)
+        user_hours[uid]["shifts"] += 1
+    
+    return {
+        "total_employees": len(users),
+        "total_hours": round(total_hours, 2),
+        "total_shifts": len(entries),
+        "by_employee": [{"user_id": k, **v} for k, v in user_hours.items()]
+    }
+
+
+# Time Entry Management
+@router.get("/time-entries/{entry_id}")
+async def get_time_entry(entry_id: str, admin: dict = Depends(get_admin_user)):
+    entry = await db.time_entries.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Time entry not found")
+    return entry
+
+
+@router.put("/time-entries/{entry_id}")
+async def update_time_entry(entry_id: str, update_data: EditTimeEntryRequest, admin: dict = Depends(get_admin_user)):
+    entry = await db.time_entries.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Time entry not found")
+    
+    update_fields = {}
+    
+    if update_data.clock_in:
+        try:
+            datetime.fromisoformat(update_data.clock_in.replace('Z', '+00:00'))
+            update_fields["clock_in"] = update_data.clock_in
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid clock_in format")
+    
+    if update_data.clock_out:
+        try:
+            datetime.fromisoformat(update_data.clock_out.replace('Z', '+00:00'))
+            update_fields["clock_out"] = update_data.clock_out
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid clock_out format")
+    
+    clock_in = update_data.clock_in or entry.get("clock_in")
+    clock_out = update_data.clock_out or entry.get("clock_out")
+    
+    if clock_in and clock_out:
+        try:
+            in_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
+            out_time = datetime.fromisoformat(clock_out.replace('Z', '+00:00'))
+            calculated_hours = round((out_time - in_time).total_seconds() / 3600, 2)
+            update_fields["total_hours"] = calculated_hours
+        except ValueError:
+            pass
+    elif update_data.total_hours is not None:
+        update_fields["total_hours"] = update_data.total_hours
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    await db.time_entries.update_one({"id": entry_id}, {"$set": update_fields})
+    
+    updated_entry = await db.time_entries.find_one({"id": entry_id}, {"_id": 0})
+    return updated_entry
+
+
+@router.delete("/time-entries/{entry_id}")
+async def delete_time_entry(entry_id: str, admin: dict = Depends(get_admin_user)):
+    result = await db.time_entries.delete_one({"id": entry_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Time entry not found")
+    return {"message": "Time entry deleted"}
+
+
+@router.post("/time-entries")
+async def create_time_entry(entry_data: CreateTimeEntryRequest, admin: dict = Depends(get_admin_user)):
+    employee = await db.users.find_one({"id": entry_data.employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    try:
+        clock_in_dt = datetime.fromisoformat(entry_data.clock_in.replace('Z', '+00:00'))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid clock_in format")
+    
+    clock_out_str = None
+    total_hours = None
+    
+    if entry_data.clock_out:
+        try:
+            clock_out_dt = datetime.fromisoformat(entry_data.clock_out.replace('Z', '+00:00'))
+            clock_out_str = entry_data.clock_out
+            total_hours = round((clock_out_dt - clock_in_dt).total_seconds() / 3600, 2)
+            
+            if total_hours < 0:
+                raise HTTPException(status_code=400, detail="Clock out must be after clock in")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid clock_out format")
+    
+    entry = TimeEntry(
+        user_id=entry_data.employee_id,
+        user_name=employee["name"],
+        clock_in=entry_data.clock_in,
+        clock_out=clock_out_str,
+        total_hours=total_hours
+    )
+    
+    await db.time_entries.insert_one(entry.model_dump())
+    
+    return entry
