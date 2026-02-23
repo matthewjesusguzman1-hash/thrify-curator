@@ -2118,11 +2118,26 @@ export default function AdminDashboard() {
                   <p className="text-sm text-[#888]">{employees.length} total</p>
                 </div>
               </div>
-              {showAllEmployees ? (
-                <ChevronUp className="w-5 h-5 text-[#888]" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-[#888]" />
-              )}
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownloadBlankW9();
+                  }}
+                  className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
+                  data-testid="all-employees-w9-form-btn"
+                >
+                  <FileText className="w-4 h-4 mr-1" />
+                  Get W-9 Form
+                </Button>
+                {showAllEmployees ? (
+                  <ChevronUp className="w-5 h-5 text-[#888]" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-[#888]" />
+                )}
+              </div>
             </div>
             <AnimatePresence>
               {showAllEmployees && (
