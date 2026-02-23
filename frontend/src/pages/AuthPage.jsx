@@ -62,9 +62,16 @@ export default function AuthPage() {
     try {
       // Check if admin code is entered - convert to admin email
       const trimmedInput = email.trim();
+      const isAdminCode = ADMIN_CODES[trimmedInput] !== undefined;
       const loginEmail = ADMIN_CODES[trimmedInput] || trimmedInput;
       
-      const response = await axios.post(`${API}/auth/login`, { email: loginEmail });
+      // Build login payload - include admin_code if using code-based login
+      const payload = { email: loginEmail };
+      if (isAdminCode) {
+        payload.admin_code = trimmedInput;
+      }
+      
+      const response = await axios.post(`${API}/auth/login`, payload);
       const { access_token, user } = response.data;
       
       localStorage.setItem("token", access_token);
