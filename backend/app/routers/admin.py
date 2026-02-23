@@ -515,3 +515,14 @@ async def get_w9_status(employee_id: str, admin: dict = Depends(get_admin_user))
         "content_type": w9_doc["content_type"],
         "uploaded_at": w9_doc["uploaded_at"]
     }
+
+
+@router.get("/w9-form")
+async def get_blank_w9_form(admin: dict = Depends(get_admin_user)):
+    """Download blank W-9 form template"""
+    # Return a redirect to the official IRS W-9 form
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(
+        url="https://www.irs.gov/pub/irs-pdf/fw9.pdf",
+        status_code=302
+    )
