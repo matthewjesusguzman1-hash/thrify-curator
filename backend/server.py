@@ -1197,6 +1197,83 @@ async def get_payroll_settings(admin: dict = Depends(get_admin_user)):
         }
     return settings
 
+@api_router.get("/admin/payroll/summary")
+async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
+    """Get payroll summary for dashboard - current period, month, and year totals"""
+    from datetime import datetime, timezone
+    
+    # Get payroll settings
+    settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
+    default_rate = settings.get("default_hourly_rate", 15.00) if settings else 15.00
+    start_date_str = settings.get("pay_period_start_date", "2026-01-06") if settings else "2026-01-06"
+    
+    now = datetime.now(timezone.utc)
+    
+    # Get current pay period dates
+    period_start, period_end = get_biweekly_period(start_date_str, 0)
+    
+    # Get all employees with their rates
+    employees = await db.users.find({"role": "employee"}, {"_id": 0, "id": 1, "hourly_rate": 1}).to_list(100)
+    employee_rates = {emp["id"]: emp.get("hourly_rate") or default_rate for emp in employees}
+    
+    # Calculate current pay period total
+    period_entries = await db.time_entries.find({
+        "clock_in": {
+            "$gte": datetime.combine(period_start, datetime.min.time()).replace(tzinfo=timezone.utc),
+            "$lt": datetime.combine(period_end + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
+        }
+    }, {"_id": 0}).to_list(1000)
+    
+    current_period_hours = 0
+    current_period_amount = 0
+    for entry in period_entries:
+        hours = entry.get("total_hours") or 0
+        current_period_hours += hours
+        emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
+        current_period_amount += hours * emp_rate
+    
+    # Calculate month total
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if now.month == 12:
+        month_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        month_end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    month_entries = await db.time_entries.find({
+        "clock_in": {"$gte": month_start, "$lt": month_end}
+    }, {"_id": 0}).to_list(1000)
+    
+    month_total = 0
+    for entry in month_entries:
+        hours = entry.get("total_hours") or 0
+        emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
+        month_total += hours * emp_rate
+    
+    # Calculate year total
+    year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    year_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    year_entries = await db.time_entries.find({
+        "clock_in": {"$gte": year_start, "$lt": year_end}
+    }, {"_id": 0}).to_list(10000)
+    
+    year_total = 0
+    for entry in year_entries:
+        hours = entry.get("total_hours") or 0
+        emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
+        year_total += hours * emp_rate
+    
+    return {
+        "current_period": {
+            "amount": round(current_period_amount, 2),
+            "hours": round(current_period_hours, 2),
+            "start": period_start.isoformat(),
+            "end": period_end.isoformat()
+        },
+        "month_total": round(month_total, 2),
+        "year_total": round(year_total, 2)
+    }
+
 @api_router.put("/admin/payroll/settings")
 async def update_payroll_settings(settings: PayrollSettings, admin: dict = Depends(get_admin_user)):
     """Update payroll settings"""
