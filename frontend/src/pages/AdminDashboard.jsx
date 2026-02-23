@@ -244,6 +244,8 @@ export default function AdminDashboard() {
     amount: "",
     employee_name: ""
   });
+  const [pendingCheckImage, setPendingCheckImage] = useState(null); // Holds image before submission
+  const [editingCheckRecord, setEditingCheckRecord] = useState(null); // For editing existing records
   const checkInputRef = useRef(null);
 
   const getAuthHeader = useCallback(() => ({
