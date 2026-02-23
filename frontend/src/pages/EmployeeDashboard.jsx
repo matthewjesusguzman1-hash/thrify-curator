@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
@@ -10,7 +10,13 @@ import {
   DollarSign,
   User,
   Home,
-  Briefcase
+  Briefcase,
+  FileText,
+  Upload,
+  Download,
+  CheckCircle,
+  AlertCircle,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -37,6 +43,11 @@ export default function EmployeeDashboard() {
   });
   const [loading, setLoading] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  
+  // W-9 state
+  const [w9Status, setW9Status] = useState(null);
+  const [uploadingW9, setUploadingW9] = useState(false);
+  const w9InputRef = useRef(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
