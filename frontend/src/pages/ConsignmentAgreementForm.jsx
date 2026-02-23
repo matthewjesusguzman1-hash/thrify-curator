@@ -203,7 +203,7 @@ export default function ConsignmentAgreementForm() {
               <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 mb-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
                 <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
                 <ul className="space-y-3">
-                  <li>• The profit split will be agreed upon prior to acceptance of any items.</li>
+                  <li>• The profit split will be agreed upon prior to acceptance of any items. Unless otherwise specified on this form, the profit split will be considered 50/50.</li>
                   <li>• There is no guarantee that your item will be sold.</li>
                   <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
                   <li>• The consignee has the right to refuse any item for sale at any time and will return the item to the consignor.</li>
