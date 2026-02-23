@@ -234,6 +234,11 @@ Build a "Thrifty Curator" reselling application with:
 - Test files: `/app/backend/tests/`
 
 ## Recent Updates (Feb 23, 2026)
+- **Payroll Check Records Auto-Refresh**: Added auto-refresh for Payroll Check Records section on page load
+  - Records count now displays immediately when admin dashboard loads
+  - No need to manually expand section to see count
+  - Implemented via dedicated useEffect hook after fetchCheckRecords definition
+
 - **Form Submissions UI**: Added admin interface to view and manage all form submissions
   - Collapsible section at bottom of Admin Dashboard
   - Three tabs for different form types
