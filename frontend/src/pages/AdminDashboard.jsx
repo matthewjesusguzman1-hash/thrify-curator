@@ -46,7 +46,8 @@ import {
   File,
   Save,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
