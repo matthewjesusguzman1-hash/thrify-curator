@@ -194,9 +194,8 @@ export default function AdminDashboard() {
   const [employeePortalData, setEmployeePortalData] = useState(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
 
-  // Employee shifts management state
-  const [showEmployeeShifts, setShowEmployeeShifts] = useState(null);
-  const [employeeShifts, setEmployeeShifts] = useState([]);
+  // Employee shifts management state (for Hours by Employee section)
+  const [showEmployeeShiftsModal, setShowEmployeeShiftsModal] = useState(null);
   const [loadingShifts, setLoadingShifts] = useState(false);
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
   const [showEditShiftModal, setShowEditShiftModal] = useState(false);
