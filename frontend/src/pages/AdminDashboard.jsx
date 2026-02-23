@@ -37,6 +37,7 @@ import {
   AlertCircle,
   Archive,
   ArrowUpDown,
+  ArrowUp,
   PlayCircle,
   StopCircle,
   PauseCircle,
