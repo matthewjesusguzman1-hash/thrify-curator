@@ -1175,8 +1175,7 @@ export default function AdminDashboard() {
                 <Button 
                   onClick={() => setShowReport(true)}
                   size="sm"
-                  style={{ background: 'linear-gradient(to right, #1A1A2E, #16213E)', color: 'white' }}
-                  className="flex items-center gap-2 font-semibold shadow-md hover:shadow-lg hover:shadow-[#1A1A2E]/30 transition-all border-0"
+                  className="btn-dark-gradient flex items-center gap-2 font-semibold shadow-md hover:shadow-lg hover:shadow-[#1A1A2E]/30 transition-all"
                   data-testid="run-report-btn"
                 >
                   <FileText className="w-4 h-4" />
