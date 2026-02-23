@@ -466,6 +466,15 @@ export default function EmployeeDashboard() {
                       <p className="text-sm font-medium text-red-700">Corrections Needed</p>
                       <p className="text-xs text-red-600">{w9Status.rejection_reason || "Please review and resubmit your W-9"}</p>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`${API}/time/w9/download`, '_blank')}
+                      className="text-red-600 border-red-400 hover:bg-red-50"
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      View
+                    </Button>
                   </div>
                   
                   {/* Upload corrected form */}
