@@ -3974,14 +3974,26 @@ export default function AdminDashboard() {
                                     size="sm"
                                     onClick={() => handleViewCheckImage(record.id)}
                                     className="h-7 px-2 text-purple-600"
+                                    title="View"
                                   >
                                     <Eye className="w-3 h-3" />
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    onClick={() => handleEditCheckRecord(record)}
+                                    className="h-7 px-2 text-blue-600"
+                                    title="Edit"
+                                    data-testid={`edit-check-record-${record.id}`}
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => handleDeleteCheckRecord(record.id)}
                                     className="h-7 px-2 text-red-500"
+                                    title="Delete"
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
