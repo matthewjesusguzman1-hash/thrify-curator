@@ -244,6 +244,113 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchFormSubmissions = useCallback(async () => {
+    setLoadingForms(true);
+    try {
+      const [jobAppsRes, inquiriesRes, agreementsRes, summaryRes] = await Promise.all([
+        axios.get(`${API}/admin/forms/job-applications`, getAuthHeader()),
+        axios.get(`${API}/admin/forms/consignment-inquiries`, getAuthHeader()),
+        axios.get(`${API}/admin/forms/consignment-agreements`, getAuthHeader()),
+        axios.get(`${API}/admin/forms/summary`, getAuthHeader())
+      ]);
+
+      setFormSubmissions({
+        jobApplications: jobAppsRes.data,
+        consignmentInquiries: inquiriesRes.data,
+        consignmentAgreements: agreementsRes.data
+      });
+      setFormsSummary(summaryRes.data);
+    } catch (error) {
+      console.error("Failed to fetch form submissions:", error);
+      toast.error("Failed to load form submissions");
+    } finally {
+      setLoadingForms(false);
+    }
+  }, [getAuthHeader]);
+
+  const handleUpdateSubmissionStatus = async (formType, submissionId, newStatus) => {
+    setUpdatingStatus(true);
+    try {
+      const endpoint = formType === "job_applications" 
+        ? "job-applications" 
+        : formType === "consignment_inquiries" 
+          ? "consignment-inquiries" 
+          : "consignment-agreements";
+      
+      await axios.put(
+        `${API}/admin/forms/${endpoint}/${submissionId}/status`,
+        { status: newStatus },
+        getAuthHeader()
+      );
+      
+      toast.success("Status updated successfully");
+      fetchFormSubmissions();
+      
+      // Update selected submission if viewing details
+      if (selectedSubmission && selectedSubmission.id === submissionId) {
+        setSelectedSubmission({ ...selectedSubmission, status: newStatus });
+      }
+    } catch (error) {
+      toast.error("Failed to update status");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleDeleteSubmission = async (formType, submissionId) => {
+    if (!window.confirm("Are you sure you want to delete this submission? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      const endpoint = formType === "job_applications" 
+        ? "job-applications" 
+        : formType === "consignment_inquiries" 
+          ? "consignment-inquiries" 
+          : "consignment-agreements";
+      
+      await axios.delete(
+        `${API}/admin/forms/${endpoint}/${submissionId}`,
+        getAuthHeader()
+      );
+      
+      toast.success("Submission deleted successfully");
+      setShowSubmissionDetails(false);
+      setSelectedSubmission(null);
+      fetchFormSubmissions();
+    } catch (error) {
+      toast.error("Failed to delete submission");
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      new: { bg: "bg-blue-100", text: "text-blue-700", icon: AlertCircle },
+      reviewed: { bg: "bg-yellow-100", text: "text-yellow-700", icon: Eye },
+      contacted: { bg: "bg-green-100", text: "text-green-700", icon: CheckCircle },
+      archived: { bg: "bg-gray-100", text: "text-gray-700", icon: Archive }
+    };
+    const config = statusConfig[status] || statusConfig.new;
+    const Icon = config.icon;
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+        <Icon className="w-3 h-3" />
+        {status || "new"}
+      </span>
+    );
+  };
+
+  const formatSubmissionDate = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const handleMarkAllRead = async () => {
     try {
       await axios.post(`${API}/admin/notifications/mark-read`, {}, getAuthHeader());
