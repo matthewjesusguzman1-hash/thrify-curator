@@ -2216,21 +2216,21 @@ export default function AdminDashboard() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
               onClick={() => setShowEditEmployee(false)}
             >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl my-8 max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
                 data-testid="edit-employee-modal"
               >
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-6 sticky top-0 bg-white pb-2 -mt-2 pt-2 -mx-2 px-2 z-10">
                   <h2 className="font-playfair text-xl font-bold text-[#333]">Edit Employee</h2>
                   <button
                     onClick={() => setShowEditEmployee(false)}
-                    className="text-[#999] hover:text-[#666]"
+                    className="text-[#999] hover:text-[#666] p-1 hover:bg-gray-100 rounded-full"
                   >
                     <X className="w-5 h-5" />
                   </button>
