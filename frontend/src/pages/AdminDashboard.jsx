@@ -4546,6 +4546,237 @@ export default function AdminDashboard() {
             </AnimatePresence>
           </div>
 
+          {/* Mileage Tracking Section */}
+          <div className="dashboard-card">
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => {
+                const willOpen = !showMileageSection;
+                setShowMileageSection(willOpen);
+                if (willOpen) {
+                  fetchMileageEntries();
+                }
+              }}
+              data-testid="mileage-section-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
+                  <Car className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-[#333]">Mileage Tracking</h2>
+                  <p className="text-sm text-[#888]">Track business miles for tax purposes</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {isTracking && (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    Tracking
+                  </span>
+                )}
+                {showMileageSection ? (
+                  <ChevronUp className="w-5 h-5 text-[#888]" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-[#888]" />
+                )}
+              </div>
+            </div>
+            <AnimatePresence>
+              {showMileageSection && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-6 space-y-6">
+                    {/* GPS Tracking Controls */}
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Navigation className="w-6 h-6 text-emerald-600" />
+                          <div>
+                            <p className="font-medium text-[#333]">GPS Trip Tracking</p>
+                            <p className="text-sm text-[#888]">
+                              {isTracking 
+                                ? `Tracking active since ${activeTripData?.start_time ? new Date(activeTripData.start_time).toLocaleTimeString() : 'N/A'}`
+                                : 'Start tracking to automatically log your trip'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {!isTracking ? (
+                            <Button
+                              onClick={startMileageTracking}
+                              className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
+                              data-testid="start-tracking-btn"
+                            >
+                              <PlayCircle className="w-4 h-4 mr-2" />
+                              Start Trip
+                            </Button>
+                          ) : (
+                            <>
+                              <Button
+                                onClick={stopMileageTracking}
+                                className="bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-600 hover:to-orange-600"
+                                data-testid="stop-tracking-btn"
+                              >
+                                <StopCircle className="w-4 h-4 mr-2" />
+                                End Trip
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={cancelTrip}
+                                className="text-[#888] hover:text-red-500"
+                              >
+                                Cancel
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {isTracking && currentLocation && (
+                        <div className="mt-3 p-3 bg-white/60 rounded-lg">
+                          <p className="text-xs text-[#666]">
+                            <MapPinned className="w-3 h-3 inline mr-1" />
+                            Current: {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                        <p className="text-sm text-[#888]">Total Miles (This Year)</p>
+                        <p className="text-2xl font-bold text-emerald-600">{mileageSummary.total_miles.toFixed(1)}</p>
+                      </div>
+                      <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                        <p className="text-sm text-[#888]">Total Trips</p>
+                        <p className="text-2xl font-bold text-teal-600">{mileageSummary.total_trips}</p>
+                      </div>
+                      <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                        <p className="text-sm text-[#888]">IRS Rate (2024)</p>
+                        <p className="text-2xl font-bold text-[#333]">$0.67<span className="text-sm font-normal">/mile</span></p>
+                        <p className="text-xs text-emerald-600 mt-1">
+                          Est. Deduction: ${(mileageSummary.total_miles * 0.67).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Manual Entry Button */}
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={() => {
+                          setMileageFormData({
+                            date: new Date().toISOString().split('T')[0],
+                            start_address: "",
+                            end_address: "",
+                            total_miles: "",
+                            purpose: "thrifting",
+                            purpose_other: "",
+                            notes: ""
+                          });
+                          setShowAddMileageModal(true);
+                        }}
+                        className="btn-secondary"
+                        data-testid="add-mileage-btn"
+                      >
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Manual Entry
+                      </Button>
+                    </div>
+
+                    {/* Mileage Entries List */}
+                    {loadingMileage ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                      </div>
+                    ) : mileageEntries.length === 0 ? (
+                      <div className="text-center py-8 text-[#888]">
+                        <Car className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                        <p>No mileage entries yet</p>
+                        <p className="text-sm">Start a trip or add a manual entry</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <h3 className="font-medium text-[#333]">Recent Trips</h3>
+                        {mileageEntries.slice(0, 10).map((entry) => (
+                          <div key={entry.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                    entry.purpose === 'thrifting' ? 'bg-purple-100 text-purple-700' :
+                                    entry.purpose === 'post_office' ? 'bg-blue-100 text-blue-700' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {entry.purpose === 'thrifting' ? 'Thrifting' :
+                                     entry.purpose === 'post_office' ? 'Post Office' :
+                                     entry.purpose_other || 'Other'}
+                                  </span>
+                                  <span className="text-sm text-[#888]">{new Date(entry.date).toLocaleDateString()}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div>
+                                    <span className="text-[#888]">From:</span>
+                                    <p className="text-[#333]">{entry.start_address || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-[#888]">To:</span>
+                                    <p className="text-[#333]">{entry.end_address || 'N/A'}</p>
+                                  </div>
+                                </div>
+                                {entry.notes && (
+                                  <p className="text-xs text-[#888] mt-2">{entry.notes}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xl font-bold text-emerald-600">{entry.total_miles.toFixed(1)}</p>
+                                <p className="text-xs text-[#888]">miles</p>
+                                <div className="flex gap-1 mt-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingMileageEntry(entry);
+                                      setMileageFormData({
+                                        date: entry.date,
+                                        start_address: entry.start_address || "",
+                                        end_address: entry.end_address || "",
+                                        total_miles: entry.total_miles.toString(),
+                                        purpose: entry.purpose,
+                                        purpose_other: entry.purpose_other || "",
+                                        notes: entry.notes || ""
+                                      });
+                                      setShowEditMileageModal(true);
+                                    }}
+                                    className="h-7 w-7 p-0"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteMileageEntry(entry.id)}
+                                    className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* W-9 Rejection Modal */}
           {reviewingW9 && (
             <motion.div
