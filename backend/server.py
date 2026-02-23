@@ -595,6 +595,7 @@ class UpdateEmployeeDetails(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     hourly_rate: Optional[float] = None
+    role: Optional[str] = None
 
 @api_router.put("/admin/employees/{employee_id}")
 async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, admin: dict = Depends(get_admin_user)):
@@ -629,6 +630,11 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
         if update_data.hourly_rate < 0:
             raise HTTPException(status_code=400, detail="Hourly rate cannot be negative")
         update_fields["hourly_rate"] = update_data.hourly_rate
+    
+    if update_data.role:
+        if update_data.role not in ["employee", "admin"]:
+            raise HTTPException(status_code=400, detail="Invalid role. Must be 'employee' or 'admin'")
+        update_fields["role"] = update_data.role
     
     if not update_fields:
         raise HTTPException(status_code=400, detail="No valid fields to update")
