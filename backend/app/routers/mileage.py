@@ -251,6 +251,48 @@ async def cancel_trip(admin: dict = Depends(get_admin_user)):
     return {"message": "Trip cancelled"}
 
 
+@router.get("/active-trip/distance")
+async def get_active_trip_distance(admin: dict = Depends(get_admin_user)):
+    """Get the current cumulative distance of the active trip"""
+    import math
+    
+    trip = await db.active_trips.find_one({"user_id": admin["id"]}, {"_id": 0})
+    if not trip:
+        return {"cumulative_miles": 0, "waypoint_count": 0}
+    
+    def haversine_distance(lat1, lon1, lat2, lon2):
+        R = 3959
+        d_lat = math.radians(lat2 - lat1)
+        d_lon = math.radians(lon2 - lon1)
+        a = math.sin(d_lat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon/2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        return R * c
+    
+    waypoints = trip.get("waypoints", [])
+    path_points = []
+    
+    start_loc = trip.get("start_location", {})
+    if start_loc:
+        path_points.append((start_loc.get("latitude"), start_loc.get("longitude")))
+    
+    for wp in waypoints:
+        if wp.get("latitude") and wp.get("longitude"):
+            path_points.append((wp.get("latitude"), wp.get("longitude")))
+    
+    cumulative_miles = 0.0
+    for i in range(1, len(path_points)):
+        prev = path_points[i-1]
+        curr = path_points[i]
+        if prev[0] and prev[1] and curr[0] and curr[1]:
+            cumulative_miles += haversine_distance(prev[0], prev[1], curr[0], curr[1])
+    
+    return {
+        "cumulative_miles": round(cumulative_miles, 2),
+        "waypoint_count": len(waypoints),
+        "start_time": trip.get("start_time")
+    }
+
+
 @router.get("/summary", response_model=MileageSummary)
 async def get_mileage_summary(
     year: Optional[int] = None,
