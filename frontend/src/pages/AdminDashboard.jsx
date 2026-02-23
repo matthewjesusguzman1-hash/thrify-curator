@@ -580,17 +580,6 @@ export default function AdminDashboard() {
   };
 
   // Filter functions for search
-  const getFilteredCheckRecords = () => {
-    if (!checkSearchQuery.trim()) return checkRecords;
-    const query = checkSearchQuery.toLowerCase();
-    return checkRecords.filter(record => 
-      (record.employee_name && record.employee_name.toLowerCase().includes(query)) ||
-      (record.description && record.description.toLowerCase().includes(query)) ||
-      (record.check_date && record.check_date.includes(query)) ||
-      (record.amount && record.amount.toString().includes(query))
-    );
-  };
-
   const getFilteredFormSubmissions = (submissions) => {
     let filtered = submissions;
     
