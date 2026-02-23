@@ -1928,6 +1928,581 @@ export default function AdminDashboard() {
             )}
           </div>
 
+          {/* Form Submissions Section */}
+          <div className="dashboard-card">
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowFormsSection(!showFormsSection)}
+              data-testid="form-submissions-toggle"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] rounded-xl flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-playfair text-xl font-semibold text-[#333]">Form Submissions</h2>
+                  <p className="text-sm text-[#888]">
+                    {formsSummary.job_applications.total + formsSummary.consignment_inquiries.total + formsSummary.consignment_agreements.total} total submissions
+                    {(formsSummary.job_applications.new + formsSummary.consignment_inquiries.new + formsSummary.consignment_agreements.new) > 0 && (
+                      <span className="ml-2 text-blue-600 font-medium">
+                        ({formsSummary.job_applications.new + formsSummary.consignment_inquiries.new + formsSummary.consignment_agreements.new} new)
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fetchFormSubmissions();
+                  }}
+                  disabled={loadingForms}
+                  className="text-[#888] hover:text-[#333]"
+                >
+                  {loadingForms ? "Loading..." : "Refresh"}
+                </Button>
+                {showFormsSection ? (
+                  <ChevronUp className="w-5 h-5 text-[#888]" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-[#888]" />
+                )}
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {showFormsSection && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-6 pt-6 border-t border-[#eee]">
+                    {/* Form Type Tabs */}
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      <button
+                        onClick={() => setActiveFormTab("job_applications")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                          activeFormTab === "job_applications"
+                            ? "bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white shadow-md"
+                            : "bg-[#F9F6F7] text-[#666] hover:bg-[#F0EAEB]"
+                        }`}
+                        data-testid="tab-job-applications"
+                      >
+                        <Briefcase className="w-4 h-4" />
+                        Job Applications
+                        {formsSummary.job_applications.new > 0 && (
+                          <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                            {formsSummary.job_applications.new}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setActiveFormTab("consignment_inquiries")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                          activeFormTab === "consignment_inquiries"
+                            ? "bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white shadow-md"
+                            : "bg-[#F9F6F7] text-[#666] hover:bg-[#F0EAEB]"
+                        }`}
+                        data-testid="tab-consignment-inquiries"
+                      >
+                        <Package className="w-4 h-4" />
+                        Consignment Inquiries
+                        {formsSummary.consignment_inquiries.new > 0 && (
+                          <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                            {formsSummary.consignment_inquiries.new}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setActiveFormTab("consignment_agreements")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                          activeFormTab === "consignment_agreements"
+                            ? "bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white shadow-md"
+                            : "bg-[#F9F6F7] text-[#666] hover:bg-[#F0EAEB]"
+                        }`}
+                        data-testid="tab-consignment-agreements"
+                      >
+                        <FileSignature className="w-4 h-4" />
+                        Agreements
+                        {formsSummary.consignment_agreements.new > 0 && (
+                          <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                            {formsSummary.consignment_agreements.new}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Job Applications Tab */}
+                    {activeFormTab === "job_applications" && (
+                      <div data-testid="job-applications-list">
+                        {loadingForms ? (
+                          <p className="text-center text-[#888] py-8">Loading...</p>
+                        ) : formSubmissions.jobApplications.length === 0 ? (
+                          <p className="text-center text-[#888] py-8">No job applications yet</p>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="data-table">
+                              <thead>
+                                <tr>
+                                  <th>Name</th>
+                                  <th>Email</th>
+                                  <th>Phone</th>
+                                  <th>Submitted</th>
+                                  <th>Status</th>
+                                  <th>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {formSubmissions.jobApplications.map((app) => (
+                                  <tr key={app.id} data-testid={`job-app-row-${app.id}`}>
+                                    <td className="font-medium">{app.full_name}</td>
+                                    <td>{app.email}</td>
+                                    <td>{app.phone}</td>
+                                    <td className="text-sm text-[#888]">{formatSubmissionDate(app.submitted_at)}</td>
+                                    <td>{getStatusBadge(app.status)}</td>
+                                    <td>
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedSubmission({ ...app, formType: "job_applications" });
+                                            setShowSubmissionDetails(true);
+                                          }}
+                                          className="text-[#8B5CF6] hover:text-[#6D28D9]"
+                                          data-testid={`view-job-app-${app.id}`}
+                                        >
+                                          <Eye className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDeleteSubmission("job_applications", app.id)}
+                                          className="text-red-500 hover:text-red-700"
+                                          data-testid={`delete-job-app-${app.id}`}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Consignment Inquiries Tab */}
+                    {activeFormTab === "consignment_inquiries" && (
+                      <div data-testid="consignment-inquiries-list">
+                        {loadingForms ? (
+                          <p className="text-center text-[#888] py-8">Loading...</p>
+                        ) : formSubmissions.consignmentInquiries.length === 0 ? (
+                          <p className="text-center text-[#888] py-8">No consignment inquiries yet</p>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="data-table">
+                              <thead>
+                                <tr>
+                                  <th>Name</th>
+                                  <th>Email</th>
+                                  <th>Item Types</th>
+                                  <th>Submitted</th>
+                                  <th>Status</th>
+                                  <th>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {formSubmissions.consignmentInquiries.map((inquiry) => (
+                                  <tr key={inquiry.id} data-testid={`inquiry-row-${inquiry.id}`}>
+                                    <td className="font-medium">{inquiry.full_name}</td>
+                                    <td>{inquiry.email}</td>
+                                    <td className="text-sm">
+                                      {inquiry.item_types?.slice(0, 2).join(", ")}
+                                      {inquiry.item_types?.length > 2 && "..."}
+                                    </td>
+                                    <td className="text-sm text-[#888]">{formatSubmissionDate(inquiry.submitted_at)}</td>
+                                    <td>{getStatusBadge(inquiry.status)}</td>
+                                    <td>
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedSubmission({ ...inquiry, formType: "consignment_inquiries" });
+                                            setShowSubmissionDetails(true);
+                                          }}
+                                          className="text-[#00D4FF] hover:text-[#00A8CC]"
+                                          data-testid={`view-inquiry-${inquiry.id}`}
+                                        >
+                                          <Eye className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDeleteSubmission("consignment_inquiries", inquiry.id)}
+                                          className="text-red-500 hover:text-red-700"
+                                          data-testid={`delete-inquiry-${inquiry.id}`}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Consignment Agreements Tab */}
+                    {activeFormTab === "consignment_agreements" && (
+                      <div data-testid="consignment-agreements-list">
+                        {loadingForms ? (
+                          <p className="text-center text-[#888] py-8">Loading...</p>
+                        ) : formSubmissions.consignmentAgreements.length === 0 ? (
+                          <p className="text-center text-[#888] py-8">No consignment agreements yet</p>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="data-table">
+                              <thead>
+                                <tr>
+                                  <th>Name</th>
+                                  <th>Email</th>
+                                  <th>Percentage</th>
+                                  <th>Signed</th>
+                                  <th>Status</th>
+                                  <th>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {formSubmissions.consignmentAgreements.map((agreement) => (
+                                  <tr key={agreement.id} data-testid={`agreement-row-${agreement.id}`}>
+                                    <td className="font-medium">{agreement.full_name}</td>
+                                    <td>{agreement.email}</td>
+                                    <td>{agreement.agreed_percentage}</td>
+                                    <td className="text-sm text-[#888]">{formatSubmissionDate(agreement.submitted_at)}</td>
+                                    <td>{getStatusBadge(agreement.status)}</td>
+                                    <td>
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedSubmission({ ...agreement, formType: "consignment_agreements" });
+                                            setShowSubmissionDetails(true);
+                                          }}
+                                          className="text-[#8B5CF6] hover:text-[#6D28D9]"
+                                          data-testid={`view-agreement-${agreement.id}`}
+                                        >
+                                          <Eye className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDeleteSubmission("consignment_agreements", agreement.id)}
+                                          className="text-red-500 hover:text-red-700"
+                                          data-testid={`delete-agreement-${agreement.id}`}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Submission Details Modal */}
+          {showSubmissionDetails && selectedSubmission && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+              onClick={() => setShowSubmissionDetails(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl w-full max-w-2xl shadow-xl my-8 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="submission-details-modal"
+              >
+                {/* Modal Header */}
+                <div className={`p-6 ${
+                  selectedSubmission.formType === "job_applications" 
+                    ? "bg-gradient-to-r from-[#FF1493] to-[#E91E8C]"
+                    : selectedSubmission.formType === "consignment_inquiries"
+                      ? "bg-gradient-to-r from-[#00D4FF] to-[#00A8CC]"
+                      : "bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]"
+                } text-white`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {selectedSubmission.formType === "job_applications" ? (
+                        <Briefcase className="w-6 h-6" />
+                      ) : selectedSubmission.formType === "consignment_inquiries" ? (
+                        <Package className="w-6 h-6" />
+                      ) : (
+                        <FileSignature className="w-6 h-6" />
+                      )}
+                      <div>
+                        <h2 className="font-playfair text-xl font-bold">{selectedSubmission.full_name}</h2>
+                        <p className="text-sm opacity-80">
+                          {selectedSubmission.formType === "job_applications" 
+                            ? "Job Application"
+                            : selectedSubmission.formType === "consignment_inquiries"
+                              ? "Consignment Inquiry"
+                              : "Consignment Agreement"
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowSubmissionDetails(false)}
+                      className="text-white/80 hover:text-white"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Content */}
+                <div className="p-6 max-h-[60vh] overflow-y-auto">
+                  {/* Status Update */}
+                  <div className="mb-6 p-4 bg-[#F9F6F7] rounded-xl">
+                    <Label className="text-sm font-medium text-[#666] mb-2 block">Update Status</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {["new", "reviewed", "contacted", "archived"].map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => handleUpdateSubmissionStatus(selectedSubmission.formType, selectedSubmission.id, status)}
+                          disabled={updatingStatus}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                            selectedSubmission.status === status || (!selectedSubmission.status && status === "new")
+                              ? "bg-[#333] text-white"
+                              : "bg-white text-[#666] hover:bg-[#eee] border border-[#ddd]"
+                          }`}
+                          data-testid={`status-btn-${status}`}
+                        >
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Contact Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
+                      <Mail className="w-5 h-5 text-[#888]" />
+                      <div>
+                        <p className="text-xs text-[#888]">Email</p>
+                        <a href={`mailto:${selectedSubmission.email}`} className="text-[#333] hover:text-[#8B5CF6]">
+                          {selectedSubmission.email}
+                        </a>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
+                      <Phone className="w-5 h-5 text-[#888]" />
+                      <div>
+                        <p className="text-xs text-[#888]">Phone</p>
+                        <a href={`tel:${selectedSubmission.phone}`} className="text-[#333] hover:text-[#8B5CF6]">
+                          {selectedSubmission.phone}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedSubmission.address && (
+                    <div className="flex items-start gap-3 p-3 bg-[#F9F6F7] rounded-xl mb-6">
+                      <MapPin className="w-5 h-5 text-[#888] mt-0.5" />
+                      <div>
+                        <p className="text-xs text-[#888]">Address</p>
+                        <p className="text-[#333]">{selectedSubmission.address}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Job Application Details */}
+                  {selectedSubmission.formType === "job_applications" && (
+                    <div className="space-y-4">
+                      {selectedSubmission.resume_text && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Resume / Experience</Label>
+                          <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl whitespace-pre-wrap">{selectedSubmission.resume_text}</p>
+                        </div>
+                      )}
+                      {selectedSubmission.why_join && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Why Join Us?</Label>
+                          <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl">{selectedSubmission.why_join}</p>
+                        </div>
+                      )}
+                      {selectedSubmission.availability && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Availability</Label>
+                          <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl">{selectedSubmission.availability}</p>
+                        </div>
+                      )}
+                      {selectedSubmission.tasks_able_to_perform?.length > 0 && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Tasks Able to Perform</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedSubmission.tasks_able_to_perform.map((task) => (
+                              <span key={task} className="px-3 py-1 bg-[#F8C8DC]/30 text-[#5D4037] rounded-full text-sm">
+                                {task}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-[#F9F6F7] rounded-xl">
+                          <p className="text-xs text-[#888]">Background Check Consent</p>
+                          <p className={`font-medium ${selectedSubmission.background_check_consent ? 'text-green-600' : 'text-red-600'}`}>
+                            {selectedSubmission.background_check_consent ? "Yes" : "No"}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-[#F9F6F7] rounded-xl">
+                          <p className="text-xs text-[#888]">Reliable Transportation</p>
+                          <p className={`font-medium ${selectedSubmission.has_reliable_transportation ? 'text-green-600' : 'text-red-600'}`}>
+                            {selectedSubmission.has_reliable_transportation ? "Yes" : "No"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Consignment Inquiry Details */}
+                  {selectedSubmission.formType === "consignment_inquiries" && (
+                    <div className="space-y-4">
+                      {selectedSubmission.item_types?.length > 0 && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Item Types</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedSubmission.item_types.map((type) => (
+                              <span key={type} className="px-3 py-1 bg-[#00D4FF]/20 text-[#00A8CC] rounded-full text-sm">
+                                {type}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {selectedSubmission.other_item_type && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Other Item Type</Label>
+                          <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl">{selectedSubmission.other_item_type}</p>
+                        </div>
+                      )}
+                      {selectedSubmission.item_description && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Item Description</Label>
+                          <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl whitespace-pre-wrap">{selectedSubmission.item_description}</p>
+                        </div>
+                      )}
+                      {selectedSubmission.item_condition && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Item Condition</Label>
+                          <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl">{selectedSubmission.item_condition}</p>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-[#F9F6F7] rounded-xl">
+                          <p className="text-xs text-[#888]">Smoke-Free Environment</p>
+                          <p className={`font-medium ${selectedSubmission.smoke_free ? 'text-green-600' : 'text-orange-600'}`}>
+                            {selectedSubmission.smoke_free ? "Yes" : "No"}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-[#F9F6F7] rounded-xl">
+                          <p className="text-xs text-[#888]">Pet-Free Environment</p>
+                          <p className={`font-medium ${selectedSubmission.pet_free ? 'text-green-600' : 'text-orange-600'}`}>
+                            {selectedSubmission.pet_free ? "Yes" : "No"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Consignment Agreement Details */}
+                  {selectedSubmission.formType === "consignment_agreements" && (
+                    <div className="space-y-4">
+                      {selectedSubmission.items_description && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Items Description</Label>
+                          <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl whitespace-pre-wrap">{selectedSubmission.items_description}</p>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-[#C5A065]/10 rounded-xl">
+                          <p className="text-xs text-[#888]">Agreed Percentage</p>
+                          <p className="font-bold text-[#C5A065] text-lg">{selectedSubmission.agreed_percentage}</p>
+                        </div>
+                        <div className="p-3 bg-[#F9F6F7] rounded-xl">
+                          <p className="text-xs text-[#888]">Signature Date</p>
+                          <p className="font-medium text-[#333]">{selectedSubmission.signature_date || "N/A"}</p>
+                        </div>
+                      </div>
+                      {selectedSubmission.signature && (
+                        <div>
+                          <Label className="text-sm font-medium text-[#666] mb-2 block">Signature</Label>
+                          <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl font-signature text-xl italic">{selectedSubmission.signature}</p>
+                        </div>
+                      )}
+                      <div className="p-3 bg-[#F9F6F7] rounded-xl">
+                        <p className="text-xs text-[#888]">Agreed to Terms</p>
+                        <p className={`font-medium ${selectedSubmission.agreed_to_terms ? 'text-green-600' : 'text-red-600'}`}>
+                          {selectedSubmission.agreed_to_terms ? "Yes" : "No"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Submission Meta */}
+                  <div className="mt-6 pt-4 border-t border-[#eee] flex items-center justify-between text-sm text-[#888]">
+                    <span>Submitted: {formatSubmissionDate(selectedSubmission.submitted_at)}</span>
+                    <span>ID: {selectedSubmission.id.slice(0, 8)}...</span>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-4 bg-[#F9F6F7] flex justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDeleteSubmission(selectedSubmission.formType, selectedSubmission.id)}
+                    className="text-red-500 border-red-200 hover:bg-red-50"
+                    data-testid="delete-submission-btn"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                  <Button
+                    onClick={() => setShowSubmissionDetails(false)}
+                    className="btn-primary"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
           {/* Edit Time Entry Modal */}
           {showEditEntry && editingEntry && (
             <motion.div
