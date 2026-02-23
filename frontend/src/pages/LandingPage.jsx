@@ -4,10 +4,7 @@ import { motion } from "framer-motion";
 import { 
   SiEbay, 
   SiFacebook, 
-  SiTiktok,
-  SiPoshmark,
-  SiMercari,
-  SiDepop
+  SiTiktok
 } from "react-icons/si";
 import { 
   Share2, 
