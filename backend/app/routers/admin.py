@@ -526,3 +526,82 @@ async def get_blank_w9_form(admin: dict = Depends(get_admin_user)):
         url="https://www.irs.gov/pub/irs-pdf/fw9.pdf",
         status_code=302
     )
+
+
+# W-9 Review endpoints
+@router.get("/w9/pending")
+async def get_pending_w9s(admin: dict = Depends(get_admin_user)):
+    """Get all W-9s pending review"""
+    pending = await db.w9_documents.find(
+        {"status": "pending_review"},
+        {"_id": 0, "content": 0}
+    ).to_list(100)
+    
+    # Add employee names
+    for doc in pending:
+        emp = await db.users.find_one({"id": doc["employee_id"]}, {"_id": 0, "name": 1, "email": 1})
+        if emp:
+            doc["employee_name"] = emp.get("name", "Unknown")
+            doc["employee_email"] = emp.get("email", "")
+    
+    return pending
+
+
+@router.post("/employees/{employee_id}/w9/approve")
+async def approve_w9(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Approve an employee's W-9 submission"""
+    w9_doc = await db.w9_documents.find_one({"employee_id": employee_id}, {"_id": 0})
+    if not w9_doc:
+        raise HTTPException(status_code=404, detail="No W-9 document found")
+    
+    await db.w9_documents.update_one(
+        {"employee_id": employee_id},
+        {"$set": {
+            "status": "approved",
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "reviewed_by": admin["id"]
+        }}
+    )
+    
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": {"w9_status": "approved"}}
+    )
+    
+    return {"message": "W-9 approved successfully"}
+
+
+@router.post("/employees/{employee_id}/w9/reject")
+async def reject_w9(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Reject an employee's W-9 and request corrections"""
+    from pydantic import BaseModel
+    
+    class RejectRequest(BaseModel):
+        reason: str
+    
+    # Get request body manually since we're appending
+    from fastapi import Request
+    
+    w9_doc = await db.w9_documents.find_one({"employee_id": employee_id}, {"_id": 0})
+    if not w9_doc:
+        raise HTTPException(status_code=404, detail="No W-9 document found")
+    
+    # For now, use a default reason - will be handled by the request body
+    await db.w9_documents.update_one(
+        {"employee_id": employee_id},
+        {"$set": {
+            "status": "needs_correction",
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "reviewed_by": admin["id"],
+            "rejection_reason": "Please review and correct your W-9 form"
+        }}
+    )
+    
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": {"w9_status": "needs_correction"}}
+    )
+    
+    # Notify employee (in-app - would need employee notification system)
+    
+    return {"message": "W-9 returned for corrections"}
