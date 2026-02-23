@@ -45,7 +45,7 @@ const DepopIcon = () => (
 const platforms = [
   { 
     name: "eBay", 
-    logoUrl: "https://customer-assets.emergentagent.com/job_5664c81d-87dc-48ff-99fd-4adf6766fc96/artifacts/42llel9l_IMG_0051.jpg",
+    logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/8j5hnnsn_IMG_0079.AVIF",
     url: "https://www.ebay.com/str/thriftycurator", 
     color: "#FFFFFF",
     useImage: true
