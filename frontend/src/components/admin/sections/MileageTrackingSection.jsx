@@ -1,0 +1,875 @@
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Car,
+  Navigation,
+  MapPinned,
+  PlayCircle,
+  StopCircle,
+  Download,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Save,
+  ChevronDown,
+  ChevronUp
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import axios from "axios";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+export default function MileageTrackingSection({ getAuthHeader }) {
+  // Section visibility
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Mileage tracking state
+  const [mileageEntries, setMileageEntries] = useState([]);
+  const [loadingMileage, setLoadingMileage] = useState(false);
+  const [activeTripData, setActiveTripData] = useState(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [trackingWatchId, setTrackingWatchId] = useState(null);
+  const [showMileageEntries, setShowMileageEntries] = useState(true);
+  
+  // Modal states
+  const [showAddMileageModal, setShowAddMileageModal] = useState(false);
+  const [showEditMileageModal, setShowEditMileageModal] = useState(false);
+  const [editingMileageEntry, setEditingMileageEntry] = useState(null);
+  const [showEndTripModal, setShowEndTripModal] = useState(false);
+  
+  // Form data
+  const [mileageFormData, setMileageFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    start_address: "",
+    end_address: "",
+    total_miles: "",
+    purpose: "thrifting",
+    purpose_other: "",
+    notes: ""
+  });
+  
+  const [mileageSummary, setMileageSummary] = useState({
+    total_miles: 0,
+    total_trips: 0,
+    by_purpose: {},
+    monthly_totals: {}
+  });
+  
+  const [endTripData, setEndTripData] = useState({
+    purpose: "thrifting",
+    purpose_other: "",
+    notes: ""
+  });
+
+  // Fetch mileage entries
+  const fetchMileageEntries = useCallback(async () => {
+    setLoadingMileage(true);
+    try {
+      const [entriesRes, summaryRes, activeTripRes] = await Promise.all([
+        axios.get(`${API}/admin/mileage/entries`, getAuthHeader()),
+        axios.get(`${API}/admin/mileage/summary`, getAuthHeader()),
+        axios.get(`${API}/admin/mileage/active-trip`, getAuthHeader())
+      ]);
+      setMileageEntries(entriesRes.data);
+      setMileageSummary(summaryRes.data);
+      if (activeTripRes.data) {
+        setActiveTripData(activeTripRes.data);
+        setIsTracking(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch mileage data:", error);
+    } finally {
+      setLoadingMileage(false);
+    }
+  }, [getAuthHeader]);
+
+  // Start GPS tracking
+  const startMileageTracking = async () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+    
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+      
+      const startLocation = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        timestamp: new Date().toISOString()
+      };
+      
+      let startAddress = `${startLocation.latitude.toFixed(4)}, ${startLocation.longitude.toFixed(4)}`;
+      
+      const response = await axios.post(`${API}/admin/mileage/start-trip`, {
+        start_location: startLocation,
+        start_address: startAddress
+      }, getAuthHeader());
+      
+      setActiveTripData(response.data);
+      setIsTracking(true);
+      setCurrentLocation(startLocation);
+      
+      // Start watching position
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const newLocation = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            timestamp: new Date().toISOString()
+          };
+          setCurrentLocation(newLocation);
+          axios.post(`${API}/admin/mileage/update-location`, {
+            location: newLocation
+          }, getAuthHeader()).catch(console.error);
+        },
+        (error) => console.error("Location tracking error:", error),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      );
+      
+      setTrackingWatchId(watchId);
+      toast.success("Trip tracking started!");
+      
+    } catch (error) {
+      console.error("Failed to start tracking:", error);
+      toast.error(error.response?.data?.detail || "Failed to start trip tracking");
+    }
+  };
+
+  // Stop tracking - show end trip modal
+  const stopMileageTracking = () => {
+    setShowEndTripModal(true);
+  };
+
+  // Confirm end trip
+  const confirmEndTrip = async () => {
+    if (!currentLocation) {
+      toast.error("Unable to get current location");
+      return;
+    }
+    
+    // Calculate distance using haversine formula
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+      const R = 3959; // Earth's radius in miles
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    };
+    
+    let totalMiles = 0;
+    if (activeTripData?.start_location && currentLocation) {
+      totalMiles = calculateDistance(
+        activeTripData.start_location.latitude,
+        activeTripData.start_location.longitude,
+        currentLocation.latitude,
+        currentLocation.longitude
+      );
+    }
+    
+    try {
+      const endAddress = `${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`;
+      
+      await axios.post(`${API}/admin/mileage/end-trip`, {
+        end_location: currentLocation,
+        end_address: endAddress,
+        total_miles: Math.round(totalMiles * 10) / 10,
+        purpose: endTripData.purpose,
+        purpose_other: endTripData.purpose === "other" ? endTripData.purpose_other : null,
+        notes: endTripData.notes
+      }, getAuthHeader());
+      
+      if (trackingWatchId) {
+        navigator.geolocation.clearWatch(trackingWatchId);
+        setTrackingWatchId(null);
+      }
+      
+      setIsTracking(false);
+      setActiveTripData(null);
+      setCurrentLocation(null);
+      setShowEndTripModal(false);
+      setEndTripData({ purpose: "thrifting", purpose_other: "", notes: "" });
+      
+      toast.success(`Trip ended! ${totalMiles.toFixed(1)} miles recorded.`);
+      fetchMileageEntries();
+      
+    } catch (error) {
+      console.error("Failed to end trip:", error);
+      toast.error(error.response?.data?.detail || "Failed to end trip");
+    }
+  };
+
+  // Cancel trip
+  const cancelTrip = async () => {
+    try {
+      await axios.post(`${API}/admin/mileage/cancel-trip`, {}, getAuthHeader());
+      
+      if (trackingWatchId) {
+        navigator.geolocation.clearWatch(trackingWatchId);
+        setTrackingWatchId(null);
+      }
+      
+      setIsTracking(false);
+      setActiveTripData(null);
+      setCurrentLocation(null);
+      toast.info("Trip cancelled");
+      
+    } catch (error) {
+      console.error("Failed to cancel trip:", error);
+      toast.error("Failed to cancel trip");
+    }
+  };
+
+  // Add manual mileage entry
+  const handleAddMileageEntry = async () => {
+    if (!mileageFormData.total_miles || !mileageFormData.start_address || !mileageFormData.end_address) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/admin/mileage/entries`, {
+        date: mileageFormData.date,
+        start_address: mileageFormData.start_address,
+        end_address: mileageFormData.end_address,
+        total_miles: parseFloat(mileageFormData.total_miles),
+        purpose: mileageFormData.purpose,
+        purpose_other: mileageFormData.purpose === "other" ? mileageFormData.purpose_other : null,
+        notes: mileageFormData.notes
+      }, getAuthHeader());
+      
+      toast.success("Mileage entry added!");
+      setShowAddMileageModal(false);
+      setMileageFormData({
+        date: new Date().toISOString().split('T')[0],
+        start_address: "",
+        end_address: "",
+        total_miles: "",
+        purpose: "thrifting",
+        purpose_other: "",
+        notes: ""
+      });
+      fetchMileageEntries();
+      
+    } catch (error) {
+      console.error("Failed to add mileage entry:", error);
+      toast.error("Failed to add mileage entry");
+    }
+  };
+
+  // Edit mileage entry
+  const handleEditMileageEntry = async () => {
+    if (!editingMileageEntry) return;
+    
+    try {
+      await axios.put(`${API}/admin/mileage/entries/${editingMileageEntry.id}`, {
+        date: mileageFormData.date,
+        start_address: mileageFormData.start_address,
+        end_address: mileageFormData.end_address,
+        total_miles: parseFloat(mileageFormData.total_miles),
+        purpose: mileageFormData.purpose,
+        purpose_other: mileageFormData.purpose === "other" ? mileageFormData.purpose_other : null,
+        notes: mileageFormData.notes
+      }, getAuthHeader());
+      
+      toast.success("Mileage entry updated!");
+      setShowEditMileageModal(false);
+      setEditingMileageEntry(null);
+      fetchMileageEntries();
+      
+    } catch (error) {
+      console.error("Failed to update mileage entry:", error);
+      toast.error("Failed to update mileage entry");
+    }
+  };
+
+  // Delete mileage entry
+  const handleDeleteMileageEntry = async (entryId) => {
+    if (!confirm("Are you sure you want to delete this mileage entry?")) return;
+    
+    try {
+      await axios.delete(`${API}/admin/mileage/entries/${entryId}`, getAuthHeader());
+      toast.success("Mileage entry deleted");
+      fetchMileageEntries();
+    } catch (error) {
+      console.error("Failed to delete mileage entry:", error);
+      toast.error("Failed to delete mileage entry");
+    }
+  };
+
+  // Open edit modal
+  const openEditMileageModal = (entry) => {
+    setEditingMileageEntry(entry);
+    setMileageFormData({
+      date: entry.date,
+      start_address: entry.start_address,
+      end_address: entry.end_address,
+      total_miles: entry.total_miles.toString(),
+      purpose: entry.purpose,
+      purpose_other: entry.purpose_other || "",
+      notes: entry.notes || ""
+    });
+    setShowEditMileageModal(true);
+  };
+
+  // Export CSV
+  const handleExportCSV = async () => {
+    try {
+      const year = new Date().getFullYear();
+      const response = await axios.get(`${API}/admin/mileage/export/csv?year=${year}`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `mileage_log_${year}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('CSV exported successfully!');
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export CSV');
+    }
+  };
+
+  // Export PDF
+  const handleExportPDF = async () => {
+    try {
+      const year = new Date().getFullYear();
+      const response = await axios.get(`${API}/admin/mileage/export/pdf?year=${year}`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `mileage_log_${year}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('PDF exported successfully!');
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export PDF');
+    }
+  };
+
+  // Fetch data when section is expanded
+  useEffect(() => {
+    if (isExpanded) {
+      fetchMileageEntries();
+    }
+  }, [isExpanded, fetchMileageEntries]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (trackingWatchId) {
+        navigator.geolocation.clearWatch(trackingWatchId);
+      }
+    };
+  }, [trackingWatchId]);
+
+  // Purpose badge colors
+  const getPurposeBadge = (purpose, purposeOther) => {
+    const badges = {
+      thrifting: { bg: "bg-purple-100", text: "text-purple-700", label: "Thrifting" },
+      post_office: { bg: "bg-blue-100", text: "text-blue-700", label: "Post Office" },
+      other: { bg: "bg-gray-100", text: "text-gray-700", label: purposeOther || "Other" }
+    };
+    const badge = badges[purpose] || badges.other;
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
+        {badge.label}
+      </span>
+    );
+  };
+
+  // Mileage Form Component
+  const MileageForm = ({ isEdit = false }) => (
+    <div className="space-y-4">
+      <div>
+        <Label>Date</Label>
+        <Input
+          type="date"
+          value={mileageFormData.date}
+          onChange={(e) => setMileageFormData({ ...mileageFormData, date: e.target.value })}
+          data-testid="mileage-date-input"
+        />
+      </div>
+      <div>
+        <Label>Start Location</Label>
+        <Input
+          type="text"
+          placeholder="e.g., Home, 123 Main St"
+          value={mileageFormData.start_address}
+          onChange={(e) => setMileageFormData({ ...mileageFormData, start_address: e.target.value })}
+          data-testid="mileage-start-input"
+        />
+      </div>
+      <div>
+        <Label>End Location</Label>
+        <Input
+          type="text"
+          placeholder="e.g., Goodwill, Thrift Store"
+          value={mileageFormData.end_address}
+          onChange={(e) => setMileageFormData({ ...mileageFormData, end_address: e.target.value })}
+          data-testid="mileage-end-input"
+        />
+      </div>
+      <div>
+        <Label>Total Miles</Label>
+        <Input
+          type="number"
+          step="0.1"
+          min="0"
+          placeholder="0.0"
+          value={mileageFormData.total_miles}
+          onChange={(e) => setMileageFormData({ ...mileageFormData, total_miles: e.target.value })}
+          data-testid="mileage-miles-input"
+        />
+      </div>
+      <div>
+        <Label>Purpose</Label>
+        <Select
+          value={mileageFormData.purpose}
+          onValueChange={(value) => setMileageFormData({ ...mileageFormData, purpose: value })}
+        >
+          <SelectTrigger data-testid="mileage-purpose-select">
+            <SelectValue placeholder="Select purpose" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="thrifting">Thrifting</SelectItem>
+            <SelectItem value="post_office">Post Office</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {mileageFormData.purpose === "other" && (
+        <div>
+          <Label>Specify Purpose</Label>
+          <Input
+            type="text"
+            placeholder="Enter purpose"
+            value={mileageFormData.purpose_other}
+            onChange={(e) => setMileageFormData({ ...mileageFormData, purpose_other: e.target.value })}
+            data-testid="mileage-purpose-other-input"
+          />
+        </div>
+      )}
+      <div>
+        <Label>Notes (optional)</Label>
+        <Input
+          type="text"
+          placeholder="Any additional notes"
+          value={mileageFormData.notes}
+          onChange={(e) => setMileageFormData({ ...mileageFormData, notes: e.target.value })}
+          data-testid="mileage-notes-input"
+        />
+      </div>
+      <Button
+        onClick={isEdit ? handleEditMileageEntry : handleAddMileageEntry}
+        className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+        data-testid="save-mileage-btn"
+      >
+        <Save className="w-4 h-4 mr-2" />
+        {isEdit ? "Update Entry" : "Save Entry"}
+      </Button>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Main Section */}
+      <div className="dashboard-card">
+        <div 
+          className="flex items-center justify-between cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
+          data-testid="mileage-section-toggle"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
+              <Car className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-[#333]">Mileage Tracking</h2>
+              <p className="text-sm text-[#888]">Track business miles for tax purposes</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {isTracking && (
+              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Tracking
+              </span>
+            )}
+            {isExpanded ? (
+              <ChevronUp className="w-5 h-5 text-[#888]" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-[#888]" />
+            )}
+          </div>
+        </div>
+        
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-6 space-y-6">
+                {/* GPS Tracking Controls */}
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Navigation className="w-6 h-6 text-emerald-600" />
+                      <div>
+                        <p className="font-medium text-[#333]">GPS Trip Tracking</p>
+                        <p className="text-sm text-[#888]">
+                          {isTracking 
+                            ? `Tracking active since ${activeTripData?.start_time ? new Date(activeTripData.start_time).toLocaleTimeString() : 'N/A'}`
+                            : 'Start tracking to automatically log your trip'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {!isTracking ? (
+                        <Button
+                          onClick={startMileageTracking}
+                          className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
+                          data-testid="start-tracking-btn"
+                        >
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          Start Trip
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            onClick={stopMileageTracking}
+                            className="bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-600 hover:to-orange-600"
+                            data-testid="stop-tracking-btn"
+                          >
+                            <StopCircle className="w-4 h-4 mr-2" />
+                            End Trip
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={cancelTrip}
+                            className="text-[#888] hover:text-red-500"
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {isTracking && currentLocation && (
+                    <div className="mt-3 p-3 bg-white/60 rounded-lg">
+                      <p className="text-xs text-[#666]">
+                        <MapPinned className="w-3 h-3 inline mr-1" />
+                        Current: {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                    <p className="text-sm text-[#888]">Total Miles (This Year)</p>
+                    <p className="text-2xl font-bold text-emerald-600">{mileageSummary.total_miles.toFixed(1)}</p>
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                    <p className="text-sm text-[#888]">Total Trips</p>
+                    <p className="text-2xl font-bold text-teal-600">{mileageSummary.total_trips}</p>
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                    <p className="text-sm text-[#888]">IRS Rate (2026)</p>
+                    <p className="text-2xl font-bold text-[#333]">$0.725<span className="text-sm font-normal">/mile</span></p>
+                    <p className="text-xs text-emerald-600 mt-1">
+                      Est. Deduction: ${(mileageSummary.total_miles * 0.725).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportCSV}
+                      className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                      data-testid="export-csv-btn"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export CSV
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportPDF}
+                      className="text-teal-600 border-teal-200 hover:bg-teal-50"
+                      data-testid="export-pdf-btn"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export PDF
+                    </Button>
+                  </div>
+                  <Button
+                    onClick={() => setShowAddMileageModal(true)}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                    data-testid="add-mileage-btn"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Entry
+                  </Button>
+                </div>
+
+                {/* Recent Trips - Collapsible */}
+                <div>
+                  <div 
+                    className="flex items-center justify-between cursor-pointer mb-3"
+                    onClick={() => setShowMileageEntries(!showMileageEntries)}
+                  >
+                    <h3 className="text-sm font-semibold text-[#333]">Recent Trips ({mileageEntries.length})</h3>
+                    {showMileageEntries ? (
+                      <ChevronUp className="w-4 h-4 text-[#888]" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-[#888]" />
+                    )}
+                  </div>
+                  
+                  <AnimatePresence>
+                    {showMileageEntries && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                      >
+                        {loadingMileage ? (
+                          <div className="text-center py-4">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600 mx-auto"></div>
+                          </div>
+                        ) : mileageEntries.length === 0 ? (
+                          <p className="text-center text-[#888] py-4">No trips recorded yet</p>
+                        ) : (
+                          <div className="space-y-2 max-h-96 overflow-y-auto">
+                            {mileageEntries.map((entry) => (
+                              <div 
+                                key={entry.id} 
+                                className="flex items-center justify-between bg-white border border-gray-100 rounded-lg p-3 hover:shadow-sm transition-shadow"
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    {getPurposeBadge(entry.purpose, entry.purpose_other)}
+                                    <span className="text-xs text-[#888]">{entry.date}</span>
+                                  </div>
+                                  <p className="text-sm text-[#666]">
+                                    {entry.start_address} → {entry.end_address}
+                                  </p>
+                                  {entry.notes && (
+                                    <p className="text-xs text-[#aaa] mt-1">{entry.notes}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="font-semibold text-emerald-600">{entry.total_miles.toFixed(1)} mi</span>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openEditMileageModal(entry)}
+                                      className="h-8 w-8 p-0 text-blue-600"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteMileageEntry(entry.id)}
+                                      className="h-8 w-8 p-0 text-red-500"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Add Mileage Entry Modal */}
+      {showAddMileageModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowAddMileageModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-[#333]">Add Mileage Entry</h3>
+              <button 
+                onClick={() => setShowAddMileageModal(false)}
+                className="text-[#888] hover:text-[#333]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <MileageForm isEdit={false} />
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Edit Mileage Entry Modal */}
+      {showEditMileageModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowEditMileageModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-[#333]">Edit Mileage Entry</h3>
+              <button 
+                onClick={() => setShowEditMileageModal(false)}
+                className="text-[#888] hover:text-[#333]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <MileageForm isEdit={true} />
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* End Trip Modal */}
+      {showEndTripModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowEndTripModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-[#333]">End Trip</h3>
+              <button 
+                onClick={() => setShowEndTripModal(false)}
+                className="text-[#888] hover:text-[#333]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-sm text-[#666]">
+                Please select the purpose of this trip before ending.
+              </p>
+              <div>
+                <Label>Purpose</Label>
+                <Select
+                  value={endTripData.purpose}
+                  onValueChange={(value) => setEndTripData({ ...endTripData, purpose: value })}
+                >
+                  <SelectTrigger data-testid="end-trip-purpose-select">
+                    <SelectValue placeholder="Select purpose" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="thrifting">Thrifting</SelectItem>
+                    <SelectItem value="post_office">Post Office</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {endTripData.purpose === "other" && (
+                <div>
+                  <Label>Specify Purpose</Label>
+                  <Input
+                    type="text"
+                    placeholder="Enter purpose"
+                    value={endTripData.purpose_other}
+                    onChange={(e) => setEndTripData({ ...endTripData, purpose_other: e.target.value })}
+                    data-testid="end-trip-purpose-other-input"
+                  />
+                </div>
+              )}
+              <div>
+                <Label>Notes (optional)</Label>
+                <Input
+                  type="text"
+                  placeholder="Any additional notes"
+                  value={endTripData.notes}
+                  onChange={(e) => setEndTripData({ ...endTripData, notes: e.target.value })}
+                  data-testid="end-trip-notes-input"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEndTripModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmEndTrip}
+                  className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 text-white"
+                  data-testid="confirm-end-trip-btn"
+                >
+                  <StopCircle className="w-4 h-4 mr-2" />
+                  End Trip
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </>
+  );
+}
