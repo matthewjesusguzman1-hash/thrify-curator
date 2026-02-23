@@ -27,6 +27,7 @@ class UserResponse(BaseModel):
     created_at: str
     has_w9: Optional[bool] = None
     w9_uploaded_at: Optional[str] = None
+    w9_status: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
