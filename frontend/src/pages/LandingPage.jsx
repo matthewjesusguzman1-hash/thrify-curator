@@ -22,26 +22,22 @@ const TIKTOK_URL = "https://www.tiktok.com/@thrifty_curator?_r=1&_t=ZP-93ukKuigA
 const APP_URL = typeof window !== 'undefined' ? window.location.origin : '';
 const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(APP_URL)}`;
 
-// Custom SVG Icons for platforms without react-icons support
+// Custom SVG Icons for platforms - stylized representations
 const PoshmarkIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="currentColor"/>
-    <path d="M9 7h4.5c1.38 0 2.5 1.12 2.5 2.5S14.88 12 13.5 12H9V7z" fill="white"/>
-    <path d="M9 12h4.5v5H9v-5z" fill="white"/>
+  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
+    <path d="M7 6h5c2.2 0 4 1.8 4 4s-1.8 4-4 4H9v4H7V6zm2 6h3c1.1 0 2-.9 2-2s-.9-2-2-2H9v4z"/>
   </svg>
 );
 
 const MercariIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <rect width="24" height="24" rx="4" fill="currentColor"/>
-    <text x="12" y="17" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="Arial">m</text>
+  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
+    <path d="M3 6h3l3 12h2l3-12h3l3 12h2V6h2v14H3V6zm5.5 0l2.5 10 2.5-10h-5z"/>
   </svg>
 );
 
 const DepopIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <circle cx="12" cy="12" r="11" fill="currentColor"/>
-    <circle cx="12" cy="12" r="6" fill="white"/>
+  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
+    <path d="M12 3c-5 0-9 4-9 9s4 9 9 9 9-4 9-9-4-9-9-9zm0 14c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z"/>
   </svg>
 );
 
