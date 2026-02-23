@@ -245,6 +245,7 @@ export default function AdminDashboard() {
   // Mileage trip state for header button
   const [headerTripActive, setHeaderTripActive] = useState(false);
   const [headerTripLoading, setHeaderTripLoading] = useState(false);
+  const [forceMileageExpand, setForceMileageExpand] = useState(false);
   const mileageSectionRef = useRef(null);
 
   // Helper function to calculate biweekly period from a start date
