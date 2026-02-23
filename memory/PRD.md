@@ -256,4 +256,4 @@ Build a "Thrifty Curator" reselling application with:
 - PDF generation uses reportlab library
 - Individual employee rates shown with ★ indicator in payroll reports
 - Minor React hydration warning in console (cosmetic, does not affect functionality)
-- **REFACTORING NEEDED**: AdminDashboard.jsx is still a large monolithic file that needs to be broken down further
+- **CRITICAL REFACTORING NEEDED**: AdminDashboard.jsx is now over 5,000 lines and urgently needs to be broken down into smaller, manageable components to reduce technical debt and maintenance risk.
