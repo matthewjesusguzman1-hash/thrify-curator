@@ -127,12 +127,12 @@ Build a "Thrifty Curator" reselling application with:
 3. Export hours to CSV/PDF
 
 ## Testing Status
-- Backend: 98.6% pass (73/74 tests - 1 pre-existing flaky test)
+- Backend: 100% pass (30 rate tests + all payroll tests)
 - Frontend: 100% pass
-- Test reports: `/app/test_reports/iteration_5.json`
+- Test reports: `/app/test_reports/iteration_6.json`
 - Test files: `/app/backend/tests/`
 
 ## Notes
 - Email notifications are configured but require a valid Resend API key (currently placeholder)
-- Console hydration warnings exist in AdminDashboard (non-blocking)
 - PDF generation uses reportlab library
+- Individual employee rates shown with ★ indicator in payroll reports
