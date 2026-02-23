@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 # Try multiple sources for BASE_URL
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '') or os.environ.get('BASE_URL', '') or 'https://inventory-hub-888.preview.emergentagent.com'
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '') or os.environ.get('BASE_URL', '') or 'https://resale-manager-3.preview.emergentagent.com'
 BASE_URL = BASE_URL.rstrip('/')
 TEST_ADMIN_EMAIL = "matthewjesusguzman1@gmail.com"
 
