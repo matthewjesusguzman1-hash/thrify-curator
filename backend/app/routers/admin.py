@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.responses import Response
 from typing import List
 from datetime import datetime, timezone
 import uuid
+import base64
+import os
 
 from app.database import db
 from app.dependencies import get_admin_user
@@ -11,6 +14,10 @@ from app.models.payroll import ReportRequest, EmailReportRequest
 from app.config import RESEND_API_KEY, SENDER_EMAIL
 from app.services.email import get_employee_hours_summary
 import resend
+
+# W-9 upload directory
+W9_UPLOAD_DIR = "/app/backend/uploads/w9"
+os.makedirs(W9_UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
