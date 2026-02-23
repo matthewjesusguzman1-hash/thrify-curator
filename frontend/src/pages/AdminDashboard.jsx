@@ -2725,27 +2725,136 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Report Filters */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div>
-                    <Label className="form-label">Start Date</Label>
-                    <Input
-                      type="date"
-                      value={reportFilters.start_date}
-                      onChange={(e) => setReportFilters({ ...reportFilters, start_date: e.target.value })}
-                      className="form-input"
-                      data-testid="report-start-date"
-                    />
+                <div className="space-y-4 mb-6">
+                  {/* Period Type Selection */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="form-label">Period Type</Label>
+                      <Select
+                        value={reportFilters.period_type}
+                        onValueChange={(value) => setReportFilters({ ...reportFilters, period_type: value })}
+                      >
+                        <SelectTrigger className="form-input" data-testid="report-period-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pay_period">Pay Period</SelectItem>
+                          <SelectItem value="month">Month</SelectItem>
+                          <SelectItem value="year">Year</SelectItem>
+                          <SelectItem value="custom">Custom Range</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Pay Period Selector */}
+                    {reportFilters.period_type === "pay_period" && (
+                      <div>
+                        <Label className="form-label">Period</Label>
+                        <Select
+                          value={reportFilters.period_index.toString()}
+                          onValueChange={(value) => setReportFilters({ ...reportFilters, period_index: parseInt(value) })}
+                        >
+                          <SelectTrigger className="form-input" data-testid="report-pay-period">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Current Pay Period</SelectItem>
+                            <SelectItem value="1">Previous Pay Period</SelectItem>
+                            <SelectItem value="2">2 Periods Ago</SelectItem>
+                            <SelectItem value="3">3 Periods Ago</SelectItem>
+                            <SelectItem value="4">4 Periods Ago</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Month Selector */}
+                    {reportFilters.period_type === "month" && (
+                      <>
+                        <div>
+                          <Label className="form-label">Month</Label>
+                          <Select
+                            value={reportFilters.month.toString()}
+                            onValueChange={(value) => setReportFilters({ ...reportFilters, month: parseInt(value) })}
+                          >
+                            <SelectTrigger className="form-input" data-testid="report-month">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {["January", "February", "March", "April", "May", "June", 
+                                "July", "August", "September", "October", "November", "December"].map((m, i) => (
+                                <SelectItem key={i} value={i.toString()}>{m}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="form-label">Year</Label>
+                          <Select
+                            value={reportFilters.year.toString()}
+                            onValueChange={(value) => setReportFilters({ ...reportFilters, year: parseInt(value) })}
+                          >
+                            <SelectTrigger className="form-input" data-testid="report-month-year">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[2024, 2025, 2026, 2027].map((y) => (
+                                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Year Selector */}
+                    {reportFilters.period_type === "year" && (
+                      <div>
+                        <Label className="form-label">Year</Label>
+                        <Select
+                          value={reportFilters.year.toString()}
+                          onValueChange={(value) => setReportFilters({ ...reportFilters, year: parseInt(value) })}
+                        >
+                          <SelectTrigger className="form-input" data-testid="report-year">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[2024, 2025, 2026, 2027].map((y) => (
+                              <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <Label className="form-label">End Date</Label>
-                    <Input
-                      type="date"
-                      value={reportFilters.end_date}
-                      onChange={(e) => setReportFilters({ ...reportFilters, end_date: e.target.value })}
-                      className="form-input"
-                      data-testid="report-end-date"
-                    />
-                  </div>
+
+                  {/* Custom Date Range */}
+                  {reportFilters.period_type === "custom" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="form-label">Start Date</Label>
+                        <Input
+                          type="date"
+                          value={reportFilters.start_date}
+                          onChange={(e) => setReportFilters({ ...reportFilters, start_date: e.target.value })}
+                          className="form-input"
+                          data-testid="report-start-date"
+                        />
+                      </div>
+                      <div>
+                        <Label className="form-label">End Date</Label>
+                        <Input
+                          type="date"
+                          value={reportFilters.end_date}
+                          onChange={(e) => setReportFilters({ ...reportFilters, end_date: e.target.value })}
+                          className="form-input"
+                          data-testid="report-end-date"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Employee Filter */}
                   <div>
                     <Label className="form-label">Employee (Optional)</Label>
                     <Select
