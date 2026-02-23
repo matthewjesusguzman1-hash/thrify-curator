@@ -141,10 +141,14 @@ Build a "Thrifty Curator" reselling application with:
 3. Export hours to CSV/PDF
 
 ## Testing Status
-- Backend: 100% pass (10/10 Edit Employee tests)
-- Frontend: 100% pass (13/13 Edit Employee UI tests)
-- Test reports: `/app/test_reports/iteration_8.json`
+- Backend: 100% pass (93/93 tests)
+- Test reports: `/app/test_reports/`
 - Test files: `/app/backend/tests/`
+
+## Recent Fixes (Feb 2026)
+- Fixed BASE_URL configuration in all test files (was causing test failures when env var not set)
+- Fixed flaky `test_create_new_employee` test (was using stale email variable)
+- Increased employee list limit from 100 to 500 and added sorting by created_at
 
 ## Notes
 - Email notifications are configured but require a valid Resend API key (currently placeholder)
