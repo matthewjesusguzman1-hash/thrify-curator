@@ -364,6 +364,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       localStorage.removeItem(ACTIVE_TRIP_KEY);
       
       setIsTracking(false);
+      setIsPaused(false);
       setActiveTripData(null);
       setCurrentLocation(null);
       setCumulativeMiles(0);
@@ -371,7 +372,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       
       // Notify parent component
       if (onTripStatusChange) {
-        onTripStatusChange(false);
+        onTripStatusChange({ isActive: false, isPaused: false });
       }
       
       toast.info("Trip cancelled");
