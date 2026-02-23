@@ -598,6 +598,48 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleEmailShiftReport = async () => {
+    if (!reportData) return;
+    
+    const email = prompt("Enter email address to send the report:", user?.email || ADMIN_EMAIL);
+    if (!email) return;
+    
+    setEmailingReport(true);
+    try {
+      await axios.post(`${API}/admin/reports/email`, {
+        recipient_email: email,
+        report_data: reportData
+      }, getAuthHeader());
+      
+      toast.success(`Report sent to ${email}`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to send report");
+    } finally {
+      setEmailingReport(false);
+    }
+  };
+
+  const handleEmailPayrollReport = async () => {
+    if (!payrollReport) return;
+    
+    const email = prompt("Enter email address to send the report:", user?.email || ADMIN_EMAIL);
+    if (!email) return;
+    
+    setEmailingPayroll(true);
+    try {
+      await axios.post(`${API}/admin/payroll/report/email`, {
+        recipient_email: email,
+        report_data: payrollReport
+      }, getAuthHeader());
+      
+      toast.success(`Payroll report sent to ${email}`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to send payroll report");
+    } finally {
+      setEmailingPayroll(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
