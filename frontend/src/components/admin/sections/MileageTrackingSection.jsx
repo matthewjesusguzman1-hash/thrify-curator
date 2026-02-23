@@ -1200,54 +1200,61 @@ export default function MileageTrackingSection({ getAuthHeader }) {
               </div>
             ) : (
               // Step 2: View report and download
-              <div className="space-y-4">
-                {/* Report Info */}
-                <div className="bg-emerald-50 p-3 rounded-lg flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-emerald-700">
-                      {reportPreview.format.toUpperCase()} Report
-                    </p>
-                    <p className="text-xs text-emerald-600">{reportPreview.dateRange.label}</p>
+              <div className="flex flex-col flex-1 overflow-hidden">
+                {/* Report Preview Content */}
+                <div className="flex-1 p-4 overflow-auto min-h-0">
+                  <div className="border border-gray-200 rounded-lg overflow-hidden h-[50vh] sm:h-[55vh]">
+                    {reportPreview.format === "pdf" ? (
+                      <iframe
+                        src={reportBlobUrl}
+                        className="w-full h-full"
+                        title="Mileage Report PDF"
+                      />
+                    ) : (
+                      <iframe
+                        src={reportBlobUrl}
+                        className="w-full h-full bg-white"
+                        title="Mileage Report CSV"
+                      />
+                    )}
                   </div>
+                </div>
+
+                {/* Sticky Footer with Download Button - always visible */}
+                <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-3 sticky bottom-0">
+                  {/* Report Info */}
+                  <div className="bg-emerald-50 p-3 rounded-lg flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-emerald-700">
+                        {reportPreview.format.toUpperCase()} Report
+                      </p>
+                      <p className="text-xs text-emerald-600">{reportPreview.dateRange.label}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Download Button - large and prominent */}
                   <Button
                     onClick={handleDownloadReport}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3"
                     data-testid="download-report-btn"
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
+                    <Download className="w-5 h-5 mr-2" />
+                    Download {reportPreview.format.toUpperCase()} Report
+                  </Button>
+
+                  {/* Back Button */}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (reportBlobUrl) window.URL.revokeObjectURL(reportBlobUrl);
+                      setReportBlobUrl(null);
+                      setReportPreview(null);
+                    }}
+                    className="w-full"
+                  >
+                    ← Back to Options
                   </Button>
                 </div>
-
-                {/* Report Preview */}
-                <div className="border border-gray-200 rounded-lg overflow-hidden" style={{ height: '60vh' }}>
-                  {reportPreview.format === "pdf" ? (
-                    <iframe
-                      src={reportBlobUrl}
-                      className="w-full h-full"
-                      title="Mileage Report PDF"
-                    />
-                  ) : (
-                    <iframe
-                      src={reportBlobUrl}
-                      className="w-full h-full bg-white"
-                      title="Mileage Report CSV"
-                    />
-                  )}
-                </div>
-
-                {/* Back Button */}
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (reportBlobUrl) window.URL.revokeObjectURL(reportBlobUrl);
-                    setReportBlobUrl(null);
-                    setReportPreview(null);
-                  }}
-                  className="w-full"
-                >
-                  ← Back to Options
-                </Button>
               </div>
             )}
           </motion.div>
