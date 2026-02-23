@@ -4337,32 +4337,65 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      {/* Clock Confirmation Dialog */}
+                      {/* Clock Confirmation Dialog - Modal Overlay */}
                       {showClockConfirm && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                          <div className="flex items-center gap-3 mb-3">
-                            <AlertCircle className="w-5 h-5 text-amber-600" />
-                            <p className="font-medium text-amber-800">
-                              Are you sure you want to clock {showClockConfirm} {viewingEmployee?.name}?
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]" onClick={() => setShowClockConfirm(null)}>
+                          <div 
+                            className="bg-white rounded-2xl p-6 mx-4 max-w-md shadow-xl"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                                showClockConfirm === 'out' ? 'bg-red-100' : 'bg-green-100'
+                              }`}>
+                                {showClockConfirm === 'out' ? (
+                                  <StopCircle className="w-6 h-6 text-red-600" />
+                                ) : (
+                                  <PlayCircle className="w-6 h-6 text-green-600" />
+                                )}
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-lg text-gray-900">
+                                  Clock {showClockConfirm === 'in' ? 'In' : 'Out'} Confirmation
+                                </h3>
+                                <p className="text-gray-500 text-sm">This action will be recorded</p>
+                              </div>
+                            </div>
+                            
+                            <p className="text-gray-700 mb-6">
+                              Are you sure you want to clock <strong>{showClockConfirm}</strong> <strong>{viewingEmployee?.name}</strong>?
                             </p>
+                            
+                            <div className="flex gap-3">
+                              <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setShowClockConfirm(null)}
+                                disabled={clockingEmployee}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                className={`flex-1 ${showClockConfirm === 'out' 
+                                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                                  : 'bg-green-600 hover:bg-green-700 text-white'
+                                }`}
+                                onClick={() => handleAdminClockEmployee(showClockConfirm)}
+                                disabled={clockingEmployee}
+                              >
+                                {clockingEmployee ? (
+                                  <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                    Processing...
+                                  </>
+                                ) : (
+                                  `Yes, Clock ${showClockConfirm === 'in' ? 'In' : 'Out'}`
+                                )}
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-3 justify-end">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowClockConfirm(null)}
-                              disabled={clockingEmployee}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleAdminClockEmployee(showClockConfirm)}
-                              disabled={clockingEmployee}
-                              className={showClockConfirm === 'out' 
-                                ? 'bg-red-600 hover:bg-red-700 text-white' 
-                                : 'bg-green-600 hover:bg-green-700 text-white'
-                              }
+                        </div>
+                      )}
                             >
                               {clockingEmployee ? 'Processing...' : `Yes, Clock ${showClockConfirm === 'in' ? 'In' : 'Out'}`}
                             </Button>
