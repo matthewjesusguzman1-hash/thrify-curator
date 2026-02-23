@@ -497,15 +497,17 @@ export default function AdminDashboard() {
     setLoadingPortal(true);
     
     try {
-      // Fetch employee's time entries and summary
-      const [entriesRes, summaryRes] = await Promise.all([
+      // Fetch employee's time entries, summary, and W-9 status
+      const [entriesRes, summaryRes, w9Res] = await Promise.all([
         axios.get(`${API}/admin/employee/${employee.id}/entries`, getAuthHeader()),
-        axios.get(`${API}/admin/employee/${employee.id}/summary`, getAuthHeader())
+        axios.get(`${API}/admin/employee/${employee.id}/summary`, getAuthHeader()),
+        axios.get(`${API}/admin/employees/${employee.id}/w9/status`, getAuthHeader()).catch(() => ({ data: { has_w9: false, status: 'not_submitted' } }))
       ]);
       
       setEmployeePortalData({
         entries: entriesRes.data,
-        summary: summaryRes.data
+        summary: summaryRes.data,
+        w9Status: w9Res.data
       });
     } catch (error) {
       console.error("Failed to fetch employee portal data:", error);
