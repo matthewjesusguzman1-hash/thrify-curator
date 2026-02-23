@@ -329,30 +329,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchFormSubmissions = useCallback(async () => {
-    setLoadingForms(true);
-    try {
-      const [jobAppsRes, inquiriesRes, agreementsRes, summaryRes] = await Promise.all([
-        axios.get(`${API}/admin/forms/job-applications`, getAuthHeader()),
-        axios.get(`${API}/admin/forms/consignment-inquiries`, getAuthHeader()),
-        axios.get(`${API}/admin/forms/consignment-agreements`, getAuthHeader()),
-        axios.get(`${API}/admin/forms/summary`, getAuthHeader())
-      ]);
-
-      setFormSubmissions({
-        jobApplications: jobAppsRes.data,
-        consignmentInquiries: inquiriesRes.data,
-        consignmentAgreements: agreementsRes.data
-      });
-      setFormsSummary(summaryRes.data);
-    } catch (error) {
-      console.error("Failed to fetch form submissions:", error);
-      toast.error("Failed to load form submissions");
-    } finally {
-      setLoadingForms(false);
-    }
-  }, [getAuthHeader]);
-
   // Fetch form submissions when section is opened
   useEffect(() => {
     if (showFormsSection) {
