@@ -118,6 +118,16 @@ export default function AdminDashboard() {
   const [payrollLoading, setPayrollLoading] = useState(false);
   const [showPayrollSettings, setShowPayrollSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  
+  // Edit employee modal state
+  const [showEditEmployee, setShowEditEmployee] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [editEmployeeData, setEditEmployeeData] = useState({
+    name: "",
+    email: "",
+    role: "employee"
+  });
+  const [savingEmployee, setSavingEmployee] = useState(false);
 
   const getAuthHeader = useCallback(() => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
