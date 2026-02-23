@@ -136,20 +136,23 @@ export default function ConsignmentInquiryForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] py-8 px-4" data-testid="consignment-inquiry-page">
       <div className="max-w-2xl mx-auto">
-        {/* Back Link - Top */}
-        <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-[#FF1493] transition-colors mt-8 mb-8" data-testid="back-link-top">
-          <ArrowLeft className="w-5 h-5" />
-          Back to Home
-        </Link>
+        {/* Back Link and Logo Row */}
+        <div className="relative mt-8 mb-6">
+          {/* Back Link - Aligned with logo */}
+          <Link to="/" className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#FF1493] transition-colors" data-testid="back-link-top">
+            <ArrowLeft className="w-5 h-5" />
+            Back to Home
+          </Link>
 
-        {/* Logo */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-24 h-24 mx-auto mb-6 rounded-xl overflow-hidden shadow-2xl ring-4 ring-white/20"
-        >
-          <img src={LOGO_URL} alt="Thrifty Curator Logo" className="w-full h-full object-cover" />
-        </motion.div>
+          {/* Logo - Centered */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-24 h-24 mx-auto rounded-xl overflow-hidden shadow-2xl ring-4 ring-white/20"
+          >
+            <img src={LOGO_URL} alt="Thrifty Curator Logo" className="w-full h-full object-cover" />
+          </motion.div>
+        </div>
 
         {/* Header */}
         <motion.div
