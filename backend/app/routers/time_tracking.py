@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from datetime import datetime, timezone, timedelta
 import asyncio
+import base64
 
 from app.database import db
 from app.dependencies import get_current_user
