@@ -16,6 +16,7 @@ class UserCreate(UserBase):
 
 class UserLogin(BaseModel):
     email: EmailStr
+    admin_code: Optional[str] = None  # Required for admin login
 
 
 class UserResponse(BaseModel):
