@@ -11,7 +11,7 @@ import {
   Briefcase, 
   FileText, 
   ClipboardCheck, 
-  ChevronRight,
+  ArrowRight,
   Clock,
   ShoppingBag,
   Tag,
@@ -48,41 +48,41 @@ const platforms = [
   { 
     name: "Depop", 
     icon: Sparkles, 
-    url: "https://www.depop.com/thriftycurator/?utm_source=generic&utm_content=shop&utm_campaign=SHARE_SHOP_OWN_WEB_LANDING_ON&utm_medium=share&utm_term=thriftycurator&_branch_referrer=H4sIAAAAAAAAA8soKSkottLXT0ktyC%2FQSywo0MvJzMvWT68MLzVzyTEJDUuyrytKTUstKsrMS49PKsovL04tsvXNT8rMSVU1MghOTEssygQA9xU5%2FUUAAAA%3D&_branch_match_id=1366085332868029851", 
+    url: "https://www.depop.com/thriftycurator/?utm_source=generic&utm_content=shop&utm_campaign=SHARE_SHOP_OWN_WEB_LANDING_ON&utm_medium=share&utm_term=thriftycurator", 
     color: "#FF2300",
   },
   { 
     name: "Facebook", 
     icon: SiFacebook, 
-    url: "https://www.facebook.com/marketplace/profile/517375094/?ref=permalink&mibextid=wwXIfr&rdid=zWeU8ozpYg7I0AC7&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1DeqtsKL85%2F%3Fmibextid%3DwwXIfr#", 
+    url: "https://www.facebook.com/marketplace/profile/517375094/", 
     color: "#1877F2",
   },
 ];
 
 // Form links
 const formLinks = [
-  { name: "Job Application", icon: Briefcase, path: "/job-application" },
-  { name: "Consignment Inquiry", icon: FileText, path: "/consignment-inquiry" },
-  { name: "Consignment Agreement", icon: ClipboardCheck, path: "/consignment-agreement" },
+  { name: "Job Application", icon: Briefcase, path: "/job-application", accent: "#FF5A5F" },
+  { name: "Consignment Inquiry", icon: FileText, path: "/consignment-inquiry", accent: "#FACC15" },
+  { name: "Consignment Agreement", icon: ClipboardCheck, path: "/consignment-agreement", accent: "#8B5CF6" },
 ];
 
 // Connect links
 const connectLinks = [
   { name: "TikTok", icon: SiTiktok, url: TIKTOK_URL, color: "#000000" },
   { name: "Facebook", icon: SiFacebook, url: "https://www.facebook.com/people/Thrifty-Curator/100070158913020/", color: "#1877F2" },
-  { name: "Message Me", icon: Mail, url: "mailto:euni.deleon1@gmail.com", color: "#D48C9E" },
+  { name: "Message Me", icon: Mail, url: "mailto:euni.deleon1@gmail.com", color: "#FF5A5F" },
 ];
 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.05 }
+    transition: { staggerChildren: 0.08 }
   }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
+  hidden: { opacity: 0, y: 15 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
 };
 
@@ -115,184 +115,226 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="landing-container" data-testid="landing-page">
-      {/* Header with Logo */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col items-center gap-3"
-      >
-        <div className="logo-container" data-testid="logo-container">
-          <img src={LOGO_URL} alt="Thrifty Curator Logo" />
-        </div>
-        <div className="text-center">
-          <h1 className="font-playfair text-2xl md:text-3xl font-bold text-[#333]" data-testid="main-title">
-            Thrifty Curator
-          </h1>
-          <p className="text-sm text-[#666] font-lato">Curated resale finds</p>
-        </div>
-      </motion.div>
-
-      {/* Main Content Grid */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column */}
+    <div className="min-h-screen bg-white" data-testid="landing-page">
+      {/* Bold Accent Bar */}
+      <div className="accent-bar" />
+      
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Header with Logo */}
         <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex flex-col items-center gap-4 mb-10"
         >
-          {/* Shop Our Stores */}
-          <div className="links-section">
-            <h2 className="section-title" data-testid="shop-section-title">Shop Our Stores</h2>
-            <div className="links-grid">
-              {platforms.map((platform) => (
-                <motion.a
-                  key={platform.name}
-                  variants={itemVariants}
-                  href={platform.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="link-card group"
-                  data-testid={`platform-link-${platform.name.toLowerCase()}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-9 h-9 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${platform.color}15` }}
-                    >
-                      <platform.icon className="w-4 h-4" style={{ color: platform.color }} />
-                    </div>
-                    <p className="font-semibold text-[#333] group-hover:text-[#5D4037] transition-colors text-sm">
-                      {platform.name}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-[#ccc] group-hover:text-[#F8C8DC] transition-all" />
-                </motion.a>
-              ))}
-            </div>
+          <div 
+            className="w-28 h-28 border-4 border-[#1A1A1A] overflow-hidden shadow-bold"
+            data-testid="logo-container"
+          >
+            <img src={LOGO_URL} alt="Thrifty Curator Logo" className="w-full h-full object-cover" />
           </div>
-
-          {/* Connect */}
-          <div className="links-section">
-            <h2 className="section-title" data-testid="connect-section-title">Connect</h2>
-            <div className="links-grid">
-              {connectLinks.map((link) => (
-                <motion.a
-                  key={link.name}
-                  variants={itemVariants}
-                  href={link.url}
-                  target={link.url.startsWith('mailto') ? undefined : "_blank"}
-                  rel={link.url.startsWith('mailto') ? undefined : "noopener noreferrer"}
-                  className="link-card group"
-                  data-testid={`connect-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-9 h-9 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${link.color}15` }}
-                    >
-                      <link.icon className="w-4 h-4" style={{ color: link.color }} />
-                    </div>
-                    <p className="font-semibold text-[#333] group-hover:text-[#5D4037] transition-colors text-sm">
-                      {link.name}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-[#ccc] group-hover:text-[#F8C8DC] transition-all" />
-                </motion.a>
-              ))}
-            </div>
+          <div className="text-center">
+            <h1 className="font-archivo text-3xl md:text-4xl text-[#1A1A1A] tracking-tight" data-testid="main-title">
+              THRIFTY CURATOR
+            </h1>
+            <p className="text-sm text-[#666] font-manrope font-semibold tracking-widest uppercase mt-1">
+              Curated Resale Finds
+            </p>
           </div>
         </motion.div>
 
-        {/* Right Column */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4"
-        >
-          {/* Forms & Applications */}
-          <div className="links-section">
-            <h2 className="section-title" data-testid="forms-section-title">Forms & Applications</h2>
-            <div className="links-grid">
-              {formLinks.map((link) => (
-                <motion.div key={link.name} variants={itemVariants}>
-                  <Link
-                    to={link.path}
-                    className="link-card group"
-                    data-testid={`form-link-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-[#F8C8DC]/20 flex items-center justify-center">
-                        <link.icon className="w-4 h-4 text-[#D48C9E]" />
-                      </div>
-                      <p className="font-semibold text-[#333] group-hover:text-[#5D4037] transition-colors text-sm">
-                        {link.name}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[#ccc] group-hover:text-[#F8C8DC] transition-all" />
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Employee Portal */}
-          <div className="links-section">
-            <h2 className="section-title" data-testid="employee-section-title">Employee</h2>
-            <motion.div variants={itemVariants}>
-              <Link
-                to="/login"
-                className="link-card group"
-                data-testid="employee-login-link"
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+          >
+            {/* Shop Our Stores */}
+            <div>
+              <h2 
+                className="font-archivo text-lg mb-4 pb-2 border-b-4 border-[#1A1A1A] inline-block"
+                data-testid="shop-section-title"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[#C5A065]/15 flex items-center justify-center">
-                    <Clock className="w-4 h-4 text-[#C5A065]" />
+                SHOP OUR STORES
+              </h2>
+              <div className="space-y-3">
+                {platforms.map((platform, index) => (
+                  <motion.a
+                    key={platform.name}
+                    variants={itemVariants}
+                    href={platform.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block bg-white border-2 border-[#1A1A1A] p-4 shadow-bold-sm hover:shadow-bold hover:translate-x-[-2px] hover:translate-y-[-2px] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-150"
+                    data-testid={`platform-link-${platform.name.toLowerCase()}`}
+                    style={{ transitionDelay: `${index * 50}ms` }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div 
+                          className="w-10 h-10 flex items-center justify-center border-2 border-[#1A1A1A]"
+                          style={{ backgroundColor: platform.color }}
+                        >
+                          <platform.icon className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="font-bold text-[#1A1A1A] uppercase tracking-wide">
+                          {platform.name}
+                        </span>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-[#1A1A1A]" />
+                    </div>
+                  </motion.a>
+                ))}
+              </div>
+            </div>
+
+            {/* Connect */}
+            <div>
+              <h2 
+                className="font-archivo text-lg mb-4 pb-2 border-b-4 border-[#1A1A1A] inline-block"
+                data-testid="connect-section-title"
+              >
+                CONNECT
+              </h2>
+              <div className="space-y-3">
+                {connectLinks.map((link, index) => (
+                  <motion.a
+                    key={link.name}
+                    variants={itemVariants}
+                    href={link.url}
+                    target={link.url.startsWith('mailto') ? undefined : "_blank"}
+                    rel={link.url.startsWith('mailto') ? undefined : "noopener noreferrer"}
+                    className="block bg-white border-2 border-[#1A1A1A] p-4 shadow-bold-sm hover:shadow-bold hover:translate-x-[-2px] hover:translate-y-[-2px] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-150"
+                    data-testid={`connect-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div 
+                          className="w-10 h-10 flex items-center justify-center border-2 border-[#1A1A1A]"
+                          style={{ backgroundColor: link.color }}
+                        >
+                          <link.icon className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="font-bold text-[#1A1A1A] uppercase tracking-wide">
+                          {link.name}
+                        </span>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-[#1A1A1A]" />
+                    </div>
+                  </motion.a>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Right Column */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+          >
+            {/* Forms & Applications */}
+            <div>
+              <h2 
+                className="font-archivo text-lg mb-4 pb-2 border-b-4 border-[#1A1A1A] inline-block"
+                data-testid="forms-section-title"
+              >
+                FORMS & APPLICATIONS
+              </h2>
+              <div className="space-y-3">
+                {formLinks.map((link, index) => (
+                  <motion.div key={link.name} variants={itemVariants}>
+                    <Link
+                      to={link.path}
+                      className="block bg-white border-2 border-[#1A1A1A] p-4 shadow-bold-sm hover:shadow-bold hover:translate-x-[-2px] hover:translate-y-[-2px] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-150"
+                      data-testid={`form-link-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div 
+                            className="w-10 h-10 flex items-center justify-center border-2 border-[#1A1A1A]"
+                            style={{ backgroundColor: link.accent }}
+                          >
+                            <link.icon className="w-5 h-5 text-white" />
+                          </div>
+                          <span className="font-bold text-[#1A1A1A] uppercase tracking-wide">
+                            {link.name}
+                          </span>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-[#1A1A1A]" />
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Employee Portal */}
+            <div>
+              <h2 
+                className="font-archivo text-lg mb-4 pb-2 border-b-4 border-[#1A1A1A] inline-block"
+                data-testid="employee-section-title"
+              >
+                EMPLOYEE
+              </h2>
+              <motion.div variants={itemVariants}>
+                <Link
+                  to="/login"
+                  className="block bg-[#FACC15] border-2 border-[#1A1A1A] p-4 shadow-bold hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-bold-lg active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-150"
+                  data-testid="employee-login-link"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 flex items-center justify-center border-2 border-[#1A1A1A] bg-[#1A1A1A]">
+                        <Clock className="w-5 h-5 text-[#FACC15]" />
+                      </div>
+                      <span className="font-archivo text-[#1A1A1A] uppercase tracking-wide">
+                        Employee Portal
+                      </span>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-[#1A1A1A]" />
                   </div>
-                  <p className="font-semibold text-[#333] group-hover:text-[#5D4037] transition-colors text-sm">
-                    Employee Portal
-                  </p>
+                </Link>
+              </motion.div>
+            </div>
+
+            {/* QR Code & Share Section */}
+            <motion.div
+              variants={itemVariants}
+              className="bg-[#1A1A1A] border-2 border-[#1A1A1A] p-6 shadow-bold-coral"
+            >
+              <div className="flex flex-col items-center gap-4">
+                {/* QR Code */}
+                <div className="flex flex-col items-center gap-2" data-testid="qr-code-section">
+                  <div className="bg-white p-3 border-2 border-white" data-testid="qr-code">
+                    <img 
+                      src={QR_CODE_URL} 
+                      alt="QR Code" 
+                      className="w-24 h-24"
+                    />
+                  </div>
+                  <p className="text-xs text-white/70 uppercase tracking-widest font-semibold">Scan to Visit</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[#ccc] group-hover:text-[#F8C8DC] transition-all" />
-              </Link>
+
+                {/* Share Button */}
+                <button
+                  onClick={handleShare}
+                  disabled={shareLoading}
+                  className="w-full bg-[#FF5A5F] text-white border-2 border-white font-archivo uppercase tracking-wide py-3 px-6 hover:bg-[#E5484D] transition-colors flex items-center justify-center gap-2"
+                  data-testid="share-button"
+                >
+                  <Share2 className="w-4 h-4" />
+                  {shareLoading ? "SHARING..." : "SHARE"}
+                </button>
+              </div>
             </motion.div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* QR Code & Share Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-        className="flex flex-col items-center gap-4 mt-2"
-      >
-        {/* QR Code - Above Share Button */}
-        <div className="flex flex-col items-center gap-2" data-testid="qr-code-section">
-          <div className="bg-white p-2 rounded-xl shadow-card" data-testid="qr-code">
-            <img 
-              src={QR_CODE_URL} 
-              alt="QR Code" 
-              className="w-20 h-20"
-            />
-          </div>
-          <p className="text-xs text-[#888]">Scan to visit</p>
+          </motion.div>
         </div>
-
-        {/* Share Button - Below QR Code */}
-        <button
-          onClick={handleShare}
-          disabled={shareLoading}
-          className="btn-primary flex items-center gap-2"
-          data-testid="share-button"
-        >
-          <Share2 className="w-4 h-4" />
-          {shareLoading ? "Sharing..." : "Share Thrifty Curator"}
-        </button>
-      </motion.div>
+      </div>
     </div>
   );
 }
