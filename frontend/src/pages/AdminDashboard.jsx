@@ -972,13 +972,14 @@ export default function AdminDashboard() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="text-white/70 hover:text-white hover:bg-white/10 relative"
+              className="bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 hover:text-white relative px-3 py-2"
               onClick={() => setShowNotifications(!showNotifications)}
               data-testid="notification-bell"
             >
               <Bell className="w-5 h-5" />
+              <span className="ml-1.5 text-sm font-medium hidden sm:inline">Alerts</span>
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF1493] text-white text-xs rounded-full flex items-center justify-center font-medium" data-testid="notification-badge">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF1493] text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg shadow-[#FF1493]/50" data-testid="notification-badge">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
