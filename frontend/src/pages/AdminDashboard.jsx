@@ -1475,7 +1475,8 @@ export default function AdminDashboard() {
       const updatePayload = {
         name: editEmployeeData.name,
         email: editEmployeeData.email,
-        role: editEmployeeData.role
+        role: editEmployeeData.role,
+        phone: editEmployeeData.phone || null
       };
       
       // Only include hourly_rate if it's a valid number
