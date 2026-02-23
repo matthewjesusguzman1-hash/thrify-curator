@@ -145,7 +145,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="landing-page">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 pt-16 pb-8 sm:pt-12">
         {/* Header with Logo */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
