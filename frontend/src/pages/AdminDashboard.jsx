@@ -3010,6 +3010,16 @@ export default function AdminDashboard() {
                                       )}
                                     </div>
                                     <span className="text-[#333] hover:text-[#C5A065] font-medium">{emp.name}</span>
+                                    {/* Clock-in Status Indicator */}
+                                    {employeeClockStatuses[emp.id] && (
+                                      <span 
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium"
+                                        title="Currently Clocked In"
+                                      >
+                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                                        Clocked In
+                                      </span>
+                                    )}
                                     <Eye className="w-3 h-3 text-[#aaa] opacity-0 group-hover:opacity-100" />
                                   </div>
                                 </td>
