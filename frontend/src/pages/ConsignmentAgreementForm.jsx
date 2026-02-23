@@ -89,12 +89,6 @@ export default function ConsignmentAgreementForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] py-8 px-4" data-testid="consignment-agreement-page">
       <div className="max-w-2xl mx-auto">
-        {/* Back Link */}
-        <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-[#8B5CF6] transition-colors mb-6" data-testid="back-link">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Home
-        </Link>
-
         {/* Logo */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
