@@ -45,8 +45,17 @@ export default function AdminDashboard() {
     by_employee: []
   });
   const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [showRemoveEmployee, setShowRemoveEmployee] = useState(false);
+  const [selectedEmployeeToRemove, setSelectedEmployeeToRemove] = useState("");
   const [newEmployee, setNewEmployee] = useState({ name: "", email: "" });
   const [addingEmployee, setAddingEmployee] = useState(false);
+  const [removingEmployee, setRemovingEmployee] = useState(false);
+  
+  // Employee details modal state
+  const [showEmployeeDetails, setShowEmployeeDetails] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [employeeShifts, setEmployeeShifts] = useState([]);
+  const [loadingEmployeeDetails, setLoadingEmployeeDetails] = useState(false);
   
   // Report state
   const [showReport, setShowReport] = useState(false);
