@@ -234,6 +234,12 @@ Build a "Thrifty Curator" reselling application with:
 - Test files: `/app/backend/tests/`
 
 ## Recent Updates (Feb 23, 2026)
+- **Search & Navigation Enhancements**:
+  - **Payroll Check Records Search**: Added search bar to filter records by employee name, description, date, or amount
+  - **Form Submissions Search & Filter**: Added search by name/email/phone and status filter dropdown (All, New, Reviewed, Contacted, Archived)
+  - Both sections now show "Showing X of Y" count indicators
+  - Clear button appears when filters are active
+
 - **Payroll Check Records Submit & Edit Feature**: Enhanced the payroll check records workflow
   - Added two-step process: select image first, then fill details and click Submit
   - Image preview shows before submission with ability to remove/change
