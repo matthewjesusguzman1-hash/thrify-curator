@@ -1909,14 +1909,14 @@ export default function AdminDashboard() {
                         <table className="data-table" data-testid="employee-hours-table">
                           <thead>
                             <tr>
-                              <th>Employee</th>
-                              <th>Total Hours</th>
-                              <th>Shifts</th>
+                              <SortableHeader table="hoursByEmployee" sortKey="name">Employee</SortableHeader>
+                              <SortableHeader table="hoursByEmployee" sortKey="hours">Total Hours</SortableHeader>
+                              <SortableHeader table="hoursByEmployee" sortKey="shifts">Shifts</SortableHeader>
                               <th>Avg Hours/Shift</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {summary.by_employee.map((emp) => (
+                            {getSortedData(summary.by_employee, 'hoursByEmployee').map((emp) => (
                               <tr key={emp.user_id} data-testid={`employee-row-${emp.user_id}`}>
                                 <td>
                                   <div className="flex items-center gap-2">
