@@ -541,7 +541,8 @@ export default function AdminDashboard() {
     setEditEmployeeData({
       name: employee.name,
       email: employee.email,
-      role: employee.role
+      role: employee.role,
+      hourly_rate: employee.hourly_rate?.toString() || ""
     });
     setShowEditEmployee(true);
   };
@@ -552,11 +553,21 @@ export default function AdminDashboard() {
     
     setSavingEmployee(true);
     try {
-      await axios.put(`${API}/admin/employees/${editingEmployee.id}`, {
+      const updatePayload = {
         name: editEmployeeData.name,
         email: editEmployeeData.email,
         role: editEmployeeData.role
-      }, getAuthHeader());
+      };
+      
+      // Only include hourly_rate if it's a valid number
+      if (editEmployeeData.hourly_rate !== "") {
+        const rate = parseFloat(editEmployeeData.hourly_rate);
+        if (!isNaN(rate) && rate >= 0) {
+          updatePayload.hourly_rate = rate;
+        }
+      }
+      
+      await axios.put(`${API}/admin/employees/${editingEmployee.id}`, updatePayload, getAuthHeader());
       
       toast.success(`${editEmployeeData.name}'s details updated successfully!`);
       setShowEditEmployee(false);
