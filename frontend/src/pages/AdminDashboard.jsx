@@ -2628,7 +2628,7 @@ export default function AdminDashboard() {
                                             <Button
                                               variant="ghost"
                                               size="sm"
-                                              onClick={(e) => { e.stopPropagation(); handleW9Download(emp.id, emp.name); }}
+                                              onClick={(e) => { e.stopPropagation(); handleViewW9(emp.id, emp.name); }}
                                               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 px-2"
                                               data-testid={`view-w9-${emp.id}`}
                                               title="View Approved W-9"
