@@ -195,7 +195,7 @@ export default function AdminDashboard() {
   const [loadingPortal, setLoadingPortal] = useState(false);
 
   // Employee shifts management state (for Hours by Employee section)
-  const [showEmployeeShiftsModal, setShowEmployeeShiftsModal] = useState(null);
+  const [showEmployeeShiftsModal, setShowEmployeeShiftsModalModal] = useState(null);
   const [loadingShifts, setLoadingShifts] = useState(false);
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
   const [showEditShiftModal, setShowEditShiftModal] = useState(false);
@@ -516,7 +516,7 @@ export default function AdminDashboard() {
 
   // Employee Shifts Management Functions
   const handleViewEmployeeShifts = async (employee) => {
-    setShowEmployeeShifts(employee);
+    setShowEmployeeShiftsModal(employee);
     setLoadingShifts(true);
     try {
       const response = await axios.get(`${API}/admin/employee/${employee.user_id}/shifts`, getAuthHeader());
@@ -3154,7 +3154,7 @@ export default function AdminDashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowEmployeeShifts(null)}
+              onClick={() => setShowEmployeeShiftsModal(null)}
             >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -3176,7 +3176,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <button
-                      onClick={() => setShowEmployeeShifts(null)}
+                      onClick={() => setShowEmployeeShiftsModal(null)}
                       className="text-[#999] hover:text-[#666]"
                     >
                       <X className="w-5 h-5" />
@@ -3263,7 +3263,7 @@ export default function AdminDashboard() {
                 <div className="p-4 border-t border-[#eee] flex justify-end">
                   <Button
                     variant="outline"
-                    onClick={() => setShowEmployeeShifts(null)}
+                    onClick={() => setShowEmployeeShiftsModal(null)}
                   >
                     Close
                   </Button>
