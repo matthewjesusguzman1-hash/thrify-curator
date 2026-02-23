@@ -1114,10 +1114,27 @@ export default function AdminDashboard() {
       
       toast.success("Payroll settings saved!");
       setShowPayrollSettings(false);
+      fetchPayrollSummary(); // Refresh the summary with new period
     } catch (error) {
       toast.error("Failed to save settings");
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // Quick save for inline pay period update
+  const handleUpdatePayrollSettings = async () => {
+    try {
+      await axios.put(`${API}/admin/payroll/settings`, {
+        id: "payroll_settings",
+        pay_period_start_date: payrollSettings.pay_period_start_date,
+        default_hourly_rate: parseFloat(payrollSettings.default_hourly_rate) || 15.00
+      }, getAuthHeader());
+      
+      toast.success("Pay period updated for all employees!");
+      fetchPayrollSummary(); // Refresh the summary with new period
+    } catch (error) {
+      toast.error("Failed to update pay period");
     }
   };
 
