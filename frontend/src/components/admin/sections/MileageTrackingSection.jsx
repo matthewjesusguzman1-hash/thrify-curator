@@ -1039,6 +1039,133 @@ export default function MileageTrackingSection({ getAuthHeader }) {
           </motion.div>
         </motion.div>
       )}
+
+      {/* Export Report Modal */}
+      {showExportModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowExportModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-[#333]">Export Mileage Report</h3>
+              <button 
+                onClick={() => setShowExportModal(false)}
+                className="text-[#888] hover:text-[#333]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {/* Period Selection */}
+              <div>
+                <Label>Date Range</Label>
+                <Select
+                  value={exportOptions.period}
+                  onValueChange={(value) => setExportOptions({ ...exportOptions, period: value })}
+                >
+                  <SelectTrigger data-testid="export-period-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="week">Last 7 Days</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                    <SelectItem value="year">This Year</SelectItem>
+                    <SelectItem value="custom">Custom Range</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Custom Date Range */}
+              {exportOptions.period === "custom" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Start Date</Label>
+                    <Input
+                      type="date"
+                      value={exportOptions.customStart}
+                      onChange={(e) => setExportOptions({ ...exportOptions, customStart: e.target.value })}
+                      data-testid="export-start-date"
+                    />
+                  </div>
+                  <div>
+                    <Label>End Date</Label>
+                    <Input
+                      type="date"
+                      value={exportOptions.customEnd}
+                      onChange={(e) => setExportOptions({ ...exportOptions, customEnd: e.target.value })}
+                      data-testid="export-end-date"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Preview */}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-[#666]">
+                  Report period: <span className="font-medium text-[#333]">{getExportDateRange().label}</span>
+                </p>
+              </div>
+
+              {/* Format Selection */}
+              <div>
+                <Label>Export Format</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <button
+                    onClick={() => setExportOptions({ ...exportOptions, format: "pdf" })}
+                    className={`p-3 rounded-lg border-2 text-center transition-all ${
+                      exportOptions.format === "pdf" 
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700" 
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <p className="font-semibold">PDF</p>
+                    <p className="text-xs text-[#888]">For printing</p>
+                  </button>
+                  <button
+                    onClick={() => setExportOptions({ ...exportOptions, format: "csv" })}
+                    className={`p-3 rounded-lg border-2 text-center transition-all ${
+                      exportOptions.format === "csv" 
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700" 
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <p className="font-semibold">CSV</p>
+                    <p className="text-xs text-[#888]">For spreadsheets</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Export Button */}
+              <Button
+                onClick={handleExportReport}
+                disabled={exporting}
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                data-testid="download-report-btn"
+              >
+                {exporting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download {exportOptions.format.toUpperCase()}
+                  </>
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </>
   );
 }
