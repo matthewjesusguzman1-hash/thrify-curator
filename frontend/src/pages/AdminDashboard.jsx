@@ -759,46 +759,57 @@ export default function AdminDashboard() {
         >
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="font-playfair text-2xl font-bold text-[#333]">Admin Dashboard</h1>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => setShowPayroll(true)}
-                variant="outline"
-                className="flex items-center gap-2 border-[#C5A065] text-[#C5A065] hover:bg-[#C5A065]/10"
-                data-testid="payroll-btn"
-              >
-                <DollarSign className="w-4 h-4" />
-                Payroll
-              </Button>
-              <Button 
-                onClick={() => setShowReport(true)}
-                variant="outline"
-                className="flex items-center gap-2"
-                data-testid="run-report-btn"
-              >
-                <FileText className="w-4 h-4" />
-                Run Report
-              </Button>
-              <Button 
-                onClick={() => setShowAddEmployee(true)}
-                className="btn-primary flex items-center gap-2"
-                data-testid="add-employee-btn"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Employee
-              </Button>
-              <Button 
-                onClick={() => setShowRemoveEmployee(true)}
-                variant="outline"
-                className="flex items-center gap-2 border-red-300 text-red-500 hover:bg-red-50"
-                data-testid="remove-employee-btn"
-              >
-                <UserMinus className="w-4 h-4" />
-                Remove Employee
-              </Button>
+            <div className="flex gap-3">
+              {/* Reports Stack */}
+              <div className="flex flex-col gap-1">
+                <Button 
+                  onClick={() => setShowPayroll(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 border-[#C5A065] text-[#C5A065] hover:bg-[#C5A065]/10"
+                  data-testid="payroll-btn"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Payroll
+                </Button>
+                <Button 
+                  onClick={() => setShowReport(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  data-testid="run-report-btn"
+                >
+                  <FileText className="w-4 h-4" />
+                  Run Report
+                </Button>
+              </div>
+              {/* Employee Management Stack */}
+              <div className="flex flex-col gap-1">
+                <Button 
+                  onClick={() => setShowAddEmployee(true)}
+                  size="sm"
+                  className="btn-primary flex items-center gap-2"
+                  data-testid="add-employee-btn"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Add Employee
+                </Button>
+                <Button 
+                  onClick={() => setShowRemoveEmployee(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 border-red-300 text-red-500 hover:bg-red-50"
+                  data-testid="remove-employee-btn"
+                >
+                  <UserMinus className="w-4 h-4" />
+                  Remove Employee
+                </Button>
+              </div>
+              {/* Edit Employee */}
               <Button 
                 onClick={() => setShowEditEmployee(true)}
                 variant="outline"
-                className="flex items-center gap-2 border-[#8BA88E] text-[#8BA88E] hover:bg-[#8BA88E]/10"
+                className="flex items-center gap-2 border-[#8BA88E] text-[#8BA88E] hover:bg-[#8BA88E]/10 self-start"
                 data-testid="edit-employee-btn"
               >
                 <UserCog className="w-4 h-4" />
