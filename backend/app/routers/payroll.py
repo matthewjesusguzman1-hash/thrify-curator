@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone, timedelta
 import io
-import resend
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -13,8 +12,7 @@ from reportlab.lib.enums import TA_CENTER
 
 from app.database import db
 from app.dependencies import get_admin_user
-from app.models.payroll import PayrollSettings, PayrollReportRequest, EmailPayrollRequest
-from app.config import RESEND_API_KEY, SENDER_EMAIL
+from app.models.payroll import PayrollSettings, PayrollReportRequest
 from app.services.helpers import get_biweekly_period, get_monthly_period, get_yearly_period
 
 router = APIRouter(prefix="/admin/payroll", tags=["Payroll"])
