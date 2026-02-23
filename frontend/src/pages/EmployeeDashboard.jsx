@@ -317,7 +317,7 @@ export default function EmployeeDashboard() {
                         </p>
                       </div>
                       <div className="text-right">
-                        {entry.total_hours ? (
+                        {entry.clock_out ? (
                           <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#00D4FF]/10 rounded-full text-sm font-medium text-[#0891B2]">
                             <Clock className="w-3 h-3" />
                             {entry.total_hours} hrs
