@@ -39,6 +39,7 @@ import {
   ArrowUpDown,
   PlayCircle,
   StopCircle,
+  PauseCircle,
   Upload,
   Camera,
   Image as ImageIcon,
