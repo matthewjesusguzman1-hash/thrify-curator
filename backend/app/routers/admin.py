@@ -507,13 +507,16 @@ async def get_w9_status(employee_id: str, admin: dict = Depends(get_admin_user))
     """Check if an employee has a W-9 on file"""
     w9_doc = await db.w9_documents.find_one({"employee_id": employee_id}, {"_id": 0, "content": 0})
     if not w9_doc:
-        return {"has_w9": False}
+        return {"has_w9": False, "status": "not_submitted"}
     
     return {
         "has_w9": True,
-        "filename": w9_doc["filename"],
-        "content_type": w9_doc["content_type"],
-        "uploaded_at": w9_doc["uploaded_at"]
+        "status": w9_doc.get("status", "submitted"),
+        "filename": w9_doc.get("filename"),
+        "content_type": w9_doc.get("content_type"),
+        "uploaded_at": w9_doc.get("uploaded_at"),
+        "rejection_reason": w9_doc.get("rejection_reason"),
+        "reviewed_at": w9_doc.get("reviewed_at")
     }
 
 
