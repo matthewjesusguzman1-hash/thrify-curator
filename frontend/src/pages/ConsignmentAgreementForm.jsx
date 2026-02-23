@@ -261,6 +261,16 @@ export default function ConsignmentAgreementForm() {
             </Button>
           </form>
         </motion.div>
+
+        {/* Back to Home - Easy access at bottom */}
+        <Link 
+          to="/" 
+          className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
+          data-testid="back-link"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Home
+        </Link>
       </div>
     </div>
   );
