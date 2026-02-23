@@ -3775,24 +3775,23 @@ export default function AdminDashboard() {
                               className="h-40 bg-gray-100 flex items-center justify-center cursor-pointer overflow-hidden relative group"
                               onClick={() => handleViewCheckImage(record.id)}
                             >
-                              <img
-                                src={`${API}/admin/payroll/check-records/${record.id}/image`}
-                                alt={record.description || "Payroll check"}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  e.target.nextSibling.style.display = 'flex';
-                                }}
-                              />
-                              <div className="hidden text-center absolute inset-0 items-center justify-center bg-gray-100">
-                                <div>
-                                  <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                                  <p className="text-xs text-[#888]">Click to view</p>
+                              {checkThumbnails[record.id] ? (
+                                <>
+                                  <img
+                                    src={checkThumbnails[record.id]}
+                                    alt={record.description || "Payroll check"}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                    <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-center">
+                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                                  <p className="text-xs text-[#888]">Loading...</p>
                                 </div>
-                              </div>
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
+                              )}
                             </div>
                             <div className="p-3">
                               <div className="flex items-center justify-between mb-2">
