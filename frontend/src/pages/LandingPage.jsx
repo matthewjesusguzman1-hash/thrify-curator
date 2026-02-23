@@ -4,7 +4,10 @@ import { motion } from "framer-motion";
 import { 
   SiEbay, 
   SiFacebook, 
-  SiTiktok 
+  SiTiktok,
+  SiPoshmark,
+  SiMercari,
+  SiDepop
 } from "react-icons/si";
 import { 
   Share2, 
@@ -13,9 +16,6 @@ import {
   ClipboardCheck, 
   ChevronRight,
   Clock,
-  ShoppingBag,
-  Tag,
-  Sparkles,
   Mail
 } from "lucide-react";
 import { toast } from "sonner";
