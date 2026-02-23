@@ -4031,6 +4031,7 @@ export default function AdminDashboard() {
             getAuthHeader={getAuthHeader} 
             onTripStatusChange={(isActive) => setHeaderTripActive(isActive)}
             forceExpand={forceMileageExpand}
+            headerTripActive={headerTripActive}
           />
 
           {/* W-9 Rejection Modal */}
