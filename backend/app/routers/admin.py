@@ -51,6 +51,15 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
 @router.get("/employees", response_model=List[UserResponse])
 async def get_all_employees(admin: dict = Depends(get_admin_user)):
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(500)
+    
+    # Enrich with W-9 status from w9_documents collection
+    for user in users:
+        w9_doc = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0, "content": 0})
+        if w9_doc:
+            user["w9_status"] = w9_doc.get("status", "submitted")
+        else:
+            user["w9_status"] = None
+    
     return [UserResponse(**u) for u in users]
 
 
