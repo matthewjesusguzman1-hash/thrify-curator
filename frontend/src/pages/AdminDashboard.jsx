@@ -2052,10 +2052,14 @@ export default function AdminDashboard() {
                                 </td>
                               </tr>
                             ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Form Submissions Section */}
