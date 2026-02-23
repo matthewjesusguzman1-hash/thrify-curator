@@ -380,6 +380,107 @@ export default function AdminDashboard() {
     });
   };
 
+  // Sorting function
+  const handleSort = (table, key) => {
+    setSortConfig(prev => ({
+      ...prev,
+      [table]: {
+        key,
+        direction: prev[table].key === key && prev[table].direction === 'asc' ? 'desc' : 'asc'
+      }
+    }));
+  };
+
+  const getSortedData = (data, table) => {
+    const { key, direction } = sortConfig[table];
+    return [...data].sort((a, b) => {
+      let aVal = a[key];
+      let bVal = b[key];
+      
+      // Handle nested properties
+      if (key === 'user_name' || key === 'name' || key === 'full_name') {
+        aVal = (aVal || '').toLowerCase();
+        bVal = (bVal || '').toLowerCase();
+      }
+      
+      // Handle dates
+      if (key.includes('_at') || key === 'clock_in' || key === 'clock_out' || key === 'created_at') {
+        aVal = aVal ? new Date(aVal).getTime() : 0;
+        bVal = bVal ? new Date(bVal).getTime() : 0;
+      }
+      
+      // Handle numbers
+      if (typeof aVal === 'number' || key === 'hours' || key === 'total_hours' || key === 'shifts' || key === 'hourly_rate') {
+        aVal = parseFloat(aVal) || 0;
+        bVal = parseFloat(bVal) || 0;
+      }
+      
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const SortableHeader = ({ table, sortKey, children, className = "" }) => {
+    const isActive = sortConfig[table]?.key === sortKey;
+    const direction = sortConfig[table]?.direction;
+    return (
+      <th 
+        className={`cursor-pointer hover:bg-[#F9F6F7] transition-colors select-none ${className}`}
+        onClick={() => handleSort(table, sortKey)}
+      >
+        <div className="flex items-center gap-1">
+          {children}
+          <span className={`transition-opacity ${isActive ? 'opacity-100' : 'opacity-30'}`}>
+            {isActive && direction === 'asc' ? '↑' : '↓'}
+          </span>
+        </div>
+      </th>
+    );
+  };
+
+  // Employee portal view functions
+  const handleViewEmployeePortal = async (employee) => {
+    setViewingEmployee(employee);
+    setShowEmployeePortal(true);
+    setLoadingPortal(true);
+    
+    try {
+      // Fetch employee's time entries and summary
+      const [entriesRes, summaryRes] = await Promise.all([
+        axios.get(`${API}/admin/employee/${employee.id}/entries`, getAuthHeader()),
+        axios.get(`${API}/admin/employee/${employee.id}/summary`, getAuthHeader())
+      ]);
+      
+      setEmployeePortalData({
+        entries: entriesRes.data,
+        summary: summaryRes.data
+      });
+    } catch (error) {
+      console.error("Failed to fetch employee portal data:", error);
+      // Use fallback data from existing state
+      const employeeEntries = timeEntries.filter(e => e.employee_id === employee.id);
+      const employeeStats = summary.by_employee.find(e => e.user_id === employee.id) || {
+        hours: 0,
+        shifts: 0
+      };
+      setEmployeePortalData({
+        entries: employeeEntries,
+        summary: {
+          total_hours: employeeStats.hours,
+          total_shifts: employeeStats.shifts,
+          week_hours: 0,
+          period_hours: employeeStats.hours,
+          period_shifts: employeeStats.shifts,
+          hourly_rate: employee.hourly_rate || payrollSettings.default_hourly_rate || 15,
+          estimated_pay: employeeStats.hours * (employee.hourly_rate || payrollSettings.default_hourly_rate || 15)
+        }
+      });
+    } finally {
+      setLoadingPortal(false);
+    }
+  };
+
   const handleMarkAllRead = async () => {
     try {
       await axios.post(`${API}/admin/notifications/mark-read`, {}, getAuthHeader());
