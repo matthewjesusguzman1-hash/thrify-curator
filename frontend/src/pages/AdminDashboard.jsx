@@ -1161,6 +1161,22 @@ export default function AdminDashboard() {
     try {
       const response = await axios.get(`${API}/admin/payroll/check-records`, getAuthHeader());
       setCheckRecords(response.data);
+      
+      // Load thumbnails for each record
+      const thumbnails = {};
+      for (const record of response.data) {
+        try {
+          const imgResponse = await axios.get(`${API}/admin/payroll/check-records/${record.id}/image`, {
+            ...getAuthHeader(),
+            responseType: 'blob'
+          });
+          const blob = new Blob([imgResponse.data], { type: imgResponse.headers['content-type'] });
+          thumbnails[record.id] = window.URL.createObjectURL(blob);
+        } catch (err) {
+          console.error(`Failed to load thumbnail for ${record.id}`);
+        }
+      }
+      setCheckThumbnails(thumbnails);
     } catch (error) {
       console.error("Failed to fetch check records:", error);
     } finally {
