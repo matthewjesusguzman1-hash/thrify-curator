@@ -553,11 +553,11 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         asyncio.create_task(send_clock_notification_email(
             action="out",
             employee_name=user["name"],
-            timestamp=now,
+            timestamp=now_iso,
             hours_summary=hours_summary
         ))
         
-        active["clock_out"] = now
+        active["clock_out"] = now_iso
         active["total_hours"] = total_hours
         return TimeEntry(**active)
     
