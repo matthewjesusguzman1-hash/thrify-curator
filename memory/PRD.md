@@ -161,6 +161,17 @@ Build a "Thrifty Curator" reselling application with:
   - Fixed CSS inheritance issue causing white text on white background
   - Added targeted CSS selectors to override inherited dashboard-header styles
   - Notification messages, timestamps, and badges now clearly visible
+- [x] Admin Dashboard UI Improvements ✅ (Feb 23, 2026)
+  - Fixed header visibility (white-on-white contrast issue)
+  - Added solid dark gradient background to header with cyan accent border
+  - Made notification "Alerts" button more readable
+  - Fixed "Run Report" button styling with darker gradient + cyan border
+  - All sections now collapse by default when dashboard opens
+  - Replaced "Overview Stats" with "Payroll Summary" showing:
+    - Current Pay Period payroll amount + hours + date range
+    - Month total payroll
+    - Year total payroll
+  - Added new backend endpoint: GET /api/admin/payroll/summary
 - [ ] Refactoring backend/frontend (server.py 2000+ lines, AdminDashboard.jsx 2500+ lines)
 
 ### P1 (High Priority)
