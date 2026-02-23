@@ -159,7 +159,7 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
     if request.employee_id:
         query["user_id"] = request.employee_id
     
-    entries = await db.time_entries.find(query, {"_id": 0}).to_list(10000)
+    entries = await db.time_entries.find(query, {"_id": 0}).to_list(1000)
     
     all_employees = await db.users.find({}, {"_id": 0}).to_list(1000)
     employee_rates = {e["id"]: e.get("hourly_rate") for e in all_employees}
@@ -266,7 +266,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     if request.employee_id:
         query["user_id"] = request.employee_id
     
-    entries = await db.time_entries.find(query, {"_id": 0}).to_list(10000)
+    entries = await db.time_entries.find(query, {"_id": 0}).to_list(1000)
     
     all_employees = await db.users.find({}, {"_id": 0}).to_list(1000)
     employee_rates = {e["id"]: e.get("hourly_rate") for e in all_employees}
