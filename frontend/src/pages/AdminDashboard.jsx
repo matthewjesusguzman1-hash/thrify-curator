@@ -973,6 +973,136 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
+          {/* Edit Employee Modal */}
+          {showEditEmployee && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowEditEmployee(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="edit-employee-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Edit Employee</h2>
+                  <button
+                    onClick={() => setShowEditEmployee(false)}
+                    className="text-[#999] hover:text-[#666]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Employee Selection (when not editing a specific employee) */}
+                {!editingEmployee ? (
+                  <div className="form-group">
+                    <Label className="form-label">Select Employee to Edit</Label>
+                    <Select
+                      value=""
+                      onValueChange={(value) => {
+                        const emp = employees.find(e => e.id === value);
+                        if (emp) handleOpenEditEmployee(emp);
+                      }}
+                    >
+                      <SelectTrigger className="form-input" data-testid="edit-employee-select">
+                        <SelectValue placeholder="Select an employee..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.filter(e => e.role !== 'admin').map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <form onSubmit={handleUpdateEmployee}>
+                    <div className="mb-4 p-3 bg-[#F9F6F7] rounded-xl flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#F8C8DC]/30 rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-[#D48C9E]" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-[#333]">{editingEmployee.name}</p>
+                        <p className="text-xs text-[#888]">Editing employee details</p>
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <Label className="form-label">Full Name *</Label>
+                      <Input
+                        type="text"
+                        value={editEmployeeData.name}
+                        onChange={(e) => setEditEmployeeData({ ...editEmployeeData, name: e.target.value })}
+                        required
+                        placeholder="Employee name"
+                        className="form-input"
+                        data-testid="edit-employee-name"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <Label className="form-label">Email *</Label>
+                      <Input
+                        type="email"
+                        value={editEmployeeData.email}
+                        onChange={(e) => setEditEmployeeData({ ...editEmployeeData, email: e.target.value })}
+                        required
+                        placeholder="employee@email.com"
+                        className="form-input"
+                        data-testid="edit-employee-email"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <Label className="form-label">Role *</Label>
+                      <Select
+                        value={editEmployeeData.role}
+                        onValueChange={(value) => setEditEmployeeData({ ...editEmployeeData, role: value })}
+                      >
+                        <SelectTrigger className="form-input" data-testid="edit-employee-role">
+                          <SelectValue placeholder="Select role..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="employee">Employee</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-[#888] mt-1">Changing to Admin gives full dashboard access</p>
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setShowEditEmployee(false);
+                          setEditingEmployee(null);
+                        }}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={savingEmployee}
+                        className="btn-primary flex-1"
+                        data-testid="save-employee-btn"
+                      >
+                        {savingEmployee ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+
           {/* Employee Details Modal */}
           {showEmployeeDetails && selectedEmployee && (
             <motion.div
