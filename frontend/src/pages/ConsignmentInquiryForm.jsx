@@ -424,6 +424,18 @@ export default function ConsignmentInquiryForm() {
               )}
             </div>
 
+            <div>
+              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Additional Information (Optional)</Label>
+              <Textarea
+                name="additional_info"
+                value={formData.additional_info}
+                onChange={handleChange}
+                placeholder="Any additional details you'd like to share about your items (sizing, special features, why you're consigning, etc.)"
+                className="border-2 border-gray-200 focus:border-[#FF1493] rounded-lg min-h-[100px]"
+                data-testid="input-additional-info"
+              />
+            </div>
+
             <Button
               type="submit"
               disabled={loading}
