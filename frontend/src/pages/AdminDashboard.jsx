@@ -1174,9 +1174,8 @@ export default function AdminDashboard() {
                 </Button>
                 <Button 
                   onClick={() => setShowReport(true)}
-                  variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 border-2 border-[#1A1A2E] text-[#1A1A2E] font-semibold hover:bg-[#1A1A2E] hover:text-white transition-all"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#1A1A2E] to-[#16213E] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#1A1A2E]/30 transition-all border-0"
                   data-testid="run-report-btn"
                 >
                   <FileText className="w-4 h-4" />
