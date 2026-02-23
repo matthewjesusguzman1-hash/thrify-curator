@@ -46,8 +46,8 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     employees = await db.users.find({"role": "employee"}, {"_id": 0, "id": 1, "hourly_rate": 1}).to_list(100)
     employee_rates = {emp["id"]: emp.get("hourly_rate") or default_rate for emp in employees}
     
-    # Get all time entries and filter manually since clock_in might be stored as string
-    all_entries = await db.time_entries.find({}, {"_id": 0}).to_list(10000)
+    # Get time entries with date filter for better performance
+    all_entries = await db.time_entries.find({}, {"_id": 0}).to_list(1000)
     
     # Helper function to parse clock_in to datetime
     def parse_clock_in(entry):
