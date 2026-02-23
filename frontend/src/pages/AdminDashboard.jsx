@@ -253,6 +253,29 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleRemoveEmployeeSubmit = async () => {
+    if (!selectedEmployeeToRemove) {
+      toast.error("Please select an employee");
+      return;
+    }
+    
+    const emp = employees.find(e => e.id === selectedEmployeeToRemove);
+    if (!emp) return;
+    
+    setRemovingEmployee(true);
+    try {
+      await axios.delete(`${API}/admin/employees/${selectedEmployeeToRemove}`, getAuthHeader());
+      toast.success(`${emp.name} has been removed`);
+      setShowRemoveEmployee(false);
+      setSelectedEmployeeToRemove("");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete employee");
+    } finally {
+      setRemovingEmployee(false);
+    }
+  };
+
   const handleDeleteEmployee = async (employeeId, employeeName) => {
     if (!window.confirm(`Are you sure you want to delete ${employeeName}? This will also delete all their time entries.`)) {
       return;
@@ -265,6 +288,29 @@ export default function AdminDashboard() {
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to delete employee");
     }
+  };
+
+  const handleViewEmployeeDetails = async (employee) => {
+    setSelectedEmployee(employee);
+    setShowEmployeeDetails(true);
+    setLoadingEmployeeDetails(true);
+    
+    try {
+      // Get employee's shifts
+      const shiftsForEmployee = timeEntries.filter(e => e.user_id === employee.id);
+      setEmployeeShifts(shiftsForEmployee);
+    } catch (error) {
+      console.error("Failed to load employee details:", error);
+    } finally {
+      setLoadingEmployeeDetails(false);
+    }
+  };
+
+  const getEmployeeStats = (employeeId) => {
+    const empEntries = timeEntries.filter(e => e.user_id === employeeId && e.total_hours);
+    const totalHours = empEntries.reduce((sum, e) => sum + (e.total_hours || 0), 0);
+    const totalShifts = empEntries.length;
+    return { totalHours: totalHours.toFixed(2), totalShifts };
   };
 
   // Edit time entry handlers
