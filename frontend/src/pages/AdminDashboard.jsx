@@ -829,6 +829,274 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
+          {/* Remove Employee Modal */}
+          {showRemoveEmployee && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowRemoveEmployee(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="remove-employee-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Remove Employee</h2>
+                  <button
+                    onClick={() => setShowRemoveEmployee(false)}
+                    className="text-[#999] hover:text-[#666]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-red-600">
+                    Warning: This will permanently delete the employee and all their time entries. This action cannot be undone.
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <Label className="form-label">Select Employee to Remove</Label>
+                  <Select
+                    value={selectedEmployeeToRemove}
+                    onValueChange={setSelectedEmployeeToRemove}
+                  >
+                    <SelectTrigger className="form-input" data-testid="remove-employee-select">
+                      <SelectValue placeholder="Select an employee..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.filter(e => e.role !== 'admin').map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.name} ({emp.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedEmployeeToRemove && (
+                  <div className="mt-4 p-3 bg-[#F9F6F7] rounded-xl">
+                    {(() => {
+                      const emp = employees.find(e => e.id === selectedEmployeeToRemove);
+                      const stats = getEmployeeStats(selectedEmployeeToRemove);
+                      return emp ? (
+                        <div className="text-sm">
+                          <p className="font-medium text-[#333]">{emp.name}</p>
+                          <p className="text-[#666]">{emp.email}</p>
+                          <p className="text-[#888] mt-2">
+                            {stats.totalShifts} shifts • {stats.totalHours} hours logged
+                          </p>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowRemoveEmployee(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleRemoveEmployeeSubmit}
+                    disabled={removingEmployee || !selectedEmployeeToRemove}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                    data-testid="confirm-remove-employee-btn"
+                  >
+                    {removingEmployee ? "Removing..." : "Remove Employee"}
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Employee Details Modal */}
+          {showEmployeeDetails && selectedEmployee && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+              onClick={() => setShowEmployeeDetails(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl my-8"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="employee-details-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                      selectedEmployee.role === 'admin' ? 'bg-[#C5A065]/20' : 'bg-[#F8C8DC]/30'
+                    }`}>
+                      {selectedEmployee.role === 'admin' ? (
+                        <Shield className="w-6 h-6 text-[#C5A065]" />
+                      ) : (
+                        <User className="w-6 h-6 text-[#D48C9E]" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="font-playfair text-xl font-bold text-[#333]">{selectedEmployee.name}</h2>
+                      <p className="text-sm text-[#888]">{selectedEmployee.role}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowEmployeeDetails(false)}
+                    className="text-[#999] hover:text-[#666]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Employee Info */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="p-4 bg-[#F9F6F7] rounded-xl">
+                    <div className="flex items-center gap-2 text-[#888] mb-1">
+                      <Mail className="w-4 h-4" />
+                      <span className="text-xs">Email</span>
+                    </div>
+                    <p className="font-medium text-[#333]">{selectedEmployee.email}</p>
+                  </div>
+                  <div className="p-4 bg-[#F9F6F7] rounded-xl">
+                    <div className="flex items-center gap-2 text-[#888] mb-1">
+                      <DollarSign className="w-4 h-4" />
+                      <span className="text-xs">Hourly Rate</span>
+                    </div>
+                    <p className="font-medium text-[#333]">
+                      {selectedEmployee.hourly_rate ? `$${selectedEmployee.hourly_rate.toFixed(2)}/hr` : 'Not set'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-[#F9F6F7] rounded-xl">
+                    <div className="flex items-center gap-2 text-[#888] mb-1">
+                      <Calendar className="w-4 h-4" />
+                      <span className="text-xs">Joined</span>
+                    </div>
+                    <p className="font-medium text-[#333]">{formatDateTime(selectedEmployee.created_at)}</p>
+                  </div>
+                  <div className="p-4 bg-[#C5A065]/10 rounded-xl">
+                    <div className="flex items-center gap-2 text-[#888] mb-1">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-xs">Total Hours</span>
+                    </div>
+                    <p className="font-bold text-[#C5A065] text-lg">
+                      {getEmployeeStats(selectedEmployee.id).totalHours} hrs
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recent Shifts */}
+                <div>
+                  <h3 className="font-semibold text-[#333] mb-3">Recent Shifts</h3>
+                  {loadingEmployeeDetails ? (
+                    <p className="text-center text-[#888] py-4">Loading...</p>
+                  ) : employeeShifts.length === 0 ? (
+                    <p className="text-center text-[#888] py-4">No shifts recorded</p>
+                  ) : (
+                    <div className="overflow-x-auto max-h-60 overflow-y-auto">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Clock In</th>
+                            <th>Clock Out</th>
+                            <th>Hours</th>
+                            <th>Edit</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {employeeShifts.slice(0, 10).map((shift) => (
+                            <tr key={shift.id}>
+                              <td>{new Date(shift.clock_in).toLocaleDateString()}</td>
+                              <td>{new Date(shift.clock_in).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                              <td>
+                                {shift.clock_out 
+                                  ? new Date(shift.clock_out).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                  : <span className="text-green-500">Active</span>
+                                }
+                              </td>
+                              <td>
+                                {shift.total_hours 
+                                  ? `${shift.total_hours.toFixed(2)} hrs`
+                                  : '-'
+                                }
+                              </td>
+                              <td>
+                                <button
+                                  onClick={() => {
+                                    setShowEmployeeDetails(false);
+                                    handleEditEntry(shift);
+                                  }}
+                                  className="text-[#C5A065] hover:text-[#9A7B4F] p-1"
+                                  title="Edit shift"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Actions */}
+                {selectedEmployee.role !== 'admin' && (
+                  <div className="mt-6 pt-4 border-t border-[#eee] flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowEmployeeDetails(false);
+                        setEditingRateId(selectedEmployee.id);
+                        setEditingRateValue(selectedEmployee.hourly_rate?.toString() || "");
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <DollarSign className="w-3 h-3" />
+                      Edit Rate
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowEmployeeDetails(false);
+                        setShowAddEntry(true);
+                        setNewEntryData({ ...newEntryData, employee_id: selectedEmployee.id });
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <Clock className="w-3 h-3" />
+                      Add Shift
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowEmployeeDetails(false);
+                        handleDeleteEmployee(selectedEmployee.id, selectedEmployee.name);
+                      }}
+                      className="flex items-center gap-1 text-red-500 border-red-200 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Delete
+                    </Button>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+
           {/* Report Modal */}
           {showReport && (
             <motion.div
