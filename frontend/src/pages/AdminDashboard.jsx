@@ -1530,7 +1530,6 @@ export default function AdminDashboard() {
                       <th>Role</th>
                       <th>Hourly Rate</th>
                       <th>Joined</th>
-                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1621,18 +1620,6 @@ export default function AdminDashboard() {
                           )}
                         </td>
                         <td>{formatDateTime(emp.created_at)}</td>
-                        <td>
-                          {emp.role !== 'admin' && (
-                            <button
-                              onClick={() => handleDeleteEmployee(emp.id, emp.name)}
-                              className="text-red-400 hover:text-red-600 transition-colors p-1"
-                              data-testid={`delete-employee-${emp.id}`}
-                              title="Delete employee"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1665,7 +1652,6 @@ export default function AdminDashboard() {
                       <th>Clock In</th>
                       <th>Clock Out</th>
                       <th>Hours</th>
-                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1692,26 +1678,6 @@ export default function AdminDashboard() {
                               Active
                             </span>
                           )}
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleEditEntry(entry)}
-                              className="text-[#C5A065] hover:text-[#9A7B4F] transition-colors p-1"
-                              data-testid={`edit-entry-${entry.id}`}
-                              title="Edit time entry"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEntry(entry.id)}
-                              className="text-red-400 hover:text-red-600 transition-colors p-1"
-                              data-testid={`delete-entry-${entry.id}`}
-                              title="Delete time entry"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
                         </td>
                       </tr>
                     ))}
