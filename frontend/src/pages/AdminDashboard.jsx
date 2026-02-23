@@ -1174,6 +1174,7 @@ export default function AdminDashboard() {
                 </Button>
                 <Button 
                   onClick={() => setShowReport(true)}
+                  variant="ghost"
                   size="sm"
                   className="btn-dark-gradient flex items-center gap-2 font-semibold shadow-md hover:shadow-lg hover:shadow-[#1A1A2E]/30 transition-all"
                   data-testid="run-report-btn"
