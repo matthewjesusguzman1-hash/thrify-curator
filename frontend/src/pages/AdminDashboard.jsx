@@ -1152,6 +1152,103 @@ export default function AdminDashboard() {
     }
   };
 
+  // Payroll Check Records functions
+  const fetchCheckRecords = useCallback(async () => {
+    setLoadingCheckRecords(true);
+    try {
+      const response = await axios.get(`${API}/admin/payroll/check-records`, getAuthHeader());
+      setCheckRecords(response.data);
+    } catch (error) {
+      console.error("Failed to fetch check records:", error);
+    } finally {
+      setLoadingCheckRecords(false);
+    }
+  }, [getAuthHeader]);
+
+  const handleCheckImageUpload = async (file) => {
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file");
+      return;
+    }
+    
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be less than 10MB");
+      return;
+    }
+    
+    setUploadingCheck(true);
+    
+    try {
+      // Convert to base64
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      
+      const payload = {
+        image_data: base64,
+        filename: file.name,
+        content_type: file.type,
+        description: checkUploadData.description || null,
+        check_date: checkUploadData.check_date || null,
+        amount: checkUploadData.amount ? parseFloat(checkUploadData.amount) : null,
+        employee_name: checkUploadData.employee_name || null
+      };
+      
+      await axios.post(`${API}/admin/payroll/check-records`, payload, getAuthHeader());
+      
+      toast.success("Check image uploaded successfully!");
+      setCheckUploadData({ description: "", check_date: "", amount: "", employee_name: "" });
+      fetchCheckRecords();
+    } catch (error) {
+      toast.error("Failed to upload check image");
+    } finally {
+      setUploadingCheck(false);
+      if (checkInputRef.current) {
+        checkInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleDeleteCheckRecord = async (recordId) => {
+    if (!window.confirm("Are you sure you want to delete this check record?")) return;
+    
+    try {
+      await axios.delete(`${API}/admin/payroll/check-records/${recordId}`, getAuthHeader());
+      toast.success("Check record deleted");
+      fetchCheckRecords();
+    } catch (error) {
+      toast.error("Failed to delete check record");
+    }
+  };
+
+  const handleViewCheckImage = async (recordId) => {
+    try {
+      const response = await axios.get(`${API}/admin/payroll/check-records/${recordId}/image`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      setViewingCheckImage({ url, recordId });
+    } catch (error) {
+      toast.error("Failed to load check image");
+    }
+  };
+
+  const closeCheckImageViewer = () => {
+    if (viewingCheckImage?.url) {
+      window.URL.revokeObjectURL(viewingCheckImage.url);
+    }
+    setViewingCheckImage(null);
+  };
+
   const getPeriodLabel = (periodType, periodIndex) => {
     const index = parseInt(periodIndex);
     if (periodType === "biweekly") {
