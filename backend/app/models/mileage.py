@@ -64,6 +64,9 @@ class ActiveTripResponse(BaseModel):
     start_address: Optional[str] = None
     start_time: str
     waypoints: List[LocationData] = []
+    is_paused: bool = False
+    paused_at: Optional[str] = None
+    total_paused_duration: float = 0.0  # Total paused time in seconds
 
 
 class StartTripRequest(BaseModel):
