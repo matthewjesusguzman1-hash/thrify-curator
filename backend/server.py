@@ -775,6 +775,41 @@ async def update_employee_rate(employee_id: str, rate_data: UpdateEmployeeRate, 
     updated = await db.users.find_one({"id": employee_id}, {"_id": 0, "password_hash": 0})
     return UserResponse(**updated)
 
+@api_router.get("/admin/employee/{employee_id}/entries")
+async def get_employee_entries(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Get all time entries for a specific employee (admin view)"""
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    entries = await db.time_entries.find(
+        {"user_id": employee_id},
+        {"_id": 0}
+    ).sort("clock_in", -1).to_list(100)
+    
+    return entries
+
+@api_router.get("/admin/employee/{employee_id}/summary")
+async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Get summary stats for a specific employee (admin view)"""
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Get the summary using existing function
+    summary = await get_employee_hours_summary(employee_id)
+    
+    # Add hourly rate and estimated pay
+    hourly_rate = employee.get("hourly_rate")
+    if not hourly_rate:
+        settings = await db.payroll_settings.find_one({}, {"_id": 0})
+        hourly_rate = settings.get("default_hourly_rate", 15.0) if settings else 15.0
+    
+    summary["hourly_rate"] = hourly_rate
+    summary["estimated_pay"] = summary.get("period_hours", 0) * hourly_rate
+    
+    return summary
+
 class ReportRequest(BaseModel):
     start_date: str
     end_date: str
