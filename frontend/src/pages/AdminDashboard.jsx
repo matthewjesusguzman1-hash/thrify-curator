@@ -1580,9 +1580,10 @@ export default function AdminDashboard() {
   const handleGenerateReport = async () => {
     setReportLoading(true);
     try {
+      const dateRange = getReportDateRange();
       const response = await axios.post(`${API}/admin/reports`, {
-        start_date: reportFilters.start_date,
-        end_date: reportFilters.end_date,
+        start_date: dateRange.start,
+        end_date: dateRange.end,
         employee_id: reportFilters.employee_id || null
       }, getAuthHeader());
       setReportData(response.data);
