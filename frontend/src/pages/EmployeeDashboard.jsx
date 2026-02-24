@@ -118,7 +118,7 @@ export default function EmployeeDashboard() {
           'Content-Type': 'multipart/form-data'
         }
       });
-      toast.success("W-9 submitted successfully! Pending admin review.");
+      toast.success("W-9 submitted successfully!");
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to upload W-9");
