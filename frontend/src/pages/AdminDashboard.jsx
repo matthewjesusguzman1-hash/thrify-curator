@@ -5487,18 +5487,6 @@ export default function AdminDashboard() {
                                     <CheckCircle className="w-4 h-4" />
                                   </Button>
                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteW9Doc(viewingW9.employeeId, doc.id);
-                                  }}
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
-                                  title="Delete this W-9"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
                               </div>
                             </div>
                           </div>
