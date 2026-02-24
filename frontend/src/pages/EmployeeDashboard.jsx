@@ -474,18 +474,12 @@ export default function EmployeeDashboard() {
                                 });
                                 const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
                                 const url = window.URL.createObjectURL(blob);
-                                // Open in new window for PDF viewing
-                                const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
-                                if (!newWindow) {
-                                  // Fallback: download if popup blocked
-                                  const link = document.createElement('a');
-                                  link.href = url;
-                                  link.download = doc.filename || 'w9.pdf';
-                                  document.body.appendChild(link);
-                                  link.click();
-                                  document.body.removeChild(link);
-                                }
-                                setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+                                setViewingW9({
+                                  url,
+                                  filename: doc.filename || 'w9.pdf',
+                                  contentType: response.headers['content-type'] || 'application/pdf',
+                                  docId: doc.id
+                                });
                               } catch (error) {
                                 console.error('View W-9 error:', error);
                                 toast.error("Failed to view W-9");
