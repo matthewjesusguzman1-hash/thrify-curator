@@ -17,7 +17,11 @@ import {
   CheckCircle,
   AlertCircle,
   Trash2,
-  Eye
+  Eye,
+  Send,
+  MessageSquare,
+  X,
+  Clock3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
