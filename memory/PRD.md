@@ -661,3 +661,50 @@ Replaced the "Message Me" mailto link on the landing page with a full in-app mes
 ### Test Report
 - `/app/test_reports/iteration_26.json` - 100% backend (13/13), 100% frontend
 - All features verified working
+
+## Messaging Enhancements & Admin Dashboard Improvements (Feb 24, 2026)
+
+### Message Modal Dark Theme
+- Updated messaging modal on landing page to match home screen dark theme
+- Dark gradient background (from-[#1A1A2E] via-[#16213E] to-[#0F3460])
+- Dark-styled inputs with bg-white/10, white text, cyan focus accents
+- Info banner with cyan styling
+- Gradient send button (cyan to purple)
+
+### Collapsible Messages
+- Messages now display in compact collapsible rows
+- Collapsed view shows: avatar, name, email, "New" badge (if unread), timestamp
+- Click to expand and view full message content
+- Expanded view shows: full message text, Reply via Email button, Mark as Read button, Delete button
+
+### Message Search
+- Added search bar at top of Messages section
+- Filters messages by sender name, email, or message content
+- Shows "Showing X of Y messages" count when filtering
+
+### Browser Push Notifications
+- Added notification toggle button (bell icon) in Messages section header
+- Click to enable/disable browser push notifications
+- When enabled, shows desktop notification when new messages arrive (if page not visible)
+- Uses Notification API with permission request
+
+### Admin Dashboard Auto-Refresh
+All collapsible sections now auto-refresh their data when expanded:
+- Messages Section - fetchMessages()
+- Form Submissions Section - fetchFormSubmissions()
+- W-9 Review Section - fetchPendingW9s()
+- All Employees Section - fetchEmployeeClockStatuses()
+- Recent Time Entries Section - fetchData()
+- Hours by Employee Section - fetchData()
+- Payroll Check Records Section - fetchCheckRecords()
+- Mileage Tracking Section - fetchMileageEntries()
+
+### Files Modified
+- `/app/frontend/src/pages/LandingPage.jsx` - Dark-themed message modal
+- `/app/frontend/src/components/admin/sections/MessagesSection.jsx` - Collapsible messages, search, notifications
+- `/app/frontend/src/components/admin/sections/FormSubmissionsSection.jsx` - Auto-refresh on expand
+- `/app/frontend/src/components/admin/sections/PayrollCheckRecordsSection.jsx` - Auto-refresh on expand
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Auto-refresh for Time Entries and Hours by Employee
+
+### Test Report
+- `/app/test_reports/iteration_27.json` - 100% frontend (15/15 features verified)
