@@ -451,7 +451,7 @@ export default function EmployeeDashboard() {
                 {w9Status?.w9_documents && w9Status.w9_documents.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Your W-9 Documents ({w9Status.total_documents})</p>
-                    {w9Status.w9_documents.map((doc, index) => (
+                    {w9Status.w9_documents.filter(doc => doc && doc.id).map((doc, index) => (
                       <div 
                         key={doc.id} 
                         className="flex items-center gap-3 p-3 rounded-xl border bg-green-50 border-green-200"
