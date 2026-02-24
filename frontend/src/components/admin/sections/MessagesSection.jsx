@@ -9,9 +9,14 @@ import {
   ExternalLink,
   CheckCircle,
   Clock,
-  RefreshCw
+  RefreshCw,
+  Search,
+  X,
+  Bell,
+  BellOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -23,8 +28,54 @@ export default function MessagesSection() {
   const [loading, setLoading] = useState(false);
   const [showSection, setShowSection] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [expandedMessages, setExpandedMessages] = useState(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
 
   const getToken = () => localStorage.getItem("token");
+
+  // Check and request notification permissions
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationsEnabled(Notification.permission === 'granted');
+    }
+  }, []);
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      toast.error("Browser notifications are not supported");
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        setNotificationsEnabled(true);
+        toast.success("Push notifications enabled!");
+        // Send a test notification
+        new Notification("Thrifty Curator", {
+          body: "You'll now receive notifications for new messages!",
+          icon: "/logo192.png"
+        });
+      } else {
+        toast.error("Notification permission denied");
+      }
+    } catch (error) {
+      console.error("Error requesting notification permission:", error);
+      toast.error("Failed to enable notifications");
+    }
+  };
+
+  const showNotification = (title, body) => {
+    if (notificationsEnabled && document.visibilityState !== 'visible') {
+      new Notification(title, {
+        body,
+        icon: "/logo192.png",
+        tag: "new-message"
+      });
+    }
+  };
 
   const fetchMessages = useCallback(async () => {
     const token = getToken();
@@ -59,7 +110,19 @@ export default function MessagesSection() {
         const res = await axios.get(`${API}/messages/admin/unread-count`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setUnreadCount(res.data.unread_count);
+        const newCount = res.data.unread_count;
+        
+        // Show notification if new messages arrived
+        if (newCount > previousUnreadCount && previousUnreadCount !== 0) {
+          const newMessages = newCount - previousUnreadCount;
+          showNotification(
+            "New Message",
+            `You have ${newMessages} new message${newMessages > 1 ? 's' : ''}`
+          );
+        }
+        
+        setPreviousUnreadCount(newCount);
+        setUnreadCount(newCount);
       } catch (error) {
         console.error("Error fetching unread count:", error);
       }
@@ -68,7 +131,7 @@ export default function MessagesSection() {
     fetchUnreadCount();
     const pollInterval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(pollInterval);
-  }, []);
+  }, [previousUnreadCount, notificationsEnabled]);
 
   // Fetch full messages when section is expanded
   useEffect(() => {
@@ -117,7 +180,6 @@ export default function MessagesSection() {
   };
 
   const handleReply = (message) => {
-    // Create mailto link with prepopulated content
     const subject = encodeURIComponent(`Re: Your Message to Thrifty Curator`);
     const body = encodeURIComponent(
       `Hi ${message.sender_name},\n\n` +
@@ -131,10 +193,21 @@ export default function MessagesSection() {
     
     window.location.href = `mailto:${message.sender_email}?subject=${subject}&body=${body}`;
     
-    // Mark as read when replying
     if (message.status === "unread") {
       handleMarkAsRead(message.id);
     }
+  };
+
+  const toggleMessageExpanded = (messageId) => {
+    setExpandedMessages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
   };
 
   const formatDate = (dateStr) => {
@@ -147,6 +220,17 @@ export default function MessagesSection() {
       minute: '2-digit'
     });
   };
+
+  // Filter messages based on search
+  const filteredMessages = messages.filter(message => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      message.sender_name.toLowerCase().includes(query) ||
+      message.sender_email.toLowerCase().includes(query) ||
+      message.message.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <div className="dashboard-card" data-testid="messages-section">
@@ -176,6 +260,29 @@ export default function MessagesSection() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Notification Toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (notificationsEnabled) {
+                setNotificationsEnabled(false);
+                toast.info("Push notifications disabled");
+              } else {
+                requestNotificationPermission();
+              }
+            }}
+            className={`${notificationsEnabled ? 'text-[#FF1493]' : 'text-[#888]'} hover:text-[#666]`}
+            title={notificationsEnabled ? "Notifications enabled" : "Enable notifications"}
+            data-testid="notifications-toggle-btn"
+          >
+            {notificationsEnabled ? (
+              <Bell className="w-4 h-4" />
+            ) : (
+              <BellOff className="w-4 h-4" />
+            )}
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -208,6 +315,36 @@ export default function MessagesSection() {
             className="overflow-hidden"
           >
             <div className="mt-4 pt-4 border-t border-[#eee]">
+              {/* Search Bar */}
+              {messages.length > 0 && (
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" />
+                    <Input
+                      type="text"
+                      placeholder="Search by name, email, or message..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 pr-10 h-10 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
+                      data-testid="messages-search-input"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#666]"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  {searchQuery && (
+                    <p className="text-xs text-[#888] mt-2">
+                      Showing {filteredMessages.length} of {messages.length} messages
+                    </p>
+                  )}
+                </div>
+              )}
+
               {loading && messages.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF1493] mx-auto"></div>
@@ -221,98 +358,140 @@ export default function MessagesSection() {
                   <p className="text-[#888] font-medium">No messages yet</p>
                   <p className="text-sm text-[#aaa] mt-1">Messages from visitors will appear here</p>
                 </div>
+              ) : filteredMessages.length === 0 ? (
+                <div className="text-center py-8">
+                  <Search className="w-12 h-12 text-[#ccc] mx-auto mb-2" />
+                  <p className="text-[#888]">No messages match your search</p>
+                </div>
               ) : (
-                <div className="space-y-3">
-                  {messages.map((message) => (
-                    <div 
-                      key={message.id}
-                      className={`p-4 rounded-xl border transition-all ${
-                        message.status === 'unread' 
-                          ? 'bg-[#FFF5F8] border-[#FF1493]/30' 
-                          : 'bg-gray-50 border-gray-200'
-                      }`}
-                      data-testid={`message-item-${message.id}`}
-                    >
-                      {/* Message Header */}
-                      <div className="flex items-start justify-between gap-4 mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                            message.status === 'unread' 
-                              ? 'bg-[#FF1493] text-white' 
-                              : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {message.sender_name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold text-[#333]">{message.sender_name}</p>
-                              {message.status === 'unread' && (
-                                <span className="px-2 py-0.5 bg-[#FF1493] text-white text-xs rounded-full font-medium">
-                                  New
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-[#888] flex items-center gap-1">
-                              <Mail className="w-3 h-3" />
-                              {message.sender_email}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-[#888] flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {formatDate(message.submitted_at)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Message Content */}
-                      <div className="bg-white rounded-lg p-3 mb-3 border border-gray-100">
-                        <p className="text-[#333] text-sm whitespace-pre-wrap">{message.message}</p>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={() => handleReply(message)}
-                            size="sm"
-                            className="bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white hover:opacity-90"
-                            data-testid={`reply-message-${message.id}`}
-                          >
-                            <ExternalLink className="w-4 h-4 mr-1" />
-                            Reply via Email
-                          </Button>
-                          {message.status === 'unread' && (
-                            <Button
-                              onClick={() => handleMarkAsRead(message.id)}
-                              variant="outline"
-                              size="sm"
-                              className="text-[#888] hover:text-[#666]"
-                              data-testid={`mark-read-${message.id}`}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Mark as Read
-                            </Button>
-                          )}
-                        </div>
-                        <Button
-                          onClick={() => handleDelete(message.id)}
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                          disabled={deletingId === message.id}
-                          data-testid={`delete-message-${message.id}`}
+                <div className="space-y-2">
+                  {filteredMessages.map((message) => {
+                    const isExpanded = expandedMessages.has(message.id);
+                    return (
+                      <div 
+                        key={message.id}
+                        className={`rounded-xl border transition-all ${
+                          message.status === 'unread' 
+                            ? 'bg-[#FFF5F8] border-[#FF1493]/30' 
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
+                        data-testid={`message-item-${message.id}`}
+                      >
+                        {/* Collapsed Header - Always visible */}
+                        <div 
+                          className="p-3 cursor-pointer flex items-center justify-between gap-3"
+                          onClick={() => toggleMessageExpanded(message.id)}
                         >
-                          {deletingId === message.id ? (
-                            <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${
+                              message.status === 'unread' 
+                                ? 'bg-[#FF1493] text-white' 
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {message.sender_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-[#333] truncate">{message.sender_name}</p>
+                                {message.status === 'unread' && (
+                                  <span className="px-1.5 py-0.5 bg-[#FF1493] text-white text-xs rounded-full font-medium flex-shrink-0">
+                                    New
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-[#888] truncate">{message.sender_email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-xs text-[#888] hidden sm:block">
+                              {formatDate(message.submitted_at)}
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-[#888]" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-[#888]" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded Content */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-3 pb-3 border-t border-[#eee]/50">
+                                {/* Timestamp on mobile */}
+                                <p className="text-xs text-[#888] mt-2 sm:hidden flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {formatDate(message.submitted_at)}
+                                </p>
+                                
+                                {/* Message Content */}
+                                <div className="bg-white rounded-lg p-3 mt-2 border border-gray-100">
+                                  <p className="text-[#333] text-sm whitespace-pre-wrap">{message.message}</p>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center justify-between mt-3">
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleReply(message);
+                                      }}
+                                      size="sm"
+                                      className="bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white hover:opacity-90"
+                                      data-testid={`reply-message-${message.id}`}
+                                    >
+                                      <ExternalLink className="w-4 h-4 mr-1" />
+                                      Reply via Email
+                                    </Button>
+                                    {message.status === 'unread' && (
+                                      <Button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMarkAsRead(message.id);
+                                        }}
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-[#888] hover:text-[#666]"
+                                        data-testid={`mark-read-${message.id}`}
+                                      >
+                                        <CheckCircle className="w-4 h-4 mr-1" />
+                                        Mark as Read
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <Button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDelete(message.id);
+                                    }}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                    disabled={deletingId === message.id}
+                                    data-testid={`delete-message-${message.id}`}
+                                  >
+                                    {deletingId === message.id ? (
+                                      <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                            </motion.div>
                           )}
-                        </Button>
+                        </AnimatePresence>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
