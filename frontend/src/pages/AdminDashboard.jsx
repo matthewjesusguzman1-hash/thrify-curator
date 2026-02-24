@@ -179,6 +179,7 @@ export default function AdminDashboard() {
   const [editEmployeeW9s, setEditEmployeeW9s] = useState([]); // W-9 documents for editing employee
   const [loadingEditW9s, setLoadingEditW9s] = useState(false);
   const [editW9Viewer, setEditW9Viewer] = useState(null); // { url, filename, contentType, docId }
+  const [showEditW9Modal, setShowEditW9Modal] = useState(false); // Separate W-9 modal for edit employee
 
   // Form submissions state
   const [formSubmissions, setFormSubmissions] = useState({
