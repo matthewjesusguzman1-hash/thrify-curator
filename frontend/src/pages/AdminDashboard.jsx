@@ -4645,7 +4645,11 @@ export default function AdminDashboard() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.open(`${API}/forms/w9`, '_blank')}
+                              onClick={() => {
+                                if (window.confirm("Are you sure you want to download the IRS W-9 form?")) {
+                                  handleDownloadBlankW9();
+                                }
+                              }}
                               className="text-[#888] hover:text-[#666]"
                             >
                               <Download className="w-4 h-4 mr-1" />
