@@ -168,6 +168,8 @@ export default function AdminDashboard() {
     phone: ""
   });
   const [savingEmployee, setSavingEmployee] = useState(false);
+  const [editEmployeeW9s, setEditEmployeeW9s] = useState([]); // W-9 documents for editing employee
+  const [loadingEditW9s, setLoadingEditW9s] = useState(false);
 
   // Form submissions state
   const [formSubmissions, setFormSubmissions] = useState({
