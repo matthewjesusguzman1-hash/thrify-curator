@@ -156,32 +156,61 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     }
 
 
-# Employee W-9 submission endpoints
+# Employee W-9 submission endpoints - Multiple W-9s support
 @router.get("/w9/status")
 async def get_w9_status(user: dict = Depends(get_current_user)):
-    """Get employee's W-9 submission status"""
-    w9_doc = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0, "content": 0})
+    """Get employee's W-9 submission status (all documents)"""
+    w9_docs = await db.w9_documents.find(
+        {"employee_id": user["id"]},
+        {"_id": 0, "content": 0}
+    ).sort("uploaded_at", -1).to_list(100)
     
-    if not w9_doc:
-        return {"status": "not_submitted", "has_w9": False, "can_edit": True}
+    if not w9_docs:
+        return {"status": "not_submitted", "has_w9": False, "can_upload": True, "w9_documents": []}
+    
+    latest = w9_docs[0]
     
     return {
-        "status": w9_doc.get("status", "submitted"),
+        "status": latest.get("status", "submitted"),
         "has_w9": True,
-        "filename": w9_doc.get("filename"),
-        "uploaded_at": w9_doc.get("uploaded_at"),
-        "can_edit": w9_doc.get("status") in ["not_submitted", "needs_correction"],
-        "rejection_reason": w9_doc.get("rejection_reason"),
-        "reviewed_at": w9_doc.get("reviewed_at")
+        "can_upload": True,  # Always allow adding more W-9s
+        "total_documents": len(w9_docs),
+        "rejection_reason": latest.get("rejection_reason"),
+        "reviewed_at": latest.get("reviewed_at"),
+        "w9_documents": w9_docs
     }
 
 
-@router.get("/w9/download")
-async def download_own_w9(user: dict = Depends(get_current_user)):
-    """Employee downloads their own submitted W-9"""
+@router.get("/w9/download/{doc_id}")
+async def download_own_w9(doc_id: str, user: dict = Depends(get_current_user)):
+    """Employee downloads a specific W-9 document"""
     from fastapi.responses import Response
     
-    w9_doc = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0})
+    w9_doc = await db.w9_documents.find_one(
+        {"employee_id": user["id"], "id": doc_id},
+        {"_id": 0}
+    )
+    
+    if not w9_doc:
+        raise HTTPException(status_code=404, detail="W-9 document not found")
+    
+    return Response(
+        content=base64.b64decode(w9_doc["content"]),
+        media_type=w9_doc.get("content_type", "application/pdf"),
+        headers={"Content-Disposition": f"inline; filename={w9_doc.get('filename', 'w9.pdf')}"}
+    )
+
+
+@router.get("/w9/download")
+async def download_latest_w9(user: dict = Depends(get_current_user)):
+    """Employee downloads their latest W-9 (backward compatibility)"""
+    from fastapi.responses import Response
+    
+    w9_doc = await db.w9_documents.find_one(
+        {"employee_id": user["id"]},
+        {"_id": 0},
+        sort=[("uploaded_at", -1)]
+    )
     
     if not w9_doc:
         raise HTTPException(status_code=404, detail="No W-9 document found")
@@ -194,15 +223,82 @@ async def download_own_w9(user: dict = Depends(get_current_user)):
 
 
 @router.post("/w9/upload")
-async def upload_w9_employee(user: dict = Depends(get_current_user)):
-    """Employee uploads their W-9 - uses form data"""
-    raise HTTPException(status_code=400, detail="Use multipart form upload endpoint")
+async def upload_w9_employee(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    """Employee uploads a new W-9"""
+    import uuid
+    
+    allowed_types = ["application/pdf", "image/jpeg", "image/png", "image/jpg"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only PDF, JPEG, and PNG files are allowed")
+    
+    content = await file.read()
+    
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+    
+    doc_id = str(uuid.uuid4())
+    
+    w9_doc = {
+        "id": doc_id,
+        "employee_id": user["id"],
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "content": base64.b64encode(content).decode('utf-8'),
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "uploaded_by": user["id"],
+        "status": "pending_review"
+    }
+    
+    await db.w9_documents.insert_one(w9_doc)
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"has_w9": True, "w9_uploaded_at": w9_doc["uploaded_at"]}}
+    )
+    
+    return {
+        "message": "W-9 uploaded successfully",
+        "id": doc_id,
+        "filename": file.filename,
+        "uploaded_at": w9_doc["uploaded_at"]
+    }
+
+
+@router.delete("/w9/{doc_id}")
+async def delete_own_w9(doc_id: str, user: dict = Depends(get_current_user)):
+    """Employee deletes a specific W-9 (only if not yet approved)"""
+    w9_doc = await db.w9_documents.find_one(
+        {"employee_id": user["id"], "id": doc_id},
+        {"_id": 0}
+    )
+    
+    if not w9_doc:
+        raise HTTPException(status_code=404, detail="W-9 document not found")
+    
+    if w9_doc.get("status") == "approved":
+        raise HTTPException(status_code=400, detail="Cannot delete approved W-9")
+    
+    await db.w9_documents.delete_one({"employee_id": user["id"], "id": doc_id})
+    
+    # Check if employee has any remaining W-9s
+    remaining = await db.w9_documents.count_documents({"employee_id": user["id"]})
+    if remaining == 0:
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$unset": {"has_w9": "", "w9_uploaded_at": "", "w9_status": ""}}
+        )
+    
+    return {"message": "W-9 deleted successfully"}
 
 
 @router.delete("/w9")
-async def delete_own_w9(user: dict = Depends(get_current_user)):
-    """Employee deletes their own W-9 (only if not yet approved)"""
-    w9_doc = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0})
+async def delete_latest_w9(user: dict = Depends(get_current_user)):
+    """Delete latest W-9 (backward compatibility)"""
+    w9_doc = await db.w9_documents.find_one(
+        {"employee_id": user["id"]},
+        {"_id": 0},
+        sort=[("uploaded_at", -1)]
+    )
     
     if not w9_doc:
         raise HTTPException(status_code=404, detail="No W-9 document found")
@@ -210,10 +306,13 @@ async def delete_own_w9(user: dict = Depends(get_current_user)):
     if w9_doc.get("status") == "approved":
         raise HTTPException(status_code=400, detail="Cannot delete approved W-9")
     
-    await db.w9_documents.delete_one({"employee_id": user["id"]})
-    await db.users.update_one(
-        {"id": user["id"]},
-        {"$unset": {"has_w9": "", "w9_uploaded_at": "", "w9_status": ""}}
-    )
+    await db.w9_documents.delete_one({"employee_id": user["id"], "id": w9_doc["id"]})
+    
+    remaining = await db.w9_documents.count_documents({"employee_id": user["id"]})
+    if remaining == 0:
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$unset": {"has_w9": "", "w9_uploaded_at": "", "w9_status": ""}}
+        )
     
     return {"message": "W-9 deleted successfully"}
