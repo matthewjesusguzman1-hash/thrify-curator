@@ -582,6 +582,72 @@ export default function MessagesSection() {
                 </div>
               )}
 
+              {/* Bulk Actions Bar */}
+              {messages.length > 0 && (
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectMode) {
+                        setSelectMode(false);
+                        setSelectedMessages(new Set());
+                      } else {
+                        setSelectMode(true);
+                      }
+                    }}
+                    className={`text-sm ${selectMode ? 'bg-[#FF1493]/10 border-[#FF1493] text-[#FF1493]' : 'text-[#888]'}`}
+                  >
+                    {selectMode ? 'Cancel Selection' : 'Select Messages'}
+                  </Button>
+                  
+                  {selectMode && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedMessages.size === filteredMessages.length) {
+                            deselectAllMessages();
+                          } else {
+                            selectAllMessages();
+                          }
+                        }}
+                        className="text-sm text-[#888]"
+                      >
+                        {selectedMessages.size === filteredMessages.length ? 'Deselect All' : 'Select All'}
+                      </Button>
+                      
+                      {selectedMessages.size > 0 && (
+                        <>
+                          <span className="text-sm text-[#888]">
+                            {selectedMessages.size} selected
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleBulkMarkAsRead}
+                            className="text-sm text-green-600 border-green-300 hover:bg-green-50"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Mark as Read
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleBulkDelete}
+                            className="text-sm text-red-500 border-red-300 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
               {loading && messages.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF1493] mx-auto"></div>
