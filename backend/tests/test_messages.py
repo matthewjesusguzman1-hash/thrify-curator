@@ -255,8 +255,11 @@ class TestMessagesCleanup:
     
     def test_cleanup_test_messages(self):
         """Clean up any TEST_ prefixed messages"""
-        # Login
-        response = requests.post(f"{BASE_URL}/api/auth/login", json={"email": "4399"})
+        # Login with admin email and code
+        response = requests.post(f"{BASE_URL}/api/auth/login", json={
+            "email": "matthewjesusguzman1@gmail.com",
+            "admin_code": "4399"
+        })
         if response.status_code != 200:
             pytest.skip("Could not login for cleanup")
         
