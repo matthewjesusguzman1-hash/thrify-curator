@@ -170,6 +170,7 @@ export default function AdminDashboard() {
   const [savingEmployee, setSavingEmployee] = useState(false);
   const [editEmployeeW9s, setEditEmployeeW9s] = useState([]); // W-9 documents for editing employee
   const [loadingEditW9s, setLoadingEditW9s] = useState(false);
+  const [editW9Viewer, setEditW9Viewer] = useState(null); // { url, filename, contentType, docId }
 
   // Form submissions state
   const [formSubmissions, setFormSubmissions] = useState({
