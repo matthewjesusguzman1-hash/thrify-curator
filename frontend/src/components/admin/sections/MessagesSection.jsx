@@ -308,11 +308,11 @@ export default function MessagesSection() {
               fetchMessages();
             }}
             disabled={loading}
-            className="text-[#888] hover:text-[#666]"
+            className="text-[#888] hover:text-[#333] hover:border-[#333]"
             data-testid="refresh-messages-btn"
           >
-            <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? "Loading..." : "Refresh"}
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
           {showSection ? (
             <ChevronUp className="w-5 h-5 text-[#888]" />
