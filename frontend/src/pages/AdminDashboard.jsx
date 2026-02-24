@@ -2680,7 +2680,7 @@ export default function AdminDashboard() {
                                     {new Date(doc.uploaded_at).toLocaleDateString()} • {doc.status === 'approved' ? 'Approved' : 'On File'}
                                   </p>
                                 </div>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 flex-shrink-0">
                                   <Button
                                     type="button"
                                     variant="ghost"
@@ -2693,7 +2693,15 @@ export default function AdminDashboard() {
                                         });
                                         const blob = new Blob([response.data], { type: response.headers['content-type'] });
                                         const url = window.URL.createObjectURL(blob);
-                                        window.open(url, '_blank');
+                                        // Use link click for better mobile compatibility
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.target = '_blank';
+                                        link.rel = 'noopener noreferrer';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
                                       } catch (error) {
                                         toast.error("Failed to view W-9");
                                       }
