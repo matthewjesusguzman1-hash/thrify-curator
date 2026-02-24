@@ -28,8 +28,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
 
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_c38502d5-e3cd-4d12-bde1-7a8331411fc2/artifacts/calba8ly_IMG_0042.jpg";
-const TIKTOK_URL = "https://www.tiktok.com/@thrifty_curator?_r=1&_t=ZP-93ukKuigAtq";
+const LOGO_URL = process.env.REACT_APP_LOGO_URL;
+const TIKTOK_URL = process.env.REACT_APP_TIKTOK_URL;
 const APP_URL = typeof window !== 'undefined' ? window.location.origin : '';
 const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(APP_URL)}`;
 
