@@ -56,7 +56,7 @@ const DepopIcon = () => (
 const platforms = [
   { 
     name: "eBay", 
-    logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/9qw758ny_IMG_0080.PNG",
+    logoUrl: process.env.REACT_APP_EBAY_LOGO_URL,
     url: "https://www.ebay.com/str/thriftycurator", 
     color: "#FFFFFF",
     useImage: true
@@ -69,21 +69,21 @@ const platforms = [
   },
   { 
     name: "Mercari", 
-    logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/uppn4q39_IMG_0077.PNG",
+    logoUrl: process.env.REACT_APP_MERCARI_LOGO_URL,
     url: "https://www.mercari.com/u/thriftycurator/?sv=0", 
     color: "#6B7AED",
     useImage: true
   },
   { 
     name: "Depop", 
-    logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/96fdtiq0_IMG_0078.PNG",
+    logoUrl: process.env.REACT_APP_DEPOP_LOGO_URL,
     url: "https://www.depop.com/thriftycurator/", 
     color: "#E60023",
     useImage: true
   },
   { 
     name: "Facebook Marketplace", 
-    logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/664sn2pn_IMG_0052.PNG",
+    logoUrl: process.env.REACT_APP_FB_MARKETPLACE_LOGO_URL,
     url: "https://www.facebook.com/marketplace/profile/517375094/", 
     color: "#3b5998",
     useImage: true
