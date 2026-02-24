@@ -3805,9 +3805,12 @@ export default function AdminDashboard() {
                     fetchPendingW9s();
                   }}
                   disabled={loadingPendingW9s}
-                  className="text-[#888] hover:text-[#666]"
+                  className="text-[#888] hover:text-[#333] hover:border-[#333]"
+                  data-testid="refresh-w9-btn"
                 >
-                  {loadingPendingW9s ? "Loading..." : "Refresh"}
+                  <RefreshCw className={`w-4 h-4 mr-1.5 ${loadingPendingW9s ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
                 </Button>
                 {showW9ReviewSection ? (
                   <ChevronUp className="w-5 h-5 text-[#888]" />
