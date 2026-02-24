@@ -202,8 +202,65 @@ export default function EmployeeDashboard() {
     }
   };
 
+  // Check if user is within range of work location
+  const checkLocation = () => {
+    return new Promise((resolve) => {
+      // If user is admin, bypass location check
+      if (user?.role === 'admin') {
+        resolve({ withinRange: true, distance: 0 });
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        toast.error("Geolocation is not supported by your browser");
+        resolve({ withinRange: false, error: "Geolocation not supported" });
+        return;
+      }
+
+      setLocationStatus({ checking: true, withinRange: null, distance: null });
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const distance = calculateDistance(
+            position.coords.latitude,
+            position.coords.longitude,
+            WORK_LOCATION.lat,
+            WORK_LOCATION.lng
+          );
+          const withinRange = distance <= WORK_LOCATION.radiusMiles;
+          setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2) });
+          resolve({ withinRange, distance: distance.toFixed(2) });
+        },
+        (error) => {
+          let errorMsg = "Unable to get your location";
+          if (error.code === 1) errorMsg = "Location access denied. Please enable location services.";
+          else if (error.code === 2) errorMsg = "Location unavailable";
+          else if (error.code === 3) errorMsg = "Location request timed out";
+          
+          setLocationStatus({ checking: false, withinRange: false, error: errorMsg });
+          resolve({ withinRange: false, error: errorMsg });
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    });
+  };
+
   const handleClock = async (action) => {
     setLoading(true);
+    
+    // Check location first (only for non-admin employees)
+    const locationResult = await checkLocation();
+    
+    if (!locationResult.withinRange) {
+      setLoading(false);
+      if (locationResult.error) {
+        toast.error(locationResult.error);
+      } else {
+        toast.error(`You must be within ${WORK_LOCATION.radiusMiles} miles of the work location to clock ${action}. You are ${locationResult.distance} miles away.`);
+      }
+      return;
+    }
+    
     try {
       await axios.post(`${API}/time/clock`, { action }, getAuthHeader());
       toast.success(action === "in" ? "Clocked in!" : "Clocked out!");
