@@ -1411,6 +1411,21 @@ export default function AdminDashboard() {
     }
   };
 
+  // Approve a specific W-9 document
+  const handleApproveW9Doc = async (employeeId, docId) => {
+    try {
+      await axios.post(`${API}/admin/employees/${employeeId}/w9/${docId}/approve`, {}, getAuthHeader());
+      toast.success("W-9 approved!");
+      // Refresh the W-9 list
+      if (viewingW9) {
+        handleViewW9(employeeId, viewingW9.employeeName);
+      }
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to approve W-9");
+    }
+  };
+
   const handleRejectW9 = async (employeeId) => {
     if (!rejectReason.trim()) {
       toast.error("Please provide a reason for rejection");
