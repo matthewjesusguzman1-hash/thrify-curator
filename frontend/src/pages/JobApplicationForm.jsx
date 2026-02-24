@@ -31,8 +31,8 @@ export default function JobApplicationForm() {
     why_join: "",
     availability: "",
     tasks_able_to_perform: [],
-    background_check_consent: false,
-    has_reliable_transportation: false,
+    background_check_consent: null,
+    has_reliable_transportation: null,
     additional_info: ""
   });
   const [loading, setLoading] = useState(false);
