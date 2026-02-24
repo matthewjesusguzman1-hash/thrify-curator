@@ -611,12 +611,12 @@ export default function AllEmployeesSection({
                         </div>
                         
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
+                        <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/10">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handlePreviewW9(doc)}
-                            className="flex-1 text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
+                            className="flex-1 min-w-[80px] text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
                             data-testid={`preview-w9-${doc.id}`}
                           >
                             <Eye className="w-4 h-4 mr-1" />
@@ -626,7 +626,7 @@ export default function AllEmployeesSection({
                             variant="outline"
                             size="sm"
                             onClick={() => handleDownloadW9(doc)}
-                            className="flex-1 text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
+                            className="flex-1 min-w-[80px] text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
                             data-testid={`download-w9-${doc.id}`}
                           >
                             <Download className="w-4 h-4 mr-1" />
@@ -637,7 +637,7 @@ export default function AllEmployeesSection({
                               variant="outline"
                               size="sm"
                               onClick={() => handleApproveW9(doc)}
-                              className="flex-1 text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent"
+                              className="flex-1 min-w-[80px] text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent"
                               data-testid={`approve-w9-${doc.id}`}
                             >
                               <CheckCheck className="w-4 h-4 mr-1" />
@@ -648,7 +648,7 @@ export default function AllEmployeesSection({
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteW9(doc)}
-                            className="text-[#FF1493] border-[#FF1493]/30 hover:bg-[#FF1493]/10 bg-transparent"
+                            className="px-3 text-[#FF1493] border-[#FF1493]/30 hover:bg-[#FF1493]/10 bg-transparent"
                             data-testid={`delete-w9-${doc.id}`}
                           >
                             <Trash2 className="w-4 h-4" />
