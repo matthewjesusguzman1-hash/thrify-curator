@@ -2874,6 +2874,108 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
+          {/* Edit Employee W-9 Viewer Modal */}
+          {editW9Viewer && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4"
+              onClick={() => {
+                if (editW9Viewer.url) window.URL.revokeObjectURL(editW9Viewer.url);
+                setEditW9Viewer(null);
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header with X button */}
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-[#1A1A2E] to-[#16213E]">
+                  <div>
+                    <h3 className="font-semibold text-white">W-9 Document</h3>
+                    <p className="text-sm text-gray-300">{editW9Viewer.filename}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (editW9Viewer.url) window.URL.revokeObjectURL(editW9Viewer.url);
+                      setEditW9Viewer(null);
+                    }}
+                    className="text-white hover:bg-white/20 text-xl font-bold w-8 h-8 p-0"
+                  >
+                    ✕
+                  </Button>
+                </div>
+
+                {/* Document Viewer */}
+                <div className="flex-1 overflow-auto p-4 bg-gray-100">
+                  {editW9Viewer.contentType?.includes('pdf') ? (
+                    <iframe
+                      src={editW9Viewer.url}
+                      className="w-full h-full min-h-[500px] rounded-lg border border-gray-200"
+                      title="W-9 Document"
+                    />
+                  ) : editW9Viewer.contentType?.includes('image') ? (
+                    <div className="flex items-center justify-center">
+                      <img
+                        src={editW9Viewer.url}
+                        alt="W-9 Document"
+                        className="max-w-full max-h-[600px] rounded-lg shadow-lg"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-center py-10">
+                      <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600">Preview not available</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-gray-200 flex justify-between items-center bg-white">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (editW9Viewer.url) window.URL.revokeObjectURL(editW9Viewer.url);
+                      setEditW9Viewer(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const response = await axios.get(`${API}/admin/employees/${editingEmployee.id}/w9/${editW9Viewer.docId}`, {
+                          ...getAuthHeader(),
+                          responseType: 'blob'
+                        });
+                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.setAttribute('download', editW9Viewer.filename || 'w9.pdf');
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        toast.success("W-9 downloaded!");
+                      } catch (error) {
+                        toast.error("Failed to download W-9");
+                      }
+                    }}
+                    className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
           {/* Employee Details Modal */}
           {showEmployeeDetails && selectedEmployee && (
             <motion.div
