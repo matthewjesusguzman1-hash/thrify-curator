@@ -2739,7 +2739,7 @@ export default function AdminDashboard() {
                                       </div>
                                     </div>
                                     {/* Action Buttons */}
-                                    <div className="flex items-center gap-2 mt-3 pt-2 border-t border-white/10">
+                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
                                       <Button
                                         type="button"
                                         variant="outline"
@@ -2763,10 +2763,10 @@ export default function AdminDashboard() {
                                             toast.error("Failed to view W-9");
                                           }
                                         }}
-                                        className="flex-1 text-white/80 border-white/20 hover:bg-white/10 bg-transparent text-xs"
+                                        className="flex-1 text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
                                         data-testid={`edit-preview-w9-${doc.id}`}
                                       >
-                                        <Eye className="w-3 h-3 mr-1" />
+                                        <Eye className="w-4 h-4 mr-1" />
                                         Preview
                                       </Button>
                                       <Button
@@ -2774,7 +2774,6 @@ export default function AdminDashboard() {
                                         variant="outline"
                                         size="sm"
                                         onClick={async () => {
-                                          if (!window.confirm("Are you sure you want to download this W-9?")) return;
                                           try {
                                             const response = await axios.get(`${API}/admin/employees/${editingEmployee.id}/w9/${doc.id}`, {
                                               ...getAuthHeader(),
@@ -2793,10 +2792,10 @@ export default function AdminDashboard() {
                                             toast.error("Failed to download W-9");
                                           }
                                         }}
-                                        className="flex-1 text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent text-xs"
+                                        className="flex-1 text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
                                         data-testid={`edit-download-w9-${doc.id}`}
                                       >
-                                        <Download className="w-3 h-3 mr-1" />
+                                        <Download className="w-4 h-4 mr-1" />
                                         Download
                                       </Button>
                                       {doc.status !== 'approved' && (
@@ -2816,10 +2815,10 @@ export default function AdminDashboard() {
                                               toast.error("Failed to approve W-9");
                                             }
                                           }}
-                                          className="flex-1 text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent text-xs"
+                                          className="flex-1 text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent"
                                           data-testid={`edit-approve-w9-${doc.id}`}
                                         >
-                                          <CheckCircle className="w-3 h-3 mr-1" />
+                                          <CheckCheck className="w-4 h-4 mr-1" />
                                           Approve
                                         </Button>
                                       )}
@@ -2841,7 +2840,7 @@ export default function AdminDashboard() {
                                         className="text-[#FF1493] border-[#FF1493]/30 hover:bg-[#FF1493]/10 bg-transparent"
                                         data-testid={`edit-delete-w9-${doc.id}`}
                                       >
-                                        <Trash2 className="w-3 h-3" />
+                                        <Trash2 className="w-4 h-4" />
                                       </Button>
                                     </div>
                                   </div>
