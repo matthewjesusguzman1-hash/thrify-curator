@@ -3224,60 +3224,8 @@ export default function AdminDashboard() {
             formatDate={formatDate}
           />
 
-          {/* PLACEHOLDER_REMOVED_REPORT_MODAL
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-playfair text-xl font-bold text-[#333]">Shift Report</h2>
-                  <button
-                    onClick={() => { setShowReport(false); setReportData(null); }}
-                    className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                  >
-                    <X className="w-5 h-5 text-gray-600" />
-                  </button>
-                </div>
 
-                {/* Report Filters */}
-                <div className="space-y-4 mb-6">
-                  {/* Period Type Selection */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="form-label">Period Type</Label>
-                      <Select
-                        value={reportFilters.period_type}
-                        onValueChange={(value) => setReportFilters({ ...reportFilters, period_type: value })}
-                      >
-                        <SelectTrigger className="form-input" data-testid="report-period-type">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pay_period">Pay Period</SelectItem>
-                          <SelectItem value="month">Month</SelectItem>
-                          <SelectItem value="year">Year</SelectItem>
-                          <SelectItem value="custom">Custom Range</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
 
-                    {/* Pay Period Selector */}
-                    {reportFilters.period_type === "pay_period" && (
-                      <div>
-                        <Label className="form-label">Period</Label>
-                        <Select
-                          value={reportFilters.period_index.toString()}
-                          onValueChange={(value) => setReportFilters({ ...reportFilters, period_index: parseInt(value) })}
-                        >
-                          <SelectTrigger className="form-input" data-testid="report-pay-period">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="0">Current Pay Period</SelectItem>
-                            <SelectItem value="1">Previous Pay Period</SelectItem>
-                            <SelectItem value="2">2 Periods Ago</SelectItem>
-                            <SelectItem value="3">3 Periods Ago</SelectItem>
-                            <SelectItem value="4">4 Periods Ago</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
                     )}
 
                     {/* Month Selector */}
