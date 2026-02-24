@@ -2692,7 +2692,7 @@ export default function AdminDashboard() {
                                 <p className="text-xs text-white/50 mt-2">Loading W-9s...</p>
                               </div>
                             ) : editEmployeeW9s.length > 0 ? (
-                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                              <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                                 {editEmployeeW9s.filter(doc => doc && doc.id).map((doc, index) => (
                                   <div 
                                     key={doc.id} 
