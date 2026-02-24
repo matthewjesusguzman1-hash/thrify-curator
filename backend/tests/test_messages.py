@@ -263,7 +263,7 @@ class TestMessagesCleanup:
         if response.status_code != 200:
             pytest.skip("Could not login for cleanup")
         
-        token = response.json().get("token")
+        token = response.json().get("access_token")
         headers = {"Authorization": f"Bearer {token}"}
         
         # Get all messages
