@@ -99,8 +99,8 @@ const formLinks = [
 
 // Connect links
 const connectLinks = [
-  { name: "TikTok", logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/yux5019k_IMG_0082.PNG", url: TIKTOK_URL, color: "#000000", useImage: true },
-  { name: "Facebook", logoUrl: "https://customer-assets.emergentagent.com/job_edb9dab3-e34c-4a6a-897b-0e7ff5eb33f3/artifacts/ghir53y9_IMG_0052.PNG", url: "https://www.facebook.com/people/Thrifty-Curator/100070158913020/", color: "#3b5998", useImage: true },
+  { name: "TikTok", logoUrl: process.env.REACT_APP_TIKTOK_LOGO_URL, url: TIKTOK_URL, color: "#000000", useImage: true },
+  { name: "Facebook", logoUrl: process.env.REACT_APP_FB_LOGO_URL, url: "https://www.facebook.com/people/Thrifty-Curator/100070158913020/", color: "#3b5998", useImage: true },
   { name: "Instagram", url: "https://www.instagram.com/thrifty_curator/", color: "#E1306C", isInstagram: true },
   { name: "Message Us", icon: MessageCircle, isMessaging: true, color: "#FF1493" },
 ];
