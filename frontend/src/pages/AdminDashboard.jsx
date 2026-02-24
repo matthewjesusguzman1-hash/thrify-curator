@@ -62,6 +62,9 @@ import MileageTrackingSection from "@/components/admin/sections/MileageTrackingS
 import PayrollCheckRecordsSection from "@/components/admin/sections/PayrollCheckRecordsSection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
 import MessagesSection from "@/components/admin/sections/MessagesSection";
+import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
+import TimeEntriesSection from "@/components/admin/sections/TimeEntriesSection";
+import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
