@@ -793,3 +793,30 @@ Simplified W-9 management by removing the approval workflow. W-9 submissions no 
 ### Test Report
 - `/app/test_reports/iteration_28.json` - 100% backend (10/10), 100% frontend
 - All W-9 management features verified working
+
+## W-9 Management UI Refinements (Dec 25, 2025)
+
+### Changes Made
+
+1. **All Employees Table - W-9 Column**
+   - Removed download button, keeping only View button (eye icon)
+   - Upload button still appears for employees without W-9
+
+2. **W-9 Viewer Modal - Approve Functionality**
+   - Added Approve button (green checkmark) next to Delete (trash) icon in sidebar
+   - Approve button only shows for non-approved W-9 documents
+   - Footer now shows Approve, Delete, and Download buttons
+   - Footer has extra padding (pb-16) to avoid "Made with Emergent" badge overlap
+
+3. **Edit Employee Modal - W-9 Section**
+   - Shows status (Approved = green, On File = blue) for each W-9
+   - Added Approve button for non-approved W-9s
+   - View, Download, Approve, Delete buttons available per document
+
+4. **Backend API**
+   - New endpoint: `POST /api/admin/employees/{id}/w9/{doc_id}/approve`
+   - Approves a specific W-9 document by ID
+
+### Test Report
+- `/app/test_reports/iteration_29.json` - 100% backend, 100% frontend
+- All W-9 UI refinements verified working
