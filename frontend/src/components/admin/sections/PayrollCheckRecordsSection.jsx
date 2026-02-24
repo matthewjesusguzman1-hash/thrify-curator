@@ -331,8 +331,11 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
               variant="outline"
               size="sm"
               onClick={(e) => { e.stopPropagation(); fetchCheckRecords(); }}
-              className="text-[#888]"
+              disabled={loadingCheckRecords}
+              className="text-[#888] hover:text-[#333] hover:border-[#333]"
+              data-testid="refresh-payroll-checks-btn"
             >
+              <RefreshCw className={`w-4 h-4 mr-1.5 ${loadingCheckRecords ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             {isExpanded ? (
