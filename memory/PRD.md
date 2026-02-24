@@ -902,3 +902,40 @@ Simplified W-9 management by removing the approval workflow. W-9 submissions no 
 - Edit Mileage Entry form - Input fields retain focus
 - Recent Trips display - Shows trip list with edit/delete buttons
 - Bulk select mode - Select Trips button functional
+
+## AdminDashboard.jsx Refactoring (Feb 24, 2026)
+
+### Changes Made
+Extracted 3 large sections from AdminDashboard.jsx into standalone components:
+
+1. **AllEmployeesSection.jsx** (439 lines)
+   - Employee table with sorting, clock status indicators
+   - Inline hourly rate editing
+   - W-9 upload/view functionality
+   - "View Portal" action
+
+2. **TimeEntriesSection.jsx** (200 lines)
+   - Recent time entries table with sorting
+   - Add Entry, Edit, Delete actions
+
+3. **HoursByEmployeeSection.jsx** (155 lines)
+   - Hours breakdown by employee
+   - View Shifts action
+
+### Results
+- AdminDashboard.jsx reduced from 5778 lines to 5356 lines (~420 lines removed)
+- Total section components now: 7 files, 4458 total lines
+- Better code organization and maintainability
+- Each section is now a self-contained, testable component
+
+### Component Structure
+```
+/app/frontend/src/components/admin/sections/
+├── AllEmployeesSection.jsx      (439 lines) - NEW
+├── FormSubmissionsSection.jsx   (489 lines)
+├── HoursByEmployeeSection.jsx   (155 lines) - NEW
+├── MessagesSection.jsx          (834 lines)
+├── MileageTrackingSection.jsx   (1627 lines)
+├── PayrollCheckRecordsSection.jsx (714 lines)
+└── TimeEntriesSection.jsx       (200 lines) - NEW
+```
