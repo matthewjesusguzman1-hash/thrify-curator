@@ -340,6 +340,8 @@ export default function LandingPage() {
                           >
                             {link.useImage ? (
                               <img src={link.logoUrl} alt={link.name} className="w-full h-full object-cover" />
+                            ) : link.isInstagram ? (
+                              <SiInstagram className="w-5 h-5 text-white" />
                             ) : (
                               <link.icon className="w-5 h-5 text-white" />
                             )}
