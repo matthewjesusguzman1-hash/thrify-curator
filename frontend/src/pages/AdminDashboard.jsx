@@ -2714,6 +2714,7 @@ export default function AdminDashboard() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={async () => {
+                                      if (!window.confirm("Are you sure you want to download this W-9?")) return;
                                       try {
                                         const response = await axios.get(`${API}/admin/employees/${editingEmployee.id}/w9/${doc.id}`, {
                                           ...getAuthHeader(),
@@ -2727,6 +2728,7 @@ export default function AdminDashboard() {
                                         link.click();
                                         link.remove();
                                         window.URL.revokeObjectURL(url);
+                                        toast.success("W-9 downloaded!");
                                       } catch (error) {
                                         toast.error("Failed to download W-9");
                                       }
