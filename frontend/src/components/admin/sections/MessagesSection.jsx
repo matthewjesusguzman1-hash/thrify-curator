@@ -405,7 +405,7 @@ export default function MessagesSection() {
                               type="date"
                               value={dateFrom}
                               onChange={(e) => setDateFrom(e.target.value)}
-                              className="h-9 w-40 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
+                              className="h-9 w-44 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
                               data-testid="date-from-input"
                             />
                           </div>
@@ -415,7 +415,7 @@ export default function MessagesSection() {
                               type="date"
                               value={dateTo}
                               onChange={(e) => setDateTo(e.target.value)}
-                              className="h-9 w-40 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
+                              className="h-9 w-44 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
                               data-testid="date-to-input"
                             />
                           </div>
