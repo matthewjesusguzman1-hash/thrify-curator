@@ -109,14 +109,14 @@ export default function AuthPage() {
 
   return (
     <div 
-      className="min-h-screen flex flex-col items-center justify-center p-4"
+      className="min-h-screen min-h-[100dvh] overflow-y-auto flex flex-col items-center justify-center p-4 pb-safe"
       style={{ background: 'linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%)' }}
       data-testid="auth-page"
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md my-auto"
       >
         <Link 
           to="/" 
