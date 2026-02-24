@@ -700,6 +700,28 @@ async def get_employee_w9s(employee_id: str, admin: dict = Depends(get_admin_use
     return {"w9_documents": w9_docs}
 
 
+@router.get("/employees/{employee_id}/w9/status")
+async def get_w9_status(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Get W-9 status summary for an employee"""
+    w9_docs = await db.w9_documents.find(
+        {"employee_id": employee_id},
+        {"_id": 0, "content": 0}
+    ).sort("uploaded_at", -1).to_list(100)
+    
+    if not w9_docs:
+        return {"has_w9": False, "status": "not_submitted", "w9_documents": []}
+    
+    # Get the latest document's status
+    latest = w9_docs[0]
+    
+    return {
+        "has_w9": True,
+        "status": latest.get("status", "submitted"),
+        "total_documents": len(w9_docs),
+        "w9_documents": w9_docs
+    }
+
+
 @router.get("/employees/{employee_id}/w9/{doc_id}")
 async def download_w9(employee_id: str, doc_id: str, admin: dict = Depends(get_admin_user)):
     """Download a specific W-9 document"""
