@@ -109,7 +109,7 @@ export default function AuthPage() {
 
   return (
     <div 
-      className="min-h-screen flex flex-col items-center justify-start pt-16 sm:pt-8 sm:justify-center p-4"
+      className="min-h-screen flex flex-col items-center justify-center p-4"
       style={{ background: 'linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%)' }}
       data-testid="auth-page"
     >
