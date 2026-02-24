@@ -3811,7 +3811,6 @@ export default function AdminDashboard() {
                   <RefreshCw className={`w-4 h-4 mr-1.5 ${loadingPendingW9s ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
-                </Button>
                 {showW9ReviewSection ? (
                   <ChevronUp className="w-5 h-5 text-[#888]" />
                 ) : (
