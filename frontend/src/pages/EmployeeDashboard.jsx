@@ -454,7 +454,7 @@ export default function EmployeeDashboard() {
                             <span className="text-green-600"> On File</span>
                           </p>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-shrink-0">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -466,7 +466,15 @@ export default function EmployeeDashboard() {
                                 });
                                 const blob = new Blob([response.data], { type: response.headers['content-type'] });
                                 const url = window.URL.createObjectURL(blob);
-                                window.open(url, '_blank');
+                                // Use link click for better mobile compatibility
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.target = '_blank';
+                                link.rel = 'noopener noreferrer';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                setTimeout(() => window.URL.revokeObjectURL(url), 1000);
                               } catch (error) {
                                 toast.error("Failed to view W-9");
                               }
