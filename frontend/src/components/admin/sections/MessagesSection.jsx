@@ -245,13 +245,29 @@ export default function MessagesSection() {
 
   const applyDatePreset = (preset) => {
     const range = preset.getValue();
-    setDateRange(range);
+    setPendingDateRange(range);
     setSelectedPreset(preset.label);
   };
 
   const clearDateFilter = () => {
     setDateRange({ from: undefined, to: undefined });
+    setPendingDateRange({ from: undefined, to: undefined });
     setSelectedPreset("");
+  };
+
+  const applyDateFilter = () => {
+    setDateRange(pendingDateRange);
+    setShowDatePicker(false);
+  };
+
+  const openDatePicker = () => {
+    setPendingDateRange(dateRange);
+    setShowDatePicker(true);
+  };
+
+  const cancelDatePicker = () => {
+    setPendingDateRange(dateRange);
+    setShowDatePicker(false);
   };
 
   const hasDateFilter = dateRange?.from;
