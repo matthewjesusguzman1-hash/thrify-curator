@@ -48,6 +48,7 @@ export default function EmployeeDashboard() {
   // W-9 state
   const [w9Status, setW9Status] = useState(null);
   const [uploadingW9, setUploadingW9] = useState(false);
+  const [viewingW9, setViewingW9] = useState(null); // { url, filename, contentType }
   const w9InputRef = useRef(null);
 
   useEffect(() => {
