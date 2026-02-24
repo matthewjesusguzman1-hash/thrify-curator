@@ -426,24 +426,15 @@ export default function EmployeeDashboard() {
             </div>
           </div>
 
-          {/* W-9 Tax Form Section */}
+          {/* W-9 Tax Form Section - Messaging Style */}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#C5A065] to-[#9A7B4F]" />
             <div className="p-6">
-              <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E] mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-[#C5A065]" />
-                W-9 Tax Form
-              </h2>
-              
-              {/* Download Blank Form */}
-              <div className="flex items-center gap-3 p-4 bg-[#F9F6F7] rounded-xl mb-4">
-                <div className="w-10 h-10 bg-[#C5A065]/20 rounded-lg flex items-center justify-center">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E] flex items-center gap-2">
                   <FileText className="w-5 h-5 text-[#C5A065]" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-[#1A1A2E]">IRS W-9 Form</p>
-                  <p className="text-xs text-gray-500">Download blank form to fill out</p>
-                </div>
+                  W-9 Tax Form
+                </h2>
                 <Button
                   variant="outline"
                   size="sm"
@@ -453,136 +444,202 @@ export default function EmployeeDashboard() {
                     }
                   }}
                   className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
+                  data-testid="get-w9-form-btn"
                 >
-                  <Download className="w-4 h-4 mr-1" />
-                  Download
+                  <FileText className="w-4 h-4 mr-1" />
+                  Get W-9 Form
                 </Button>
               </div>
 
-              {/* W-9 Status / Upload Section */}
-              <div className="space-y-3">
-                {/* Show list of existing W-9s */}
-                {w9Status?.w9_documents && w9Status.w9_documents.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Your W-9 Documents ({w9Status.total_documents})</p>
+              {/* Submit New W-9 Button */}
+              {!showW9SubmitForm && (
+                <Button
+                  onClick={() => setShowW9SubmitForm(true)}
+                  className="w-full mb-4 bg-gradient-to-r from-[#C5A065] to-[#9A7B4F] hover:from-[#9A7B4F] hover:to-[#C5A065] text-white"
+                  data-testid="submit-w9-btn"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Submit W-9 to Admin
+                </Button>
+              )}
+
+              {/* W-9 Submission Form */}
+              {showW9SubmitForm && (
+                <div className="mb-4 p-4 bg-[#F9F6F7] rounded-xl border border-[#C5A065]/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-medium text-[#1A1A2E] flex items-center gap-2">
+                      <Send className="w-4 h-4 text-[#C5A065]" />
+                      Submit W-9 Form
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setShowW9SubmitForm(false);
+                        setW9FormData({ file: null, notes: '' });
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  
+                  {/* File Upload */}
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      W-9 Document *
+                    </label>
+                    <div 
+                      className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                        w9FormData.file 
+                          ? 'border-green-400 bg-green-50' 
+                          : 'border-gray-300 hover:border-[#C5A065]'
+                      }`}
+                      onClick={() => w9InputRef.current?.click()}
+                    >
+                      <input
+                        type="file"
+                        ref={w9InputRef}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => setW9FormData({ ...w9FormData, file: e.target.files[0] })}
+                      />
+                      {w9FormData.file ? (
+                        <div className="flex items-center justify-center gap-2 text-green-700">
+                          <CheckCircle className="w-5 h-5" />
+                          <span className="font-medium">{w9FormData.file.name}</span>
+                        </div>
+                      ) : (
+                        <div className="text-gray-500">
+                          <Upload className="w-6 h-6 mx-auto mb-1" />
+                          <p className="text-sm">Click to select W-9 file</p>
+                          <p className="text-xs text-gray-400">PDF, JPG, or PNG</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Notes Field */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Notes (optional)
+                    </label>
+                    <textarea
+                      value={w9FormData.notes}
+                      onChange={(e) => setW9FormData({ ...w9FormData, notes: e.target.value })}
+                      placeholder="Add any notes for the administrator..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C5A065] focus:border-transparent resize-none"
+                      rows={2}
+                      data-testid="w9-notes-input"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    onClick={handleW9Submit}
+                    disabled={!w9FormData.file || uploadingW9}
+                    className="w-full bg-gradient-to-r from-[#C5A065] to-[#9A7B4F] hover:from-[#9A7B4F] hover:to-[#C5A065] text-white"
+                    data-testid="submit-w9-form-btn"
+                  >
+                    {uploadingW9 ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    {uploadingW9 ? "Submitting..." : "Submit W-9"}
+                  </Button>
+                </div>
+              )}
+
+              {/* Submitted W-9s List */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Your Submissions
+                  {w9Status?.total_documents > 0 && (
+                    <span className="bg-[#C5A065]/20 text-[#9A7B4F] px-2 py-0.5 rounded-full text-xs">
+                      {w9Status.total_documents}
+                    </span>
+                  )}
+                </h3>
+
+                {w9Status?.w9_documents && w9Status.w9_documents.filter(doc => doc && doc.id).length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     {w9Status.w9_documents.filter(doc => doc && doc.id).map((doc, index) => (
                       <div 
                         key={doc.id} 
-                        className="flex items-center gap-3 p-3 rounded-xl border bg-green-50 border-green-200"
+                        className={`p-3 rounded-xl border ${
+                          doc.status === 'approved' 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-amber-50 border-amber-200'
+                        }`}
+                        data-testid={`w9-submission-${doc.id}`}
                       >
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-green-100">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#1A1A2E] truncate">{doc.filename || `W-9 #${index + 1}`}</p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(doc.uploaded_at).toLocaleDateString()} • 
-                            <span className="text-green-600"> On File</span>
-                          </p>
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              try {
-                                const response = await axios.get(`${API}/time/w9/download/${doc.id}`, {
-                                  ...getAuthHeader(),
-                                  responseType: 'blob'
-                                });
-                                const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
-                                const url = window.URL.createObjectURL(blob);
-                                setViewingW9({
-                                  url,
-                                  filename: doc.filename || 'w9.pdf',
-                                  contentType: response.headers['content-type'] || 'application/pdf',
-                                  docId: doc.id
-                                });
-                              } catch (error) {
-                                console.error('View W-9 error:', error);
-                                toast.error("Failed to view W-9");
-                              }
-                            }}
-                            className="text-gray-600 hover:text-[#1A1A2E] p-1 h-auto"
-                            data-testid={`view-w9-${doc.id}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              if (!window.confirm("Are you sure you want to download this W-9?")) return;
-                              try {
-                                const response = await axios.get(`${API}/time/w9/download/${doc.id}`, {
-                                  ...getAuthHeader(),
-                                  responseType: 'blob'
-                                });
-                                const url = window.URL.createObjectURL(new Blob([response.data]));
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.setAttribute('download', doc.filename || `w9_document.pdf`);
-                                document.body.appendChild(link);
-                                link.click();
-                                link.remove();
-                                window.URL.revokeObjectURL(url);
-                                toast.success("W-9 downloaded!");
-                              } catch (error) {
-                                toast.error("Failed to download W-9");
-                              }
-                            }}
-                            className="text-blue-500 hover:text-blue-700 p-1 h-auto"
-                            data-testid={`download-w9-${doc.id}`}
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FileText className={`w-4 h-4 ${
+                                doc.status === 'approved' ? 'text-green-600' : 'text-amber-600'
+                              }`} />
+                              <span className="font-medium text-[#1A1A2E] truncate">
+                                {doc.filename || `W-9 #${index + 1}`}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Clock3 className="w-3 h-3" />
+                                {new Date(doc.uploaded_at).toLocaleDateString()}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full font-medium ${
+                                doc.status === 'approved' 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {doc.status === 'approved' ? 'Approved' : 'Pending Review'}
+                              </span>
+                            </div>
+                            {doc.notes && (
+                              <p className="mt-1 text-xs text-gray-600 italic">"{doc.notes}"</p>
+                            )}
+                          </div>
+                          <div className="flex gap-1 ml-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const response = await axios.get(`${API}/time/w9/download/${doc.id}`, {
+                                    ...getAuthHeader(),
+                                    responseType: 'blob'
+                                  });
+                                  const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+                                  const url = window.URL.createObjectURL(blob);
+                                  setViewingW9({
+                                    url,
+                                    filename: doc.filename || 'w9.pdf',
+                                    contentType: response.headers['content-type'] || 'application/pdf',
+                                    docId: doc.id
+                                  });
+                                } catch (error) {
+                                  toast.error("Failed to view W-9");
+                                }
+                              }}
+                              className="text-gray-600 hover:text-[#1A1A2E] p-1 h-auto"
+                              data-testid={`view-w9-${doc.id}`}
+                              title="View"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">No W-9 submissions yet</p>
+                    <p className="text-xs text-gray-400">Submit your W-9 form above for review</p>
+                  </div>
                 )}
-
-                {/* Upload new W-9 (always available) */}
-                <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Upload className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-[#1A1A2E]">
-                      {w9Status?.has_w9 ? 'Upload Additional W-9' : 'Submit Your W-9'}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {w9Status?.has_w9 
-                        ? 'Add another W-9 document if needed' 
-                        : 'Upload your completed W-9 form for review'}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <input
-                      type="file"
-                      ref={w9InputRef}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      className="hidden"
-                      onChange={(e) => handleW9Upload(e.target.files[0])}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => w9InputRef.current?.click()}
-                      disabled={uploadingW9}
-                      className="text-blue-600 border-blue-400 hover:bg-blue-50"
-                    >
-                      {uploadingW9 ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
-                      ) : (
-                        <>
-                          <Upload className="w-4 h-4 mr-1" />
-                          Upload
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
