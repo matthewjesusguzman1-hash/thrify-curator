@@ -550,23 +550,25 @@ export default function EmployeeDashboard() {
               )}
 
               {/* Submitted W-9s List */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  Your Submissions
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-white/80 flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-[#00D4FF]" />
+                    View Submissions
+                  </h3>
                   {w9Status?.total_documents > 0 && (
-                    <span className="bg-[#8B5CF6]/30 text-[#8B5CF6] px-2 py-0.5 rounded-full text-xs">
-                      {w9Status.total_documents}
+                    <span className="bg-[#8B5CF6]/30 text-[#8B5CF6] px-2 py-0.5 rounded-full text-xs font-medium">
+                      {w9Status.total_documents} document(s)
                     </span>
                   )}
-                </h3>
+                </div>
 
                 {w9Status?.w9_documents && w9Status.w9_documents.filter(doc => doc && doc.id).length > 0 ? (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                     {w9Status.w9_documents.filter(doc => doc && doc.id).map((doc, index) => (
                       <div 
                         key={doc.id} 
-                        className={`p-3 rounded-xl border ${
+                        className={`p-4 rounded-xl border ${
                           doc.status === 'approved' 
                             ? 'bg-[#00D4FF]/10 border-[#00D4FF]/30' 
                             : 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30'
@@ -582,64 +584,71 @@ export default function EmployeeDashboard() {
                               <span className="font-medium text-white truncate">
                                 {doc.filename || `W-9 #${index + 1}`}
                               </span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                doc.status === 'approved' 
+                                  ? 'bg-[#00D4FF]/20 text-[#00D4FF]' 
+                                  : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
+                              }`}>
+                                {doc.status === 'approved' ? 'Approved' : 'Pending'}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-white/60">
+                            <div className="flex items-center gap-3 text-xs text-white/50">
                               {doc.uploaded_at && new Date(doc.uploaded_at).toString() !== 'Invalid Date' && (
                                 <span className="flex items-center gap-1">
                                   <Clock3 className="w-3 h-3" />
                                   {new Date(doc.uploaded_at).toLocaleDateString()}
                                 </span>
                               )}
-                              <span className={`px-2 py-0.5 rounded-full font-medium ${
-                                doc.status === 'approved' 
-                                  ? 'bg-[#00D4FF]/20 text-[#00D4FF]' 
-                                  : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
-                              }`}>
-                                {doc.status === 'approved' ? 'Approved' : 'Pending Review'}
-                              </span>
                             </div>
                             {doc.notes && (
-                              <p className="mt-1 text-xs text-white/50 italic">"{doc.notes}"</p>
+                              <div className="mt-2 p-2 bg-white/5 rounded-lg">
+                                <p className="text-xs text-white/60 flex items-start gap-1">
+                                  <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                  <span className="italic">"{doc.notes}"</span>
+                                </p>
+                              </div>
                             )}
                           </div>
-                          <div className="flex gap-1 ml-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async () => {
-                                try {
-                                  const response = await axios.get(`${API}/time/w9/download/${doc.id}`, {
-                                    ...getAuthHeader(),
-                                    responseType: 'blob'
-                                  });
-                                  const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
-                                  const url = window.URL.createObjectURL(blob);
-                                  setViewingW9({
-                                    url,
-                                    filename: doc.filename || 'w9.pdf',
-                                    contentType: response.headers['content-type'] || 'application/pdf',
-                                    docId: doc.id
-                                  });
-                                } catch (error) {
-                                  toast.error("Failed to view W-9");
-                                }
-                              }}
-                              className="text-white/60 hover:text-[#00D4FF] p-1 h-auto hover:bg-white/5"
-                              data-testid={`view-w9-${doc.id}`}
-                              title="View"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </div>
+                        </div>
+                        
+                        {/* Action Button */}
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const response = await axios.get(`${API}/time/w9/download/${doc.id}`, {
+                                  ...getAuthHeader(),
+                                  responseType: 'blob'
+                                });
+                                const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+                                const url = window.URL.createObjectURL(blob);
+                                setViewingW9({
+                                  url,
+                                  filename: doc.filename || 'w9.pdf',
+                                  contentType: response.headers['content-type'] || 'application/pdf',
+                                  docId: doc.id
+                                });
+                              } catch (error) {
+                                toast.error("Failed to view W-9");
+                              }
+                            }}
+                            className="flex-1 text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
+                            data-testid={`view-w9-${doc.id}`}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Preview
+                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-6 text-white/50">
+                  <div className="text-center py-6 bg-white/5 rounded-xl border border-white/10">
                     <FileText className="w-10 h-10 mx-auto mb-2 text-white/20" />
-                    <p className="text-sm">No W-9 submissions yet</p>
-                    <p className="text-xs text-white/30">Submit your W-9 form above for review</p>
+                    <p className="text-sm text-white/60">No W-9 submissions yet</p>
+                    <p className="text-xs text-white/40 mt-1">Submit your W-9 form above for review</p>
                   </div>
                 )}
               </div>
