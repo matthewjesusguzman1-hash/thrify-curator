@@ -1317,8 +1317,13 @@ export default function AdminDashboard() {
   const handleSelectW9 = async (index) => {
     if (index === selectedW9Index || !employeeW9List[index]) return;
     
-    setLoadingW9Viewer(true);
     const doc = employeeW9List[index];
+    if (!doc || !doc.id) {
+      toast.error("Invalid document");
+      return;
+    }
+    
+    setLoadingW9Viewer(true);
     
     try {
       // Revoke old URL
