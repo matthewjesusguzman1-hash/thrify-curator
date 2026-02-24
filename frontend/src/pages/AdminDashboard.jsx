@@ -2668,7 +2668,7 @@ export default function AdminDashboard() {
                           </div>
                         ) : editEmployeeW9s.length > 0 ? (
                           <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {editEmployeeW9s.map((doc, index) => (
+                            {editEmployeeW9s.filter(doc => doc && doc.id).map((doc, index) => (
                               <div 
                                 key={doc.id} 
                                 className={`flex items-center gap-3 p-3 rounded-xl border ${
