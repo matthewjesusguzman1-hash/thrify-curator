@@ -39,8 +39,8 @@ export default function ConsignmentInquiryForm() {
     brand: "",
     item_description: "",
     item_condition: "",
-    smoke_free: true,
-    pet_free: true,
+    smoke_free: null,
+    pet_free: null,
     image_urls: [],
     additional_info: ""
   });
