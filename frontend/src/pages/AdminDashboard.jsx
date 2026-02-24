@@ -557,6 +557,20 @@ export default function AdminDashboard() {
     }
   }, [showAllEmployees, employees.length, fetchEmployeeClockStatuses]);
 
+  // Refresh time entries when section is opened
+  useEffect(() => {
+    if (showTimeEntries) {
+      fetchData();
+    }
+  }, [showTimeEntries]);
+
+  // Refresh hours by employee when section is opened
+  useEffect(() => {
+    if (showHoursByEmployee) {
+      fetchData();
+    }
+  }, [showHoursByEmployee]);
+
   const handleDeleteSubmission = async (formType, submissionId) => {
     if (!window.confirm("Are you sure you want to delete this submission? This action cannot be undone.")) {
       return;
