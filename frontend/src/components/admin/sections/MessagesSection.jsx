@@ -193,25 +193,14 @@ export default function MessagesSection() {
     });
   };
 
-  const formatDateRange = (from, to) => {
-    if (!from && !to) return "";
-    const fromDate = from ? new Date(from + 'T00:00:00') : null;
-    const toDate = to ? new Date(to + 'T00:00:00') : null;
+  const formatDateRange = (range) => {
+    if (!range?.from) return "";
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
     
-    if (from === to) {
-      return fromDate.toLocaleDateString('en-US', options);
+    if (!range.to || range.from.toDateString() === range.to.toDateString()) {
+      return range.from.toLocaleDateString('en-US', options);
     }
-    if (fromDate && toDate) {
-      return `${fromDate.toLocaleDateString('en-US', options)} - ${toDate.toLocaleDateString('en-US', options)}`;
-    }
-    if (fromDate) {
-      return `From ${fromDate.toLocaleDateString('en-US', options)}`;
-    }
-    if (toDate) {
-      return `Until ${toDate.toLocaleDateString('en-US', options)}`;
-    }
-    return "";
+    return `${range.from.toLocaleDateString('en-US', options)} - ${range.to.toLocaleDateString('en-US', options)}`;
   };
 
   // Filter messages based on search and date
@@ -227,33 +216,37 @@ export default function MessagesSection() {
       if (!matchesText) return false;
     }
     
-    // Date filter - compare dates only (ignore time)
-    if (dateFrom || dateTo) {
+    // Date filter
+    if (dateRange?.from) {
       const messageDate = new Date(message.submitted_at);
-      const messageDateStr = messageDate.toISOString().split('T')[0];
+      messageDate.setHours(0, 0, 0, 0);
       
-      if (dateFrom && messageDateStr < dateFrom) return false;
-      if (dateTo && messageDateStr > dateTo) return false;
+      const fromDate = new Date(dateRange.from);
+      fromDate.setHours(0, 0, 0, 0);
+      if (messageDate < fromDate) return false;
+      
+      if (dateRange.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        if (messageDate > toDate) return false;
+      }
     }
     
     return true;
   });
 
   const applyDatePreset = (preset) => {
-    const { from, to } = preset.getValue();
-    setDateFrom(from);
-    setDateTo(to);
+    const range = preset.getValue();
+    setDateRange(range);
     setSelectedPreset(preset.label);
-    setShowDatePicker(false);
   };
 
   const clearDateFilter = () => {
-    setDateFrom("");
-    setDateTo("");
+    setDateRange({ from: undefined, to: undefined });
     setSelectedPreset("");
   };
 
-  const hasDateFilter = dateFrom || dateTo;
+  const hasDateFilter = dateRange?.from;
 
   return (
     <div className="dashboard-card" data-testid="messages-section">
