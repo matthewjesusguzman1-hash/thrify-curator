@@ -669,7 +669,7 @@ async def upload_w9(employee_id: str, file: UploadFile = File(...), admin: dict 
         "content": base64.b64encode(content).decode('utf-8'),
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": admin["id"],
-        "status": "pending_review"
+        "status": "submitted"
     }
     
     # Insert new W-9 document
