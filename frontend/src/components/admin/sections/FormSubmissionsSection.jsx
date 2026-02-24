@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,13 @@ export default function FormSubmissionsSection({
     consignmentInquiries: { key: "submitted_at", direction: "desc" },
     consignmentAgreements: { key: "submitted_at", direction: "desc" }
   });
+
+  // Auto-refresh when section is expanded
+  useEffect(() => {
+    if (isExpanded) {
+      fetchFormSubmissions();
+    }
+  }, [isExpanded, fetchFormSubmissions]);
 
   const handleSort = (table, key) => {
     setSortConfig(prev => ({
