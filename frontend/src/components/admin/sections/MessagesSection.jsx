@@ -154,6 +154,90 @@ export default function MessagesSection() {
     }
   };
 
+  // Toggle message selection
+  const toggleMessageSelection = (messageId) => {
+    setSelectedMessages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all filtered messages
+  const selectAllMessages = () => {
+    const filteredIds = filteredMessages.map(m => m.id);
+    setSelectedMessages(new Set(filteredIds));
+  };
+
+  // Deselect all
+  const deselectAllMessages = () => {
+    setSelectedMessages(new Set());
+  };
+
+  // Bulk mark as read
+  const handleBulkMarkAsRead = async () => {
+    if (selectedMessages.size === 0) return;
+    const token = getToken();
+    try {
+      const promises = Array.from(selectedMessages).map(id =>
+        axios.put(
+          `${API}/messages/admin/${id}/status`,
+          { status: "read" },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+      );
+      await Promise.all(promises);
+      
+      const selectedUnreadCount = messages.filter(
+        m => selectedMessages.has(m.id) && m.status === "unread"
+      ).length;
+      
+      setMessages(prev => 
+        prev.map(m => selectedMessages.has(m.id) ? { ...m, status: "read" } : m)
+      );
+      setUnreadCount(prev => Math.max(0, prev - selectedUnreadCount));
+      setSelectedMessages(new Set());
+      setSelectMode(false);
+      toast.success(`${selectedMessages.size} message(s) marked as read`);
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+      toast.error("Failed to mark messages as read");
+    }
+  };
+
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedMessages.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedMessages.size} message(s)?`)) return;
+    
+    const token = getToken();
+    try {
+      const promises = Array.from(selectedMessages).map(id =>
+        axios.delete(`${API}/messages/admin/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      );
+      await Promise.all(promises);
+      
+      const selectedUnreadCount = messages.filter(
+        m => selectedMessages.has(m.id) && m.status === "unread"
+      ).length;
+      
+      setMessages(prev => prev.filter(m => !selectedMessages.has(m.id)));
+      setUnreadCount(prev => Math.max(0, prev - selectedUnreadCount));
+      setSelectedMessages(new Set());
+      setSelectMode(false);
+      toast.success(`${selectedMessages.size} message(s) deleted`);
+    } catch (error) {
+      console.error("Error deleting messages:", error);
+      toast.error("Failed to delete messages");
+    }
+  };
+
   const handleReply = (message) => {
     const subject = encodeURIComponent(`Re: Your Message to Thrifty Curator`);
     const body = encodeURIComponent(
