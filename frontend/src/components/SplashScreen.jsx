@@ -36,25 +36,115 @@ export default function SplashScreen({ onComplete }) {
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]"
           data-testid="splash-screen"
         >
-          {/* Animated background elements */}
+          {/* Animated smoke/cloud background elements */}
           <div className="absolute inset-0 overflow-hidden">
+            {/* Large cyan smoke - moves and pulses */}
             <motion.div
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 0.25, scale: 1 }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-              className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00D4FF] rounded-full blur-3xl"
+              initial={{ opacity: 0, scale: 0, x: -100 }}
+              animate={{ 
+                opacity: [0, 0.5, 0.4, 0.5], 
+                scale: [0.5, 1.2, 1, 1.1],
+                x: [-100, 50, 0, 30],
+                y: [0, -30, 20, -10]
+              }}
+              transition={{ 
+                duration: 4, 
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatType: "reverse"
+              }}
+              className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#00D4FF] rounded-full blur-[100px]"
             />
+            
+            {/* Large pink/magenta smoke - moves and pulses */}
             <motion.div
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 0.25, scale: 1 }}
-              transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
-              className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#FF1493] rounded-full blur-3xl"
+              initial={{ opacity: 0, scale: 0, x: 100 }}
+              animate={{ 
+                opacity: [0, 0.5, 0.35, 0.5], 
+                scale: [0.5, 1.3, 0.9, 1.2],
+                x: [100, -40, 20, -20],
+                y: [0, 40, -20, 30]
+              }}
+              transition={{ 
+                duration: 5, 
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatType: "reverse",
+                delay: 0.3
+              }}
+              className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-[#FF1493] rounded-full blur-[100px]"
             />
+            
+            {/* Purple smoke in center - pulses dramatically */}
             <motion.div
               initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 0.2, scale: 1 }}
-              transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#8B5CF6] rounded-full blur-3xl"
+              animate={{ 
+                opacity: [0, 0.45, 0.3, 0.45], 
+                scale: [0.3, 1.4, 1, 1.3],
+                rotate: [0, 180, 360]
+              }}
+              transition={{ 
+                duration: 6, 
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatType: "reverse",
+                delay: 0.5
+              }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#8B5CF6] rounded-full blur-[80px]"
+            />
+            
+            {/* Additional small cyan accent */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ 
+                opacity: [0, 0.6, 0.3, 0.6],
+                scale: [0.8, 1.5, 1, 1.3],
+                x: [0, 80, -40, 60],
+                y: [0, -60, 40, -30]
+              }}
+              transition={{ 
+                duration: 3.5, 
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatType: "reverse"
+              }}
+              className="absolute top-1/3 right-1/3 w-[250px] h-[250px] bg-[#00D4FF] rounded-full blur-[60px]"
+            />
+            
+            {/* Additional small pink accent */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ 
+                opacity: [0, 0.55, 0.25, 0.55],
+                scale: [0.7, 1.4, 0.9, 1.2],
+                x: [0, -70, 50, -40],
+                y: [0, 50, -30, 40]
+              }}
+              transition={{ 
+                duration: 4, 
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatType: "reverse",
+                delay: 0.8
+              }}
+              className="absolute bottom-1/3 left-1/3 w-[280px] h-[280px] bg-[#FF1493] rounded-full blur-[70px]"
+            />
+            
+            {/* Gold/warm accent for depth */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ 
+                opacity: [0, 0.3, 0.15, 0.3],
+                scale: [0.5, 1.2, 0.8, 1.1]
+              }}
+              transition={{ 
+                duration: 5, 
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatType: "reverse",
+                delay: 1
+              }}
+              className="absolute top-2/3 right-1/4 w-[200px] h-[200px] bg-[#C5A065] rounded-full blur-[50px]"
             />
           </div>
 
