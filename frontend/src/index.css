@@ -40,8 +40,21 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background: linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
     min-height: 100vh;
+    min-height: 100dvh;
     color: #1A1A2E;
     font-weight: 400;
+}
+
+/* Mobile keyboard safe area support */
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Ensure proper mobile viewport handling */
+@supports (min-height: 100dvh) {
+    .min-h-screen {
+        min-height: 100dvh;
+    }
 }
 
 /* Bold Typography */
