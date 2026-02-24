@@ -2657,15 +2657,27 @@ export default function AdminDashboard() {
                             {editEmployeeW9s.map((doc, index) => (
                               <div 
                                 key={doc.id} 
-                                className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-200"
+                                className={`flex items-center gap-3 p-3 rounded-xl border ${
+                                  doc.status === 'approved' 
+                                    ? 'bg-green-50 border-green-200' 
+                                    : 'bg-blue-50 border-blue-200'
+                                }`}
                               >
-                                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                  <CheckCircle className="w-4 h-4 text-green-600" />
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                  doc.status === 'approved' ? 'bg-green-100' : 'bg-blue-100'
+                                }`}>
+                                  <CheckCircle className={`w-4 h-4 ${
+                                    doc.status === 'approved' ? 'text-green-600' : 'text-blue-600'
+                                  }`} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-green-700 truncate">{doc.filename || `W-9 #${index + 1}`}</p>
-                                  <p className="text-xs text-green-600">
-                                    {new Date(doc.uploaded_at).toLocaleDateString()}
+                                  <p className={`text-sm font-medium truncate ${
+                                    doc.status === 'approved' ? 'text-green-700' : 'text-blue-700'
+                                  }`}>{doc.filename || `W-9 #${index + 1}`}</p>
+                                  <p className={`text-xs ${
+                                    doc.status === 'approved' ? 'text-green-600' : 'text-blue-600'
+                                  }`}>
+                                    {new Date(doc.uploaded_at).toLocaleDateString()} • {doc.status === 'approved' ? 'Approved' : 'On File'}
                                   </p>
                                 </div>
                                 <div className="flex gap-1">
