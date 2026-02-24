@@ -2905,27 +2905,6 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     </div>
-                                  fetchData();
-                                } catch (error) {
-                                  toast.error(error.response?.data?.detail || "Failed to upload W-9");
-                                }
-                                e.target.value = ''; // Reset input
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => document.getElementById('edit-employee-w9-upload').click()}
-                              className="text-blue-600 border-blue-400 hover:bg-blue-100"
-                            >
-                              <Upload className="w-4 h-4 mr-1" />
-                              Upload
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
 
                     <div className="flex gap-3 mt-6">
                       <Button
