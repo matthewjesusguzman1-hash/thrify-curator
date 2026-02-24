@@ -29,6 +29,26 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Work location coordinates (Omaha, NE area)
+const WORK_LOCATION = {
+  lat: 41.13056,
+  lng: -95.99029,
+  radiusMiles: 0.5
+};
+
+// Calculate distance between two coordinates in miles using Haversine formula
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -48,6 +68,7 @@ export default function EmployeeDashboard() {
   });
   const [loading, setLoading] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [locationStatus, setLocationStatus] = useState({ checking: false, withinRange: null, distance: null });
   
   // W-9 state
   const [w9Status, setW9Status] = useState(null);
