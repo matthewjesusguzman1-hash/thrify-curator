@@ -360,6 +360,7 @@ export default function MessagesSection() {
                             onClick={(e) => {
                               e.stopPropagation();
                               clearDateFilter();
+                              setShowDatePicker(false);
                             }}
                           />
                         )}
