@@ -16,7 +16,11 @@ import {
   CheckCheck,
   X,
   ArrowUpDown,
-  ArrowUp
+  ArrowUp,
+  Download,
+  Trash2,
+  Clock3,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +43,13 @@ export default function AllEmployeesSection({
   const [editingRateId, setEditingRateId] = useState(null);
   const [editingRateValue, setEditingRateValue] = useState("");
   const [uploadingW9, setUploadingW9] = useState(null);
+  
+  // W-9 Management Modal State
+  const [showW9Modal, setShowW9Modal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [employeeW9Docs, setEmployeeW9Docs] = useState([]);
+  const [loadingW9s, setLoadingW9s] = useState(false);
+  const [previewingW9, setPreviewingW9] = useState(null);
   
   // Sorting state
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
