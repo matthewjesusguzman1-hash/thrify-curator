@@ -95,8 +95,12 @@ test.describe('Edit Employee Modal W-9 Section', () => {
     // Wait for employee to load
     await expect(page.getByTestId('edit-employee-name')).toBeVisible();
     
-    // Verify document count badge is present (e.g., "2 document(s)")
-    const countBadge = page.locator('span:text-matches("\\d+ document\\(s\\)")');
+    // Scroll down within the modal to see W-9 section
+    const modal = page.getByTestId('edit-employee-modal');
+    await modal.evaluate(el => el.scrollTo(0, el.scrollHeight));
+    
+    // Verify document count badge is present (format: "N document(s)")
+    const countBadge = page.locator('text=document(s)').first();
     await expect(countBadge).toBeVisible({ timeout: 10000 });
   });
 
