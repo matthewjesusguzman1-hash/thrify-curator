@@ -5548,8 +5548,8 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Footer */}
-                <div className="p-4 border-t border-gray-200 flex justify-between items-center bg-white">
+                {/* Footer - moved up to avoid "Made with Emergent" badge */}
+                <div className="p-4 pb-16 border-t border-gray-200 flex justify-between items-center bg-white">
                   <Button
                     variant="outline"
                     onClick={closeW9Viewer}
@@ -5559,13 +5559,23 @@ export default function AdminDashboard() {
                   <div className="flex gap-2">
                     {viewingW9 && (
                       <>
+                        {viewingW9.status !== 'approved' && (
+                          <Button
+                            variant="outline"
+                            onClick={() => handleApproveW9Doc(viewingW9.employeeId, viewingW9.docId)}
+                            className="text-green-600 border-green-300 hover:bg-green-50"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Approve
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           onClick={() => handleDeleteW9Doc(viewingW9.employeeId, viewingW9.docId)}
                           className="text-red-600 border-red-300 hover:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Delete This W-9
+                          Delete
                         </Button>
                         <Button
                           onClick={() => {
