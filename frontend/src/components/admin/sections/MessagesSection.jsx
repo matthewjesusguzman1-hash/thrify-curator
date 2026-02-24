@@ -355,14 +355,18 @@ export default function MessagesSection() {
                         <CalendarIcon className="w-4 h-4 mr-2" />
                         {hasDateFilter ? formatDateRange(dateRange) : "Select dates"}
                         {hasDateFilter && (
-                          <X 
-                            className="w-4 h-4 ml-2 hover:text-[#E91E8C]" 
+                          <span 
+                            className="ml-2 p-0.5 hover:bg-[#FF1493]/20 rounded cursor-pointer"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               clearDateFilter();
-                              setShowDatePicker(false);
                             }}
-                          />
+                            role="button"
+                            aria-label="Clear date filter"
+                          >
+                            <X className="w-4 h-4" />
+                          </span>
                         )}
                       </Button>
 
