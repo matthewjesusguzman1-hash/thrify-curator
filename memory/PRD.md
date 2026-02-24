@@ -744,3 +744,52 @@ Implemented a "pending state" pattern:
 4. ✅ Click "X" on date button → Filter cleared, all messages shown
 5. ✅ Quick presets (Today, Last 7 days, etc.) work correctly
 6. ✅ "Clear" button inside calendar works correctly
+
+## Multiple W-9 Form Management (Dec 25, 2025)
+
+### Feature Overview
+Simplified W-9 management by removing the approval workflow. W-9 submissions no longer require admin review - they are simply stored and accessible.
+
+### Changes Made
+
+1. **Removed W-9 Review Section**
+   - W-9 Review section completely removed from Admin Dashboard
+   - No more "pending review" status - W-9s are immediately "submitted"
+   - Removed W-9 Rejection Modal
+
+2. **Edit Employee Modal - W-9 Management**
+   - New "W-9 Tax Documents" section in Edit Employee modal
+   - Shows list of all W-9 documents for employee with:
+     - Filename and upload date
+     - View button (opens in new tab)
+     - Download button
+     - Delete button (admin can remove any W-9)
+   - "Add Another W-9" upload button always available
+   - "Blank W-9 Form" download link (IRS form)
+
+3. **Employee Dashboard - W-9 Viewing**
+   - W-9 documents now show "On File" status (not "Pending")
+   - Employees can view and download their own W-9s
+   - Download buttons added for each W-9 document
+   - Employees can upload additional W-9s
+   - Employees cannot delete W-9s (admin only)
+
+4. **All Employees Table - W-9 Column**
+   - View button (eye icon) - opens W-9 viewer modal
+   - Download button (download icon) - downloads W-9
+   - Upload button (upload icon) - appears if no W-9 on file
+
+### Backend Changes
+- W-9 status changed from "pending_review" to "submitted"
+- Removed duplicate route for `/employees/{employee_id}/w9/status`
+- W-9 approval/rejection endpoints remain but unused
+
+### Files Modified
+- `/app/backend/app/routers/admin.py` - Removed duplicate route, changed status
+- `/app/backend/app/routers/time_tracking.py` - Changed status to "submitted"
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Edit Employee W-9 section, removed W-9 Review
+- `/app/frontend/src/pages/EmployeeDashboard.jsx` - Simplified W-9 display
+
+### Test Report
+- `/app/test_reports/iteration_28.json` - 100% backend (10/10), 100% frontend
+- All W-9 management features verified working
