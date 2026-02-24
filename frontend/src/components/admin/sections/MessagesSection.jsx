@@ -56,6 +56,7 @@ export default function MessagesSection() {
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
+  const [pendingDateRange, setPendingDateRange] = useState({ from: undefined, to: undefined });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState("");
 
