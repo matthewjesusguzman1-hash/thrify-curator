@@ -728,98 +728,10 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     );
   };
 
-  // Mileage Form Component
-  const MileageForm = ({ isEdit = false }) => (
-    <div className="space-y-4">
-      <div>
-        <Label>Date</Label>
-        <Input
-          type="date"
-          value={mileageFormData.date}
-          onChange={(e) => setMileageFormData({ ...mileageFormData, date: e.target.value })}
-          data-testid="mileage-date-input"
-        />
-      </div>
-      <div>
-        <Label>Start Location</Label>
-        <Input
-          type="text"
-          placeholder="e.g., Home, 123 Main St"
-          value={mileageFormData.start_address}
-          onChange={(e) => setMileageFormData({ ...mileageFormData, start_address: e.target.value })}
-          data-testid="mileage-start-input"
-        />
-      </div>
-      <div>
-        <Label>End Location</Label>
-        <Input
-          type="text"
-          placeholder="e.g., Goodwill, Thrift Store"
-          value={mileageFormData.end_address}
-          onChange={(e) => setMileageFormData({ ...mileageFormData, end_address: e.target.value })}
-          data-testid="mileage-end-input"
-        />
-      </div>
-      <div>
-        <Label>Total Miles</Label>
-        <Input
-          type="number"
-          step="0.1"
-          min="0"
-          placeholder="0.0"
-          value={mileageFormData.total_miles}
-          onChange={(e) => setMileageFormData({ ...mileageFormData, total_miles: e.target.value })}
-          data-testid="mileage-miles-input"
-        />
-      </div>
-      <div>
-        <Label>Purpose</Label>
-        <Select
-          value={mileageFormData.purpose}
-          onValueChange={(value) => setMileageFormData({ ...mileageFormData, purpose: value })}
-        >
-          <SelectTrigger data-testid="mileage-purpose-select">
-            <SelectValue placeholder="Select purpose" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="thrifting">Thrifting</SelectItem>
-            <SelectItem value="post_office">Post Office</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {mileageFormData.purpose === "other" && (
-        <div>
-          <Label>Specify Purpose</Label>
-          <Input
-            type="text"
-            placeholder="Enter purpose"
-            value={mileageFormData.purpose_other}
-            onChange={(e) => setMileageFormData({ ...mileageFormData, purpose_other: e.target.value })}
-            data-testid="mileage-purpose-other-input"
-          />
-        </div>
-      )}
-      <div>
-        <Label>Notes (optional)</Label>
-        <Input
-          type="text"
-          placeholder="Any additional notes"
-          value={mileageFormData.notes}
-          onChange={(e) => setMileageFormData({ ...mileageFormData, notes: e.target.value })}
-          data-testid="mileage-notes-input"
-        />
-      </div>
-      <Button
-        onClick={isEdit ? handleEditMileageEntry : handleAddMileageEntry}
-        className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
-        data-testid="save-mileage-btn"
-      >
-        <Save className="w-4 h-4 mr-2" />
-        {isEdit ? "Update Entry" : "Save Entry"}
-      </Button>
-    </div>
-  );
+  // Mileage form field change handlers using functional updates to prevent re-render focus loss
+  const handleFormFieldChange = (field, value) => {
+    setMileageFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   return (
     <>
