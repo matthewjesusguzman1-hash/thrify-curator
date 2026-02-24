@@ -689,17 +689,6 @@ async def upload_w9(employee_id: str, file: UploadFile = File(...), admin: dict 
     }
 
 
-@router.get("/employees/{employee_id}/w9")
-async def get_employee_w9s(employee_id: str, admin: dict = Depends(get_admin_user)):
-    """Get all W-9 documents for an employee"""
-    w9_docs = await db.w9_documents.find(
-        {"employee_id": employee_id},
-        {"_id": 0, "content": 0}
-    ).sort("uploaded_at", -1).to_list(100)
-    
-    return {"w9_documents": w9_docs}
-
-
 @router.get("/employees/{employee_id}/w9/status")
 async def get_w9_status(employee_id: str, admin: dict = Depends(get_admin_user)):
     """Get W-9 status summary for an employee"""
@@ -741,6 +730,17 @@ async def download_w9(employee_id: str, doc_id: str, admin: dict = Depends(get_a
             "Content-Disposition": f'attachment; filename="{w9_doc["filename"]}"'
         }
     )
+
+
+@router.get("/employees/{employee_id}/w9")
+async def get_employee_w9s(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Get all W-9 documents for an employee"""
+    w9_docs = await db.w9_documents.find(
+        {"employee_id": employee_id},
+        {"_id": 0, "content": 0}
+    ).sort("uploaded_at", -1).to_list(100)
+    
+    return {"w9_documents": w9_docs}
 
 
 @router.delete("/employees/{employee_id}/w9/{doc_id}")
