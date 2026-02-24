@@ -990,3 +990,33 @@ Created reusable modal components in `/app/frontend/src/components/admin/modals/
 - New modal components are ready for integration
 - Components follow the same patterns (props, state management, API calls)
 - Each component is self-contained and testable
+
+## Deployment Preparation Complete (Feb 24, 2026)
+
+### Changes Made for Deployment
+1. **Moved hardcoded URLs to environment variables:**
+   - REACT_APP_LOGO_URL
+   - REACT_APP_TIKTOK_URL
+   - REACT_APP_EBAY_LOGO_URL
+   - REACT_APP_MERCARI_LOGO_URL
+   - REACT_APP_DEPOP_LOGO_URL
+   - REACT_APP_FB_MARKETPLACE_LOGO_URL
+   - REACT_APP_TIKTOK_LOGO_URL
+   - REACT_APP_FB_LOGO_URL
+
+2. **Updated files to use environment variables:**
+   - LandingPage.jsx
+   - AuthPage.jsx
+   - JobApplicationForm.jsx
+   - ConsignmentInquiryForm.jsx
+
+### Deployment Status: READY ✅
+- All hardcoded URLs moved to .env
+- CORS configured for production
+- MongoDB connection via environment variables
+- JWT authentication configured
+- No blocking issues
+
+### Performance Warnings (Non-blocking)
+- DB query optimizations recommended in payroll.py, admin.py, time_tracking.py
+- These are optimization suggestions, not deployment blockers
