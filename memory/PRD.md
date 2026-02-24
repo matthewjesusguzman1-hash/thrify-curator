@@ -605,3 +605,59 @@ Build a "Thrifty Curator" reselling application with:
 - `/app/backend/app/models/__init__.py` - Removed email model exports
 - `/app/backend/app/config.py` - Removed email configuration
 - `/app/backend/.env` - Removed email environment variables
+
+## In-App Messaging Center (Feb 24, 2026)
+
+### Feature Overview
+Replaced the "Message Me" mailto link on the landing page with a full in-app messaging center. Visitors can now submit messages directly through the website, and admins can view and respond to them via the dashboard.
+
+### Landing Page Changes
+- **"Message Us" Button**: Opens a styled modal instead of opening email client
+- **Message Modal**: 
+  - Name, Email (required), and Message fields
+  - Info banner explaining that replies will be sent via email
+  - Validation for all fields and email format
+  - Success state showing confirmation message
+
+### Admin Dashboard Changes  
+- **New "Messages" Section**: Added collapsible section after "Hours by Employee"
+- **Unread Count Badge**: Shows number of unread messages on the section icon
+- **Message List**: Displays all messages with sender info, timestamp, and content
+- **Actions per Message**:
+  - "Reply via Email" - Opens default email client with prepopulated thank-you message
+  - "Mark as Read" - Updates message status
+  - "Delete" - Removes message from database
+- **Auto-refresh**: Unread count polls every 30 seconds
+
+### API Endpoints
+- `POST /api/messages/` - Public endpoint for submitting messages
+- `GET /api/messages/admin/all` - Admin: Get all messages
+- `GET /api/messages/admin/unread-count` - Admin: Get unread count
+- `PUT /api/messages/admin/{id}/status` - Admin: Update read/unread status
+- `DELETE /api/messages/admin/{id}` - Admin: Delete message
+
+### Database Schema
+```json
+{
+  "id": "uuid",
+  "sender_name": "string",
+  "sender_email": "string",
+  "message": "string",
+  "submitted_at": "datetime ISO",
+  "status": "unread | read"
+}
+```
+
+### Files Created
+- `/app/backend/app/models/messages.py` - Pydantic models
+- `/app/backend/app/routers/messages.py` - API endpoints
+- `/app/frontend/src/components/admin/sections/MessagesSection.jsx` - Admin dashboard component
+
+### Files Modified  
+- `/app/frontend/src/pages/LandingPage.jsx` - Added message modal
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Added MessagesSection import and usage
+- `/app/backend/server.py` - Registered messages router
+
+### Test Report
+- `/app/test_reports/iteration_26.json` - 100% backend (13/13), 100% frontend
+- All features verified working
