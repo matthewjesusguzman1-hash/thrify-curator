@@ -60,6 +60,7 @@ import axios from "axios";
 import MileageTrackingSection from "@/components/admin/sections/MileageTrackingSection";
 import PayrollCheckRecordsSection from "@/components/admin/sections/PayrollCheckRecordsSection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
+import MessagesSection from "@/components/admin/sections/MessagesSection";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
