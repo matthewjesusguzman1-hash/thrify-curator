@@ -5612,11 +5612,24 @@ export default function AdminDashboard() {
                           Delete
                         </Button>
                         <Button
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = viewingW9.url;
-                            link.download = viewingW9.filename || 'w9.pdf';
-                            link.click();
+                          onClick={async () => {
+                            try {
+                              const response = await axios.get(`${API}/admin/employees/${viewingW9.employeeId}/w9/${viewingW9.docId}`, {
+                                ...getAuthHeader(),
+                                responseType: 'blob'
+                              });
+                              const url = window.URL.createObjectURL(new Blob([response.data]));
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.setAttribute('download', viewingW9.filename || 'w9.pdf');
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              window.URL.revokeObjectURL(url);
+                              toast.success("W-9 downloaded!");
+                            } catch (error) {
+                              toast.error("Failed to download W-9");
+                            }
                           }}
                           className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
                         >
