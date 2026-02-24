@@ -2741,7 +2741,7 @@ export default function AdminDashboard() {
                                       </div>
                                     </div>
                                     {/* Action Buttons */}
-                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
+                                    <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/10">
                                       <Button
                                         type="button"
                                         variant="outline"
@@ -2765,7 +2765,7 @@ export default function AdminDashboard() {
                                             toast.error("Failed to view W-9");
                                           }
                                         }}
-                                        className="flex-1 text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
+                                        className="flex-1 min-w-[70px] text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
                                         data-testid={`edit-preview-w9-${doc.id}`}
                                       >
                                         <Eye className="w-4 h-4 mr-1" />
@@ -2794,7 +2794,7 @@ export default function AdminDashboard() {
                                             toast.error("Failed to download W-9");
                                           }
                                         }}
-                                        className="flex-1 text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
+                                        className="flex-1 min-w-[70px] text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
                                         data-testid={`edit-download-w9-${doc.id}`}
                                       >
                                         <Download className="w-4 h-4 mr-1" />
@@ -2817,7 +2817,7 @@ export default function AdminDashboard() {
                                               toast.error("Failed to approve W-9");
                                             }
                                           }}
-                                          className="flex-1 text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent"
+                                          className="flex-1 min-w-[70px] text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent"
                                           data-testid={`edit-approve-w9-${doc.id}`}
                                         >
                                           <CheckCheck className="w-4 h-4 mr-1" />
@@ -2839,7 +2839,7 @@ export default function AdminDashboard() {
                                             toast.error("Failed to delete W-9");
                                           }
                                         }}
-                                        className="text-[#FF1493] border-[#FF1493]/30 hover:bg-[#FF1493]/10 bg-transparent"
+                                        className="px-3 text-[#FF1493] border-[#FF1493]/30 hover:bg-[#FF1493]/10 bg-transparent"
                                         data-testid={`edit-delete-w9-${doc.id}`}
                                       >
                                         <Trash2 className="w-4 h-4" />
