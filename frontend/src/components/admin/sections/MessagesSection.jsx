@@ -399,7 +399,7 @@ export default function MessagesSection() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.15 }}
-                            className="absolute right-0 top-12 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-4"
+                            className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:right-0 top-1/4 sm:top-12 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-4 max-h-[70vh] sm:max-h-none overflow-y-auto"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {/* Calendar - Main Focus */}
