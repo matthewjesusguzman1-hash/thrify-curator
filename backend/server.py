@@ -17,6 +17,7 @@ from app.routers import (
     forms_router,
     mileage_router
 )
+from app.routers.messages import router as messages_router
 
 # Configure logging
 logging.basicConfig(
