@@ -2283,8 +2283,8 @@ export default function AdminDashboard() {
                           className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
                           data-testid="download-w9-form-btn"
                         >
-                          <Download className="w-4 h-4 mr-1" />
-                          Download
+                          <FileText className="w-4 h-4 mr-1" />
+                          Get W-9 Form
                         </Button>
                       </div>
                       
