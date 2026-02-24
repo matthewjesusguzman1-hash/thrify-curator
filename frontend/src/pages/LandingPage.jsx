@@ -579,8 +579,8 @@ export default function LandingPage() {
 
                     {/* Message Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="message-text" className="text-[#333] font-medium">
-                        Your Message <span className="text-red-500">*</span>
+                      <Label htmlFor="message-text" className="text-white/90 font-medium">
+                        Your Message <span className="text-[#FF1493]">*</span>
                       </Label>
                       <Textarea
                         id="message-text"
@@ -588,7 +588,7 @@ export default function LandingPage() {
                         value={messageForm.message}
                         onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
                         rows={4}
-                        className="border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20 resize-none"
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00D4FF] focus:ring-[#00D4FF]/20 resize-none"
                         data-testid="message-text-input"
                       />
                     </div>
@@ -597,7 +597,7 @@ export default function LandingPage() {
                     <Button
                       onClick={handleSendMessage}
                       disabled={sendingMessage}
-                      className="w-full h-12 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold hover:opacity-90 transition-all"
+                      className="w-full h-12 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white font-semibold hover:opacity-90 transition-all"
                       data-testid="send-message-btn"
                     >
                       {sendingMessage ? (
