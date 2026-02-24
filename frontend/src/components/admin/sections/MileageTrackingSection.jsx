@@ -1032,6 +1032,63 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                       >
+                        {/* Bulk Actions Bar */}
+                        {mileageEntries.length > 0 && (
+                          <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (selectMode) {
+                                  setSelectMode(false);
+                                  setSelectedTrips(new Set());
+                                } else {
+                                  setSelectMode(true);
+                                }
+                              }}
+                              className={`text-sm ${selectMode ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600' : 'text-[#888]'}`}
+                            >
+                              {selectMode ? 'Cancel Selection' : 'Select Trips'}
+                            </Button>
+                            
+                            {selectMode && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (selectedTrips.size === mileageEntries.length) {
+                                      deselectAllTrips();
+                                    } else {
+                                      selectAllTrips();
+                                    }
+                                  }}
+                                  className="text-sm text-[#888]"
+                                >
+                                  {selectedTrips.size === mileageEntries.length ? 'Deselect All' : 'Select All'}
+                                </Button>
+                                
+                                {selectedTrips.size > 0 && (
+                                  <>
+                                    <span className="text-sm text-[#888]">
+                                      {selectedTrips.size} selected
+                                    </span>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={handleBulkDelete}
+                                      className="text-sm text-red-500 border-red-300 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-1" />
+                                      Delete
+                                    </Button>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
+
                         {loadingMileage ? (
                           <div className="text-center py-4">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600 mx-auto"></div>
@@ -1040,52 +1097,88 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                           <p className="text-center text-[#888] py-4">No trips recorded yet</p>
                         ) : (
                           <div className="space-y-2 max-h-96 overflow-y-auto">
-                            {mileageEntries.map((entry) => (
-                              <div 
-                                key={entry.id} 
-                                className="flex items-center justify-between bg-white border border-gray-100 rounded-lg p-3 hover:shadow-sm transition-shadow"
-                              >
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    {getPurposeBadge(entry.purpose, entry.purpose_other)}
-                                    <span className="text-xs text-[#888]">{entry.date}</span>
-                                    {entry.waypoint_count > 0 && (
-                                      <span className="text-xs text-emerald-600 flex items-center gap-1">
-                                        <Route className="w-3 h-3" />
-                                        {entry.waypoint_count} pts
-                                      </span>
+                            {mileageEntries.map((entry) => {
+                              const isSelected = selectedTrips.has(entry.id);
+                              return (
+                                <div 
+                                  key={entry.id} 
+                                  className={`flex items-center justify-between border rounded-lg p-3 transition-all cursor-pointer ${
+                                    isSelected 
+                                      ? 'bg-emerald-50 border-emerald-400' 
+                                      : 'bg-white border-gray-100 hover:shadow-sm'
+                                  }`}
+                                  onClick={() => {
+                                    if (selectMode) {
+                                      toggleTripSelection(entry.id);
+                                    }
+                                  }}
+                                >
+                                  {/* Checkbox for selection mode */}
+                                  {selectMode && (
+                                    <div 
+                                      className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mr-3 transition-all ${
+                                        isSelected 
+                                          ? 'bg-emerald-500 border-emerald-500' 
+                                          : 'border-gray-300 hover:border-emerald-500'
+                                      }`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleTripSelection(entry.id);
+                                      }}
+                                    >
+                                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                                    </div>
+                                  )}
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      {getPurposeBadge(entry.purpose, entry.purpose_other)}
+                                      <span className="text-xs text-[#888]">{entry.date}</span>
+                                      {entry.waypoint_count > 0 && (
+                                        <span className="text-xs text-emerald-600 flex items-center gap-1">
+                                          <Route className="w-3 h-3" />
+                                          {entry.waypoint_count} pts
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-[#666]">
+                                      {entry.start_address} → {entry.end_address}
+                                    </p>
+                                    {entry.notes && (
+                                      <p className="text-xs text-[#aaa] mt-1">{entry.notes}</p>
                                     )}
                                   </div>
-                                  <p className="text-sm text-[#666]">
-                                    {entry.start_address} → {entry.end_address}
-                                  </p>
-                                  {entry.notes && (
-                                    <p className="text-xs text-[#aaa] mt-1">{entry.notes}</p>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <span className="font-semibold text-emerald-600">{entry.total_miles.toFixed(1)} mi</span>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => openEditMileageModal(entry)}
-                                      className="h-8 w-8 p-0 text-blue-600"
-                                    >
-                                      <Edit2 className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleDeleteMileageEntry(entry.id)}
-                                      className="h-8 w-8 p-0 text-red-500"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
+                                  <div className="flex items-center gap-3">
+                                    <span className="font-semibold text-emerald-600">{entry.total_miles.toFixed(1)} mi</span>
+                                    {!selectMode && (
+                                      <div className="flex gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openEditMileageModal(entry);
+                                          }}
+                                          className="h-8 w-8 p-0 text-blue-600"
+                                        >
+                                          <Edit2 className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteMileageEntry(entry.id);
+                                          }}
+                                          className="h-8 w-8 p-0 text-red-500"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </motion.div>
