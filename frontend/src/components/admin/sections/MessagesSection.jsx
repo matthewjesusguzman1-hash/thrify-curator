@@ -350,32 +350,108 @@ export default function MessagesSection() {
             className="overflow-hidden"
           >
             <div className="mt-4 pt-4 border-t border-[#eee]">
-              {/* Search Bar */}
+              {/* Search and Filter Bar */}
               {messages.length > 0 && (
-                <div className="mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" />
-                    <Input
-                      type="text"
-                      placeholder="Search by name, email, or message..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 pr-10 h-10 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
-                      data-testid="messages-search-input"
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#666]"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
+                <div className="mb-4 space-y-3">
+                  {/* Text Search */}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" />
+                      <Input
+                        type="text"
+                        placeholder="Search by name, email, or message..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 pr-10 h-10 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
+                        data-testid="messages-search-input"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#666]"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDateFilters(!showDateFilters)}
+                      className={`h-10 px-3 ${showDateFilters || dateFrom || dateTo ? 'border-[#FF1493] text-[#FF1493]' : 'text-[#888]'}`}
+                      data-testid="toggle-date-filter-btn"
+                    >
+                      <Calendar className="w-4 h-4 mr-1" />
+                      Date
+                      {(dateFrom || dateTo) && (
+                        <span className="ml-1 w-2 h-2 bg-[#FF1493] rounded-full" />
+                      )}
+                    </Button>
                   </div>
-                  {searchQuery && (
-                    <p className="text-xs text-[#888] mt-2">
-                      Showing {filteredMessages.length} of {messages.length} messages
-                    </p>
+
+                  {/* Date Filters */}
+                  <AnimatePresence>
+                    {showDateFilters && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex flex-wrap gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm text-[#666] font-medium whitespace-nowrap">From:</label>
+                            <Input
+                              type="date"
+                              value={dateFrom}
+                              onChange={(e) => setDateFrom(e.target.value)}
+                              className="h-9 w-40 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
+                              data-testid="date-from-input"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm text-[#666] font-medium whitespace-nowrap">To:</label>
+                            <Input
+                              type="date"
+                              value={dateTo}
+                              onChange={(e) => setDateTo(e.target.value)}
+                              className="h-9 w-40 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
+                              data-testid="date-to-input"
+                            />
+                          </div>
+                          {(dateFrom || dateTo) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => { setDateFrom(""); setDateTo(""); }}
+                              className="h-9 text-[#888] hover:text-[#666]"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Clear dates
+                            </Button>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Filter Results Count */}
+                  {hasActiveFilters && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-[#888]">
+                        Showing {filteredMessages.length} of {messages.length} messages
+                        {dateFrom && dateTo && ` (${dateFrom} to ${dateTo})`}
+                        {dateFrom && !dateTo && ` (from ${dateFrom})`}
+                        {!dateFrom && dateTo && ` (until ${dateTo})`}
+                      </p>
+                      <button
+                        onClick={clearFilters}
+                        className="text-xs text-[#FF1493] hover:text-[#E91E8C] font-medium"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
