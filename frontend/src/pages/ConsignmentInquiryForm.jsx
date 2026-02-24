@@ -93,6 +93,17 @@ export default function ConsignmentInquiryForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate environment section
+    if (formData.smoke_free === null) {
+      toast.error("Please select whether your home is smoke free or not");
+      return;
+    }
+    if (formData.pet_free === null) {
+      toast.error("Please select whether your home is pet free or not");
+      return;
+    }
+    
     setLoading(true);
 
     try {
