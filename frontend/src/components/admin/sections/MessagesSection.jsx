@@ -369,30 +369,9 @@ export default function MessagesSection() {
                             className="absolute right-0 top-12 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-4"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {/* Preset Options */}
+                            {/* Calendar - Main Focus */}
                             <div className="mb-4">
-                              <p className="text-xs font-medium text-[#888] uppercase tracking-wider mb-2">Quick Select</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {DATE_PRESETS.map((preset) => (
-                                  <button
-                                    key={preset.label}
-                                    onClick={() => applyDatePreset(preset)}
-                                    className={`px-3 py-2 text-sm rounded-lg border transition-all ${
-                                      selectedPreset === preset.label
-                                        ? 'bg-[#FF1493] text-white border-[#FF1493]'
-                                        : 'bg-gray-50 text-[#666] border-gray-200 hover:border-[#FF1493] hover:text-[#FF1493]'
-                                    }`}
-                                  >
-                                    {preset.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Calendar for Custom Range */}
-                            <div className="border-t border-gray-200 pt-4">
-                              <p className="text-xs font-medium text-[#888] uppercase tracking-wider mb-2">Custom Range</p>
-                              <p className="text-xs text-[#aaa] mb-3">Click a date to start, then click another to set the range</p>
+                              <p className="text-xs text-[#888] mb-3 text-center">Click a date to start, then click another to set the range</p>
                               <Calendar
                                 mode="range"
                                 selected={dateRange}
@@ -411,8 +390,28 @@ export default function MessagesSection() {
                               />
                             </div>
 
+                            {/* Quick Select Presets */}
+                            <div className="border-t border-gray-200 pt-3">
+                              <p className="text-xs font-medium text-[#888] uppercase tracking-wider mb-2">Quick Select</p>
+                              <div className="flex flex-wrap gap-2">
+                                {DATE_PRESETS.map((preset) => (
+                                  <button
+                                    key={preset.label}
+                                    onClick={() => applyDatePreset(preset)}
+                                    className={`px-3 py-1.5 text-xs rounded-full border transition-all ${
+                                      selectedPreset === preset.label
+                                        ? 'bg-[#FF1493] text-white border-[#FF1493]'
+                                        : 'bg-gray-50 text-[#666] border-gray-200 hover:border-[#FF1493] hover:text-[#FF1493]'
+                                    }`}
+                                  >
+                                    {preset.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
                             {/* Actions */}
-                            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                            <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200">
                               <button
                                 onClick={clearDateFilter}
                                 className="text-sm text-[#888] hover:text-[#666]"
