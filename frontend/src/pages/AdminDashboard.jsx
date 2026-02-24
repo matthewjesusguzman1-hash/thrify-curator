@@ -1353,6 +1353,10 @@ export default function AdminDashboard() {
 
   // Delete a specific W-9 document
   const handleDeleteW9Doc = async (employeeId, docId) => {
+    if (!employeeId || !docId) {
+      toast.error("Invalid document or employee ID");
+      return;
+    }
     if (!window.confirm("Are you sure you want to delete this W-9 document?")) return;
     
     try {
