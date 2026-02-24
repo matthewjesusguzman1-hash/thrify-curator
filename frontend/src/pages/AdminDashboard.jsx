@@ -2713,7 +2713,9 @@ export default function AdminDashboard() {
                                       <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-white truncate">{doc.filename || `W-9 #${index + 1}`}</p>
                                         <div className="flex items-center gap-2 text-xs text-white/50">
-                                          <span>{new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                                          {doc.uploaded_at && new Date(doc.uploaded_at).toString() !== 'Invalid Date' && (
+                                            <span>{new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                                          )}
                                           <span className={`px-2 py-0.5 rounded-full ${
                                             doc.status === 'approved' 
                                               ? 'bg-[#00D4FF]/20 text-[#00D4FF]' 
