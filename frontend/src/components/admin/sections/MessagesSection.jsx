@@ -238,21 +238,20 @@ export default function MessagesSection() {
       if (!matchesText) return false;
     }
     
-    // Date filter
+    // Date filter - compare dates only (ignore time)
     if (dateFrom || dateTo) {
       const messageDate = new Date(message.submitted_at);
-      messageDate.setHours(0, 0, 0, 0);
+      // Get just the date part (YYYY-MM-DD) for comparison
+      const messageDateStr = messageDate.toISOString().split('T')[0];
       
       if (dateFrom) {
-        const fromDate = new Date(dateFrom);
-        fromDate.setHours(0, 0, 0, 0);
-        if (messageDate < fromDate) return false;
+        // Message date must be >= from date
+        if (messageDateStr < dateFrom) return false;
       }
       
       if (dateTo) {
-        const toDate = new Date(dateTo);
-        toDate.setHours(23, 59, 59, 999);
-        if (messageDate > toDate) return false;
+        // Message date must be <= to date
+        if (messageDateStr > dateTo) return false;
       }
     }
     
