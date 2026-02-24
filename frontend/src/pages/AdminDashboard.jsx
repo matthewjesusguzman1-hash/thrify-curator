@@ -5432,24 +5432,40 @@ export default function AdminDashboard() {
                                     ? 'bg-green-100 text-green-700'
                                     : doc.status === 'needs_correction'
                                     ? 'bg-red-100 text-red-700'
-                                    : 'bg-yellow-100 text-yellow-700'
+                                    : 'bg-blue-100 text-blue-700'
                                 }`}>
                                   {doc.status === 'approved' ? 'Approved' : 
-                                   doc.status === 'needs_correction' ? 'Needs Fix' : 'Pending'}
+                                   doc.status === 'needs_correction' ? 'Needs Fix' : 'On File'}
                                 </span>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteW9Doc(viewingW9.employeeId, doc.id);
-                                }}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
-                                title="Delete this W-9"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              <div className="flex flex-col gap-1">
+                                {doc.status !== 'approved' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleApproveW9Doc(viewingW9.employeeId, doc.id);
+                                    }}
+                                    className="text-green-500 hover:text-green-700 hover:bg-green-50 p-1 h-auto"
+                                    title="Approve this W-9"
+                                  >
+                                    <CheckCircle className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteW9Doc(viewingW9.employeeId, doc.id);
+                                  }}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                                  title="Delete this W-9"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         ))}
