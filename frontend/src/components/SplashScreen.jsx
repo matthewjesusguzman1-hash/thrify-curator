@@ -16,12 +16,12 @@ export default function SplashScreen({ onComplete }) {
       return;
     }
 
-    // Show splash for 2.5 seconds
+    // Show splash for 4 seconds
     const timer = setTimeout(() => {
       setIsVisible(false);
       sessionStorage.setItem('hasSeenSplash', 'true');
       onComplete?.();
-    }, 2500);
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, [onComplete]);
