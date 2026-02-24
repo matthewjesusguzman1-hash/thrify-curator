@@ -490,6 +490,25 @@ export default function AdminDashboard() {
     }
   };
 
+  // Master refresh function - refreshes all dashboard data
+  const handleMasterRefresh = async () => {
+    setMasterRefreshing(true);
+    try {
+      await Promise.all([
+        fetchData(),
+        fetchNotifications(),
+        fetchPayrollSummary(),
+        fetchPendingW9s()
+      ]);
+      toast.success("Dashboard refreshed");
+    } catch (error) {
+      console.error("Error refreshing dashboard:", error);
+      toast.error("Failed to refresh some data");
+    } finally {
+      setMasterRefreshing(false);
+    }
+  };
+
   // Fetch form submissions when section is opened
   useEffect(() => {
     if (showFormsSection) {
