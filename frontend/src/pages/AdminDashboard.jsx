@@ -5713,6 +5713,7 @@ export default function AdminDashboard() {
                         </Button>
                         <Button
                           onClick={async () => {
+                            if (!window.confirm("Are you sure you want to download this W-9?")) return;
                             try {
                               const response = await axios.get(`${API}/admin/employees/${viewingW9.employeeId}/w9/${viewingW9.docId}`, {
                                 ...getAuthHeader(),
