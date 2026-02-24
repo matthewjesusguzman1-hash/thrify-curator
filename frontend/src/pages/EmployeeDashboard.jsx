@@ -645,6 +645,7 @@ export default function EmployeeDashboard() {
               </Button>
               <Button
                 onClick={async () => {
+                  if (!window.confirm("Are you sure you want to download this W-9?")) return;
                   try {
                     const response = await axios.get(`${API}/time/w9/download/${viewingW9.docId}`, {
                       ...getAuthHeader(),
