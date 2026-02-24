@@ -409,8 +409,15 @@ export default function MessagesSection() {
                                 mode="range"
                                 selected={pendingDateRange}
                                 onSelect={(range) => {
-                                  setPendingDateRange(range || { from: undefined, to: undefined });
+                                  const newRange = range || { from: undefined, to: undefined };
+                                  setPendingDateRange(newRange);
                                   setSelectedPreset("");
+                                  
+                                  // Auto-apply filter and close calendar when range is complete (both dates selected)
+                                  if (newRange.from && newRange.to) {
+                                    setDateRange(newRange);
+                                    setShowDatePicker(false);
+                                  }
                                 }}
                                 numberOfMonths={1}
                                 className="rounded-lg border border-gray-200"
@@ -430,7 +437,13 @@ export default function MessagesSection() {
                                 {DATE_PRESETS.map((preset) => (
                                   <button
                                     key={preset.label}
-                                    onClick={() => applyDatePreset(preset)}
+                                    onClick={() => {
+                                      const range = preset.getValue();
+                                      setDateRange(range);
+                                      setPendingDateRange(range);
+                                      setSelectedPreset(preset.label);
+                                      setShowDatePicker(false);
+                                    }}
                                     className={`px-3 py-1.5 text-xs rounded-full border transition-all ${
                                       selectedPreset === preset.label
                                         ? 'bg-[#FF1493] text-white border-[#FF1493]'
@@ -443,24 +456,19 @@ export default function MessagesSection() {
                               </div>
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200">
+                            {/* Clear Button */}
+                            <div className="flex justify-center mt-4 pt-3 border-t border-gray-200">
                               <button
                                 onClick={() => {
+                                  setDateRange({ from: undefined, to: undefined });
                                   setPendingDateRange({ from: undefined, to: undefined });
                                   setSelectedPreset("");
+                                  setShowDatePicker(false);
                                 }}
-                                className="text-sm text-[#888] hover:text-[#666]"
+                                className="text-sm text-[#888] hover:text-[#FF1493]"
                               >
-                                Clear
+                                Clear Filter
                               </button>
-                              <Button
-                                size="sm"
-                                onClick={applyDateFilter}
-                                className="bg-[#FF1493] text-white hover:bg-[#E91E8C]"
-                              >
-                                Done
-                              </Button>
                             </div>
                           </motion.div>
                         )}
