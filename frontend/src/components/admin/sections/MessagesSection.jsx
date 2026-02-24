@@ -364,7 +364,11 @@ export default function MessagesSection() {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setShowDatePicker(!showDatePicker);
+                          if (showDatePicker) {
+                            cancelDatePicker();
+                          } else {
+                            openDatePicker();
+                          }
                         }}
                         className={`h-10 px-3 w-full sm:w-auto justify-center ${hasDateFilter ? 'bg-[#FF1493]/10 border-[#FF1493] text-[#FF1493]' : 'text-[#888]'}`}
                         data-testid="date-range-btn"
@@ -403,9 +407,9 @@ export default function MessagesSection() {
                               <p className="text-xs text-[#888] mb-3 text-center">Click a date to start, then click another to set the range</p>
                               <Calendar
                                 mode="range"
-                                selected={dateRange}
+                                selected={pendingDateRange}
                                 onSelect={(range) => {
-                                  setDateRange(range || { from: undefined, to: undefined });
+                                  setPendingDateRange(range || { from: undefined, to: undefined });
                                   setSelectedPreset("");
                                 }}
                                 numberOfMonths={1}
@@ -442,14 +446,17 @@ export default function MessagesSection() {
                             {/* Actions */}
                             <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200">
                               <button
-                                onClick={clearDateFilter}
+                                onClick={() => {
+                                  setPendingDateRange({ from: undefined, to: undefined });
+                                  setSelectedPreset("");
+                                }}
                                 className="text-sm text-[#888] hover:text-[#666]"
                               >
                                 Clear
                               </button>
                               <Button
                                 size="sm"
-                                onClick={() => setShowDatePicker(false)}
+                                onClick={applyDateFilter}
                                 className="bg-[#FF1493] text-white hover:bg-[#E91E8C]"
                               >
                                 Done
