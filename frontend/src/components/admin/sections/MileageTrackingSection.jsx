@@ -44,6 +44,10 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
   const [cumulativeMiles, setCumulativeMiles] = useState(0);
   const [waypointCount, setWaypointCount] = useState(0);
   
+  // Multi-select state
+  const [selectedTrips, setSelectedTrips] = useState(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+  
   // Refs for tracking
   const locationUpdateInterval = useRef(null);
   
