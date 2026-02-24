@@ -173,6 +173,9 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
     if settings and settings.get("pay_period_start_date"):
         start_str = settings["pay_period_start_date"]
         period_start = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+        # Ensure period_start is timezone-aware
+        if period_start.tzinfo is None:
+            period_start = period_start.replace(tzinfo=timezone.utc)
         while period_start + timedelta(days=14) < now:
             period_start += timedelta(days=14)
     else:
