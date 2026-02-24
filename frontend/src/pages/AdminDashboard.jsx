@@ -2269,7 +2269,11 @@ export default function AdminDashboard() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={handleDownloadBlankW9}
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to download the IRS W-9 form?")) {
+                              handleDownloadBlankW9();
+                            }
+                          }}
                           className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
                           data-testid="download-w9-form-btn"
                         >
