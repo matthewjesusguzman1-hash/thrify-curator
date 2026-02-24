@@ -3451,7 +3451,7 @@ export default function AdminDashboard() {
             getAuthHeader={getAuthHeader}
             formatDateTime={formatDateTime}
             onViewEmployeePortal={handleViewEmployeePortal}
-            onRefreshEmployees={fetchEmployees}
+            onRefreshEmployees={fetchData}
             onDownloadBlankW9={handleDownloadBlankW9}
           />
 
