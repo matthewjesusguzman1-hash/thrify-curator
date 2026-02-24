@@ -340,7 +340,8 @@ export default function ConsignmentInquiryForm() {
             </div>
 
             <div>
-              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Environment</Label>
+              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Environment *</Label>
+              <p className="text-sm text-gray-500 mb-3">Please indicate the environment where items are stored</p>
               <div className="space-y-3 mt-2">
                 <div className="flex gap-6">
                   <label className="flex items-center gap-3 cursor-pointer">
