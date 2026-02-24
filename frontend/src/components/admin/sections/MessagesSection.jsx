@@ -223,9 +223,16 @@ export default function MessagesSection() {
       
       const fromDate = new Date(dateRange.from);
       fromDate.setHours(0, 0, 0, 0);
-      if (messageDate < fromDate) return false;
       
-      if (dateRange.to) {
+      // If only one date selected (no 'to' date), filter for just that day
+      if (!dateRange.to) {
+        const fromDateEnd = new Date(dateRange.from);
+        fromDateEnd.setHours(23, 59, 59, 999);
+        if (messageDate < fromDate || messageDate > fromDateEnd) return false;
+      } else {
+        // Range filter
+        if (messageDate < fromDate) return false;
+        
         const toDate = new Date(dateRange.to);
         toDate.setHours(23, 59, 59, 999);
         if (messageDate > toDate) return false;
