@@ -30,7 +30,7 @@ class TestMessagesAPI:
             "admin_code": "4399"
         })
         assert response.status_code == 200, f"Admin login failed: {response.text}"
-        self.admin_token = response.json().get("token")
+        self.admin_token = response.json().get("access_token")
         assert self.admin_token, "No token returned from login"
     
     def get_auth_header(self):
