@@ -3214,20 +3214,17 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
-          {/* Report Modal */}
-          {showReport && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
-              onClick={() => { setShowReport(false); setReportData(null); }}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-xl my-8"
-                onClick={(e) => e.stopPropagation()}
-                data-testid="report-modal"
+          {/* Shift Report Modal - Extracted Component */}
+          <ShiftReportModal
+            isOpen={showReport}
+            onClose={() => setShowReport(false)}
+            getAuthHeader={getAuthHeader}
+            employees={employees}
+            formatDateTime={formatDateTime}
+            formatDate={formatDate}
+          />
+
+          {/* PLACEHOLDER_REMOVED_REPORT_MODAL
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-playfair text-xl font-bold text-[#333]">Shift Report</h2>
