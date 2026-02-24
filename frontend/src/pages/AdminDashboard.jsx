@@ -1906,7 +1906,19 @@ export default function AdminDashboard() {
           className="space-y-6"
         >
           <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4">
-            <h1 className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white w-full sm:w-auto text-left">Admin Dashboard</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white w-full sm:w-auto text-left">Admin Dashboard</h1>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMasterRefresh}
+                disabled={masterRefreshing}
+                className="h-9 px-3 border-white/30 text-white hover:bg-white/10 transition-all"
+                data-testid="master-refresh-btn"
+              >
+                <RefreshCw className={`w-4 h-4 ${masterRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
             <div className="flex gap-2 items-start">
               {/* Reports Stack */}
               <div className="flex flex-col gap-1">
