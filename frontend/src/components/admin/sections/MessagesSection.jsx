@@ -670,22 +670,47 @@ export default function MessagesSection() {
                 <div className="space-y-2">
                   {filteredMessages.map((message) => {
                     const isExpanded = expandedMessages.has(message.id);
+                    const isSelected = selectedMessages.has(message.id);
                     return (
                       <div 
                         key={message.id}
                         className={`rounded-xl border transition-all ${
-                          message.status === 'unread' 
-                            ? 'bg-[#FFF5F8] border-[#FF1493]/30' 
-                            : 'bg-gray-50 border-gray-200'
+                          isSelected 
+                            ? 'bg-[#FF1493]/10 border-[#FF1493]'
+                            : message.status === 'unread' 
+                              ? 'bg-[#FFF5F8] border-[#FF1493]/30' 
+                              : 'bg-gray-50 border-gray-200'
                         }`}
                         data-testid={`message-item-${message.id}`}
                       >
                         {/* Collapsed Header */}
                         <div 
                           className="p-3 cursor-pointer flex items-center justify-between gap-3"
-                          onClick={() => toggleMessageExpanded(message.id)}
+                          onClick={() => {
+                            if (selectMode) {
+                              toggleMessageSelection(message.id);
+                            } else {
+                              toggleMessageExpanded(message.id);
+                            }
+                          }}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
+                            {/* Checkbox for selection mode */}
+                            {selectMode && (
+                              <div 
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                                  isSelected 
+                                    ? 'bg-[#FF1493] border-[#FF1493]' 
+                                    : 'border-gray-300 hover:border-[#FF1493]'
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMessageSelection(message.id);
+                                }}
+                              >
+                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                            )}
                             <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${
                               message.status === 'unread' 
                                 ? 'bg-[#FF1493] text-white' 
@@ -709,10 +734,12 @@ export default function MessagesSection() {
                             <span className="text-xs text-[#888] hidden sm:block">
                               {formatDate(message.submitted_at)}
                             </span>
-                            {isExpanded ? (
-                              <ChevronUp className="w-4 h-4 text-[#888]" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4 text-[#888]" />
+                            {!selectMode && (
+                              isExpanded ? (
+                                <ChevronUp className="w-4 h-4 text-[#888]" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-[#888]" />
+                              )
                             )}
                           </div>
                         </div>
