@@ -2,89 +2,84 @@
 The user wants to build a Thrifty Curator reselling application.
 
 **PRODUCT REQUIREMENTS (Consolidated):**
-*   **Landing Page & Forms:** A Black Bold themed app with a landing page (logo, QR code, platform links) and themed forms for Job Applications, Consignment Inquiries, and Consignment Agreements. The message submission form now matches the dark theme.
-*   **In-App Messaging:**
-    *   Replaced the  link with an in-app messaging system.
-    *   Visitors can send messages from a modal on the landing page, providing their name, email, and message.
-    *   Admins can view messages in a dedicated, collapsible section in their dashboard.
-    *   The admin view includes an unread message counter.
-    *   Admins can reply, which opens their default email client with a pre-populated thank you message.
-    *   Messages can be marked as read or deleted.
-    *   The message list is searchable by text content.
-    *   The message list can be filtered by a date range, using a single, interactive calendar to select the range.
-*   **Authentication:** Passwordless JWT-based authentication for admins using special codes.
-*   **Employee Portal:** Employees can clock in/out and manage W-9s. Admins can manage employees.
-*   **Admin Dashboard:** A comprehensive, responsive dashboard for managing employees, payroll, W-9s, mileage, and now, messages. Several sections now auto-refresh data when expanded. The layout is mobile-friendly, with filters stacking vertically.
-*   **Removed Features:** All email-sending functionality and browser push notifications have been removed.
+*   **Landing Page & Forms:** A Black Bold themed app with a landing page (logo, QR code, platform links), themed forms for Job Applications, Consignment Inquiries, and Consignment Agreements. The message submission form matches the dark theme. The Consignment Inquiry form now has a mandatory Environment section.
+*   **In-App Messaging:** A complete messaging system allowing visitors to send messages and admins to view, reply, search, filter (by date), mark as read, and delete them in their dashboard. The date filter UX has been refined to be more intuitive.
+*   **Social Media Links:** The landing page's Connect section includes links to TikTok, Facebook, and now Instagram.
+*   **Authentication:** Passwordless JWT-based authentication for admins and employees.
+*   **Employee Portal:** Employees can clock in/out. The system now needs to support employees submitting multiple W-9 forms.
+*   **Admin Dashboard:** A responsive dashboard for managing employees, payroll, W-9s, mileage, and messages. All sections now have consistent-looking refresh buttons, and a master refresh button has been added to the header. The system must allow admins to view, add, and remove multiple W-9 forms for each employee.
+*   **Removed Features:** Email-sending functionality and browser push notifications have been removed.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application for the Thrifty Curator business. The application includes passwordless authentication, employee/admin portals, time tracking, W-9 management, payroll summaries, and a comprehensive mileage tracking system.
+A full-stack React/FastAPI/MongoDB application for the Thrifty Curator business. The app includes passwordless authentication, admin/employee portals, and various management features.
 
-The most recent session focused on building and refining a complete in-app messaging feature. This includes a themed submission modal on the landing page and a feature-rich viewing section in the admin dashboard with search, collapsible messages, and an advanced calendar-based date range filter. Additionally, several sections of the admin dashboard were updated to automatically refresh their data when opened.
+In this session, the agent successfully:
+1.  Fixed and refined the calendar date-range filter in the admin messaging section, including mobile responsiveness.
+2.  Added an Instagram link to the landing page.
+3.  Standardized all refresh buttons on the admin dashboard and added a global master refresh button.
+4.  Made the Environment section mandatory on the Consignment Inquiry form.
+
+The agent then began implementing a complex feature to allow multiple W-9 form submissions per employee. The backend models and some API routes were updated, but the corresponding frontend changes have introduced critical bugs.
 
 **Last working item**:
-    - Last item agent was working: The agent was investigating a user report stating the calendar function in select dates is not working. Despite agent tests and screenshots indicating the feature works as designed (selecting a date range filters the messages), the user perceives it as broken. This is the final blocker for completing the messaging feature.
+    - Last item agent was working: The agent was in the middle of implementing support for multiple W-9 forms. After updating the backend and frontend, the feature is broken. The agent correctly diagnosed that a FastAPI route ordering issue in  is causing the View W-9 functionality to fail with a 404 error for the  endpoint.
     - Status: IN PROGRESS
-    - Agent Testing Done: Y (The agent's own tests indicate the feature is working, but this conflicts with the user's report.)
-    - Which testing method agent to use? both. Use the screenshot tool to perform a simple, step-by-step test of the calendar selection to visually confirm the behavior for the user. If the issue persists, use the frontend testing agent to write a specific test case for the calendar's  and filter logic.
+    - Agent Testing Done: N
+    - Which testing method agent to use? backend testing agent. First, fix the routing issue and test the backend W-9 endpoints (, ) via curl or a dedicated test file. Once the backend is confirmed working, use the frontend testing agent to test the entire multi-W-9 workflow on both the Admin and Employee dashboards, as the frontend is currently unstable.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: The calendar date filter in the  is not working as per the user's expectation. (P0)
+  - Issue 1: The multiple W-9 forms feature is broken. (P0)
 
   Issues Detail:
   - Issue 1: 
-     - **Description:** The user reports that the calendar for date filtering is not functioning correctly. The agent's previous investigations showed the calendar does highlight a range and filter results, but the user is not satisfied. This could be a subtle bug in the filtering logic (e.g., how it handles single dates vs. ranges) or a UX/UI issue where the behavior is not intuitive.
-     - **Attempted fixes:** The agent has refactored the date picker multiple times based on user feedback, fixed single-date selection logic, and fixed an issue with the 'clear' button. Current code uses  in range mode. The agent's last test involved targeted clicks and screenshots which seemed to show correct functionality, but the user reported the issue again.
+     - **Description:** The implementation for handling multiple W-9 forms has failed. Admins cannot view W-9s from the dashboard (fails with a Failed to load W-9 toast due to a backend 404 error). The Employee Dashboard crashes with a Objects are not valid as a React child error upon login.
+     - **Attempted fixes:** The agent updated the  model to store a list of W-9s, added new API endpoints, and heavily modified  and .
      - **Next debug checklist:**
-       1. View .
-       2. Closely re-examine the  function and the  state management.
-       3. Re-verify the filtering logic within the  memoized variable, specifically how it handles  and . Pay close attention to timezone or end-of-day/start-of-day discrepancies.
-       4. Perform a very simple, isolated test:
-          - Use the screenshot tool to click only a single date in the calendar.
-          - Click Done.
-          - Capture the result to see if the messages are filtered for that one day.
-       5. If the above works, repeat for a multi-day range, capturing screenshots at each step to create a clear visual record of the behavior.
-     - **Why fix this issue and what will be achieved with the fix?** This is the final requested feature and the last remaining bug. Fixing it will complete the messaging center, unblock deployment, and satisfy the user's requirements.
+       1.  **Fix Backend Route:** Edit . Move the route for  to be *before* the route for  to resolve the path-matching conflict.
+       2.  **Verify Backend Fix:** After restarting the backend, use  to test that  returns a 200 OK.
+       3.  **Fix Admin Frontend:** Re-test the View W-9 button in the admin dashboard. It should now successfully fetch the W-9 data.
+       4.  **Fix Employee Dashboard Crash:** Investigate the Objects are not valid as a React child error in . This is likely caused by the component trying to render the  array or object directly instead of mapping over it or checking if it's empty.
+     - **Why fix this issue and what will be achieved with the fix?** This will complete a core user requirement to allow employees and admins to manage multiple W-9 documents.
      - **Status:** IN PROGRESS
-     - **Is recurring issue?** Y
-     - **Should Test frontend/backend/both after fix?** frontend
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?** both
      - **Blocked on other issue:** No.
 
 **In progress Task List**:
-- None.
+  - Task 1: Complete the implementation of multiple W-9 form management. (P0)
+     - **Where to resume:** Start by fixing the backend routing issue in  as detailed in the issue above.
+     - **What will be achieved with this?** Employees will be able to upload multiple W-9s, and admins will be able to view, add, and delete them for any employee.
+     - **Status:** IN PROGRESS
+     - **Should Test frontend/backend/both after fix?** both
+     - **Blocked on something:** The backend routing bug.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks:**
-    *   **Deployment (P0):** Immediately after the calendar bug is fixed and verified by the user, deployment is the highest priority.
-    - **Continue Refactoring  (P1):** This is a long-standing technical debt item to improve code health. It was deferred to build the messaging feature.
+    *   **Deployment (P0):** Immediately after the W-9 feature is fixed and verified by the user.
+    *   **Continue Refactoring  (P1):** This large file is a source of technical debt and should be broken down into smaller components.
 *   **Future Tasks:**
-    *   **Unused Component Cleanup (P2):** After refactoring is complete, identify and remove any unused components.
+    *   **Unused Component Cleanup (P2):** Identify and remove unused components after the refactoring is complete.
 
 **Completed work in this session**
-- **Feature: In-App Messaging Center**
-  - Implemented a complete, full-stack messaging feature.
-  - **Backend:** Updated  model and  router to include the sender's email.
-  - **Frontend (Landing Page):** Created a new messaging modal in  and styled it to match the existing dark theme.
-  - **Frontend (Admin Dashboard):**
-    - Created a new  component.
-    - Implemented features: unread count, collapsible messages, text search, Reply via Email, Mark as Read, and Delete.
-    - Iteratively designed and built an advanced date-range filter using a single, interactive calendar.
-    - Ensured the search and filter controls are responsive and stack on mobile.
-- **Enhancements:**
-  - Added auto-refresh functionality to several sections in  so data is re-fetched when a section is expanded.
-- **Bug Fixes:**
-  - Fixed multiple bugs in the date filter functionality, including same-day selection, single-day selection, and the clear button behavior.
-- **Feature Removal:**
-  - Removed the browser push notification feature from the  per user request.
+- **Feature: Calendar Filter V2 (DONE)**
+  - Refined the date filter in  to auto-apply and close upon selecting a date range, removing the Done button.
+  - Fixed mobile styling to ensure the calendar is fully visible and usable on small screens.
+- **Feature: Instagram Link (DONE)**
+  - Added an Instagram button with the correct icon and link to the Connect section in .
+- **Feature: Standardized Refresh Buttons (DONE)**
+  - Added a master refresh button to the  header.
+  - Styled all individual section refresh buttons to be consistent (icon + text).
+- **Enhancement: Mandatory Form Field (DONE)**
+  - Made the Environment radio button group a required field in  with proper validation.
 
 **Earlier issues found/mentioned but not fixed**
 - None.
 
 **Known issue recurrence from previous fork**
-- None in this session.
+- None.
 
 **Code Architecture**
 
@@ -96,67 +91,72 @@ The most recent session focused on building and refining a complete in-app messa
 - **State Management**: React Hooks (, , ).
 
 **key DB schema**
-  - **messages**:  (Modified to include ).
+  - **users**: The  field has been replaced by , where  is a Pydantic model containing , , and .
 
 **changes in tech stack**
 - None.
 
 **All files of reference**
-*   : (NEW) Contains all logic for the messaging view, including the problematic date filter.
-*   : Modified to add the messaging modal.
-*   : Modified to integrate the new section and add auto-refresh logic to other sections.
-*   : Modified to auto-refresh data when expanded.
-*   : Modified to auto-refresh data when expanded.
-*   : Modified to add  field.
-*   : Modified to handle the  field on creation.
+*   : Contains the W-9 routing bug that needs to be fixed.
+*   : Heavily modified for refresh buttons and the broken W-9 viewer modal.
+*   : Modified for the W-9 upload feature and is currently crashing.
+*   : Contains the updated schema for .
+*   : Contains the W-9 endpoints for employees.
+*   : Contains the fixed calendar logic.
+*   : Contains the new Instagram link.
+*   : Contains the new form validation.
 
 **Areas that need refactoring**:
-- ** (CRITICAL):** This file remains a high priority for refactoring due to its large size and complexity.
+- ** (CRITICAL):** This file's complexity is increasing. The multi-W9 implementation should be extracted into its own components to make this file more maintainable.
 
 **key api endpoints**
-*   : Creates a new message from the landing page.
-*   : Fetches all messages for the admin dashboard.
+*   : (New) Uploads a new W-9 document for the logged-in employee.
+*   : (New) Gets the list of W-9 documents for a specific employee.
+*   : (Modified) Downloads a specific W-9 document.
+*   : (New) Deletes a specific W-9 document.
 
 **Critical Info for New Agent**
-- **Top Priority:** You must resolve the user's issue with the calendar date filter in . The user reports it's not working. Do not assume it's fixed until the user confirms it. Start with simple, visual tests using the screenshot tool to align on the observed behavior before diving deeper into the code.
-- **Next Action:** Once the messaging feature is fully fixed and verified by the user, proceed with deployment using the .
-- **Background Task:** Continue the refactoring of  as a lower-priority task.
+- **Your immediate priority is to fix the broken multiple W-9 forms feature.** The previous agent correctly identified the first bug: a route ordering issue in . Fix that first.
+- After fixing the backend, you must address the frontend crash in  (Objects are not valid as a React child). This is a critical blocker.
+- The W-9 implementation changes are complex and have destabilized parts of the application. Proceed carefully and test each part (backend API, admin UI, employee UI) incrementally.
 
 **documents and test reports created in this job**
   -  (updated)
-  - 
-  - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1.  add search by date option in messages... - **Request implemented.**
-2.  add test messages to try feature - **Request completed.**
-3.  ...same date no messages appear... calendar button... is cutoff - **Bugs fixed.**
-4.  remove push notification capability... use one field for selection - **Request implemented.**
-5.  ...use one calendar button to highlight the days - **UI refinement implemented.**
-6.  I want to see a monthly calendar and select the days - **UI refinement implemented.**
-7.  stack the search field and date range filter in the mobile version - **Request implemented.**
-8.  x is clicked... erase... calendar doesnt work when only one date is chosen - **Bugs fixed.**
-9.  the calendar function in select dates is not working - **Current blocking issue, IN PROGRESS.**
-10. (The user has made multiple requests to refine and fix the calendar, indicating high sensitivity to this feature's usability.)
+1.  the date range is not working on mobile for date before today... - **Investigated, functionality confirmed to be working correctly.**
+2.  add button for instagram page... - **Request implemented.**
+3.  put it above the message us button - **Request implemented.**
+4.  make all refresh buttons look the same - **Request implemented.**
+5.  add a master refresh button in the header - **Request implemented.**
+6.  make environment section mandatory in consignment inquiry form - **Request implemented.**
+7.  add ability for employee and admin to submit multiple w9 forms. - **Request in progress, currently broken.**
+8.  add ability for admin to remove selected w9 forms... - **Request in progress, currently broken.**
+9.  make option for admin to add additional w9 forms or remove in the edit employee w-9 section - **Request in progress, currently broken.**
+10. 1. - User message, likely an accidental input.
 
 **Project Health Check:**
-- **Broken**: The date filter in the  is considered broken from the user's perspective, blocking the completion of the new messaging feature.
+- **Broken**:
+    - The entire multiple W-9 feature is non-functional.
+    - The Employee Dashboard page crashes on load.
+    - The admin's W-9 viewer modal fails to load data.
 - **Mocked**: None.
 
 **3rd Party Integrations**
-*   : For QR code on the landing page.
-*   : For generating PDF reports.
-*   : For UI animations.
-*   : For frontend API requests.
+*   
+*   
+*   
+*   
 
 **Testing status**
-  - Testing agent used after significant changes: YES. The testing agent was used to verify the messaging feature, and all tests passed. However, this did not catch the usability issue reported by the user regarding the calendar.
+  - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: , .
-  - Known regressions: The user-reported calendar issue is the only known problem.
+  - Test files created: None.
+  - Known regressions: The employee dashboard is inaccessible, and the admin W-9 viewing feature is broken.
 
 **Credentials to test flow:**
 - **Admin Access:** From the login page, enter code  or  in the email/code field.
+- **Employee Access:** The agent was trying to use  which failed. You may need to create a test employee or find valid credentials.
 
 **What agent forgot to execute**
-- The agent successfully implemented all explicit requests. The current task is to resolve a user-reported bug/usability issue, not a forgotten instruction.</analysis>
+- The agent was in the middle of implementing the complex multi-W-9 feature. It did not forget a task, but the current implementation is incomplete and has introduced several critical bugs that must be fixed before proceeding.</analysis>

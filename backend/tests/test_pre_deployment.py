@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://curator-hub-4.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://thrifty-curator-2.preview.emergentagent.com').rstrip('/')
 
 class TestAdminLogin:
     """Test admin authentication with code 4399"""
