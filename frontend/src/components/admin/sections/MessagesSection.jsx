@@ -225,16 +225,47 @@ export default function MessagesSection() {
     });
   };
 
-  // Filter messages based on search
+  // Filter messages based on search and date
   const filteredMessages = messages.filter(message => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      message.sender_name.toLowerCase().includes(query) ||
-      message.sender_email.toLowerCase().includes(query) ||
-      message.message.toLowerCase().includes(query)
-    );
+    // Text search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesText = (
+        message.sender_name.toLowerCase().includes(query) ||
+        message.sender_email.toLowerCase().includes(query) ||
+        message.message.toLowerCase().includes(query)
+      );
+      if (!matchesText) return false;
+    }
+    
+    // Date filter
+    if (dateFrom || dateTo) {
+      const messageDate = new Date(message.submitted_at);
+      messageDate.setHours(0, 0, 0, 0);
+      
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (messageDate < fromDate) return false;
+      }
+      
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (messageDate > toDate) return false;
+      }
+    }
+    
+    return true;
   });
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setDateFrom("");
+    setDateTo("");
+  };
+
+  const hasActiveFilters = searchQuery || dateFrom || dateTo;
 
   return (
     <div className="dashboard-card" data-testid="messages-section">
