@@ -155,10 +155,15 @@ export default function AllEmployeesSection({
 
   // View W-9
   const handleViewW9 = async (employeeId, employeeName) => {
+    if (!employeeId) {
+      toast.error("Invalid employee ID");
+      return;
+    }
+    
     try {
       // Get W-9 status/documents for the employee
       const response = await axios.get(`${API}/admin/employees/${employeeId}/w9/status`, getAuthHeader());
-      const { w9_documents } = response.data;
+      const w9_documents = (response.data.w9_documents || []).filter(doc => doc && doc.id);
       
       if (!w9_documents || w9_documents.length === 0) {
         toast.error("No W-9 documents found");
