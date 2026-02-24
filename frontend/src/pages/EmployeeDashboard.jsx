@@ -433,109 +433,115 @@ export default function EmployeeDashboard() {
               </div>
 
               {/* W-9 Status / Upload Section */}
-              {w9Status?.status === 'approved' ? (
-                <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-200">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-green-700">W-9 Approved</p>
-                    <p className="text-xs text-green-600">Your W-9 has been reviewed and approved</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleViewMyW9}
-                    className="text-green-600 border-green-400 hover:bg-green-50"
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    View
-                  </Button>
-                </div>
-              ) : w9Status?.status === 'pending_review' ? (
-                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
-                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-amber-700">Pending Review</p>
-                    <p className="text-xs text-amber-600">Your W-9 is being reviewed by admin</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleViewMyW9}
-                    className="text-amber-600 border-amber-400 hover:bg-amber-50"
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    View
-                  </Button>
-                </div>
-              ) : w9Status?.status === 'needs_correction' ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
-                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                      <AlertCircle className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-red-700">Corrections Needed</p>
-                      <p className="text-xs text-red-600">{w9Status.rejection_reason || "Please review and resubmit your W-9"}</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleViewMyW9}
-                      className="text-red-600 border-red-400 hover:bg-red-50"
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
-                  </div>
-                  
-                  {/* Upload corrected form */}
-                  <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Upload className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-[#1A1A2E]">Upload Corrected W-9</p>
-                      <p className="text-xs text-gray-500">Submit your corrected W-9 form</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <input
-                        type="file"
-                        ref={w9InputRef}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                        onChange={(e) => handleW9Upload(e.target.files[0])}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => w9InputRef.current?.click()}
-                        disabled={uploadingW9}
-                        className="text-blue-600 border-blue-400 hover:bg-blue-50"
+              <div className="space-y-3">
+                {/* Show list of existing W-9s */}
+                {w9Status?.w9_documents && w9Status.w9_documents.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Your W-9 Documents ({w9Status.total_documents})</p>
+                    {w9Status.w9_documents.map((doc, index) => (
+                      <div 
+                        key={doc.id} 
+                        className={`flex items-center gap-3 p-3 rounded-xl border ${
+                          doc.status === 'approved' 
+                            ? 'bg-green-50 border-green-200' 
+                            : doc.status === 'needs_correction'
+                            ? 'bg-red-50 border-red-200'
+                            : 'bg-amber-50 border-amber-200'
+                        }`}
                       >
-                        {uploadingW9 ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
-                        ) : (
-                          <>
-                            <Upload className="w-4 h-4 mr-1" />
-                            Upload
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          doc.status === 'approved' 
+                            ? 'bg-green-100' 
+                            : doc.status === 'needs_correction'
+                            ? 'bg-red-100'
+                            : 'bg-amber-100'
+                        }`}>
+                          {doc.status === 'approved' ? (
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          ) : doc.status === 'needs_correction' ? (
+                            <AlertCircle className="w-4 h-4 text-red-600" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-amber-600" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#1A1A2E] truncate">{doc.filename || `W-9 #${index + 1}`}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(doc.uploaded_at).toLocaleDateString()} • 
+                            <span className={
+                              doc.status === 'approved' 
+                                ? 'text-green-600' 
+                                : doc.status === 'needs_correction'
+                                ? 'text-red-600'
+                                : 'text-amber-600'
+                            }>
+                              {' '}{doc.status === 'approved' ? 'Approved' : doc.status === 'needs_correction' ? 'Needs Fix' : 'Pending'}
+                            </span>
+                          </p>
+                          {doc.status === 'needs_correction' && doc.rejection_reason && (
+                            <p className="text-xs text-red-600 mt-1">{doc.rejection_reason}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const response = await axios.get(`${API}/time/w9/download/${doc.id}`, {
+                                  ...getAuthHeader(),
+                                  responseType: 'blob'
+                                });
+                                const blob = new Blob([response.data], { type: response.headers['content-type'] });
+                                const url = window.URL.createObjectURL(blob);
+                                window.open(url, '_blank');
+                              } catch (error) {
+                                toast.error("Failed to view W-9");
+                              }
+                            }}
+                            className="text-gray-600 hover:text-[#1A1A2E] p-1 h-auto"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {doc.status !== 'approved' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                if (!window.confirm("Are you sure you want to delete this W-9?")) return;
+                                try {
+                                  await axios.delete(`${API}/time/w9/${doc.id}`, getAuthHeader());
+                                  toast.success("W-9 deleted");
+                                  fetchData();
+                                } catch (error) {
+                                  toast.error(error.response?.data?.detail || "Cannot delete W-9");
+                                }
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1 h-auto"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ) : (
+                )}
+
+                {/* Upload new W-9 (always available) */}
                 <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
                   <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                     <Upload className="w-5 h-5 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-[#1A1A2E]">Submit Your W-9</p>
-                    <p className="text-xs text-gray-500">Upload your completed W-9 form for review</p>
+                    <p className="text-sm font-medium text-[#1A1A2E]">
+                      {w9Status?.has_w9 ? 'Upload Additional W-9' : 'Submit Your W-9'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {w9Status?.has_w9 
+                        ? 'Add another W-9 document if needed' 
+                        : 'Upload your completed W-9 form for review'}
+                    </p>
                   </div>
                   <div className="flex gap-1">
                     <input
@@ -563,7 +569,7 @@ export default function EmployeeDashboard() {
                     </Button>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </motion.div>
