@@ -12,8 +12,6 @@ import {
   RefreshCw,
   Search,
   X,
-  Bell,
-  BellOff,
   Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +20,31 @@ import { toast } from "sonner";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Date range presets
+const DATE_PRESETS = [
+  { label: "Today", getValue: () => {
+    const today = new Date().toISOString().split('T')[0];
+    return { from: today, to: today };
+  }},
+  { label: "Last 7 days", getValue: () => {
+    const today = new Date();
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return { from: weekAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+  }},
+  { label: "Last 30 days", getValue: () => {
+    const today = new Date();
+    const monthAgo = new Date(today);
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    return { from: monthAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+  }},
+  { label: "This month", getValue: () => {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { from: firstDay.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+  }},
+];
 
 export default function MessagesSection() {
   const [messages, setMessages] = useState([]);
@@ -33,53 +56,10 @@ export default function MessagesSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [showDateFilters, setShowDateFilters] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState("");
 
   const getToken = () => localStorage.getItem("token");
-
-  // Check and request notification permissions
-  useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationsEnabled(Notification.permission === 'granted');
-    }
-  }, []);
-
-  const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      toast.error("Browser notifications are not supported");
-      return;
-    }
-
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        setNotificationsEnabled(true);
-        toast.success("Push notifications enabled!");
-        // Send a test notification
-        new Notification("Thrifty Curator", {
-          body: "You'll now receive notifications for new messages!",
-          icon: "/logo192.png"
-        });
-      } else {
-        toast.error("Notification permission denied");
-      }
-    } catch (error) {
-      console.error("Error requesting notification permission:", error);
-      toast.error("Failed to enable notifications");
-    }
-  };
-
-  const showNotification = (title, body) => {
-    if (notificationsEnabled && document.visibilityState !== 'visible') {
-      new Notification(title, {
-        body,
-        icon: "/logo192.png",
-        tag: "new-message"
-      });
-    }
-  };
 
   const fetchMessages = useCallback(async () => {
     const token = getToken();
@@ -114,19 +94,7 @@ export default function MessagesSection() {
         const res = await axios.get(`${API}/messages/admin/unread-count`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const newCount = res.data.unread_count;
-        
-        // Show notification if new messages arrived
-        if (newCount > previousUnreadCount && previousUnreadCount !== 0) {
-          const newMessages = newCount - previousUnreadCount;
-          showNotification(
-            "New Message",
-            `You have ${newMessages} new message${newMessages > 1 ? 's' : ''}`
-          );
-        }
-        
-        setPreviousUnreadCount(newCount);
-        setUnreadCount(newCount);
+        setUnreadCount(res.data.unread_count);
       } catch (error) {
         console.error("Error fetching unread count:", error);
       }
@@ -135,7 +103,7 @@ export default function MessagesSection() {
     fetchUnreadCount();
     const pollInterval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(pollInterval);
-  }, [previousUnreadCount, notificationsEnabled]);
+  }, []);
 
   // Fetch full messages when section is expanded
   useEffect(() => {
@@ -225,6 +193,27 @@ export default function MessagesSection() {
     });
   };
 
+  const formatDateRange = (from, to) => {
+    if (!from && !to) return "";
+    const fromDate = from ? new Date(from + 'T00:00:00') : null;
+    const toDate = to ? new Date(to + 'T00:00:00') : null;
+    const options = { month: 'short', day: 'numeric', year: 'numeric' };
+    
+    if (from === to) {
+      return fromDate.toLocaleDateString('en-US', options);
+    }
+    if (fromDate && toDate) {
+      return `${fromDate.toLocaleDateString('en-US', options)} - ${toDate.toLocaleDateString('en-US', options)}`;
+    }
+    if (fromDate) {
+      return `From ${fromDate.toLocaleDateString('en-US', options)}`;
+    }
+    if (toDate) {
+      return `Until ${toDate.toLocaleDateString('en-US', options)}`;
+    }
+    return "";
+  };
+
   // Filter messages based on search and date
   const filteredMessages = messages.filter(message => {
     // Text search filter
@@ -241,30 +230,30 @@ export default function MessagesSection() {
     // Date filter - compare dates only (ignore time)
     if (dateFrom || dateTo) {
       const messageDate = new Date(message.submitted_at);
-      // Get just the date part (YYYY-MM-DD) for comparison
       const messageDateStr = messageDate.toISOString().split('T')[0];
       
-      if (dateFrom) {
-        // Message date must be >= from date
-        if (messageDateStr < dateFrom) return false;
-      }
-      
-      if (dateTo) {
-        // Message date must be <= to date
-        if (messageDateStr > dateTo) return false;
-      }
+      if (dateFrom && messageDateStr < dateFrom) return false;
+      if (dateTo && messageDateStr > dateTo) return false;
     }
     
     return true;
   });
 
-  const clearFilters = () => {
-    setSearchQuery("");
-    setDateFrom("");
-    setDateTo("");
+  const applyDatePreset = (preset) => {
+    const { from, to } = preset.getValue();
+    setDateFrom(from);
+    setDateTo(to);
+    setSelectedPreset(preset.label);
+    setShowDatePicker(false);
   };
 
-  const hasActiveFilters = searchQuery || dateFrom || dateTo;
+  const clearDateFilter = () => {
+    setDateFrom("");
+    setDateTo("");
+    setSelectedPreset("");
+  };
+
+  const hasDateFilter = dateFrom || dateTo;
 
   return (
     <div className="dashboard-card" data-testid="messages-section">
@@ -294,29 +283,6 @@ export default function MessagesSection() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {/* Notification Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (notificationsEnabled) {
-                setNotificationsEnabled(false);
-                toast.info("Push notifications disabled");
-              } else {
-                requestNotificationPermission();
-              }
-            }}
-            className={`${notificationsEnabled ? 'text-[#FF1493]' : 'text-[#888]'} hover:text-[#666]`}
-            title={notificationsEnabled ? "Notifications enabled" : "Enable notifications"}
-            data-testid="notifications-toggle-btn"
-          >
-            {notificationsEnabled ? (
-              <Bell className="w-4 h-4" />
-            ) : (
-              <BellOff className="w-4 h-4" />
-            )}
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -349,11 +315,11 @@ export default function MessagesSection() {
             className="overflow-hidden"
           >
             <div className="mt-4 pt-4 border-t border-[#eee]">
-              {/* Search and Filter Bar */}
+              {/* Search and Date Filter Bar */}
               {messages.length > 0 && (
                 <div className="mb-4 space-y-3">
-                  {/* Text Search */}
                   <div className="flex gap-2">
+                    {/* Text Search */}
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" />
                       <Input
@@ -373,79 +339,129 @@ export default function MessagesSection() {
                         </button>
                       )}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowDateFilters(!showDateFilters)}
-                      className={`h-10 px-3 ${showDateFilters || dateFrom || dateTo ? 'border-[#FF1493] text-[#FF1493]' : 'text-[#888]'}`}
-                      data-testid="toggle-date-filter-btn"
-                    >
-                      <Calendar className="w-4 h-4 mr-1" />
-                      Date
-                      {(dateFrom || dateTo) && (
-                        <span className="ml-1 w-2 h-2 bg-[#FF1493] rounded-full" />
-                      )}
-                    </Button>
+
+                    {/* Date Range Picker Button */}
+                    <div className="relative">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDatePicker(!showDatePicker);
+                        }}
+                        className={`h-10 px-3 whitespace-nowrap ${hasDateFilter ? 'bg-[#FF1493]/10 border-[#FF1493] text-[#FF1493]' : 'text-[#888]'}`}
+                        data-testid="date-range-btn"
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {hasDateFilter ? formatDateRange(dateFrom, dateTo) : "Select dates"}
+                        {hasDateFilter && (
+                          <X 
+                            className="w-4 h-4 ml-2 hover:text-[#E91E8C]" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearDateFilter();
+                            }}
+                          />
+                        )}
+                      </Button>
+
+                      {/* Date Picker Dropdown */}
+                      <AnimatePresence>
+                        {showDatePicker && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute right-0 top-12 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-4 min-w-[320px]"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {/* Preset Options */}
+                            <div className="mb-4">
+                              <p className="text-xs font-medium text-[#888] uppercase tracking-wider mb-2">Quick Select</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {DATE_PRESETS.map((preset) => (
+                                  <button
+                                    key={preset.label}
+                                    onClick={() => applyDatePreset(preset)}
+                                    className={`px-3 py-2 text-sm rounded-lg border transition-all ${
+                                      selectedPreset === preset.label
+                                        ? 'bg-[#FF1493] text-white border-[#FF1493]'
+                                        : 'bg-gray-50 text-[#666] border-gray-200 hover:border-[#FF1493] hover:text-[#FF1493]'
+                                    }`}
+                                  >
+                                    {preset.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Custom Date Range */}
+                            <div className="border-t border-gray-200 pt-4">
+                              <p className="text-xs font-medium text-[#888] uppercase tracking-wider mb-2">Custom Range</p>
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <label className="text-sm text-[#666] w-12">From</label>
+                                  <Input
+                                    type="date"
+                                    value={dateFrom}
+                                    onChange={(e) => {
+                                      setDateFrom(e.target.value);
+                                      setSelectedPreset("");
+                                    }}
+                                    className="flex-1 h-9 border-[#ddd] focus:border-[#FF1493]"
+                                    data-testid="date-from-input"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <label className="text-sm text-[#666] w-12">To</label>
+                                  <Input
+                                    type="date"
+                                    value={dateTo}
+                                    onChange={(e) => {
+                                      setDateTo(e.target.value);
+                                      setSelectedPreset("");
+                                    }}
+                                    className="flex-1 h-9 border-[#ddd] focus:border-[#FF1493]"
+                                    data-testid="date-to-input"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                              <button
+                                onClick={clearDateFilter}
+                                className="text-sm text-[#888] hover:text-[#666]"
+                              >
+                                Clear
+                              </button>
+                              <Button
+                                size="sm"
+                                onClick={() => setShowDatePicker(false)}
+                                className="bg-[#FF1493] text-white hover:bg-[#E91E8C]"
+                              >
+                                Apply
+                              </Button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </div>
 
-                  {/* Date Filters */}
-                  <AnimatePresence>
-                    {showDateFilters && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="flex flex-wrap gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="flex items-center gap-2">
-                            <label className="text-sm text-[#666] font-medium whitespace-nowrap">From:</label>
-                            <Input
-                              type="date"
-                              value={dateFrom}
-                              onChange={(e) => setDateFrom(e.target.value)}
-                              className="h-9 w-44 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
-                              data-testid="date-from-input"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <label className="text-sm text-[#666] font-medium whitespace-nowrap">To:</label>
-                            <Input
-                              type="date"
-                              value={dateTo}
-                              onChange={(e) => setDateTo(e.target.value)}
-                              className="h-9 w-44 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
-                              data-testid="date-to-input"
-                            />
-                          </div>
-                          {(dateFrom || dateTo) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => { setDateFrom(""); setDateTo(""); }}
-                              className="h-9 text-[#888] hover:text-[#666]"
-                            >
-                              <X className="w-4 h-4 mr-1" />
-                              Clear dates
-                            </Button>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
                   {/* Filter Results Count */}
-                  {hasActiveFilters && (
-                    <div className="flex items-center justify-between">
+                  {(searchQuery || hasDateFilter) && (
+                    <div className="flex items-center justify-between px-1">
                       <p className="text-xs text-[#888]">
                         Showing {filteredMessages.length} of {messages.length} messages
-                        {dateFrom && dateTo && ` (${dateFrom} to ${dateTo})`}
-                        {dateFrom && !dateTo && ` (from ${dateFrom})`}
-                        {!dateFrom && dateTo && ` (until ${dateTo})`}
                       </p>
                       <button
-                        onClick={clearFilters}
+                        onClick={() => {
+                          setSearchQuery("");
+                          clearDateFilter();
+                        }}
                         className="text-xs text-[#FF1493] hover:text-[#E91E8C] font-medium"
                       >
                         Clear all filters
@@ -471,7 +487,7 @@ export default function MessagesSection() {
               ) : filteredMessages.length === 0 ? (
                 <div className="text-center py-8">
                   <Search className="w-12 h-12 text-[#ccc] mx-auto mb-2" />
-                  <p className="text-[#888]">No messages match your search</p>
+                  <p className="text-[#888]">No messages match your filters</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -487,7 +503,7 @@ export default function MessagesSection() {
                         }`}
                         data-testid={`message-item-${message.id}`}
                       >
-                        {/* Collapsed Header - Always visible */}
+                        {/* Collapsed Header */}
                         <div 
                           className="p-3 cursor-pointer flex items-center justify-between gap-3"
                           onClick={() => toggleMessageExpanded(message.id)}
