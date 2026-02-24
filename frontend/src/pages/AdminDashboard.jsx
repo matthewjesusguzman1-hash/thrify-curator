@@ -201,6 +201,9 @@ export default function AdminDashboard() {
   const [showHoursByEmployee, setShowHoursByEmployee] = useState(false);
   const [showAllEmployees, setShowAllEmployees] = useState(false);
   const [showTimeEntries, setShowTimeEntries] = useState(false);
+  
+  // Master refresh state
+  const [masterRefreshing, setMasterRefreshing] = useState(false);
 
   // Payroll summary state for overview
   const [payrollSummary, setPayrollSummary] = useState({
