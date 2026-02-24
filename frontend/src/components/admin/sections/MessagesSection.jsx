@@ -59,6 +59,8 @@ export default function MessagesSection() {
   const [pendingDateRange, setPendingDateRange] = useState({ from: undefined, to: undefined });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState("");
+  const [selectedMessages, setSelectedMessages] = useState(new Set());
+  const [selectMode, setSelectMode] = useState(false);
 
   const getToken = () => localStorage.getItem("token");
 
