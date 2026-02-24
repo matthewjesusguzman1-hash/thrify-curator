@@ -1420,6 +1420,10 @@ export default function AdminDashboard() {
 
   // Approve a specific W-9 document
   const handleApproveW9Doc = async (employeeId, docId) => {
+    if (!employeeId || !docId) {
+      toast.error("Invalid document or employee ID");
+      return;
+    }
     try {
       await axios.post(`${API}/admin/employees/${employeeId}/w9/${docId}/approve`, {}, getAuthHeader());
       toast.success("W-9 approved!");
