@@ -42,7 +42,7 @@ class MileageEntryUpdate(BaseModel):
 class MileageEntryResponse(BaseModel):
     id: str
     user_id: str
-    user_name: str
+    user_name: Optional[str] = "Unknown"
     date: str
     start_location: Optional[LocationData] = None
     end_location: Optional[LocationData] = None
