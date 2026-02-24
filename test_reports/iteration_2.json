@@ -1,0 +1,64 @@
+{
+  "summary": "Tested W-9 Tax Form redesign. All UI components present and functional. Critical backend issue found: endpoint conflict causes notes and id fields to be missing from stored documents.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/time/w9/upload",
+        "issue": "Duplicate endpoint in server.py (line ~300) overrides the router endpoint in time_tracking.py. The server.py version: (1) Does NOT accept 'notes' parameter - frontend notes field is ignored, (2) Does NOT generate unique 'id' for documents - uses upsert by employee_id instead, (3) Uses different status value 'pending_review' vs 'submitted'",
+        "priority": "HIGH",
+        "fix": "Remove or update the @app.post('/api/time/w9/upload') endpoint in server.py to use the router version that properly supports notes and generates unique IDs"
+      },
+      {
+        "endpoint": "Frontend W-9 list rendering",
+        "issue": "EmployeeDashboard.jsx line 564 filters documents with `.filter(doc => doc && doc.id)` but server.py endpoint doesn't store 'id' field, causing all submitted W-9s to be hidden from the UI despite being stored in database",
+        "priority": "HIGH",
+        "fix": "Either update server.py endpoint to generate and store 'id' field, OR remove the id filter in frontend"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "W-9 submission list display",
+        "issue": "Submitted W-9s don't appear in 'Your Submissions' list due to backend not storing 'id' field",
+        "affected_selectors": ["[data-testid^='w9-submission-']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix server.py W-9 upload endpoint to match time_tracking.py router version - add 'notes' parameter and generate unique 'id' for each document",
+    "Remove duplicate endpoint in server.py OR ensure router endpoint takes precedence"
+  ],
+  "critical_code_review_comments": [
+    "server.py line ~300: @app.post('/api/time/w9/upload') endpoint conflicts with time_tracking.py router endpoint - app-level routes override router routes",
+    "server.py W-9 endpoint uses upsert which replaces existing W-9 instead of allowing multiple submissions as designed in time_tracking.py",
+    "EmployeeDashboard.jsx line 564: .filter(doc => doc && doc.id) will filter out all documents if backend doesn't return 'id' field"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A - Frontend only testing requested",
+    "frontend": "85% - All UI components present, integration issue with W-9 list display due to backend"
+  },
+  "test_credentials": {
+    "admin_code": "4399",
+    "test_employee_email": "testemployee@thriftycurator.com"
+  },
+  "seed_data_creation": "Created test W-9 submission via API to verify upload flow",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "W-9 UI components all present. Backend endpoint conflict needs to be fixed. After fix, verify: (1) Notes field value is stored and displayed, (2) Multiple W-9 submissions appear in list with status badges, (3) Admin modal shows Preview/Download/Approve/Delete buttons for submitted documents",
+  "features_tested": {
+    "Employee Dashboard - W-9 section 'Submit W-9 to Admin' button": "PASSED",
+    "Employee Dashboard - W-9 submission form with file upload and notes": "PASSED - UI present, notes not saved to DB due to backend issue",
+    "Employee Dashboard - Submitted W-9s list": "FAILED - Documents filtered out due to missing 'id' field",
+    "Employee Dashboard - 'Get W-9 Form' button": "PASSED",
+    "Admin Dashboard - W-9 column in employees table": "PASSED",
+    "Admin Dashboard - W-9 View button opens modal": "PASSED",
+    "Admin Dashboard - W-9 Modal action buttons": "NOT TESTABLE - No documents with proper structure to test",
+    "Backend - POST /api/time/w9/upload with notes": "FAILED - server.py endpoint overrides router, notes parameter ignored"
+  }
+}
