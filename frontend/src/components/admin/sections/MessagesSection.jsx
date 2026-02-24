@@ -12,10 +12,11 @@ import {
   RefreshCw,
   Search,
   X,
-  Calendar
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -24,25 +25,25 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // Date range presets
 const DATE_PRESETS = [
   { label: "Today", getValue: () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date();
     return { from: today, to: today };
   }},
   { label: "Last 7 days", getValue: () => {
     const today = new Date();
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
-    return { from: weekAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+    return { from: weekAgo, to: today };
   }},
   { label: "Last 30 days", getValue: () => {
     const today = new Date();
     const monthAgo = new Date(today);
     monthAgo.setDate(monthAgo.getDate() - 30);
-    return { from: monthAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+    return { from: monthAgo, to: today };
   }},
   { label: "This month", getValue: () => {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    return { from: firstDay.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+    return { from: firstDay, to: today };
   }},
 ];
 
@@ -54,8 +55,7 @@ export default function MessagesSection() {
   const [deletingId, setDeletingId] = useState(null);
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState("");
 
