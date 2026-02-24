@@ -3438,7 +3438,7 @@ export default function AdminDashboard() {
 
                     {/* Settings Row */}
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <Settings className="w-5 h-5 text-[#888]" />
                           <div>
@@ -3446,21 +3446,21 @@ export default function AdminDashboard() {
                             <p className="text-xs text-[#888]">Set the start date for bi-weekly pay periods</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-2 ml-8 sm:ml-0">
                           <div className="flex items-center gap-2">
                             <Label className="text-sm text-[#666]">Start Date:</Label>
                             <Input
                               type="date"
                               value={payrollSettings.pay_period_start_date}
                               onChange={(e) => setPayrollSettings({ ...payrollSettings, pay_period_start_date: e.target.value })}
-                              className="w-40 h-9 text-sm"
+                              className="w-36 sm:w-40 h-9 text-sm"
                               data-testid="pay-period-start-date"
                             />
                           </div>
                           <Button
                             size="sm"
                             onClick={handleUpdatePayrollSettings}
-                            className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
+                            className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white whitespace-nowrap"
                             data-testid="save-pay-period-btn"
                           >
                             <Save className="w-4 h-4 mr-1" />
