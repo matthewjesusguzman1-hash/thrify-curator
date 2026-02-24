@@ -815,6 +815,36 @@ async def approve_w9(employee_id: str, admin: dict = Depends(get_admin_user)):
     return {"message": "W-9 approved successfully"}
 
 
+@router.post("/employees/{employee_id}/w9/{doc_id}/approve")
+async def approve_specific_w9(employee_id: str, doc_id: str, admin: dict = Depends(get_admin_user)):
+    """Approve a specific W-9 document"""
+    result = await db.w9_documents.update_one(
+        {"employee_id": employee_id, "id": doc_id},
+        {"$set": {
+            "status": "approved",
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "reviewed_by": admin["id"]
+        }}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="W-9 document not found")
+    
+    # Update user's w9_status if this is their latest document
+    latest_doc = await db.w9_documents.find_one(
+        {"employee_id": employee_id},
+        {"_id": 0, "status": 1},
+        sort=[("uploaded_at", -1)]
+    )
+    if latest_doc and latest_doc.get("id") == doc_id:
+        await db.users.update_one(
+            {"id": employee_id},
+            {"$set": {"w9_status": "approved"}}
+        )
+    
+    return {"message": "W-9 approved successfully"}
+
+
 @router.post("/employees/{employee_id}/w9/reject")
 async def reject_w9(employee_id: str, reject_data: dict, admin: dict = Depends(get_admin_user)):
     """Reject an employee's W-9 and request corrections"""
