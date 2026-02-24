@@ -156,16 +156,18 @@ export default function FormSubmissionsSection({
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
               fetchFormSubmissions();
             }}
             disabled={loadingForms}
-            className="text-[#888] hover:text-[#333]"
+            className="text-[#888] hover:text-[#333] hover:border-[#333]"
+            data-testid="refresh-forms-btn"
           >
-            {loadingForms ? "Loading..." : "Refresh"}
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${loadingForms ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
           {isExpanded ? (
             <ChevronUp className="w-5 h-5 text-[#888]" />
