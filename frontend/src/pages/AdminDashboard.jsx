@@ -2600,9 +2600,14 @@ export default function AdminDashboard() {
                       </p>
                     </div>
 
-                    {/* W-9 Form Download Section */}
+                    {/* W-9 Documents Section */}
                     <div className="form-group">
-                      <Label className="form-label">W-9 Tax Form</Label>
+                      <Label className="form-label flex items-center justify-between">
+                        <span>W-9 Tax Documents</span>
+                        {editEmployeeW9s.length > 0 && (
+                          <span className="text-xs font-normal text-[#888]">{editEmployeeW9s.length} document(s)</span>
+                        )}
+                      </Label>
                       <div className="space-y-2">
                         {/* Download blank form */}
                         <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
@@ -2626,87 +2631,163 @@ export default function AdminDashboard() {
                           </Button>
                         </div>
                         
-                        {/* Current W-9 status or upload */}
-                        {editEmployeeData.has_w9 ? (
-                          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-200">
-                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                              <CheckCircle className="w-5 h-5 text-green-600" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-green-700">W-9 On File</p>
-                              <p className="text-xs text-green-600">
-                                {editEmployeeData.w9_status === 'pending_review' && 'Pending Review'}
-                                {editEmployeeData.w9_status === 'approved' && 'Approved'}
-                                {editEmployeeData.w9_status === 'needs_correction' && 'Needs Correction'}
-                                {!editEmployeeData.w9_status && 'Uploaded'}
-                              </p>
-                            </div>
-                            <div className="flex gap-1">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleW9Download(editEmployeeData.id, editEmployeeData.name)}
-                                className="text-green-600 border-green-400 hover:bg-green-50"
+                        {/* Existing W-9 documents list */}
+                        {loadingEditW9s ? (
+                          <div className="p-4 text-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C5A065] mx-auto"></div>
+                            <p className="text-xs text-[#888] mt-2">Loading W-9s...</p>
+                          </div>
+                        ) : editEmployeeW9s.length > 0 ? (
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {editEmployeeW9s.map((doc, index) => (
+                              <div 
+                                key={doc.id} 
+                                className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-200"
                               >
-                                <Download className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleW9Delete(editEmployeeData.id)}
-                                className="text-red-500 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
+                                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                  <CheckCircle className="w-4 h-4 text-green-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-green-700 truncate">{doc.filename || `W-9 #${index + 1}`}</p>
+                                  <p className="text-xs text-green-600">
+                                    {new Date(doc.uploaded_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await axios.get(`${API}/admin/employees/${editingEmployee.id}/w9/${doc.id}`, {
+                                          ...getAuthHeader(),
+                                          responseType: 'blob'
+                                        });
+                                        const blob = new Blob([response.data], { type: response.headers['content-type'] });
+                                        const url = window.URL.createObjectURL(blob);
+                                        window.open(url, '_blank');
+                                      } catch (error) {
+                                        toast.error("Failed to view W-9");
+                                      }
+                                    }}
+                                    className="text-green-600 hover:bg-green-100 p-1 h-auto"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await axios.get(`${API}/admin/employees/${editingEmployee.id}/w9/${doc.id}`, {
+                                          ...getAuthHeader(),
+                                          responseType: 'blob'
+                                        });
+                                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.setAttribute('download', doc.filename || `w9_${editingEmployee.name}.pdf`);
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.remove();
+                                        window.URL.revokeObjectURL(url);
+                                      } catch (error) {
+                                        toast.error("Failed to download W-9");
+                                      }
+                                    }}
+                                    className="text-blue-600 hover:bg-blue-100 p-1 h-auto"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={async () => {
+                                      if (!window.confirm("Are you sure you want to delete this W-9?")) return;
+                                      try {
+                                        await axios.delete(`${API}/admin/employees/${editingEmployee.id}/w9/${doc.id}`, getAuthHeader());
+                                        toast.success("W-9 deleted");
+                                        setEditEmployeeW9s(prev => prev.filter(d => d.id !== doc.id));
+                                        fetchData();
+                                      } catch (error) {
+                                        toast.error("Failed to delete W-9");
+                                      }
+                                    }}
+                                    className="text-red-500 hover:bg-red-100 p-1 h-auto"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
-                            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                              <Upload className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-[#333]">Attach Completed W-9</p>
-                              {editEmployeeW9File ? (
-                                <p className="text-xs text-green-600">{editEmployeeW9File.name}</p>
-                              ) : (
-                                <p className="text-xs text-[#888]">Upload employee's filled W-9</p>
-                              )}
-                            </div>
-                            <div className="flex gap-1">
-                              <input
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                className="hidden"
-                                id="edit-employee-w9-upload"
-                                onChange={(e) => setEditEmployeeW9File(e.target.files[0])}
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => document.getElementById('edit-employee-w9-upload').click()}
-                                className="text-amber-600 border-amber-400 hover:bg-amber-50"
-                              >
-                                <Upload className="w-4 h-4 mr-1" />
-                                {editEmployeeW9File ? 'Change' : 'Upload'}
-                              </Button>
-                              {editEmployeeW9File && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditEmployeeW9File(null)}
-                                  className="text-red-500 hover:bg-red-50"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
+                          <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-center">
+                            <p className="text-sm text-[#888]">No W-9 documents on file</p>
                           </div>
                         )}
+                        
+                        {/* Upload new W-9 */}
+                        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Upload className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-[#333]">
+                              {editEmployeeW9s.length > 0 ? 'Add Another W-9' : 'Upload W-9'}
+                            </p>
+                            {editEmployeeW9File ? (
+                              <p className="text-xs text-green-600">{editEmployeeW9File.name}</p>
+                            ) : (
+                              <p className="text-xs text-[#888]">Upload employee's completed W-9</p>
+                            )}
+                          </div>
+                          <div className="flex gap-1">
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              className="hidden"
+                              id="edit-employee-w9-upload"
+                              onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+                                
+                                const formData = new FormData();
+                                formData.append('file', file);
+                                
+                                try {
+                                  await axios.post(`${API}/admin/employees/${editingEmployee.id}/w9`, formData, {
+                                    headers: {
+                                      Authorization: `Bearer ${localStorage.getItem("token")}`,
+                                      'Content-Type': 'multipart/form-data'
+                                    }
+                                  });
+                                  toast.success("W-9 uploaded successfully!");
+                                  // Refresh W-9 list
+                                  const response = await axios.get(`${API}/admin/employees/${editingEmployee.id}/w9/status`, getAuthHeader());
+                                  setEditEmployeeW9s(response.data.w9_documents || []);
+                                  fetchData();
+                                } catch (error) {
+                                  toast.error(error.response?.data?.detail || "Failed to upload W-9");
+                                }
+                                e.target.value = ''; // Reset input
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => document.getElementById('edit-employee-w9-upload').click()}
+                              className="text-blue-600 border-blue-400 hover:bg-blue-100"
+                            >
+                              <Upload className="w-4 h-4 mr-1" />
+                              Upload
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
