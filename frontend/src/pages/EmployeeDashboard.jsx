@@ -584,10 +584,12 @@ export default function EmployeeDashboard() {
                               </span>
                             </div>
                             <div className="flex items-center gap-3 text-xs text-white/60">
-                              <span className="flex items-center gap-1">
-                                <Clock3 className="w-3 h-3" />
-                                {new Date(doc.uploaded_at).toLocaleDateString()}
-                              </span>
+                              {doc.uploaded_at && new Date(doc.uploaded_at).toString() !== 'Invalid Date' && (
+                                <span className="flex items-center gap-1">
+                                  <Clock3 className="w-3 h-3" />
+                                  {new Date(doc.uploaded_at).toLocaleDateString()}
+                                </span>
+                              )}
                               <span className={`px-2 py-0.5 rounded-full font-medium ${
                                 doc.status === 'approved' 
                                   ? 'bg-[#00D4FF]/20 text-[#00D4FF]' 
