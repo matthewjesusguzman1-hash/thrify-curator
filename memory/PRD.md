@@ -820,3 +820,35 @@ Simplified W-9 management by removing the approval workflow. W-9 submissions no 
 ### Test Report
 - `/app/test_reports/iteration_29.json` - 100% backend, 100% frontend
 - All W-9 UI refinements verified working
+
+## W-9 Bug Fixes (Dec 25, 2025)
+
+### Issues Fixed
+
+1. **Edit Employee Modal - W-9 buttons not working**
+   - **Root Cause**: Old W-9 documents in database were missing `id` field
+   - **Fix**: Added `id` field to 4 existing W-9 documents in database
+
+2. **W-9 Documents Modal - buttons not working**
+   - **Root Cause**: Same as above - documents without `id` field couldn't be fetched
+   - **Fix**: Same as above
+
+3. **Only first employee could access W-9 documents**
+   - **Root Cause**: Backend route ordering issue - `/status` endpoint was being matched by `/{doc_id}` route
+   - **Fix**: Reordered backend routes so `/status` comes before `/{doc_id}` in admin.py
+
+4. **Employee Portal - W-9 view/download errors**
+   - **Root Cause**: Same missing `id` field issue
+   - **Fix**: Same database fix
+
+### Backend Changes
+- Reordered routes in `/app/backend/app/routers/admin.py`:
+  - `/employees/{id}/w9/status` now comes before `/employees/{id}/w9/{doc_id}`
+  - `/employees/{id}/w9` (list all) now comes last
+
+### Database Fix
+- Added `id` field to 4 W-9 documents that were created before the multi-W-9 feature
+
+### Test Report
+- `/app/test_reports/iteration_30.json` - 100% backend, 100% frontend
+- All W-9 bugs verified fixed for: James Wilson, Lisa Martinez, Sarah Johnson
