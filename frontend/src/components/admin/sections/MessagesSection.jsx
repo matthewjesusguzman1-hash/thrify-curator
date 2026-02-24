@@ -13,7 +13,8 @@ import {
   Search,
   X,
   Bell,
-  BellOff
+  BellOff,
+  Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,9 @@ export default function MessagesSection() {
   const [deletingId, setDeletingId] = useState(null);
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showDateFilters, setShowDateFilters] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
 
