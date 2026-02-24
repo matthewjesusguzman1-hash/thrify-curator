@@ -4653,15 +4653,14 @@ export default function AdminDashboard() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                if (window.confirm("Are you sure you want to download the IRS W-9 form?")) {
-                                  handleDownloadBlankW9();
-                                }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownloadBlankW9();
                               }}
-                              className="text-[#888] hover:text-[#666]"
+                              className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
                             >
-                              <Download className="w-4 h-4 mr-1" />
-                              Get Form
+                              <FileText className="w-4 h-4 mr-1" />
+                              Get W-9 Form
                             </Button>
                           </div>
 
