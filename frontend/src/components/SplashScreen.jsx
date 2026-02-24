@@ -40,19 +40,19 @@ export default function SplashScreen({ onComplete }) {
           <div className="absolute inset-0 overflow-hidden">
             <motion.div
               initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 0.1, scale: 1 }}
+              animate={{ opacity: 0.25, scale: 1 }}
               transition={{ duration: 1.5, ease: "easeOut" }}
               className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00D4FF] rounded-full blur-3xl"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 0.1, scale: 1 }}
+              animate={{ opacity: 0.25, scale: 1 }}
               transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
               className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#FF1493] rounded-full blur-3xl"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 0.08, scale: 1 }}
+              animate={{ opacity: 0.2, scale: 1 }}
               transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#8B5CF6] rounded-full blur-3xl"
             />
