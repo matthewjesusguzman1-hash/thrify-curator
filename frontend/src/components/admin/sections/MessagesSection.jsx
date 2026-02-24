@@ -311,7 +311,7 @@ export default function MessagesSection() {
               {/* Search and Date Filter Bar */}
               {messages.length > 0 && (
                 <div className="mb-4 space-y-3">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     {/* Text Search */}
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" />
@@ -342,7 +342,7 @@ export default function MessagesSection() {
                           e.stopPropagation();
                           setShowDatePicker(!showDatePicker);
                         }}
-                        className={`h-10 px-3 whitespace-nowrap ${hasDateFilter ? 'bg-[#FF1493]/10 border-[#FF1493] text-[#FF1493]' : 'text-[#888]'}`}
+                        className={`h-10 px-3 w-full sm:w-auto justify-center ${hasDateFilter ? 'bg-[#FF1493]/10 border-[#FF1493] text-[#FF1493]' : 'text-[#888]'}`}
                         data-testid="date-range-btn"
                       >
                         <CalendarIcon className="w-4 h-4 mr-2" />
