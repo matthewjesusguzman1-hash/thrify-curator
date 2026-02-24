@@ -3,7 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, 
-  Clock, 
+  Clock,
+  Clock3,
   LogOut, 
   TrendingUp,
   Calendar,
@@ -50,7 +51,8 @@ import {
   Monitor,
   Save,
   Car,
-  RefreshCw
+  RefreshCw,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
