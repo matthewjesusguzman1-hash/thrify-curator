@@ -2698,7 +2698,7 @@ export default function AdminDashboard() {
                                         toast.error("Failed to view W-9");
                                       }
                                     }}
-                                    className="text-green-600 hover:bg-green-100 p-1 h-auto"
+                                    className="text-gray-600 hover:bg-gray-100 p-1 h-auto"
                                   >
                                     <Eye className="w-4 h-4" />
                                   </Button>
@@ -2728,6 +2728,28 @@ export default function AdminDashboard() {
                                   >
                                     <Download className="w-4 h-4" />
                                   </Button>
+                                  {doc.status !== 'approved' && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={async () => {
+                                        try {
+                                          await axios.post(`${API}/admin/employees/${editingEmployee.id}/w9/${doc.id}/approve`, {}, getAuthHeader());
+                                          toast.success("W-9 approved!");
+                                          // Refresh W-9 list
+                                          const response = await axios.get(`${API}/admin/employees/${editingEmployee.id}/w9/status`, getAuthHeader());
+                                          setEditEmployeeW9s(response.data.w9_documents || []);
+                                          fetchData();
+                                        } catch (error) {
+                                          toast.error("Failed to approve W-9");
+                                        }
+                                      }}
+                                      className="text-green-500 hover:bg-green-100 p-1 h-auto"
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                   <Button
                                     type="button"
                                     variant="ghost"
