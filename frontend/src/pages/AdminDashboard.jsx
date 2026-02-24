@@ -1257,17 +1257,27 @@ export default function AdminDashboard() {
     toast.success("Opening W-9 form...");
   };
 
-  // View W-9 in modal (without downloading)
+  // View W-9 in modal (without downloading) - Now shows list of all W-9s
   const handleViewW9 = async (employeeId, employeeName) => {
     setLoadingW9Viewer(true);
     setShowW9ViewerModal(true);
+    setSelectedW9Index(0);
+    setEmployeeW9List([]);
     
     try {
-      // Get W-9 status info first
+      // Get all W-9 documents for this employee
       const statusRes = await axios.get(`${API}/admin/employees/${employeeId}/w9/status`, getAuthHeader());
+      const w9Documents = statusRes.data.w9_documents || [];
       
-      // Get the W-9 file as blob
-      const response = await axios.get(`${API}/admin/employees/${employeeId}/w9`, {
+      if (w9Documents.length === 0) {
+        toast.error("No W-9 documents found");
+        setShowW9ViewerModal(false);
+        return;
+      }
+      
+      // Load the first W-9 document
+      const firstDoc = w9Documents[0];
+      const response = await axios.get(`${API}/admin/employees/${employeeId}/w9/${firstDoc.id}`, {
         ...getAuthHeader(),
         responseType: 'blob'
       });
@@ -1275,14 +1285,16 @@ export default function AdminDashboard() {
       const blob = new Blob([response.data], { type: response.headers['content-type'] });
       const url = window.URL.createObjectURL(blob);
       
+      setEmployeeW9List(w9Documents);
       setViewingW9({
         employeeId,
         employeeName,
+        docId: firstDoc.id,
         url,
         contentType: response.headers['content-type'],
-        filename: statusRes.data.filename,
-        status: statusRes.data.status,
-        uploadedAt: statusRes.data.uploaded_at
+        filename: firstDoc.filename,
+        status: firstDoc.status,
+        uploadedAt: firstDoc.uploaded_at
       });
     } catch (error) {
       toast.error("Failed to load W-9");
@@ -1292,11 +1304,77 @@ export default function AdminDashboard() {
     }
   };
 
+  // Switch to a different W-9 document
+  const handleSelectW9 = async (index) => {
+    if (index === selectedW9Index || !employeeW9List[index]) return;
+    
+    setLoadingW9Viewer(true);
+    const doc = employeeW9List[index];
+    
+    try {
+      // Revoke old URL
+      if (viewingW9?.url) {
+        window.URL.revokeObjectURL(viewingW9.url);
+      }
+      
+      const response = await axios.get(`${API}/admin/employees/${viewingW9.employeeId}/w9/${doc.id}`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      
+      setSelectedW9Index(index);
+      setViewingW9({
+        ...viewingW9,
+        docId: doc.id,
+        url,
+        contentType: response.headers['content-type'],
+        filename: doc.filename,
+        status: doc.status,
+        uploadedAt: doc.uploaded_at
+      });
+    } catch (error) {
+      toast.error("Failed to load W-9");
+    } finally {
+      setLoadingW9Viewer(false);
+    }
+  };
+
+  // Delete a specific W-9 document
+  const handleDeleteW9Doc = async (employeeId, docId) => {
+    if (!window.confirm("Are you sure you want to delete this W-9 document?")) return;
+    
+    try {
+      await axios.delete(`${API}/admin/employees/${employeeId}/w9/${docId}`, getAuthHeader());
+      toast.success("W-9 deleted successfully");
+      
+      // Remove from list
+      const newList = employeeW9List.filter(doc => doc.id !== docId);
+      setEmployeeW9List(newList);
+      
+      if (newList.length === 0) {
+        closeW9Viewer();
+        fetchData();
+      } else {
+        // Load first remaining document
+        setSelectedW9Index(0);
+        handleSelectW9(0);
+        fetchData();
+      }
+    } catch (error) {
+      toast.error("Failed to delete W-9");
+    }
+  };
+
   const closeW9Viewer = () => {
     if (viewingW9?.url) {
       window.URL.revokeObjectURL(viewingW9.url);
     }
     setViewingW9(null);
+    setEmployeeW9List([]);
+    setSelectedW9Index(0);
     setShowW9ViewerModal(false);
   };
 
