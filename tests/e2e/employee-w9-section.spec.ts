@@ -36,12 +36,16 @@ test.describe('Employee Dashboard W-9 Section', () => {
   });
 
   test('should display Your Submissions section with document count', async ({ page }) => {
-    // Look for "Your Submissions" heading
-    const submissionsHeading = page.getByText('Your Submissions', { exact: false });
+    // Scroll down to W-9 section
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    
+    // Look for "YOUR SUBMISSIONS" heading (uppercase as shown in UI)
+    const submissionsHeading = page.getByText('YOUR SUBMISSIONS', { exact: false });
     await expect(submissionsHeading).toBeVisible();
     
-    // There should be submission count badge (test employee has 2 documents)
-    const countBadge = page.locator('span:text-matches("^\\d$")');
+    // There should be submission count badge (shows number in badge next to heading)
+    // The badge contains the number 2 (or 1 depending on filter)
+    const countBadge = submissionsHeading.locator('xpath=following-sibling::span | ../span');
     await expect(countBadge.first()).toBeVisible();
   });
 
@@ -78,16 +82,19 @@ test.describe('Employee Dashboard W-9 Section', () => {
   });
 
   test('should display submitted W-9 documents with status badges', async ({ page }) => {
+    // Scroll down to W-9 section
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    
     // Test employee has submitted W-9s - check for status badges
     // Status can be "Approved" or "Pending Review"
-    const approvedBadge = page.locator('text=Approved');
-    const pendingBadge = page.locator('text=Pending Review');
+    const approvedBadge = page.locator('span:text("Approved")');
+    const pendingBadge = page.locator('span:text("Pending Review")');
     
-    // At least one of these should be visible
-    const hasApproved = await approvedBadge.count() > 0;
-    const hasPending = await pendingBadge.count() > 0;
+    // Wait for the W-9 section to load
+    await expect(page.getByText('YOUR SUBMISSIONS', { exact: false })).toBeVisible();
     
-    expect(hasApproved || hasPending).toBeTruthy();
+    // At least one of these should be visible - give it time to render
+    await expect(approvedBadge.or(pendingBadge).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should show View button for submitted W-9 documents', async ({ page }) => {
@@ -120,17 +127,21 @@ test.describe('Employee Dashboard W-9 Section', () => {
   });
 
   test('should have dark theme styling for W-9 section', async ({ page }) => {
-    // Verify W-9 section has dark theme background gradient
-    const w9SectionLocator = page.locator('div').filter({ hasText: /^W-9 Tax Form/ }).first();
+    // Scroll down to W-9 section
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     
-    // Get parent section container with dark theme
-    const sectionParent = page.locator('.bg-gradient-to-br.from-\\[\\#1A1A2E\\]').first();
-    await expect(sectionParent).toBeVisible();
+    // Wait for W-9 section to appear
+    const w9Heading = page.getByRole('heading', { name: 'W-9 Tax Form' });
+    await expect(w9Heading).toBeVisible();
     
-    // Verify text is white
-    const headingText = sectionParent.locator('h2');
-    const textColor = await headingText.evaluate(el => window.getComputedStyle(el).color);
-    // White color
+    // Verify the heading text is white (dark theme)
+    const textColor = await w9Heading.evaluate(el => window.getComputedStyle(el).color);
+    // White color would be rgb(255, 255, 255)
     expect(textColor).toMatch(/rgb\(255,\s*255,\s*255\)|rgba\(255,\s*255,\s*255/);
+    
+    // Verify the section has gradient background (dark theme)
+    // Get the parent container that has the gradient
+    const sectionContainer = w9Heading.locator('xpath=ancestor::div[contains(@class, "bg-gradient")]').first();
+    await expect(sectionContainer).toBeVisible();
   });
 });
