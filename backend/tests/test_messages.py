@@ -24,9 +24,10 @@ class TestMessagesAPI:
     @pytest.fixture(autouse=True)
     def setup(self):
         """Get admin token for authenticated requests"""
-        # Login with admin code
+        # Login with admin email and code
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "4399"  # Admin code
+            "email": "matthewjesusguzman1@gmail.com",
+            "admin_code": "4399"
         })
         assert response.status_code == 200, f"Admin login failed: {response.text}"
         self.admin_token = response.json().get("token")
