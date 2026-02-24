@@ -467,48 +467,21 @@ export default function AllEmployeesSection({
                           <td>{formatDateTime(emp.created_at)}</td>
                           <td>
                             {emp.role !== 'admin' && (
-                              <div className="flex items-center gap-1">
-                                {emp.has_w9 ? (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => { e.stopPropagation(); handleViewW9(emp.id, emp.name); }}
-                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 px-2"
-                                    data-testid={`view-w9-${emp.id}`}
-                                    title="View W-9"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                ) : (
-                                  <>
-                                    <input
-                                      type="file"
-                                      accept=".pdf,.jpg,.jpeg,.png"
-                                      className="hidden"
-                                      id={`w9-upload-${emp.id}`}
-                                      onChange={(e) => handleW9Upload(emp.id, e.target.files[0])}
-                                    />
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        document.getElementById(`w9-upload-${emp.id}`).click();
-                                      }}
-                                      className="text-[#888] hover:text-[#666] hover:bg-[#F9F6F7] h-8 px-2"
-                                      disabled={uploadingW9 === emp.id}
-                                      data-testid={`upload-w9-${emp.id}`}
-                                      title="Upload W-9"
-                                    >
-                                      {uploadingW9 === emp.id ? (
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#C5A065]"></div>
-                                      ) : (
-                                        <Upload className="w-4 h-4" />
-                                      )}
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); handleOpenW9Modal(emp); }}
+                                className={`h-8 px-2 ${
+                                  emp.has_w9 
+                                    ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' 
+                                    : 'text-[#888] hover:text-[#666] hover:bg-[#F9F6F7]'
+                                }`}
+                                data-testid={`view-w9-${emp.id}`}
+                                title={emp.has_w9 ? "View W-9 Documents" : "No W-9 Submitted"}
+                              >
+                                <FileText className="w-4 h-4" />
+                                {emp.has_w9 && <span className="ml-1 text-xs">View</span>}
+                              </Button>
                             )}
                           </td>
                           <td>
