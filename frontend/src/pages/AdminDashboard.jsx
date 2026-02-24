@@ -2696,27 +2696,23 @@ export default function AdminDashboard() {
                                 {editEmployeeW9s.filter(doc => doc && doc.id).map((doc, index) => (
                                   <div 
                                     key={doc.id} 
-                                    className={`p-3 rounded-xl border ${
+                                    className={`p-4 rounded-xl border ${
                                       doc.status === 'approved' 
                                         ? 'bg-[#00D4FF]/10 border-[#00D4FF]/30' 
                                         : 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30'
                                     }`}
+                                    data-testid={`edit-w9-doc-${doc.id}`}
                                   >
-                                    <div className="flex items-center gap-3">
-                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                        doc.status === 'approved' ? 'bg-[#00D4FF]/20' : 'bg-[#8B5CF6]/20'
-                                      }`}>
-                                        <FileText className={`w-4 h-4 ${
-                                          doc.status === 'approved' ? 'text-[#00D4FF]' : 'text-[#8B5CF6]'
-                                        }`} />
-                                      </div>
+                                    <div className="flex items-start justify-between">
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-white truncate">{doc.filename || `W-9 #${index + 1}`}</p>
-                                        <div className="flex items-center gap-2 text-xs text-white/50">
-                                          {doc.uploaded_at && new Date(doc.uploaded_at).toString() !== 'Invalid Date' && (
-                                            <span>{new Date(doc.uploaded_at).toLocaleDateString()}</span>
-                                          )}
-                                          <span className={`px-2 py-0.5 rounded-full ${
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <FileText className={`w-4 h-4 ${
+                                            doc.status === 'approved' ? 'text-[#00D4FF]' : 'text-[#8B5CF6]'
+                                          }`} />
+                                          <span className="font-medium text-white truncate">
+                                            {doc.filename || `W-9 #${index + 1}`}
+                                          </span>
+                                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                             doc.status === 'approved' 
                                               ? 'bg-[#00D4FF]/20 text-[#00D4FF]' 
                                               : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
@@ -2724,8 +2720,21 @@ export default function AdminDashboard() {
                                             {doc.status === 'approved' ? 'Approved' : 'Pending'}
                                           </span>
                                         </div>
+                                        <div className="flex items-center gap-3 text-xs text-white/50">
+                                          {doc.uploaded_at && new Date(doc.uploaded_at).toString() !== 'Invalid Date' && (
+                                            <span className="flex items-center gap-1">
+                                              <Clock3 className="w-3 h-3" />
+                                              {new Date(doc.uploaded_at).toLocaleDateString()}
+                                            </span>
+                                          )}
+                                        </div>
                                         {doc.notes && (
-                                          <p className="text-xs text-white/40 mt-1 italic">"{doc.notes}"</p>
+                                          <div className="mt-2 p-2 bg-white/5 rounded-lg">
+                                            <p className="text-xs text-white/60 flex items-start gap-1">
+                                              <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                              <span className="italic">"{doc.notes}"</span>
+                                            </p>
+                                          </div>
                                         )}
                                       </div>
                                     </div>
