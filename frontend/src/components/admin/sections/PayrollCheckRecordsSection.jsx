@@ -82,10 +82,17 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
     }
   }, [getAuthHeader]);
 
-  // Auto-fetch on mount
+  // Auto-fetch on mount and when expanded
   useEffect(() => {
     fetchCheckRecords();
   }, [fetchCheckRecords]);
+
+  // Auto-refresh when section is expanded
+  useEffect(() => {
+    if (isExpanded) {
+      fetchCheckRecords();
+    }
+  }, [isExpanded, fetchCheckRecords]);
 
   // Handle image file selection
   const handleCheckImageUpload = async (file) => {
