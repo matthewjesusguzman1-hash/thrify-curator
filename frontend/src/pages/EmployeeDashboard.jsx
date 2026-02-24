@@ -442,46 +442,17 @@ export default function EmployeeDashboard() {
                     {w9Status.w9_documents.map((doc, index) => (
                       <div 
                         key={doc.id} 
-                        className={`flex items-center gap-3 p-3 rounded-xl border ${
-                          doc.status === 'approved' 
-                            ? 'bg-green-50 border-green-200' 
-                            : doc.status === 'needs_correction'
-                            ? 'bg-red-50 border-red-200'
-                            : 'bg-amber-50 border-amber-200'
-                        }`}
+                        className="flex items-center gap-3 p-3 rounded-xl border bg-green-50 border-green-200"
                       >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          doc.status === 'approved' 
-                            ? 'bg-green-100' 
-                            : doc.status === 'needs_correction'
-                            ? 'bg-red-100'
-                            : 'bg-amber-100'
-                        }`}>
-                          {doc.status === 'approved' ? (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                          ) : doc.status === 'needs_correction' ? (
-                            <AlertCircle className="w-4 h-4 text-red-600" />
-                          ) : (
-                            <Clock className="w-4 h-4 text-amber-600" />
-                          )}
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-green-100">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-[#1A1A2E] truncate">{doc.filename || `W-9 #${index + 1}`}</p>
                           <p className="text-xs text-gray-500">
                             {new Date(doc.uploaded_at).toLocaleDateString()} • 
-                            <span className={
-                              doc.status === 'approved' 
-                                ? 'text-green-600' 
-                                : doc.status === 'needs_correction'
-                                ? 'text-red-600'
-                                : 'text-amber-600'
-                            }>
-                              {' '}{doc.status === 'approved' ? 'Approved' : doc.status === 'needs_correction' ? 'Needs Fix' : 'Pending'}
-                            </span>
+                            <span className="text-green-600"> On File</span>
                           </p>
-                          {doc.status === 'needs_correction' && doc.rejection_reason && (
-                            <p className="text-xs text-red-600 mt-1">{doc.rejection_reason}</p>
-                          )}
                         </div>
                         <div className="flex gap-1">
                           <Button
@@ -501,28 +472,36 @@ export default function EmployeeDashboard() {
                               }
                             }}
                             className="text-gray-600 hover:text-[#1A1A2E] p-1 h-auto"
+                            data-testid={`view-w9-${doc.id}`}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          {doc.status !== 'approved' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async () => {
-                                if (!window.confirm("Are you sure you want to delete this W-9?")) return;
-                                try {
-                                  await axios.delete(`${API}/time/w9/${doc.id}`, getAuthHeader());
-                                  toast.success("W-9 deleted");
-                                  fetchData();
-                                } catch (error) {
-                                  toast.error(error.response?.data?.detail || "Cannot delete W-9");
-                                }
-                              }}
-                              className="text-red-500 hover:text-red-700 p-1 h-auto"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const response = await axios.get(`${API}/time/w9/download/${doc.id}`, {
+                                  ...getAuthHeader(),
+                                  responseType: 'blob'
+                                });
+                                const url = window.URL.createObjectURL(new Blob([response.data]));
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.setAttribute('download', doc.filename || `w9_document.pdf`);
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                                window.URL.revokeObjectURL(url);
+                              } catch (error) {
+                                toast.error("Failed to download W-9");
+                              }
+                            }}
+                            className="text-blue-500 hover:text-blue-700 p-1 h-auto"
+                            data-testid={`download-w9-${doc.id}`}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
