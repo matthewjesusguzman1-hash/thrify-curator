@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   SiEbay, 
   SiFacebook, 
-  SiTiktok
+  SiTiktok,
+  SiInstagram
 } from "react-icons/si";
 import { 
   Share2, 
