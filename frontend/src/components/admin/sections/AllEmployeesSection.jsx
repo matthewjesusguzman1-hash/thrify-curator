@@ -592,10 +592,12 @@ export default function AllEmployeesSection({
                               </span>
                             </div>
                             <div className="flex items-center gap-3 text-xs text-white/50">
-                              <span className="flex items-center gap-1">
-                                <Clock3 className="w-3 h-3" />
-                                {new Date(doc.uploaded_at).toLocaleDateString()}
-                              </span>
+                              {doc.uploaded_at && new Date(doc.uploaded_at).toString() !== 'Invalid Date' && (
+                                <span className="flex items-center gap-1">
+                                  <Clock3 className="w-3 h-3" />
+                                  {new Date(doc.uploaded_at).toLocaleDateString()}
+                                </span>
+                              )}
                             </div>
                             {doc.notes && (
                               <div className="mt-2 p-2 bg-white/5 rounded-lg">
