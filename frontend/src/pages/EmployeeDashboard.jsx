@@ -21,7 +21,8 @@ import {
   Send,
   MessageSquare,
   X,
-  Clock3
+  Clock3,
+  MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
