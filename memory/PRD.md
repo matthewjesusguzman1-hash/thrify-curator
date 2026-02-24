@@ -708,3 +708,39 @@ All collapsible sections now auto-refresh their data when expanded:
 
 ### Test Report
 - `/app/test_reports/iteration_27.json` - 100% frontend (15/15 features verified)
+
+## Calendar Date Range Filter Fix (Feb 24, 2026)
+
+### Issue
+User reported that the calendar date filter in Messages section was "not allowing selection of date range by choosing two dates". When clicking the first date, the filter was immediately applied, showing "No messages match your filters" before the user could select the second date.
+
+### Root Cause
+The original implementation applied the filter immediately upon any date selection. In `react-day-picker` range mode:
+- First click: `{ from: Date, to: undefined }` → filter applied for single day
+- Second click: `{ from: Date, to: Date }` → filter applied for range
+
+This caused confusing UX where messages disappeared after first click.
+
+### Solution
+Implemented a "pending state" pattern:
+1. **Added `pendingDateRange` state** - Stores date selection while calendar is open
+2. **Calendar uses `pendingDateRange`** - User sees visual selection without filtering
+3. **"Done" button applies filter** - Copies `pendingDateRange` to `dateRange`
+4. **Messages remain visible** - Filter only applies when user explicitly confirms
+
+### Code Changes
+- `/app/frontend/src/components/admin/sections/MessagesSection.jsx`:
+  - Added `pendingDateRange` state variable
+  - Added `openDatePicker()`, `cancelDatePicker()`, `applyDateFilter()` functions
+  - Calendar `onSelect` now updates `pendingDateRange` instead of `dateRange`
+  - "Done" button calls `applyDateFilter()` to apply the filter
+  - "Clear" button in picker clears `pendingDateRange`
+  - Quick presets update `pendingDateRange` as well
+
+### Verified Behavior
+1. ✅ Click first date → All messages remain visible, date highlighted in calendar
+2. ✅ Click second date → Range highlighted, messages still visible
+3. ✅ Click "Done" → Filter applied, showing matching messages with "Showing X of Y"
+4. ✅ Click "X" on date button → Filter cleared, all messages shown
+5. ✅ Quick presets (Today, Last 7 days, etc.) work correctly
+6. ✅ "Clear" button inside calendar works correctly
