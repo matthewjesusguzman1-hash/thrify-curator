@@ -300,32 +300,55 @@ export default function LandingPage() {
                 </h2>
                 <div className="space-y-3">
                   {connectLinks.map((link) => (
-                    <motion.a
-                      key={link.name}
-                      variants={itemVariants}
-                      href={link.url}
-                      target={link.url.startsWith('mailto') ? undefined : "_blank"}
-                      rel={link.url.startsWith('mailto') ? undefined : "noopener noreferrer"}
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#FF1493]/10 hover:to-[#8B5CF6]/10 transition-all duration-300 group"
-                      data-testid={`connect-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden"
-                          style={{ backgroundColor: link.color }}
-                        >
-                          {link.useImage ? (
-                            <img src={link.logoUrl} alt={link.name} className="w-full h-full object-cover" />
-                          ) : (
+                    link.isMessaging ? (
+                      <motion.button
+                        key={link.name}
+                        variants={itemVariants}
+                        onClick={handleOpenMessaging}
+                        className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#FF1493]/10 hover:to-[#8B5CF6]/10 transition-all duration-300 group text-left"
+                        data-testid={`connect-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden"
+                            style={{ backgroundColor: link.color }}
+                          >
                             <link.icon className="w-5 h-5 text-white" />
-                          )}
+                          </div>
+                          <span className="font-semibold text-[#1A1A2E] group-hover:text-[#FF1493] transition-colors">
+                            {link.name}
+                          </span>
                         </div>
-                        <span className="font-semibold text-[#1A1A2E] group-hover:text-[#FF1493] transition-colors">
-                          {link.name}
-                        </span>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#FF1493] group-hover:translate-x-1 transition-all" />
-                    </motion.a>
+                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#FF1493] group-hover:translate-x-1 transition-all" />
+                      </motion.button>
+                    ) : (
+                      <motion.a
+                        key={link.name}
+                        variants={itemVariants}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#FF1493]/10 hover:to-[#8B5CF6]/10 transition-all duration-300 group"
+                        data-testid={`connect-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden"
+                            style={{ backgroundColor: link.color }}
+                          >
+                            {link.useImage ? (
+                              <img src={link.logoUrl} alt={link.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <link.icon className="w-5 h-5 text-white" />
+                            )}
+                          </div>
+                          <span className="font-semibold text-[#1A1A2E] group-hover:text-[#FF1493] transition-colors">
+                            {link.name}
+                          </span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#FF1493] group-hover:translate-x-1 transition-all" />
+                      </motion.a>
+                    )
                   ))}
                 </div>
               </div>
