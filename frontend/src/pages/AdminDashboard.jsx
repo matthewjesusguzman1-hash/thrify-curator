@@ -65,6 +65,9 @@ import MessagesSection from "@/components/admin/sections/MessagesSection";
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
 import TimeEntriesSection from "@/components/admin/sections/TimeEntriesSection";
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
+import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
+import PayrollModal from "@/components/admin/modals/PayrollModal";
+import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
