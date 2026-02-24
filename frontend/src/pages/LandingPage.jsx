@@ -123,42 +123,31 @@ export default function LandingPage() {
   
   // Messaging state
   const [showMessageModal, setShowMessageModal] = useState(false);
-  const [messageView, setMessageView] = useState("login"); // login, compose, history
-  const [userName, setUserName] = useState("");
-  const [loggedInName, setLoggedInName] = useState("");
-  const [messageText, setMessageText] = useState("");
-  const [userMessages, setUserMessages] = useState([]);
+  const [messageSent, setMessageSent] = useState(false);
+  const [messageForm, setMessageForm] = useState({
+    name: "",
+    email: "",
+    message: ""
+  });
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
 
-  const handleMessageLogin = async () => {
-    if (!userName.trim()) {
+  const handleSendMessage = async () => {
+    // Validate form
+    if (!messageForm.name.trim()) {
       toast.error("Please enter your name");
       return;
     }
-    
-    setLoadingMessages(true);
-    try {
-      const response = await axios.get(`${API}/api/messages/check/${encodeURIComponent(userName.trim())}`);
-      setUserMessages(response.data.messages || []);
-      setLoggedInName(userName.trim());
-      setMessageView("history");
-      
-      if (response.data.unread_replies > 0) {
-        toast.success(`You have ${response.data.unread_replies} new reply(s)!`);
-      }
-    } catch (error) {
-      console.error("Error checking messages:", error);
-      setLoggedInName(userName.trim());
-      setUserMessages([]);
-      setMessageView("history");
-    } finally {
-      setLoadingMessages(false);
+    if (!messageForm.email.trim()) {
+      toast.error("Please enter your email address");
+      return;
     }
-  };
-
-  const handleSendMessage = async () => {
-    if (!messageText.trim()) {
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(messageForm.email.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    if (!messageForm.message.trim()) {
       toast.error("Please enter a message");
       return;
     }
@@ -166,16 +155,13 @@ export default function LandingPage() {
     setSendingMessage(true);
     try {
       await axios.post(`${API}/api/messages`, {
-        sender_name: loggedInName,
-        message: messageText.trim()
+        sender_name: messageForm.name.trim(),
+        sender_email: messageForm.email.trim().toLowerCase(),
+        message: messageForm.message.trim()
       });
       
-      toast.success("Message sent! We'll get back to you soon.");
-      setMessageText("");
-      
-      // Refresh messages
-      const response = await axios.get(`${API}/api/messages/check/${encodeURIComponent(loggedInName)}`);
-      setUserMessages(response.data.messages || []);
+      setMessageSent(true);
+      toast.success("Message sent successfully!");
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
@@ -186,16 +172,14 @@ export default function LandingPage() {
 
   const handleOpenMessaging = () => {
     setShowMessageModal(true);
-    setMessageView("login");
-    setUserName("");
-    setLoggedInName("");
-    setMessageText("");
-    setUserMessages([]);
+    setMessageSent(false);
+    setMessageForm({ name: "", email: "", message: "" });
   };
 
-  const formatMessageDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const handleCloseMessaging = () => {
+    setShowMessageModal(false);
+    setMessageSent(false);
+    setMessageForm({ name: "", email: "", message: "" });
   };
 
   const handleShare = async () => {
