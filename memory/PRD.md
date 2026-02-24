@@ -1048,3 +1048,49 @@ W-9 documents in the database sometimes lacked `id` fields, causing frontend cod
 
 ### Result
 API calls with undefined IDs are now prevented at the frontend level.
+
+## W-9 Feature Redesign (Feb 24, 2026)
+
+### Employee Portal Changes
+- **Removed**: Direct W-9 upload in the old section
+- **Added**: Messaging-style W-9 submission form with:
+  - File upload (PDF, JPG, PNG)
+  - Optional notes field for employee comments
+  - Submit button to send to admin
+- **Added**: Submissions list showing:
+  - Document filename
+  - Upload date
+  - Status (Pending Review / Approved)
+  - Notes preview
+  - View button
+- **Kept**: "Get W-9 Form" button to download blank IRS W-9
+
+### Admin Portal Changes (All Employees Section)
+- **Updated**: W-9 column shows "View" button for employees with submissions
+- **Added**: W-9 Management Modal with:
+  - Employee name header
+  - List of submitted W-9 documents
+  - For each document: Preview, Download, Approve, Delete buttons
+  - Document notes display
+  - Status badges (Pending/Approved)
+  - "Get W-9 Form" button in footer
+  - Close button
+
+### Backend Changes
+- **Updated** `/api/time/w9/upload` endpoint:
+  - Now accepts optional `notes` field (Form parameter)
+  - Generates unique `id` for each document
+  - Supports multiple W-9 submissions per employee
+- **Updated** `w9_documents` collection schema:
+  - Added `id` field (UUID)
+  - Added `notes` field
+
+### Files Modified
+- `frontend/src/pages/EmployeeDashboard.jsx` - Complete W-9 section redesign
+- `frontend/src/components/admin/sections/AllEmployeesSection.jsx` - W-9 Management Modal
+- `backend/server.py` - Updated upload endpoint with notes support
+- `backend/app/routers/time_tracking.py` - Updated upload endpoint
+
+### Test Data
+- Test Employee created: testemployee@thriftycurator.com
+- Sample W-9 submitted with notes: "This is my W-9 submission for 2026"
