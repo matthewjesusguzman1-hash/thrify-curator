@@ -223,7 +223,11 @@ async def download_latest_w9(user: dict = Depends(get_current_user)):
 
 
 @router.post("/w9/upload")
-async def upload_w9_employee(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+async def upload_w9_employee(
+    file: UploadFile = File(...), 
+    notes: str = Form(None),
+    user: dict = Depends(get_current_user)
+):
     """Employee uploads a new W-9"""
     import uuid
     
@@ -246,7 +250,8 @@ async def upload_w9_employee(file: UploadFile = File(...), user: dict = Depends(
         "content": base64.b64encode(content).decode('utf-8'),
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": user["id"],
-        "status": "submitted"
+        "status": "submitted",
+        "notes": notes or ""
     }
     
     await db.w9_documents.insert_one(w9_doc)
