@@ -140,7 +140,14 @@ export default function EmployeeDashboard() {
   };
 
   const handleDownloadBlankW9 = () => {
-    window.open("https://www.irs.gov/pub/irs-pdf/fw9.pdf", "_blank");
+    // Use link click for better mobile compatibility
+    const link = document.createElement('a');
+    link.href = "https://www.irs.gov/pub/irs-pdf/fw9.pdf";
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleViewMyW9 = async () => {
