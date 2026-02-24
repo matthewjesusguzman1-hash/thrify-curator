@@ -246,7 +246,7 @@ async def upload_w9_employee(file: UploadFile = File(...), user: dict = Depends(
         "content": base64.b64encode(content).decode('utf-8'),
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": user["id"],
-        "status": "pending_review"
+        "status": "submitted"
     }
     
     await db.w9_documents.insert_one(w9_doc)
