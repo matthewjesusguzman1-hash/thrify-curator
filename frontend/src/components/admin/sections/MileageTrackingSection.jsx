@@ -519,6 +519,50 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     }
   };
 
+  // Toggle trip selection
+  const toggleTripSelection = (tripId) => {
+    setSelectedTrips(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tripId)) {
+        newSet.delete(tripId);
+      } else {
+        newSet.add(tripId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all trips
+  const selectAllTrips = () => {
+    const allIds = mileageEntries.map(e => e.id);
+    setSelectedTrips(new Set(allIds));
+  };
+
+  // Deselect all
+  const deselectAllTrips = () => {
+    setSelectedTrips(new Set());
+  };
+
+  // Bulk delete trips
+  const handleBulkDelete = async () => {
+    if (selectedTrips.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedTrips.size} trip(s)?`)) return;
+    
+    try {
+      const promises = Array.from(selectedTrips).map(id =>
+        axios.delete(`${API}/admin/mileage/entries/${id}`, getAuthHeader())
+      );
+      await Promise.all(promises);
+      toast.success(`${selectedTrips.size} trip(s) deleted`);
+      setSelectedTrips(new Set());
+      setSelectMode(false);
+      fetchMileageEntries();
+    } catch (error) {
+      console.error("Error deleting trips:", error);
+      toast.error("Failed to delete trips");
+    }
+  };
+
   // Open edit modal
   const openEditMileageModal = (entry) => {
     setEditingMileageEntry(entry);
