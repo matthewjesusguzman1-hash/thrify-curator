@@ -568,6 +568,108 @@ export default function EmployeeDashboard() {
           </div>
         </motion.div>
       </main>
+
+      {/* W-9 Viewer Modal */}
+      {viewingW9 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            if (viewingW9.url) window.URL.revokeObjectURL(viewingW9.url);
+            setViewingW9(null);
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-[#1A1A2E] to-[#16213E]">
+              <div>
+                <h3 className="font-semibold text-white">W-9 Document</h3>
+                <p className="text-sm text-gray-300">{viewingW9.filename}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (viewingW9.url) window.URL.revokeObjectURL(viewingW9.url);
+                  setViewingW9(null);
+                }}
+                className="text-white hover:bg-white/20"
+              >
+                ✕
+              </Button>
+            </div>
+
+            {/* Document Viewer */}
+            <div className="flex-1 overflow-auto p-4 bg-gray-100">
+              {viewingW9.contentType?.includes('pdf') ? (
+                <iframe
+                  src={viewingW9.url}
+                  className="w-full h-full min-h-[500px] rounded-lg border border-gray-200"
+                  title="W-9 Document"
+                />
+              ) : viewingW9.contentType?.includes('image') ? (
+                <div className="flex items-center justify-center">
+                  <img
+                    src={viewingW9.url}
+                    alt="W-9 Document"
+                    className="max-w-full max-h-[600px] rounded-lg shadow-lg"
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">Preview not available</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 flex justify-between items-center bg-white">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (viewingW9.url) window.URL.revokeObjectURL(viewingW9.url);
+                  setViewingW9(null);
+                }}
+              >
+                Close
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    const response = await axios.get(`${API}/time/w9/download/${viewingW9.docId}`, {
+                      ...getAuthHeader(),
+                      responseType: 'blob'
+                    });
+                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', viewingW9.filename || 'w9.pdf');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                    toast.success("W-9 downloaded!");
+                  } catch (error) {
+                    toast.error("Failed to download W-9");
+                  }
+                }}
+                className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }
