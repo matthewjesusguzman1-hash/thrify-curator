@@ -1020,3 +1020,31 @@ Created reusable modal components in `/app/frontend/src/components/admin/modals/
 ### Performance Warnings (Non-blocking)
 - DB query optimizations recommended in payroll.py, admin.py, time_tracking.py
 - These are optimization suggestions, not deployment blockers
+
+## Undefined ID Bug Fixes (Feb 24, 2026)
+
+### Issue
+Production deployment logs showed 404 errors with `undefined` in URLs:
+- `/api/admin/employees/{id}/w9/undefined/approve`
+- `/api/admin/employees/{id}/w9/undefined`
+- `/api/time/w9/download/undefined`
+
+### Root Cause
+W-9 documents in the database sometimes lacked `id` fields, causing frontend code to pass `undefined` to API calls.
+
+### Fixes Applied
+1. **EmployeeDashboard.jsx**
+   - Added `.filter(doc => doc && doc.id)` to W-9 document list rendering
+
+2. **AdminDashboard.jsx**
+   - Added guards to `handleViewW9()` - validates employeeId and filters docs with valid ids
+   - Added guards to `handleApproveW9Doc()` - validates employeeId and docId
+   - Added guards to `handleDeleteW9Doc()` - validates employeeId and docId
+   - Added guards to `handleSelectW9()` - validates doc and doc.id
+   - Added `.filter(doc => doc && doc.id)` to Edit Employee W-9 list
+
+3. **AllEmployeesSection.jsx**
+   - Added guards to `handleViewW9()` - validates employeeId and filters docs with valid ids
+
+### Result
+API calls with undefined IDs are now prevented at the frontend level.
