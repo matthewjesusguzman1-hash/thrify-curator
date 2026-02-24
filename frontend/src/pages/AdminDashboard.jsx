@@ -4351,89 +4351,16 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
-          {/* Edit Time Entry Modal */}
-          {showEditEntry && editingEntry && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowEditEntry(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-                data-testid="edit-entry-modal"
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-playfair text-xl font-bold text-[#333]">Edit Time Entry</h2>
-                  <button
-                    onClick={() => setShowEditEntry(false)}
-                    className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                  >
-                    <X className="w-5 h-5 text-gray-600" />
-                  </button>
-                </div>
-
-                <div className="mb-4 p-3 bg-[#F9F6F7] rounded-xl">
-                  <p className="text-sm text-[#666]">Employee</p>
-                  <p className="font-semibold text-[#333]">{editingEntry.user_name}</p>
-                </div>
-
-                <form onSubmit={handleSaveEdit}>
-                  <div className="form-group">
-                    <Label className="form-label">Clock In *</Label>
-                    <Input
-                      type="datetime-local"
-                      value={editFormData.clock_in}
-                      onChange={(e) => setEditFormData({ ...editFormData, clock_in: e.target.value })}
-                      required
-                      className="form-input"
-                      data-testid="edit-clock-in"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <Label className="form-label">Clock Out</Label>
-                    <Input
-                      type="datetime-local"
-                      value={editFormData.clock_out}
-                      onChange={(e) => setEditFormData({ ...editFormData, clock_out: e.target.value })}
-                      className="form-input"
-                      data-testid="edit-clock-out"
-                    />
-                    <p className="text-xs text-[#888] mt-1">Leave empty if still active</p>
-                  </div>
-
-                  <div className="p-3 bg-[#faf7f2] rounded-xl mb-4">
-                    <p className="text-xs text-[#888]">
-                      Total hours will be automatically calculated based on clock in/out times.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3 mt-6">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowEditEntry(false)}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={savingEdit}
-                      className="btn-primary flex-1"
-                      data-testid="save-edit-btn"
-                    >
-                      {savingEdit ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
-                </form>
-              </motion.div>
-            </motion.div>
-          )}
+          {/* Edit Time Entry Modal - Extracted Component */}
+          <TimeEntryModal
+            isOpen={showEditEntry && !!editingEntry}
+            onClose={() => setShowEditEntry(false)}
+            mode="edit"
+            entry={editingEntry}
+            employees={employees}
+            getAuthHeader={getAuthHeader}
+            onSuccess={fetchData}
+          />
 
           {/* Add Time Entry Modal */}
           {showAddEntry && (
