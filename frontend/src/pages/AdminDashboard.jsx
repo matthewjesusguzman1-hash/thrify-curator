@@ -3701,6 +3701,9 @@ export default function AdminDashboard() {
           </div>
 
 
+          {/* Messages Section */}
+          <MessagesSection />
+
           {/* Form Submissions Section */}
           <FormSubmissionsSection
             formSubmissions={formSubmissions}
