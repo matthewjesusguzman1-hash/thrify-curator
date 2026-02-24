@@ -509,7 +509,7 @@ export default function AllEmployeesSection({
         )}
       </AnimatePresence>
 
-      {/* W-9 Management Modal */}
+      {/* W-9 Management Modal - Dark Theme */}
       <AnimatePresence>
         {showW9Modal && selectedEmployee && (
           <motion.div
@@ -523,25 +523,26 @@ export default function AllEmployeesSection({
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-xl"
+              className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-xl border border-white/10"
               onClick={(e) => e.stopPropagation()}
               data-testid="w9-management-modal"
             >
               {/* Header */}
-              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-[#C5A065] to-[#9A7B4F]">
+              <div className="p-4 border-b border-white/10">
+                <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493] rounded-full mb-4" />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center">
                       <FileText className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <h2 className="font-semibold text-white">W-9 Documents</h2>
-                      <p className="text-sm text-white/80">{selectedEmployee.name}</p>
+                      <p className="text-sm text-white/60">{selectedEmployee.name}</p>
                     </div>
                   </div>
                   <button
                     onClick={handleCloseW9Modal}
-                    className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
+                    className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
                   >
                     <X className="w-5 h-5 text-white" />
                   </button>
@@ -552,14 +553,14 @@ export default function AllEmployeesSection({
               <div className="p-4 overflow-y-auto max-h-[60vh]">
                 {loadingW9s ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C5A065] mx-auto mb-3"></div>
-                    <p className="text-gray-500">Loading documents...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00D4FF] mx-auto mb-3"></div>
+                    <p className="text-white/60">Loading documents...</p>
                   </div>
                 ) : employeeW9Docs.length === 0 ? (
                   <div className="text-center py-8">
-                    <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No W-9 submissions yet</p>
-                    <p className="text-sm text-gray-400">Employee has not submitted any W-9 forms</p>
+                    <FileText className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                    <p className="text-white/60">No W-9 submissions yet</p>
+                    <p className="text-sm text-white/40">Employee has not submitted any W-9 forms</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -568,8 +569,8 @@ export default function AllEmployeesSection({
                         key={doc.id}
                         className={`p-4 rounded-xl border ${
                           doc.status === 'approved'
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-amber-50 border-amber-200'
+                            ? 'bg-[#00D4FF]/10 border-[#00D4FF]/30'
+                            : 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30'
                         }`}
                         data-testid={`w9-doc-${doc.id}`}
                       >
@@ -577,28 +578,28 @@ export default function AllEmployeesSection({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <FileText className={`w-4 h-4 ${
-                                doc.status === 'approved' ? 'text-green-600' : 'text-amber-600'
+                                doc.status === 'approved' ? 'text-[#00D4FF]' : 'text-[#8B5CF6]'
                               }`} />
-                              <span className="font-medium text-[#333] truncate">
+                              <span className="font-medium text-white truncate">
                                 {doc.filename || `W-9 #${index + 1}`}
                               </span>
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                 doc.status === 'approved'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-amber-100 text-amber-700'
+                                  ? 'bg-[#00D4FF]/20 text-[#00D4FF]'
+                                  : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
                               }`}>
                                 {doc.status === 'approved' ? 'Approved' : 'Pending'}
                               </span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                            <div className="flex items-center gap-3 text-xs text-white/50">
                               <span className="flex items-center gap-1">
                                 <Clock3 className="w-3 h-3" />
                                 {new Date(doc.uploaded_at).toLocaleDateString()}
                               </span>
                             </div>
                             {doc.notes && (
-                              <div className="mt-2 p-2 bg-white/50 rounded-lg">
-                                <p className="text-xs text-gray-500 flex items-start gap-1">
+                              <div className="mt-2 p-2 bg-white/5 rounded-lg">
+                                <p className="text-xs text-white/60 flex items-start gap-1">
                                   <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
                                   <span className="italic">"{doc.notes}"</span>
                                 </p>
@@ -608,12 +609,12 @@ export default function AllEmployeesSection({
                         </div>
                         
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200/50">
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handlePreviewW9(doc)}
-                            className="flex-1 text-gray-600 border-gray-300"
+                            className="flex-1 text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
                             data-testid={`preview-w9-${doc.id}`}
                           >
                             <Eye className="w-4 h-4 mr-1" />
@@ -623,7 +624,7 @@ export default function AllEmployeesSection({
                             variant="outline"
                             size="sm"
                             onClick={() => handleDownloadW9(doc)}
-                            className="flex-1 text-blue-600 border-blue-300"
+                            className="flex-1 text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
                             data-testid={`download-w9-${doc.id}`}
                           >
                             <Download className="w-4 h-4 mr-1" />
@@ -634,7 +635,7 @@ export default function AllEmployeesSection({
                               variant="outline"
                               size="sm"
                               onClick={() => handleApproveW9(doc)}
-                              className="flex-1 text-green-600 border-green-300"
+                              className="flex-1 text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent"
                               data-testid={`approve-w9-${doc.id}`}
                             >
                               <CheckCheck className="w-4 h-4 mr-1" />
@@ -645,7 +646,7 @@ export default function AllEmployeesSection({
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteW9(doc)}
-                            className="text-red-500 border-red-300 hover:bg-red-50"
+                            className="text-[#FF1493] border-[#FF1493]/30 hover:bg-[#FF1493]/10 bg-transparent"
                             data-testid={`delete-w9-${doc.id}`}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -658,17 +659,21 @@ export default function AllEmployeesSection({
               </div>
 
               {/* Footer */}
-              <div className="p-4 border-t border-gray-200 flex justify-between items-center bg-gray-50">
+              <div className="p-4 border-t border-white/10 flex justify-between items-center">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={onDownloadBlankW9}
-                  className="text-[#C5A065] border-[#C5A065]"
+                  className="text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
                 >
                   <FileText className="w-4 h-4 mr-1" />
                   Get W-9 Form
                 </Button>
-                <Button variant="outline" onClick={handleCloseW9Modal}>
+                <Button 
+                  variant="outline" 
+                  onClick={handleCloseW9Modal}
+                  className="text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
+                >
                   Close
                 </Button>
               </div>
