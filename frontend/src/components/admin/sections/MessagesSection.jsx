@@ -345,8 +345,8 @@ export default function MessagesSection() {
                         className={`h-10 px-3 whitespace-nowrap ${hasDateFilter ? 'bg-[#FF1493]/10 border-[#FF1493] text-[#FF1493]' : 'text-[#888]'}`}
                         data-testid="date-range-btn"
                       >
-                        <Calendar className="w-4 h-4 mr-2" />
-                        {hasDateFilter ? formatDateRange(dateFrom, dateTo) : "Select dates"}
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        {hasDateFilter ? formatDateRange(dateRange) : "Select dates"}
                         {hasDateFilter && (
                           <X 
                             className="w-4 h-4 ml-2 hover:text-[#E91E8C]" 
@@ -366,7 +366,7 @@ export default function MessagesSection() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.15 }}
-                            className="absolute right-0 top-12 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-4 min-w-[320px]"
+                            className="absolute right-0 top-12 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-4"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {/* Preset Options */}
@@ -389,37 +389,26 @@ export default function MessagesSection() {
                               </div>
                             </div>
 
-                            {/* Custom Date Range */}
+                            {/* Calendar for Custom Range */}
                             <div className="border-t border-gray-200 pt-4">
                               <p className="text-xs font-medium text-[#888] uppercase tracking-wider mb-2">Custom Range</p>
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2">
-                                  <label className="text-sm text-[#666] w-12">From</label>
-                                  <Input
-                                    type="date"
-                                    value={dateFrom}
-                                    onChange={(e) => {
-                                      setDateFrom(e.target.value);
-                                      setSelectedPreset("");
-                                    }}
-                                    className="flex-1 h-9 border-[#ddd] focus:border-[#FF1493]"
-                                    data-testid="date-from-input"
-                                  />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <label className="text-sm text-[#666] w-12">To</label>
-                                  <Input
-                                    type="date"
-                                    value={dateTo}
-                                    onChange={(e) => {
-                                      setDateTo(e.target.value);
-                                      setSelectedPreset("");
-                                    }}
-                                    className="flex-1 h-9 border-[#ddd] focus:border-[#FF1493]"
-                                    data-testid="date-to-input"
-                                  />
-                                </div>
-                              </div>
+                              <p className="text-xs text-[#aaa] mb-3">Click a date to start, then click another to set the range</p>
+                              <Calendar
+                                mode="range"
+                                selected={dateRange}
+                                onSelect={(range) => {
+                                  setDateRange(range || { from: undefined, to: undefined });
+                                  setSelectedPreset("");
+                                }}
+                                numberOfMonths={1}
+                                className="rounded-lg border border-gray-200"
+                                classNames={{
+                                  day_selected: "bg-[#FF1493] text-white hover:bg-[#E91E8C] hover:text-white focus:bg-[#E91E8C] focus:text-white",
+                                  day_range_middle: "bg-[#FF1493]/20 text-[#FF1493]",
+                                  day_range_start: "bg-[#FF1493] text-white rounded-l-md",
+                                  day_range_end: "bg-[#FF1493] text-white rounded-r-md",
+                                }}
+                              />
                             </div>
 
                             {/* Actions */}
@@ -435,7 +424,7 @@ export default function MessagesSection() {
                                 onClick={() => setShowDatePicker(false)}
                                 className="bg-[#FF1493] text-white hover:bg-[#E91E8C]"
                               >
-                                Apply
+                                Done
                               </Button>
                             </div>
                           </motion.div>
