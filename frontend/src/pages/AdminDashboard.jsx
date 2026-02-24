@@ -1268,6 +1268,11 @@ export default function AdminDashboard() {
 
   // View W-9 in modal (without downloading) - Now shows list of all W-9s
   const handleViewW9 = async (employeeId, employeeName) => {
+    if (!employeeId) {
+      toast.error("Invalid employee ID");
+      return;
+    }
+    
     setLoadingW9Viewer(true);
     setShowW9ViewerModal(true);
     setSelectedW9Index(0);
@@ -1276,7 +1281,7 @@ export default function AdminDashboard() {
     try {
       // Get all W-9 documents for this employee
       const statusRes = await axios.get(`${API}/admin/employees/${employeeId}/w9/status`, getAuthHeader());
-      const w9Documents = statusRes.data.w9_documents || [];
+      const w9Documents = (statusRes.data.w9_documents || []).filter(doc => doc && doc.id);
       
       if (w9Documents.length === 0) {
         toast.error("No W-9 documents found");
