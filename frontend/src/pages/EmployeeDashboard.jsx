@@ -426,13 +426,13 @@ export default function EmployeeDashboard() {
             </div>
           </div>
 
-          {/* W-9 Tax Form Section - Messaging Style */}
-          <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-[#C5A065] to-[#9A7B4F]" />
+          {/* W-9 Tax Form Section - Dark Theme Matching Home Screen */}
+          <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10">
+            <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493]" />
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E] flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-[#C5A065]" />
+                <h2 className="font-poppins text-lg font-semibold text-white flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#00D4FF]" />
                   W-9 Tax Form
                 </h2>
                 <Button
@@ -443,7 +443,7 @@ export default function EmployeeDashboard() {
                       handleDownloadBlankW9();
                     }
                   }}
-                  className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
+                  className="text-[#00D4FF] border-[#00D4FF]/50 hover:bg-[#00D4FF]/10 bg-transparent"
                   data-testid="get-w9-form-btn"
                 >
                   <FileText className="w-4 h-4 mr-1" />
@@ -455,7 +455,7 @@ export default function EmployeeDashboard() {
               {!showW9SubmitForm && (
                 <Button
                   onClick={() => setShowW9SubmitForm(true)}
-                  className="w-full mb-4 bg-gradient-to-r from-[#C5A065] to-[#9A7B4F] hover:from-[#9A7B4F] hover:to-[#C5A065] text-white"
+                  className="w-full mb-4 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#8B5CF6] hover:to-[#00D4FF] text-white font-semibold"
                   data-testid="submit-w9-btn"
                 >
                   <Send className="w-4 h-4 mr-2" />
@@ -465,10 +465,10 @@ export default function EmployeeDashboard() {
 
               {/* W-9 Submission Form */}
               {showW9SubmitForm && (
-                <div className="mb-4 p-4 bg-[#F9F6F7] rounded-xl border border-[#C5A065]/30">
+                <div className="mb-4 p-4 bg-white/5 rounded-xl border border-white/10">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-[#1A1A2E] flex items-center gap-2">
-                      <Send className="w-4 h-4 text-[#C5A065]" />
+                    <h3 className="font-medium text-white flex items-center gap-2">
+                      <Send className="w-4 h-4 text-[#00D4FF]" />
                       Submit W-9 Form
                     </h3>
                     <button
@@ -476,7 +476,7 @@ export default function EmployeeDashboard() {
                         setShowW9SubmitForm(false);
                         setW9FormData({ file: null, notes: '' });
                       }}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-white/60 hover:text-white"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -484,14 +484,14 @@ export default function EmployeeDashboard() {
                   
                   {/* File Upload */}
                   <div className="mb-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-white/80 mb-1">
                       W-9 Document *
                     </label>
                     <div 
                       className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
                         w9FormData.file 
-                          ? 'border-green-400 bg-green-50' 
-                          : 'border-gray-300 hover:border-[#C5A065]'
+                          ? 'border-[#00D4FF] bg-[#00D4FF]/10' 
+                          : 'border-white/20 hover:border-[#00D4FF]/50'
                       }`}
                       onClick={() => w9InputRef.current?.click()}
                     >
@@ -503,15 +503,15 @@ export default function EmployeeDashboard() {
                         onChange={(e) => setW9FormData({ ...w9FormData, file: e.target.files[0] })}
                       />
                       {w9FormData.file ? (
-                        <div className="flex items-center justify-center gap-2 text-green-700">
+                        <div className="flex items-center justify-center gap-2 text-[#00D4FF]">
                           <CheckCircle className="w-5 h-5" />
                           <span className="font-medium">{w9FormData.file.name}</span>
                         </div>
                       ) : (
-                        <div className="text-gray-500">
+                        <div className="text-white/60">
                           <Upload className="w-6 h-6 mx-auto mb-1" />
                           <p className="text-sm">Click to select W-9 file</p>
-                          <p className="text-xs text-gray-400">PDF, JPG, or PNG</p>
+                          <p className="text-xs text-white/40">PDF, JPG, or PNG</p>
                         </div>
                       )}
                     </div>
@@ -519,14 +519,14 @@ export default function EmployeeDashboard() {
 
                   {/* Notes Field */}
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-white/80 mb-1">
                       Notes (optional)
                     </label>
                     <textarea
                       value={w9FormData.notes}
                       onChange={(e) => setW9FormData({ ...w9FormData, notes: e.target.value })}
                       placeholder="Add any notes for the administrator..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C5A065] focus:border-transparent resize-none"
+                      className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-lg focus:ring-2 focus:ring-[#00D4FF] focus:border-transparent resize-none text-white placeholder-white/40"
                       rows={2}
                       data-testid="w9-notes-input"
                     />
@@ -536,7 +536,7 @@ export default function EmployeeDashboard() {
                   <Button
                     onClick={handleW9Submit}
                     disabled={!w9FormData.file || uploadingW9}
-                    className="w-full bg-gradient-to-r from-[#C5A065] to-[#9A7B4F] hover:from-[#9A7B4F] hover:to-[#C5A065] text-white"
+                    className="w-full bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#8B5CF6] hover:to-[#00D4FF] text-white font-semibold"
                     data-testid="submit-w9-form-btn"
                   >
                     {uploadingW9 ? (
@@ -551,11 +551,11 @@ export default function EmployeeDashboard() {
 
               {/* Submitted W-9s List */}
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider flex items-center gap-2">
                   <MessageSquare className="w-4 h-4" />
                   Your Submissions
                   {w9Status?.total_documents > 0 && (
-                    <span className="bg-[#C5A065]/20 text-[#9A7B4F] px-2 py-0.5 rounded-full text-xs">
+                    <span className="bg-[#8B5CF6]/30 text-[#8B5CF6] px-2 py-0.5 rounded-full text-xs">
                       {w9Status.total_documents}
                     </span>
                   )}
@@ -568,8 +568,8 @@ export default function EmployeeDashboard() {
                         key={doc.id} 
                         className={`p-3 rounded-xl border ${
                           doc.status === 'approved' 
-                            ? 'bg-green-50 border-green-200' 
-                            : 'bg-amber-50 border-amber-200'
+                            ? 'bg-[#00D4FF]/10 border-[#00D4FF]/30' 
+                            : 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30'
                         }`}
                         data-testid={`w9-submission-${doc.id}`}
                       >
@@ -577,27 +577,27 @@ export default function EmployeeDashboard() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <FileText className={`w-4 h-4 ${
-                                doc.status === 'approved' ? 'text-green-600' : 'text-amber-600'
+                                doc.status === 'approved' ? 'text-[#00D4FF]' : 'text-[#8B5CF6]'
                               }`} />
-                              <span className="font-medium text-[#1A1A2E] truncate">
+                              <span className="font-medium text-white truncate">
                                 {doc.filename || `W-9 #${index + 1}`}
                               </span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                            <div className="flex items-center gap-3 text-xs text-white/60">
                               <span className="flex items-center gap-1">
                                 <Clock3 className="w-3 h-3" />
                                 {new Date(doc.uploaded_at).toLocaleDateString()}
                               </span>
                               <span className={`px-2 py-0.5 rounded-full font-medium ${
                                 doc.status === 'approved' 
-                                  ? 'bg-green-100 text-green-700' 
-                                  : 'bg-amber-100 text-amber-700'
+                                  ? 'bg-[#00D4FF]/20 text-[#00D4FF]' 
+                                  : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
                               }`}>
                                 {doc.status === 'approved' ? 'Approved' : 'Pending Review'}
                               </span>
                             </div>
                             {doc.notes && (
-                              <p className="mt-1 text-xs text-gray-600 italic">"{doc.notes}"</p>
+                              <p className="mt-1 text-xs text-white/50 italic">"{doc.notes}"</p>
                             )}
                           </div>
                           <div className="flex gap-1 ml-2">
@@ -622,7 +622,7 @@ export default function EmployeeDashboard() {
                                   toast.error("Failed to view W-9");
                                 }
                               }}
-                              className="text-gray-600 hover:text-[#1A1A2E] p-1 h-auto"
+                              className="text-white/60 hover:text-[#00D4FF] p-1 h-auto hover:bg-white/5"
                               data-testid={`view-w9-${doc.id}`}
                               title="View"
                             >
@@ -634,10 +634,10 @@ export default function EmployeeDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-6 text-gray-500">
-                    <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <div className="text-center py-6 text-white/50">
+                    <FileText className="w-10 h-10 mx-auto mb-2 text-white/20" />
                     <p className="text-sm">No W-9 submissions yet</p>
-                    <p className="text-xs text-gray-400">Submit your W-9 form above for review</p>
+                    <p className="text-xs text-white/30">Submit your W-9 form above for review</p>
                   </div>
                 )}
               </div>
