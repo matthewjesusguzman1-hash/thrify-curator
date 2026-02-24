@@ -3963,62 +3963,6 @@ export default function AdminDashboard() {
             headerTripPaused={headerTripPaused}
           />
 
-          {/* W-9 Rejection Modal */}
-          {reviewingW9 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setReviewingW9(null)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-red-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-playfair text-lg font-bold text-[#333]">Request Corrections</h3>
-                    <p className="text-sm text-[#888]">{reviewingW9.employee_name}'s W-9</p>
-                  </div>
-                </div>
-                
-                <div className="mb-4">
-                  <Label className="form-label">Reason for Rejection *</Label>
-                  <textarea
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="Please describe the issues with the W-9..."
-                    className="w-full p-3 border border-[#ddd] rounded-xl resize-none h-24 focus:outline-none focus:ring-2 focus:ring-red-300"
-                  />
-                </div>
-                
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setReviewingW9(null);
-                      setRejectReason("");
-                    }}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => handleRejectW9(reviewingW9.employee_id)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                  >
-                    Send for Corrections
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-
           {/* Submission Details Modal */}
           {showSubmissionDetails && selectedSubmission && (
             <motion.div
