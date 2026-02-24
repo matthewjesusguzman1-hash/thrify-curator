@@ -3461,6 +3461,16 @@ export default function AdminDashboard() {
                                           <Button
                                             variant="ghost"
                                             size="sm"
+                                            onClick={(e) => { e.stopPropagation(); handleViewW9(emp.id, emp.name); }}
+                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 px-2"
+                                            data-testid={`view-w9-${emp.id}`}
+                                            title="View W-9"
+                                          >
+                                            <Eye className="w-4 h-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
                                             onClick={(e) => { e.stopPropagation(); handleW9Download(emp.id, emp.name); }}
                                             className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 px-2"
                                             data-testid={`download-w9-${emp.id}`}
@@ -3468,18 +3478,6 @@ export default function AdminDashboard() {
                                           >
                                             <Download className="w-4 h-4" />
                                           </Button>
-                                          {emp.w9_status === 'approved' && (
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={(e) => { e.stopPropagation(); handleViewW9(emp.id, emp.name); }}
-                                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 px-2"
-                                              data-testid={`view-w9-${emp.id}`}
-                                              title="View Approved W-9"
-                                            >
-                                              <Eye className="w-4 h-4" />
-                                            </Button>
-                                          )}
                                         </>
                                       ) : (
                                         <>
