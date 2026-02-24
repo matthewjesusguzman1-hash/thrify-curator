@@ -508,6 +508,252 @@ export default function AllEmployeesSection({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* W-9 Management Modal */}
+      <AnimatePresence>
+        {showW9Modal && selectedEmployee && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={handleCloseW9Modal}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+              data-testid="w9-management-modal"
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-[#C5A065] to-[#9A7B4F]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-white">W-9 Documents</h2>
+                      <p className="text-sm text-white/80">{selectedEmployee.name}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCloseW9Modal}
+                    className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 overflow-y-auto max-h-[60vh]">
+                {loadingW9s ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C5A065] mx-auto mb-3"></div>
+                    <p className="text-gray-500">Loading documents...</p>
+                  </div>
+                ) : employeeW9Docs.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">No W-9 submissions yet</p>
+                    <p className="text-sm text-gray-400">Employee has not submitted any W-9 forms</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {employeeW9Docs.map((doc, index) => (
+                      <div
+                        key={doc.id}
+                        className={`p-4 rounded-xl border ${
+                          doc.status === 'approved'
+                            ? 'bg-green-50 border-green-200'
+                            : 'bg-amber-50 border-amber-200'
+                        }`}
+                        data-testid={`w9-doc-${doc.id}`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FileText className={`w-4 h-4 ${
+                                doc.status === 'approved' ? 'text-green-600' : 'text-amber-600'
+                              }`} />
+                              <span className="font-medium text-[#333] truncate">
+                                {doc.filename || `W-9 #${index + 1}`}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                doc.status === 'approved'
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {doc.status === 'approved' ? 'Approved' : 'Pending'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Clock3 className="w-3 h-3" />
+                                {new Date(doc.uploaded_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {doc.notes && (
+                              <div className="mt-2 p-2 bg-white/50 rounded-lg">
+                                <p className="text-xs text-gray-500 flex items-start gap-1">
+                                  <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                  <span className="italic">"{doc.notes}"</span>
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200/50">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePreviewW9(doc)}
+                            className="flex-1 text-gray-600 border-gray-300"
+                            data-testid={`preview-w9-${doc.id}`}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Preview
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadW9(doc)}
+                            className="flex-1 text-blue-600 border-blue-300"
+                            data-testid={`download-w9-${doc.id}`}
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            Download
+                          </Button>
+                          {doc.status !== 'approved' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApproveW9(doc)}
+                              className="flex-1 text-green-600 border-green-300"
+                              data-testid={`approve-w9-${doc.id}`}
+                            >
+                              <CheckCheck className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteW9(doc)}
+                            className="text-red-500 border-red-300 hover:bg-red-50"
+                            data-testid={`delete-w9-${doc.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-gray-200 flex justify-between items-center bg-gray-50">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onDownloadBlankW9}
+                  className="text-[#C5A065] border-[#C5A065]"
+                >
+                  <FileText className="w-4 h-4 mr-1" />
+                  Get W-9 Form
+                </Button>
+                <Button variant="outline" onClick={handleCloseW9Modal}>
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* W-9 Preview Modal */}
+      <AnimatePresence>
+        {previewingW9 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4"
+            onClick={() => {
+              if (previewingW9.url) window.URL.revokeObjectURL(previewingW9.url);
+              setPreviewingW9(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-[#1A1A2E] to-[#16213E]">
+                <div>
+                  <h3 className="font-semibold text-white">W-9 Preview</h3>
+                  <p className="text-sm text-gray-300">{previewingW9.filename}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (previewingW9.url) window.URL.revokeObjectURL(previewingW9.url);
+                    setPreviewingW9(null);
+                  }}
+                  className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+
+              {/* Document Viewer */}
+              <div className="flex-1 overflow-auto p-4 bg-gray-100">
+                {previewingW9.contentType?.includes('pdf') ? (
+                  <iframe
+                    src={previewingW9.url}
+                    className="w-full h-full min-h-[500px] rounded-lg border border-gray-200"
+                    title="W-9 Document"
+                  />
+                ) : previewingW9.contentType?.includes('image') ? (
+                  <div className="flex items-center justify-center">
+                    <img
+                      src={previewingW9.url}
+                      alt="W-9 Document"
+                      className="max-w-full max-h-[600px] rounded-lg shadow-lg"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600">Preview not available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-gray-200 flex justify-end bg-white">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (previewingW9.url) window.URL.revokeObjectURL(previewingW9.url);
+                    setPreviewingW9(null);
+                  }}
+                >
+                  Close Preview
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
