@@ -459,6 +459,166 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Message Us Modal */}
+      <AnimatePresence>
+        {showMessageModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={handleCloseMessaging}
+            data-testid="message-modal-overlay"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              data-testid="message-modal"
+            >
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-[#FF1493] to-[#E91E8C] p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                      <MessageCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold text-lg">Message Us</h3>
+                      <p className="text-white/80 text-sm">We'd love to hear from you</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCloseMessaging}
+                    className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                    data-testid="close-message-modal"
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6">
+                {messageSent ? (
+                  // Success State
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-6"
+                  >
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle className="w-8 h-8 text-green-500" />
+                    </div>
+                    <h4 className="font-bold text-xl text-[#1A1A2E] mb-2">Message Sent!</h4>
+                    <p className="text-[#666] mb-6">
+                      Thank you for reaching out. We'll review your message and reply to your email shortly.
+                    </p>
+                    <Button
+                      onClick={handleCloseMessaging}
+                      className="bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white hover:opacity-90"
+                      data-testid="close-success-btn"
+                    >
+                      Close
+                    </Button>
+                  </motion.div>
+                ) : (
+                  // Form State
+                  <div className="space-y-5">
+                    {/* Info Banner */}
+                    <div className="bg-[#FFF5F8] border border-[#FF1493]/20 rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <Mail className="w-5 h-5 text-[#FF1493] flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-[#666]">
+                          Please provide your email address so we can respond to you. All replies will be sent directly to your inbox.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Name Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="sender-name" className="text-[#333] font-medium">
+                        Your Name <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#888]" />
+                        <Input
+                          id="sender-name"
+                          type="text"
+                          placeholder="Enter your name"
+                          value={messageForm.name}
+                          onChange={(e) => setMessageForm({ ...messageForm, name: e.target.value })}
+                          className="pl-10 h-12 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
+                          data-testid="message-name-input"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="sender-email" className="text-[#333] font-medium">
+                        Your Email <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#888]" />
+                        <Input
+                          id="sender-email"
+                          type="email"
+                          placeholder="Enter your email address"
+                          value={messageForm.email}
+                          onChange={(e) => setMessageForm({ ...messageForm, email: e.target.value })}
+                          className="pl-10 h-12 border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20"
+                          data-testid="message-email-input"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Message Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="message-text" className="text-[#333] font-medium">
+                        Your Message <span className="text-red-500">*</span>
+                      </Label>
+                      <Textarea
+                        id="message-text"
+                        placeholder="How can we help you?"
+                        value={messageForm.message}
+                        onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
+                        rows={4}
+                        className="border-[#ddd] focus:border-[#FF1493] focus:ring-[#FF1493]/20 resize-none"
+                        data-testid="message-text-input"
+                      />
+                    </div>
+
+                    {/* Submit Button */}
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={sendingMessage}
+                      className="w-full h-12 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold hover:opacity-90 transition-all"
+                      data-testid="send-message-btn"
+                    >
+                      {sendingMessage ? (
+                        <span className="flex items-center gap-2">
+                          <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Sending...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <Send className="w-4 h-4" />
+                          Send Message
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
