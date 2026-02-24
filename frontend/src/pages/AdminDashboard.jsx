@@ -1655,7 +1655,7 @@ export default function AdminDashboard() {
   };
 
   // Edit employee handlers
-  const handleOpenEditEmployee = (employee) => {
+  const handleOpenEditEmployee = async (employee) => {
     setEditingEmployee(employee);
     setEditEmployeeData({
       name: employee.name,
@@ -1665,6 +1665,19 @@ export default function AdminDashboard() {
       phone: employee.phone || ""
     });
     setShowEditEmployee(true);
+    setEditEmployeeW9s([]);
+    setLoadingEditW9s(true);
+    
+    // Fetch W-9 documents for this employee
+    try {
+      const response = await axios.get(`${API}/admin/employees/${employee.id}/w9/status`, getAuthHeader());
+      setEditEmployeeW9s(response.data.w9_documents || []);
+    } catch (error) {
+      console.error("Failed to fetch W-9 documents:", error);
+      setEditEmployeeW9s([]);
+    } finally {
+      setLoadingEditW9s(false);
+    }
   };
 
   const handleUpdateEmployee = async (e) => {
