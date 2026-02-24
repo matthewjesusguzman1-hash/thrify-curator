@@ -107,12 +107,18 @@ export default function EmployeeDashboard() {
     }
   };
 
-  const handleW9Upload = async (file) => {
-    if (!file) return;
+  const handleW9Submit = async () => {
+    if (!w9FormData.file) {
+      toast.error("Please select a W-9 file to submit");
+      return;
+    }
     
     setUploadingW9(true);
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', w9FormData.file);
+    if (w9FormData.notes) {
+      formData.append('notes', w9FormData.notes);
+    }
     
     try {
       await axios.post(`${API}/time/w9/upload`, formData, {
@@ -121,10 +127,12 @@ export default function EmployeeDashboard() {
           'Content-Type': 'multipart/form-data'
         }
       });
-      toast.success("W-9 submitted successfully!");
+      toast.success("W-9 submitted for review!");
+      setW9FormData({ file: null, notes: '' });
+      setShowW9SubmitForm(false);
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to upload W-9");
+      toast.error(error.response?.data?.detail || "Failed to submit W-9");
     } finally {
       setUploadingW9(false);
     }
