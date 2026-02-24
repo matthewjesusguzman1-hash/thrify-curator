@@ -876,3 +876,29 @@ Simplified W-9 management by removing the approval workflow. W-9 submissions no 
 ### Test Report
 - `/app/test_reports/iteration_31.json` - 100% backend, 100% frontend
 - All mobile compatibility fixes verified
+
+## Mileage Section Bug Fixes (Feb 24, 2026)
+
+### Issues Fixed
+
+1. **P0: Backend API Not Returning Mileage Data (FIXED)**
+   - **Root Cause**: `MileageEntryResponse` Pydantic model had `user_name` as a required field (`str`), but some database entries were missing this field, causing a ValidationError
+   - **Fix**: Changed `user_name` to `Optional[str]` with default value `"Unknown"` in `/app/backend/app/models/mileage.py`
+   - **Result**: GET `/api/admin/mileage/entries` now returns valid JSON array
+
+2. **P0: Frontend Input Fields Losing Focus (FIXED)**
+   - **Root Cause**: `MileageForm` component was defined inside the parent component function, causing it to be recreated on every render and losing input focus
+   - **Fix**: Removed the internal `MileageForm` component, added `handleFormFieldChange` helper function using functional state updates, and inlined the form JSX directly in the modal components
+   - **Files Changed**: `/app/frontend/src/components/admin/sections/MileageTrackingSection.jsx`
+   - **Result**: Input fields now retain focus while typing (verified character-by-character)
+
+### Test Report
+- `/app/test_reports/iteration_1.json` - 100% backend (11/11 tests), 100% frontend
+- All mileage bugs verified fixed
+
+### Features Verified Working
+- GET /api/admin/mileage/entries - Returns valid JSON array
+- Add Mileage Entry form - Input fields retain focus, submission works
+- Edit Mileage Entry form - Input fields retain focus
+- Recent Trips display - Shows trip list with edit/delete buttons
+- Bulk select mode - Select Trips button functional
