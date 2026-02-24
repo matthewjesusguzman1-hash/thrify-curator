@@ -164,39 +164,124 @@ export default function AllEmployeesSection({
     }
   };
 
-  // View W-9
-  const handleViewW9 = async (employeeId, employeeName) => {
-    if (!employeeId) {
-      toast.error("Invalid employee ID");
+  // Open W-9 Management Modal
+  const handleOpenW9Modal = async (employee) => {
+    if (!employee || !employee.id) {
+      toast.error("Invalid employee");
       return;
     }
     
+    setSelectedEmployee(employee);
+    setShowW9Modal(true);
+    setLoadingW9s(true);
+    setEmployeeW9Docs([]);
+    
     try {
-      // Get W-9 status/documents for the employee
-      const response = await axios.get(`${API}/admin/employees/${employeeId}/w9/status`, getAuthHeader());
-      const w9_documents = (response.data.w9_documents || []).filter(doc => doc && doc.id);
-      
-      if (!w9_documents || w9_documents.length === 0) {
-        toast.error("No W-9 documents found");
-        return;
-      }
-      
-      // Get the most recent document
-      const latestDoc = w9_documents[0];
-      
-      // Download and open in new tab
-      const docResponse = await axios.get(
-        `${API}/admin/employees/${employeeId}/w9/${latestDoc.id}`,
+      const response = await axios.get(`${API}/admin/employees/${employee.id}/w9/status`, getAuthHeader());
+      const docs = (response.data.w9_documents || []).filter(doc => doc && doc.id);
+      setEmployeeW9Docs(docs);
+    } catch (error) {
+      toast.error("Failed to load W-9 documents");
+    } finally {
+      setLoadingW9s(false);
+    }
+  };
+
+  // Preview W-9 in modal
+  const handlePreviewW9 = async (doc) => {
+    if (!selectedEmployee || !doc || !doc.id) return;
+    
+    try {
+      const response = await axios.get(
+        `${API}/admin/employees/${selectedEmployee.id}/w9/${doc.id}`,
         { ...getAuthHeader(), responseType: 'blob' }
       );
       
-      const blob = new Blob([docResponse.data], { type: latestDoc.content_type });
+      const blob = new Blob([response.data], { type: doc.content_type || 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      
+      setPreviewingW9({
+        url,
+        filename: doc.filename || 'w9.pdf',
+        contentType: doc.content_type || 'application/pdf',
+        docId: doc.id
+      });
     } catch (error) {
-      toast.error("Failed to view W-9");
+      toast.error("Failed to preview W-9");
     }
+  };
+
+  // Download W-9
+  const handleDownloadW9 = async (doc) => {
+    if (!selectedEmployee || !doc || !doc.id) return;
+    if (!window.confirm("Are you sure you want to download this W-9?")) return;
+    
+    try {
+      const response = await axios.get(
+        `${API}/admin/employees/${selectedEmployee.id}/w9/${doc.id}`,
+        { ...getAuthHeader(), responseType: 'blob' }
+      );
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.filename || 'w9_document.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("W-9 downloaded!");
+    } catch (error) {
+      toast.error("Failed to download W-9");
+    }
+  };
+
+  // Approve W-9
+  const handleApproveW9 = async (doc) => {
+    if (!selectedEmployee || !doc || !doc.id) return;
+    
+    try {
+      await axios.post(
+        `${API}/admin/employees/${selectedEmployee.id}/w9/${doc.id}/approve`,
+        {},
+        getAuthHeader()
+      );
+      toast.success("W-9 approved!");
+      // Refresh the list
+      handleOpenW9Modal(selectedEmployee);
+      onRefreshEmployees();
+    } catch (error) {
+      toast.error("Failed to approve W-9");
+    }
+  };
+
+  // Delete W-9
+  const handleDeleteW9 = async (doc) => {
+    if (!selectedEmployee || !doc || !doc.id) return;
+    if (!window.confirm("Are you sure you want to delete this W-9? The employee will no longer be able to see it.")) return;
+    
+    try {
+      await axios.delete(
+        `${API}/admin/employees/${selectedEmployee.id}/w9/${doc.id}`,
+        getAuthHeader()
+      );
+      toast.success("W-9 deleted!");
+      // Refresh the list
+      handleOpenW9Modal(selectedEmployee);
+      onRefreshEmployees();
+    } catch (error) {
+      toast.error("Failed to delete W-9");
+    }
+  };
+
+  // Close W-9 modal
+  const handleCloseW9Modal = () => {
+    if (previewingW9?.url) {
+      window.URL.revokeObjectURL(previewingW9.url);
+    }
+    setShowW9Modal(false);
+    setSelectedEmployee(null);
+    setEmployeeW9Docs([]);
+    setPreviewingW9(null);
   };
 
   return (
