@@ -53,14 +53,15 @@ async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials 
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# Employee W-9 upload endpoint
+# Employee W-9 upload endpoint (supports multiple submissions with notes)
 @app.post("/api/time/w9/upload")
-async def employee_upload_w9(file: UploadFile = File(...), user: dict = Depends(get_current_user_from_token)):
+async def employee_upload_w9(
+    file: UploadFile = File(...), 
+    notes: str = Form(None),
+    user: dict = Depends(get_current_user_from_token)
+):
     """Employee uploads their completed W-9 form"""
-    # Check if W-9 already approved
-    existing = await db.w9_documents.find_one({"employee_id": user["id"]}, {"_id": 0})
-    if existing and existing.get("status") == "approved":
-        raise HTTPException(status_code=400, detail="W-9 already approved, cannot modify")
+    import uuid
     
     # Validate file type
     allowed_types = ["application/pdf", "image/jpeg", "image/png", "image/jpg"]
@@ -73,26 +74,25 @@ async def employee_upload_w9(file: UploadFile = File(...), user: dict = Depends(
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
     
+    doc_id = str(uuid.uuid4())
+    
     w9_doc = {
+        "id": doc_id,
         "employee_id": user["id"],
         "filename": file.filename,
         "content_type": file.content_type,
         "content": base64.b64encode(content).decode('utf-8'),
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
-        "uploaded_by": "employee",
-        "status": "pending_review",
-        "rejection_reason": None  # Clear any previous rejection reason when resubmitting
+        "uploaded_by": user["id"],
+        "status": "submitted",
+        "notes": notes or ""
     }
     
-    await db.w9_documents.update_one(
-        {"employee_id": user["id"]},
-        {"$set": w9_doc},
-        upsert=True
-    )
+    await db.w9_documents.insert_one(w9_doc)
     
     await db.users.update_one(
         {"id": user["id"]},
-        {"$set": {"has_w9": True, "w9_uploaded_at": w9_doc["uploaded_at"], "w9_status": "pending_review"}}
+        {"$set": {"has_w9": True, "w9_uploaded_at": w9_doc["uploaded_at"]}}
     )
     
     # Create notification for admin
@@ -102,14 +102,15 @@ async def employee_upload_w9(file: UploadFile = File(...), user: dict = Depends(
         employee_id=user["id"],
         employee_name=user["name"],
         message=f"{user['name']} has submitted their W-9 form for review",
-        details={"filename": file.filename, "submitted_at": w9_doc["uploaded_at"]}
+        details={"filename": file.filename, "submitted_at": w9_doc["uploaded_at"], "notes": notes or ""}
     )
     await db.admin_notifications.insert_one(notification.model_dump())
     
     return {
-        "message": "W-9 uploaded successfully and pending review",
+        "message": "W-9 uploaded successfully",
+        "id": doc_id,
         "filename": file.filename,
-        "status": "pending_review"
+        "uploaded_at": w9_doc["uploaded_at"]
     }
 
 
