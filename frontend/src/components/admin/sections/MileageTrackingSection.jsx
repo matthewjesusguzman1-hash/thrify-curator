@@ -1242,7 +1242,95 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <MileageForm isEdit={true} />
+            <div className="space-y-4">
+              <div>
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={mileageFormData.date}
+                  onChange={(e) => handleFormFieldChange('date', e.target.value)}
+                  data-testid="edit-mileage-date-input"
+                />
+              </div>
+              <div>
+                <Label>Start Location</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g., Home, 123 Main St"
+                  value={mileageFormData.start_address}
+                  onChange={(e) => handleFormFieldChange('start_address', e.target.value)}
+                  data-testid="edit-mileage-start-input"
+                />
+              </div>
+              <div>
+                <Label>End Location</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g., Goodwill, Thrift Store"
+                  value={mileageFormData.end_address}
+                  onChange={(e) => handleFormFieldChange('end_address', e.target.value)}
+                  data-testid="edit-mileage-end-input"
+                />
+              </div>
+              <div>
+                <Label>Total Miles</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="0.0"
+                  value={mileageFormData.total_miles}
+                  onChange={(e) => handleFormFieldChange('total_miles', e.target.value)}
+                  data-testid="edit-mileage-miles-input"
+                />
+              </div>
+              <div>
+                <Label>Purpose</Label>
+                <Select
+                  value={mileageFormData.purpose}
+                  onValueChange={(value) => handleFormFieldChange('purpose', value)}
+                >
+                  <SelectTrigger data-testid="edit-mileage-purpose-select">
+                    <SelectValue placeholder="Select purpose" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="thrifting">Thrifting</SelectItem>
+                    <SelectItem value="post_office">Post Office</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {mileageFormData.purpose === "other" && (
+                <div>
+                  <Label>Specify Purpose</Label>
+                  <Input
+                    type="text"
+                    placeholder="Enter purpose"
+                    value={mileageFormData.purpose_other}
+                    onChange={(e) => handleFormFieldChange('purpose_other', e.target.value)}
+                    data-testid="edit-mileage-purpose-other-input"
+                  />
+                </div>
+              )}
+              <div>
+                <Label>Notes (optional)</Label>
+                <Input
+                  type="text"
+                  placeholder="Any additional notes"
+                  value={mileageFormData.notes}
+                  onChange={(e) => handleFormFieldChange('notes', e.target.value)}
+                  data-testid="edit-mileage-notes-input"
+                />
+              </div>
+              <Button
+                onClick={handleEditMileageEntry}
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                data-testid="update-mileage-btn"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Update Entry
+              </Button>
+            </div>
           </motion.div>
         </motion.div>
       )}
