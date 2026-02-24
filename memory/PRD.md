@@ -1151,14 +1151,16 @@ API calls with undefined IDs are now prevented at the frontend level.
 
 ## Pending Tasks
 
-### P1: AdminDashboard.jsx Refactoring (Incomplete)
-- **Status**: Modal component files created but NOT integrated
-- **Created files**:
-  - `/app/frontend/src/components/admin/modals/ShiftReportModal.jsx`
-  - `/app/frontend/src/components/admin/modals/PayrollModal.jsx`
-  - `/app/frontend/src/components/admin/modals/TimeEntryModal.jsx`
-- **Action needed**: Replace inline modal code in AdminDashboard.jsx with component imports
-- **Impact**: AdminDashboard.jsx is still ~5000+ lines
+### P1: AdminDashboard.jsx Refactoring (PARTIALLY COMPLETE)
+- **Status**: ShiftReportModal and TimeEntryModal integrated successfully
+- **File size reduction**: 5350 → 4976 lines (~374 lines removed)
+- **Integrated components**:
+  - `ShiftReportModal.jsx` - ✅ Working
+  - `TimeEntryModal.jsx` (Add mode) - ✅ Working
+  - `TimeEntryModal.jsx` (Edit mode) - ✅ Working
+- **Remaining integration**:
+  - `PayrollModal.jsx` - NOT integrated (inline code has different field names: `custom_end`, `hourly_rate`)
+- **Action needed**: Update PayrollModal component to match inline code fields, then integrate
 
 ### P2: Production Deployment
 - Application ready for deployment
