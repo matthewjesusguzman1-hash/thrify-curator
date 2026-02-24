@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   MessageCircle, 
   Mail, 
-  User, 
   ChevronDown, 
   ChevronUp, 
   Trash2,
@@ -18,14 +17,17 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export default function MessagesSection({ token }) {
+export default function MessagesSection() {
   const [messages, setMessages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showSection, setShowSection] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
+  const getToken = () => localStorage.getItem("token");
+
   const fetchMessages = useCallback(async () => {
+    const token = getToken();
     if (!token) return;
     setLoading(true);
     try {
@@ -45,10 +47,11 @@ export default function MessagesSection({ token }) {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   // Fetch unread count on mount and poll every 30 seconds
   useEffect(() => {
+    const token = getToken();
     if (!token) return;
     
     const fetchUnreadCount = async () => {
@@ -65,7 +68,7 @@ export default function MessagesSection({ token }) {
     fetchUnreadCount();
     const pollInterval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(pollInterval);
-  }, [token]);
+  }, []);
 
   // Fetch full messages when section is expanded
   useEffect(() => {
@@ -75,6 +78,7 @@ export default function MessagesSection({ token }) {
   }, [showSection, fetchMessages]);
 
   const handleMarkAsRead = async (messageId) => {
+    const token = getToken();
     try {
       await axios.put(
         `${API}/messages/admin/${messageId}/status`,
@@ -92,6 +96,7 @@ export default function MessagesSection({ token }) {
   };
 
   const handleDelete = async (messageId) => {
+    const token = getToken();
     setDeletingId(messageId);
     try {
       await axios.delete(`${API}/messages/admin/${messageId}`, {
