@@ -184,7 +184,7 @@ export default function HoursByEmployeeSection({
           data-testid="hours-by-employee-toggle"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-[#3B82F6] to-[#2563EB] rounded-xl flex items-center justify-center">
               <Clock className="w-5 h-5 text-white" />
             </div>
             <div>
