@@ -688,16 +688,17 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Employees</SelectItem>
-                      {employees?.filter(e => e.role !== 'admin').map((emp) => (
+                      {employees?.map((emp) => (
                         <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name}
+                          {emp.name} {emp.role === 'admin' ? '(Admin)' : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Date Filter Type */}
+                {/* Date Filter Type - Hidden for W-9 reports */}
+                {reportType !== "w9" && (
                 <div>
                   <Label className="text-sm font-medium text-[#666] mb-2 block">
                     <Filter className="w-4 h-4 inline mr-1" />
@@ -715,6 +716,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                     </SelectContent>
                   </Select>
                 </div>
+                )}
 
                 {/* Month/Year selectors */}
                 {filterType === "month" && (
