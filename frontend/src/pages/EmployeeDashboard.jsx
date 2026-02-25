@@ -171,25 +171,13 @@ export default function EmployeeDashboard() {
 
   // Check location on page load/focus - auto clock out if outside work area
   useEffect(() => {
-    const checkLocationOnLoad = async () => {
+    const checkLocationOnLoad = () => {
       // Skip if not clocked in or user is admin
       if (!clockedIn || user?.role === 'admin') return;
       
       if (!navigator.geolocation) return;
       
-      // Check permission state first
-      try {
-        if (navigator.permissions && navigator.permissions.query) {
-          const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-          if (permissionStatus.state === 'denied') {
-            // Can't check location - skip auto clock out
-            return;
-          }
-        }
-      } catch (err) {
-        // Continue anyway
-      }
-      
+      // Try to get location - if it fails (denied), just skip auto clock out
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const distance = calculateDistance(
@@ -218,6 +206,7 @@ export default function EmployeeDashboard() {
           }
         },
         (error) => {
+          // If GPS is denied or unavailable, just skip auto clock out
           console.log("Initial location check failed:", error.message);
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
