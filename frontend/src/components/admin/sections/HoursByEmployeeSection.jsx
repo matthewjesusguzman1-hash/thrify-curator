@@ -237,8 +237,7 @@ export default function HoursByEmployeeSection({
                         {getSortedData(employeeStats).map((emp) => (
                           <tr 
                             key={emp.user_id} 
-                            className="cursor-pointer hover:bg-[#F9F6F7] transition-colors"
-                            onClick={() => setSelectedEmployee(emp)}
+                            className="hover:bg-[#F9F6F7] transition-colors"
                             data-testid={`employee-row-${emp.user_id}`}
                           >
                             <td>
@@ -263,7 +262,7 @@ export default function HoursByEmployeeSection({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={(e) => { e.stopPropagation(); setSelectedEmployee(emp); }}
+                                  onClick={() => setSelectedEmployee(emp)}
                                   className="text-[#8B5CF6] hover:text-[#6D28D9] hover:bg-[#8B5CF6]/10"
                                 >
                                   View Shifts
