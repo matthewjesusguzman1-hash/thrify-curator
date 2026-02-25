@@ -1842,19 +1842,12 @@ export default function AdminDashboard() {
     <div className="dashboard-container" data-testid="admin-dashboard">
       {/* Header */}
       <header 
-        className="dashboard-header pt-16 sm:pt-4" 
+        className="dashboard-header" 
         style={{ 
           background: 'linear-gradient(90deg, #1A1A2E 0%, #16213E 100%)',
-          paddingTop: 'max(env(safe-area-inset-top, 16px) + 12px, 64px)'
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 48px)'
         }}
       >
-        <style>{`
-          @media (min-width: 640px) {
-            .dashboard-header {
-              padding-top: 16px !important;
-            }
-          }
-        `}</style>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
