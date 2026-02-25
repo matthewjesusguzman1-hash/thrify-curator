@@ -1499,7 +1499,7 @@ async def get_w9_report_pdf(
         status = emp["w9_status"]
         if status == "approved":
             pdf.set_fill_color(200, 255, 200)
-        elif status in ["submitted", "pending"]:
+        elif status in ["submitted", "pending", "pending_review"]:
             pdf.set_fill_color(255, 255, 200)
         else:
             pdf.set_fill_color(255, 200, 200)
@@ -1508,9 +1508,12 @@ async def get_w9_report_pdf(
         role = emp["role"]
         last_updated = emp.get("last_updated", "")[:10] if emp.get("last_updated") else "N/A"
         
+        # Format status for display
+        display_status = "Pending" if status in ["submitted", "pending", "pending_review"] else status.replace("_", " ").title()
+        
         pdf.cell(50, 6, name, border=1)
         pdf.cell(35, 6, role, border=1, align="C")
-        pdf.cell(35, 6, status.replace("_", " ").title(), border=1, fill=True, align="C")
+        pdf.cell(35, 6, display_status, border=1, fill=True, align="C")
         pdf.cell(25, 6, str(emp["document_count"]), border=1, align="C")
         pdf.cell(35, 6, last_updated, border=1, align="C")
         pdf.ln()
