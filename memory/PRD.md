@@ -1339,3 +1339,26 @@ Once a user denies GPS permission, the browser caches this decision. There is NO
     └── TimeEntriesSection.jsx       (200 lines)
 ```
 
+
+## UI Fixes (Feb 25, 2026)
+
+### 1. Splash Screen Performance Fix
+- **Issue**: Splash page appeared glitchy on desktop due to complex animations
+- **Fix**: Simplified animated background effects to static gradient glows
+  - Removed infinite animations, scaling, and movement
+  - Reduced blur sizes from 100px to 60-80px
+  - Reduced number of gradient elements from 7 to 3
+  - Now uses simple fade-in transitions for smooth rendering
+- **File**: `/app/frontend/src/components/SplashScreen.jsx`
+
+### 2. Payroll Modal Header Simplification
+- **Issue**: Modal header showed "Payroll Reports" with subtitle "Generate payroll-ready reports"
+- **Fix**: Changed header to simply "Payroll" with no subtitle
+- **File**: `/app/frontend/src/pages/AdminDashboard.jsx` (inline payroll modal)
+
+### 3. Download PDF Button Removed
+- **Issue**: After generating payroll report, a "Download PDF" button appeared
+- **Fix**: Removed the Download PDF button from the payroll modal
+- **Note**: PDF downloads are still available through the Reports section
+- **File**: `/app/frontend/src/pages/AdminDashboard.jsx`
+
