@@ -1355,13 +1355,18 @@ async def download_mileage_report_pdf(
         pdf.cell(25, 6, "Deduction", border=1, fill=True, align="C")
         pdf.ln()
         
+        # IRS standard mileage rate
+        MILEAGE_RATE = 0.70
+        
         for entry in report["entries"][:50]:
             purpose = (entry.get("purpose", "") or "")[:35]
+            miles = entry.get("total_miles", 0)
+            deduction = miles * MILEAGE_RATE
             pdf.cell(40, 5, entry.get("user_name", "")[:20], border=1)
             pdf.cell(25, 5, entry.get("date", "")[:10], border=1)
             pdf.cell(70, 5, purpose, border=1)
-            pdf.cell(20, 5, f"{entry.get('miles', 0):.1f}", border=1, align="C")
-            pdf.cell(25, 5, f"${entry.get('deduction', 0):.2f}", border=1, align="C")
+            pdf.cell(20, 5, f"{miles:.1f}", border=1, align="C")
+            pdf.cell(25, 5, f"${deduction:.2f}", border=1, align="C")
             pdf.ln()
     
     pdf_output = pdf.output()
