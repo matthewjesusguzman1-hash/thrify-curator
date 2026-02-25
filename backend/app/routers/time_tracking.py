@@ -345,7 +345,7 @@ async def upload_w9_employee(
 
 @router.delete("/w9/{doc_id}")
 async def delete_own_w9(doc_id: str, user: dict = Depends(get_current_user)):
-    """Employee deletes a specific W-9 (only if not yet approved)"""
+    """Employee deletes a specific W-9 (only if not yet approved, unless admin)"""
     w9_doc = await db.w9_documents.find_one(
         {"employee_id": user["id"], "id": doc_id},
         {"_id": 0}
@@ -354,7 +354,9 @@ async def delete_own_w9(doc_id: str, user: dict = Depends(get_current_user)):
     if not w9_doc:
         raise HTTPException(status_code=404, detail="W-9 document not found")
     
-    if w9_doc.get("status") == "approved":
+    # Admins can delete their own W-9s even if approved
+    # Regular employees can only delete non-approved W-9s
+    if w9_doc.get("status") == "approved" and user.get("role") != "admin":
         raise HTTPException(status_code=400, detail="Cannot delete approved W-9")
     
     await db.w9_documents.delete_one({"employee_id": user["id"], "id": doc_id})
