@@ -390,30 +390,11 @@ export default function EmployeeDashboard() {
 
               {/* Location Status Indicator */}
               {locationStatus.denied ? (
-                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                  <div className="flex items-center justify-center gap-2 text-yellow-700 mb-2">
-                    <MapPin className="w-5 h-5" />
-                    <span className="font-medium">Location Access Required</span>
+                <div className="mb-4 p-3 bg-[#1A1A2E]/10 border border-[#8B5CF6]/20 rounded-xl">
+                  <div className="flex items-center justify-center gap-2 text-[#8B5CF6]">
+                    <MapPin className="w-4 h-4" />
+                    <span className="text-sm">Location required to clock in</span>
                   </div>
-                  <p className="text-sm text-yellow-600 mb-3">
-                    Location permission was denied. To clock in/out, please enable location access:
-                  </p>
-                  <div className="text-xs text-yellow-700 bg-yellow-100 rounded-lg p-3 mb-3 text-left">
-                    <p className="font-medium mb-1">How to enable:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Click the lock/info icon in your browser's address bar</li>
-                      <li>Find "Location" and change it to "Allow"</li>
-                      <li>Refresh the page and try again</li>
-                    </ul>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => window.location.reload()}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-1" />
-                    Refresh Page
-                  </Button>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2 mb-4 text-sm">
