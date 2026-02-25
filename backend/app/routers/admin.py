@@ -1238,8 +1238,8 @@ async def download_mileage_report_csv(
     """Download mileage report as CSV"""
     report = await get_mileage_report(start_date, end_date, employee_id, admin)
     
-    # IRS standard mileage rate
-    MILEAGE_RATE = 0.70
+    # IRS standard mileage rate (72.5 cents per mile)
+    MILEAGE_RATE = 0.725
     
     output = io.StringIO()
     writer = csv.writer(output)
