@@ -422,18 +422,21 @@ export default function EmployeeDashboard() {
                 <div className="mb-4 p-4 bg-[#1A1A2E]/10 border border-[#8B5CF6]/30 rounded-xl">
                   <div className="flex items-center justify-center gap-2 text-[#8B5CF6] mb-3">
                     <MapPin className="w-5 h-5" />
-                    <span className="font-medium">Enable Location to Clock In</span>
+                    <span className="font-medium">Location Access Required</span>
                   </div>
-                  <p className="text-sm text-gray-600 text-center mb-4">
-                    Please enable location access and restart the app
-                  </p>
+                  <div className="text-sm text-gray-600 text-center mb-4 space-y-2">
+                    <p>Location was blocked. To enable:</p>
+                    <p className="text-xs text-gray-500">
+                      Tap the lock/info icon in your browser's address bar → Site settings → Allow Location
+                    </p>
+                  </div>
                   <div className="flex justify-center">
                     <Button
                       onClick={() => window.location.reload()}
                       className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] hover:from-[#7C3AED] hover:to-[#00A8CC] text-white"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Restart App
+                      Restart After Enabling
                     </Button>
                   </div>
                 </div>
