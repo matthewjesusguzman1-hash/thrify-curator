@@ -3451,7 +3451,7 @@ export default function AdminDashboard() {
             onAddEntry={() => setShowAddEntry(true)}
             onEditEntry={handleEditEntry}
             onDeleteEntry={handleDeleteEntry}
-            payPeriodStart={payPeriodStart}
+            payPeriodStart={payrollSettings.pay_period_start_date}
           />
 
 
