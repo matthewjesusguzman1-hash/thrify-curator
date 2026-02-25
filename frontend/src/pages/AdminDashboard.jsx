@@ -4917,7 +4917,8 @@ export default function AdminDashboard() {
                   <div className="flex gap-2">
                     {viewingW9 && (
                       <>
-                        {viewingW9.status !== 'approved' && (
+                        {/* Only show Approve button when NOT from portal view */}
+                        {!w9ViewerFromPortal && viewingW9.status !== 'approved' && (
                           <Button
                             variant="outline"
                             onClick={() => handleApproveW9Doc(viewingW9.employeeId, viewingW9.docId)}
@@ -4927,17 +4928,19 @@ export default function AdminDashboard() {
                             Approve
                           </Button>
                         )}
-                        <Button
-                          variant="outline"
-                          onClick={() => handleDeleteW9Doc(viewingW9.employeeId, viewingW9.docId)}
-                          className="text-red-600 border-red-300 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </Button>
+                        {/* Only show Delete button when NOT from portal view */}
+                        {!w9ViewerFromPortal && (
+                          <Button
+                            variant="outline"
+                            onClick={() => handleDeleteW9Doc(viewingW9.employeeId, viewingW9.docId)}
+                            className="text-red-600 border-red-300 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </Button>
+                        )}
                         <Button
                           onClick={async () => {
-                            if (!window.confirm("Are you sure you want to download this W-9?")) return;
                             try {
                               const response = await axios.get(`${API}/admin/employees/${viewingW9.employeeId}/w9/${viewingW9.docId}`, {
                                 ...getAuthHeader(),
