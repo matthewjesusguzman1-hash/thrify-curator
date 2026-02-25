@@ -107,6 +107,129 @@ export default function EmployeeDashboard() {
     return () => clearInterval(interval);
   }, [clockedIn, currentEntry]);
 
+  // Location monitoring effect - checks location every 30 seconds while clocked in
+  useEffect(() => {
+    let locationInterval;
+    
+    const verifyLocationAndAutoClockOut = async () => {
+      // Skip if not clocked in or user is admin
+      if (!clockedIn || user?.role === 'admin') return;
+      
+      // Check if geolocation is available
+      if (!navigator.geolocation) return;
+      
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const distance = calculateDistance(
+            position.coords.latitude,
+            position.coords.longitude,
+            WORK_LOCATION.lat,
+            WORK_LOCATION.lng
+          );
+          const withinRange = distance <= WORK_LOCATION.radiusMiles;
+          
+          if (withinRange) {
+            // User is in range - update the last verified timestamp
+            try {
+              await axios.post(`${API}/time/verify-location`, {}, getAuthHeader());
+              console.log("Location verified - in range");
+            } catch (error) {
+              console.error("Failed to verify location:", error);
+            }
+          } else {
+            // User left the work area - auto clock out
+            console.log("User left work area - auto clocking out");
+            try {
+              const response = await axios.post(`${API}/time/auto-clock-out`, {}, getAuthHeader());
+              toast.warning("You left the work area. Clocked out automatically.", { duration: 5000 });
+              fetchData();
+            } catch (error) {
+              console.error("Auto clock out failed:", error);
+            }
+          }
+        },
+        (error) => {
+          // If we can't get location, just skip this check
+          console.log("Location check failed:", error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    };
+    
+    if (clockedIn && user?.role !== 'admin') {
+      // Check immediately on mount/clock-in
+      verifyLocationAndAutoClockOut();
+      
+      // Then check every 30 seconds
+      locationInterval = setInterval(verifyLocationAndAutoClockOut, 30000);
+    }
+    
+    return () => {
+      if (locationInterval) clearInterval(locationInterval);
+    };
+  }, [clockedIn, user]);
+
+  // Check location on page load/focus - auto clock out if outside work area
+  useEffect(() => {
+    const checkLocationOnLoad = async () => {
+      // Skip if not clocked in or user is admin
+      if (!clockedIn || user?.role === 'admin') return;
+      
+      if (!navigator.geolocation) return;
+      
+      // Check permission state first
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+          if (permissionStatus.state === 'denied') {
+            // Can't check location - skip auto clock out
+            return;
+          }
+        }
+      } catch (err) {
+        // Continue anyway
+      }
+      
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const distance = calculateDistance(
+            position.coords.latitude,
+            position.coords.longitude,
+            WORK_LOCATION.lat,
+            WORK_LOCATION.lng
+          );
+          const withinRange = distance <= WORK_LOCATION.radiusMiles;
+          
+          if (!withinRange) {
+            // User opened app while outside work area - auto clock out with adjusted time
+            console.log("User opened app outside work area - auto clocking out with adjusted time");
+            try {
+              const response = await axios.post(`${API}/time/auto-clock-out`, {}, getAuthHeader());
+              const usedLastVerified = response.data.used_last_verified;
+              if (usedLastVerified) {
+                toast.warning("You were clocked out at your last verified location time.", { duration: 6000 });
+              } else {
+                toast.warning("You left the work area. Clocked out automatically.", { duration: 5000 });
+              }
+              fetchData();
+            } catch (error) {
+              console.error("Auto clock out failed:", error);
+            }
+          }
+        },
+        (error) => {
+          console.log("Initial location check failed:", error.message);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    };
+    
+    // Small delay to let the page settle
+    const timeout = setTimeout(checkLocationOnLoad, 1000);
+    
+    return () => clearTimeout(timeout);
+  }, [clockedIn, user]);
+
   const getAuthHeader = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   });
