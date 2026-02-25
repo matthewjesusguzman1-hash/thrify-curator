@@ -286,21 +286,23 @@ export default function EmployeeDashboard() {
     
     setLoading(true);
     
-    // Check location first (only for non-admin employees)
-    const locationResult = await checkLocation();
-    
-    if (locationResult.denied) {
-      // User denied - the UI will show the subtle warning
-      setLoading(false);
-      return;
-    }
-    
-    if (!locationResult.withinRange) {
-      setLoading(false);
-      if (!locationResult.error) {
-        toast.error("You are too far from the work location");
+    // Only check location for clock IN - allow clock out from anywhere
+    if (action === "in") {
+      const locationResult = await checkLocation();
+      
+      if (locationResult.denied) {
+        // User denied - the UI will show the subtle warning
+        setLoading(false);
+        return;
       }
-      return;
+      
+      if (!locationResult.withinRange) {
+        setLoading(false);
+        if (!locationResult.error) {
+          toast.error("You are too far from the work location");
+        }
+        return;
+      }
     }
     
     try {
