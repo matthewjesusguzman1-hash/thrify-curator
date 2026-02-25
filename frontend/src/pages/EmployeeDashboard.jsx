@@ -346,9 +346,6 @@ export default function EmployeeDashboard() {
           resolve({ withinRange, distance: distance.toFixed(2) });
         },
         (error) => {
-          // Show what error we got
-          alert(`Location error: Code ${error.code} - ${error.message}`);
-          
           if (error.code === 1) {
             // PERMISSION_DENIED
             setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
