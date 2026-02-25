@@ -4163,7 +4163,7 @@ export default function AdminDashboard() {
                                 </div>
                               </div>
                               <Button
-                                onClick={() => handleViewW9(viewingEmployee.id, viewingEmployee.name, true)}
+                                onClick={() => handleOpenPortalW9Modal(viewingEmployee.id, viewingEmployee.name)}
                                 className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
                               >
                                 <Eye className="w-4 h-4 mr-2" />
