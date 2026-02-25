@@ -91,6 +91,8 @@ export default function TimeEntryModal({
         } else {
           // Update total hours directly
           updatePayload.total_hours = parseFloat(formData.total_hours);
+          // Include admin note when adjusting hours
+          updatePayload.admin_note = formData.admin_note || null;
         }
         
         await axios.put(`${API}/admin/time-entries/${entry.id}`, updatePayload, getAuthHeader());
