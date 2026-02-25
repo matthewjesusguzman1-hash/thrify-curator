@@ -136,9 +136,14 @@ async def start_trip(trip_data: StartTripRequest, admin: dict = Depends(get_admi
     trip_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
+    # Use the admin's actual name from their login code
+    admin_name = admin.get("admin_name", "Administrator")
+    
     trip_doc = {
         "id": trip_id,
         "user_id": admin["id"],
+        "user_name": admin_name,
+        "admin_code": admin.get("admin_code"),
         "start_location": trip_data.start_location.model_dump(),
         "start_address": trip_data.start_address,
         "start_time": now,
