@@ -11,14 +11,14 @@ import {
   FileSpreadsheet,
   File,
   Clock,
-  DollarSign,
   Car,
   Briefcase,
   FileSignature,
   CheckCircle,
   AlertCircle,
   Eye,
-  X
+  X,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
