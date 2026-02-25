@@ -459,8 +459,8 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   );
 
   const renderMileagePreview = (data) => {
-    // IRS standard mileage rate for 2026
-    const MILEAGE_RATE = 0.70;
+    // IRS standard mileage rate for 2026 (72.5 cents per mile)
+    const MILEAGE_RATE = 0.725;
     
     return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
