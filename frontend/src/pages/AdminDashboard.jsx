@@ -1963,7 +1963,7 @@ export default function AdminDashboard() {
                                   : notification.type === 'w9_submission'
                                   ? <FileText className="w-5 h-5 text-white" />
                                   : notification.type === 'new_message'
-                                  ? <MessageCircle className="w-5 h-5 text-white" />
+                                  ? <MessageSquare className="w-5 h-5 text-white" />
                                   : <Bell className="w-5 h-5 text-white" />
                                 }
                               </div>
