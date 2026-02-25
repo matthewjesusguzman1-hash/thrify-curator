@@ -1166,3 +1166,50 @@ API calls with undefined IDs are now prevented at the frontend level.
 - Application ready for deployment
 - All features tested and working
 - Run deployment agent when ready
+
+## Geolocation Clock-In Fix (Feb 25, 2026)
+
+### Issue
+Employee clock-in GPS flow was showing the "Location Access Required" warning immediately instead of prompting for GPS permission on first click.
+
+### Root Cause Analysis
+The issue was related to browser permission caching:
+1. On a **fresh session**, clicking "Clock In" triggers `navigator.geolocation.getCurrentPosition()` which shows the browser's GPS permission prompt
+2. If user **denies** the permission, browsers cache this decision
+3. On subsequent visits/reloads, the cached "denied" state causes immediate failure without showing a prompt
+
+### Solution Implemented
+1. **Added Permissions API check**: Before calling `getCurrentPosition()`, we check the permission state
+   - If "denied" → Show warning immediately (browser won't show prompt)
+   - If "prompt" → Call `getCurrentPosition()` which triggers the browser prompt
+   - If "granted" → Get location directly
+
+2. **Improved warning message**: Updated the location blocked warning with device-specific instructions:
+   - **iPhone/iPad**: Settings → Safari → Location → Allow
+   - **Android**: Tap ⋮ menu → Settings → Site settings → Location → Allow
+   - **Desktop**: Click the lock icon in address bar → Reset permission
+
+3. **Added console logging**: For debugging GPS issues in production
+
+### Code Changes
+- Modified: `/app/frontend/src/pages/EmployeeDashboard.jsx`
+  - `checkLocation()` function now uses async/await
+  - Added Permissions API check before geolocation request
+  - Added detailed console logging
+  - Updated warning UI with platform-specific instructions
+
+### Expected Behavior
+1. **Fresh session (never asked before)**:
+   - Click "Clock In" → Browser shows GPS permission prompt → Allow/Block
+2. **Previously allowed**:
+   - Click "Clock In" → Location checked immediately → Clock in if within range
+3. **Previously denied**:
+   - Click "Clock In" → Warning shown with instructions to reset permission → User must manually enable in browser settings
+
+### Testing Verified
+- ✅ Permission granted + within range → Clock in succeeds with "Location verified"
+- ✅ Permission granted + too far → Shows "Too far" message with toast
+- ✅ Permission denied → Shows warning with platform-specific enable instructions
+
+### Browser Limitation (Cannot Fix)
+Once a user denies GPS permission, the browser caches this decision. There is NO programmatic way to re-trigger the permission prompt. The only solution is for the user to manually reset the permission in their browser settings.
