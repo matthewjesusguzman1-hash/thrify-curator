@@ -4545,19 +4545,6 @@ export default function AdminDashboard() {
                     <CalendarDays className="w-4 h-4" />
                     {payrollLoading ? "Generating..." : "Generate Report"}
                   </Button>
-                  {payrollReport && (
-                    <>
-                      <Button
-                        onClick={handleDownloadPayrollPDF}
-                        variant="outline"
-                        className="flex items-center gap-2 border-[#C5A065] text-[#C5A065]"
-                        data-testid="download-payroll-pdf-btn"
-                      >
-                        <Download className="w-4 h-4" />
-                        Download PDF
-                      </Button>
-                    </>
-                  )}
                 </div>
 
                 {/* Payroll Report Results */}
