@@ -49,7 +49,8 @@ export default function TimeEntryModal({
         employee_id: entry.user_id || "",
         clock_in: formatForInput(entry.clock_in),
         clock_out: formatForInput(entry.clock_out),
-        total_hours: entry.total_hours?.toString() || ""
+        total_hours: entry.total_hours?.toString() || "",
+        admin_note: entry.admin_note || ""
       });
       setEditMode("times"); // Default to times mode
     } else if (mode === 'add') {
@@ -57,7 +58,8 @@ export default function TimeEntryModal({
         employee_id: "",
         clock_in: "",
         clock_out: "",
-        total_hours: ""
+        total_hours: "",
+        admin_note: ""
       });
       setEditMode("times");
     }
