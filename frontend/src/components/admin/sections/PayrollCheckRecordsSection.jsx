@@ -374,7 +374,7 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-[#666]">Check Date</Label>
+                      <Label className="text-xs text-[#666]">Payment Date</Label>
                       <Input
                         type="date"
                         value={checkUploadData.check_date}
