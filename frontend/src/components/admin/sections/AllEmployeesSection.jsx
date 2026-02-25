@@ -17,7 +17,6 @@ import {
   X,
   ArrowUpDown,
   ArrowUp,
-  Download,
   Trash2,
   Clock3,
   MessageSquare
