@@ -1315,3 +1315,212 @@ async def download_mileage_report_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+
+# W-9 Report endpoints
+@router.get("/reports/w9")
+async def get_w9_report(
+    employee_id: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Get W-9 status report for all employees (including admins)"""
+    # Get all users including admins
+    query = {}
+    if employee_id:
+        query["id"] = employee_id
+    
+    users = await db.users.find(query, {"_id": 0}).to_list(500)
+    
+    # Get all W-9 documents
+    w9_docs = await db.w9_documents.find({}, {"_id": 0, "content": 0}).to_list(1000)
+    
+    # Create a map of employee_id to their W-9 documents
+    w9_by_employee = {}
+    for doc in w9_docs:
+        emp_id = doc.get("employee_id")
+        if emp_id not in w9_by_employee:
+            w9_by_employee[emp_id] = []
+        w9_by_employee[emp_id].append(doc)
+    
+    # Build employee report data
+    employees = []
+    summary = {"total_employees": 0, "approved": 0, "pending": 0, "not_submitted": 0}
+    
+    for user in users:
+        user_id = user.get("id")
+        user_w9s = w9_by_employee.get(user_id, [])
+        
+        # Determine W-9 status
+        if user_w9s:
+            # Sort by uploaded_at to get latest
+            sorted_docs = sorted(user_w9s, key=lambda x: x.get("uploaded_at", ""), reverse=True)
+            latest_status = sorted_docs[0].get("status", "submitted")
+            last_updated = sorted_docs[0].get("uploaded_at")
+        else:
+            latest_status = "not_submitted"
+            last_updated = None
+        
+        # Count for summary
+        if latest_status == "approved":
+            summary["approved"] += 1
+        elif latest_status in ["submitted", "pending"]:
+            summary["pending"] += 1
+        else:
+            summary["not_submitted"] += 1
+        
+        summary["total_employees"] += 1
+        
+        employees.append({
+            "id": user_id,
+            "name": user.get("name", "Unknown"),
+            "email": user.get("email", ""),
+            "role": user.get("role", "employee"),
+            "w9_status": latest_status,
+            "document_count": len(user_w9s),
+            "last_updated": last_updated
+        })
+    
+    # Sort by name
+    employees.sort(key=lambda x: x.get("name", "").lower())
+    
+    return {
+        "summary": summary,
+        "employees": employees,
+        "generated_at": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@router.get("/reports/w9/csv")
+async def get_w9_report_csv(
+    employee_id: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Download W-9 status report as CSV"""
+    report = await get_w9_report(employee_id, admin)
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(["W-9 Status Report", f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"])
+    writer.writerow([])
+    
+    # Summary
+    writer.writerow(["Summary"])
+    writer.writerow(["Total Employees", report["summary"]["total_employees"]])
+    writer.writerow(["Approved", report["summary"]["approved"]])
+    writer.writerow(["Pending", report["summary"]["pending"]])
+    writer.writerow(["Not Submitted", report["summary"]["not_submitted"]])
+    writer.writerow([])
+    
+    # Employee details
+    writer.writerow(["Employee Name", "Email", "Role", "W-9 Status", "Document Count", "Last Updated"])
+    for emp in report["employees"]:
+        writer.writerow([
+            emp["name"],
+            emp["email"],
+            emp["role"],
+            emp["w9_status"],
+            emp["document_count"],
+            emp.get("last_updated", "")[:10] if emp.get("last_updated") else "N/A"
+        ])
+    
+    csv_content = output.getvalue()
+    filename = f"w9_report_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
+    
+    return Response(
+        content=csv_content.encode('utf-8'),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/reports/w9/pdf")
+async def get_w9_report_pdf(
+    employee_id: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Download W-9 status report as PDF"""
+    if not HAS_FPDF:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    report = await get_w9_report(employee_id, admin)
+    
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Title
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, "Thrifty Curator - W-9 Status Report", ln=True, align="C")
+    pdf.ln(5)
+    
+    # Generated date
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}", ln=True)
+    pdf.ln(5)
+    
+    # Summary section
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "Summary", ln=True)
+    pdf.set_font("Helvetica", "", 11)
+    
+    summary = report["summary"]
+    pdf.cell(0, 6, f"Total Employees: {summary['total_employees']}", ln=True)
+    pdf.set_text_color(0, 128, 0)
+    pdf.cell(0, 6, f"Approved: {summary['approved']}", ln=True)
+    pdf.set_text_color(255, 165, 0)
+    pdf.cell(0, 6, f"Pending: {summary['pending']}", ln=True)
+    pdf.set_text_color(255, 0, 0)
+    pdf.cell(0, 6, f"Not Submitted: {summary['not_submitted']}", ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(10)
+    
+    # Employee table
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "Employee W-9 Status", ln=True)
+    pdf.ln(3)
+    
+    # Table header
+    pdf.set_fill_color(200, 200, 200)
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(50, 7, "Name", border=1, fill=True)
+    pdf.cell(35, 7, "Role", border=1, fill=True, align="C")
+    pdf.cell(35, 7, "Status", border=1, fill=True, align="C")
+    pdf.cell(25, 7, "Docs", border=1, fill=True, align="C")
+    pdf.cell(35, 7, "Last Updated", border=1, fill=True, align="C")
+    pdf.ln()
+    
+    # Table rows
+    pdf.set_font("Helvetica", "", 9)
+    for emp in report["employees"]:
+        # Status color
+        status = emp["w9_status"]
+        if status == "approved":
+            pdf.set_fill_color(200, 255, 200)
+        elif status in ["submitted", "pending"]:
+            pdf.set_fill_color(255, 255, 200)
+        else:
+            pdf.set_fill_color(255, 200, 200)
+        
+        name = emp["name"][:25] if len(emp["name"]) > 25 else emp["name"]
+        role = emp["role"]
+        last_updated = emp.get("last_updated", "")[:10] if emp.get("last_updated") else "N/A"
+        
+        pdf.cell(50, 6, name, border=1)
+        pdf.cell(35, 6, role, border=1, align="C")
+        pdf.cell(35, 6, status.replace("_", " ").title(), border=1, fill=True, align="C")
+        pdf.cell(25, 6, str(emp["document_count"]), border=1, align="C")
+        pdf.cell(35, 6, last_updated, border=1, align="C")
+        pdf.ln()
+        pdf.set_fill_color(255, 255, 255)
+    
+    pdf_output = pdf.output()
+    filename = f"w9_report_{datetime.now(timezone.utc).strftime('%Y%m%d')}.pdf"
+    
+    return Response(
+        content=bytes(pdf_output),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
