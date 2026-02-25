@@ -173,43 +173,55 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
 
     setLoading(true);
     try {
-      let endpoint = "";
-      const params = new URLSearchParams({
-        start_date: start,
-        end_date: end
-      });
-      
-      if (selectedEmployee !== "all") {
-        params.append("employee_id", selectedEmployee);
-      }
+      let response;
+      let filename = `${reportType}_report_${start}_to_${end}.${format}`;
 
       if (reportType === "shifts") {
-        endpoint = `/admin/reports/shifts/${format}?${params.toString()}`;
+        const params = new URLSearchParams({
+          start_date: start,
+          end_date: end
+        });
+        if (selectedEmployee !== "all") {
+          params.append("employee_id", selectedEmployee);
+        }
+        response = await axios.get(`${API}/admin/reports/shifts/${format}?${params.toString()}`, {
+          ...getAuthHeader(),
+          responseType: 'blob'
+        });
       } else if (reportType === "payroll") {
-        const payrollParams = new URLSearchParams({
+        // Use POST for payroll PDF
+        const payload = {
           period_type: "custom",
           custom_start: start,
           custom_end: end,
-          hourly_rate: payrollSettings?.default_hourly_rate || "15.00"
+          hourly_rate: payrollSettings?.default_hourly_rate || 15.00
+        };
+        if (selectedEmployee !== "all") {
+          payload.employee_id = selectedEmployee;
+        }
+        response = await axios.post(`${API}/payroll/report/${format}`, payload, {
+          ...getAuthHeader(),
+          responseType: 'blob'
+        });
+      } else if (reportType === "mileage") {
+        const params = new URLSearchParams({
+          start_date: start,
+          end_date: end
         });
         if (selectedEmployee !== "all") {
-          payrollParams.append("employee_id", selectedEmployee);
+          params.append("employee_id", selectedEmployee);
         }
-        endpoint = `/admin/payroll/report/${format}?${payrollParams.toString()}`;
-      } else if (reportType === "mileage") {
-        endpoint = `/admin/mileage/report/${format}?${params.toString()}`;
+        response = await axios.get(`${API}/admin/mileage/report/${format}?${params.toString()}`, {
+          ...getAuthHeader(),
+          responseType: 'blob'
+        });
       }
-
-      const response = await axios.get(`${API}${endpoint}`, {
-        ...getAuthHeader(),
-        responseType: 'blob'
-      });
 
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${reportType}_report_${start}_to_${end}.${format}`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
