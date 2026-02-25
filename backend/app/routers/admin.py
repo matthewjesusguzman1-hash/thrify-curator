@@ -194,7 +194,7 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
     
     # Get time entries in period
     entries = await db.time_entries.find({
-        "employee_id": employee_id
+        "user_id": employee_id
     }, {"_id": 0}).to_list(500)
     
     period_hours = 0
