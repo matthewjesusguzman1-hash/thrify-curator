@@ -763,6 +763,37 @@ async def get_employee_w9s(employee_id: str, admin: dict = Depends(get_admin_use
     return {"w9_documents": w9_docs}
 
 
+@router.get("/employees/{employee_id}/w9/latest")
+async def get_employee_latest_w9(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Get the latest W-9 document for an employee as a file download"""
+    # Get the most recent W-9 document
+    w9_doc = await db.w9_documents.find_one(
+        {"employee_id": employee_id},
+        sort=[("uploaded_at", -1)]
+    )
+    
+    if not w9_doc:
+        raise HTTPException(status_code=404, detail="No W-9 document found for this employee")
+    
+    content = w9_doc.get("content")
+    if not content:
+        raise HTTPException(status_code=404, detail="W-9 document content not found")
+    
+    import base64
+    try:
+        file_bytes = base64.b64decode(content)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to decode W-9 document")
+    
+    filename = w9_doc.get("filename", "w9_document.pdf")
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename={filename}"}
+    )
+
+
 @router.delete("/employees/{employee_id}/w9/{doc_id}")
 async def delete_w9(employee_id: str, doc_id: str, admin: dict = Depends(get_admin_user)):
     """Delete a specific W-9 document"""
