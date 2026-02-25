@@ -248,6 +248,30 @@ export default function AllEmployeesSection({
     }
   };
 
+  // Download W-9
+  const handleDownloadW9 = async (doc) => {
+    if (!selectedEmployee || !doc || !doc.id) return;
+    
+    try {
+      const response = await axios.get(
+        `${API}/admin/employees/${selectedEmployee.id}/w9/${doc.id}`,
+        { ...getAuthHeader(), responseType: 'blob' }
+      );
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.filename || 'w9.pdf');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("W-9 downloaded!");
+    } catch (error) {
+      toast.error("Failed to download W-9");
+    }
+  };
+
   // Close W-9 modal
   const handleCloseW9Modal = () => {
     if (previewingW9?.url) {
