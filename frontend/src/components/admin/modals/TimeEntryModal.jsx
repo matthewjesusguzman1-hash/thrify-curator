@@ -79,10 +79,18 @@ export default function TimeEntryModal({
     
     try {
       if (mode === 'edit') {
-        await axios.put(`${API}/admin/time-entries/${entry.id}`, {
-          clock_in: formData.clock_in ? new Date(formData.clock_in).toISOString() : null,
-          clock_out: formData.clock_out ? new Date(formData.clock_out).toISOString() : null
-        }, getAuthHeader());
+        const updatePayload = {};
+        
+        if (editMode === 'times') {
+          // Update clock in/out times - backend will calculate hours
+          updatePayload.clock_in = formData.clock_in ? new Date(formData.clock_in).toISOString() : null;
+          updatePayload.clock_out = formData.clock_out ? new Date(formData.clock_out).toISOString() : null;
+        } else {
+          // Update total hours directly
+          updatePayload.total_hours = parseFloat(formData.total_hours);
+        }
+        
+        await axios.put(`${API}/admin/time-entries/${entry.id}`, updatePayload, getAuthHeader());
         toast.success("Time entry updated");
       } else {
         await axios.post(`${API}/admin/time-entries`, {
