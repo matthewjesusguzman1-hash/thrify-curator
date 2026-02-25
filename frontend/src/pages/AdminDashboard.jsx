@@ -65,7 +65,6 @@ import PayrollCheckRecordsSection from "@/components/admin/sections/PayrollCheck
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
 import MessagesSection from "@/components/admin/sections/MessagesSection";
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
-import TimeEntriesSection from "@/components/admin/sections/TimeEntriesSection";
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
