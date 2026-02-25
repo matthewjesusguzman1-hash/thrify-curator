@@ -804,12 +804,13 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                   )}
                 </p>
               </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 mb-6">
                 <Button
                   onClick={handlePreview}
-                  disabled={loading || (filterType === "custom" && (!customStartDate || !customEndDate))}
+                  disabled={loading || (reportType !== "w9" && filterType === "custom" && (!customStartDate || !customEndDate))}
                   className="bg-[#10B981] hover:bg-[#059669] text-white"
                   data-testid="preview-report-btn"
                 >
@@ -817,7 +818,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 </Button>
                 <Button
                   onClick={() => handleDownload("csv")}
-                  disabled={loading || (filterType === "custom" && (!customStartDate || !customEndDate))}
+                  disabled={loading || (reportType !== "w9" && filterType === "custom" && (!customStartDate || !customEndDate))}
                   variant="outline"
                   className="border-[#10B981] text-[#10B981] hover:bg-[#10B981]/10"
                   data-testid="download-csv-btn"
@@ -827,7 +828,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 </Button>
                 <Button
                   onClick={() => handleDownload("pdf")}
-                  disabled={loading || (filterType === "custom" && (!customStartDate || !customEndDate))}
+                  disabled={loading || (reportType !== "w9" && filterType === "custom" && (!customStartDate || !customEndDate))}
                   variant="outline"
                   className="border-[#EF4444] text-[#EF4444] hover:bg-[#EF4444]/10"
                   data-testid="download-pdf-btn"
