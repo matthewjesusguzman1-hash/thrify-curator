@@ -924,6 +924,44 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* W-9 Viewer Modal */}
+      <AnimatePresence>
+        {viewingW9 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={handleCloseW9Viewer}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-[#333]">W-9 Document</h3>
+                <button 
+                  onClick={handleCloseW9Viewer}
+                  className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+              <div className="flex-1 p-4 overflow-hidden">
+                <iframe
+                  src={viewingW9.url}
+                  className="w-full h-[70vh] border border-gray-200 rounded-lg"
+                  title="W-9 Document"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
