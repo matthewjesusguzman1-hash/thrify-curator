@@ -571,7 +571,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                   <th className="text-left p-2">Employee</th>
                   <th className="text-left p-2">Role</th>
                   <th className="text-center p-2">Status</th>
-                  <th className="text-center p-2">Documents</th>
                   <th className="text-left p-2">Last Updated</th>
                   <th className="text-center p-2">Actions</th>
                 </tr>
@@ -607,7 +606,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                         </span>
                       )}
                     </td>
-                    <td className="p-2 text-center">{emp.document_count || 0}</td>
                     <td className="p-2 text-[#666]">
                       {emp.last_updated ? new Date(emp.last_updated).toLocaleDateString() : '-'}
                     </td>
