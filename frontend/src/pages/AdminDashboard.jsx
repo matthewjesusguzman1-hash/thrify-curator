@@ -1329,6 +1329,75 @@ export default function AdminDashboard() {
     }
   };
 
+  // Open Portal W-9 Modal (dark theme - for Employee Portal view)
+  const handleOpenPortalW9Modal = async (employeeId, employeeName) => {
+    if (!employeeId) {
+      toast.error("Invalid employee ID");
+      return;
+    }
+    
+    setShowPortalW9Modal(true);
+    setLoadingPortalW9(true);
+    setPortalW9Docs([]);
+    
+    try {
+      const response = await axios.get(`${API}/admin/employees/${employeeId}/w9/status`, getAuthHeader());
+      const docs = (response.data.w9_documents || []).filter(doc => doc && doc.id);
+      setPortalW9Docs(docs);
+    } catch (error) {
+      toast.error("Failed to load W-9 documents");
+    } finally {
+      setLoadingPortalW9(false);
+    }
+  };
+
+  // Preview W-9 from Portal Modal
+  const handlePreviewPortalW9 = async (doc) => {
+    if (!doc || !doc.id || !viewingEmployee?.id) return;
+    
+    try {
+      const response = await axios.get(
+        `${API}/admin/employees/${viewingEmployee.id}/w9/${doc.id}`,
+        { ...getAuthHeader(), responseType: 'blob' }
+      );
+      
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      
+      setPreviewingPortalW9({
+        url,
+        contentType: response.headers['content-type'],
+        filename: doc.filename || 'w9.pdf',
+      });
+    } catch (error) {
+      toast.error("Failed to preview W-9");
+    }
+  };
+
+  // Download W-9 from Portal Modal
+  const handleDownloadPortalW9 = async (doc) => {
+    if (!doc || !doc.id || !viewingEmployee?.id) return;
+    
+    try {
+      const response = await axios.get(
+        `${API}/admin/employees/${viewingEmployee.id}/w9/${doc.id}`,
+        { ...getAuthHeader(), responseType: 'blob' }
+      );
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.filename || 'w9.pdf');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("W-9 downloaded!");
+    } catch (error) {
+      toast.error("Failed to download W-9");
+    }
+  };
+
   // Switch to a different W-9 document
   const handleSelectW9 = async (index) => {
     if (index === selectedW9Index || !employeeW9List[index]) return;
