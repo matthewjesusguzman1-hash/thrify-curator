@@ -558,7 +558,7 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
                           {checkThumbnails[record.id] ? (
                             <img 
                               src={checkThumbnails[record.id]} 
-                              alt="Check" 
+                              alt="Payment" 
                               className="w-12 h-12 object-cover rounded-lg border border-gray-200"
                             />
                           ) : (
