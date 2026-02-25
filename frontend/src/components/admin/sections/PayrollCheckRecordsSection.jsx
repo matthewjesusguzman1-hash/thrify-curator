@@ -697,7 +697,7 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
           >
             <img
               src={viewingCheckImage.url}
-              alt="Check"
+              alt="Payment"
               className="max-w-full max-h-[85vh] object-contain rounded-lg"
             />
             <button
