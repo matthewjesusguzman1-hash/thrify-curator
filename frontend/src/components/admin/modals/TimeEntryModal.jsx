@@ -253,6 +253,19 @@ export default function TimeEntryModal({
                   Total hours will be automatically calculated{isEdit ? " based on clock in/out times" : " if clock out is provided"}.
                 </p>
               </div>
+
+              {/* Show existing admin note if any */}
+              {isEdit && entry?.admin_note && (
+                <div className="p-3 bg-[#FEF3C7] border border-[#F59E0B]/30 rounded-xl mb-4">
+                  <div className="flex items-start gap-2">
+                    <FileText className="w-4 h-4 text-[#D97706] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-[#92400E] mb-1">Admin Note:</p>
+                      <p className="text-sm text-[#78350F]">{entry.admin_note}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -284,6 +297,25 @@ export default function TimeEntryModal({
                   </p>
                 </div>
               )}
+
+              {/* Admin Note Input */}
+              <div className="form-group">
+                <Label className="form-label flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#F59E0B]" />
+                  Admin Note (optional)
+                </Label>
+                <textarea
+                  value={formData.admin_note}
+                  onChange={(e) => setFormData({ ...formData, admin_note: e.target.value })}
+                  placeholder="Add a note explaining the hours adjustment (e.g., 'Off-site delivery work', 'Training session')"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-transparent resize-none text-sm"
+                  rows={2}
+                  data-testid="admin-note-input"
+                />
+                <p className="text-xs text-[#888] mt-1">
+                  This note is only visible to admins for reference
+                </p>
+              </div>
 
               <div className="p-3 bg-[#faf7f2] rounded-xl mb-4">
                 <p className="text-xs text-[#888]">
