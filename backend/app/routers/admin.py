@@ -1238,20 +1238,27 @@ async def download_mileage_report_csv(
     """Download mileage report as CSV"""
     report = await get_mileage_report(start_date, end_date, employee_id, admin)
     
+    # IRS standard mileage rate
+    MILEAGE_RATE = 0.70
+    
     output = io.StringIO()
     writer = csv.writer(output)
     
     # Header
-    writer.writerow(["Employee", "Date", "Purpose", "Miles", "Deduction"])
+    writer.writerow(["Employee", "Date", "From", "To", "Purpose", "Miles", "Deduction"])
     
     # Data rows
     for entry in report["entries"]:
+        miles = entry.get("total_miles", 0)
+        deduction = miles * MILEAGE_RATE
         writer.writerow([
             entry.get("user_name", "Unknown"),
             entry.get("date", ""),
+            entry.get("start_address", ""),
+            entry.get("end_address", ""),
             entry.get("purpose", ""),
-            f"{entry.get('miles', 0):.1f}",
-            f"${entry.get('deduction', 0):.2f}"
+            f"{miles:.1f}",
+            f"${deduction:.2f}"
         ])
     
     # Summary
