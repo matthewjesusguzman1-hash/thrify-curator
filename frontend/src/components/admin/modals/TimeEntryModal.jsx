@@ -205,37 +205,88 @@ export default function TimeEntryModal({
             </div>
           )}
 
-          <div className="form-group">
-            <Label className="form-label">Clock In *</Label>
-            <Input
-              type="datetime-local"
-              value={formData.clock_in}
-              onChange={(e) => setFormData({ ...formData, clock_in: e.target.value })}
-              required
-              className="form-input"
-              data-testid={isEdit ? "edit-clock-in" : "add-entry-clock-in"}
-            />
-          </div>
+          {/* Show times fields for add mode, or edit mode with "times" selected */}
+          {(!isEdit || editMode === "times") && (
+            <>
+              <div className="form-group">
+                <Label className="form-label">Clock In *</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.clock_in}
+                  onChange={(e) => setFormData({ ...formData, clock_in: e.target.value })}
+                  required={!isEdit || editMode === "times"}
+                  className="form-input"
+                  data-testid={isEdit ? "edit-clock-in" : "add-entry-clock-in"}
+                />
+              </div>
 
-          <div className="form-group">
-            <Label className="form-label">Clock Out</Label>
-            <Input
-              type="datetime-local"
-              value={formData.clock_out}
-              onChange={(e) => setFormData({ ...formData, clock_out: e.target.value })}
-              className="form-input"
-              data-testid={isEdit ? "edit-clock-out" : "add-entry-clock-out"}
-            />
-            <p className="text-xs text-[#888] mt-1">
-              {isEdit ? "Leave empty if still active" : "Leave empty to create an active shift"}
-            </p>
-          </div>
+              <div className="form-group">
+                <Label className="form-label">Clock Out</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.clock_out}
+                  onChange={(e) => setFormData({ ...formData, clock_out: e.target.value })}
+                  className="form-input"
+                  data-testid={isEdit ? "edit-clock-out" : "add-entry-clock-out"}
+                />
+                <p className="text-xs text-[#888] mt-1">
+                  {isEdit ? "Leave empty if still active" : "Leave empty to create an active shift"}
+                </p>
+              </div>
 
-          <div className="p-3 bg-[#faf7f2] rounded-xl mb-4">
-            <p className="text-xs text-[#888]">
-              Total hours will be automatically calculated{isEdit ? " based on clock in/out times" : " if clock out is provided"}.
-            </p>
-          </div>
+              {/* Show calculated hours preview */}
+              {calculateHours() && (
+                <div className="p-3 bg-[#00D4FF]/10 border border-[#00D4FF]/30 rounded-xl mb-4">
+                  <p className="text-sm text-[#0891B2]">
+                    <span className="font-medium">Calculated Hours:</span> {calculateHours()} hrs
+                  </p>
+                </div>
+              )}
+
+              <div className="p-3 bg-[#faf7f2] rounded-xl mb-4">
+                <p className="text-xs text-[#888]">
+                  Total hours will be automatically calculated{isEdit ? " based on clock in/out times" : " if clock out is provided"}.
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* Show hours field for edit mode with "hours" selected */}
+          {isEdit && editMode === "hours" && (
+            <>
+              <div className="form-group">
+                <Label className="form-label">Total Hours *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.total_hours}
+                  onChange={(e) => setFormData({ ...formData, total_hours: e.target.value })}
+                  placeholder="e.g., 8.5"
+                  required
+                  className="form-input"
+                  data-testid="edit-total-hours"
+                />
+                <p className="text-xs text-[#888] mt-1">
+                  Enter the total hours worked (e.g., 8.5 for 8 hours 30 minutes)
+                </p>
+              </div>
+
+              {entry?.total_hours && (
+                <div className="p-3 bg-[#8B5CF6]/10 border border-[#8B5CF6]/30 rounded-xl mb-4">
+                  <p className="text-sm text-[#7C3AED]">
+                    <span className="font-medium">Current Hours:</span> {entry.total_hours} hrs
+                  </p>
+                </div>
+              )}
+
+              <div className="p-3 bg-[#faf7f2] rounded-xl mb-4">
+                <p className="text-xs text-[#888]">
+                  This will override the calculated hours. Clock in/out times will remain unchanged.
+                </p>
+              </div>
+            </>
+          )}
 
           <div className="flex gap-3 mt-6">
             <Button
