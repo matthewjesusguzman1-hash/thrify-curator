@@ -379,70 +379,68 @@ export default function EmployeeDashboard() {
     setLoading(true);
     
     // Only check location for clock IN - allow clock out from anywhere
-    if (action === "in") {
-      // For iOS Safari compatibility, call geolocation directly without Promise wrapper
-      if (user?.role !== 'admin') {
-        if (!navigator.geolocation) {
-          toast.error("Geolocation is not supported by your browser");
-          setLoading(false);
-          return;
-        }
-        
-        setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
-        
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const distance = calculateDistance(
-              position.coords.latitude,
-              position.coords.longitude,
-              WORK_LOCATION.lat,
-              WORK_LOCATION.lng
-            );
-            const withinRange = distance <= WORK_LOCATION.radiusMiles;
-            setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2), denied: false });
-            
-            if (!withinRange) {
-              toast.error("You are too far from the work location");
-              setLoading(false);
-              return;
-            }
-            
-            // Location verified - proceed with clock in
-            try {
-              await axios.post(`${API}/time/clock`, { action: "in" }, getAuthHeader());
-              toast.success("Clocked in!");
-              fetchData();
-              setElapsedTime(0);
-            } catch (error) {
-              toast.error(error.response?.data?.detail || "Failed to clock in");
-            } finally {
-              setLoading(false);
-            }
-          },
-          (error) => {
-            setLoading(false);
-            if (error.code === 1) {
-              // Check if running as standalone PWA
-              const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-              if (isStandalone) {
-                toast.error("Please enable location for this app in Settings → Privacy → Location Services", { duration: 5000 });
-              }
-              setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
-            } else if (error.code === 2) {
-              toast.error("GPS is turned off. Please enable Location Services in your device settings.");
-              setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
-            } else {
-              toast.error("Location request timed out. Please try again.");
-              setLocationStatus({ checking: false, withinRange: false, error: "timeout", denied: false });
-            }
-          },
-          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-        );
-        return; // Exit here - the callback will handle the rest
+    // Admins bypass location check entirely
+    if (action === "in" && user?.role !== 'admin') {
+      if (!navigator.geolocation) {
+        toast.error("Geolocation is not supported by your browser");
+        setLoading(false);
+        return;
       }
+      
+      setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
+      
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const distance = calculateDistance(
+            position.coords.latitude,
+            position.coords.longitude,
+            WORK_LOCATION.lat,
+            WORK_LOCATION.lng
+          );
+          const withinRange = distance <= WORK_LOCATION.radiusMiles;
+          setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2), denied: false });
+          
+          if (!withinRange) {
+            toast.error("You are too far from the work location");
+            setLoading(false);
+            return;
+          }
+          
+          // Location verified - proceed with clock in
+          try {
+            await axios.post(`${API}/time/clock`, { action: "in" }, getAuthHeader());
+            toast.success("Clocked in!");
+            fetchData();
+            setElapsedTime(0);
+          } catch (error) {
+            toast.error(error.response?.data?.detail || "Failed to clock in");
+          } finally {
+            setLoading(false);
+          }
+        },
+        (error) => {
+          setLoading(false);
+          if (error.code === 1) {
+            // Check if running as standalone PWA
+            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+            if (isStandalone) {
+              toast.error("Please enable location for this app in Settings → Privacy → Location Services", { duration: 5000 });
+            }
+            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
+          } else if (error.code === 2) {
+            toast.error("GPS is turned off. Please enable Location Services in your device settings.");
+            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+          } else {
+            toast.error("Location request timed out. Please try again.");
+            setLocationStatus({ checking: false, withinRange: false, error: "timeout", denied: false });
+          }
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      );
+      return; // Exit here - the callback will handle the rest
     }
     
-    // For clock out or admin users
+    // For clock out, admin clock in, or admin clock out - no location check needed
     try {
       await axios.post(`${API}/time/clock`, { action }, getAuthHeader());
       toast.success(action === "in" ? "Clocked in!" : "Clocked out!");
