@@ -2068,16 +2068,6 @@ export default function AdminDashboard() {
                   <DollarSign className="w-4 h-4" />
                   Payroll
                 </Button>
-                <Button 
-                  onClick={() => setShowReport(true)}
-                  size="sm"
-                  variant="outline"
-                  className="flex items-center gap-2 border-white/30 text-white font-semibold hover:bg-white/10 transition-all text-xs sm:text-sm h-9"
-                  data-testid="run-report-btn"
-                >
-                  <FileText className="w-4 h-4" />
-                  Shift Report
-                </Button>
               </div>
               {/* Employee Management + Start Trip */}
               <div className="flex flex-col gap-1">
@@ -4419,16 +4409,6 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPayrollSettings(true)}
-                      className="text-[#666]"
-                      data-testid="payroll-settings-btn"
-                    >
-                      <Settings className="w-4 h-4 mr-1" />
-                      Settings
-                    </Button>
                     <button
                       onClick={() => setShowPayroll(false)}
                       className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
