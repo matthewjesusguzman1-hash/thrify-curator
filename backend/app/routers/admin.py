@@ -1023,7 +1023,7 @@ async def download_shift_report_csv(
 
 
 @router.get("/reports/shifts/pdf")
-async def download_shift_report_pdf(
+async def get_shift_report_pdf(
     start_date: str,
     end_date: str,
     employee_id: Optional[str] = None,
