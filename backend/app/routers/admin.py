@@ -210,6 +210,9 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
         if clock_in:
             try:
                 entry_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
+                # Ensure entry_time is timezone-aware for comparison
+                if entry_time.tzinfo is None:
+                    entry_time = entry_time.replace(tzinfo=timezone.utc)
                 if period_start <= entry_time < period_end:
                     period_hours += hours
                     period_shifts += 1
