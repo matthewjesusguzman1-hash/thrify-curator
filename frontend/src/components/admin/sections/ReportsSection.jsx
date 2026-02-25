@@ -321,6 +321,23 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
     setViewingW9(null);
   };
 
+  // Delete all W-9s for an employee
+  const handleDeleteW9 = async (employeeId, employeeName) => {
+    if (!window.confirm(`Are you sure you want to delete all W-9 documents for ${employeeName}? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/admin/employees/${employeeId}/w9/all`, getAuthHeader());
+      toast.success(`W-9 documents deleted for ${employeeName}`);
+      // Refresh the report preview
+      handlePreview();
+    } catch (error) {
+      toast.error("Failed to delete W-9 documents");
+      console.error(error);
+    }
+  };
+
   const formatDateTime = (isoString) => {
     if (!isoString) return "-";
     const date = new Date(isoString);
@@ -343,8 +360,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
 
     if (previewData.type === "shifts") {
       return renderShiftPreview(previewData.data);
-    } else if (previewData.type === "payroll") {
-      return renderPayrollPreview(previewData.data);
     } else if (previewData.type === "mileage") {
       return renderMileagePreview(previewData.data);
     } else if (previewData.type === "w9") {
@@ -356,7 +371,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   const renderShiftPreview = (data) => (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white p-4">
-        <h3 className="font-semibold text-lg mb-2">Shift Report Summary</h3>
+        <h3 className="font-semibold text-lg mb-2">Payroll/Shift Report Summary</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white/10 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold">{data.total_entries}</p>
