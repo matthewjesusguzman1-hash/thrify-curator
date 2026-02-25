@@ -285,6 +285,21 @@ export default function AdminDashboard() {
   // Back to top button state
   const [showBackToTop, setShowBackToTop] = useState(false);
 
+  // Load admin name from localStorage on mount
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        if (user.name) {
+          setCurrentAdminName(user.name);
+        }
+      } catch (e) {
+        console.error("Error parsing user data:", e);
+      }
+    }
+  }, []);
+
   // Handle scroll for back to top button with hysteresis to prevent flickering
   useEffect(() => {
     let ticking = false;
