@@ -187,8 +187,12 @@ async def pause_trip(admin: dict = Depends(get_admin_user)):
 
 @router.post("/resume-trip")
 async def resume_trip(admin: dict = Depends(get_admin_user)):
-    """Resume a paused trip"""
-    trip = await db.active_trips.find_one({"user_id": admin["id"]})
+    """Resume a paused trip - only affects this admin's trip"""
+    admin_code = admin.get("admin_code")
+    if not admin_code:
+        raise HTTPException(status_code=400, detail="Admin code required")
+    
+    trip = await db.active_trips.find_one({"admin_code": admin_code})
     if not trip:
         raise HTTPException(status_code=404, detail="No active trip found")
     
@@ -206,7 +210,7 @@ async def resume_trip(admin: dict = Depends(get_admin_user)):
         total_paused += pause_duration
     
     await db.active_trips.update_one(
-        {"user_id": admin["id"]},
+        {"admin_code": admin_code},
         {"$set": {"is_paused": False, "paused_at": None, "total_paused_duration": total_paused}}
     )
     
@@ -215,8 +219,12 @@ async def resume_trip(admin: dict = Depends(get_admin_user)):
 
 @router.post("/update-location")
 async def update_trip_location(location_data: UpdateTripLocationRequest, admin: dict = Depends(get_admin_user)):
-    """Add a waypoint to the active trip (only if not paused)"""
-    trip = await db.active_trips.find_one({"user_id": admin["id"]})
+    """Add a waypoint to the active trip (only if not paused) - only affects this admin's trip"""
+    admin_code = admin.get("admin_code")
+    if not admin_code:
+        raise HTTPException(status_code=400, detail="Admin code required")
+    
+    trip = await db.active_trips.find_one({"admin_code": admin_code})
     if not trip:
         raise HTTPException(status_code=404, detail="No active trip found")
     
@@ -228,7 +236,7 @@ async def update_trip_location(location_data: UpdateTripLocationRequest, admin: 
     waypoint["timestamp"] = datetime.now(timezone.utc).isoformat()
     
     await db.active_trips.update_one(
-        {"user_id": admin["id"]},
+        {"admin_code": admin_code},
         {"$push": {"waypoints": waypoint}}
     )
     
