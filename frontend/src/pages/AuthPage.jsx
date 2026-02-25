@@ -11,10 +11,10 @@ import axios from "axios";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
 
-// Admin codes mapped to their emails
+// Admin codes - both map to the same primary admin email
 const ADMIN_CODES = {
   "4399": "matthewjesusguzman1@gmail.com",
-  "0826": "euniceguzman@thriftycurator.com"
+  "0826": "matthewjesusguzman1@gmail.com"
 };
 
 export default function AuthPage() {
