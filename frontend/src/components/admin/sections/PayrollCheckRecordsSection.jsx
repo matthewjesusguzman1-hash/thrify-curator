@@ -166,7 +166,7 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
         }
         
         await axios.put(`${API}/admin/payroll/check-records/${editingCheckRecord.id}`, payload, getAuthHeader());
-        toast.success("Check record updated successfully!");
+        toast.success("Payment record updated successfully!");
         setEditingCheckRecord(null);
       } else {
         // Create new record
@@ -181,7 +181,7 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
         };
         
         await axios.post(`${API}/admin/payroll/check-records`, payload, getAuthHeader());
-        toast.success("Check record saved successfully!");
+        toast.success("Payment record saved successfully!");
       }
       
       // Reset form
