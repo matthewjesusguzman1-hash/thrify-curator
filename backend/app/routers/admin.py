@@ -1364,7 +1364,7 @@ async def get_w9_report(
         # Count for summary
         if latest_status == "approved":
             summary["approved"] += 1
-        elif latest_status in ["submitted", "pending"]:
+        elif latest_status in ["submitted", "pending", "pending_review"]:
             summary["pending"] += 1
         else:
             summary["not_submitted"] += 1
