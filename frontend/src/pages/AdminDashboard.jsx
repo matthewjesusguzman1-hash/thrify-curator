@@ -4120,7 +4120,7 @@ export default function AdminDashboard() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleViewW9(viewingEmployee.id, viewingEmployee.name)}
+                                    onClick={() => handleViewW9(viewingEmployee.id, viewingEmployee.name, true)}
                                     className="text-[#888] hover:text-[#666]"
                                   >
                                     <Eye className="w-4 h-4 mr-1" />
