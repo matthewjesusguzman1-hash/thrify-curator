@@ -407,14 +407,30 @@ export default function EmployeeDashboard() {
 
               {/* Location Status Indicator */}
               {locationStatus.denied ? (
-                <div className="mb-4 p-3 bg-[#1A1A2E]/10 border border-[#8B5CF6]/20 rounded-xl">
-                  <div className="flex items-center justify-center gap-2 text-[#8B5CF6] mb-2">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm font-medium">Location required to clock in</span>
+                <div className="mb-4 p-4 bg-[#1A1A2E]/10 border border-[#8B5CF6]/30 rounded-xl">
+                  <div className="flex items-center justify-center gap-2 text-[#8B5CF6] mb-3">
+                    <MapPin className="w-5 h-5" />
+                    <span className="font-medium">Location Required</span>
                   </div>
-                  <p className="text-xs text-gray-500 text-center">
-                    Close and reopen the app, then allow location when prompted
+                  <p className="text-sm text-gray-600 text-center mb-4">
+                    To clock in, please restart the app and select <span className="font-medium text-[#8B5CF6]">"Allow"</span> when prompted for location access
                   </p>
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={() => {
+                        // Try to close the window/app
+                        window.close();
+                        // If window.close() doesn't work (most cases), reload as fallback
+                        setTimeout(() => {
+                          window.location.reload();
+                        }, 100);
+                      }}
+                      className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] hover:from-[#7C3AED] hover:to-[#00A8CC] text-white"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Restart App
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2 mb-4 text-sm">
