@@ -1847,8 +1847,7 @@ export default function AdminDashboard() {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-white" data-testid="admin-name">{user.name}</p>
-            <p className="text-sm text-[#00D4FF] font-medium">Administrator</p>
+            <p className="font-semibold text-white" data-testid="admin-name">Administrator</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
