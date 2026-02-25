@@ -20,7 +20,7 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export default function PayrollCheckRecordsSection({ getAuthHeader }) {
+export default function PaymentRecordsSection({ getAuthHeader }) {
   // Section visibility
   const [isExpanded, setIsExpanded] = useState(false);
   

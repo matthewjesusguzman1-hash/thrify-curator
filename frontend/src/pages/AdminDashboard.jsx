@@ -61,7 +61,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import axios from "axios";
 import MileageTrackingSection from "@/components/admin/sections/MileageTrackingSection";
-import PayrollCheckRecordsSection from "@/components/admin/sections/PayrollCheckRecordsSection";
+import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
 import MessagesSection from "@/components/admin/sections/MessagesSection";
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
