@@ -328,7 +328,7 @@ export default function EmployeeDashboard() {
 
   // Check if user is within range of work location
   const checkLocation = () => {
-    return new Promise(async (resolve) => {
+    return new Promise((resolve) => {
       // If user is admin, bypass location check
       if (user?.role === 'admin') {
         resolve({ withinRange: true, distance: 0 });
@@ -341,31 +341,10 @@ export default function EmployeeDashboard() {
         return;
       }
 
-      // First, check the current permission state using the Permissions API
-      // This helps us know if the browser will show a prompt or immediately deny
-      try {
-        if (navigator.permissions && navigator.permissions.query) {
-          const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-          console.log("Geolocation permission state:", permissionStatus.state);
-          
-          if (permissionStatus.state === 'denied') {
-            // Permission was previously denied - browser won't show prompt
-            // User must manually enable in browser/device settings
-            console.log("Permission is denied - showing warning");
-            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
-            resolve({ withinRange: false, denied: true });
-            return;
-          }
-        }
-      } catch (err) {
-        // Permissions API not available - proceed to request location directly
-        console.log("Permissions API not available:", err);
-      }
-
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
 
-      // Request location - this will prompt the user if permission state is "prompt"
-      // and will get location directly if permission state is "granted"
+      // Request location directly - this will prompt the user if not already granted
+      // Do NOT pre-check with Permissions API as it can incorrectly report "denied" on some devices
       navigator.geolocation.getCurrentPosition(
         (position) => {
           console.log("Geolocation success:", position.coords.latitude, position.coords.longitude);
