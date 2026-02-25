@@ -1271,7 +1271,7 @@ export default function AdminDashboard() {
   };
 
   // View W-9 in modal (without downloading) - Now shows list of all W-9s
-  const handleViewW9 = async (employeeId, employeeName) => {
+  const handleViewW9 = async (employeeId, employeeName, fromPortal = false) => {
     if (!employeeId) {
       toast.error("Invalid employee ID");
       return;
@@ -1281,6 +1281,7 @@ export default function AdminDashboard() {
     setShowW9ViewerModal(true);
     setSelectedW9Index(0);
     setEmployeeW9List([]);
+    setW9ViewerFromPortal(fromPortal);
     
     try {
       // Get all W-9 documents for this employee
