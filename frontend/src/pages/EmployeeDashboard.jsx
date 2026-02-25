@@ -394,9 +394,23 @@ export default function EmployeeDashboard() {
               {/* Location Status Indicator */}
               {locationStatus.denied ? (
                 <div className="mb-4 p-3 bg-[#1A1A2E]/10 border border-[#8B5CF6]/20 rounded-xl">
-                  <div className="flex items-center justify-center gap-2 text-[#8B5CF6]">
+                  <div className="flex items-center justify-center gap-2 text-[#8B5CF6] mb-2">
                     <MapPin className="w-4 h-4" />
-                    <span className="text-sm">Location required to clock in</span>
+                    <span className="text-sm font-medium">Location required to clock in</span>
+                  </div>
+                  <p className="text-xs text-gray-500 text-center mb-2">
+                    Tap the <span className="inline-flex items-center"><MapPin className="w-3 h-3 mx-0.5" /></span> icon in your browser's address bar to enable location
+                  </p>
+                  <div className="flex justify-center">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => window.location.reload()}
+                      className="text-[#8B5CF6] hover:bg-[#8B5CF6]/10 text-xs"
+                    >
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Refresh after enabling
+                    </Button>
                   </div>
                 </div>
               ) : (
