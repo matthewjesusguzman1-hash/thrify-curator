@@ -146,6 +146,39 @@ export default function TimeEntryModal({
           </div>
         )}
 
+        {/* Edit Mode Toggle - Only show in edit mode */}
+        {isEdit && (
+          <div className="mb-4">
+            <Label className="form-label mb-2 block">Adjustment Method</Label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEditMode("times")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg border-2 transition-all ${
+                  editMode === "times"
+                    ? "border-[#00D4FF] bg-[#00D4FF]/10 text-[#00D4FF]"
+                    : "border-gray-200 hover:border-gray-300 text-gray-600"
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-medium">Adjust Times</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditMode("hours")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg border-2 transition-all ${
+                  editMode === "hours"
+                    ? "border-[#8B5CF6] bg-[#8B5CF6]/10 text-[#8B5CF6]"
+                    : "border-gray-200 hover:border-gray-300 text-gray-600"
+                }`}
+              >
+                <Calculator className="w-4 h-4" />
+                <span className="text-sm font-medium">Adjust Hours</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {!isEdit && (
           <p className="text-sm text-[#666] mb-4">
             Create a manual time entry for an employee who forgot to clock in or worked off-site.
