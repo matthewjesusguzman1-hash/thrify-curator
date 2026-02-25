@@ -1362,3 +1362,31 @@ Once a user denies GPS permission, the browser caches this decision. There is NO
 - **Note**: PDF downloads are still available through the Reports section
 - **File**: `/app/frontend/src/pages/AdminDashboard.jsx`
 
+## Notification Panel Fix (Dec 2025)
+
+### Issue
+User reported that "Mark as read" and "Clear All" buttons were not visible in the notification panel. The notification panel opened correctly but the action buttons in the header were missing/hidden.
+
+### Root Cause
+1. The "Mark read" button was conditionally rendered only when `unreadCount > 0`
+2. The auto-mark-as-read `useEffect` hook was firing quickly after panel open, setting `unreadCount` to 0
+3. The buttons had low-contrast styling (`text-white/70` on dark background)
+4. Layout used `flex items-center justify-between` which caused buttons to be hidden when space was tight
+
+### Fix Applied
+- Redesigned the notification panel header with a two-row layout
+- First row: Title, unread count badge, and X close button
+- Second row: "Mark all read" and "Clear all" buttons (shown when `notifications.length > 0`)
+- Both buttons now have solid background colors for better visibility:
+  - "Mark all read": cyan/teal background (`bg-white/10 border-white/20`)
+  - "Clear all": red background (`bg-red-500/20 border-red-400/30`)
+- Buttons are now always visible when there are notifications (not dependent on `unreadCount`)
+
+### Files Modified
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Notification panel header section
+
+### Test Results
+- ✅ "Mark all read" button visible and functional (shows toast "All notifications marked as read")
+- ✅ "Clear all" button visible and functional (clears all notifications, shows toast "All notifications cleared")
+- ✅ Panel works correctly on both desktop and mobile views
+
