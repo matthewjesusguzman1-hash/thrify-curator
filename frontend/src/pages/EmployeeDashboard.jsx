@@ -217,7 +217,7 @@ export default function EmployeeDashboard() {
         return;
       }
 
-      setLocationStatus({ checking: true, withinRange: null, distance: null });
+      setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -228,17 +228,23 @@ export default function EmployeeDashboard() {
             WORK_LOCATION.lng
           );
           const withinRange = distance <= WORK_LOCATION.radiusMiles;
-          setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2) });
+          setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2), denied: false });
           resolve({ withinRange, distance: distance.toFixed(2) });
         },
         (error) => {
-          let errorMsg = "Unable to get your location";
-          if (error.code === 1) errorMsg = "Location access denied. Please enable location services.";
-          else if (error.code === 2) errorMsg = "Location unavailable";
-          else if (error.code === 3) errorMsg = "Location request timed out";
-          
-          setLocationStatus({ checking: false, withinRange: false, error: errorMsg });
-          resolve({ withinRange: false, error: errorMsg });
+          if (error.code === 1) {
+            // User denied location access
+            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
+            resolve({ withinRange: false, denied: true });
+          } else {
+            let errorMsg = "Unable to get your location";
+            if (error.code === 2) errorMsg = "Location unavailable. Please try again.";
+            else if (error.code === 3) errorMsg = "Location request timed out. Please try again.";
+            
+            setLocationStatus({ checking: false, withinRange: false, error: errorMsg, denied: false });
+            toast.error(errorMsg);
+            resolve({ withinRange: false, error: errorMsg });
+          }
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
       );
@@ -251,12 +257,18 @@ export default function EmployeeDashboard() {
     // Check location first (only for non-admin employees)
     const locationResult = await checkLocation();
     
+    if (locationResult.denied) {
+      // User denied - don't show toast, the UI will show the warning
+      setLoading(false);
+      return;
+    }
+    
     if (!locationResult.withinRange) {
       setLoading(false);
       if (locationResult.error) {
-        toast.error(locationResult.error);
+        // Error already shown via toast in checkLocation
       } else {
-        toast.error(`You must be within ${WORK_LOCATION.radiusMiles} miles of the work location to clock ${action}. You are ${locationResult.distance} miles away.`);
+        toast.error("You are too far from the work location");
       }
       return;
     }
