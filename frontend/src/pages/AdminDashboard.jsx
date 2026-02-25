@@ -3444,20 +3444,15 @@ export default function AdminDashboard() {
           </div>
 
 
-          {/* Recent Time Entries - Extracted Component */}
-          <TimeEntriesSection
+          {/* Hours by Employee - Unified Section with Shifts Modal */}
+          <HoursByEmployeeSection
             timeEntries={timeEntries}
+            employees={employees}
             formatDateTime={formatDateTime}
             onAddEntry={() => setShowAddEntry(true)}
             onEditEntry={handleEditEntry}
             onDeleteEntry={handleDeleteEntry}
-          />
-
-
-          {/* Hours by Employee - Extracted Component */}
-          <HoursByEmployeeSection
-            employeeHours={summary.by_employee}
-            onViewShifts={handleViewEmployeeShifts}
+            payPeriodStart={payPeriodStart}
           />
 
 
