@@ -466,64 +466,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
     </div>
   );
 
-  const renderPayrollPreview = (data) => (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
-      <div className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white p-4">
-        <h3 className="font-semibold text-lg mb-2">Payroll Report Summary</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white/10 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold">{data.total_employees || 0}</p>
-            <p className="text-sm opacity-80">Employees</p>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold">{(data.total_hours || 0).toFixed(1)}</p>
-            <p className="text-sm opacity-80">Total Hours</p>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold">{formatCurrency(data.total_gross_pay)}</p>
-            <p className="text-sm opacity-80">Gross Pay</p>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold">{formatCurrency(data.total_mileage_deduction)}</p>
-            <p className="text-sm opacity-80">Mileage Deduction</p>
-          </div>
-        </div>
-      </div>
-
-      {data.employees?.length > 0 && (
-        <div className="p-4 max-h-[350px] overflow-y-auto">
-          <h4 className="font-medium text-[#333] mb-3">Employee Breakdown</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="text-left p-2">Employee</th>
-                  <th className="text-center p-2">Hours</th>
-                  <th className="text-center p-2">Rate</th>
-                  <th className="text-right p-2">Gross Pay</th>
-                  <th className="text-right p-2">Mileage</th>
-                  <th className="text-right p-2">Net Pay</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.employees.map((emp, idx) => (
-                  <tr key={idx} className="border-t border-gray-100">
-                    <td className="p-2 font-medium">{emp.name}</td>
-                    <td className="p-2 text-center">{(emp.total_hours || 0).toFixed(2)}</td>
-                    <td className="p-2 text-center">{formatCurrency(emp.hourly_rate)}/hr</td>
-                    <td className="p-2 text-right">{formatCurrency(emp.gross_pay)}</td>
-                    <td className="p-2 text-right text-green-600">+{formatCurrency(emp.mileage_deduction)}</td>
-                    <td className="p-2 text-right font-semibold">{formatCurrency(emp.net_pay)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
   const renderMileagePreview = (data) => (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white p-4">
