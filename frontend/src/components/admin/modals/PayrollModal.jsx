@@ -238,9 +238,6 @@ export default function PayrollModal({
             <CalendarDays className="w-4 h-4" />
             {payrollLoading ? "Generating..." : "Generate Report"}
           </Button>
-          <p className="text-xs text-[#888] self-center ml-2">
-            For downloads, use the Reports section
-          </p>
         </div>
 
         {/* Payroll Report Results */}
