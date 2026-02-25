@@ -50,21 +50,34 @@ async def login(credentials: UserLogin):
     
     # Admin users must use their admin code to login
     if user["role"] == "admin":
-        # Both codes map to the same primary admin email
+        # Each admin code maps to a specific admin
         ADMIN_CODES = {
-            "4399": "matthewjesusguzman1@gmail.com",
-            "0826": "matthewjesusguzman1@gmail.com"
+            "4399": {"email": "matthewjesusguzman1@gmail.com", "name": "Matthew Guzman"},
+            "0826": {"email": "euniceguzman@thriftycurator.com", "name": "Eunice Guzman"}
         }
         
-        # Check if this admin requires code-based login
-        if credentials.email in ADMIN_CODES.values():
-            if not credentials.admin_code:
-                raise HTTPException(status_code=401, detail="Admin access requires an access code")
-            
-            # Verify the code is valid and maps to the email
-            expected_email = ADMIN_CODES.get(credentials.admin_code)
-            if expected_email != credentials.email:
-                raise HTTPException(status_code=401, detail="Invalid access code")
+        # Check if admin code is provided
+        if not credentials.admin_code:
+            raise HTTPException(status_code=401, detail="Admin access requires an access code")
+        
+        # Verify the code is valid
+        admin_info = ADMIN_CODES.get(credentials.admin_code)
+        if not admin_info:
+            raise HTTPException(status_code=401, detail="Invalid access code")
+        
+        # Store which admin code was used in the token payload
+        token = create_token(user["id"], user["email"], user["role"], admin_code=credentials.admin_code, admin_name=admin_info["name"])
+        
+        return TokenResponse(
+            access_token=token,
+            user=UserResponse(
+                id=user["id"],
+                email=user["email"],
+                name=admin_info["name"],  # Use the admin name from code
+                role=user["role"],
+                created_at=user["created_at"]
+            )
+        )
     
     token = create_token(user["id"], user["email"], user["role"])
     
