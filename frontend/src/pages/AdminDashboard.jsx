@@ -2841,7 +2841,7 @@ export default function AdminDashboard() {
                     onClick={() => setShowEditW9Modal(false)}
                     className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
                   >
-                    <X className="w-4 h-4 text-white" />
+                    <X className="w-5 h-5 text-white" />
                   </button>
                 </div>
 
