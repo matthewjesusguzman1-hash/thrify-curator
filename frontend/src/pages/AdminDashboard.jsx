@@ -3444,15 +3444,6 @@ export default function AdminDashboard() {
             payPeriodStart={payrollSettings.pay_period_start_date}
           />
 
-          {/* Reports Section */}
-          <ReportsSection
-            employees={employees}
-            payPeriodStart={payrollSettings.pay_period_start_date}
-            getAuthHeader={getAuthHeader}
-            payrollSettings={payrollSettings}
-          />
-
-
           {/* Messages Section */}
           <MessagesSection />
 
