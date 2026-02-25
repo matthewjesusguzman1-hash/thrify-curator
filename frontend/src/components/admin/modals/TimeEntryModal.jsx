@@ -299,7 +299,12 @@ export default function TimeEntryModal({
             </Button>
             <Button
               type="submit"
-              disabled={loading || (!isEdit && (!formData.employee_id || !formData.clock_in)) || (isEdit && !formData.clock_in)}
+              disabled={
+                loading || 
+                (!isEdit && (!formData.employee_id || !formData.clock_in)) || 
+                (isEdit && editMode === "times" && !formData.clock_in) ||
+                (isEdit && editMode === "hours" && (!formData.total_hours || parseFloat(formData.total_hours) < 0))
+              }
               className="btn-primary flex-1"
               data-testid={isEdit ? "save-edit-btn" : "submit-add-entry-btn"}
             >
