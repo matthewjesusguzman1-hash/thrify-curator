@@ -403,7 +403,7 @@ export default function HoursByEmployeeSection({
                     {filteredEntries.map((entry) => (
                       <div 
                         key={entry.id} 
-                        className={`p-4 rounded-xl border ${
+                        className={`p-4 rounded-xl border min-h-[120px] ${
                           entry.adjusted_by_admin 
                             ? 'bg-[#FEF3C7]/50 border-[#F59E0B]/30' 
                             : 'bg-white border-gray-200'
@@ -435,28 +435,24 @@ export default function HoursByEmployeeSection({
                               <p><span className="font-medium">Out:</span> {entry.clock_out ? formatDateTime(entry.clock_out) : '-'}</p>
                             </div>
 
-                            {/* Admin Note - Expandable */}
+                            {/* Admin Note - Collapsed by default, shows preview */}
                             {entry.admin_note && (
                               <div 
-                                className={`mt-3 p-3 bg-[#FEF3C7] border border-[#F59E0B]/30 rounded-lg cursor-pointer transition-all ${
-                                  expandedNoteId === entry.id ? '' : 'hover:bg-[#FEF3C7]/80'
-                                }`}
+                                className="mt-3 p-2 bg-[#FEF3C7] border border-[#F59E0B]/30 rounded-lg cursor-pointer hover:bg-[#FEF3C7]/80 transition-all"
                                 onClick={() => setExpandedNoteId(expandedNoteId === entry.id ? null : entry.id)}
                               >
-                                <div className="flex items-start gap-2">
-                                  <FileText className="w-4 h-4 text-[#D97706] flex-shrink-0 mt-0.5" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-[#92400E] mb-1">Admin Note:</p>
-                                    <p className={`text-sm text-[#78350F] ${
-                                      expandedNoteId === entry.id ? '' : 'line-clamp-2'
-                                    }`}>
-                                      {entry.admin_note}
-                                    </p>
-                                    {entry.admin_note.length > 100 && expandedNoteId !== entry.id && (
-                                      <p className="text-xs text-[#D97706] mt-1">Click to expand</p>
-                                    )}
-                                  </div>
+                                <div className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-[#D97706] flex-shrink-0" />
+                                  <span className="text-xs font-medium text-[#92400E]">Admin Note</span>
+                                  <ChevronDown className={`w-4 h-4 text-[#D97706] ml-auto transition-transform ${
+                                    expandedNoteId === entry.id ? 'rotate-180' : ''
+                                  }`} />
                                 </div>
+                                {expandedNoteId === entry.id && (
+                                  <p className="text-sm text-[#78350F] mt-2 pl-6">
+                                    {entry.admin_note}
+                                  </p>
+                                )}
                               </div>
                             )}
                           </div>
