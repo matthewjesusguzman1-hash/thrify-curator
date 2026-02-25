@@ -215,30 +215,19 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
         ? `w9_report_${new Date().toISOString().split('T')[0]}.${format}`
         : `${reportType}_report_${start}_to_${end}.${format}`;
 
+      const employeeIds = getEmployeeIdsForFilter();
+
       if (reportType === "shifts") {
         const params = new URLSearchParams({
           start_date: start,
           end_date: end
         });
-        if (selectedEmployee !== "all") {
-          params.append("employee_id", selectedEmployee);
+        if (employeeIds && employeeIds.length === 1) {
+          params.append("employee_id", employeeIds[0]);
+        } else if (employeeIds && employeeIds.length > 1) {
+          params.append("employee_ids", employeeIds.join(","));
         }
         response = await axios.get(`${API}/admin/reports/shifts/${format}?${params.toString()}`, {
-          ...getAuthHeader(),
-          responseType: 'blob'
-        });
-      } else if (reportType === "payroll") {
-        // Use POST for payroll PDF
-        const payload = {
-          period_type: "custom",
-          custom_start: start,
-          custom_end: end,
-          hourly_rate: payrollSettings?.default_hourly_rate || 15.00
-        };
-        if (selectedEmployee !== "all") {
-          payload.employee_id = selectedEmployee;
-        }
-        response = await axios.post(`${API}/payroll/report/${format}`, payload, {
           ...getAuthHeader(),
           responseType: 'blob'
         });
@@ -247,8 +236,8 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           start_date: start,
           end_date: end
         });
-        if (selectedEmployee !== "all") {
-          params.append("employee_id", selectedEmployee);
+        if (employeeIds && employeeIds.length === 1) {
+          params.append("employee_id", employeeIds[0]);
         }
         response = await axios.get(`${API}/admin/mileage/report/${format}?${params.toString()}`, {
           ...getAuthHeader(),
@@ -256,8 +245,8 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
         });
       } else if (reportType === "w9") {
         const params = new URLSearchParams();
-        if (selectedEmployee !== "all") {
-          params.append("employee_id", selectedEmployee);
+        if (employeeIds && employeeIds.length === 1) {
+          params.append("employee_id", employeeIds[0]);
         }
         response = await axios.get(`${API}/admin/reports/w9/${format}?${params.toString()}`, {
           ...getAuthHeader(),
