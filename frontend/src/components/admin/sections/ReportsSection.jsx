@@ -628,7 +628,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDownloadW9(emp.id, emp.name)}
-                            className="h-7 px-2 text-[#10B981] hover:bg-[#10B981]/10"
+                            className="h-7 px-2 text-[#F43F5E] hover:bg-[#F43F5E]/10"
                             data-testid={`download-w9-${emp.id}`}
                           >
                             <Download className="w-3.5 h-3.5 mr-1" />
@@ -703,18 +703,18 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                       onClick={() => handleReportTypeChange(type.id)}
                       className={`p-4 rounded-xl border-2 transition-all text-left ${
                         reportType === type.id
-                          ? 'border-[#10B981] bg-[#10B981]/5'
+                          ? 'border-[#F43F5E] bg-[#F43F5E]/5'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          reportType === type.id ? 'bg-[#10B981] text-white' : 'bg-gray-100 text-gray-500'
+                          reportType === type.id ? 'bg-[#F43F5E] text-white' : 'bg-gray-100 text-gray-500'
                         }`}>
                           <type.icon className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className={`font-medium ${reportType === type.id ? 'text-[#10B981]' : 'text-[#333]'}`}>
+                          <p className={`font-medium ${reportType === type.id ? 'text-[#F43F5E]' : 'text-[#333]'}`}>
                             {type.label}
                           </p>
                           <p className="text-xs text-[#888]">{type.description}</p>
@@ -862,7 +862,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 <Button
                   onClick={handlePreview}
                   disabled={loading || (reportType !== "w9" && filterType === "custom" && (!customStartDate || !customEndDate))}
-                  className="bg-[#10B981] hover:bg-[#059669] text-white"
+                  className="bg-[#F43F5E] hover:bg-[#E11D48] text-white"
                   data-testid="preview-report-btn"
                 >
                   {loading ? "Loading..." : "Preview Report"}
@@ -871,7 +871,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                   onClick={() => handleDownload("csv")}
                   disabled={loading || (reportType !== "w9" && filterType === "custom" && (!customStartDate || !customEndDate))}
                   variant="outline"
-                  className="border-[#10B981] text-[#10B981] hover:bg-[#10B981]/10"
+                  className="border-[#F43F5E] text-[#F43F5E] hover:bg-[#F43F5E]/10"
                   data-testid="download-csv-btn"
                 >
                   <FileSpreadsheet className="w-4 h-4 mr-2" />
