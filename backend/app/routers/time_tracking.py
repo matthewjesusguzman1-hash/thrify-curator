@@ -38,9 +38,12 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
             today_entry["last_clock_in"] = now_iso
             return TimeEntry(**today_entry)
         else:
+            # Use "Administrator" for admin users instead of their personal name
+            display_name = "Administrator" if user.get("role") == "admin" else user["name"]
+            
             entry = TimeEntry(
                 user_id=user["id"],
-                user_name=user["name"],
+                user_name=display_name,
                 clock_in=now_iso,
                 shift_date=today_start.strftime("%Y-%m-%d")
             )
