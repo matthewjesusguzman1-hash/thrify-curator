@@ -648,9 +648,12 @@ async def create_time_entry(entry_data: CreateTimeEntryRequest, admin: dict = De
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid clock_out format")
     
+    # Use "Administrator" for admin users instead of their personal name
+    display_name = "Administrator" if employee.get("role") == "admin" else employee["name"]
+    
     entry = TimeEntry(
         user_id=entry_data.employee_id,
-        user_name=employee["name"],
+        user_name=display_name,
         clock_in=entry_data.clock_in,
         clock_out=clock_out_str,
         total_hours=total_hours
