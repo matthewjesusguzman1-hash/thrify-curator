@@ -121,35 +121,40 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
 
     setLoading(true);
     try {
-      let endpoint = "";
-      const params = new URLSearchParams({
-        start_date: start,
-        end_date: end
-      });
+      let response;
       
-      if (selectedEmployee !== "all") {
-        params.append("employee_id", selectedEmployee);
-      }
-
       if (reportType === "shifts") {
-        endpoint = `/admin/reports/shifts?${params.toString()}`;
+        const params = new URLSearchParams({
+          start_date: start,
+          end_date: end
+        });
+        if (selectedEmployee !== "all") {
+          params.append("employee_id", selectedEmployee);
+        }
+        response = await axios.get(`${API}/admin/reports/shifts?${params.toString()}`, getAuthHeader());
       } else if (reportType === "payroll") {
-        // Use existing payroll report endpoint
-        const payrollParams = new URLSearchParams({
+        // Use POST for payroll report
+        const payload = {
           period_type: "custom",
           custom_start: start,
           custom_end: end,
-          hourly_rate: payrollSettings?.default_hourly_rate || "15.00"
+          hourly_rate: payrollSettings?.default_hourly_rate || 15.00
+        };
+        if (selectedEmployee !== "all") {
+          payload.employee_id = selectedEmployee;
+        }
+        response = await axios.post(`${API}/payroll/report`, payload, getAuthHeader());
+      } else if (reportType === "mileage") {
+        const params = new URLSearchParams({
+          start_date: start,
+          end_date: end
         });
         if (selectedEmployee !== "all") {
-          payrollParams.append("employee_id", selectedEmployee);
+          params.append("employee_id", selectedEmployee);
         }
-        endpoint = `/admin/payroll/report?${payrollParams.toString()}`;
-      } else if (reportType === "mileage") {
-        endpoint = `/admin/mileage/report?${params.toString()}`;
+        response = await axios.get(`${API}/admin/mileage/report?${params.toString()}`, getAuthHeader());
       }
 
-      const response = await axios.get(`${API}${endpoint}`, getAuthHeader());
       setPreviewData({ type: reportType, data: response.data });
     } catch (error) {
       toast.error("Failed to load report preview");
