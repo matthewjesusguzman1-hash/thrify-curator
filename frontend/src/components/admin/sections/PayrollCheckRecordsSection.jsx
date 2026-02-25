@@ -360,7 +360,7 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
                 <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl mb-4">
                   <h3 className="font-medium text-[#333] mb-3 flex items-center gap-2">
                     <Upload className="w-4 h-4 text-purple-600" />
-                    {editingCheckRecord ? 'Edit Check Record' : 'Upload Check Photo'}
+                    {editingCheckRecord ? 'Edit Payment Record' : 'Upload Payment Photo'}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                     <div>
