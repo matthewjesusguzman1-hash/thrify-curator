@@ -29,6 +29,11 @@ logger = logging.getLogger(__name__)
 # Create the main app
 app = FastAPI(title="Thrifty Curator API", version="2.0.0")
 
+# Health check endpoint for Kubernetes
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
