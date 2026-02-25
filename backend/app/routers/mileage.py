@@ -46,10 +46,13 @@ async def create_mileage_entry(entry: MileageEntryCreate, admin: dict = Depends(
     entry_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
+    # Use "Administrator" for admin users instead of their personal name
+    display_name = "Administrator" if admin.get("role") == "admin" else admin["name"]
+    
     entry_doc = {
         "id": entry_id,
         "user_id": admin["id"],
-        "user_name": admin["name"],
+        "user_name": display_name,
         "date": entry.date,
         "start_location": entry.start_location.model_dump() if entry.start_location else None,
         "end_location": entry.end_location.model_dump() if entry.end_location else None,
