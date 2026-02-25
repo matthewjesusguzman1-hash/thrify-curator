@@ -205,7 +205,7 @@ export default function EmployeeDashboard() {
 
   // Check if user is within range of work location
   const checkLocation = () => {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       // If user is admin, bypass location check
       if (user?.role === 'admin') {
         resolve({ withinRange: true, distance: 0 });
@@ -216,6 +216,20 @@ export default function EmployeeDashboard() {
         toast.error("Geolocation is not supported by your browser");
         resolve({ withinRange: false, error: "Geolocation not supported" });
         return;
+      }
+
+      // Check permission state first (if Permissions API available)
+      if (navigator.permissions) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' });
+          if (permission.state === 'denied') {
+            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
+            resolve({ withinRange: false, denied: true });
+            return;
+          }
+        } catch (e) {
+          // Permissions API not fully supported, continue with geolocation request
+        }
       }
 
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
@@ -247,7 +261,7 @@ export default function EmployeeDashboard() {
             resolve({ withinRange: false, error: errorMsg });
           }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     });
   };
