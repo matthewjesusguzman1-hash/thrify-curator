@@ -4831,27 +4831,29 @@ export default function AdminDashboard() {
                           </div>
                         ))}
                       </div>
-                      {/* Add W-9 button */}
-                      <div className="p-3 border-t border-gray-200">
-                        <label className="w-full">
-                          <input
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            className="hidden"
-                            onChange={async (e) => {
-                              const file = e.target.files[0];
-                              if (file && viewingW9?.employeeId) {
-                                await handleW9Upload(viewingW9.employeeId, file);
-                                handleViewW9(viewingW9.employeeId, viewingW9.employeeName);
-                              }
-                            }}
-                          />
-                          <span className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm bg-[#FF1493] text-white rounded-lg cursor-pointer hover:bg-[#E91E8C] transition-colors">
-                            <Upload className="w-4 h-4" />
-                            Add W-9
-                          </span>
-                        </label>
-                      </div>
+                      {/* Add W-9 button - only show when NOT from portal view */}
+                      {!w9ViewerFromPortal && (
+                        <div className="p-3 border-t border-gray-200">
+                          <label className="w-full">
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (file && viewingW9?.employeeId) {
+                                  await handleW9Upload(viewingW9.employeeId, file);
+                                  handleViewW9(viewingW9.employeeId, viewingW9.employeeName);
+                                }
+                              }}
+                            />
+                            <span className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm bg-[#FF1493] text-white rounded-lg cursor-pointer hover:bg-[#E91E8C] transition-colors">
+                              <Upload className="w-4 h-4" />
+                              Add W-9
+                            </span>
+                          </label>
+                        </div>
+                      )}
                     </div>
                   )}
 
