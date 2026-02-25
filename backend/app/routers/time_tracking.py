@@ -77,6 +77,80 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
     raise HTTPException(status_code=400, detail="Invalid action")
 
 
+@router.post("/verify-location")
+async def verify_location(user: dict = Depends(get_current_user)):
+    """Update the last verified location timestamp for the active time entry"""
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    
+    active = await db.time_entries.find_one(
+        {"user_id": user["id"], "clock_out": None}, {"_id": 0}
+    )
+    
+    if not active:
+        raise HTTPException(status_code=400, detail="Not clocked in")
+    
+    await db.time_entries.update_one(
+        {"id": active["id"]},
+        {"$set": {"last_location_verified": now_iso}}
+    )
+    
+    return {"success": True, "last_location_verified": now_iso}
+
+
+@router.post("/auto-clock-out")
+async def auto_clock_out(user: dict = Depends(get_current_user)):
+    """Auto clock out using the last verified location time as the clock out time"""
+    active = await db.time_entries.find_one(
+        {"user_id": user["id"], "clock_out": None}, {"_id": 0}
+    )
+    
+    if not active:
+        raise HTTPException(status_code=400, detail="Not clocked in")
+    
+    # Use the last verified location time as clock out time, or current time if not available
+    last_verified = active.get("last_location_verified")
+    if last_verified:
+        clock_out_time = datetime.fromisoformat(last_verified)
+    else:
+        clock_out_time = datetime.now(timezone.utc)
+    
+    clock_out_iso = clock_out_time.isoformat()
+    
+    # Calculate hours based on last_clock_in to clock_out_time
+    last_clock_in = active.get("last_clock_in", active["clock_in"])
+    clock_in_time = datetime.fromisoformat(last_clock_in)
+    session_hours = round((clock_out_time - clock_in_time).total_seconds() / 3600, 2)
+    
+    # Ensure non-negative hours
+    if session_hours < 0:
+        session_hours = 0
+    
+    accumulated_hours = active.get("accumulated_hours", 0.0) + session_hours
+    total_hours = round(accumulated_hours, 2)
+    
+    await db.time_entries.update_one(
+        {"id": active["id"]},
+        {"$set": {
+            "clock_out": clock_out_iso, 
+            "total_hours": total_hours, 
+            "accumulated_hours": accumulated_hours,
+            "auto_clocked_out": True
+        }}
+    )
+    
+    active["clock_out"] = clock_out_iso
+    active["total_hours"] = total_hours
+    active["auto_clocked_out"] = True
+    
+    return {
+        "success": True,
+        "clock_out_time": clock_out_iso,
+        "used_last_verified": last_verified is not None,
+        "entry": TimeEntry(**active)
+    }
+
+
 @router.get("/status")
 async def get_clock_status(user: dict = Depends(get_current_user)):
     active = await db.time_entries.find_one(
