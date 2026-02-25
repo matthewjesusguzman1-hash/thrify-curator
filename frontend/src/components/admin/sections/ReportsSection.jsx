@@ -686,7 +686,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                   {reportTypes.map((type) => (
                     <button
                       key={type.id}
-                      onClick={() => { setReportType(type.id); setPreviewData(null); }}
+                      onClick={() => handleReportTypeChange(type.id)}
                       className={`p-4 rounded-xl border-2 transition-all text-left ${
                         reportType === type.id
                           ? 'border-[#10B981] bg-[#10B981]/5'
