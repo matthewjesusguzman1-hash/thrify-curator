@@ -18,13 +18,17 @@ def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 
-def create_token(user_id: str, email: str, role: str) -> str:
+def create_token(user_id: str, email: str, role: str, admin_code: str = None, admin_name: str = None) -> str:
     payload = {
         "sub": user_id,
         "email": email,
         "role": role,
         "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
     }
+    if admin_code:
+        payload["admin_code"] = admin_code
+    if admin_name:
+        payload["admin_name"] = admin_name
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
@@ -34,6 +38,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
+        # Add admin_code and admin_name to user dict if present in token
+        if payload.get("admin_code"):
+            user["admin_code"] = payload["admin_code"]
+        if payload.get("admin_name"):
+            user["admin_name"] = payload["admin_name"]
         return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
