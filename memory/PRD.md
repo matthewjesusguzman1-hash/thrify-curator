@@ -712,7 +712,7 @@ All collapsible sections now auto-refresh their data when expanded:
 ## Calendar Date Range Filter Fix (Feb 24, 2026)
 
 
-## Recent Updates (Feb 25, 2026) - Reports Consolidation & Admin Simplification
+## Recent Updates (Feb 25, 2026) - Reports Consolidation & Admin W-9 Management
 
 ### Reports Section Changes (COMPLETED)
 
@@ -726,16 +726,20 @@ All collapsible sections now auto-refresh their data when expanded:
    - Non-admin employees shown individually
    - "All Employees" option still available
 
-3. **W-9 Report with Delete**: Added delete button for each employee's W-9 in the W-9 Report preview
-   - View, Download, and Delete buttons for employees with W-9 documents
-   - Delete confirms before removing all W-9s for an employee
-   - Backend endpoint: `DELETE /api/admin/employees/{employee_id}/w9/all`
+3. **Mileage Report Defaults to Administrator**: When selecting Mileage Report, the employee dropdown automatically defaults to "Administrator"
 
-4. **W-9 Report Type**: Shows employee W-9 submission status
+4. **W-9 Report**: View and Download buttons only (no delete button in Reports section)
    - Summary stats: Total employees, Approved, Pending, Not Submitted counts
    - Employee table with Name, Role, Status, Document Count, Last Updated, Actions
    - Status color-coded: Green (Approved), Yellow (Pending), Red (Not Submitted)
-   - View/Download/Delete buttons for employees with W-9 documents
+
+### Admin W-9 Delete (My Dashboard) - COMPLETED
+
+**New Feature:** Admins can now delete their own W-9 documents from "My Dashboard"
+- Navigate: Admin Dashboard → "My Dashboard" button → W-9 Tax Form section
+- Each W-9 document shows Preview and Delete (trash can) buttons
+- Admins can delete approved W-9s (regular employees can only delete pending ones)
+- Backend updated to allow admins to delete their own approved W-9s
 
 ### Admin Dashboard Changes (COMPLETED)
 
@@ -743,12 +747,13 @@ All collapsible sections now auto-refresh their data when expanded:
    - Both codes authenticate as the primary admin (matthewjesusguzman1@gmail.com)
 
 2. **Dashboard Header**: Shows "Administrator" instead of the logged-in user's name
-   - Cleaner, more professional appearance
 
 ### Files Modified
-- `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Removed Payroll, renamed to Payroll/Shift, updated employee filter, added W-9 delete
+- `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Removed Payroll, renamed to Payroll/Shift, mileage defaults to Administrator, removed W-9 delete button
+- `/app/frontend/src/pages/EmployeeDashboard.jsx` - Added W-9 delete button for admins in W-9 section
 - `/app/frontend/src/pages/AdminDashboard.jsx` - Changed header to show "Administrator"
 - `/app/frontend/src/pages/AuthPage.jsx` - Both admin codes map to same admin email
+- `/app/backend/app/routers/time_tracking.py` - Updated W-9 delete to allow admins to delete approved W-9s
 - `/app/backend/app/routers/admin.py` - Added delete all W-9s endpoint
 - `/app/backend/app/routers/auth.py` - Updated admin code mapping
 
@@ -758,10 +763,7 @@ All collapsible sections now auto-refresh their data when expanded:
 - `GET /api/admin/reports/w9/pdf` - PDF download
 - `GET /api/admin/employees/{employee_id}/w9/latest` - Download latest W-9
 - `DELETE /api/admin/employees/{employee_id}/w9/all` - Delete all W-9s for employee
-
-2. **Dashboard Header Change**: Shows "Administrator" instead of the logged-in user's name
-   - Cleaner, more professional appearance
-   - No personal information displayed in the header
+- `DELETE /api/time/w9/{doc_id}` - Employee deletes own W-9 (admins can delete approved)
 
 ### Files Modified
 - `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Added W-9 report type, admin inclusion, conditional date filters, View/Download buttons
