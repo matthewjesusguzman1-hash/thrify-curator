@@ -481,6 +481,24 @@ export default function AdminDashboard() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Auto-mark notifications as read when panel is opened
+  useEffect(() => {
+    if (showNotifications && unreadCount > 0) {
+      // Mark all as read after a brief delay so user sees them first
+      const timer = setTimeout(async () => {
+        try {
+          await axios.post(`${API}/admin/notifications/mark-read`, {}, getAuthHeader());
+          setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+          setUnreadCount(0);
+        } catch (error) {
+          console.error("Failed to auto-mark notifications as read:", error);
+        }
+      }, 1500); // 1.5 second delay so user sees the unread state first
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showNotifications, unreadCount, getAuthHeader]);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
