@@ -56,11 +56,27 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
   const reportTypes = [
-    { id: "shifts", label: "Shift Report", icon: Clock, description: "Clock in/out times and hours worked" },
-    { id: "payroll", label: "Payroll Report", icon: DollarSign, description: "Hours, rates, and estimated pay" },
+    { id: "shifts", label: "Payroll/Shift Report", icon: Clock, description: "Clock in/out times, hours worked, and pay" },
     { id: "mileage", label: "Mileage Report", icon: Car, description: "Trip details and deductions" },
     { id: "w9", label: "W-9 Report", icon: FileSignature, description: "Employee W-9 submission status" }
   ];
+
+  // Filter employees to show - replace admin users with single "Administrator" option
+  const getFilteredEmployees = () => {
+    if (!employees) return [];
+    
+    const nonAdminEmployees = employees.filter(e => e.role !== 'admin');
+    const hasAdmins = employees.some(e => e.role === 'admin');
+    
+    // Add a single "Administrator" option if there are any admins
+    if (hasAdmins) {
+      return [
+        { id: 'administrator', name: 'Administrator', role: 'admin' },
+        ...nonAdminEmployees
+      ];
+    }
+    return nonAdminEmployees;
+  };
 
   // Get biweekly period dates
   const getBiweeklyPeriod = () => {
