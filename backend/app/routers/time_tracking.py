@@ -6,6 +6,7 @@ import base64
 from app.database import db
 from app.dependencies import get_current_user
 from app.models.time_entry import TimeEntry, ClockInOut
+from app.models.notifications import AdminNotification
 
 router = APIRouter(prefix="/time", tags=["Time Tracking"])
 
@@ -16,6 +17,9 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
     now_iso = now.isoformat()
     
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Use "Administrator" for admin users instead of their personal name
+    display_name = "Administrator" if user.get("role") == "admin" else user["name"]
     
     if action.action == "in":
         active = await db.time_entries.find_one(
@@ -36,11 +40,19 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
             )
             today_entry["clock_out"] = None
             today_entry["last_clock_in"] = now_iso
+            
+            # Create clock in notification
+            notification = AdminNotification(
+                type="clock_in",
+                employee_id=user["id"],
+                employee_name=display_name,
+                message=f"{display_name} clocked in",
+                details={"time": now_iso}
+            )
+            await db.admin_notifications.insert_one(notification.model_dump())
+            
             return TimeEntry(**today_entry)
         else:
-            # Use "Administrator" for admin users instead of their personal name
-            display_name = "Administrator" if user.get("role") == "admin" else user["name"]
-            
             entry = TimeEntry(
                 user_id=user["id"],
                 user_name=display_name,
@@ -51,6 +63,17 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
             entry_dict["last_clock_in"] = now_iso
             entry_dict["accumulated_hours"] = 0.0
             await db.time_entries.insert_one(entry_dict)
+            
+            # Create clock in notification
+            notification = AdminNotification(
+                type="clock_in",
+                employee_id=user["id"],
+                employee_name=display_name,
+                message=f"{display_name} clocked in",
+                details={"time": now_iso}
+            )
+            await db.admin_notifications.insert_one(notification.model_dump())
+            
             return entry
     
     elif action.action == "out":
@@ -75,6 +98,17 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         
         active["clock_out"] = now_iso
         active["total_hours"] = total_hours
+        
+        # Create clock out notification
+        notification = AdminNotification(
+            type="clock_out",
+            employee_id=user["id"],
+            employee_name=display_name,
+            message=f"{display_name} clocked out",
+            details={"time": now_iso, "hours": total_hours}
+        )
+        await db.admin_notifications.insert_one(notification.model_dump())
+        
         return TimeEntry(**active)
     
     raise HTTPException(status_code=400, detail="Invalid action")
