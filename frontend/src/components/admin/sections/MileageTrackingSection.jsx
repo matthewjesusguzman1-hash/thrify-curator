@@ -349,6 +349,13 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         locationUpdateInterval.current = null;
       }
       
+      // Clear backup interval from localStorage
+      const savedIntervalId = localStorage.getItem('mileage_interval_id');
+      if (savedIntervalId) {
+        clearInterval(parseInt(savedIntervalId));
+        localStorage.removeItem('mileage_interval_id');
+      }
+      
       // Clear localStorage
       localStorage.removeItem(ACTIVE_TRIP_KEY);
       
