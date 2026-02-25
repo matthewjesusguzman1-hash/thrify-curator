@@ -473,7 +473,7 @@ export default function MessagesSection() {
                             role="button"
                             aria-label="Clear date filter"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-5 h-5" />
                           </span>
                         )}
                       </Button>
