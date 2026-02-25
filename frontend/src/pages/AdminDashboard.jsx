@@ -123,6 +123,9 @@ export default function AdminDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   
+  // Current admin info
+  const [currentAdminName, setCurrentAdminName] = useState("Administrator");
+  
   // Edit time entry state
   const [showEditEntry, setShowEditEntry] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
