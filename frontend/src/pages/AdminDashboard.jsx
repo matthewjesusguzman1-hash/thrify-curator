@@ -493,7 +493,7 @@ export default function AdminDashboard() {
         } catch (error) {
           console.error("Failed to auto-mark notifications as read:", error);
         }
-      }, 1500); // 1.5 second delay so user sees the unread state first
+      }, 500); // 0.5 second delay
       
       return () => clearTimeout(timer);
     }
