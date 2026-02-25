@@ -389,22 +389,29 @@ export default function EmployeeDashboard() {
 
               {/* Location Status Indicator */}
               {locationStatus.denied ? (
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
                   <div className="flex items-center justify-center gap-2 text-yellow-700 mb-2">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm font-medium">Location access required</span>
+                    <MapPin className="w-5 h-5" />
+                    <span className="font-medium">Location Access Required</span>
                   </div>
-                  <p className="text-xs text-yellow-600 mb-3">Please allow location access to clock in/out</p>
+                  <p className="text-sm text-yellow-600 mb-3">
+                    Location permission was denied. To clock in/out, please enable location access:
+                  </p>
+                  <div className="text-xs text-yellow-700 bg-yellow-100 rounded-lg p-3 mb-3 text-left">
+                    <p className="font-medium mb-1">How to enable:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Click the lock/info icon in your browser's address bar</li>
+                      <li>Find "Location" and change it to "Allow"</li>
+                      <li>Refresh the page and try again</li>
+                    </ul>
+                  </div>
                   <Button
                     size="sm"
-                    onClick={() => {
-                      setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
-                      handleClock(clockedIn ? "out" : "in");
-                    }}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs"
+                    onClick={() => window.location.reload()}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
                   >
-                    <MapPin className="w-3 h-3 mr-1" />
-                    Allow Location
+                    <RefreshCw className="w-4 h-4 mr-1" />
+                    Refresh Page
                   </Button>
                 </div>
               ) : (
