@@ -926,7 +926,7 @@ export default function EmployeeDashboard() {
                           </div>
                         </div>
                         
-                        {/* Action Button */}
+                        {/* Action Buttons */}
                         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
                           <Button
                             variant="outline"
@@ -955,6 +955,29 @@ export default function EmployeeDashboard() {
                             <Eye className="w-4 h-4 mr-1" />
                             Preview
                           </Button>
+                          {/* Delete button - available for admins and for pending (non-approved) documents */}
+                          {(user?.role === 'admin' || doc.status !== 'approved') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                if (!window.confirm("Are you sure you want to delete this W-9 document?")) return;
+                                try {
+                                  await axios.delete(`${API}/time/w9/${doc.id}`, getAuthHeader());
+                                  toast.success("W-9 deleted");
+                                  // Refresh the status
+                                  const res = await axios.get(`${API}/time/w9/status`, getAuthHeader());
+                                  setW9Status(res.data);
+                                } catch (error) {
+                                  toast.error(error.response?.data?.detail || "Failed to delete W-9");
+                                }
+                              }}
+                              className="text-red-400 border-red-400/30 hover:bg-red-400/10 bg-transparent"
+                              data-testid={`delete-w9-${doc.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
