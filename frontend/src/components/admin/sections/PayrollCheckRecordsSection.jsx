@@ -322,7 +322,7 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
               <Camera className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-[#333]">Payroll Check Records</h2>
+              <h2 className="text-lg font-semibold text-[#333]">Payment Records</h2>
               <p className="text-xs text-[#888]">{checkRecords.length} records stored</p>
             </div>
           </div>
@@ -333,7 +333,7 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
               onClick={(e) => { e.stopPropagation(); fetchCheckRecords(); }}
               disabled={loadingCheckRecords}
               className="text-[#888] hover:text-[#333] hover:border-[#333]"
-              data-testid="refresh-payroll-checks-btn"
+              data-testid="refresh-payment-records-btn"
             >
               <RefreshCw className={`w-4 h-4 mr-1.5 ${loadingCheckRecords ? 'animate-spin' : ''}`} />
               Refresh
