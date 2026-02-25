@@ -205,7 +205,7 @@ export default function EmployeeDashboard() {
 
   // Check if user is within range of work location
   const checkLocation = () => {
-    return new Promise(async (resolve) => {
+    return new Promise((resolve) => {
       // If user is admin, bypass location check
       if (user?.role === 'admin') {
         resolve({ withinRange: true, distance: 0 });
@@ -218,22 +218,9 @@ export default function EmployeeDashboard() {
         return;
       }
 
-      // Check permission state first (if Permissions API available)
-      if (navigator.permissions) {
-        try {
-          const permission = await navigator.permissions.query({ name: 'geolocation' });
-          if (permission.state === 'denied') {
-            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
-            resolve({ withinRange: false, denied: true });
-            return;
-          }
-        } catch (e) {
-          // Permissions API not fully supported, continue with geolocation request
-        }
-      }
-
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
 
+      // Request location - this will prompt the user if not already granted/denied
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const distance = calculateDistance(
@@ -247,21 +234,23 @@ export default function EmployeeDashboard() {
           resolve({ withinRange, distance: distance.toFixed(2) });
         },
         (error) => {
+          console.log("Geolocation error:", error.code, error.message);
           if (error.code === 1) {
-            // User denied location access
+            // PERMISSION_DENIED - user denied or GPS is off
+            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
+            resolve({ withinRange: false, denied: true });
+          } else if (error.code === 2) {
+            // POSITION_UNAVAILABLE - GPS hardware issue or turned off
             setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
             resolve({ withinRange: false, denied: true });
           } else {
-            let errorMsg = "Unable to get your location";
-            if (error.code === 2) errorMsg = "Location unavailable. Please try again.";
-            else if (error.code === 3) errorMsg = "Location request timed out. Please try again.";
-            
-            setLocationStatus({ checking: false, withinRange: false, error: errorMsg, denied: false });
-            toast.error(errorMsg);
-            resolve({ withinRange: false, error: errorMsg });
+            // TIMEOUT or other error
+            toast.error("Location request timed out. Please try again.");
+            setLocationStatus({ checking: false, withinRange: false, error: "timeout", denied: false });
+            resolve({ withinRange: false, error: "timeout" });
           }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     });
   };
