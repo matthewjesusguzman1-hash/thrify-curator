@@ -903,16 +903,9 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
 
                 {/* Action Buttons */}
                 <div className="flex justify-between items-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowExportModal(true)}
-                    className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                    data-testid="export-report-btn"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Reports
-                  </Button>
+                  <p className="text-xs text-[#888]">
+                    For mileage reports, use the Reports section
+                  </p>
                   <Button
                     onClick={() => setShowAddMileageModal(true)}
                     className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
