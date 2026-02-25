@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import {
   X,
   User,
-  Download,
   CalendarDays,
   DollarSign,
   Settings
