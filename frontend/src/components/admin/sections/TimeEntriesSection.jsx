@@ -154,10 +154,25 @@ export default function TimeEntriesSection({
                           <td>{entry.clock_out ? formatDateTime(entry.clock_out) : '-'}</td>
                           <td>
                             {entry.total_hours ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#F8C8DC]/20 rounded-full text-sm font-medium text-[#5D4037]">
-                                <Clock className="w-3 h-3" />
-                                {entry.total_hours} hrs
-                              </span>
+                              <div className="flex flex-col gap-1">
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium ${
+                                  entry.adjusted_by_admin 
+                                    ? 'bg-[#FEF3C7] text-[#92400E]' 
+                                    : 'bg-[#F8C8DC]/20 text-[#5D4037]'
+                                }`}>
+                                  <Clock className="w-3 h-3" />
+                                  {entry.total_hours} hrs
+                                  {entry.adjusted_by_admin && (
+                                    <span className="text-xs ml-1" title="Adjusted by admin">✎</span>
+                                  )}
+                                </span>
+                                {entry.admin_note && (
+                                  <div className="flex items-start gap-1 text-xs text-[#92400E] max-w-[200px]" title={entry.admin_note}>
+                                    <FileText className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                    <span className="truncate">{entry.admin_note}</span>
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#8BA88E]/20 rounded-full text-sm font-medium text-[#5A8A5E]">
                                 Active
