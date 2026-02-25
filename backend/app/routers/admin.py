@@ -1440,9 +1440,12 @@ async def get_w9_report(
         
         summary["total_employees"] += 1
         
+        # Use "Administrator" for admin users instead of their personal name
+        display_name = "Administrator" if user.get("role") == "admin" else user.get("name", "Unknown")
+        
         employees.append({
             "id": user_id,
-            "name": user.get("name", "Unknown"),
+            "name": display_name,
             "email": user.get("email", ""),
             "role": user.get("role", "employee"),
             "w9_status": latest_status,
