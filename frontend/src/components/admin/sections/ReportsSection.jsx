@@ -363,7 +363,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
 
   const renderShiftPreview = (data) => (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
-      <div className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white p-4">
+      <div className="bg-gradient-to-r from-[#F43F5E] to-[#E11D48] text-white p-4">
         <h3 className="font-semibold text-lg mb-2">Payroll/Shift Report Summary</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white/10 rounded-lg p-3 text-center">
