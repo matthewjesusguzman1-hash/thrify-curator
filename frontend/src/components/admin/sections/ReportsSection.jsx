@@ -117,15 +117,19 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   };
 
   const handlePreview = async () => {
-    const { start, end } = getDateRange();
-    if (!start || !end) {
-      toast.error("Please select a valid date range");
-      return;
+    // W-9 report doesn't need date range
+    if (reportType !== "w9") {
+      const { start, end } = getDateRange();
+      if (!start || !end) {
+        toast.error("Please select a valid date range");
+        return;
+      }
     }
 
     setLoading(true);
     try {
       let response;
+      const { start, end } = getDateRange();
       
       if (reportType === "shifts") {
         const params = new URLSearchParams({
@@ -157,6 +161,12 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           params.append("employee_id", selectedEmployee);
         }
         response = await axios.get(`${API}/admin/mileage/report?${params.toString()}`, getAuthHeader());
+      } else if (reportType === "w9") {
+        const params = new URLSearchParams();
+        if (selectedEmployee !== "all") {
+          params.append("employee_id", selectedEmployee);
+        }
+        response = await axios.get(`${API}/admin/reports/w9?${params.toString()}`, getAuthHeader());
       }
 
       setPreviewData({ type: reportType, data: response.data });
