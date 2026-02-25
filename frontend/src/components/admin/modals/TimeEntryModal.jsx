@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Clock, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,9 +28,11 @@ export default function TimeEntryModal({
   const [formData, setFormData] = useState({
     employee_id: "",
     clock_in: "",
-    clock_out: ""
+    clock_out: "",
+    total_hours: ""
   });
   const [loading, setLoading] = useState(false);
+  const [editMode, setEditMode] = useState("times"); // 'times' or 'hours'
 
   // Reset form when modal opens or entry changes
   useEffect(() => {
