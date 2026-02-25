@@ -2,45 +2,54 @@
 The user wants to build a Thrifty Curator reselling application.
 
 **PRODUCT REQUIREMENTS (Consolidated):**
-*   **Core Functionality:** A full-stack application with a Black Bold theme, passwordless authentication, and distinct portals for Admins and Employees.
-*   **Landing Page & Forms:** A themed landing page and various forms (Job Applications, Consignment).
-*   **Admin Dashboard:** A comprehensive dashboard for managing employees, payroll, mileage, and messages, including a full messaging system.
-*   **W-9 Management:** A complete system for handling multiple W-9 forms per employee. Admins can Preview, Download, Approve, and Delete W-9s.
-*   **Employee Portal:** Employees can clock in/out, submit W-9s, and view their submission status. Admins can also access this view to manage their own submissions.
-*   **Geolocation for Clock-in/out:** The clock-in/out function for employees must only work when they are within a 0.5-mile radius of the coordinates . Admins are exempt.
-*   **Auto Clock-Out:** Employees are automatically clocked out if they leave the work radius, with their time adjusted to the last verified in-range location.
-*   **Time Adjustments:** Admins can manually edit time entries, either by adjusting clock-in/out times or by directly overriding the total hours, with a private note required for overrides.
-*   **Centralized Reporting:** A unified Reports section in the admin dashboard for generating, previewing, and downloading Payroll/Shift, Mileage, and W-9 reports, with filters for employees and various date ranges.
-*   **Data Attribution:** All data entered by an admin (e.g., mileage trips) should be attributed to a generic Administrator entity, not the individual admin's name.
-*   **UI/UX:**
-    *   The admin dashboard header should display Administrator instead of the logged-in admin's name.
-    *   Payment-related sections should use the term Payment Records instead of Payroll Check Records.
+*   **Core Functionality:** A full-stack application with a Black Bold theme, passwordless authentication, and distinct portals for two Admins (Matthew Guzman, Eunice Guzman) and Employees.
+*   **Landing Page & Forms:** A themed, animated landing page and various forms (Job Applications, Consignment).
+*   **Admin Dashboard:**
+    *   A comprehensive dashboard for managing employees, payroll, mileage, and messages.
+    *   Header must display the logged-in admin's name and be padded for mobile devices with notches (iPhone Dynamic Island).
+    *   Sections should have unique, theme-consistent colors and icons.
+*   **Mileage Tracking:**
+    *   Mileage tracking must be completely separate for each admin. Admins must be able to start, pause, and end trips independently and concurrently.
+    *   Each trip must be attributed to the specific admin who logged it.
+    *   The system must continuously track waypoints using high-accuracy geolocation while a trip is active.
+*   **W-9 Management:**
+    *   A complete system for handling multiple W-9 forms per employee.
+    *   Admins can Preview, Download, and Approve W-9s.
+    *   The ability to *delete* a W-9 form is restricted to the Edit Employee section only.
+    *   The W-9 viewer modal should have a dark, themed design consistent with user-provided images.
+*   **Employee Portal & Data:**
+    *   Employees can clock in/out, submit W-9s, and view their submission status.
+    *   Admins can view an employee's portal, which must accurately display payroll data (hours, shifts, pay) for the current period.
+*   **Reporting:** A centralized Reports section for Payroll/Shift, Mileage, and W-9 reports.
+*   **Notifications:** A notification system that alerts admins for clock-ins, clock-outs, W-9 submissions, and new messages. The notification panel should auto-mark items as read when opened and include a Clear All button.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app features robust, geolocation-based time tracking for employees and a comprehensive admin dashboard.
+A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The application features separate admin accounts, independent and enhanced mileage tracking, a refined W-9 management flow, and a comprehensive notification system.
 
-The main focus of the recent session was a major overhaul of the reporting system. All reporting is now centralized in a single Reports section, which includes Payroll/Shift, Mileage, and W-9 reports. This section allows filtering by employee (with all admins grouped into a single Administrator entity) and downloading reports as CSV/PDF.
-
-Based on user feedback, several refinements were made: redundant download buttons were removed from other parts of the app, admin access codes were unified, W-9 management was improved with view/download/delete capabilities, and all admin-generated data is now consistently attributed to Administrator. A bug in mileage calculation was also fixed, and the mileage deduction rate was standardized across the application. The last change was renaming Payroll Check Records to Payment Records throughout the UI.
+Recent work focused on implementing a series of user-requested UI/UX changes and bug fixes. This included separating admin data from a generic Administrator to specific users (Matthew Guzman, Eunice Guzman), making mileage tracking concurrent and independent for each admin, and optimizing the GPS waypoint collection to be more frequent and accurate. The W-9 viewer modal was restyled to a dark theme, and its delete functionality was restricted. Several UI bugs were fixed, including a data mismatch in the employee portal, a glitchy splash screen, and header padding on mobile. The last item worked on was an attempt to fix the notification panel's UI.
 
 **Last working item**:
-    - Last item agent was working: The agent was implementing the user's request to rename all instances of Payroll Check Records and related terms (e.g., Check Date) to Payment Records and Payment Date to better reflect various payment methods. The code changes have been applied.
+    - Last item agent was working: The agent was implementing the user's request for the notification panel to automatically mark notifications as read when opened and to add a visible Clear All button. The user reported that after the agent's changes, these features were still not working and the control buttons were not visible.
     - Status: IN PROGRESS
     - Agent Testing Done: N
     - Which testing method agent to use? screenshot tool
-    - User Testing Done: N
+    - User Testing Done: Y
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Visual verification of the Payment Records rename is pending. (P0)
+  - Issue 1: The notification panel UI is not functioning as requested. (P0)
   
   Issues Detail:
   - Issue 1: 
-     - **Description**: The agent implemented the renaming of Payroll Check Records to Payment Records but the final screenshot verification failed due to a browser crash. The changes need to be visually confirmed.
-     - **Attempted fixes**: The code changes were successfully applied across .
-     - **Next debug checklist**: Use the screenshot tool to navigate to the Admin Dashboard, open the Payment Records section, and verify that all labels, titles, and buttons have been updated from Check to Payment.
-     - **Why fix this issue and what will be achieved with the fix?**: To confirm the last user request was successfully implemented and ensure UI consistency.
+     - **Description**: The user-facing notification panel does not show the Mark as read or Clear All buttons, and the function to automatically mark notifications as read when the panel is opened is not working.
+     - **Attempted fixes**: The agent added a  hook to  to trigger an API call to mark notifications as read. The agent also confirmed the existence of the necessary UI code and backend endpoints. However, the user confirmed the UI is not rendering the controls.
+     - **Next debug checklist**:
+        1.  Review , specifically the  component that renders the notification panel.
+        2.  Verify the conditional rendering logic for the  that contains the Mark as read and Clear buttons. Check why it might be failing (e.g.,  being zero at render time).
+        3.  Add  statements inside the  for auto-marking as read to confirm it's being triggered when the panel opens and that the API call is successful.
+        4.  Use browser developer tools (via screenshot if necessary) to inspect the rendered HTML of the notification panel. Check if the buttons are being rendered but are hidden by CSS or are outside the visible area.
+     - **Why fix this issue and what will be achieved with the fix?**: To provide the user with the requested notification management capabilities, improving the dashboard's usability.
      - **Status**:  IN PROGRESS
      - **Is recurring issue?**: N
      - **Should Test frontend/backend/both after fix?**: Frontend
@@ -51,99 +60,98 @@ Based on user feedback, several refinements were made: redundant download button
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks:**
-    *   **Rename  file (P1):** The file  should be renamed to  to match its new purpose and internal component name.
-    *   **Complete  Refactor (P1):** An earlier task to extract the  into its own component () was never completed and should be addressed.
+    *   **Refactor  Modals (P1):** The  file contains large, inline implementations of both the Payroll modal and W-9 viewer modal. This creates significant code duplication, as dedicated components like  exist but are not used. Refactor the dashboard to remove the inline code and use the external, reusable modal components.
 *   **Future Tasks:**
     *   **Deployment (P2):** The user has previously requested deployment. This should be the final step after all feature work and verification are complete.
-    *   **Unused Component/State Cleanup (P2):** General cleanup of any unused code after all refactoring is complete.
 
 **Completed work in this session**
-- **Feature: Reporting System Overhaul (DONE)**
-  - Consolidated Shift, Payroll, and Mileage reports into a unified .
-  - Added a new  with view and download capabilities.
-  - Merged the Payroll report into a single Payroll/Shift Report.
-  - Removed all redundant report download buttons from other sections (, , ).
-- **Feature: Admin & Data Attribution Unification (DONE)**
-  - Both admin access codes (, ) now lead to a single admin dashboard.
-  - The dashboard header now displays Administrator instead of a specific admin's name.
-  - All admin-generated data (e.g., mileage entries) is now attributed to Administrator in the database and reports. A migration script was run to update historical data.
-- **Feature: W-9 Management Refinement (DONE)**
-  - Added functionality for an admin to delete their own W-9 submissions from the My Dashboard view ().
-  - Removed the W-9 delete function from the main  to prevent accidental deletion of other employees' records.
-- **Bugfix & UX Improvements (DONE)**
-  - Fixed a bug where the mileage report failed to calculate  due to a field name mismatch.
-  - Standardized the mileage deduction rate to  across the app to resolve a data discrepancy.
-  - Fixed a FastAPI routing bug where specific string routes were being incorrectly matched by dynamic routes.
-  - Set the Mileage Report's employee filter to default to Administrator.
+- **Admin & Mileage Tracking Overhaul:**
+  - Separated admin access into two distinct accounts: Matthew Guzman (4399) and Eunice Guzman (0826).
+  - Admin dashboard header now displays the logged-in admin's name.
+  - Mileage trips are now logged against the specific admin who created them.
+  - Enabled independent and concurrent mileage tracking for each admin.
+  - Enhanced waypoint tracking for mileage to be more frequent and accurate.
+- **Notification System:**
+  - Implemented backend logic to create notifications for clock-in/out and W-9 submissions.
+  - Updated the frontend to correctly display icons and messages for different notification types.
+- **W-9 Management Refinements:**
+  - Restyled the W-9 viewer modal to a dark, themed design per user specification.
+  - Removed the delete functionality from the main All Employees W-9 viewer, restricting it to the Edit Employee section.
+- **Bug Fixes & UI/UX:**
+  - Fixed a critical data mismatch bug where the View Portal payroll summary (shifts, hours) did not reflect the employee's actual time entries.
+  - Resolved a glitchy splash screen animation on both desktop and mobile.
+  - Added safe-area padding to the mobile header to prevent overlap with the iPhone's Dynamic Island.
+  - Reordered and re-colored Admin Dashboard sections for better visual distinction.
+  - Cleaned up the UI by removing the Shift Report button from the header and the Settings button from the Payroll modal.
+  - Removed the Documents column from the W-9 report table.
+- **Deployment & Assets:**
+  - Added a  endpoint to the backend for deployment health checks.
+  - Replaced the home screen bookmark icon () with a user-provided image.
 
 **Earlier issues found/mentioned but not fixed**
-   - None
+   - **Technical Debt:** The agent identified that  contains duplicated, inline modal logic instead of using existing external components (). The agent worked around this to fix a bug but did not perform the necessary refactoring to remove the duplicated code. This is captured in the Upcoming Tasks.
 
 **Known issue recurrence from previous fork**
-  - None in this session.
+  - **Refactoring of :** The task to extract the  was noted as pending in the previous session's handoff. This session, the agent found that while the component file exists, it's not actually being used, and the duplication remains.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend**: React, TailwindCSS, , , , .
-- **Backend**: FastAPI, PyMongo, Pydantic, FPDF2 (for PDF reports).
+- **Frontend**: React, TailwindCSS,  (for animations),  (icons).
+- **Backend**: FastAPI, PyMongo, Pydantic.
 - **APIs**: Browser Geolocation API ().
+- **State Management**: React state (, ) and  for user session data.
 
 **key DB schema**
-- No schema changes were made. Data in the  collection was updated to change  to Administrator for admin users.
+- ****: The  of a document is now the , enforcing that each admin can only have one active trip at a time and separating their trips from others.
+- ****: Now includes a  field populated with the specific admin's name (e.g., 'Matthew Guzman') instead of the generic 'Administrator'.
+- ****: A new collection to store application-wide notifications. Each document includes , , , and a  status.
 
 **changes in tech stack**
   - None.
 
 **All files of reference**
-*   : The central hub for all reporting logic.
-*   : Contains all backend logic for reports, data attribution, and bug fixes.
-*   : Contains the logic for an admin deleting their own W-9.
-*   : Contains the UI for payment records, recently renamed from payroll checks.
-*   : The main admin view.
+*   : The central file for most recent UI changes, bug fixes, and the currently broken notification panel.
+*   : Contains the core logic for admin separation, the new  endpoint, and data aggregation fixes.
+*   : Defines the separate login logic for the two admin users.
+*   : Contains the enhanced GPS tracking logic.
 
 **Areas that need refactoring**:
-- The file  should be renamed to  for consistency with its content.
-- The  refactoring to extract  into its own component is still pending from a previous session.
+-  is severely bloated with inline modal implementations for both the Payroll and W-9 viewers. This code should be extracted into reusable components to reduce duplication and improve maintainability. The existing but unused  is evidence of this technical debt.
 
 **key api endpoints**
-- : (New) Generate W-9 reports (JSON/CSV/PDF).
-- : (New) Fetches the most recent W-9 document for a specific user.
-- : (New) Deletes all W-9 documents for a specific employee, used in the W-9 report.
-- : (Modified) Logic updated to allow an admin to delete their own approved W-9.
-- : (Modified) Fixed  calculation and aligned the deduction rate.
-- : (Modified) Attributes new entries created by an admin to Administrator.
+- : **(New)** Endpoint for deployment health checks.
+- : **(Modified)** Now returns data for two distinct admin users.
+- : **(Fixed)** Correctly calculates  and  from time entries.
+- : **(Modified)** All trip-related endpoints (, , , , ) now operate on a per-admin basis using  as the identifier.
+- : Marks all of a user's notifications as read.
+- : Deletes all of a user's notifications.
 
 **Critical Info for New Agent**
-- Your first action should be to verify the last pending change: the renaming of Payroll Check Records to Payment Records. A screenshot attempt failed, so this needs confirmation.
-- The reporting functionality is now highly centralized in . Most future reporting changes will likely be in this file and the corresponding endpoints in .
-- Be aware of the FastAPI route ordering issue that was fixed. Specific routes (e.g., ) must be defined *before* dynamic routes (e.g., ) in  to ensure correct matching.
-- The application now uses a standardized Administrator name for all data generated by admins. This logic is implemented in various backend routes.
+- Your immediate priority is to fix the notification panel UI in . The user has confirmed that the Mark as read and Clear All buttons are missing, and the auto-read feature is not working.
+- The application's admin logic has fundamentally changed. It no longer uses a generic Administrator but two distinct, named admins whose data and actions (especially for mileage) are tracked separately.
+- Be aware of the significant technical debt in  regarding inline modals. While fixing the notification issue, avoid adding more inline logic. A refactor is the correct long-term solution.
 
 **documents and test reports created in this job**
-  - 
-  - 
+  -  (updated)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1.  **Request:** Rename Payroll Check Records to Payment Records. **Status:** IN PROGRESS (Implemented but needs visual verification).
-2.  **Request:** Use Administrator instead of a specific admin's name for all data entered from the admin dashboard. **Status:** COMPLETED.
-3.  **Request:** Fix the discrepancy in mileage deduction calculation between the report and the tracking section. **Status:** COMPLETED.
-4.  **Request:** Fix a bug where the mileage report was not showing any trip data. **Status:** COMPLETED.
-5.  **Request:** Move the W-9 delete functionality from the  to the admin's personal My Dashboard view and default the mileage report filter to Administrator. **Status:** COMPLETED.
-6.  **Request:** Continue - User prompt to continue with a screenshot action. **Status:** HANDLED.
-7.  **Request:** Merge the Payroll and Shift reports, consolidate admin names in filters to a single Administrator option, and add the ability to delete W-9s from the reports section. **Status:** COMPLETED (and later modified by request #5).
-8.  **Request:** Unify the admin dashboards, change the header title to Administrator, and add View/Download buttons to the W-9 report. **Status:** COMPLETED.
-9.  **Request:** Consolidate all reports into the reports section, include admins as employees, and remove download functions from all other areas. **Status:** COMPLETED.
-10. **(Agent Action):** The agent proposed the plan for the initial consolidation.
+1.  **Request:** I don’t see any of the above options when clicking the notification bell button. **Status:** PENDING. This is the current active issue. The agent's implementation of notification controls is not visible to the user.
+2.  **Request:** When the notifications are opened automatically mark them as read. Add a button to clear the notifications. **Status:** IN PROGRESS. The agent implemented this but the user's follow-up message confirms it's not working.
+3.  **Request:** Ensure all admins track waypoints continuously for accurate mileage. **Status:** COMPLETED.
+4.  **Request:** Completely separate the mileage feature for each admin so they can't interfere with each other's trips. **Status:** COMPLETED.
+5.  **Request:** Separate admin data for Eunice (0826) and Matthew (4399), showing their names and tracking their mileage individually. **Status:** COMPLETED.
+6.  **Request:** Replace the home screen bookmark icon with an attachment. **Status:** COMPLETED.
+7.  **Request:** Remove the delete function from the W-9 viewer in the All Employees section. **Status:** COMPLETED.
+8.  **Request:** Change the W-9 viewer in the employee portal to match the dark-themed modal from an attachment. **Status:** COMPLETED.
+9.  **Request:** Make the W-9 section in the employee portal function like the View button in the All Employees W-9 column. **Status:** COMPLETED.
+10. **Feedback:** The previous request was not completed. **Status:** HANDLED (The agent re-addressed and completed the request in subsequent steps).
 
 **Project Health Check:**
-- **Broken**: None.
+- **Broken**: The notification panel's UI controls (Mark as read, Clear All) and auto-read functionality are not working.
 - **Mocked**: None.
-- **Needs Attention**:
-    - The UI for  needs visual verification.
-    - The filename  should be renamed to .
-    - The pending refactor of  to extract  has not been addressed.
+- **Needs Attention**:  contains significant duplicated code for modals that needs to be refactored into reusable components.
 
 **3rd Party Integrations**
 *   
@@ -157,13 +165,11 @@ Based on user feedback, several refinements were made: redundant download button
   - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: None.
+  - Known regressions: None
 
 **Credentials to test flow:**
-- **Admin Access:** From the login page, enter code  or .
-- **Employee Access:** Create a new employee via the admin dashboard to get a clean test user.
+- **Admin Access:** From the login page, enter code  (for Matthew Guzman) or  (for Eunice Guzman).
 
 **What agent forgot to execute**
-- The agent did not rename the file  to  after changing its internal purpose and component name.
-- The pending refactor of  noted in the initial handoff summary was not addressed during this session.
-- The agent did not re-attempt the verification screenshot after the browser crashed, leaving the final task of the session unconfirmed.</analysis>
+- The agent failed to correctly implement the user's final request for notification panel controls, leaving it in a broken state.
+- The agent did not address the underlying technical debt of duplicated modal code in , instead adding more patches to the inline code.</analysis>
