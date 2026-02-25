@@ -249,6 +249,7 @@ export default function AdminDashboard() {
   const [loadingW9Viewer, setLoadingW9Viewer] = useState(false);
   const [employeeW9List, setEmployeeW9List] = useState([]);
   const [selectedW9Index, setSelectedW9Index] = useState(0);
+  const [w9ViewerFromPortal, setW9ViewerFromPortal] = useState(false);
 
   // Employee shifts management state (for Hours by Employee section)
   const [showEmployeeShiftsModal, setShowEmployeeShiftsModal] = useState(null);
