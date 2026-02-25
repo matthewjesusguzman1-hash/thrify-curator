@@ -3483,6 +3483,14 @@ export default function AdminDashboard() {
             headerTripPaused={headerTripPaused}
           />
 
+          {/* Reports Section - After Mileage Tracking */}
+          <ReportsSection
+            employees={employees}
+            payPeriodStart={payrollSettings.pay_period_start_date}
+            getAuthHeader={getAuthHeader}
+            payrollSettings={payrollSettings}
+          />
+
           {/* Submission Details Modal */}
           {showSubmissionDetails && selectedSubmission && (
             <motion.div
