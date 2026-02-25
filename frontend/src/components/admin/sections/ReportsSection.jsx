@@ -263,6 +263,54 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
     }
   };
 
+  // View W-9 for an employee
+  const handleViewW9 = async (employeeId) => {
+    try {
+      // Get the latest W-9 document for this employee
+      const response = await axios.get(`${API}/admin/employees/${employeeId}/w9/latest`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      setViewingW9({ url, employeeId });
+    } catch (error) {
+      toast.error("Failed to load W-9 document");
+      console.error(error);
+    }
+  };
+
+  // Download W-9 for an employee
+  const handleDownloadW9 = async (employeeId, employeeName) => {
+    try {
+      const response = await axios.get(`${API}/admin/employees/${employeeId}/w9/latest`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `w9_${employeeName.replace(/\s+/g, '_')}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("W-9 downloaded");
+    } catch (error) {
+      toast.error("Failed to download W-9");
+      console.error(error);
+    }
+  };
+
+  // Close W-9 viewer
+  const handleCloseW9Viewer = () => {
+    if (viewingW9?.url) {
+      window.URL.revokeObjectURL(viewingW9.url);
+    }
+    setViewingW9(null);
+  };
+
   const formatDateTime = (isoString) => {
     if (!isoString) return "-";
     const date = new Date(isoString);
