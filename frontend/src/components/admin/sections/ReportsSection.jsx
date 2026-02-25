@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
@@ -9,7 +9,11 @@ import {
   Users,
   Filter,
   FileSpreadsheet,
-  File
+  File,
+  Clock,
+  DollarSign,
+  Car,
+  Briefcase
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -26,8 +30,9 @@ import axios from "axios";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
-export default function ReportsSection({ employees, payPeriodStart, getAuthHeader }) {
+export default function ReportsSection({ employees, payPeriodStart, getAuthHeader, payrollSettings }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [reportType, setReportType] = useState("shifts"); // shifts, payroll, mileage
   const [filterType, setFilterType] = useState("period");
   const [selectedEmployee, setSelectedEmployee] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -43,6 +48,12 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   ];
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+
+  const reportTypes = [
+    { id: "shifts", label: "Shift Report", icon: Clock, description: "Clock in/out times and hours worked" },
+    { id: "payroll", label: "Payroll Report", icon: DollarSign, description: "Hours, rates, and estimated pay" },
+    { id: "mileage", label: "Mileage Report", icon: Car, description: "Trip details and deductions" }
+  ];
 
   // Get biweekly period dates
   const getBiweeklyPeriod = () => {
@@ -110,19 +121,36 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
 
     setLoading(true);
     try {
+      let endpoint = "";
       const params = new URLSearchParams({
         start_date: start,
         end_date: end
       });
+      
       if (selectedEmployee !== "all") {
         params.append("employee_id", selectedEmployee);
       }
 
-      const response = await axios.get(
-        `${API}/admin/reports/shifts?${params.toString()}`,
-        getAuthHeader()
-      );
-      setPreviewData(response.data);
+      if (reportType === "shifts") {
+        endpoint = `/admin/reports/shifts?${params.toString()}`;
+      } else if (reportType === "payroll") {
+        // Use existing payroll report endpoint
+        const payrollParams = new URLSearchParams({
+          period_type: "custom",
+          custom_start: start,
+          custom_end: end,
+          hourly_rate: payrollSettings?.default_hourly_rate || "15.00"
+        });
+        if (selectedEmployee !== "all") {
+          payrollParams.append("employee_id", selectedEmployee);
+        }
+        endpoint = `/admin/payroll/report?${payrollParams.toString()}`;
+      } else if (reportType === "mileage") {
+        endpoint = `/admin/mileage/report?${params.toString()}`;
+      }
+
+      const response = await axios.get(`${API}${endpoint}`, getAuthHeader());
+      setPreviewData({ type: reportType, data: response.data });
     } catch (error) {
       toast.error("Failed to load report preview");
       console.error(error);
@@ -140,27 +168,43 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
 
     setLoading(true);
     try {
+      let endpoint = "";
       const params = new URLSearchParams({
         start_date: start,
         end_date: end
       });
+      
       if (selectedEmployee !== "all") {
         params.append("employee_id", selectedEmployee);
       }
 
-      const response = await axios.get(
-        `${API}/admin/reports/shifts/${format}?${params.toString()}`,
-        {
-          ...getAuthHeader(),
-          responseType: 'blob'
+      if (reportType === "shifts") {
+        endpoint = `/admin/reports/shifts/${format}?${params.toString()}`;
+      } else if (reportType === "payroll") {
+        const payrollParams = new URLSearchParams({
+          period_type: "custom",
+          custom_start: start,
+          custom_end: end,
+          hourly_rate: payrollSettings?.default_hourly_rate || "15.00"
+        });
+        if (selectedEmployee !== "all") {
+          payrollParams.append("employee_id", selectedEmployee);
         }
-      );
+        endpoint = `/admin/payroll/report/${format}?${payrollParams.toString()}`;
+      } else if (reportType === "mileage") {
+        endpoint = `/admin/mileage/report/${format}?${params.toString()}`;
+      }
+
+      const response = await axios.get(`${API}${endpoint}`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
 
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `shift_report_${start}_to_${end}.${format}`);
+      link.setAttribute('download', `${reportType}_report_${start}_to_${end}.${format}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -187,6 +231,245 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
     });
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+  };
+
+  // Render preview based on report type
+  const renderPreview = () => {
+    if (!previewData) return null;
+
+    if (previewData.type === "shifts") {
+      return renderShiftPreview(previewData.data);
+    } else if (previewData.type === "payroll") {
+      return renderPayrollPreview(previewData.data);
+    } else if (previewData.type === "mileage") {
+      return renderMileagePreview(previewData.data);
+    }
+    return null;
+  };
+
+  const renderShiftPreview = (data) => (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white p-4">
+        <h3 className="font-semibold text-lg mb-2">Shift Report Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{data.total_entries}</p>
+            <p className="text-sm opacity-80">Total Shifts</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">
+              {data.summary?.reduce((sum, s) => sum + s.total_hours, 0).toFixed(1)}
+            </p>
+            <p className="text-sm opacity-80">Total Hours</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{data.summary?.length || 0}</p>
+            <p className="text-sm opacity-80">Employees</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">
+              {formatCurrency(data.summary?.reduce((sum, s) => sum + (s.total_hours * s.hourly_rate), 0))}
+            </p>
+            <p className="text-sm opacity-80">Est. Total Pay</p>
+          </div>
+        </div>
+      </div>
+
+      {data.summary?.length > 0 && (
+        <div className="p-4 border-b border-gray-200">
+          <h4 className="font-medium text-[#333] mb-3">By Employee</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="text-left p-2">Employee</th>
+                  <th className="text-center p-2">Hours</th>
+                  <th className="text-center p-2">Shifts</th>
+                  <th className="text-right p-2">Est. Pay</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.summary.map((s, idx) => (
+                  <tr key={idx} className="border-t border-gray-100">
+                    <td className="p-2 font-medium">{s.employee_name}</td>
+                    <td className="p-2 text-center">{s.total_hours.toFixed(2)}</td>
+                    <td className="p-2 text-center">{s.total_shifts}</td>
+                    <td className="p-2 text-right">{formatCurrency(s.total_hours * s.hourly_rate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="p-4 max-h-[300px] overflow-y-auto">
+        <h4 className="font-medium text-[#333] mb-3">Shift Details ({data.entries?.length || 0} entries)</h4>
+        {data.entries?.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="text-left p-2">Employee</th>
+                  <th className="text-left p-2">Clock In</th>
+                  <th className="text-left p-2">Clock Out</th>
+                  <th className="text-center p-2">Hours</th>
+                  <th className="text-left p-2">Admin Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.entries.slice(0, 20).map((entry, idx) => (
+                  <tr key={idx} className={`border-t border-gray-100 ${entry.adjusted_by_admin ? 'bg-yellow-50' : ''}`}>
+                    <td className="p-2">{entry.employee_name}</td>
+                    <td className="p-2">{formatDateTime(entry.clock_in)}</td>
+                    <td className="p-2">{entry.clock_out ? formatDateTime(entry.clock_out) : <span className="text-green-600">Active</span>}</td>
+                    <td className="p-2 text-center">
+                      {entry.total_hours?.toFixed(2) || "0.00"}
+                      {entry.adjusted_by_admin && <span className="text-[#D97706] ml-1">*</span>}
+                    </td>
+                    <td className="p-2 text-[#666] text-xs max-w-[150px] truncate" title={entry.admin_note}>
+                      {entry.admin_note || "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {data.entries.length > 20 && (
+              <p className="text-sm text-[#888] text-center mt-2">Showing first 20 of {data.entries.length} entries. Download for full report.</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-center text-[#888] py-4">No shifts found for this period</p>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderPayrollPreview = (data) => (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white p-4">
+        <h3 className="font-semibold text-lg mb-2">Payroll Report Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{data.total_employees || 0}</p>
+            <p className="text-sm opacity-80">Employees</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{(data.total_hours || 0).toFixed(1)}</p>
+            <p className="text-sm opacity-80">Total Hours</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{formatCurrency(data.total_gross_pay)}</p>
+            <p className="text-sm opacity-80">Gross Pay</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{formatCurrency(data.total_mileage_deduction)}</p>
+            <p className="text-sm opacity-80">Mileage Deduction</p>
+          </div>
+        </div>
+      </div>
+
+      {data.employees?.length > 0 && (
+        <div className="p-4 max-h-[350px] overflow-y-auto">
+          <h4 className="font-medium text-[#333] mb-3">Employee Breakdown</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="text-left p-2">Employee</th>
+                  <th className="text-center p-2">Hours</th>
+                  <th className="text-center p-2">Rate</th>
+                  <th className="text-right p-2">Gross Pay</th>
+                  <th className="text-right p-2">Mileage</th>
+                  <th className="text-right p-2">Net Pay</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.employees.map((emp, idx) => (
+                  <tr key={idx} className="border-t border-gray-100">
+                    <td className="p-2 font-medium">{emp.name}</td>
+                    <td className="p-2 text-center">{(emp.total_hours || 0).toFixed(2)}</td>
+                    <td className="p-2 text-center">{formatCurrency(emp.hourly_rate)}/hr</td>
+                    <td className="p-2 text-right">{formatCurrency(emp.gross_pay)}</td>
+                    <td className="p-2 text-right text-green-600">+{formatCurrency(emp.mileage_deduction)}</td>
+                    <td className="p-2 text-right font-semibold">{formatCurrency(emp.net_pay)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderMileagePreview = (data) => (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white p-4">
+        <h3 className="font-semibold text-lg mb-2">Mileage Report Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{data.total_trips || 0}</p>
+            <p className="text-sm opacity-80">Total Trips</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{(data.total_miles || 0).toFixed(1)}</p>
+            <p className="text-sm opacity-80">Total Miles</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{formatCurrency(data.total_deduction)}</p>
+            <p className="text-sm opacity-80">Total Deduction</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{data.employees?.length || 0}</p>
+            <p className="text-sm opacity-80">Employees</p>
+          </div>
+        </div>
+      </div>
+
+      {data.entries?.length > 0 && (
+        <div className="p-4 max-h-[350px] overflow-y-auto">
+          <h4 className="font-medium text-[#333] mb-3">Trip Details ({data.entries.length} trips)</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="text-left p-2">Employee</th>
+                  <th className="text-left p-2">Date</th>
+                  <th className="text-left p-2">Purpose</th>
+                  <th className="text-center p-2">Miles</th>
+                  <th className="text-right p-2">Deduction</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.entries.slice(0, 20).map((entry, idx) => (
+                  <tr key={idx} className="border-t border-gray-100">
+                    <td className="p-2">{entry.user_name}</td>
+                    <td className="p-2">{new Date(entry.date).toLocaleDateString()}</td>
+                    <td className="p-2 max-w-[150px] truncate" title={entry.purpose}>{entry.purpose}</td>
+                    <td className="p-2 text-center">{entry.miles?.toFixed(1)}</td>
+                    <td className="p-2 text-right text-green-600">{formatCurrency(entry.deduction)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {data.entries.length > 20 && (
+              <p className="text-sm text-[#888] text-center mt-2">Showing first 20 of {data.entries.length} entries. Download for full report.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {(!data.entries || data.entries.length === 0) && (
+        <div className="p-8 text-center text-[#888]">
+          No mileage entries found for this period
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="dashboard-card" data-testid="reports-section">
       <div
@@ -200,7 +483,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           </div>
           <div>
             <h2 className="font-playfair text-xl font-semibold text-[#333]">Reports</h2>
-            <p className="text-sm text-[#888]">Generate and download shift reports</p>
+            <p className="text-sm text-[#888]">Generate shift, payroll, and mileage reports</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -222,6 +505,41 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
             className="overflow-hidden"
           >
             <div className="mt-4 pt-4 border-t border-[#eee]">
+              {/* Report Type Selector */}
+              <div className="mb-6">
+                <Label className="text-sm font-medium text-[#666] mb-3 block">
+                  <Briefcase className="w-4 h-4 inline mr-1" />
+                  Report Type
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {reportTypes.map((type) => (
+                    <button
+                      key={type.id}
+                      onClick={() => { setReportType(type.id); setPreviewData(null); }}
+                      className={`p-4 rounded-xl border-2 transition-all text-left ${
+                        reportType === type.id
+                          ? 'border-[#10B981] bg-[#10B981]/5'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          reportType === type.id ? 'bg-[#10B981] text-white' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          <type.icon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className={`font-medium ${reportType === type.id ? 'text-[#10B981]' : 'text-[#333]'}`}>
+                            {type.label}
+                          </p>
+                          <p className="text-xs text-[#888]">{type.description}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Filters */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {/* Employee Filter */}
@@ -383,103 +701,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
               </div>
 
               {/* Preview Data */}
-              {previewData && (
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  {/* Summary */}
-                  <div className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white p-4">
-                    <h3 className="font-semibold text-lg mb-2">Report Summary</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-white/10 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-bold">{previewData.total_entries}</p>
-                        <p className="text-sm opacity-80">Total Shifts</p>
-                      </div>
-                      <div className="bg-white/10 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-bold">
-                          {previewData.summary?.reduce((sum, s) => sum + s.total_hours, 0).toFixed(1)}
-                        </p>
-                        <p className="text-sm opacity-80">Total Hours</p>
-                      </div>
-                      <div className="bg-white/10 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-bold">{previewData.summary?.length || 0}</p>
-                        <p className="text-sm opacity-80">Employees</p>
-                      </div>
-                      <div className="bg-white/10 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-bold">
-                          ${previewData.summary?.reduce((sum, s) => sum + (s.total_hours * s.hourly_rate), 0).toFixed(2)}
-                        </p>
-                        <p className="text-sm opacity-80">Est. Total Pay</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Employee Summary Table */}
-                  {previewData.summary?.length > 0 && (
-                    <div className="p-4 border-b border-gray-200">
-                      <h4 className="font-medium text-[#333] mb-3">By Employee</h4>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="text-left p-2">Employee</th>
-                              <th className="text-center p-2">Hours</th>
-                              <th className="text-center p-2">Shifts</th>
-                              <th className="text-right p-2">Est. Pay</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {previewData.summary.map((s, idx) => (
-                              <tr key={idx} className="border-t border-gray-100">
-                                <td className="p-2 font-medium">{s.employee_name}</td>
-                                <td className="p-2 text-center">{s.total_hours.toFixed(2)}</td>
-                                <td className="p-2 text-center">{s.total_shifts}</td>
-                                <td className="p-2 text-right">${(s.total_hours * s.hourly_rate).toFixed(2)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Detailed Entries */}
-                  <div className="p-4 max-h-[400px] overflow-y-auto">
-                    <h4 className="font-medium text-[#333] mb-3">Shift Details ({previewData.entries?.length || 0} entries)</h4>
-                    {previewData.entries?.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="text-left p-2">Employee</th>
-                              <th className="text-left p-2">Clock In</th>
-                              <th className="text-left p-2">Clock Out</th>
-                              <th className="text-center p-2">Hours</th>
-                              <th className="text-left p-2">Admin Note</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {previewData.entries.map((entry, idx) => (
-                              <tr key={idx} className={`border-t border-gray-100 ${entry.adjusted_by_admin ? 'bg-yellow-50' : ''}`}>
-                                <td className="p-2">{entry.employee_name}</td>
-                                <td className="p-2">{formatDateTime(entry.clock_in)}</td>
-                                <td className="p-2">{entry.clock_out ? formatDateTime(entry.clock_out) : <span className="text-green-600">Active</span>}</td>
-                                <td className="p-2 text-center">
-                                  {entry.total_hours?.toFixed(2) || "0.00"}
-                                  {entry.adjusted_by_admin && <span className="text-[#D97706] ml-1">*</span>}
-                                </td>
-                                <td className="p-2 text-[#666] text-xs max-w-[200px] truncate" title={entry.admin_note}>
-                                  {entry.admin_note || "-"}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <p className="text-center text-[#888] py-4">No shifts found for this period</p>
-                    )}
-                  </div>
-                </div>
-              )}
+              {renderPreview()}
             </div>
           </motion.div>
         )}
