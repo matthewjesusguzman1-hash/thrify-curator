@@ -352,6 +352,10 @@ async def upload_w9_employee(
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
     
     doc_id = str(uuid.uuid4())
+    now_iso = datetime.now(timezone.utc).isoformat()
+    
+    # Use "Administrator" for admin users instead of their personal name
+    display_name = "Administrator" if user.get("role") == "admin" else user["name"]
     
     w9_doc = {
         "id": doc_id,
@@ -359,7 +363,7 @@ async def upload_w9_employee(
         "filename": file.filename,
         "content_type": file.content_type,
         "content": base64.b64encode(content).decode('utf-8'),
-        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "uploaded_at": now_iso,
         "uploaded_by": user["id"],
         "status": "submitted",
         "notes": notes or ""
@@ -371,6 +375,16 @@ async def upload_w9_employee(
         {"id": user["id"]},
         {"$set": {"has_w9": True, "w9_uploaded_at": w9_doc["uploaded_at"]}}
     )
+    
+    # Create W-9 submission notification
+    notification = AdminNotification(
+        type="w9_submission",
+        employee_id=user["id"],
+        employee_name=display_name,
+        message=f"{display_name} submitted a W-9 form",
+        details={"filename": file.filename, "time": now_iso}
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
     
     return {
         "message": "W-9 uploaded successfully",
