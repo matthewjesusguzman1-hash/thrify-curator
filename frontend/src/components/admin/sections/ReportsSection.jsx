@@ -179,8 +179,9 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   };
 
   const handleDownload = async (format) => {
+    // W-9 report doesn't need date range
     const { start, end } = getDateRange();
-    if (!start || !end) {
+    if (reportType !== "w9" && (!start || !end)) {
       toast.error("Please select a valid date range");
       return;
     }
@@ -188,7 +189,9 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
     setLoading(true);
     try {
       let response;
-      let filename = `${reportType}_report_${start}_to_${end}.${format}`;
+      let filename = reportType === "w9" 
+        ? `w9_report_${new Date().toISOString().split('T')[0]}.${format}`
+        : `${reportType}_report_${start}_to_${end}.${format}`;
 
       if (reportType === "shifts") {
         const params = new URLSearchParams({
@@ -226,6 +229,15 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           params.append("employee_id", selectedEmployee);
         }
         response = await axios.get(`${API}/admin/mileage/report/${format}?${params.toString()}`, {
+          ...getAuthHeader(),
+          responseType: 'blob'
+        });
+      } else if (reportType === "w9") {
+        const params = new URLSearchParams();
+        if (selectedEmployee !== "all") {
+          params.append("employee_id", selectedEmployee);
+        }
+        response = await axios.get(`${API}/admin/reports/w9/${format}?${params.toString()}`, {
           ...getAuthHeader(),
           responseType: 'blob'
         });
