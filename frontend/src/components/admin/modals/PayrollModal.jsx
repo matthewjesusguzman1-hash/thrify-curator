@@ -279,17 +279,9 @@ export default function PayrollModal({
             <CalendarDays className="w-4 h-4" />
             {payrollLoading ? "Generating..." : "Generate Report"}
           </Button>
-          {payrollReport && (
-            <Button
-              onClick={handleDownloadPDF}
-              variant="outline"
-              className="flex items-center gap-2 border-[#C5A065] text-[#C5A065]"
-              data-testid="download-payroll-pdf-btn"
-            >
-              <Download className="w-4 h-4" />
-              Download PDF
-            </Button>
-          )}
+          <p className="text-xs text-[#888] self-center ml-2">
+            For downloads, use the Reports section
+          </p>
         </div>
 
         {/* Payroll Report Results */}
