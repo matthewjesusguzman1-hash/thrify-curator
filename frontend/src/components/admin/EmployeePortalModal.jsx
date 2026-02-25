@@ -182,7 +182,7 @@ export default function EmployeePortalModal({
           className="w-full mt-6 bg-gradient-to-r from-[#ec4899] to-[#d946ef] hover:from-[#db2777] hover:to-[#c026d3] text-white font-semibold py-3"
           data-testid="close-portal-btn"
         >
-          <X className="w-4 h-4 mr-2" />
+          <X className="w-5 h-5 mr-2" />
           Close Employee Portal
         </Button>
       </motion.div>
