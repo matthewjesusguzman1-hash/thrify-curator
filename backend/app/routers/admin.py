@@ -535,12 +535,16 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
                 "employee_name": employee["name"]
             }
         else:
+            # Use "Administrator" for admin users instead of their personal name (for both employee and admin acting)
+            employee_display_name = "Administrator" if employee.get("role") == "admin" else employee["name"]
+            admin_display_name = "Administrator" if admin.get("role") == "admin" else admin["name"]
+            
             # Create new entry
             entry_id = str(uuid.uuid4())
             entry = {
                 "id": entry_id,
                 "user_id": employee_id,
-                "user_name": employee["name"],
+                "user_name": employee_display_name,
                 "clock_in": now_iso,
                 "clock_out": None,
                 "shift_date": today_start.strftime("%Y-%m-%d"),
@@ -549,14 +553,14 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
                 "total_hours": None,
                 "admin_clocked": True,
                 "admin_id": admin["id"],
-                "admin_name": admin["name"]
+                "admin_name": admin_display_name
             }
             await db.time_entries.insert_one(entry)
             return {
-                "message": f"Clocked in {employee['name']}",
+                "message": f"Clocked in {employee_display_name}",
                 "action": "in",
                 "timestamp": now_iso,
-                "employee_name": employee["name"],
+                "employee_name": employee_display_name,
                 "entry_id": entry_id
             }
     
