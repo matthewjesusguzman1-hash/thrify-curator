@@ -300,7 +300,7 @@ export default function HoursByEmployeeSection({
               data-testid="employee-shifts-modal"
             >
               {/* Modal Header */}
-              <div className="p-6 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white">
+              <div className="p-6 bg-gradient-to-r from-[#A78BFA] to-[#8B5CF6] text-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
