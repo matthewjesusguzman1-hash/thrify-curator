@@ -600,6 +600,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                   <th className="text-center p-2">Status</th>
                   <th className="text-center p-2">Documents</th>
                   <th className="text-left p-2">Last Updated</th>
+                  <th className="text-center p-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -636,6 +637,34 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                     <td className="p-2 text-center">{emp.document_count || 0}</td>
                     <td className="p-2 text-[#666]">
                       {emp.last_updated ? new Date(emp.last_updated).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="p-2 text-center">
+                      {emp.document_count > 0 ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewW9(emp.id)}
+                            className="h-7 px-2 text-[#8B5CF6] hover:bg-[#8B5CF6]/10"
+                            data-testid={`view-w9-${emp.id}`}
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadW9(emp.id, emp.name)}
+                            className="h-7 px-2 text-[#10B981] hover:bg-[#10B981]/10"
+                            data-testid={`download-w9-${emp.id}`}
+                          >
+                            <Download className="w-3.5 h-3.5 mr-1" />
+                            Download
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-[#999] text-xs">No W-9</span>
+                      )}
                     </td>
                   </tr>
                 ))}
