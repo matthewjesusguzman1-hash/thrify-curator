@@ -566,11 +566,18 @@ export default function EmployeeDashboard() {
                   </div>
                   <div className="text-sm text-gray-600 text-center mb-4 space-y-2">
                     <p>Location permission was blocked.</p>
-                    <div className="text-xs text-gray-500 space-y-1">
-                      <p><strong>On iPhone/iPad:</strong> Settings → Safari → Location → Allow for this site</p>
-                      <p><strong>On Android:</strong> Tap ⋮ menu → Settings → Site settings → Location → Allow</p>
-                      <p><strong>On Desktop:</strong> Click the lock icon in address bar → Reset permission</p>
-                    </div>
+                    {(window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) ? (
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <p><strong>For this app:</strong></p>
+                        <p>Settings → Privacy & Security → Location Services → Find this app → Allow</p>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <p><strong>On iPhone/iPad:</strong> Settings → Safari → Location → Allow for this site</p>
+                        <p><strong>On Android:</strong> Tap ⋮ menu → Settings → Site settings → Location → Allow</p>
+                        <p><strong>On Desktop:</strong> Click the lock icon in address bar → Reset permission</p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex justify-center gap-2">
                     <Button
