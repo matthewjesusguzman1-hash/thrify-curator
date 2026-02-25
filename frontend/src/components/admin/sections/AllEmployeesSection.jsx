@@ -622,16 +622,6 @@ export default function AllEmployeesSection({
                             <Eye className="w-4 h-4 mr-1" />
                             Preview
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownloadW9(doc)}
-                            className="flex-1 min-w-[80px] text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
-                            data-testid={`download-w9-${doc.id}`}
-                          >
-                            <Download className="w-4 h-4 mr-1" />
-                            Download
-                          </Button>
                           {doc.status !== 'approved' && (
                             <Button
                               variant="outline"
