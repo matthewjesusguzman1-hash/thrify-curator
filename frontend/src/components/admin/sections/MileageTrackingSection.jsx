@@ -438,6 +438,13 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         setTrackingWatchId(null);
       }
       
+      // Clear backup interval while paused
+      const savedIntervalId = localStorage.getItem('mileage_interval_id');
+      if (savedIntervalId) {
+        clearInterval(parseInt(savedIntervalId));
+        localStorage.removeItem('mileage_interval_id');
+      }
+      
       setIsPaused(true);
       
       // Notify parent component
