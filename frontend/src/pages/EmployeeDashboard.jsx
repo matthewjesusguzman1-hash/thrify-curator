@@ -253,22 +253,25 @@ export default function EmployeeDashboard() {
   };
 
   const handleClock = async (action) => {
+    // Reset denied state to allow re-requesting location
+    if (locationStatus.denied) {
+      setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
+    }
+    
     setLoading(true);
     
     // Check location first (only for non-admin employees)
     const locationResult = await checkLocation();
     
     if (locationResult.denied) {
-      // User denied - don't show toast, the UI will show the warning
+      // User denied - the UI will show the subtle warning
       setLoading(false);
       return;
     }
     
     if (!locationResult.withinRange) {
       setLoading(false);
-      if (locationResult.error) {
-        // Error already shown via toast in checkLocation
-      } else {
+      if (!locationResult.error) {
         toast.error("You are too far from the work location");
       }
       return;
