@@ -1,16 +1,25 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
-from fastapi.responses import Response
-from typing import List
+from fastapi.responses import Response, StreamingResponse
+from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 import uuid
 import base64
 import os
+import io
+import csv
 
 from app.database import db
 from app.dependencies import get_admin_user
 from app.models.user import UserResponse, CreateEmployee, UpdateEmployeeDetails, UpdateEmployeeRate
 from app.models.time_entry import TimeEntry, EditTimeEntryRequest, CreateTimeEntryRequest
 from app.models.payroll import ReportRequest
+
+# PDF generation
+try:
+    from fpdf import FPDF
+    HAS_FPDF = True
+except ImportError:
+    HAS_FPDF = False
 
 # W-9 upload directory
 W9_UPLOAD_DIR = "/app/backend/uploads/w9"
