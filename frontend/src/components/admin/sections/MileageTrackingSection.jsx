@@ -165,6 +165,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         const newLocation = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
           timestamp: new Date().toISOString()
         };
         setCurrentLocation(newLocation);
@@ -175,15 +176,16 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         }, getAuthHeader()).catch(console.error);
       },
       (error) => console.error("Failed to get current position:", error),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
 
-    // Start watching position
+    // Start watching position with high frequency
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const newLocation = {
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
           timestamp: new Date().toISOString()
         };
         setCurrentLocation(newLocation);
@@ -197,10 +199,37 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         }).catch(console.error);
       },
       (error) => console.error("Location tracking error:", error),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 1000 }
     );
     
     setTrackingWatchId(watchId);
+    
+    // Also restart backup interval polling
+    const intervalId = setInterval(async () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const newLocation = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              timestamp: new Date().toISOString()
+            };
+            setCurrentLocation(newLocation);
+            
+            axios.post(`${API}/admin/mileage/update-location`, {
+              location: newLocation
+            }, getAuthHeader()).then(() => {
+              fetchCumulativeDistance();
+            }).catch(console.error);
+          },
+          (error) => console.error("Interval location error:", error),
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      }
+    }, 10000);
+    
+    localStorage.setItem('mileage_interval_id', intervalId.toString());
   }, [getAuthHeader, fetchCumulativeDistance]);
 
   // Start GPS tracking
