@@ -2347,7 +2347,7 @@ export default function AdminDashboard() {
                               onClick={() => setNewEmployeeW9File(null)}
                               className="text-red-500 hover:bg-red-50"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-5 h-5" />
                             </Button>
                           )}
                         </div>
