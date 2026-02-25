@@ -719,7 +719,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 )}
 
                 {/* Month/Year selectors */}
-                {filterType === "month" && (
+                {reportType !== "w9" && filterType === "month" && (
                   <>
                     <div>
                       <Label className="text-sm font-medium text-[#666] mb-2 block">Month</Label>
@@ -750,7 +750,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                   </>
                 )}
 
-                {filterType === "year" && (
+                {reportType !== "w9" && filterType === "year" && (
                   <div>
                     <Label className="text-sm font-medium text-[#666] mb-2 block">Year</Label>
                     <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
@@ -767,7 +767,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 )}
 
                 {/* Custom date range */}
-                {filterType === "custom" && (
+                {reportType !== "w9" && filterType === "custom" && (
                   <>
                     <div>
                       <Label className="text-sm font-medium text-[#666] mb-2 block">Start Date</Label>
@@ -791,7 +791,8 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 )}
               </div>
 
-              {/* Selected Range Display */}
+              {/* Selected Range Display - not for W-9 reports */}
+              {reportType !== "w9" && (
               <div className="bg-[#F9F6F7] rounded-xl p-3 mb-4">
                 <p className="text-sm text-[#666]">
                   <Calendar className="w-4 h-4 inline mr-2" />
