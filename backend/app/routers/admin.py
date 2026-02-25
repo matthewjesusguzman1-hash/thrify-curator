@@ -1193,9 +1193,12 @@ async def get_mileage_report(
     
     entries = await db.mileage_entries.find(query, {"_id": 0}).sort("date", 1).to_list(1000)
     
-    # Calculate totals
-    total_miles = sum(e.get("miles", 0) for e in entries)
-    total_deduction = sum(e.get("deduction", 0) for e in entries)
+    # IRS standard mileage rate for 2026 (cents per mile)
+    MILEAGE_RATE = 0.70
+    
+    # Calculate totals - use total_miles field from database
+    total_miles = sum(e.get("total_miles", 0) for e in entries)
+    total_deduction = total_miles * MILEAGE_RATE
     
     # Group by employee
     employee_summary = {}
@@ -1209,8 +1212,9 @@ async def get_mileage_report(
                 "total_deduction": 0,
                 "trip_count": 0
             }
-        employee_summary[uid]["total_miles"] += entry.get("miles", 0)
-        employee_summary[uid]["total_deduction"] += entry.get("deduction", 0)
+        miles = entry.get("total_miles", 0)
+        employee_summary[uid]["total_miles"] += miles
+        employee_summary[uid]["total_deduction"] += miles * MILEAGE_RATE
         employee_summary[uid]["trip_count"] += 1
     
     return {
