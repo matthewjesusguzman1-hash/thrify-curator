@@ -198,7 +198,9 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
     }, {"_id": 0}).to_list(500)
     
     period_hours = 0
+    period_shifts = 0
     total_hours = 0
+    total_shifts = len(entries)
     
     for entry in entries:
         hours = entry.get("hours", 0)
@@ -210,6 +212,7 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
                 entry_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
                 if period_start <= entry_time < period_end:
                     period_hours += hours
+                    period_shifts += 1
             except (ValueError, TypeError):
                 pass
     
@@ -219,7 +222,9 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
     
     summary = {
         "period_hours": period_hours,
+        "period_shifts": period_shifts,
         "total_hours": total_hours,
+        "total_shifts": total_shifts,
         "hourly_rate": hourly_rate,
         "estimated_pay": period_hours * hourly_rate,
         "period_start": period_start.isoformat(),
