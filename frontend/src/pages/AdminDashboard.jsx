@@ -251,6 +251,12 @@ export default function AdminDashboard() {
   const [selectedW9Index, setSelectedW9Index] = useState(0);
   const [w9ViewerFromPortal, setW9ViewerFromPortal] = useState(false);
 
+  // Portal W-9 Modal state (dark theme)
+  const [showPortalW9Modal, setShowPortalW9Modal] = useState(false);
+  const [portalW9Docs, setPortalW9Docs] = useState([]);
+  const [loadingPortalW9, setLoadingPortalW9] = useState(false);
+  const [previewingPortalW9, setPreviewingPortalW9] = useState(null);
+
   // Employee shifts management state (for Hours by Employee section)
   const [showEmployeeShiftsModal, setShowEmployeeShiftsModal] = useState(null);
   const [loadingShifts, setLoadingShifts] = useState(false);
