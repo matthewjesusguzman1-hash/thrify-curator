@@ -4808,22 +4808,25 @@ export default function AdminDashboard() {
                                    doc.status === 'needs_correction' ? 'Needs Fix' : 'On File'}
                                 </span>
                               </div>
-                              <div className="flex flex-col gap-1">
-                                {doc.status !== 'approved' && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleApproveW9Doc(viewingW9.employeeId, doc.id);
-                                    }}
-                                    className="text-green-500 hover:text-green-700 hover:bg-green-50 p-1 h-auto"
-                                    title="Approve this W-9"
-                                  >
-                                    <CheckCircle className="w-4 h-4" />
-                                  </Button>
-                                )}
-                              </div>
+                              {/* Only show approve button when NOT from portal view */}
+                              {!w9ViewerFromPortal && (
+                                <div className="flex flex-col gap-1">
+                                  {doc.status !== 'approved' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleApproveW9Doc(viewingW9.employeeId, doc.id);
+                                      }}
+                                      className="text-green-500 hover:text-green-700 hover:bg-green-50 p-1 h-auto"
+                                      title="Approve this W-9"
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
