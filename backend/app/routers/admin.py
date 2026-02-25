@@ -1193,8 +1193,8 @@ async def get_mileage_report(
     
     entries = await db.mileage_entries.find(query, {"_id": 0}).sort("date", 1).to_list(1000)
     
-    # IRS standard mileage rate for 2026 (cents per mile)
-    MILEAGE_RATE = 0.70
+    # IRS standard mileage rate for 2026 (72.5 cents per mile)
+    MILEAGE_RATE = 0.725
     
     # Calculate totals - use total_miles field from database
     total_miles = sum(e.get("total_miles", 0) for e in entries)
