@@ -15,7 +15,6 @@ import {
   ChevronDown,
   ChevronUp,
   Route,
-  Eye,
   Check,
   CheckCircle
 } from "lucide-react";
