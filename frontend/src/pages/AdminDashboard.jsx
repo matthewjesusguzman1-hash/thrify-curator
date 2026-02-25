@@ -3481,8 +3481,8 @@ export default function AdminDashboard() {
             getStatusBadge={getStatusBadge}
           />
 
-          {/* Payroll Check Records Section */}
-          <PayrollCheckRecordsSection getAuthHeader={getAuthHeader} />
+          {/* Payment Records Section */}
+          <PaymentRecordsSection getAuthHeader={getAuthHeader} />
 
 
           {/* Mileage Tracking Section */}
