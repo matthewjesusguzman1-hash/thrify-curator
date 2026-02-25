@@ -118,8 +118,12 @@ async def delete_mileage_entry(entry_id: str, admin: dict = Depends(get_admin_us
 
 @router.get("/active-trip", response_model=Optional[ActiveTripResponse])
 async def get_active_trip(admin: dict = Depends(get_admin_user)):
-    """Get the currently active trip for the admin user"""
-    trip = await db.active_trips.find_one({"user_id": admin["id"]}, {"_id": 0})
+    """Get the currently active trip for THIS specific admin (by admin_code)"""
+    admin_code = admin.get("admin_code")
+    if not admin_code:
+        return None
+    
+    trip = await db.active_trips.find_one({"admin_code": admin_code}, {"_id": 0})
     if trip:
         return ActiveTripResponse(**trip)
     return None
