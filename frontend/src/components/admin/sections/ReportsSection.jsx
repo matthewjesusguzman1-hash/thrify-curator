@@ -458,7 +458,11 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
     </div>
   );
 
-  const renderMileagePreview = (data) => (
+  const renderMileagePreview = (data) => {
+    // IRS standard mileage rate for 2026
+    const MILEAGE_RATE = 0.70;
+    
+    return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white p-4">
         <h3 className="font-semibold text-lg mb-2">Mileage Report Summary</h3>
@@ -491,21 +495,29 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 <tr className="bg-gray-50">
                   <th className="text-left p-2">Employee</th>
                   <th className="text-left p-2">Date</th>
+                  <th className="text-left p-2">From → To</th>
                   <th className="text-left p-2">Purpose</th>
                   <th className="text-center p-2">Miles</th>
                   <th className="text-right p-2">Deduction</th>
                 </tr>
               </thead>
               <tbody>
-                {data.entries.slice(0, 20).map((entry, idx) => (
+                {data.entries.slice(0, 20).map((entry, idx) => {
+                  const miles = entry.total_miles || 0;
+                  const deduction = miles * MILEAGE_RATE;
+                  return (
                   <tr key={idx} className="border-t border-gray-100">
                     <td className="p-2">{entry.user_name}</td>
                     <td className="p-2">{new Date(entry.date).toLocaleDateString()}</td>
-                    <td className="p-2 max-w-[150px] truncate" title={entry.purpose}>{entry.purpose}</td>
-                    <td className="p-2 text-center">{entry.miles?.toFixed(1)}</td>
-                    <td className="p-2 text-right text-green-600">{formatCurrency(entry.deduction)}</td>
+                    <td className="p-2 max-w-[150px] truncate" title={`${entry.start_address} → ${entry.end_address}`}>
+                      {entry.start_address || '-'} → {entry.end_address || '-'}
+                    </td>
+                    <td className="p-2 max-w-[100px] truncate" title={entry.purpose}>{entry.purpose}</td>
+                    <td className="p-2 text-center">{miles.toFixed(1)}</td>
+                    <td className="p-2 text-right text-green-600">{formatCurrency(deduction)}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             {data.entries.length > 20 && (
@@ -521,7 +533,8 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   const renderW9Preview = (data) => (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
