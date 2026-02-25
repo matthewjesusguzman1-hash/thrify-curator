@@ -7,7 +7,6 @@ import {
   PlayCircle,
   StopCircle,
   PauseCircle,
-  Download,
   Plus,
   Edit2,
   Trash2,
