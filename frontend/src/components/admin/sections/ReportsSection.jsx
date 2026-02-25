@@ -617,7 +617,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           </div>
           <div>
             <h2 className="font-playfair text-xl font-semibold text-[#333]">Reports</h2>
-            <p className="text-sm text-[#888]">Generate shift, payroll, and mileage reports</p>
+            <p className="text-sm text-[#888]">Generate shift, payroll, mileage, and W-9 reports</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
