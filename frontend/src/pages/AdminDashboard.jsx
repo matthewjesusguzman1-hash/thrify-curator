@@ -4415,8 +4415,7 @@ export default function AdminDashboard() {
                       <DollarSign className="w-5 h-5 text-[#C5A065]" />
                     </div>
                     <div>
-                      <h2 className="font-playfair text-xl font-bold text-[#333]">Payroll Reports</h2>
-                      <p className="text-sm text-[#888]">Generate payroll-ready reports</p>
+                      <h2 className="font-playfair text-xl font-bold text-[#333]">Payroll</h2>
                     </div>
                   </div>
                   <div className="flex gap-2">
