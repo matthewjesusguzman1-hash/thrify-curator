@@ -425,10 +425,12 @@ export default function EmployeeDashboard() {
                     <span className="font-medium">Location Access Required</span>
                   </div>
                   <div className="text-sm text-gray-600 text-center mb-4 space-y-2">
-                    <p>Location was blocked. To enable:</p>
-                    <p className="text-xs text-gray-500">
-                      Tap the lock/info icon in your browser's address bar → Site settings → Allow Location
-                    </p>
+                    <p>Location permission was blocked.</p>
+                    <div className="text-xs text-gray-500 space-y-1">
+                      <p><strong>On iPhone/iPad:</strong> Settings → Safari → Location → Allow</p>
+                      <p><strong>On Android:</strong> Tap ⋮ menu → Settings → Site settings → Location → Allow</p>
+                      <p><strong>On Desktop:</strong> Click the lock icon in address bar → Reset permission</p>
+                    </div>
                   </div>
                   <div className="flex justify-center">
                     <Button
@@ -436,7 +438,7 @@ export default function EmployeeDashboard() {
                       className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] hover:from-[#7C3AED] hover:to-[#00A8CC] text-white"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Restart After Enabling
+                      Retry After Enabling
                     </Button>
                   </div>
                 </div>
