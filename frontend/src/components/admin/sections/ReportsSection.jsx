@@ -515,6 +515,95 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
     </div>
   );
 
+  const renderW9Preview = (data) => (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] text-white p-4">
+        <h3 className="font-semibold text-lg mb-2">W-9 Submission Report</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold">{data.summary?.total_employees || 0}</p>
+            <p className="text-sm opacity-80">Total Employees</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-green-300">{data.summary?.approved || 0}</p>
+            <p className="text-sm opacity-80">Approved</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-yellow-300">{data.summary?.pending || 0}</p>
+            <p className="text-sm opacity-80">Pending</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-red-300">{data.summary?.not_submitted || 0}</p>
+            <p className="text-sm opacity-80">Not Submitted</p>
+          </div>
+        </div>
+      </div>
+
+      {data.employees?.length > 0 && (
+        <div className="p-4 max-h-[400px] overflow-y-auto">
+          <h4 className="font-medium text-[#333] mb-3">Employee W-9 Status</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="text-left p-2">Employee</th>
+                  <th className="text-left p-2">Role</th>
+                  <th className="text-center p-2">Status</th>
+                  <th className="text-center p-2">Documents</th>
+                  <th className="text-left p-2">Last Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.employees.map((emp, idx) => (
+                  <tr key={idx} className="border-t border-gray-100">
+                    <td className="p-2 font-medium">{emp.name}</td>
+                    <td className="p-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        emp.role === 'admin' 
+                          ? 'bg-purple-100 text-purple-700' 
+                          : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {emp.role}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      {emp.w9_status === 'approved' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          <CheckCircle className="w-3 h-3" />
+                          Approved
+                        </span>
+                      ) : emp.w9_status === 'submitted' || emp.w9_status === 'pending' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                          <AlertCircle className="w-3 h-3" />
+                          Pending
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                          <AlertCircle className="w-3 h-3" />
+                          Not Submitted
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-2 text-center">{emp.document_count || 0}</td>
+                    <td className="p-2 text-[#666]">
+                      {emp.last_updated ? new Date(emp.last_updated).toLocaleDateString() : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {(!data.employees || data.employees.length === 0) && (
+        <div className="p-8 text-center text-[#888]">
+          No employees found
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="dashboard-card" data-testid="reports-section">
       <div
