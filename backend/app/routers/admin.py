@@ -1120,3 +1120,198 @@ async def download_shift_report_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# Mileage Reports endpoints
+@router.get("/mileage/report")
+async def get_mileage_report(
+    start_date: str,
+    end_date: str,
+    employee_id: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Get mileage report data for the given date range"""
+    try:
+        start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        end = end.replace(hour=23, minute=59, second=59)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    # Build query
+    query = {
+        "date": {"$gte": start.isoformat()[:10], "$lte": end.isoformat()[:10]}
+    }
+    if employee_id:
+        query["user_id"] = employee_id
+    
+    entries = await db.mileage_entries.find(query, {"_id": 0}).sort("date", 1).to_list(1000)
+    
+    # Calculate totals
+    total_miles = sum(e.get("miles", 0) for e in entries)
+    total_deduction = sum(e.get("deduction", 0) for e in entries)
+    
+    # Group by employee
+    employee_summary = {}
+    for entry in entries:
+        uid = entry.get("user_id")
+        if uid not in employee_summary:
+            employee_summary[uid] = {
+                "user_id": uid,
+                "user_name": entry.get("user_name", "Unknown"),
+                "total_miles": 0,
+                "total_deduction": 0,
+                "trip_count": 0
+            }
+        employee_summary[uid]["total_miles"] += entry.get("miles", 0)
+        employee_summary[uid]["total_deduction"] += entry.get("deduction", 0)
+        employee_summary[uid]["trip_count"] += 1
+    
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "entries": entries,
+        "employees": list(employee_summary.values()),
+        "total_trips": len(entries),
+        "total_miles": total_miles,
+        "total_deduction": total_deduction
+    }
+
+
+@router.get("/mileage/report/csv")
+async def download_mileage_report_csv(
+    start_date: str,
+    end_date: str,
+    employee_id: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Download mileage report as CSV"""
+    report = await get_mileage_report(start_date, end_date, employee_id, admin)
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(["Employee", "Date", "Purpose", "Miles", "Deduction"])
+    
+    # Data rows
+    for entry in report["entries"]:
+        writer.writerow([
+            entry.get("user_name", "Unknown"),
+            entry.get("date", ""),
+            entry.get("purpose", ""),
+            f"{entry.get('miles', 0):.1f}",
+            f"${entry.get('deduction', 0):.2f}"
+        ])
+    
+    # Summary
+    writer.writerow([])
+    writer.writerow(["=== SUMMARY ==="])
+    writer.writerow(["Employee", "Total Miles", "Total Deduction", "Trips"])
+    for emp in report["employees"]:
+        writer.writerow([
+            emp["user_name"],
+            f"{emp['total_miles']:.1f}",
+            f"${emp['total_deduction']:.2f}",
+            emp["trip_count"]
+        ])
+    
+    writer.writerow([])
+    writer.writerow(["GRAND TOTAL", f"{report['total_miles']:.1f}", f"${report['total_deduction']:.2f}", report["total_trips"]])
+    
+    output.seek(0)
+    filename = f"mileage_report_{start_date[:10]}_to_{end_date[:10]}.csv"
+    
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode()),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/mileage/report/pdf")
+async def download_mileage_report_pdf(
+    start_date: str,
+    end_date: str,
+    employee_id: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Download mileage report as PDF"""
+    if not HAS_FPDF:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    report = await get_mileage_report(start_date, end_date, employee_id, admin)
+    
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Title
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, "Thrifty Curator - Mileage Report", ln=True, align="C")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Period: {start_date[:10]} to {end_date[:10]}", ln=True, align="C")
+    pdf.ln(5)
+    
+    # Summary
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "Summary", ln=True)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Total Trips: {report['total_trips']}", ln=True)
+    pdf.cell(0, 6, f"Total Miles: {report['total_miles']:.1f}", ln=True)
+    pdf.cell(0, 6, f"Total Deduction: ${report['total_deduction']:.2f}", ln=True)
+    pdf.ln(5)
+    
+    # By Employee
+    if report["employees"]:
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.cell(0, 8, "By Employee", ln=True)
+        pdf.set_font("Helvetica", "", 9)
+        
+        pdf.set_fill_color(240, 240, 240)
+        pdf.cell(60, 7, "Employee", border=1, fill=True)
+        pdf.cell(30, 7, "Miles", border=1, fill=True, align="C")
+        pdf.cell(35, 7, "Deduction", border=1, fill=True, align="C")
+        pdf.cell(25, 7, "Trips", border=1, fill=True, align="C")
+        pdf.ln()
+        
+        for emp in report["employees"]:
+            pdf.cell(60, 6, emp["user_name"][:25], border=1)
+            pdf.cell(30, 6, f"{emp['total_miles']:.1f}", border=1, align="C")
+            pdf.cell(35, 6, f"${emp['total_deduction']:.2f}", border=1, align="C")
+            pdf.cell(25, 6, str(emp["trip_count"]), border=1, align="C")
+            pdf.ln()
+    
+    pdf.ln(5)
+    
+    # Detailed entries
+    if report["entries"]:
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.cell(0, 8, "Trip Details", ln=True)
+        pdf.set_font("Helvetica", "", 8)
+        
+        pdf.set_fill_color(240, 240, 240)
+        pdf.cell(40, 6, "Employee", border=1, fill=True)
+        pdf.cell(25, 6, "Date", border=1, fill=True)
+        pdf.cell(70, 6, "Purpose", border=1, fill=True)
+        pdf.cell(20, 6, "Miles", border=1, fill=True, align="C")
+        pdf.cell(25, 6, "Deduction", border=1, fill=True, align="C")
+        pdf.ln()
+        
+        for entry in report["entries"][:50]:
+            purpose = (entry.get("purpose", "") or "")[:35]
+            pdf.cell(40, 5, entry.get("user_name", "")[:20], border=1)
+            pdf.cell(25, 5, entry.get("date", "")[:10], border=1)
+            pdf.cell(70, 5, purpose, border=1)
+            pdf.cell(20, 5, f"{entry.get('miles', 0):.1f}", border=1, align="C")
+            pdf.cell(25, 5, f"${entry.get('deduction', 0):.2f}", border=1, align="C")
+            pdf.ln()
+    
+    pdf_output = pdf.output()
+    filename = f"mileage_report_{start_date[:10]}_to_{end_date[:10]}.pdf"
+    
+    return Response(
+        content=bytes(pdf_output),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
