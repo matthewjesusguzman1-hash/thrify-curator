@@ -17,7 +17,8 @@ import {
   CheckCircle,
   AlertCircle,
   Eye,
-  X
+  X,
+  BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -662,8 +663,8 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
         data-testid="reports-toggle"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-xl flex items-center justify-center">
-            <FileText className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 bg-gradient-to-r from-[#F43F5E] to-[#E11D48] rounded-xl flex items-center justify-center">
+            <BarChart3 className="w-5 h-5 text-white" />
           </div>
           <div>
             <h2 className="font-playfair text-xl font-semibold text-[#333]">Reports</h2>
