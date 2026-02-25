@@ -795,6 +795,20 @@ async def get_employee_w9s(employee_id: str, admin: dict = Depends(get_admin_use
     return {"w9_documents": w9_docs}
 
 
+@router.delete("/employees/{employee_id}/w9/all")
+async def delete_all_w9s(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete all W-9 documents for an employee"""
+    result = await db.w9_documents.delete_many({"employee_id": employee_id})
+    
+    # Update user record
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$unset": {"has_w9": "", "w9_uploaded_at": "", "w9_status": ""}}
+    )
+    
+    return {"message": f"Deleted {result.deleted_count} W-9 document(s) successfully"}
+
+
 @router.delete("/employees/{employee_id}/w9/{doc_id}")
 async def delete_w9(employee_id: str, doc_id: str, admin: dict = Depends(get_admin_user)):
     """Delete a specific W-9 document"""
@@ -811,20 +825,6 @@ async def delete_w9(employee_id: str, doc_id: str, admin: dict = Depends(get_adm
         )
     
     return {"message": "W-9 document deleted successfully"}
-
-
-@router.delete("/employees/{employee_id}/w9/all")
-async def delete_all_w9s(employee_id: str, admin: dict = Depends(get_admin_user)):
-    """Delete all W-9 documents for an employee"""
-    result = await db.w9_documents.delete_many({"employee_id": employee_id})
-    
-    # Update user record
-    await db.users.update_one(
-        {"id": employee_id},
-        {"$unset": {"has_w9": "", "w9_uploaded_at": "", "w9_status": ""}}
-    )
-    
-    return {"message": f"Deleted {result.deleted_count} W-9 document(s) successfully"}
 
 
 @router.get("/w9-form")
