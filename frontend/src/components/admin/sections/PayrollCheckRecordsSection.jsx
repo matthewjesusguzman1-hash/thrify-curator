@@ -454,9 +454,9 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
                             setPendingCheckImage(null);
                             if (checkInputRef.current) checkInputRef.current.value = "";
                           }}
-                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     )}
