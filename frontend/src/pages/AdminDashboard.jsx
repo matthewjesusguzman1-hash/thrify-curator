@@ -1948,7 +1948,7 @@ export default function AdminDashboard() {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-white" data-testid="admin-name">Administrator</p>
+            <p className="font-semibold text-white" data-testid="admin-name">{currentAdminName}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
