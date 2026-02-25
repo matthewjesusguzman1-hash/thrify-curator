@@ -394,7 +394,7 @@ export default function EmployeeDashboard() {
                 {clockedIn ? 'Currently Working' : 'Not Clocked In'}
               </div>
 
-              {/* Location Status Indicator */}
+              {/* Location Status Indicator - Only show when there's a status to display */}
               {locationStatus.denied ? (
                 <div className="mb-4 p-4 bg-[#1A1A2E]/10 border border-[#8B5CF6]/30 rounded-xl">
                   <div className="flex items-center justify-center gap-2 text-[#8B5CF6] mb-3">
@@ -414,27 +414,22 @@ export default function EmployeeDashboard() {
                     </Button>
                   </div>
                 </div>
-              ) : (
+              ) : locationStatus.checking ? (
                 <div className="flex items-center justify-center gap-2 mb-4 text-sm">
-                  <MapPin className={`w-4 h-4 ${
-                    locationStatus.checking ? 'text-yellow-500 animate-pulse' :
-                    locationStatus.withinRange === true ? 'text-green-500' :
-                    locationStatus.withinRange === false ? 'text-red-500' :
-                    'text-gray-400'
-                  }`} />
-                  <span className={`${
-                    locationStatus.checking ? 'text-yellow-600' :
-                    locationStatus.withinRange === true ? 'text-green-600' :
-                    locationStatus.withinRange === false ? 'text-red-600' :
-                    'text-gray-500'
-                  }`}>
-                    {locationStatus.checking ? 'Checking location...' :
-                     locationStatus.withinRange === true ? 'Location verified' :
-                     locationStatus.withinRange === false ? 'Too far' :
-                     'Location required for clock in/out'}
-                  </span>
+                  <MapPin className="w-4 h-4 text-yellow-500 animate-pulse" />
+                  <span className="text-yellow-600">Checking location...</span>
                 </div>
-              )}
+              ) : locationStatus.withinRange === true ? (
+                <div className="flex items-center justify-center gap-2 mb-4 text-sm">
+                  <MapPin className="w-4 h-4 text-green-500" />
+                  <span className="text-green-600">Location verified</span>
+                </div>
+              ) : locationStatus.withinRange === false && !locationStatus.denied ? (
+                <div className="flex items-center justify-center gap-2 mb-4 text-sm">
+                  <MapPin className="w-4 h-4 text-red-500" />
+                  <span className="text-red-600">Too far</span>
+                </div>
+              ) : null}
 
               {clockedIn && (
                 <div className="mb-6">
