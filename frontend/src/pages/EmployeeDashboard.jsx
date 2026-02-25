@@ -413,7 +413,7 @@ export default function EmployeeDashboard() {
                     <span className="text-sm font-medium">Location required to clock in</span>
                   </div>
                   <p className="text-xs text-gray-500 text-center">
-                    Tap the lock icon in your address bar → Location → Allow, then refresh
+                    Close and reopen the app, then allow location when prompted
                   </p>
                 </div>
               ) : (
