@@ -203,7 +203,7 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
     total_shifts = len(entries)
     
     for entry in entries:
-        hours = entry.get("hours", 0)
+        hours = entry.get("total_hours", 0) or 0
         total_hours += hours
         
         clock_in = entry.get("clock_in", "")
