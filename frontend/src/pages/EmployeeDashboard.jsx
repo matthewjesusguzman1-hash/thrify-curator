@@ -331,6 +331,7 @@ export default function EmployeeDashboard() {
       }
 
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
+      toast.info("Requesting location access...", { duration: 2000 });
 
       // Request location directly - this will prompt the user if not already granted
       // Do NOT pre-check with Permissions API as it can incorrectly report "denied" on some devices
