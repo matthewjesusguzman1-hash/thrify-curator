@@ -242,17 +242,18 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       // Store in localStorage for persistence across sessions
       localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(tripData));
       
-      // Start watching position
+      // Start watching position with high frequency for accurate mileage tracking
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
           const newLocation = {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
             timestamp: new Date().toISOString()
           };
           setCurrentLocation(newLocation);
           
-          // Send waypoint to server
+          // Send waypoint to server for accurate mileage calculation
           axios.post(`${API}/admin/mileage/update-location`, {
             location: newLocation
           }, getAuthHeader()).then(() => {
@@ -260,17 +261,50 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
           }).catch(console.error);
         },
         (error) => console.error("Location tracking error:", error),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+        { 
+          enableHighAccuracy: true, 
+          timeout: 5000,      // 5 second timeout
+          maximumAge: 1000    // Only accept positions less than 1 second old for accuracy
+        }
       );
       
       setTrackingWatchId(watchId);
+      
+      // Also set up interval-based polling as backup for more consistent waypoints
+      const intervalId = setInterval(async () => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const newLocation = {
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                accuracy: pos.coords.accuracy,
+                timestamp: new Date().toISOString()
+              };
+              setCurrentLocation(newLocation);
+              
+              // Send waypoint to server
+              axios.post(`${API}/admin/mileage/update-location`, {
+                location: newLocation
+              }, getAuthHeader()).then(() => {
+                fetchCumulativeDistance();
+              }).catch(console.error);
+            },
+            (error) => console.error("Interval location error:", error),
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+          );
+        }
+      }, 10000); // Poll every 10 seconds as backup
+      
+      // Store interval ID for cleanup
+      localStorage.setItem('mileage_interval_id', intervalId.toString());
       
       // Notify parent component
       if (onTripStatusChange) {
         onTripStatusChange({ isActive: true, isPaused: false });
       }
       
-      toast.success("Trip tracking started! Route will be tracked even if you leave the app.");
+      toast.success("Trip tracking started! GPS waypoints will be recorded continuously for accurate mileage.");
       
     } catch (error) {
       console.error("Failed to start tracking:", error);
