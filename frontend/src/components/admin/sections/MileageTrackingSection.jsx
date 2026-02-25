@@ -923,6 +923,11 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                                     <div className="flex items-center gap-2 mb-1">
                                       {getPurposeBadge(entry.purpose, entry.purpose_other)}
                                       <span className="text-xs text-[#888]">{entry.date}</span>
+                                      {entry.user_name && (
+                                        <span className="text-xs px-2 py-0.5 bg-gradient-to-r from-[#00D4FF]/10 to-[#8B5CF6]/10 text-[#8B5CF6] rounded-full font-medium">
+                                          {entry.user_name}
+                                        </span>
+                                      )}
                                       {entry.waypoint_count > 0 && (
                                         <span className="text-xs text-emerald-600 flex items-center gap-1">
                                           <Route className="w-3 h-3" />
