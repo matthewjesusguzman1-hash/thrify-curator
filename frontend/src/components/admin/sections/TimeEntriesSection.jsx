@@ -8,7 +8,8 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowUpDown,
-  ArrowUp
+  ArrowUp,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
