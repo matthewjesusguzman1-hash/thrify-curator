@@ -55,7 +55,8 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   const reportTypes = [
     { id: "shifts", label: "Shift Report", icon: Clock, description: "Clock in/out times and hours worked" },
     { id: "payroll", label: "Payroll Report", icon: DollarSign, description: "Hours, rates, and estimated pay" },
-    { id: "mileage", label: "Mileage Report", icon: Car, description: "Trip details and deductions" }
+    { id: "mileage", label: "Mileage Report", icon: Car, description: "Trip details and deductions" },
+    { id: "w9", label: "W-9 Report", icon: FileSignature, description: "Employee W-9 submission status" }
   ];
 
   // Get biweekly period dates
