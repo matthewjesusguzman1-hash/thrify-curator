@@ -721,6 +721,7 @@ All collapsible sections now auto-refresh their data when expanded:
    - Summary stats: Total employees, Approved, Pending, Not Submitted counts
    - Employee table with Name, Role (Admin/Employee badge), Status, Document Count, Last Updated
    - Status color-coded: Green (Approved), Yellow (Pending), Red (Not Submitted)
+   - **NEW: View/Download buttons** for each employee with W-9 documents
 
 2. **Admins Included in Reports**: Employee filter dropdown now includes admin users
    - Admin names show "(Admin)" suffix for clarity
@@ -739,22 +740,40 @@ All collapsible sections now auto-refresh their data when expanded:
    - `GET /api/admin/reports/w9` - JSON preview data
    - `GET /api/admin/reports/w9/csv` - CSV download with summary and employee table
    - `GET /api/admin/reports/w9/pdf` - PDF download with color-coded status
+   - `GET /api/admin/employees/{employee_id}/w9/latest` - Download latest W-9 for an employee
+
+### Admin Dashboard Changes (Feb 25, 2026)
+
+1. **Unified Admin Login**: Both admin codes (4399 and 0826) now access the same admin dashboard
+   - Previously: 4399 → Matthew Guzman's dashboard, 0826 → Eunice Guzman's dashboard
+   - Now: Both codes authenticate as the primary admin (matthewjesusguzman1@gmail.com)
+
+2. **Dashboard Header Change**: Shows "Administrator" instead of the logged-in user's name
+   - Cleaner, more professional appearance
+   - No personal information displayed in the header
 
 ### Files Modified
-- `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Added W-9 report type, admin inclusion, conditional date filters
+- `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Added W-9 report type, admin inclusion, conditional date filters, View/Download buttons
 - `/app/frontend/src/components/admin/modals/PayrollModal.jsx` - Removed download button
 - `/app/frontend/src/components/admin/sections/MileageTrackingSection.jsx` - Removed export modal and download functionality
 - `/app/frontend/src/components/admin/sections/AllEmployeesSection.jsx` - Removed W-9 download button
-- `/app/backend/app/routers/admin.py` - Added W-9 report endpoints (JSON, CSV, PDF)
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Changed header to show "Administrator" instead of user name
+- `/app/frontend/src/pages/AuthPage.jsx` - Both admin codes now map to same admin email
+- `/app/backend/app/routers/admin.py` - Added W-9 report endpoints (JSON, CSV, PDF, latest W-9)
+- `/app/backend/app/routers/auth.py` - Updated admin code mapping
 
 ### UI Changes
 - Reports section description updated: "Generate shift, payroll, mileage, and W-9 reports"
 - Report type grid updated to 4 columns (was 3) to accommodate W-9 Report card
 - W-9 Report icon: FileSignature (purple gradient header on preview)
+- W-9 Report table: Added "Actions" column with View/Download buttons per employee
+- Admin Dashboard header: Shows "Administrator" instead of user's name
 
 ### Testing
 - Backend: W-9 report endpoints return correct data with proper status categorization
+- Backend: `/api/admin/employees/{id}/w9/latest` endpoint successfully returns PDF W-9 documents
 - Frontend: Reports section displays all 4 report types correctly
+- Frontend: Both admin codes (4399 and 0826) access the same admin dashboard
 - Download buttons removed from PayrollModal, MileageTrackingSection, AllEmployeesSection
 - View-only functionality preserved where downloads were removed
 
