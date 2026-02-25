@@ -712,41 +712,52 @@ All collapsible sections now auto-refresh their data when expanded:
 ## Calendar Date Range Filter Fix (Feb 24, 2026)
 
 
-## Recent Updates (Feb 25, 2026) - Centralized Reports & W-9 Report
+## Recent Updates (Feb 25, 2026) - Reports Consolidation & Admin Simplification
 
-### Centralized Reports Section (COMPLETED)
+### Reports Section Changes (COMPLETED)
 
 **Changes Implemented:**
-1. **Added W-9 Report Type**: New report type in the Reports section showing employee W-9 submission status
+1. **Removed Payroll Report**: Payroll Report removed from Reports section
+   - Shift Report renamed to **"Payroll/Shift Report"** (combines shift and pay data)
+   - Now only 3 report types: Payroll/Shift, Mileage, W-9
+
+2. **Employee Filter Updated**: 
+   - Individual admin names (Matthew Guzman, Eunice Guzman) replaced with single **"Administrator"** option
+   - Non-admin employees shown individually
+   - "All Employees" option still available
+
+3. **W-9 Report with Delete**: Added delete button for each employee's W-9 in the W-9 Report preview
+   - View, Download, and Delete buttons for employees with W-9 documents
+   - Delete confirms before removing all W-9s for an employee
+   - Backend endpoint: `DELETE /api/admin/employees/{employee_id}/w9/all`
+
+4. **W-9 Report Type**: Shows employee W-9 submission status
    - Summary stats: Total employees, Approved, Pending, Not Submitted counts
-   - Employee table with Name, Role (Admin/Employee badge), Status, Document Count, Last Updated
+   - Employee table with Name, Role, Status, Document Count, Last Updated, Actions
    - Status color-coded: Green (Approved), Yellow (Pending), Red (Not Submitted)
-   - **NEW: View/Download buttons** for each employee with W-9 documents
+   - View/Download/Delete buttons for employees with W-9 documents
 
-2. **Admins Included in Reports**: Employee filter dropdown now includes admin users
-   - Admin names show "(Admin)" suffix for clarity
-   - All report types (Shift, Payroll, Mileage, W-9) can filter by specific admin or employee
-
-3. **Date Filter Hidden for W-9**: W-9 reports don't require date ranges
-   - Filter controls (Pay Period, Month, Year, Custom) hidden when W-9 report selected
-   - Only Employee filter shown
-
-4. **Download Buttons Removed from Other Areas**:
-   - **PayrollModal.jsx**: Removed "Download PDF" button, replaced with text "For downloads, use the Reports section"
-   - **MileageTrackingSection.jsx**: Removed "Reports" button entirely, added text "For mileage reports, use the Reports section"
-   - **AllEmployeesSection.jsx**: Removed "Download" button from W-9 document actions (kept Preview, Approve, Delete)
-
-5. **Backend W-9 Report Endpoints Added**:
-   - `GET /api/admin/reports/w9` - JSON preview data
-   - `GET /api/admin/reports/w9/csv` - CSV download with summary and employee table
-   - `GET /api/admin/reports/w9/pdf` - PDF download with color-coded status
-   - `GET /api/admin/employees/{employee_id}/w9/latest` - Download latest W-9 for an employee
-
-### Admin Dashboard Changes (Feb 25, 2026)
+### Admin Dashboard Changes (COMPLETED)
 
 1. **Unified Admin Login**: Both admin codes (4399 and 0826) now access the same admin dashboard
-   - Previously: 4399 → Matthew Guzman's dashboard, 0826 → Eunice Guzman's dashboard
-   - Now: Both codes authenticate as the primary admin (matthewjesusguzman1@gmail.com)
+   - Both codes authenticate as the primary admin (matthewjesusguzman1@gmail.com)
+
+2. **Dashboard Header**: Shows "Administrator" instead of the logged-in user's name
+   - Cleaner, more professional appearance
+
+### Files Modified
+- `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Removed Payroll, renamed to Payroll/Shift, updated employee filter, added W-9 delete
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Changed header to show "Administrator"
+- `/app/frontend/src/pages/AuthPage.jsx` - Both admin codes map to same admin email
+- `/app/backend/app/routers/admin.py` - Added delete all W-9s endpoint
+- `/app/backend/app/routers/auth.py` - Updated admin code mapping
+
+### Backend Endpoints
+- `GET /api/admin/reports/w9` - JSON preview data
+- `GET /api/admin/reports/w9/csv` - CSV download
+- `GET /api/admin/reports/w9/pdf` - PDF download
+- `GET /api/admin/employees/{employee_id}/w9/latest` - Download latest W-9
+- `DELETE /api/admin/employees/{employee_id}/w9/all` - Delete all W-9s for employee
 
 2. **Dashboard Header Change**: Shows "Administrator" instead of the logged-in user's name
    - Cleaner, more professional appearance
