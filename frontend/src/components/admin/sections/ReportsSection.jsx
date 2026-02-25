@@ -572,7 +572,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                           <CheckCircle className="w-3 h-3" />
                           Approved
                         </span>
-                      ) : emp.w9_status === 'submitted' || emp.w9_status === 'pending' ? (
+                      ) : emp.w9_status === 'submitted' || emp.w9_status === 'pending' || emp.w9_status === 'pending_review' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
                           <AlertCircle className="w-3 h-3" />
                           Pending
