@@ -270,6 +270,9 @@ async def end_trip(trip_data: EndTripRequest, admin: dict = Depends(get_admin_us
     # Use the calculated cumulative distance (override client-side calculation)
     total_miles = round(cumulative_miles, 1) if cumulative_miles > 0 else trip_data.total_miles
     
+    # Use "Administrator" for admin users instead of their personal name
+    display_name = "Administrator" if admin.get("role") == "admin" else admin["name"]
+    
     entry_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -277,7 +280,7 @@ async def end_trip(trip_data: EndTripRequest, admin: dict = Depends(get_admin_us
     entry_doc = {
         "id": entry_id,
         "user_id": admin["id"],
-        "user_name": admin["name"],
+        "user_name": display_name,
         "date": today,
         "start_location": trip["start_location"],
         "end_location": trip_data.end_location.model_dump(),
