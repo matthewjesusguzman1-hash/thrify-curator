@@ -1948,11 +1948,23 @@ export default function AdminDashboard() {
                               <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                 notification.type === 'clock_in' 
                                   ? 'bg-green-500' 
-                                  : 'bg-red-500'
+                                  : notification.type === 'clock_out'
+                                  ? 'bg-red-500'
+                                  : notification.type === 'w9_submission'
+                                  ? 'bg-orange-500'
+                                  : notification.type === 'new_message'
+                                  ? 'bg-pink-500'
+                                  : 'bg-blue-500'
                               }`}>
                                 {notification.type === 'clock_in' 
                                   ? <LogIn className="w-5 h-5 text-white" />
-                                  : <LogOut className="w-5 h-5 text-white" />
+                                  : notification.type === 'clock_out'
+                                  ? <LogOut className="w-5 h-5 text-white" />
+                                  : notification.type === 'w9_submission'
+                                  ? <FileText className="w-5 h-5 text-white" />
+                                  : notification.type === 'new_message'
+                                  ? <MessageCircle className="w-5 h-5 text-white" />
+                                  : <Bell className="w-5 h-5 text-white" />
                                 }
                               </div>
                               
@@ -1962,9 +1974,19 @@ export default function AdminDashboard() {
                                   <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
                                     notification.type === 'clock_in'
                                       ? 'bg-green-100 text-green-800'
-                                      : 'bg-red-100 text-red-800'
+                                      : notification.type === 'clock_out'
+                                      ? 'bg-red-100 text-red-800'
+                                      : notification.type === 'w9_submission'
+                                      ? 'bg-orange-100 text-orange-800'
+                                      : notification.type === 'new_message'
+                                      ? 'bg-pink-100 text-pink-800'
+                                      : 'bg-blue-100 text-blue-800'
                                   }`}>
-                                    {notification.type === 'clock_in' ? 'IN' : 'OUT'}
+                                    {notification.type === 'clock_in' ? 'IN' 
+                                      : notification.type === 'clock_out' ? 'OUT'
+                                      : notification.type === 'w9_submission' ? 'W-9'
+                                      : notification.type === 'new_message' ? 'MSG'
+                                      : 'INFO'}
                                   </span>
                                   <span className="notification-time text-xs">
                                     {formatNotificationTime(notification.created_at)}
