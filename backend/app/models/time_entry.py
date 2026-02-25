@@ -14,6 +14,8 @@ class TimeEntry(BaseModel):
     shift_date: Optional[str] = None
     last_clock_in: Optional[str] = None
     accumulated_hours: Optional[float] = None
+    admin_note: Optional[str] = None  # Note visible only to admins
+    adjusted_by_admin: Optional[bool] = None  # Flag if hours were manually adjusted
 
 
 class ClockInOut(BaseModel):
@@ -24,6 +26,7 @@ class EditTimeEntryRequest(BaseModel):
     clock_in: Optional[str] = None
     clock_out: Optional[str] = None
     total_hours: Optional[float] = None
+    admin_note: Optional[str] = None  # Note for admin reference
 
 
 class CreateTimeEntryRequest(BaseModel):
