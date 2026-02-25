@@ -440,7 +440,11 @@ async def update_time_entry(entry_id: str, update_data: EditTimeEntryRequest, ad
     clock_in = update_data.clock_in or entry.get("clock_in")
     clock_out = update_data.clock_out or entry.get("clock_out")
     
-    if clock_in and clock_out:
+    # If total_hours is explicitly provided, use it directly (override mode)
+    if update_data.total_hours is not None:
+        update_fields["total_hours"] = update_data.total_hours
+    # Otherwise, if we have both clock times (and they were updated), calculate hours
+    elif clock_in and clock_out and (update_data.clock_in or update_data.clock_out):
         try:
             in_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
             out_time = datetime.fromisoformat(clock_out.replace('Z', '+00:00'))
@@ -448,8 +452,6 @@ async def update_time_entry(entry_id: str, update_data: EditTimeEntryRequest, ad
             update_fields["total_hours"] = calculated_hours
         except ValueError:
             pass
-    elif update_data.total_hours is not None:
-        update_fields["total_hours"] = update_data.total_hours
     
     if not update_fields:
         raise HTTPException(status_code=400, detail="No valid fields to update")
