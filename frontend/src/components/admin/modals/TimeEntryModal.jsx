@@ -47,16 +47,31 @@ export default function TimeEntryModal({
       setFormData({
         employee_id: entry.user_id || "",
         clock_in: formatForInput(entry.clock_in),
-        clock_out: formatForInput(entry.clock_out)
+        clock_out: formatForInput(entry.clock_out),
+        total_hours: entry.total_hours?.toString() || ""
       });
+      setEditMode("times"); // Default to times mode
     } else if (mode === 'add') {
       setFormData({
         employee_id: "",
         clock_in: "",
-        clock_out: ""
+        clock_out: "",
+        total_hours: ""
       });
+      setEditMode("times");
     }
   }, [mode, entry, isOpen]);
+
+  // Calculate hours from times
+  const calculateHours = () => {
+    if (formData.clock_in && formData.clock_out) {
+      const inTime = new Date(formData.clock_in);
+      const outTime = new Date(formData.clock_out);
+      const hours = (outTime - inTime) / (1000 * 60 * 60);
+      return hours > 0 ? hours.toFixed(2) : "0.00";
+    }
+    return null;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
