@@ -437,7 +437,7 @@ export default function AllEmployeesSection({
                                     className="text-red-400 hover:text-red-500 p-1"
                                     title="Cancel"
                                   >
-                                    <X className="w-3 h-3" />
+                                    <X className="w-5 h-5" />
                                   </button>
                                 </div>
                               ) : (
