@@ -628,15 +628,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                             <Download className="w-3.5 h-3.5 mr-1" />
                             Download
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteW9(emp.id, emp.name)}
-                            className="h-7 px-2 text-[#EF4444] hover:bg-[#EF4444]/10"
-                            data-testid={`delete-w9-${emp.id}`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
                         </div>
                       ) : (
                         <span className="text-[#999] text-xs">No W-9</span>
