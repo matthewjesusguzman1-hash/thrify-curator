@@ -711,6 +711,55 @@ All collapsible sections now auto-refresh their data when expanded:
 
 ## Calendar Date Range Filter Fix (Feb 24, 2026)
 
+
+## Recent Updates (Feb 25, 2026) - Centralized Reports & W-9 Report
+
+### Centralized Reports Section (COMPLETED)
+
+**Changes Implemented:**
+1. **Added W-9 Report Type**: New report type in the Reports section showing employee W-9 submission status
+   - Summary stats: Total employees, Approved, Pending, Not Submitted counts
+   - Employee table with Name, Role (Admin/Employee badge), Status, Document Count, Last Updated
+   - Status color-coded: Green (Approved), Yellow (Pending), Red (Not Submitted)
+
+2. **Admins Included in Reports**: Employee filter dropdown now includes admin users
+   - Admin names show "(Admin)" suffix for clarity
+   - All report types (Shift, Payroll, Mileage, W-9) can filter by specific admin or employee
+
+3. **Date Filter Hidden for W-9**: W-9 reports don't require date ranges
+   - Filter controls (Pay Period, Month, Year, Custom) hidden when W-9 report selected
+   - Only Employee filter shown
+
+4. **Download Buttons Removed from Other Areas**:
+   - **PayrollModal.jsx**: Removed "Download PDF" button, replaced with text "For downloads, use the Reports section"
+   - **MileageTrackingSection.jsx**: Removed "Reports" button entirely, added text "For mileage reports, use the Reports section"
+   - **AllEmployeesSection.jsx**: Removed "Download" button from W-9 document actions (kept Preview, Approve, Delete)
+
+5. **Backend W-9 Report Endpoints Added**:
+   - `GET /api/admin/reports/w9` - JSON preview data
+   - `GET /api/admin/reports/w9/csv` - CSV download with summary and employee table
+   - `GET /api/admin/reports/w9/pdf` - PDF download with color-coded status
+
+### Files Modified
+- `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Added W-9 report type, admin inclusion, conditional date filters
+- `/app/frontend/src/components/admin/modals/PayrollModal.jsx` - Removed download button
+- `/app/frontend/src/components/admin/sections/MileageTrackingSection.jsx` - Removed export modal and download functionality
+- `/app/frontend/src/components/admin/sections/AllEmployeesSection.jsx` - Removed W-9 download button
+- `/app/backend/app/routers/admin.py` - Added W-9 report endpoints (JSON, CSV, PDF)
+
+### UI Changes
+- Reports section description updated: "Generate shift, payroll, mileage, and W-9 reports"
+- Report type grid updated to 4 columns (was 3) to accommodate W-9 Report card
+- W-9 Report icon: FileSignature (purple gradient header on preview)
+
+### Testing
+- Backend: W-9 report endpoints return correct data with proper status categorization
+- Frontend: Reports section displays all 4 report types correctly
+- Download buttons removed from PayrollModal, MileageTrackingSection, AllEmployeesSection
+- View-only functionality preserved where downloads were removed
+
+
+
 ### Issue
 User reported that the calendar date filter in Messages section was "not allowing selection of date range by choosing two dates". When clicking the first date, the filter was immediately applied, showing "No messages match your filters" before the user could select the second date.
 
