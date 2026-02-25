@@ -1999,41 +1999,49 @@ export default function AdminDashboard() {
                   data-testid="notification-dropdown"
                 >
                   {/* Header */}
-                  <div className="p-4 bg-gradient-to-r from-[#1A1A2E] to-[#16213E] flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bell className="w-5 h-5 text-[#00D4FF]" />
-                      <h3 className="font-semibold text-white">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <span className="px-2 py-0.5 bg-[#FF1493] text-white text-xs rounded-full font-medium">
-                          {unreadCount} new
-                        </span>
-                      )}
+                  <div className="p-4 bg-gradient-to-r from-[#1A1A2E] to-[#16213E]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-5 h-5 text-[#00D4FF]" />
+                        <h3 className="font-semibold text-white">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <span className="px-2 py-0.5 bg-[#FF1493] text-white text-xs rounded-full font-medium">
+                            {unreadCount} new
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        className="p-1 text-white/60 hover:text-white rounded"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div className="flex gap-1">
-                      {unreadCount > 0 && (
+                    {/* Action buttons - always visible when there are notifications */}
+                    {notifications.length > 0 && (
+                      <div className="flex gap-2">
                         <Button 
-                          variant="ghost" 
+                          variant="outline"
                           size="sm" 
-                          className="h-8 text-xs text-white/70 hover:text-white hover:bg-white/10"
+                          className="flex-1 h-8 text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
                           onClick={handleMarkAllRead}
                           data-testid="mark-all-read-btn"
                         >
                           <CheckCheck className="w-4 h-4 mr-1" />
-                          Mark read
+                          Mark all read
                         </Button>
-                      )}
-                      {notifications.length > 0 && (
                         <Button 
-                          variant="ghost" 
+                          variant="outline"
                           size="sm" 
-                          className="h-8 text-xs text-red-400 hover:text-red-300 hover:bg-white/10"
+                          className="flex-1 h-8 text-xs bg-red-500/20 border-red-400/30 text-red-300 hover:bg-red-500/30"
                           onClick={handleClearNotifications}
                           data-testid="clear-notifications-btn"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Clear all
                         </Button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Notification List */}
