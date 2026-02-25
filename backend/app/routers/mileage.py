@@ -163,8 +163,12 @@ async def start_trip(trip_data: StartTripRequest, admin: dict = Depends(get_admi
 
 @router.post("/pause-trip")
 async def pause_trip(admin: dict = Depends(get_admin_user)):
-    """Pause the active trip tracking"""
-    trip = await db.active_trips.find_one({"user_id": admin["id"]})
+    """Pause the active trip tracking - only affects this admin's trip"""
+    admin_code = admin.get("admin_code")
+    if not admin_code:
+        raise HTTPException(status_code=400, detail="Admin code required")
+    
+    trip = await db.active_trips.find_one({"admin_code": admin_code})
     if not trip:
         raise HTTPException(status_code=404, detail="No active trip found")
     
@@ -174,7 +178,7 @@ async def pause_trip(admin: dict = Depends(get_admin_user)):
     now = datetime.now(timezone.utc).isoformat()
     
     await db.active_trips.update_one(
-        {"user_id": admin["id"]},
+        {"admin_code": admin_code},
         {"$set": {"is_paused": True, "paused_at": now}}
     )
     
