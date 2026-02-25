@@ -403,25 +403,17 @@ export default function HoursByEmployeeSection({
                     {filteredEntries.map((entry) => (
                       <div 
                         key={entry.id} 
-                        className={`p-4 rounded-xl border min-h-[120px] ${
-                          entry.adjusted_by_admin 
-                            ? 'bg-[#FEF3C7]/50 border-[#F59E0B]/30' 
-                            : 'bg-white border-gray-200'
-                        }`}
+                        className="p-4 rounded-xl border min-h-[120px] bg-white border-gray-200"
                         data-testid={`shift-entry-${entry.id}`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${
-                                entry.adjusted_by_admin 
-                                  ? 'bg-[#FEF3C7] text-[#92400E]' 
-                                  : 'bg-[#8B5CF6]/10 text-[#6D28D9]'
-                              }`}>
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-[#8B5CF6]/10 text-[#6D28D9]">
                                 <Clock className="w-3 h-3" />
                                 {entry.total_hours || 0} hrs
                                 {entry.adjusted_by_admin && (
-                                  <span className="text-xs ml-1">✎</span>
+                                  <span className="text-[#D97706] ml-0.5" title="Hours adjusted by admin">*</span>
                                 )}
                               </span>
                               {!entry.clock_out && (
