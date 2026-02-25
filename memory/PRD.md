@@ -1294,3 +1294,48 @@ The issue was related to browser permission caching:
 
 ### Browser Limitation (Cannot Fix)
 Once a user denies GPS permission, the browser caches this decision. There is NO programmatic way to re-trigger the permission prompt. The only solution is for the user to manually reset the permission in their browser settings.
+
+
+## Payment Records Rename & File Refactoring (Feb 25, 2026)
+
+### Changes Completed
+
+1. **UI Label Rename (VERIFIED)**
+   - "Payroll Check Records" → "Payment Records"
+   - "Upload Check Photo" → "Upload Payment Photo"
+   - "Check Date" → "Payment Date"
+   - All instances in the UI updated and verified via screenshot
+
+2. **File Rename (COMPLETED)**
+   - `PayrollCheckRecordsSection.jsx` → `PaymentRecordsSection.jsx`
+   - Component name updated: `PayrollCheckRecordsSection` → `PaymentRecordsSection`
+   - Import updated in `AdminDashboard.jsx`
+   - Comment updated to reflect new section name
+
+### Files Modified
+- `/app/frontend/src/components/admin/sections/PaymentRecordsSection.jsx` (renamed from PayrollCheckRecordsSection.jsx)
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Updated import and component usage
+
+### Refactoring Status
+- **PayrollModal.jsx** extraction: ✅ Already completed (exists at `/app/frontend/src/components/admin/modals/PayrollModal.jsx`)
+- **PaymentRecordsSection.jsx** rename: ✅ Completed this session
+- All pending refactoring tasks are now complete
+
+### Architecture Update
+```
+/app/frontend/src/components/admin/
+├── modals/
+│   ├── PayrollModal.jsx       (390 lines)
+│   ├── ShiftReportModal.jsx   (395 lines)
+│   └── TimeEntryModal.jsx     (204 lines)
+└── sections/
+    ├── AllEmployeesSection.jsx      (439 lines)
+    ├── FormSubmissionsSection.jsx   (489 lines)
+    ├── HoursByEmployeeSection.jsx   (155 lines)
+    ├── MessagesSection.jsx          (834 lines)
+    ├── MileageTrackingSection.jsx   (1627 lines)
+    ├── PaymentRecordsSection.jsx    (714 lines) - RENAMED
+    ├── ReportsSection.jsx           (centralized reports)
+    └── TimeEntriesSection.jsx       (200 lines)
+```
+
