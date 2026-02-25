@@ -331,13 +331,10 @@ export default function EmployeeDashboard() {
       }
 
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
-      toast.info("Requesting location access...", { duration: 2000 });
 
       // Request location directly - this will prompt the user if not already granted
-      // Do NOT pre-check with Permissions API as it can incorrectly report "denied" on some devices
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log("Geolocation success:", position.coords.latitude, position.coords.longitude);
           const distance = calculateDistance(
             position.coords.latitude,
             position.coords.longitude,
@@ -349,13 +346,15 @@ export default function EmployeeDashboard() {
           resolve({ withinRange, distance: distance.toFixed(2) });
         },
         (error) => {
-          console.log("Geolocation error:", error.code, error.message);
+          // Show what error we got
+          alert(`Location error: Code ${error.code} - ${error.message}`);
+          
           if (error.code === 1) {
-            // PERMISSION_DENIED - user clicked "Block" on the prompt or GPS is blocked
+            // PERMISSION_DENIED
             setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
             resolve({ withinRange: false, denied: true });
           } else if (error.code === 2) {
-            // POSITION_UNAVAILABLE - GPS hardware issue or turned off at device level
+            // POSITION_UNAVAILABLE
             toast.error("GPS is turned off. Please enable Location Services in your device settings.");
             setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
             resolve({ withinRange: false, error: "GPS unavailable" });
