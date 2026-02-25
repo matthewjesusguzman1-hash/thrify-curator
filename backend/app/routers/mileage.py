@@ -245,10 +245,14 @@ async def update_trip_location(location_data: UpdateTripLocationRequest, admin: 
 
 @router.post("/end-trip", response_model=MileageEntryResponse)
 async def end_trip(trip_data: EndTripRequest, admin: dict = Depends(get_admin_user)):
-    """End the active trip and save it as a mileage entry"""
+    """End the active trip and save it as a mileage entry - only affects this admin's trip"""
     import math
     
-    trip = await db.active_trips.find_one({"user_id": admin["id"]}, {"_id": 0})
+    admin_code = admin.get("admin_code")
+    if not admin_code:
+        raise HTTPException(status_code=400, detail="Admin code required")
+    
+    trip = await db.active_trips.find_one({"admin_code": admin_code}, {"_id": 0})
     if not trip:
         raise HTTPException(status_code=404, detail="No active trip found")
     
