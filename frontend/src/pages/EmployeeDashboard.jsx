@@ -422,6 +422,11 @@ export default function EmployeeDashboard() {
           (error) => {
             setLoading(false);
             if (error.code === 1) {
+              // Check if running as standalone PWA
+              const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+              if (isStandalone) {
+                toast.error("Please enable location for this app in Settings → Privacy → Location Services", { duration: 5000 });
+              }
               setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
             } else if (error.code === 2) {
               toast.error("GPS is turned off. Please enable Location Services in your device settings.");
