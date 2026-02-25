@@ -320,23 +320,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
     setViewingW9(null);
   };
 
-  // Delete all W-9s for an employee
-  const handleDeleteW9 = async (employeeId, employeeName) => {
-    if (!window.confirm(`Are you sure you want to delete all W-9 documents for ${employeeName}? This action cannot be undone.`)) {
-      return;
-    }
-    
-    try {
-      await axios.delete(`${API}/admin/employees/${employeeId}/w9/all`, getAuthHeader());
-      toast.success(`W-9 documents deleted for ${employeeName}`);
-      // Refresh the report preview
-      handlePreview();
-    } catch (error) {
-      toast.error("Failed to delete W-9 documents");
-      console.error(error);
-    }
-  };
-
   const formatDateTime = (isoString) => {
     if (!isoString) return "-";
     const date = new Date(isoString);
