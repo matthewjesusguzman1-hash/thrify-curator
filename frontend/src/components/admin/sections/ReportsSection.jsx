@@ -35,7 +35,7 @@ const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
 export default function ReportsSection({ employees, payPeriodStart, getAuthHeader, payrollSettings }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [reportType, setReportType] = useState("shifts"); // shifts, payroll, mileage
+  const [reportType, setReportType] = useState("shifts"); // shifts, payroll, mileage, w9
   const [filterType, setFilterType] = useState("period");
   const [selectedEmployee, setSelectedEmployee] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -44,6 +44,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   const [customEndDate, setCustomEndDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [viewingW9, setViewingW9] = useState(null); // For W-9 preview modal
 
   const months = [
     "January", "February", "March", "April", "May", "June",
