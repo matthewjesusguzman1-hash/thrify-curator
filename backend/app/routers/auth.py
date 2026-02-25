@@ -50,10 +50,10 @@ async def login(credentials: UserLogin):
     
     # Admin users must use their admin code to login
     if user["role"] == "admin":
-        # Define valid admin codes
+        # Both codes map to the same primary admin email
         ADMIN_CODES = {
             "4399": "matthewjesusguzman1@gmail.com",
-            "0826": "euniceguzman@thriftycurator.com"
+            "0826": "matthewjesusguzman1@gmail.com"
         }
         
         # Check if this admin requires code-based login
@@ -61,7 +61,7 @@ async def login(credentials: UserLogin):
             if not credentials.admin_code:
                 raise HTTPException(status_code=401, detail="Admin access requires an access code")
             
-            # Verify the code matches the email
+            # Verify the code is valid and maps to the email
             expected_email = ADMIN_CODES.get(credentials.admin_code)
             if expected_email != credentials.email:
                 raise HTTPException(status_code=401, detail="Invalid access code")
