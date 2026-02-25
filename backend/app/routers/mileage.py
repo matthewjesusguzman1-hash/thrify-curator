@@ -127,9 +127,13 @@ async def get_active_trip(admin: dict = Depends(get_admin_user)):
 
 @router.post("/start-trip", response_model=ActiveTripResponse)
 async def start_trip(trip_data: StartTripRequest, admin: dict = Depends(get_admin_user)):
-    """Start tracking a new trip"""
-    # Check if there's already an active trip
-    existing = await db.active_trips.find_one({"user_id": admin["id"]})
+    """Start tracking a new trip - each admin has their own independent trip"""
+    admin_code = admin.get("admin_code")
+    if not admin_code:
+        raise HTTPException(status_code=400, detail="Admin code required for trip tracking")
+    
+    # Check if THIS admin already has an active trip (by admin_code, not user_id)
+    existing = await db.active_trips.find_one({"admin_code": admin_code})
     if existing:
         raise HTTPException(status_code=400, detail="You already have an active trip. Please end it first.")
     
@@ -143,7 +147,7 @@ async def start_trip(trip_data: StartTripRequest, admin: dict = Depends(get_admi
         "id": trip_id,
         "user_id": admin["id"],
         "user_name": admin_name,
-        "admin_code": admin.get("admin_code"),
+        "admin_code": admin_code,
         "start_location": trip_data.start_location.model_dump(),
         "start_address": trip_data.start_address,
         "start_time": now,
