@@ -288,6 +288,8 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
       return renderPayrollPreview(previewData.data);
     } else if (previewData.type === "mileage") {
       return renderMileagePreview(previewData.data);
+    } else if (previewData.type === "w9") {
+      return renderW9Preview(previewData.data);
     }
     return null;
   };
