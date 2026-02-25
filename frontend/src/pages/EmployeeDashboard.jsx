@@ -376,25 +376,46 @@ export default function EmployeeDashboard() {
               </div>
 
               {/* Location Status Indicator */}
-              <div className="flex items-center justify-center gap-2 mb-4 text-sm">
-                <MapPin className={`w-4 h-4 ${
-                  locationStatus.checking ? 'text-yellow-500 animate-pulse' :
-                  locationStatus.withinRange === true ? 'text-green-500' :
-                  locationStatus.withinRange === false ? 'text-red-500' :
-                  'text-gray-400'
-                }`} />
-                <span className={`${
-                  locationStatus.checking ? 'text-yellow-600' :
-                  locationStatus.withinRange === true ? 'text-green-600' :
-                  locationStatus.withinRange === false ? 'text-red-600' :
-                  'text-gray-500'
-                }`}>
-                  {locationStatus.checking ? 'Checking location...' :
-                   locationStatus.withinRange === true ? 'Location verified' :
-                   locationStatus.withinRange === false ? `Too far (${locationStatus.distance} mi away)` :
-                   'Location required for clock in/out'}
-                </span>
-              </div>
+              {locationStatus.denied ? (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                  <div className="flex items-center justify-center gap-2 text-yellow-700 mb-2">
+                    <MapPin className="w-4 h-4" />
+                    <span className="text-sm font-medium">Location access required</span>
+                  </div>
+                  <p className="text-xs text-yellow-600 mb-3">Please allow location access to clock in/out</p>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
+                      handleClock(clockedIn ? "out" : "in");
+                    }}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs"
+                  >
+                    <MapPin className="w-3 h-3 mr-1" />
+                    Allow Location
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2 mb-4 text-sm">
+                  <MapPin className={`w-4 h-4 ${
+                    locationStatus.checking ? 'text-yellow-500 animate-pulse' :
+                    locationStatus.withinRange === true ? 'text-green-500' :
+                    locationStatus.withinRange === false ? 'text-red-500' :
+                    'text-gray-400'
+                  }`} />
+                  <span className={`${
+                    locationStatus.checking ? 'text-yellow-600' :
+                    locationStatus.withinRange === true ? 'text-green-600' :
+                    locationStatus.withinRange === false ? 'text-red-600' :
+                    'text-gray-500'
+                  }`}>
+                    {locationStatus.checking ? 'Checking location...' :
+                     locationStatus.withinRange === true ? 'Location verified' :
+                     locationStatus.withinRange === false ? 'Too far' :
+                     'Location required for clock in/out'}
+                  </span>
+                </div>
+              )}
 
               {clockedIn && (
                 <div className="mb-6">
@@ -429,12 +450,6 @@ export default function EmployeeDashboard() {
                   </>
                 )}
               </button>
-              
-              {/* Location requirement notice */}
-              <p className="text-xs text-gray-400 mt-3">
-                <MapPin className="w-3 h-3 inline mr-1" />
-                Must be within 0.5 miles of work location
-              </p>
             </div>
           </div>
 
