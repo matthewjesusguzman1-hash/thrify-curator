@@ -611,11 +611,11 @@ export default function AllEmployeesSection({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteW9(doc)}
-                            className="px-3 text-[#FF1493] border-[#FF1493]/30 hover:bg-[#FF1493]/10 bg-transparent"
-                            data-testid={`delete-w9-${doc.id}`}
+                            onClick={() => handleDownloadW9(doc)}
+                            className="px-3 text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
+                            data-testid={`download-w9-${doc.id}`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Download className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
