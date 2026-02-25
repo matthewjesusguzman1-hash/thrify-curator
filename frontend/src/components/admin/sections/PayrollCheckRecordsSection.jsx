@@ -248,14 +248,14 @@ export default function PayrollCheckRecordsSection({ getAuthHeader }) {
 
   // Delete record
   const handleDeleteCheckRecord = async (recordId) => {
-    if (!window.confirm("Are you sure you want to delete this check record?")) return;
+    if (!window.confirm("Are you sure you want to delete this payment record?")) return;
     
     try {
       await axios.delete(`${API}/admin/payroll/check-records/${recordId}`, getAuthHeader());
-      toast.success("Check record deleted");
+      toast.success("Payment record deleted");
       fetchCheckRecords();
     } catch (error) {
-      toast.error("Failed to delete check record");
+      toast.error("Failed to delete payment record");
     }
   };
 
