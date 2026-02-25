@@ -86,46 +86,6 @@ export default function PayrollModal({
     }
   };
 
-  // Download PDF
-  const handleDownloadPDF = async () => {
-    if (!payrollReport) return;
-    
-    try {
-      const params = new URLSearchParams({
-        period_type: payrollFilters.period_type,
-        period_index: payrollFilters.period_index,
-        hourly_rate: payrollFilters.hourly_rate || "15.00"
-      });
-
-      if (payrollFilters.period_type === "custom") {
-        params.set("custom_start", payrollFilters.custom_start);
-        params.set("custom_end", payrollFilters.custom_end);
-      }
-
-      if (payrollFilters.employee_id) {
-        params.set("employee_id", payrollFilters.employee_id);
-      }
-
-      const response = await axios.get(`${API}/admin/payroll/pdf?${params}`, {
-        ...getAuthHeader(),
-        responseType: 'blob'
-      });
-
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `payroll_${payrollReport.period.start_formatted}_${payrollReport.period.end_formatted}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-      toast.success("Payroll report downloaded");
-    } catch (error) {
-      toast.error("Failed to download PDF");
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
