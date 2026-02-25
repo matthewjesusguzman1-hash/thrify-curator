@@ -890,3 +890,233 @@ async def reject_w9(employee_id: str, reject_data: dict, admin: dict = Depends(g
     )
     
     return {"message": "W-9 returned for corrections", "reason": reason}
+
+
+# Shift Reports endpoints
+@router.get("/reports/shifts")
+async def get_shift_report(
+    start_date: str,
+    end_date: str,
+    employee_id: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Get shift report data for the given date range"""
+    try:
+        start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        # Set end to end of day
+        end = end.replace(hour=23, minute=59, second=59)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    # Build query
+    query = {
+        "clock_in": {"$gte": start.isoformat(), "$lte": end.isoformat()}
+    }
+    if employee_id:
+        query["user_id"] = employee_id
+    
+    entries = await db.time_entries.find(query, {"_id": 0}).sort("clock_in", 1).to_list(1000)
+    
+    # Get employee details
+    employee_map = {}
+    for entry in entries:
+        if entry["user_id"] not in employee_map:
+            emp = await db.users.find_one({"id": entry["user_id"]}, {"_id": 0, "name": 1, "email": 1, "hourly_rate": 1})
+            if emp:
+                employee_map[entry["user_id"]] = emp
+    
+    # Format response
+    report_data = []
+    for entry in entries:
+        emp = employee_map.get(entry["user_id"], {})
+        report_data.append({
+            "employee_id": entry["user_id"],
+            "employee_name": entry.get("user_name") or emp.get("name", "Unknown"),
+            "clock_in": entry["clock_in"],
+            "clock_out": entry.get("clock_out"),
+            "total_hours": entry.get("total_hours", 0),
+            "admin_note": entry.get("admin_note"),
+            "adjusted_by_admin": entry.get("adjusted_by_admin", False),
+            "hourly_rate": emp.get("hourly_rate", 15.00)
+        })
+    
+    # Calculate summary by employee
+    summary = {}
+    for item in report_data:
+        emp_id = item["employee_id"]
+        if emp_id not in summary:
+            summary[emp_id] = {
+                "employee_name": item["employee_name"],
+                "total_hours": 0,
+                "total_shifts": 0,
+                "hourly_rate": item["hourly_rate"]
+            }
+        summary[emp_id]["total_hours"] += item["total_hours"] or 0
+        summary[emp_id]["total_shifts"] += 1
+    
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "entries": report_data,
+        "summary": list(summary.values()),
+        "total_entries": len(report_data)
+    }
+
+
+@router.get("/reports/shifts/csv")
+async def download_shift_report_csv(
+    start_date: str,
+    end_date: str,
+    employee_id: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Download shift report as CSV"""
+    # Get report data
+    report = await get_shift_report(start_date, end_date, employee_id, admin)
+    
+    # Create CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow([
+        "Employee Name", "Clock In", "Clock Out", "Hours", "Admin Note", "Adjusted"
+    ])
+    
+    # Data rows
+    for entry in report["entries"]:
+        clock_in = entry["clock_in"][:16].replace("T", " ") if entry["clock_in"] else ""
+        clock_out = entry["clock_out"][:16].replace("T", " ") if entry["clock_out"] else "Active"
+        writer.writerow([
+            entry["employee_name"],
+            clock_in,
+            clock_out,
+            f"{entry['total_hours']:.2f}" if entry["total_hours"] else "0.00",
+            entry["admin_note"] or "",
+            "Yes" if entry["adjusted_by_admin"] else "No"
+        ])
+    
+    # Summary section
+    writer.writerow([])
+    writer.writerow(["=== SUMMARY ==="])
+    writer.writerow(["Employee", "Total Hours", "Total Shifts", "Estimated Pay"])
+    for s in report["summary"]:
+        pay = s["total_hours"] * s["hourly_rate"]
+        writer.writerow([
+            s["employee_name"],
+            f"{s['total_hours']:.2f}",
+            s["total_shifts"],
+            f"${pay:.2f}"
+        ])
+    
+    output.seek(0)
+    
+    # Generate filename
+    filename = f"shift_report_{start_date[:10]}_to_{end_date[:10]}.csv"
+    
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode()),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/reports/shifts/pdf")
+async def download_shift_report_pdf(
+    start_date: str,
+    end_date: str,
+    employee_id: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Download shift report as PDF"""
+    if not HAS_FPDF:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    # Get report data
+    report = await get_shift_report(start_date, end_date, employee_id, admin)
+    
+    # Create PDF
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Title
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, "Thrifty Curator - Shift Report", ln=True, align="C")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Period: {start_date[:10]} to {end_date[:10]}", ln=True, align="C")
+    pdf.ln(5)
+    
+    # Summary section
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "Summary by Employee", ln=True)
+    pdf.set_font("Helvetica", "", 9)
+    
+    # Summary table header
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(60, 7, "Employee", border=1, fill=True)
+    pdf.cell(30, 7, "Hours", border=1, fill=True, align="C")
+    pdf.cell(30, 7, "Shifts", border=1, fill=True, align="C")
+    pdf.cell(35, 7, "Est. Pay", border=1, fill=True, align="C")
+    pdf.ln()
+    
+    total_hours = 0
+    total_pay = 0
+    for s in report["summary"]:
+        pay = s["total_hours"] * s["hourly_rate"]
+        total_hours += s["total_hours"]
+        total_pay += pay
+        pdf.cell(60, 6, s["employee_name"][:25], border=1)
+        pdf.cell(30, 6, f"{s['total_hours']:.2f}", border=1, align="C")
+        pdf.cell(30, 6, str(s["total_shifts"]), border=1, align="C")
+        pdf.cell(35, 6, f"${pay:.2f}", border=1, align="C")
+        pdf.ln()
+    
+    # Totals
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(60, 7, "TOTAL", border=1, fill=True)
+    pdf.cell(30, 7, f"{total_hours:.2f}", border=1, fill=True, align="C")
+    pdf.cell(30, 7, str(len(report["entries"])), border=1, fill=True, align="C")
+    pdf.cell(35, 7, f"${total_pay:.2f}", border=1, fill=True, align="C")
+    pdf.ln(10)
+    
+    # Detailed entries
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "Detailed Shift Entries", ln=True)
+    pdf.set_font("Helvetica", "", 8)
+    
+    # Table header
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(35, 6, "Employee", border=1, fill=True)
+    pdf.cell(35, 6, "Clock In", border=1, fill=True)
+    pdf.cell(35, 6, "Clock Out", border=1, fill=True)
+    pdf.cell(15, 6, "Hours", border=1, fill=True, align="C")
+    pdf.cell(60, 6, "Admin Note", border=1, fill=True)
+    pdf.ln()
+    
+    for entry in report["entries"]:
+        clock_in = entry["clock_in"][5:16].replace("T", " ") if entry["clock_in"] else ""
+        clock_out = entry["clock_out"][5:16].replace("T", " ") if entry["clock_out"] else "Active"
+        note = (entry["admin_note"] or "")[:30]
+        if entry["admin_note"] and len(entry["admin_note"]) > 30:
+            note += "..."
+        
+        pdf.cell(35, 5, entry["employee_name"][:18], border=1)
+        pdf.cell(35, 5, clock_in, border=1)
+        pdf.cell(35, 5, clock_out, border=1)
+        pdf.cell(15, 5, f"{entry['total_hours']:.2f}" if entry["total_hours"] else "0", border=1, align="C")
+        pdf.cell(60, 5, note, border=1)
+        pdf.ln()
+    
+    # Generate PDF bytes
+    pdf_output = pdf.output()
+    
+    # Generate filename
+    filename = f"shift_report_{start_date[:10]}_to_{end_date[:10]}.pdf"
+    
+    return Response(
+        content=bytes(pdf_output),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
