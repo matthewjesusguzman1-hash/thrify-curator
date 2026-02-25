@@ -2017,30 +2017,18 @@ export default function AdminDashboard() {
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    {/* Action buttons - always visible when there are notifications */}
+                    {/* Clear notifications button */}
                     {notifications.length > 0 && (
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline"
-                          size="sm" 
-                          className="flex-1 h-8 text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
-                          onClick={handleMarkAllRead}
-                          data-testid="mark-all-read-btn"
-                        >
-                          <CheckCheck className="w-4 h-4 mr-1" />
-                          Mark all read
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          size="sm" 
-                          className="flex-1 h-8 text-xs bg-red-500/20 border-red-400/30 text-red-300 hover:bg-red-500/30"
-                          onClick={handleClearNotifications}
-                          data-testid="clear-notifications-btn"
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Clear all
-                        </Button>
-                      </div>
+                      <Button 
+                        variant="outline"
+                        size="sm" 
+                        className="w-full h-8 text-xs bg-red-500/20 border-red-400/30 text-red-300 hover:bg-red-500/30"
+                        onClick={handleClearNotifications}
+                        data-testid="clear-notifications-btn"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Clear notifications
+                      </Button>
                     )}
                   </div>
 
