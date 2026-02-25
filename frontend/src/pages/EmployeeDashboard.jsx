@@ -69,7 +69,7 @@ export default function EmployeeDashboard() {
   });
   const [loading, setLoading] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [locationStatus, setLocationStatus] = useState({ checking: false, withinRange: null, distance: null });
+  const [locationStatus, setLocationStatus] = useState({ checking: false, withinRange: null, distance: null, denied: false });
   
   // W-9 state
   const [w9Status, setW9Status] = useState(null);
