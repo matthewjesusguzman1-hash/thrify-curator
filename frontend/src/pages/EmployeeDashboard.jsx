@@ -354,9 +354,10 @@ export default function EmployeeDashboard() {
             setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
             resolve({ withinRange: false, denied: true });
           } else if (error.code === 2) {
-            // POSITION_UNAVAILABLE - GPS hardware issue or turned off
-            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
-            resolve({ withinRange: false, denied: true });
+            // POSITION_UNAVAILABLE - GPS hardware issue or turned off at device level
+            toast.error("GPS is turned off. Please enable Location Services in your device settings.");
+            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+            resolve({ withinRange: false, error: "GPS unavailable" });
           } else {
             // TIMEOUT or other error
             toast.error("Location request timed out. Please try again.");
