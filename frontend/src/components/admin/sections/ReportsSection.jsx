@@ -784,9 +784,9 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Employees</SelectItem>
-                      {employees?.map((emp) => (
+                      {getFilteredEmployees().map((emp) => (
                         <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name} {emp.role === 'admin' ? '(Admin)' : ''}
+                          {emp.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
