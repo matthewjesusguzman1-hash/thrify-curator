@@ -1332,7 +1332,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                   <span className="text-xl font-bold text-emerald-600">{cumulativeMiles.toFixed(2)} mi</span>
                 </div>
                 <p className="text-xs text-emerald-600 mt-1">
-                  Calculated from {waypointCount} GPS waypoints along your route
+                  Calculated from {waypointCount} GPS waypoints (more waypoints = more accurate)
                 </p>
               </div>
               <div>
