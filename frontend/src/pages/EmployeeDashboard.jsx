@@ -520,18 +520,28 @@ export default function EmployeeDashboard() {
                   <div className="text-sm text-gray-600 text-center mb-4 space-y-2">
                     <p>Location permission was blocked.</p>
                     <div className="text-xs text-gray-500 space-y-1">
-                      <p><strong>On iPhone/iPad:</strong> Settings → Safari → Location → Allow</p>
+                      <p><strong>On iPhone/iPad:</strong> Settings → Safari → Location → Allow for this site</p>
                       <p><strong>On Android:</strong> Tap ⋮ menu → Settings → Site settings → Location → Allow</p>
                       <p><strong>On Desktop:</strong> Click the lock icon in address bar → Reset permission</p>
                     </div>
                   </div>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center gap-2">
+                    <Button
+                      onClick={() => {
+                        setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
+                        handleClock("in");
+                      }}
+                      variant="outline"
+                      className="border-[#8B5CF6] text-[#8B5CF6]"
+                    >
+                      Try Again
+                    </Button>
                     <Button
                       onClick={() => window.location.reload()}
                       className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] hover:from-[#7C3AED] hover:to-[#00A8CC] text-white"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Retry
+                      Reload Page
                     </Button>
                   </div>
                 </div>
