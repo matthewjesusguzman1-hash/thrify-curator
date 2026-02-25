@@ -412,23 +412,20 @@ export default function EmployeeDashboard() {
                     <MapPin className="w-5 h-5" />
                     <span className="font-medium">Location Required</span>
                   </div>
-                  <p className="text-sm text-gray-600 text-center mb-4">
-                    To clock in, please restart the app and select <span className="font-medium text-[#8B5CF6]">"Allow"</span> when prompted for location access
+                  <p className="text-sm text-gray-600 text-center mb-3">
+                    Location was blocked. To enable:
                   </p>
+                  <div className="text-xs text-gray-500 bg-white/50 rounded-lg p-3 mb-4 text-left space-y-2">
+                    <p><span className="font-medium">iPhone:</span> Settings → Safari → Location → Allow</p>
+                    <p><span className="font-medium">Android:</span> Tap ⋮ menu → Settings → Site settings → Location</p>
+                  </div>
                   <div className="flex justify-center">
                     <Button
-                      onClick={() => {
-                        // Try to close the window/app
-                        window.close();
-                        // If window.close() doesn't work (most cases), reload as fallback
-                        setTimeout(() => {
-                          window.location.reload();
-                        }, 100);
-                      }}
+                      onClick={() => window.location.reload()}
                       className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] hover:from-[#7C3AED] hover:to-[#00A8CC] text-white"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Restart App
+                      I've Enabled Location
                     </Button>
                   </div>
                 </div>
