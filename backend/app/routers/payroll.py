@@ -36,10 +36,10 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     """Get payroll summary for dashboard"""
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     default_rate = settings.get("default_hourly_rate", 15.00) if settings else 15.00
-    start_date_str = settings.get("pay_period_start_date", "2026-01-06") if settings else "2026-01-06"
     
     now = datetime.now(timezone.utc)
-    period_start, period_end = get_biweekly_period(start_date_str, 0)
+    # Use first Monday of year as anchor (no custom start date needed)
+    period_start, period_end = get_biweekly_period(period_index=0)
     
     employees = await db.users.find({"role": "employee"}, {"_id": 0, "id": 1, "hourly_rate": 1}).to_list(100)
     employee_rates = {emp["id"]: emp.get("hourly_rate") or default_rate for emp in employees}
