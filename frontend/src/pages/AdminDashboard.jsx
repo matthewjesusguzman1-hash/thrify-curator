@@ -2667,6 +2667,44 @@ export default function AdminDashboard() {
                       </p>
                     </div>
 
+                    {/* Employee Start Date */}
+                    <div className="form-group">
+                      <Label className="form-label">Start Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal h-10 form-input"
+                            data-testid="employee-start-date-trigger"
+                          >
+                            <Calendar className="mr-2 h-4 w-4 text-[#00D4FF]" />
+                            {editEmployeeData.start_date ? (
+                              <span>{new Date(editEmployeeData.start_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                            ) : (
+                              <span className="text-[#888]">Select start date...</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <DayPicker
+                            mode="single"
+                            selected={editEmployeeData.start_date ? new Date(editEmployeeData.start_date + 'T00:00:00') : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                const dateStr = date.toISOString().split('T')[0];
+                                setEditEmployeeData({
+                                  ...editEmployeeData,
+                                  start_date: dateStr
+                                });
+                              }
+                            }}
+                            className="rounded-md border"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <p className="text-xs text-[#888] mt-1">When this employee started working</p>
+                    </div>
+
                     {/* Pay Period Info - Read Only */}
                     <div className="form-group">
                       <div className="bg-gradient-to-br from-[#00D4FF]/10 to-[#00A8CC]/5 rounded-xl p-4 border border-[#00D4FF]/20">
