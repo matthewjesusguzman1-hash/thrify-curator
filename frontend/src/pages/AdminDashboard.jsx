@@ -610,7 +610,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Download form submission as PDF (mobile-friendly)
+  // Download form submission as PDF
   const handleDownloadSubmission = async (submission) => {
     try {
       toast.loading("Preparing PDF...", { id: "download-loading" });
@@ -621,24 +621,14 @@ export default function AdminDashboard() {
           ? "consignment-inquiries" 
           : "consignment-agreements";
       
-      const token = localStorage.getItem("token");
-      
-      // Fetch the PDF
-      const response = await fetch(
+      const response = await axios.get(
         `${API}/admin/forms/${endpoint}/${submission.id}/pdf`,
         {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          ...getAuthHeader(),
+          responseType: 'blob'
         }
       );
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch PDF');
-      }
-      
-      const blob = await response.blob();
       toast.dismiss("download-loading");
       
       const formType = submission.formType === "job_applications" 
@@ -648,37 +638,16 @@ export default function AdminDashboard() {
           : "Consignment_Agreement";
       const filename = `${submission.full_name.replace(/\s+/g, "_")}_${formType}.pdf`;
       
-      // Try Web Share API first (works great on iOS)
-      if (navigator.share && navigator.canShare) {
-        const file = new File([blob], filename, { type: 'application/pdf' });
-        const shareData = { files: [file] };
-        
-        if (navigator.canShare(shareData)) {
-          try {
-            await navigator.share(shareData);
-            toast.success("PDF shared/saved");
-            return;
-          } catch (shareError) {
-            // User cancelled or share failed, fall through to other methods
-            if (shareError.name !== 'AbortError') {
-              console.log("Share failed, trying fallback");
-            }
-          }
-        }
-      }
+      // Create download link - same method as ReportsSection
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
       
-      // Fallback: Create object URL and download
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      // Cleanup after delay
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
       toast.success("PDF downloaded");
     } catch (error) {
       toast.dismiss("download-loading");
