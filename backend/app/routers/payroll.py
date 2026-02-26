@@ -452,41 +452,38 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     elements.append(Spacer(1, 15))
     
     if employee_data:
-        elements.append(Paragraph("Employee Breakdown", section_header))
-        elements.append(Spacer(1, 10))
-        
-        emp_table_data = [["Employee", "Hours", "Shifts", "Rate", "Gross Wages"]]
+        # EMPLOYEE BREAKDOWN section
+        elements.append(Paragraph("EMPLOYEE BREAKDOWN", section_style))
+        elements.append(Table([[""]], colWidths=[7.5*inch], rowHeights=[1], style=[('LINEBELOW', (0, 0), (-1, -1), 0.5, LIGHT_GRAY)]))
+        elements.append(Spacer(1, 5))
         
         for uid, data in employee_data.items():
             hours = data["total_hours"]
             emp_rate = data["hourly_rate"]
-            # Use rounded hours for pay calculation to match displayed time
             rounded_hours = round_hours_to_minute(hours)
             wages = round(rounded_hours * emp_rate, 2)
-            emp_table_data.append([
-                data["name"],
-                format_hours_hms(hours),
-                str(data["total_shifts"]),
-                f"${emp_rate:.2f}",
-                f"${wages:.2f}"
-            ])
+            
+            # Employee name as sub-header
+            emp_name_style = ParagraphStyle('EmpName', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', textColor=BLACK, leftIndent=10)
+            elements.append(Paragraph(data["name"], emp_name_style))
+            
+            emp_data = [
+                [Paragraph("Hours:", label_style), Paragraph(format_hours_hms(hours), value_style),
+                 Paragraph("Shifts:", label_style), Paragraph(str(data["total_shifts"]), value_style)],
+                [Paragraph("Rate:", label_style), Paragraph(f"${emp_rate:.2f}/hr", value_style),
+                 Paragraph("Gross Wages:", label_style), Paragraph(f"${wages:.2f}", green_value_style)],
+            ]
+            emp_table = Table(emp_data, colWidths=[1*inch, 1.5*inch, 1.2*inch, 1.5*inch])
+            emp_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 1),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+                ('LEFTPADDING', (0, 0), (0, -1), 20),
+            ]))
+            elements.append(emp_table)
+            elements.append(Spacer(1, 8))
         
-        emp_table = Table(emp_table_data, colWidths=[2.5*inch, 1*inch, 0.8*inch, 1*inch, 1.2*inch])
-        emp_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), ACCENT_PURPLE),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('TEXTCOLOR', (-1, 1), (-1, -1), GREEN_MONEY),  # Green for wages column
-            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('TOPPADDING', (0, 0), (-1, -1), 10),
-            ('GRID', (0, 0), (-1, -1), 0, colors.white),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_BG]),
-        ]))
-        elements.append(emp_table)
-        elements.append(Spacer(1, 30))
+        elements.append(Spacer(1, 15))
         
         elements.append(Paragraph("Shift Details", section_header))
         elements.append(Spacer(1, 10))
