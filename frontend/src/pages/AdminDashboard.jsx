@@ -3339,7 +3339,7 @@ export default function AdminDashboard() {
                   <h2 className="font-playfair text-xl font-semibold text-[#333]">Payroll Summary</h2>
                   <p className="text-xs text-[#888]">
                     Pay Period: {(() => {
-                      const period = calculateBiweeklyPeriod(payrollSettings.pay_period_start_date);
+                      const period = calculateBiweeklyPeriod();
                       if (period) {
                         return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
                       }
