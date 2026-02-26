@@ -610,73 +610,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // View form submission PDF in new tab
-  const handleViewSubmissionPDF = async (submission) => {
-    try {
-      toast.loading("Loading PDF...", { id: "pdf-loading" });
-      
-      const endpoint = submission.formType === "job_applications" 
-        ? "job-applications" 
-        : submission.formType === "consignment_inquiries" 
-          ? "consignment-inquiries" 
-          : "consignment-agreements";
-      
-      const response = await axios.get(
-        `${API}/admin/forms/${endpoint}/${submission.id}/pdf`,
-        {
-          ...getAuthHeader(),
-          responseType: 'arraybuffer'
-        }
-      );
-      
-      toast.dismiss("pdf-loading");
-      
-      // Convert to base64 for iOS compatibility
-      const base64 = btoa(
-        new Uint8Array(response.data).reduce(
-          (data, byte) => data + String.fromCharCode(byte),
-          ''
-        )
-      );
-      
-      // Create data URL
-      const dataUrl = `data:application/pdf;base64,${base64}`;
-      
-      // Open in new window - works better on iOS
-      const pdfWindow = window.open('', '_blank');
-      if (pdfWindow) {
-        pdfWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>PDF Viewer</title>
-              <style>
-                body { margin: 0; padding: 0; height: 100vh; }
-                iframe, embed, object { width: 100%; height: 100%; border: none; }
-              </style>
-            </head>
-            <body>
-              <embed src="${dataUrl}" type="application/pdf" />
-            </body>
-          </html>
-        `);
-        pdfWindow.document.close();
-      } else {
-        // Fallback: download instead
-        toast.info("Opening PDF as download...");
-        handleDownloadSubmission(submission);
-      }
-    } catch (error) {
-      toast.dismiss("pdf-loading");
-      console.error("View error:", error);
-      toast.error("Failed to open PDF");
-    }
-  };
-
-  // Download form submission as PDF
+  // Download form submission as PDF (mobile-friendly)
   const handleDownloadSubmission = async (submission) => {
     try {
-      toast.loading("Preparing download...", { id: "download-loading" });
+      toast.loading("Preparing PDF...", { id: "download-loading" });
       
       const endpoint = submission.formType === "job_applications" 
         ? "job-applications" 
@@ -688,7 +625,7 @@ export default function AdminDashboard() {
         `${API}/admin/forms/${endpoint}/${submission.id}/pdf`,
         {
           ...getAuthHeader(),
-          responseType: 'arraybuffer'
+          responseType: 'blob'
         }
       );
       
@@ -701,26 +638,30 @@ export default function AdminDashboard() {
           : "Consignment_Agreement";
       const filename = `${submission.full_name.replace(/\s+/g, "_")}_${formType}.pdf`;
       
-      // Convert to base64 for iOS compatibility
-      const base64 = btoa(
-        new Uint8Array(response.data).reduce(
-          (data, byte) => data + String.fromCharCode(byte),
-          ''
-        )
-      );
+      // Create blob URL
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
       
-      // Create data URL
-      const dataUrl = `data:application/pdf;base64,${base64}`;
+      // Check if on iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       
-      // Create download link
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (isIOS) {
+        // On iOS, open in new tab (Safari will show share/save options)
+        window.open(url, '_blank');
+        toast.success("PDF opened - tap Share to save");
+      } else {
+        // On other devices, trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("PDF downloaded");
+      }
       
-      toast.success("PDF ready for download");
+      // Cleanup after delay
+      setTimeout(() => window.URL.revokeObjectURL(url), 30000);
     } catch (error) {
       toast.dismiss("download-loading");
       console.error("Download error:", error);
