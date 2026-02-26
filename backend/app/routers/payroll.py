@@ -423,14 +423,6 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     total_wages = sum(round_hours_to_minute(e["total_hours"]) * e["hourly_rate"] for e in employee_data.values())
     total_shifts = sum(e["total_shifts"] for e in employee_data.values())
     
-    summary_data = [
-        ["Summary", ""],
-        ["Total Employees", str(len(employee_data))],
-        ["Total Hours", format_hours_hms(total_hours)],
-        ["Total Shifts", str(total_shifts)],
-        ["Total Wages", f"${total_wages:.2f}"]
-    ]
-    
     # SUMMARY section
     elements.append(Paragraph("SUMMARY", section_style))
     elements.append(Table([[""]], colWidths=[7.5*inch], rowHeights=[1], style=[('LINEBELOW', (0, 0), (-1, -1), 0.5, LIGHT_GRAY)]))
