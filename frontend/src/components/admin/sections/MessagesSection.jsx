@@ -104,10 +104,13 @@ export default function MessagesSection() {
       }
     };
 
+    // Fetch messages on initial mount
+    fetchMessages();
+    
     fetchUnreadCount();
     const pollInterval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(pollInterval);
-  }, []);
+  }, [fetchMessages]);
 
   // Fetch full messages when section is expanded
   useEffect(() => {
