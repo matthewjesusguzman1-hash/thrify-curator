@@ -77,7 +77,8 @@ export default function HoursByEmployeeSection({
   };
 
   // Get biweekly period dates - always based on first Monday of the year
-  const getBiweeklyPeriod = () => {
+  // offset: 0 = current period, -1 = previous period, etc.
+  const getBiweeklyPeriod = (offset = 0) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -85,7 +86,7 @@ export default function HoursByEmployeeSection({
     const firstMonday = getFirstMondayOfYear(today.getFullYear());
     
     const daysSinceStart = Math.floor((today - firstMonday) / (1000 * 60 * 60 * 24));
-    const periodNumber = Math.floor(daysSinceStart / 14);
+    const periodNumber = Math.floor(daysSinceStart / 14) + offset;
     const periodStart = new Date(firstMonday);
     periodStart.setDate(periodStart.getDate() + (periodNumber * 14));
     const periodEnd = new Date(periodStart);
