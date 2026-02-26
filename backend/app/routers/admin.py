@@ -60,14 +60,18 @@ def round_to_nearest_minute(seconds: float) -> float:
 
 @router.post("/create-employee", response_model=UserResponse)
 async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(get_admin_user)):
-    existing = await db.users.find_one({"email": employee_data.email})
+    # Normalize email to lowercase for consistent storage and lookup
+    email_normalized = employee_data.email.lower().strip()
+    
+    # Case-insensitive check for existing email
+    existing = await db.users.find_one({"email": {"$regex": f"^{email_normalized}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     user_id = str(uuid.uuid4())
     user_doc = {
         "id": user_id,
-        "email": employee_data.email,
+        "email": email_normalized,  # Store lowercase
         "name": employee_data.name,
         "role": "employee",
         "phone": employee_data.phone,
@@ -78,7 +82,7 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
     
     return UserResponse(
         id=user_id,
-        email=employee_data.email,
+        email=email_normalized,
         name=employee_data.name,
         role="employee",
         phone=employee_data.phone,
