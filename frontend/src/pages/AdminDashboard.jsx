@@ -625,25 +625,47 @@ export default function AdminDashboard() {
         `${API}/admin/forms/${endpoint}/${submission.id}/pdf`,
         {
           ...getAuthHeader(),
-          responseType: 'blob'
+          responseType: 'arraybuffer'
         }
       );
       
       toast.dismiss("pdf-loading");
       
-      // Open PDF in new tab for viewing
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
+      // Convert to base64 for iOS compatibility
+      const base64 = btoa(
+        new Uint8Array(response.data).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ''
+        )
+      );
       
-      // For mobile compatibility, create a link and click it
-      const newWindow = window.open(url, '_blank');
-      if (!newWindow) {
-        // If popup blocked, try opening in same window
-        window.location.href = url;
+      // Create data URL
+      const dataUrl = `data:application/pdf;base64,${base64}`;
+      
+      // Open in new window - works better on iOS
+      const pdfWindow = window.open('', '_blank');
+      if (pdfWindow) {
+        pdfWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>PDF Viewer</title>
+              <style>
+                body { margin: 0; padding: 0; height: 100vh; }
+                iframe, embed, object { width: 100%; height: 100%; border: none; }
+              </style>
+            </head>
+            <body>
+              <embed src="${dataUrl}" type="application/pdf" />
+            </body>
+          </html>
+        `);
+        pdfWindow.document.close();
+      } else {
+        // Fallback: download instead
+        toast.info("Opening PDF as download...");
+        handleDownloadSubmission(submission);
       }
-      
-      // Clean up after a delay
-      setTimeout(() => window.URL.revokeObjectURL(url), 30000);
     } catch (error) {
       toast.dismiss("pdf-loading");
       console.error("View error:", error);
@@ -666,15 +688,11 @@ export default function AdminDashboard() {
         `${API}/admin/forms/${endpoint}/${submission.id}/pdf`,
         {
           ...getAuthHeader(),
-          responseType: 'blob'
+          responseType: 'arraybuffer'
         }
       );
       
       toast.dismiss("download-loading");
-      
-      // Force download using anchor element
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
       
       const formType = submission.formType === "job_applications" 
         ? "Job_Application"
@@ -683,24 +701,24 @@ export default function AdminDashboard() {
           : "Consignment_Agreement";
       const filename = `${submission.full_name.replace(/\s+/g, "_")}_${formType}.pdf`;
       
-      // Create anchor and force download - works on mobile
+      // Convert to base64 for iOS compatibility
+      const base64 = btoa(
+        new Uint8Array(response.data).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ''
+        )
+      );
+      
+      // Create data URL
+      const dataUrl = `data:application/pdf;base64,${base64}`;
+      
+      // Create download link
       const link = document.createElement('a');
-      link.href = url;
+      link.href = dataUrl;
       link.download = filename;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      
-      // Append to body, click, then remove
       document.body.appendChild(link);
-      
-      // Use timeout for mobile Safari compatibility
-      setTimeout(() => {
-        link.click();
-        setTimeout(() => {
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        }, 1000);
-      }, 100);
+      link.click();
+      document.body.removeChild(link);
       
       toast.success("PDF ready for download");
     } catch (error) {
