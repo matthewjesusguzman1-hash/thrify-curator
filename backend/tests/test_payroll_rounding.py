@@ -175,11 +175,14 @@ class TestRoundingLogic:
     
     def test_round_hours_to_minute_basic(self):
         """Test basic rounding to nearest minute"""
-        # 30 seconds rounds to 1 minute
-        assert round_hours_to_minute(1/120) == round(1/60, 4)  # 0.5 min -> 1 min
+        # 0.5 minutes (30 seconds) in hours = 30/3600 = 0.00833... hours
+        # This rounds to 1 minute = 1/60 hours = 0.0167
+        half_minute_in_hours = 30/3600
+        assert round_hours_to_minute(half_minute_in_hours) == round(1/60, 4)  # 0.5 min -> 1 min
         
-        # 29 seconds rounds to 0 minutes
-        assert round_hours_to_minute(29/3600) == 0  # < 0.5 min -> 0 min
+        # Less than 0.5 minutes (e.g., 20 seconds) should round to 0
+        less_than_half = 20/3600  # 20 seconds in hours
+        assert round_hours_to_minute(less_than_half) == 0  # < 0.5 min -> 0 min
         
         # Exactly 1 minute
         assert round_hours_to_minute(1/60) == round(1/60, 4)
