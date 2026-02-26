@@ -485,46 +485,44 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         
         elements.append(Spacer(1, 15))
         
-        elements.append(Paragraph("Shift Details", section_header))
-        elements.append(Spacer(1, 10))
+        # SHIFT DETAILS section
+        elements.append(Paragraph("SHIFT DETAILS", section_style))
+        elements.append(Table([[""]], colWidths=[7.5*inch], rowHeights=[1], style=[('LINEBELOW', (0, 0), (-1, -1), 0.5, LIGHT_GRAY)]))
+        elements.append(Spacer(1, 5))
         
         for uid, data in employee_data.items():
             emp_header_style = ParagraphStyle(
                 'EmpHeader',
-                parent=styles['Heading3'],
-                fontSize=11,
-                textColor=DARK_BG,
-                spaceBefore=10,
-                spaceAfter=5
+                parent=styles['Normal'],
+                fontSize=10,
+                textColor=BLACK,
+                spaceBefore=8,
+                spaceAfter=3,
+                fontName='Helvetica-Bold',
+                leftIndent=10
             )
             elements.append(Paragraph(f"{data['name']} (${data['hourly_rate']:.2f}/hr)", emp_header_style))
             
-            shift_data = [["Date", "Clock In", "Clock Out", "Hours"]]
             for shift in sorted(data["shifts"], key=lambda x: x["clock_in"]):
                 clock_in_dt = datetime.fromisoformat(shift["clock_in"].replace('Z', '+00:00'))
                 clock_out_dt = datetime.fromisoformat(shift["clock_out"].replace('Z', '+00:00')) if shift["clock_out"] else None
                 
-                shift_data.append([
-                    clock_in_dt.strftime("%m/%d/%Y"),
-                    clock_in_dt.strftime("%I:%M %p"),
-                    clock_out_dt.strftime("%I:%M %p") if clock_out_dt else "-",
-                    format_hours_hms(shift['hours'])
-                ])
+                shift_data = [
+                    [Paragraph("Date:", label_style), Paragraph(clock_in_dt.strftime("%m/%d/%Y"), value_style),
+                     Paragraph("In:", label_style), Paragraph(clock_in_dt.strftime("%I:%M %p"), value_style),
+                     Paragraph("Out:", label_style), Paragraph(clock_out_dt.strftime("%I:%M %p") if clock_out_dt else "-", value_style),
+                     Paragraph("Hours:", label_style), Paragraph(format_hours_hms(shift['hours']), value_style)],
+                ]
+                shift_table = Table(shift_data, colWidths=[0.6*inch, 1*inch, 0.5*inch, 0.9*inch, 0.5*inch, 0.9*inch, 0.7*inch, 0.8*inch])
+                shift_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('TOPPADDING', (0, 0), (-1, -1), 1),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+                    ('LEFTPADDING', (0, 0), (0, -1), 25),
+                ]))
+                elements.append(shift_table)
             
-            shift_table = Table(shift_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1*inch])
-            shift_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), ACCENT_CYAN),
-                ('TEXTCOLOR', (0, 0), (-1, 0), DARK_BG),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                ('TOPPADDING', (0, 0), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0, colors.white),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_BG]),
-            ]))
-            elements.append(shift_table)
-            elements.append(Spacer(1, 15))
+            elements.append(Spacer(1, 5))
     
     elements.append(Spacer(1, 20))
     footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER, textColor=colors.Color(0.5, 0.5, 0.5))
