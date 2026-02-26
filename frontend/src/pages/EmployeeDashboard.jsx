@@ -696,7 +696,7 @@ export default function EmployeeDashboard() {
                 <p className="text-sm text-gray-500">
                   Rate: <span className="font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</span>
                   <span className="mx-2">•</span>
-                  Calculation: {formatHoursToHMS(summary.period_hours)} × {formatCurrency(summary.hourly_rate)}
+                  {summary.period_hours?.toFixed(2) || '0.00'} hrs × {formatCurrency(summary.hourly_rate)} = {formatCurrency(summary.estimated_pay)}
                 </p>
               </div>
             </div>
