@@ -610,6 +610,36 @@ export default function AdminDashboard() {
     }
   };
 
+  // View form submission PDF in new tab
+  const handleViewSubmissionPDF = async (submission) => {
+    try {
+      const endpoint = submission.formType === "job_applications" 
+        ? "job-applications" 
+        : submission.formType === "consignment_inquiries" 
+          ? "consignment-inquiries" 
+          : "consignment-agreements";
+      
+      const response = await axios.get(
+        `${API}/admin/forms/${endpoint}/${submission.id}/pdf`,
+        {
+          ...getAuthHeader(),
+          responseType: 'blob'
+        }
+      );
+      
+      // Open PDF in new tab for viewing
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      
+      // Clean up after a delay
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+    } catch (error) {
+      console.error("View error:", error);
+      toast.error("Failed to open PDF");
+    }
+  };
+
   // Download form submission as PDF
   const handleDownloadSubmission = async (submission) => {
     try {
@@ -627,22 +657,30 @@ export default function AdminDashboard() {
         }
       );
       
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = url;
+      // Force download using anchor element
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
       
       const formType = submission.formType === "job_applications" 
         ? "Job_Application"
         : submission.formType === "consignment_inquiries"
           ? "Consignment_Inquiry"
           : "Consignment_Agreement";
-      link.download = `${submission.full_name.replace(/\s+/g, "_")}_${formType}.pdf`;
+      const filename = `${submission.full_name.replace(/\s+/g, "_")}_${formType}.pdf`;
       
+      // Create hidden anchor and force click
+      const link = document.createElement('a');
+      link.style.display = 'none';
+      link.href = url;
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
       
       toast.success("PDF downloaded");
     } catch (error) {
