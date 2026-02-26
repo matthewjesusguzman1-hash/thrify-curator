@@ -484,10 +484,10 @@ export default function EmployeeDashboard() {
 
   const formatDate = (isoString) => {
     if (!isoString) return '';
-    return new Date(isoString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    });
+    // Parse as UTC and format without timezone conversion
+    const date = new Date(isoString);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
   };
 
   const formatCurrency = (amount) => {
