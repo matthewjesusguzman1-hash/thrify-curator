@@ -385,7 +385,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           </div>
           <div className="bg-white/10 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold">
-              {formatHoursToHMS(data.summary?.reduce((sum, s) => sum + s.total_hours, 0), { showSeconds: false })}
+              {formatHoursToHMS(data.summary?.reduce((sum, s) => sum + s.total_hours, 0))}
             </p>
             <p className="text-sm opacity-80">Total Hours</p>
           </div>
