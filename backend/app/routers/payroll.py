@@ -119,8 +119,11 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
         clock_in_dt = parse_clock_in(entry)
         if clock_in_dt and year_start <= clock_in_dt < year_end:
             hours = entry.get("total_hours") or 0
-            emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
-            year_total += hours * emp_rate
+            # Use user_id (not employee_id) to match time_entries schema
+            emp_rate = employee_rates.get(entry.get("user_id"), default_rate)
+            # Use rounded hours for pay calculation
+            rounded_hours = round_hours_to_minute(hours)
+            year_total += rounded_hours * emp_rate
     
     return {
         "current_period": {
@@ -222,14 +225,20 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
     for uid, data in employee_data.items():
         data["total_hours"] = round(data["total_hours"], 2)
         emp_rate = data["hourly_rate"]
-        data["gross_wages"] = round(data["total_hours"] * emp_rate, 2)
+        # Use rounded hours for pay calculation to match displayed time
+        rounded_total = round_hours_to_minute(data["total_hours"])
+        data["gross_wages"] = round(rounded_total * emp_rate, 2)
+        # Also store the formatted time for display
+        data["total_hours_formatted"] = format_hours_hms(data["total_hours"])
         data["daily_totals"] = dict(sorted(data["daily_totals"].items()))
         for date in data["daily_totals"]:
             data["daily_totals"][date] = round(data["daily_totals"][date], 2)
     
     total_hours = sum(e["total_hours"] for e in employee_data.values())
+    # Sum gross_wages which already uses rounded hours
     total_wages = sum(e["gross_wages"] for e in employee_data.values())
     total_shifts = sum(e["total_shifts"] for e in employee_data.values())
+    total_hours_formatted = format_hours_hms(total_hours)
     
     return {
         "period": {
