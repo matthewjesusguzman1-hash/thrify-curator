@@ -2689,6 +2689,18 @@ export default function AdminDashboard() {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
+                          <div className="p-3 border-b bg-gradient-to-r from-[#00D4FF]/10 to-[#00A8CC]/10">
+                            <p className="text-xs text-[#666] mb-1">Current Pay Period</p>
+                            <p className="text-sm font-semibold text-[#00A8CC]">
+                              {(() => {
+                                const period = calculateBiweeklyPeriod();
+                                if (period) {
+                                  return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                                }
+                                return '';
+                              })()}
+                            </p>
+                          </div>
                           <DayPicker
                             mode="single"
                             selected={editEmployeeData.start_date ? new Date(editEmployeeData.start_date + 'T00:00:00') : undefined}
@@ -2701,44 +2713,11 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="rounded-md border"
+                            className="rounded-md border-0"
                           />
                         </PopoverContent>
                       </Popover>
                       <p className="text-xs text-[#888] mt-1">When this employee started working</p>
-                    </div>
-
-                    {/* Pay Period Info - Read Only */}
-                    <div className="form-group">
-                      <div className="bg-gradient-to-br from-[#00D4FF]/10 to-[#00A8CC]/5 rounded-xl p-4 border border-[#00D4FF]/20">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-lg flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <span className="font-medium text-[#333]">Current Pay Period</span>
-                            <p className="text-sm font-semibold text-[#00A8CC]" data-testid="employee-current-period">
-                              {(() => {
-                                const period = calculateBiweeklyPeriod();
-                                if (period) {
-                                  return `${period.start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`;
-                                }
-                                return 'Not configured';
-                              })()}
-                            </p>
-                            <p className="text-xs text-[#888]">
-                              {(() => {
-                                const period = calculateBiweeklyPeriod();
-                                if (period) {
-                                  const anchorStr = period.anchorDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                                  return `Bi-weekly Period #${period.periodNumber} (year starts ${anchorStr})`;
-                                }
-                                return '';
-                              })()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
                     </div>
 
                     {/* W-9 Documents Section - Button to open modal */}
