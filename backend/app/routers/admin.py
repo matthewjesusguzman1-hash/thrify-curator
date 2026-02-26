@@ -1580,11 +1580,12 @@ async def get_w9_report_pdf(
     # Table header
     pdf.set_fill_color(200, 200, 200)
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(50, 7, "Name", border=1, fill=True)
-    pdf.cell(35, 7, "Role", border=1, fill=True, align="C")
-    pdf.cell(35, 7, "Status", border=1, fill=True, align="C")
-    pdf.cell(25, 7, "Docs", border=1, fill=True, align="C")
-    pdf.cell(35, 7, "Last Updated", border=1, fill=True, align="C")
+    pdf.cell(45, 7, "Name", border=1, fill=True)
+    pdf.cell(30, 7, "Start Date", border=1, fill=True, align="C")
+    pdf.cell(25, 7, "Role", border=1, fill=True, align="C")
+    pdf.cell(30, 7, "Status", border=1, fill=True, align="C")
+    pdf.cell(20, 7, "Docs", border=1, fill=True, align="C")
+    pdf.cell(30, 7, "Last Updated", border=1, fill=True, align="C")
     pdf.ln()
     
     # Table rows
@@ -1599,18 +1600,29 @@ async def get_w9_report_pdf(
         else:
             pdf.set_fill_color(255, 200, 200)
         
-        name = emp["name"][:25] if len(emp["name"]) > 25 else emp["name"]
+        name = emp["name"][:22] if len(emp["name"]) > 22 else emp["name"]
         role = emp["role"]
         last_updated = emp.get("last_updated", "")[:10] if emp.get("last_updated") else "N/A"
+        
+        # Format start date
+        start_date = emp.get("start_date", "")
+        if start_date:
+            try:
+                start_date = datetime.fromisoformat(start_date).strftime("%b %d, %Y")
+            except:
+                start_date = "N/A"
+        else:
+            start_date = "N/A"
         
         # Format status for display
         display_status = "Pending" if status in ["submitted", "pending", "pending_review"] else status.replace("_", " ").title()
         
-        pdf.cell(50, 6, name, border=1)
-        pdf.cell(35, 6, role, border=1, align="C")
-        pdf.cell(35, 6, display_status, border=1, fill=True, align="C")
-        pdf.cell(25, 6, str(emp["document_count"]), border=1, align="C")
-        pdf.cell(35, 6, last_updated, border=1, align="C")
+        pdf.cell(45, 6, name, border=1)
+        pdf.cell(30, 6, start_date, border=1, align="C")
+        pdf.cell(25, 6, role, border=1, align="C")
+        pdf.cell(30, 6, display_status, border=1, fill=True, align="C")
+        pdf.cell(20, 6, str(emp["document_count"]), border=1, align="C")
+        pdf.cell(30, 6, last_updated, border=1, align="C")
         pdf.ln()
         pdf.set_fill_color(255, 255, 255)
     
