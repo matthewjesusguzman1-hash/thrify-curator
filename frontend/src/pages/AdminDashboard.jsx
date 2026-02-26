@@ -4718,7 +4718,7 @@ export default function AdminDashboard() {
               </motion.div>
             </motion.div>
           )}
-        </motion.div>
+        </div>
       </main>
 
       {/* Back to Top Button */}
