@@ -937,6 +937,18 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 >
                   {loading ? "Loading..." : "Preview Report"}
                 </Button>
+                {previewData && (
+                  <Button
+                    onClick={refreshCurrentReport}
+                    disabled={refreshing}
+                    variant="outline"
+                    className="border-[#00D4FF] text-[#00D4FF] hover:bg-[#00D4FF]/10"
+                    data-testid="refresh-report-btn"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                    {refreshing ? "Refreshing..." : "Refresh"}
+                  </Button>
+                )}
                 <Button
                   onClick={() => handleDownload("csv")}
                   disabled={loading || (reportType !== "w9" && filterType === "custom" && (!customStartDate || !customEndDate))}
