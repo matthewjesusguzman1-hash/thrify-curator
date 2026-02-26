@@ -430,7 +430,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
                     clock_in_dt.strftime("%m/%d/%Y"),
                     clock_in_dt.strftime("%I:%M %p"),
                     clock_out_dt.strftime("%I:%M %p") if clock_out_dt else "-",
-                    f"{shift['hours']:.2f}"
+                    format_hours_hms(shift['hours'])
                 ])
             
             shift_table = Table(shift_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1*inch])
