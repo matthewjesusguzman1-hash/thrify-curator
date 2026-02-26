@@ -105,17 +105,13 @@ const connectLinks = [
   { name: "Message Us", icon: MessageCircle, isMessaging: true, color: "#FF1493" },
 ];
 
+// Removed stagger animations to prevent flickering on page load/navigation
 const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 }
-  }
+  visible: { opacity: 1 }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 15 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+  visible: { opacity: 1, y: 0 }
 };
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -222,12 +218,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="landing-page">
       <div className="max-w-5xl mx-auto px-4 pt-16 pb-8 sm:pt-12">
         {/* Header with Logo */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col items-center gap-4 mb-10"
-        >
+        <div className="flex flex-col items-center gap-4 mb-10">
           <div 
             className="w-28 h-28 rounded-2xl overflow-hidden shadow-2xl ring-4 ring-white/20"
             data-testid="logo-container"
@@ -242,7 +233,7 @@ export default function LandingPage() {
               Curated Resale Finds
             </p>
           </div>
-        </motion.div>
+        </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
