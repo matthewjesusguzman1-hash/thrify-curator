@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Eye,
   X,
-  BarChart3
+  BarChart3,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -36,7 +37,7 @@ import { formatHoursToHMS } from "@/lib/utils";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
-export default function ReportsSection({ employees, payPeriodStart, getAuthHeader, payrollSettings }) {
+export default function ReportsSection({ employees, payPeriodStart, getAuthHeader, payrollSettings, lastDataUpdate }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [reportType, setReportType] = useState("shifts"); // shifts, mileage, w9
   const [filterType, setFilterType] = useState("period");
