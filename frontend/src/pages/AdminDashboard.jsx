@@ -2017,15 +2017,12 @@ export default function AdminDashboard() {
         }
       }
       
-      // Handle pay period settings
-      if (editEmployeeData.sync_pay_period_with) {
-        updatePayload.sync_pay_period_with = editEmployeeData.sync_pay_period_with;
-      } else if (editEmployeeData.pay_period_start_date) {
+      // Handle pay period start date
+      if (editEmployeeData.pay_period_start_date) {
         updatePayload.pay_period_start_date = editEmployeeData.pay_period_start_date;
       } else {
-        // Clear both if using global settings
+        // Clear custom pay period - use global settings (first Monday of year)
         updatePayload.pay_period_start_date = "";
-        updatePayload.sync_pay_period_with = "";
       }
       
       await axios.put(`${API}/admin/employees/${editingEmployee.id}`, updatePayload, getAuthHeader());
