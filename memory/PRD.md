@@ -244,6 +244,21 @@ Build a "Thrifty Curator" reselling application with:
   - First-time visitors still see the branded splash screen
   - Return visitors now see the landing page content immediately without any flicker
 
+- **Payroll Summary UI Cleanup & Per-Employee Pay Period Settings** (Dec 2025):
+  - **Payroll Summary Changes**:
+    - Removed "Bi-weekly Period" text and "X hrs tracked" from the payroll summary section
+    - Added pay period date range to the Payroll Summary header (e.g., "Pay Period: Feb 18 - Mar 3, 2026")
+    - Removed the inline pay period settings from the Payroll Summary section
+  - **Per-Employee Pay Period Settings** (in Edit Employee modal):
+    - Added new "Pay Period Settings" section to the Edit Employee modal
+    - Three options available:
+      1. **Use Global Pay Period**: Uses the default bi-weekly period for all employees
+      2. **Sync with Another Employee**: Match pay period with an existing employee (dropdown to select)
+      3. **Custom Pay Period**: Set a unique bi-weekly start date for this specific employee (date picker)
+  - **Backend Updates**:
+    - Added `pay_period_start_date` and `sync_pay_period_with` fields to user model
+    - Updated `/api/admin/employees/{id}` endpoint to handle pay period settings
+
 ## Recent Updates (Feb 23, 2026)
 - **Phone Number Support for Employees**: Added phone number field throughout the employee management system
   - New "Phone" column in All Employees table (sortable)
