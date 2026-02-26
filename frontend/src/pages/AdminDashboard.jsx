@@ -3985,7 +3985,7 @@ export default function AdminDashboard() {
                                 ? 'bg-[#00D4FF]/20 text-[#00A8CC]' 
                                 : 'bg-green-100 text-green-700'
                             }`}>
-                              {shift.clock_out ? `${shift.total_hours || 0} hrs` : 'Active'}
+                              {shift.clock_out ? formatHoursToHMS(shift.total_hours) : 'Active'}
                             </span>
                             <div className="flex items-center gap-1">
                               <Button
