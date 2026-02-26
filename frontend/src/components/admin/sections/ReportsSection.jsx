@@ -170,6 +170,55 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
     return [selectedEmployee];
   };
 
+  // Refresh current report data
+  const refreshCurrentReport = useCallback(async () => {
+    if (!previewData || !isExpanded) return;
+    
+    setRefreshing(true);
+    try {
+      let response;
+      const { start, end } = getDateRange();
+      const employeeIds = getEmployeeIdsForFilter();
+      
+      if (previewData.type === "shifts") {
+        const params = new URLSearchParams({ start_date: start, end_date: end });
+        if (employeeIds && employeeIds.length === 1) {
+          params.append("employee_id", employeeIds[0]);
+        } else if (employeeIds && employeeIds.length > 1) {
+          params.append("employee_ids", employeeIds.join(","));
+        }
+        response = await axios.get(`${API}/admin/reports/shifts?${params.toString()}`, getAuthHeader());
+      } else if (previewData.type === "mileage") {
+        const params = new URLSearchParams({ start_date: start, end_date: end });
+        if (employeeIds && employeeIds.length === 1) {
+          params.append("employee_id", employeeIds[0]);
+        }
+        response = await axios.get(`${API}/admin/mileage/report?${params.toString()}`, getAuthHeader());
+      } else if (previewData.type === "w9") {
+        const params = new URLSearchParams();
+        if (employeeIds && employeeIds.length === 1) {
+          params.append("employee_id", employeeIds[0]);
+        }
+        response = await axios.get(`${API}/admin/reports/w9?${params.toString()}`, getAuthHeader());
+      }
+      
+      if (response) {
+        setPreviewData({ type: previewData.type, data: response.data });
+      }
+    } catch (error) {
+      console.error("Failed to refresh report:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [previewData, isExpanded, getAuthHeader, filterType, selectedMonth, selectedYear, customStartDate, customEndDate, selectedEmployee, employees]);
+
+  // Auto-refresh when data updates
+  useEffect(() => {
+    if (lastDataUpdate && previewData && isExpanded) {
+      refreshCurrentReport();
+    }
+  }, [lastDataUpdate]);
+
   const handlePreview = async () => {
     // W-9 report doesn't need date range
     if (reportType !== "w9") {
