@@ -80,10 +80,16 @@ export default function ConsignmentAgreementForm() {
             <p className="text-[#666] mb-4">
               Thank you for signing the consignment agreement. We'll send you a confirmation email with next steps.
             </p>
-            <p className="text-sm text-[#888] mb-6 bg-[#F9F6F7] rounded-lg p-3">
-              <Mail className="w-4 h-4 inline mr-2 text-[#8B5CF6]" />
-              We will reply to you via email at the address you provided.
-            </p>
+            <div className="mb-6 bg-gradient-to-r from-[#8B5CF6]/20 to-[#6D28D9]/20 border-2 border-[#8B5CF6] rounded-xl p-4">
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-10 h-10 bg-[#8B5CF6] rounded-full flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-[#1A1A2E] font-semibold text-base">
+                  We will contact you via email at the address you provided
+                </p>
+              </div>
+            </div>
             <Link to="/">
               <Button className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
                 Back to Home
