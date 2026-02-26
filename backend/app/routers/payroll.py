@@ -325,50 +325,98 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         })
     
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.3*inch, bottomMargin=0.5*inch, leftMargin=0.5*inch, rightMargin=0.5*inch)
     elements = []
     styles = getSampleStyleSheet()
     
-    # Brand colors
-    DARK_BG = colors.Color(26/255, 26/255, 46/255)  # #1A1A2E
-    ACCENT_PINK = colors.Color(244/255, 63/255, 94/255)  # #F43F5E
-    ACCENT_PURPLE = colors.Color(139/255, 92/255, 246/255)  # #8B5CF6
-    ACCENT_CYAN = colors.Color(0/255, 212/255, 255/255)  # #00D4FF
-    LIGHT_BG = colors.Color(249/255, 246/255, 247/255)  # #F9F6F7
-    GREEN_MONEY = colors.Color(34/255, 139/255, 34/255)  # Forest green
+    # Brand colors - Cyan theme for payroll (like Consignment Inquiry)
+    HEADER_COLOR = colors.Color(0/255, 212/255, 255/255)  # Cyan #00D4FF
+    SECTION_COLOR = colors.Color(0/255, 180/255, 216/255)  # Slightly darker cyan
+    GREEN = colors.Color(34/255, 139/255, 34/255)  # Green for money
+    GRAY_LABEL = colors.Color(128/255, 128/255, 128/255)
+    BLACK = colors.black
+    LIGHT_GRAY = colors.Color(200/255, 200/255, 200/255)
     
+    # Custom styles
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
-        fontSize=22,
-        alignment=TA_CENTER,
-        spaceAfter=5,
-        textColor=DARK_BG
+        fontSize=20,
+        alignment=0,  # Left align
+        spaceAfter=2,
+        textColor=colors.white,
+        fontName='Helvetica-Bold'
     )
     subtitle_style = ParagraphStyle(
         'CustomSubtitle',
         parent=styles['Normal'],
-        fontSize=12,
-        alignment=TA_CENTER,
-        spaceAfter=10,
-        textColor=colors.Color(102/255, 102/255, 102/255)
+        fontSize=11,
+        alignment=0,  # Left align
+        spaceAfter=0,
+        textColor=colors.white
     )
-    section_header = ParagraphStyle(
+    section_style = ParagraphStyle(
         'SectionHeader',
-        parent=styles['Heading2'],
-        fontSize=14,
-        textColor=ACCENT_PURPLE,
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=SECTION_COLOR,
         spaceBefore=15,
-        spaceAfter=10
+        spaceAfter=3,
+        fontName='Helvetica-Bold'
+    )
+    label_style = ParagraphStyle(
+        'Label',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=GRAY_LABEL,
+        leftIndent=10
+    )
+    value_style = ParagraphStyle(
+        'Value',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=BLACK
+    )
+    green_value_style = ParagraphStyle(
+        'GreenValue',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=GREEN,
+        fontName='Helvetica-Bold'
     )
     
-    elements.append(Paragraph("Thrifty Curator", title_style))
-    elements.append(Paragraph("Payroll Report", subtitle_style))
-    
-    period_text = f"Period: {period_start.strftime('%B %d, %Y')} - {period_end.strftime('%B %d, %Y')}"
-    elements.append(Paragraph(period_text, subtitle_style))
-    elements.append(Paragraph(f"Default Hourly Rate: ${default_rate:.2f} (individual rates may vary)", subtitle_style))
+    # Header table with cyan background
+    header_data = [
+        [Paragraph("THRIFTY CURATOR", title_style)],
+        [Paragraph("Payroll Report", subtitle_style)]
+    ]
+    header_table = Table(header_data, colWidths=[7.5*inch])
+    header_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), HEADER_COLOR),
+        ('TOPPADDING', (0, 0), (-1, 0), 15),
+        ('BOTTOMPADDING', (0, -1), (-1, -1), 15),
+        ('LEFTPADDING', (0, 0), (-1, -1), 15),
+    ]))
+    elements.append(header_table)
     elements.append(Spacer(1, 20))
+    
+    # REPORT PERIOD section
+    elements.append(Paragraph("REPORT PERIOD", section_style))
+    elements.append(Table([[""]], colWidths=[7.5*inch], rowHeights=[1], style=[('LINEBELOW', (0, 0), (-1, -1), 0.5, LIGHT_GRAY)]))
+    elements.append(Spacer(1, 5))
+    
+    period_data = [
+        [Paragraph("Date Range:", label_style), Paragraph(f"{period_start.strftime('%B %d, %Y')} - {period_end.strftime('%B %d, %Y')}", value_style)],
+        [Paragraph("Default Rate:", label_style), Paragraph(f"${default_rate:.2f}/hr", value_style)],
+    ]
+    period_table = Table(period_data, colWidths=[1.5*inch, 5.5*inch])
+    period_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    elements.append(period_table)
+    elements.append(Spacer(1, 10))
     
     total_hours = sum(e["total_hours"] for e in employee_data.values())
     # Use rounded hours for pay calculation to match displayed time
