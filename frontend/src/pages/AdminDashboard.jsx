@@ -3461,33 +3461,39 @@ export default function AdminDashboard() {
 
 
           {/* Hours by Employee - Unified Section with Shifts Modal */}
-          <HoursByEmployeeSection
-            timeEntries={timeEntries}
-            employees={employees}
-            formatDateTime={formatDateTime}
-            onAddEntry={() => setShowAddEntry(true)}
-            onEditEntry={handleEditEntry}
-            onDeleteEntry={handleDeleteEntry}
-            payPeriodStart={payrollSettings.pay_period_start_date}
-          />
+          <div data-testid="hours-section">
+            <HoursByEmployeeSection
+              timeEntries={timeEntries}
+              employees={employees}
+              formatDateTime={formatDateTime}
+              onAddEntry={() => setShowAddEntry(true)}
+              onEditEntry={handleEditEntry}
+              onDeleteEntry={handleDeleteEntry}
+              payPeriodStart={payrollSettings.pay_period_start_date}
+            />
+          </div>
 
           {/* Messages Section */}
-          <MessagesSection />
+          <div data-testid="messages-section">
+            <MessagesSection />
+          </div>
 
           {/* Form Submissions Section */}
-          <FormSubmissionsSection
-            formSubmissions={formSubmissions}
-            formsSummary={formsSummary}
-            loadingForms={loadingForms}
-            fetchFormSubmissions={fetchFormSubmissions}
-            onViewSubmission={(submission) => {
-              setSelectedSubmission(submission);
-              setShowSubmissionDetails(true);
-            }}
-            onDeleteSubmission={handleDeleteSubmission}
-            formatSubmissionDate={formatSubmissionDate}
-            getStatusBadge={getStatusBadge}
-          />
+          <div data-testid="form-submissions-section">
+            <FormSubmissionsSection
+              formSubmissions={formSubmissions}
+              formsSummary={formsSummary}
+              loadingForms={loadingForms}
+              fetchFormSubmissions={fetchFormSubmissions}
+              onViewSubmission={(submission) => {
+                setSelectedSubmission(submission);
+                setShowSubmissionDetails(true);
+              }}
+              onDeleteSubmission={handleDeleteSubmission}
+              formatSubmissionDate={formatSubmissionDate}
+              getStatusBadge={getStatusBadge}
+            />
+          </div>
 
           {/* Payment Records Section */}
           <PaymentRecordsSection getAuthHeader={getAuthHeader} />
