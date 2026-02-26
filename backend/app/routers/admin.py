@@ -1176,8 +1176,7 @@ async def get_shift_report_pdf(
         pdf.cell(30, 6, f"${pay:.2f}", border=1, align="C")
         pdf.ln()
     
-    # Totals - also use rounded hours for total pay
-    total_rounded = round_hours_to_minute(total_hours)
+    # Totals - pay already calculated from rounded hours per employee
     pdf.set_font("Helvetica", "B", 9)
     pdf.cell(50, 7, "TOTAL", border=1, fill=True)
     pdf.cell(25, 7, format_hours_hms(total_hours), border=1, fill=True, align="C")
