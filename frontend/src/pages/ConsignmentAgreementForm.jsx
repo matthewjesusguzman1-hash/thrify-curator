@@ -218,6 +218,25 @@ export default function ConsignmentAgreementForm() {
               />
             </div>
 
+            <div>
+              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                Custom Profit Split
+                <span className="font-normal text-[#888] ml-2">(Default: 50/50)</span>
+              </Label>
+              <Input
+                type="text"
+                name="custom_split"
+                value={formData.custom_split}
+                onChange={handleChange}
+                placeholder="Leave blank unless instructed otherwise"
+                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg placeholder:text-[#999] placeholder:italic"
+                data-testid="input-custom-split"
+              />
+              <p className="text-xs text-[#888] mt-1">
+                If a different split was agreed upon, enter it here (e.g., "60/40", "70/30")
+              </p>
+            </div>
+
             {/* Terms and Conditions */}
             <div>
               <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 mb-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
