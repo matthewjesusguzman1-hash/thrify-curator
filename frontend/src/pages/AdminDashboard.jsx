@@ -2193,9 +2193,10 @@ export default function AdminDashboard() {
                         {notifications.map((notification) => (
                           <div 
                             key={notification.id} 
-                            className={`notification-list-item p-4 hover:bg-[#faf9f7] transition-all ${
+                            className={`notification-list-item p-4 hover:bg-[#faf9f7] transition-all cursor-pointer ${
                               !notification.read ? 'bg-[#FFF5F8] border-l-4 border-l-[#FF1493]' : 'bg-white'
                             }`}
+                            onClick={() => handleNotificationClick(notification)}
                             data-testid={`notification-item-${notification.id}`}
                           >
                             <div className="flex items-start gap-3">
