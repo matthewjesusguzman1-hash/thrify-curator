@@ -233,6 +233,17 @@ Build a "Thrifty Curator" reselling application with:
 - Test reports: `/app/test_reports/`
 - Test files: `/app/backend/tests/`
 
+## Recent Updates (Dec 2025)
+- **Landing Page Flickering Fix** (Dec 2025):
+  - Fixed screen flickering issue on the public landing page when returning/navigating back
+  - **Root Cause**: The `SplashScreen` component was always rendered in `App.js`, and the `sessionStorage` check happened AFTER the component mounted, causing a brief flash of the splash overlay on return visits
+  - **Solution**: 
+    - Modified `App.js` to check `sessionStorage.hasSeenSplash` synchronously during initial render using a lazy state initializer
+    - Only render `SplashScreen` when needed (first-time visitors)
+    - Removed `framer-motion` animations with `initial={{ opacity: 0 }}` from `LandingPage.jsx` that caused content to "pop in"
+  - First-time visitors still see the branded splash screen
+  - Return visitors now see the landing page content immediately without any flicker
+
 ## Recent Updates (Feb 23, 2026)
 - **Phone Number Support for Employees**: Added phone number field throughout the employee management system
   - New "Phone" column in All Employees table (sortable)
