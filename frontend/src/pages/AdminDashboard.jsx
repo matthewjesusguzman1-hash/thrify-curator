@@ -3399,11 +3399,15 @@ export default function AdminDashboard() {
                           <p className="text-sm font-medium text-[#666]">Current Pay Period</p>
                         </div>
                       </div>
-                      {payrollSummary.current_period?.start && payrollSummary.current_period?.end && (
-                        <p className="text-xs text-[#888] mt-3 pt-3 border-t border-[#00D4FF]/10">
-                          {new Date(payrollSummary.current_period.start).toLocaleDateString()} - {new Date(payrollSummary.current_period.end).toLocaleDateString()}
-                        </p>
-                      )}
+                      <p className="text-xs text-[#888] mt-3 pt-3 border-t border-[#00D4FF]/10">
+                        {(() => {
+                          const period = calculateBiweeklyPeriod();
+                          if (period) {
+                            return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                          }
+                          return '';
+                        })()}
+                      </p>
                     </div>
                     
                     {/* Month Total */}
