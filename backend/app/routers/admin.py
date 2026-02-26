@@ -1458,81 +1458,149 @@ async def download_mileage_report_pdf(
     employee_id: Optional[str] = None,
     admin: dict = Depends(get_admin_user)
 ):
-    """Download mileage report as PDF"""
+    """Download mileage report as PDF - styled like other forms"""
     if not HAS_FPDF:
         raise HTTPException(status_code=500, detail="PDF generation not available")
     
     report = await get_mileage_report(start_date, end_date, employee_id, admin)
     
+    # Brand colors - Teal theme for mileage (matches other mileage export)
+    HEADER_COLOR = (20, 184, 166)  # Teal #14B8A6
+    SECTION_COLOR = (13, 148, 136)  # Darker teal
+    GREEN = (34, 139, 34)
+    GRAY_LABEL = (128, 128, 128)
+    BLACK = (0, 0, 0)
+    LIGHT_GRAY = (200, 200, 200)
+    
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Title
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "Thrifty Curator - Mileage Report", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Period: {start_date[:10]} to {end_date[:10]}", ln=True, align="C")
-    pdf.ln(5)
+    # Header banner
+    pdf.set_fill_color(*HEADER_COLOR)
+    pdf.rect(0, 0, 210, 30, 'F')
     
-    # Summary
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "Summary", ln=True)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Total Trips: {report['total_trips']}", ln=True)
-    pdf.cell(0, 6, f"Total Miles: {report['total_miles']:.1f}", ln=True)
-    pdf.cell(0, 6, f"Total Deduction: ${report['total_deduction']:.2f}", ln=True)
-    pdf.ln(5)
+    # Title in header
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_y(8)
+    pdf.cell(0, 8, "THRIFTY CURATOR", ln=True, align="L")
+    pdf.set_font("Helvetica", "", 11)
+    pdf.cell(0, 6, "Mileage Report", ln=True, align="L")
     
-    # By Employee
+    pdf.set_y(40)
+    pdf.set_x(10)
+    
+    # REPORT PERIOD section
+    pdf.set_text_color(*SECTION_COLOR)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "REPORT PERIOD", ln=True)
+    pdf.set_draw_color(*LIGHT_GRAY)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(3)
+    
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(*GRAY_LABEL)
+    pdf.cell(50, 6, "Date Range:")
+    pdf.set_text_color(*BLACK)
+    pdf.cell(0, 6, f"{start_date[:10]} to {end_date[:10]}", ln=True)
+    pdf.ln(8)
+    
+    # SUMMARY section
+    pdf.set_text_color(*SECTION_COLOR)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "SUMMARY", ln=True)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(3)
+    
+    pdf.set_font("Helvetica", "", 10)
+    
+    pdf.set_text_color(*GRAY_LABEL)
+    pdf.cell(50, 6, "Total Trips:")
+    pdf.set_text_color(*BLACK)
+    pdf.cell(0, 6, str(report['total_trips']), ln=True)
+    
+    pdf.set_text_color(*GRAY_LABEL)
+    pdf.cell(50, 6, "Total Miles:")
+    pdf.set_text_color(*BLACK)
+    pdf.cell(0, 6, f"{report['total_miles']:.1f} miles", ln=True)
+    
+    pdf.set_text_color(*GRAY_LABEL)
+    pdf.cell(50, 6, "Total Deduction:")
+    pdf.set_text_color(*GREEN)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(0, 6, f"${report['total_deduction']:.2f}", ln=True)
+    pdf.ln(8)
+    
+    # BY EMPLOYEE section
     if report["employees"]:
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 8, "By Employee", ln=True)
-        pdf.set_font("Helvetica", "", 9)
-        
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(60, 7, "Employee", border=1, fill=True)
-        pdf.cell(30, 7, "Miles", border=1, fill=True, align="C")
-        pdf.cell(35, 7, "Deduction", border=1, fill=True, align="C")
-        pdf.cell(25, 7, "Trips", border=1, fill=True, align="C")
-        pdf.ln()
+        pdf.set_text_color(*SECTION_COLOR)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 8, "BY EMPLOYEE", ln=True)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(3)
         
         for emp in report["employees"]:
-            pdf.cell(60, 6, emp["user_name"][:25], border=1)
-            pdf.cell(30, 6, f"{emp['total_miles']:.1f}", border=1, align="C")
-            pdf.cell(35, 6, f"${emp['total_deduction']:.2f}", border=1, align="C")
-            pdf.cell(25, 6, str(emp["trip_count"]), border=1, align="C")
-            pdf.ln()
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_text_color(*BLACK)
+            pdf.cell(0, 6, emp["user_name"], ln=True)
+            
+            pdf.set_font("Helvetica", "", 9)
+            pdf.set_text_color(*GRAY_LABEL)
+            pdf.cell(25, 5, "    Miles:")
+            pdf.set_text_color(*BLACK)
+            pdf.cell(30, 5, f"{emp['total_miles']:.1f}")
+            pdf.set_text_color(*GRAY_LABEL)
+            pdf.cell(25, 5, "Trips:")
+            pdf.set_text_color(*BLACK)
+            pdf.cell(20, 5, str(emp["trip_count"]))
+            pdf.set_text_color(*GRAY_LABEL)
+            pdf.cell(30, 5, "Deduction:")
+            pdf.set_text_color(*GREEN)
+            pdf.cell(0, 5, f"${emp['total_deduction']:.2f}", ln=True)
+            pdf.ln(2)
+        
+        pdf.ln(5)
     
-    pdf.ln(5)
-    
-    # Detailed entries
+    # TRIP DETAILS section
     if report["entries"]:
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 8, "Trip Details", ln=True)
-        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(*SECTION_COLOR)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 8, "TRIP DETAILS", ln=True)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(3)
         
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(40, 6, "Employee", border=1, fill=True)
-        pdf.cell(25, 6, "Date", border=1, fill=True)
-        pdf.cell(70, 6, "Purpose", border=1, fill=True)
-        pdf.cell(20, 6, "Miles", border=1, fill=True, align="C")
-        pdf.cell(25, 6, "Deduction", border=1, fill=True, align="C")
-        pdf.ln()
-        
-        # IRS standard mileage rate (72.5 cents per mile)
         MILEAGE_RATE = 0.725
         
         for entry in report["entries"][:50]:
-            purpose = (entry.get("purpose", "") or "")[:35]
+            purpose = entry.get("purpose", "") or "Other"
             miles = entry.get("total_miles", 0)
             deduction = miles * MILEAGE_RATE
-            pdf.cell(40, 5, entry.get("user_name", "")[:20], border=1)
-            pdf.cell(25, 5, entry.get("date", "")[:10], border=1)
-            pdf.cell(70, 5, purpose, border=1)
-            pdf.cell(20, 5, f"{miles:.1f}", border=1, align="C")
-            pdf.cell(25, 5, f"${deduction:.2f}", border=1, align="C")
-            pdf.ln()
+            
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.set_text_color(*BLACK)
+            pdf.cell(0, 5, f"{entry.get('date', '')[:10]} - {entry.get('user_name', '')}", ln=True)
+            
+            pdf.set_font("Helvetica", "", 8)
+            pdf.set_text_color(*GRAY_LABEL)
+            pdf.cell(25, 4, "    Purpose:")
+            pdf.set_text_color(*BLACK)
+            pdf.cell(60, 4, purpose[:30])
+            pdf.set_text_color(*GRAY_LABEL)
+            pdf.cell(18, 4, "Miles:")
+            pdf.set_text_color(*BLACK)
+            pdf.cell(20, 4, f"{miles:.1f}")
+            pdf.set_text_color(*GRAY_LABEL)
+            pdf.cell(25, 4, "Deduction:")
+            pdf.set_text_color(*GREEN)
+            pdf.cell(0, 4, f"${deduction:.2f}", ln=True)
+            pdf.ln(2)
+    
+    # Footer
+    pdf.set_y(-20)
+    pdf.set_text_color(150, 150, 150)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.cell(0, 10, f"Page 1 | Generated on {datetime.now(timezone.utc).strftime('%B %d, %Y')}", align="C")
     
     pdf_output = pdf.output()
     filename = f"mileage_report_{start_date[:10]}_to_{end_date[:10]}.pdf"
