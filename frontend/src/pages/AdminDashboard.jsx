@@ -71,6 +71,7 @@ import ReportsSection from "@/components/admin/sections/ReportsSection";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
 import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
+import FormSubmissionModal from "@/components/admin/modals/FormSubmissionModal";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
