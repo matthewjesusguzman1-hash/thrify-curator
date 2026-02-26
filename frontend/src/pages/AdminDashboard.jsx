@@ -2680,107 +2680,129 @@ export default function AdminDashboard() {
                           </div>
                           <div>
                             <span className="font-medium text-[#333]">Pay Period Settings</span>
-                            <p className="text-xs text-[#888]">Configure pay period for this employee</p>
+                            <p className="text-xs text-[#888]">Configure pay period start date for this employee</p>
                           </div>
                         </div>
                         
-                        {/* Pay Period Options */}
+                        {/* Current Pay Period Display */}
+                        <div className="bg-white rounded-lg p-3 mb-4 border border-[#00D4FF]/20">
+                          <p className="text-xs text-[#888] mb-1">Current Pay Period Range</p>
+                          <p className="text-sm font-semibold text-[#333]" data-testid="employee-current-period">
+                            {(() => {
+                              const startDate = editEmployeeData.pay_period_start_date || payrollSettings.pay_period_start_date;
+                              if (startDate) {
+                                const period = calculateBiweeklyPeriod(startDate);
+                                if (period) {
+                                  return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                                }
+                              }
+                              return 'Not configured';
+                            })()}
+                          </p>
+                        </div>
+
+                        {/* Pay Period Start Date with Calendar */}
                         <div className="space-y-3">
-                          {/* Option: Use Global Settings */}
-                          <label className="flex items-center gap-3 p-3 rounded-lg bg-white border border-[#eee] cursor-pointer hover:border-[#00D4FF]/50 transition-colors">
-                            <input
-                              type="radio"
-                              name="payPeriodOption"
-                              checked={!editEmployeeData.pay_period_start_date && !editEmployeeData.sync_pay_period_with}
-                              onChange={() => setEditEmployeeData({ 
-                                ...editEmployeeData, 
-                                pay_period_start_date: "", 
-                                sync_pay_period_with: "" 
-                              })}
-                              className="w-4 h-4 text-[#00D4FF]"
-                            />
-                            <div>
-                              <span className="text-sm font-medium text-[#333]">Use Global Pay Period</span>
-                              <p className="text-xs text-[#888]">
-                                {payrollSettings.pay_period_start_date 
-                                  ? `Starting from ${new Date(payrollSettings.pay_period_start_date).toLocaleDateString()}`
-                                  : 'Default bi-weekly period'}
-                              </p>
-                            </div>
-                          </label>
-                          
-                          {/* Option: Sync with Another Employee */}
-                          <label className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#eee] cursor-pointer hover:border-[#00D4FF]/50 transition-colors">
-                            <input
-                              type="radio"
-                              name="payPeriodOption"
-                              checked={!!editEmployeeData.sync_pay_period_with}
-                              onChange={() => setEditEmployeeData({ 
-                                ...editEmployeeData, 
-                                pay_period_start_date: "",
-                                sync_pay_period_with: employees.filter(e => e.id !== editingEmployee?.id && e.role !== 'admin')[0]?.id || ""
-                              })}
-                              className="w-4 h-4 text-[#00D4FF] mt-1"
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-[#333]">Sync with Another Employee</span>
-                              <p className="text-xs text-[#888] mb-2">Match pay period with an existing employee</p>
-                              {editEmployeeData.sync_pay_period_with && (
-                                <Select
-                                  value={editEmployeeData.sync_pay_period_with}
-                                  onValueChange={(value) => setEditEmployeeData({ 
-                                    ...editEmployeeData, 
-                                    sync_pay_period_with: value,
-                                    pay_period_start_date: ""
-                                  })}
+                          <div>
+                            <Label className="text-sm text-[#666] mb-2 block">Pay Period Start Date</Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="w-full justify-start text-left font-normal h-10 border-[#eee]"
+                                  data-testid="pay-period-calendar-trigger"
                                 >
-                                  <SelectTrigger className="h-9 text-sm">
-                                    <SelectValue placeholder="Select employee..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {employees
-                                      .filter(e => e.id !== editingEmployee?.id && e.role !== 'admin')
-                                      .map((emp) => (
-                                        <SelectItem key={emp.id} value={emp.id}>
-                                          {emp.name}
-                                        </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </div>
-                          </label>
-                          
-                          {/* Option: Custom Pay Period */}
-                          <label className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#eee] cursor-pointer hover:border-[#00D4FF]/50 transition-colors">
-                            <input
-                              type="radio"
-                              name="payPeriodOption"
-                              checked={!!editEmployeeData.pay_period_start_date && !editEmployeeData.sync_pay_period_with}
-                              onChange={() => setEditEmployeeData({ 
-                                ...editEmployeeData, 
-                                pay_period_start_date: payrollSettings.pay_period_start_date || new Date().toISOString().split('T')[0],
-                                sync_pay_period_with: ""
-                              })}
-                              className="w-4 h-4 text-[#00D4FF] mt-1"
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-[#333]">Custom Pay Period</span>
-                              <p className="text-xs text-[#888] mb-2">Set a unique bi-weekly start date for this employee</p>
-                              {editEmployeeData.pay_period_start_date && !editEmployeeData.sync_pay_period_with && (
-                                <Input
-                                  type="date"
-                                  value={editEmployeeData.pay_period_start_date}
-                                  onChange={(e) => setEditEmployeeData({ 
-                                    ...editEmployeeData, 
-                                    pay_period_start_date: e.target.value 
-                                  })}
-                                  className="h-9 text-sm w-full"
-                                  data-testid="edit-employee-pay-period-date"
+                                  <Calendar className="mr-2 h-4 w-4 text-[#00D4FF]" />
+                                  {editEmployeeData.pay_period_start_date ? (
+                                    <span>{new Date(editEmployeeData.pay_period_start_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                  ) : (
+                                    <span className="text-[#888]">Select start date...</span>
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <DayPicker
+                                  mode="single"
+                                  selected={editEmployeeData.pay_period_start_date ? new Date(editEmployeeData.pay_period_start_date + 'T00:00:00') : undefined}
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      const dateStr = date.toISOString().split('T')[0];
+                                      setEditEmployeeData({
+                                        ...editEmployeeData,
+                                        pay_period_start_date: dateStr,
+                                        sync_pay_period_with: ""
+                                      });
+                                    }
+                                  }}
+                                  className="rounded-md border"
                                 />
-                              )}
-                            </div>
-                          </label>
+                              </PopoverContent>
+                            </Popover>
+                            {editEmployeeData.pay_period_start_date && (
+                              <p className="text-xs text-[#00A8CC] mt-2">
+                                New period will be: {(() => {
+                                  const period = calculateBiweeklyPeriod(editEmployeeData.pay_period_start_date);
+                                  if (period) {
+                                    return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} (Period #${period.periodNumber})`;
+                                  }
+                                  return 'Invalid date';
+                                })()}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Divider */}
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 h-px bg-[#eee]"></div>
+                            <span className="text-xs text-[#888]">or</span>
+                            <div className="flex-1 h-px bg-[#eee]"></div>
+                          </div>
+
+                          {/* Sync with Another Employee */}
+                          <div>
+                            <Label className="text-sm text-[#666] mb-2 block">Sync with Another Employee</Label>
+                            <Select
+                              value={editEmployeeData.sync_pay_period_with || ""}
+                              onValueChange={(value) => {
+                                if (value === "none") {
+                                  setEditEmployeeData({
+                                    ...editEmployeeData,
+                                    sync_pay_period_with: "",
+                                    pay_period_start_date: ""
+                                  });
+                                } else {
+                                  // Get the selected employee's pay period
+                                  const syncEmployee = employees.find(e => e.id === value);
+                                  setEditEmployeeData({
+                                    ...editEmployeeData,
+                                    sync_pay_period_with: value,
+                                    pay_period_start_date: syncEmployee?.pay_period_start_date || ""
+                                  });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-10 border-[#eee]" data-testid="sync-employee-select">
+                                <SelectValue placeholder="Select employee to sync with..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">
+                                  <span className="text-[#888]">None (use global settings)</span>
+                                </SelectItem>
+                                {employees
+                                  .filter(e => e.id !== editingEmployee?.id && e.role !== 'admin')
+                                  .map((emp) => (
+                                    <SelectItem key={emp.id} value={emp.id}>
+                                      {emp.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            {editEmployeeData.sync_pay_period_with && (
+                              <p className="text-xs text-[#8B5CF6] mt-2">
+                                Will sync pay period with: {employees.find(e => e.id === editEmployeeData.sync_pay_period_with)?.name}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
