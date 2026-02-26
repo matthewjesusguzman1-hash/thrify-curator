@@ -337,41 +337,34 @@ export default function AdminDashboard() {
   const getFirstMondayOfYear = (year) => {
     const jan1 = new Date(year, 0, 1);
     const dayOfWeek = jan1.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const daysUntilMonday = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : 8 - dayOfWeek);
-    const firstMonday = new Date(year, 0, 1 + daysUntilMonday);
-    return firstMonday;
+    // Calculate days to add to get to first Monday
+    const daysToAdd = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : 8 - dayOfWeek);
+    return new Date(year, 0, 1 + daysToAdd);
   };
 
-  const calculateBiweeklyPeriod = (startDateStr) => {
-    let startDate;
-    
-    if (!startDateStr) {
-      // Default to first Monday of current year
-      startDate = getFirstMondayOfYear(new Date().getFullYear());
-    } else {
-      try {
-        startDate = new Date(startDateStr + 'T00:00:00');
-      } catch (e) {
-        startDate = getFirstMondayOfYear(new Date().getFullYear());
-      }
-    }
-    
+  // Calculate bi-weekly pay period based on first Monday of the year
+  // The pay period is ALWAYS anchored to the first Monday of the current year
+  const calculateBiweeklyPeriod = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Calculate how many complete 14-day periods have passed
+    // Get the first Monday of the current year as the anchor
+    const firstMonday = getFirstMondayOfYear(today.getFullYear());
+    
+    // Calculate how many complete 14-day periods have passed since first Monday
     const msPerDay = 24 * 60 * 60 * 1000;
-    const daysDiff = Math.floor((today - startDate) / msPerDay);
+    const daysDiff = Math.floor((today - firstMonday) / msPerDay);
     const periodNumber = Math.floor(daysDiff / 14);
     
     // Calculate the current period's start and end
-    const periodStart = new Date(startDate.getTime() + (periodNumber * 14 * msPerDay));
+    const periodStart = new Date(firstMonday.getTime() + (periodNumber * 14 * msPerDay));
     const periodEnd = new Date(periodStart.getTime() + (13 * msPerDay));
     
     return {
       start: periodStart,
       end: periodEnd,
-      periodNumber: periodNumber + 1
+      periodNumber: periodNumber + 1,
+      anchorDate: firstMonday
     };
   };
 
