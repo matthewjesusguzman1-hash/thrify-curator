@@ -4498,9 +4498,15 @@ export default function AdminDashboard() {
                       <h3 className="text-white font-semibold">
                         {viewingW9?.employeeName}'s W-9 Forms
                       </h3>
-                      <p className="text-white/60 text-xs">
-                        {employeeW9List.length} document{employeeW9List.length !== 1 ? 's' : ''} on file
-                      </p>
+                      <div className="flex items-center gap-3 text-white/60 text-xs">
+                        <span>{employeeW9List.length} document{employeeW9List.length !== 1 ? 's' : ''} on file</span>
+                        {viewingW9?.employeeStartDate && (
+                          <>
+                            <span className="text-white/30">•</span>
+                            <span>Started: {new Date(viewingW9.employeeStartDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
