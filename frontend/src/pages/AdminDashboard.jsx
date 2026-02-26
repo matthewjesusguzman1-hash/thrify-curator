@@ -2339,11 +2339,7 @@ export default function AdminDashboard() {
         {/* Bold Gradient Accent Bar */}
         <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493] -mx-8 -mt-8 mb-6 rounded-b-lg" />
         
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
+        <div className="space-y-6">
           <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <h1 className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white w-full sm:w-auto text-left">Admin Dashboard</h1>
