@@ -8,51 +8,41 @@ The user wants to build a Thrifty Curator reselling application.
     *   A comprehensive dashboard for managing employees, payroll, mileage, and messages.
     *   Header must display the logged-in admin's name.
     *   Sections should be visually distinct.
-*   **Mileage Tracking:** Must be completely separate and concurrent for each admin.
-*   **W-9 Management:** Admins can Preview, Download, Approve, and (in a restricted context) Delete W-9 forms.
-*   **Employee Portal & Data:** Employees can clock in/out and submit W-9s. Admins can view an employee's portal with accurate payroll data.
-*   **Reporting:** A centralized Reports section for Payroll/Shift, Mileage, and W-9 reports.
-*   **Notifications:** A notification system alerting admins for key events.
-    *   The notification bell must be highlighted for unread notifications.
-    *   Notifications are automatically marked as read when the panel is opened.
-    *   Includes a Clear notifications button.
-    *   Clicking a notification should navigate the user to the relevant item in the dashboard.
-    *   Covers clock-in/out, W-9s, messages, and all form submissions.
-*   **Form Submissions Management:**
-    *   Admins must be able to view all submitted forms in the dashboard.
-    *   Ability to change the status of each submission.
-    *   Ability to download submissions as a professionally formatted PDF.
-    *   Ability to send a pre-populated email response to the submitter directly from the dashboard.
-*   **Bug Fixes:** Address UI/UX issues like screen flickering and data loading delays.
+*   **Payroll & Time Tracking:**
+    *   The pay period is bi-weekly, starting from the first Monday of the year. This calculation must be consistent across all sections.
+    *   Pay calculations must be based on time rounded to the nearest minute, and this should be reflected consistently across all reports and displays.
+    *   The pay rate for each employee must be visible in reports.
+    *   Employees can clock in/out. A live timer () should be visible on both the employee dashboard and the admin's portal view when an employee is clocked in.
+    *   An employee must be able to clock out even if an admin clocked them in.
+    *   Clocking in again on the same day must create a new shift, not reopen a completed one.
+*   **Reporting:** A centralized Reports section. All reports must refresh in real-time as underlying data (like time entries) changes.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app includes separate admin accounts, mileage tracking, W-9 management, and a highly detailed form submission and notification system. The last session focused heavily on enhancing the notification system with multiple new features (highlighting, auto-read, click-to-navigate) and building out a complete management workflow for form submissions, including status updates, formatted PDF downloads, and a send email feature. A major refactoring of the main  component was also started to improve maintainability.
+A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app has admin and employee portals, form management, and reporting. The last session focused on standardizing time display and pay calculations across the entire application. Time durations are now displayed in a human-readable  format (rounded to the nearest minute), while live timers show seconds. Pay calculations are now based on this rounded time to ensure the math displayed to the user is consistent. A real-time update mechanism was added to reports, and several critical bugs related to clock-in/out logic were resolved.
 
 **Last working item**:
-    - Last item agent was working: The user reported that sections on the home screen flicker or glitch when returning to it. The agent identified that 's  animations were causing content to flash on load. The agent removed these animations from the main dashboard wrapper and several section components within . However, the user's final message confirms the issue persists.
+    - Last item agent was working: The user reported that payroll reports do not match the time worked. The agent identified that  was the source of the discrepancy, as it was using raw decimal hours for calculations (instead of rounded-to-the-minute values) and was incorrectly using  instead of  for lookups. The agent began fixing the  endpoint in that file.
     - Status: IN PROGRESS
-    - Agent Testing Done: Y
-    - Which testing method agent to use? screenshot tool
-    - User Testing Done: Y
+    - Agent Testing Done: N
+    - Which testing method agent to use? both
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Screen flickers on the home screen (P0)
-  
+  - Issue 1: Payroll reports do not match the time worked (P0)
+
   Issues Detail:
   - Issue 1: 
-     - **Description**: Sections on the application's main screen flicker or have a visual glitch upon loading or navigating back to the page.
-     - **Attempted fixes**: The agent removed  animations from  and its child section components (, , etc.).
+     - **Attempted fixes**: The agent started refactoring . A  helper was added, and the  function was partially updated to use the correct  key and the new rounding logic. The fix is not complete.
      - **Next debug checklist**:
-        1.  Clarify what the user means by home screen and store sections. The agent's fix targeted , but the issue might be on  or another public-facing page.
-        2.  Investigate  and any other potential home pages for  animations that could cause flickering.
-        3.  Examine the logic for returning to the home screen. The flicker might be caused by component re-rendering during navigation, not just the initial load.
-        4.  Review conditional rendering logic that might be causing large sections of the UI to unmount and remount unnecessarily.
-     - **Why fix this issue and what will be achieved with the fix?**: Resolving this will provide a smoother, more professional user experience by eliminating a distracting visual glitch.
+        1.  Complete the modifications in , ensuring all endpoints (especially  and ) use  for pay calculations and the correct  field for data aggregation.
+        2.  Thoroughly test the payroll endpoints via  to confirm their output matches the logic in the main Reports section ().
+        3.  Verify the frontend Payroll Summary section on the Admin Dashboard accurately reflects the corrected backend data using the screenshot tool.
+     - **Why fix this issue and what will be achieved with the fix?**: This will resolve a critical data inconsistency and ensure all payroll-related information is accurate and uniform across the application, fulfilling a direct user request.
      - **Status**:  IN PROGRESS
-     - **Is recurring issue?**: Y
-     - **Should Test frontend/backend/both after fix?**: Frontend
+     - **Is recurring issue?**: Y (Data consistency issues have been a recurring theme).
+     - **Should Test frontend/backend/both after fix?**: Both
      - **Blocked on other issue**: None
 
 **In progress Task List**:
@@ -60,99 +50,103 @@ A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app incl
 
  Task Detail:
   - Task 1: 
-     - **Where to resume**: The agent has already successfully extracted the  and  into their own components, reducing the file size of  by over 500 lines. The next step is to continue this process by extracting the remaining large, inline modals: , , and .
-     - **What will be achieved with this?**: This will significantly improve code maintainability, readability, and performance by breaking down a monolithic component into smaller, reusable pieces.
+     - **Description**: The main  component is overly large and complex. The refactoring process to break it down into smaller components is ongoing.
+     - **Where to resume**: Extract the remaining large, inline modals (, , and ) into their own dedicated component files under .
+     - **What will be achieved with this?**: Significantly improve code maintainability, readability, and developer velocity.
      - **Status**:  IN PROGRESS
      - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on something**: None
+     - **Blocked on something**: Blocked by the higher-priority payroll bug (Issue 1).
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks:**
-    *   **Complete  Refactor (P1):** Finish extracting the remaining inline modals (, , ) into dedicated components.
 *   **Future Tasks:**
     *   **Deployment (P2):** Once all features are complete and verified, deploy the application.
 
 **Completed work in this session**
-- **Notification System Overhaul:**
-  - Fixed UI bugs with missing control buttons.
-  - Implemented auto-mark-as-read functionality when the notification panel is opened.
-  - Added a prominent glowing/pulsing highlight to the notification bell for unread notifications.
-  - Added notifications for all form submissions (Job Applications, Inquiries, Agreements).
-  - Implemented click-to-navigate: clicking a notification now scrolls to and expands the relevant dashboard section and opens the specific item if applicable.
-- **Form Submission Management:**
-  - Fixed a bug preventing admins from viewing submitted forms.
-  - Added status change functionality (, , , ) to the form viewer modal.
-  - Implemented a Send Email feature that opens the admin's mail client with pre-populated templates based on the form type.
-  - Added a themed, professionally formatted PDF download option for all submissions.
-  - Iteratively resolved mobile/iOS-specific issues with the PDF download button.
-  - Added a Custom Profit Split field to the Consignment Agreement form.
-  - Enhanced the Thank You message on forms to be more visually prominent.
-- **Bug Fixes & UX Improvements:**
-  - Added a confirmation dialog before deleting messages.
-  - Fixed a data loading bug where the Messages section appeared empty until refreshed.
-- **Refactoring:**
-  - Began a major refactor of , successfully extracting the  and  into separate, reusable components.
+- **Pay Calculation & Time Display Overhaul:**
+  - Standardized all pay calculations to use time rounded to the nearest minute, ensuring the displayed math is consistent for the user.
+  - Converted all static time duration displays from decimal hours (e.g., ) to a readable  format (e.g., ).
+  - Added the employee's pay rate () to all relevant tables in the payroll report (UI, PDF, and CSV).
+- **Real-Time Functionality:**
+  - Implemented a real-time update system for the Reports section, which now auto-refreshes when underlying data changes, and added a manual Refresh button.
+  - Added a live  timer to the admin's View Employee Portal modal, mirroring the timer on the employee's own dashboard.
+  - Implemented periodic data refreshes on the Admin and Employee dashboards to keep data current.
+- **Critical Bug Fixes:**
+  - **Clock-in Logic:** Fixed a major bug where starting a new shift on the same day would incorrectly reopen a previously completed shift. The logic now correctly creates a new time entry.
+  - **Admin Clock-in:** Resolved an issue that prevented an employee from clocking out if an admin had initiated their clock-in.
+- **Data Consistency:**
+  - Fixed a bug where payroll reports used a hardcoded default pay rate (5/hr) instead of the correct admin-configured rate (0/hr).
+  - Clarified the Calculation text on dashboards to show the precise decimal hours used for pay () alongside the rounded display time (), preventing user confusion.
 
 **Earlier issues found/mentioned but not fixed**
-   - The primary known issue is the large-scale technical debt in , which is now being actively addressed through the In progress Task List.
+   - None.
 
 **Known issue recurrence from previous fork**
-  - The need to refactor  was carried over and is now in progress.
+  - The need to refactor  was carried over and remains in progress.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend**: React, TailwindCSS, , , .
-- **Backend**: FastAPI, PyMongo, Pydantic,  for PDF generation.
-- **APIs**: Browser Geolocation API, Web Share API (for iOS file sharing).
-- **State Management**: React state (, ) and .
+- **Frontend**: React, TailwindCSS, , . A new helper at  centralizes hour-to-string formatting.
+- **Backend**: FastAPI, PyMongo, Pydantic. A  helper function has been added to backend modules to standardize time calculations.
+- **Core Logic**:
+    - **Time Handling**: Time is stored in the database with full second precision. For all display purposes (reports, dashboards), it is rounded to the nearest minute and shown as .
+    - **Pay Calculation**: Pay is now consistently calculated based on the *rounded* hour value to match the displayed time.
+    - **Real-Time Updates**: A  timestamp in the  state triggers re-fetching in child components like . Periodic polling has also been added.
 
 **key DB schema**
-  - No schema changes were made. The  collection was utilized for new notification types.
+  - **users**: No schema changes in this session.
+  - **time_entries**: No schema changes in this session.
 
 **changes in tech stack**
   - None.
 
 **All files of reference**
-*   : The central file for most recent changes and ongoing refactoring.
-*   : The likely source of the current screen flickering issue.
-*   : Newly created component containing form viewing/management logic.
-*   : Contains the new PDF generation endpoints for form submissions.
-*   : Logic for creating notifications upon form submission.
+*   : **Currently being fixed.** The primary file for the current high-priority issue.
+*   : Contains updated clock-in/out logic.
+*   : Contains updated report generation logic.
+*   : Contains updated employee clock-in/out logic.
+*   : The central hub for many of the recent UI changes, including timers and real-time state management.
+*   : The frontend component for reports, which now includes real-time updates and new data columns.
+*   : The new frontend utility for time formatting.
 
 **Areas that need refactoring**:
--  is still approximately 4800 lines long. The refactoring task is in progress but needs to be completed by extracting the remaining inline modals (, , ).
+- : This remains the highest priority for refactoring to improve maintainability.
+- : This file has grown significantly and could benefit from being broken down into smaller, more focused modules (e.g., separating user management from time tracking functions).
 
 **key api endpoints**
-- : **(New)** Generates and returns a formatted PDF of a specific form submission.
-- : **(Modified)** Endpoints for Job Application, Consignment Inquiry, and Consignment Agreement now trigger a notification to be created in the backend.
+- : **BROKEN/INCORRECT.** Currently being fixed to provide accurate, consistent payroll data.
+- : Logic was fixed to correctly handle multiple shifts on the same day.
+- : Logic was fixed for the same reason.
+- : Updated to include pay rate and use consistent, rounded time for calculations.
 
 **Critical Info for New Agent**
-- **Your immediate priority is to fix the screen flickering issue.** The user has confirmed it still exists after your last attempt. Your investigation should focus on the page the user considers the home screen (likely ), not just the admin dashboard where you previously applied fixes.
-- The major refactoring of  is in progress. After fixing the flicker, your next task is to continue extracting the remaining inline modals to improve code health.
-- The notification system is now feature-complete, with highlighting, auto-read, and click-to-navigate functionality. Be aware of the  function in  which controls this new behavior.
-- The form submission download button has been through several iterations to achieve iOS compatibility. The current implementation uses the Web Share API or direct new-tab links, which is a key detail if further modifications are needed.
+- **Your immediate task (P0) is to fix the payroll discrepancy.** The root cause is in . You must finish the work started by the previous agent: ensure all calculations use time rounded to the nearest minute and that data is fetched using the correct  key.
+- **Consistency is key.** The user wants the math they see to be the math that is used. All pay calculations MUST be derived from the displayed  time values, not the raw, precise time stored in the database.
+- After fixing the payroll bug, the next priority (P1) is to continue refactoring the monolithic  component.
 
 **documents and test reports created in this job**
   -  (updated)
+  - 
+  - 
+  - (and several others from testing cycles)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1.  **Request:** Fix flickering on the home screen. **Status:** PENDING (User confirmed the fix was not successful).
-2.  **Request:** When opening the home screen, the sections flicker. **Status:** IN PROGRESS (Agent attempted a fix).
-3.  **Request:** Clicking a notification should scroll to the item; if the section is already open, it shouldn't close it. **Status:** COMPLETED.
-4.  **Request:** When viewing notifications, tapping an individual notification should auto-scroll to that opened section and view the item. **Status:** COMPLETED.
-5.  **Request:** Refactor. **Status:** IN PROGRESS.
-6.  **Request:** Default the consignment profit split to 50/50 but allow a custom override. **Status:** COMPLETED.
-7.  **Request:** When viewing submitted forms, allow admins to send a pre-populated email to the submitter. **Status:** COMPLETED.
-8.  **Request:** Make the note on form submission success pages more obvious, and change 2-3 days to soon. **Status:** COMPLETED.
-9.  **Request:** Refactor. **Status:** IN PROGRESS.
-10. **Request:** The  section shows no messages until I refresh it. **Status:** COMPLETED.
+1.  **Request:** Add a live h:m:s timer to the admin's employee portal view. **Status:** COMPLETED.
+2.  **Reported Issue:** Employee cannot clock out after an admin has clocked them in. **Status:** COMPLETED (Fixed).
+3.  **Request:** Calculate estimated pay using the displayed time (rounded to the nearest minute), not the precise stored time. **Status:** COMPLETED.
+4.  **Reported Issue:** The Hours by Employee section shows decimal hours, not  format. **Status:** COMPLETED (Fixed).
+5.  **Reported Issue:** Pay calculation for minutes seems incorrect (e.g., 2 minutes = ). **Status:** COMPLETED (Fixed, was a rounding/display issue, now 1 min = /bin/bash.33).
+6.  **Reported Issue:** Payroll reports do not match the time worked. **Status:** IN PROGRESS (This is the current ).
+7.  **Initial user message was a request from the agent to confirm the plan**
+8.  **User approved agent's plan**
+9.  **User asked to change label to Est. pay from Pay**
+10. **The user wants the time to be reflected in hours, minutes, and seconds in recent shifts and reports.**
 
 **Project Health Check:**
-- **Broken**: The application's home screen has a visual flicker on load, which persists despite attempted fixes.
+- **Broken**: The payroll summary functionality, both on the backend () and its corresponding frontend section, is providing incorrect data.
 - **Mocked**: None.
-- **Needs Attention**:  is partially refactored but remains a very large monolithic component with significant inline logic that needs to be extracted.
+- **Needs Attention**:  requires significant refactoring.
 
 **3rd Party Integrations**
 *   
@@ -163,13 +157,13 @@ A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app incl
 *   
 
 **Testing status**
-  - Testing agent used after significant changes: NO
+  - Testing agent used after significant changes: YES
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: The screen flickering issue is a persistent bug that has not been fully resolved.
+  - Known regressions: The payroll summary data is incorrect, which could be considered a regression.
 
 **Credentials to test flow:**
-- **Admin Access:** From the login page, enter code  (for Matthew Guzman) or  (for Eunice Guzman).
+- **Admin Access:** From the login page (), enter code  (for Matthew Guzman) or  (for Eunice Guzman).
 
 **What agent forgot to execute**
-- The agent did not fully resolve the screen flickering issue. The fix was applied to the , but the user's report (returning to home screen, store sections) suggests the problem may lie on a different page, such as , which the agent did not investigate.</analysis>
+- The agent did not forget any tasks but was in the middle of fixing the payroll discrepancy in  when the session ended. This fix needs to be completed and verified.</analysis>
