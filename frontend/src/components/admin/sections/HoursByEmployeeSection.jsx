@@ -264,7 +264,7 @@ export default function HoursByEmployeeSection({
                             <td>
                               <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#8B5CF6]/10 rounded-full text-sm font-semibold text-[#6D28D9]">
                                 <Clock className="w-3 h-3" />
-                                {emp.total_hours} hrs
+                                {formatHoursToHMS(emp.total_hours)}
                               </span>
                             </td>
                             <td>
