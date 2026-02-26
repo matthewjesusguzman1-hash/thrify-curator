@@ -221,13 +221,12 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     
     payroll_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     default_rate = 15.00
-    pay_period_start_date = "2026-01-06"
     
     if payroll_settings:
         default_rate = payroll_settings.get("default_hourly_rate", 15.00)
-        pay_period_start_date = payroll_settings.get("pay_period_start_date", "2026-01-06")
     
-    period_start, period_end = get_biweekly_period(pay_period_start_date, 0)
+    # Use first Monday of year as anchor
+    period_start, period_end = get_biweekly_period(period_index=0)
     
     if hasattr(period_start, 'tzinfo') and period_start.tzinfo is None:
         period_start = period_start.replace(tzinfo=timezone.utc)
