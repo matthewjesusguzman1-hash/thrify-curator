@@ -22,59 +22,38 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
     display_name = "Administrator" if user.get("role") == "admin" else user["name"]
     
     if action.action == "in":
+        # Check if already clocked in
         active = await db.time_entries.find_one(
             {"user_id": user["id"], "clock_out": None}, {"_id": 0}
         )
         if active:
             raise HTTPException(status_code=400, detail="Already clocked in")
         
-        today_entry = await db.time_entries.find_one(
-            {"user_id": user["id"], "shift_date": today_start.strftime("%Y-%m-%d")},
-            {"_id": 0}
+        # Always create a new entry for each clock-in
+        # This ensures that completed shifts (clocked out by admin or employee) 
+        # are not accidentally reopened
+        entry = TimeEntry(
+            user_id=user["id"],
+            user_name=display_name,
+            clock_in=now_iso,
+            shift_date=today_start.strftime("%Y-%m-%d")
         )
+        entry_dict = entry.model_dump()
+        entry_dict["last_clock_in"] = now_iso
+        entry_dict["accumulated_hours"] = 0.0
+        await db.time_entries.insert_one(entry_dict)
         
-        if today_entry:
-            await db.time_entries.update_one(
-                {"id": today_entry["id"]},
-                {"$set": {"clock_out": None, "last_clock_in": now_iso}}
-            )
-            today_entry["clock_out"] = None
-            today_entry["last_clock_in"] = now_iso
-            
-            # Create clock in notification
-            notification = AdminNotification(
-                type="clock_in",
-                employee_id=user["id"],
-                employee_name=display_name,
-                message=f"{display_name} clocked in",
-                details={"time": now_iso}
-            )
-            await db.admin_notifications.insert_one(notification.model_dump())
-            
-            return TimeEntry(**today_entry)
-        else:
-            entry = TimeEntry(
-                user_id=user["id"],
-                user_name=display_name,
-                clock_in=now_iso,
-                shift_date=today_start.strftime("%Y-%m-%d")
-            )
-            entry_dict = entry.model_dump()
-            entry_dict["last_clock_in"] = now_iso
-            entry_dict["accumulated_hours"] = 0.0
-            await db.time_entries.insert_one(entry_dict)
-            
-            # Create clock in notification
-            notification = AdminNotification(
-                type="clock_in",
-                employee_id=user["id"],
-                employee_name=display_name,
-                message=f"{display_name} clocked in",
-                details={"time": now_iso}
-            )
-            await db.admin_notifications.insert_one(notification.model_dump())
-            
-            return entry
+        # Create clock in notification
+        notification = AdminNotification(
+            type="clock_in",
+            employee_id=user["id"],
+            employee_name=display_name,
+            message=f"{display_name} clocked in",
+            details={"time": now_iso}
+        )
+        await db.admin_notifications.insert_one(notification.model_dump())
+        
+        return entry
     
     elif action.action == "out":
         active = await db.time_entries.find_one(
