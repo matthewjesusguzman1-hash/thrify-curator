@@ -72,6 +72,7 @@ import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
 import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
 import FormSubmissionModal from "@/components/admin/modals/FormSubmissionModal";
+import { AddEmployeeModal, RemoveEmployeeModal } from "@/components/admin/modals/EmployeeModals";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
