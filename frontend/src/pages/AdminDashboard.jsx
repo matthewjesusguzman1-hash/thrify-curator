@@ -1969,8 +1969,7 @@ export default function AdminDashboard() {
       email: employee.email,
       role: employee.role,
       hourly_rate: employee.hourly_rate?.toString() || "",
-      phone: employee.phone || "",
-      pay_period_start_date: employee.pay_period_start_date || ""
+      phone: employee.phone || ""
     });
     setShowEditEmployee(true);
     setEditEmployeeW9s([]);
