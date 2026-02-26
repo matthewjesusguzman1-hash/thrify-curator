@@ -2374,18 +2374,6 @@ export default function AdminDashboard() {
               </Button>
             </div>
             <div className="flex gap-2 items-start">
-              {/* Reports Stack */}
-              <div className="flex flex-col gap-1">
-                <Button 
-                  onClick={() => setShowPayroll(true)}
-                  size="sm"
-                  className="flex items-center gap-2 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#00D4FF]/30 transition-all border-0 text-xs sm:text-sm h-9"
-                  data-testid="payroll-btn"
-                >
-                  <DollarSign className="w-4 h-4" />
-                  Payroll
-                </Button>
-              </div>
               {/* Employee Management + Start Trip */}
               <div className="flex flex-col gap-1">
                 {/* Add, Edit, Remove row */}
