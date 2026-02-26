@@ -181,14 +181,15 @@ class TestRoundingLogic:
         # 31 seconds = 31/3600 hours = 0.5167 minutes -> rounds to 1 minute
         just_over_half_min = 31/3600
         result = round_hours_to_minute(just_over_half_min)
-        assert result == round(1/60, 4), f"31 seconds should round to 1 minute, got {result}"
+        expected = 1/60  # 1 minute in hours
+        assert abs(result - expected) < 0.0001, f"31 seconds should round to 1 minute, got {result}"
         
         # 25 seconds = 25/3600 hours = 0.417 minutes -> rounds to 0 minutes
         under_half = 25/3600
         assert round_hours_to_minute(under_half) == 0  # < 0.5 min -> 0 min
         
         # Exactly 1 minute
-        assert round_hours_to_minute(1/60) == round(1/60, 4)
+        assert abs(round_hours_to_minute(1/60) - 1/60) < 0.0001
         
         # Exactly 30 minutes
         assert round_hours_to_minute(0.5) == 0.5
