@@ -1047,6 +1047,34 @@ export default function AdminDashboard() {
     }
   };
 
+  // Timer effect for admin portal view - updates every second when employee is clocked in
+  useEffect(() => {
+    if (!showEmployeePortal || !employeeClockStatus?.is_clocked_in || !employeeClockStatus?.clock_in_time) {
+      setPortalElapsedTime(0);
+      return;
+    }
+    
+    const updateElapsed = () => {
+      const clockInTime = new Date(employeeClockStatus.clock_in_time).getTime();
+      const now = Date.now();
+      const elapsed = Math.floor((now - clockInTime) / 1000);
+      setPortalElapsedTime(elapsed > 0 ? elapsed : 0);
+    };
+    
+    updateElapsed(); // Initial update
+    const interval = setInterval(updateElapsed, 1000);
+    
+    return () => clearInterval(interval);
+  }, [showEmployeePortal, employeeClockStatus?.is_clocked_in, employeeClockStatus?.clock_in_time]);
+
+  // Format seconds to HH:MM:SS for portal timer
+  const formatPortalTime = (seconds) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Header Trip Button Functions
   const checkActiveTripStatus = useCallback(async () => {
     try {
