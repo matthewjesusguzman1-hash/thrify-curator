@@ -519,7 +519,8 @@ export default function AdminDashboard() {
         if (hoursSection) {
           hoursSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
           // Expand the section if collapsed
-          const hoursToggle = document.querySelector('[data-testid="hours-section-toggle"]');
+          await new Promise(resolve => setTimeout(resolve, 300));
+          const hoursToggle = document.querySelector('[data-testid="hours-by-employee-toggle"]');
           if (hoursToggle) {
             hoursToggle.click();
           }
@@ -533,6 +534,7 @@ export default function AdminDashboard() {
         if (employeesSection) {
           employeesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
           // Expand the section if collapsed
+          await new Promise(resolve => setTimeout(resolve, 300));
           const empToggle = document.querySelector('[data-testid="employees-section-toggle"]');
           if (empToggle) {
             empToggle.click();
@@ -546,6 +548,7 @@ export default function AdminDashboard() {
         if (messagesSection) {
           messagesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
           // Expand the section
+          await new Promise(resolve => setTimeout(resolve, 300));
           const msgToggle = document.querySelector('[data-testid="messages-section-toggle"]');
           if (msgToggle) {
             msgToggle.click();
@@ -561,6 +564,7 @@ export default function AdminDashboard() {
         if (formSection) {
           formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
           // Expand the section
+          await new Promise(resolve => setTimeout(resolve, 300));
           const formToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
           if (formToggle) {
             formToggle.click();
