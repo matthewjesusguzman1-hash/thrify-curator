@@ -1049,18 +1049,22 @@ async def download_shift_report_csv(
     
     # Header
     writer.writerow([
-        "Employee Name", "Clock In", "Clock Out", "Hours", "Admin Note", "Adjusted"
+        "Employee Name", "Clock In", "Clock Out", "Hours", "Est. Pay", "Admin Note", "Adjusted"
     ])
     
     # Data rows
     for entry in report["entries"]:
         clock_in = entry["clock_in"][:16].replace("T", " ") if entry["clock_in"] else ""
         clock_out = entry["clock_out"][:16].replace("T", " ") if entry["clock_out"] else "Active"
+        hours = entry["total_hours"] or 0
+        hourly_rate = entry.get("hourly_rate", 15.00)
+        est_pay = hours * hourly_rate
         writer.writerow([
             entry["employee_name"],
             clock_in,
             clock_out,
-            f"{entry['total_hours']:.2f}" if entry["total_hours"] else "0.00",
+            f"{hours:.2f}",
+            f"${est_pay:.2f}",
             entry["admin_note"] or "",
             "Yes" if entry["adjusted_by_admin"] else "No"
         ])
@@ -1156,25 +1160,30 @@ async def get_shift_report_pdf(
     
     # Table header
     pdf.set_fill_color(240, 240, 240)
-    pdf.cell(35, 6, "Employee", border=1, fill=True)
-    pdf.cell(35, 6, "Clock In", border=1, fill=True)
-    pdf.cell(35, 6, "Clock Out", border=1, fill=True)
+    pdf.cell(32, 6, "Employee", border=1, fill=True)
+    pdf.cell(32, 6, "Clock In", border=1, fill=True)
+    pdf.cell(32, 6, "Clock Out", border=1, fill=True)
     pdf.cell(15, 6, "Hours", border=1, fill=True, align="C")
-    pdf.cell(60, 6, "Admin Note", border=1, fill=True)
+    pdf.cell(22, 6, "Est. Pay", border=1, fill=True, align="C")
+    pdf.cell(47, 6, "Admin Note", border=1, fill=True)
     pdf.ln()
     
     for entry in report["entries"]:
         clock_in = entry["clock_in"][5:16].replace("T", " ") if entry["clock_in"] else ""
         clock_out = entry["clock_out"][5:16].replace("T", " ") if entry["clock_out"] else "Active"
-        note = (entry["admin_note"] or "")[:30]
-        if entry["admin_note"] and len(entry["admin_note"]) > 30:
+        note = (entry["admin_note"] or "")[:22]
+        if entry["admin_note"] and len(entry["admin_note"]) > 22:
             note += "..."
+        hours = entry["total_hours"] or 0
+        hourly_rate = entry.get("hourly_rate", 15.00)
+        est_pay = hours * hourly_rate
         
-        pdf.cell(35, 5, entry["employee_name"][:18], border=1)
-        pdf.cell(35, 5, clock_in, border=1)
-        pdf.cell(35, 5, clock_out, border=1)
-        pdf.cell(15, 5, f"{entry['total_hours']:.2f}" if entry["total_hours"] else "0", border=1, align="C")
-        pdf.cell(60, 5, note, border=1)
+        pdf.cell(32, 5, entry["employee_name"][:16], border=1)
+        pdf.cell(32, 5, clock_in, border=1)
+        pdf.cell(32, 5, clock_out, border=1)
+        pdf.cell(15, 5, f"{hours:.2f}", border=1, align="C")
+        pdf.cell(22, 5, f"${est_pay:.2f}", border=1, align="C")
+        pdf.cell(47, 5, note, border=1)
         pdf.ln()
     
     # Generate PDF bytes

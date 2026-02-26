@@ -440,6 +440,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                   <th className="text-left p-2">Clock In</th>
                   <th className="text-left p-2">Clock Out</th>
                   <th className="text-center p-2">Hours</th>
+                  <th className="text-right p-2">Est. Pay</th>
                   <th className="text-left p-2">Admin Note</th>
                 </tr>
               </thead>
@@ -452,6 +453,9 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                     <td className="p-2 text-center">
                       {entry.total_hours?.toFixed(2) || "0.00"}
                       {entry.adjusted_by_admin && <span className="text-[#D97706] ml-1">*</span>}
+                    </td>
+                    <td className="p-2 text-right font-medium text-green-600">
+                      {formatCurrency((entry.total_hours || 0) * (entry.hourly_rate || 15))}
                     </td>
                     <td className="p-2 text-[#666] text-xs max-w-[150px] truncate" title={entry.admin_note}>
                       {entry.admin_note || "-"}
