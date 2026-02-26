@@ -3962,7 +3962,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Modal Footer */}
-                <div className="p-4 bg-[#F9F6F7] flex justify-between">
+                <div className="p-4 bg-[#F9F6F7] flex justify-between items-center gap-2">
                   <Button
                     variant="outline"
                     onClick={() => handleDeleteSubmission(selectedSubmission.formType, selectedSubmission.id)}
@@ -3972,12 +3972,23 @@ export default function AdminDashboard() {
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete
                   </Button>
-                  <Button
-                    onClick={() => setShowSubmissionDetails(false)}
-                    className="btn-primary"
-                  >
-                    Close
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleDownloadSubmission(selectedSubmission)}
+                      className="text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10"
+                      data-testid="download-submission-btn"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                    <Button
+                      onClick={() => setShowSubmissionDetails(false)}
+                      className="btn-primary"
+                    >
+                      Close
+                    </Button>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
