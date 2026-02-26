@@ -55,6 +55,8 @@ class UpdateEmployeeDetails(BaseModel):
     hourly_rate: Optional[float] = None
     role: Optional[str] = None
     phone: Optional[str] = None
+    pay_period_start_date: Optional[str] = None  # Custom pay period start date
+    sync_pay_period_with: Optional[str] = None  # Employee ID to sync pay period with
 
 
 class W9RejectRequest(BaseModel):
