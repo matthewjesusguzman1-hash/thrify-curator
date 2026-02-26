@@ -2043,8 +2043,7 @@ export default function AdminDashboard() {
                         <div className="w-16 h-16 bg-[#F9F6F7] rounded-full flex items-center justify-center mx-auto mb-4">
                           <Bell className="w-8 h-8 text-[#ccc]" />
                         </div>
-                        <p className="text-[#888] text-sm font-medium">No notifications yet</p>
-                        <p className="text-[#aaa] text-xs mt-1">You'll see employee clock in/out events here</p>
+                        <p className="text-[#888] text-sm font-medium">No notifications</p>
                       </div>
                     ) : (
                       <div className="divide-y divide-[#f0f0f0]">
