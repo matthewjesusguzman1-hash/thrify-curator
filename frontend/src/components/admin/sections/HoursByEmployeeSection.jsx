@@ -112,7 +112,7 @@ export default function HoursByEmployeeSection({
       }
       return true;
     }).sort((a, b) => new Date(b.clock_in) - new Date(a.clock_in));
-  }, [selectedEmployee, timeEntries, filterType, selectedMonth, selectedYear, payPeriodStart]);
+  }, [selectedEmployee, timeEntries, filterType, selectedMonth, selectedYear]);
 
   // Calculate filtered totals
   const filteredTotals = useMemo(() => {
