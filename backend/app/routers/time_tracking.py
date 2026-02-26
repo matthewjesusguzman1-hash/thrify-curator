@@ -11,6 +11,16 @@ from app.models.notifications import AdminNotification
 router = APIRouter(prefix="/time", tags=["Time Tracking"])
 
 
+def round_to_nearest_minute(seconds: float) -> float:
+    """Convert seconds to hours, rounded to the nearest minute.
+    
+    Example: 1872 seconds = 31.2 minutes → rounds to 31 minutes = 0.5167 hours
+    Returns hours as a float rounded to 4 decimal places for precision.
+    """
+    total_minutes = round(seconds / 60)  # Round to nearest minute
+    return round(total_minutes / 60, 4)  # Convert to hours with 4 decimal precision
+
+
 @router.post("/clock", response_model=TimeEntry)
 async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc)
