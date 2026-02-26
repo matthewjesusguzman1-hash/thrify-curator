@@ -334,30 +334,46 @@ export default function AdminDashboard() {
   };
 
   // Helper function to calculate biweekly period from a start date
+  // Helper to get the first Monday of a given year
+  const getFirstMondayOfYear = (year) => {
+    const jan1 = new Date(year, 0, 1);
+    const dayOfWeek = jan1.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : 8 - dayOfWeek);
+    const firstMonday = new Date(year, 0, 1 + daysUntilMonday);
+    return firstMonday;
+  };
+
   const calculateBiweeklyPeriod = (startDateStr) => {
-    if (!startDateStr) return null;
-    try {
-      const startDate = new Date(startDateStr + 'T00:00:00');
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      // Calculate how many complete 14-day periods have passed
-      const msPerDay = 24 * 60 * 60 * 1000;
-      const daysDiff = Math.floor((today - startDate) / msPerDay);
-      const periodNumber = Math.floor(daysDiff / 14);
-      
-      // Calculate the current period's start and end
-      const periodStart = new Date(startDate.getTime() + (periodNumber * 14 * msPerDay));
-      const periodEnd = new Date(periodStart.getTime() + (13 * msPerDay));
-      
-      return {
-        start: periodStart,
-        end: periodEnd,
-        periodNumber: periodNumber + 1
-      };
-    } catch (e) {
-      return null;
+    let startDate;
+    
+    if (!startDateStr) {
+      // Default to first Monday of current year
+      startDate = getFirstMondayOfYear(new Date().getFullYear());
+    } else {
+      try {
+        startDate = new Date(startDateStr + 'T00:00:00');
+      } catch (e) {
+        startDate = getFirstMondayOfYear(new Date().getFullYear());
+      }
     }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate how many complete 14-day periods have passed
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysDiff = Math.floor((today - startDate) / msPerDay);
+    const periodNumber = Math.floor(daysDiff / 14);
+    
+    // Calculate the current period's start and end
+    const periodStart = new Date(startDate.getTime() + (periodNumber * 14 * msPerDay));
+    const periodEnd = new Date(periodStart.getTime() + (13 * msPerDay));
+    
+    return {
+      start: periodStart,
+      end: periodEnd,
+      periodNumber: periodNumber + 1
+    };
   };
 
   // Helper to get report date range based on period type
