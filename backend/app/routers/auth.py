@@ -44,7 +44,9 @@ async def register(user_data: UserCreate):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
-    user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
+    # Case-insensitive email lookup
+    email_lower = credentials.email.lower().strip()
+    user = await db.users.find_one({"email": {"$regex": f"^{email_lower}$", "$options": "i"}}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Email not registered. Contact your administrator.")
     
