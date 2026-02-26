@@ -248,9 +248,8 @@ export default function LandingPage() {
                 </h2>
                 <div className="space-y-3">
                   {platforms.map((platform, index) => (
-                    <motion.a
+                    <a
                       key={platform.name}
-                      variants={itemVariants}
                       href={platform.url}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -273,7 +272,7 @@ export default function LandingPage() {
                         </span>
                       </div>
                       <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#00D4FF] group-hover:translate-x-1 transition-all" />
-                    </motion.a>
+                    </a>
                   ))}
                 </div>
               </div>
@@ -289,9 +288,8 @@ export default function LandingPage() {
                 <div className="space-y-3">
                   {connectLinks.map((link) => (
                     link.isMessaging ? (
-                      <motion.button
+                      <button
                         key={link.name}
-                        variants={itemVariants}
                         onClick={handleOpenMessaging}
                         className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#FF1493]/10 hover:to-[#8B5CF6]/10 transition-all duration-300 group text-left"
                         data-testid={`connect-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
@@ -308,11 +306,10 @@ export default function LandingPage() {
                           </span>
                         </div>
                         <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#FF1493] group-hover:translate-x-1 transition-all" />
-                      </motion.button>
+                      </button>
                     ) : (
-                      <motion.a
+                      <a
                         key={link.name}
-                        variants={itemVariants}
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -337,7 +334,7 @@ export default function LandingPage() {
                           </span>
                         </div>
                         <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#FF1493] group-hover:translate-x-1 transition-all" />
-                      </motion.a>
+                      </a>
                     )
                   ))}
                 </div>
@@ -356,7 +353,7 @@ export default function LandingPage() {
                 </h2>
                 <div className="space-y-3">
                   {formLinks.map((link) => (
-                    <motion.div key={link.name} variants={itemVariants}>
+                    <div key={link.name}>
                       <Link
                         to={link.path}
                         className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#8B5CF6]/10 hover:to-[#00D4FF]/10 transition-all duration-300 group"
@@ -375,7 +372,7 @@ export default function LandingPage() {
                         </div>
                         <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#8B5CF6] group-hover:translate-x-1 transition-all" />
                       </Link>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -388,7 +385,7 @@ export default function LandingPage() {
                 <h2 className="font-poppins font-bold text-lg text-[#1A1A2E] mb-4" data-testid="employee-section-title">
                   Employee
                 </h2>
-                <motion.div variants={itemVariants}>
+                <div>
                   <Link
                     to="/login"
                     className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-[#1A1A2E] to-[#16213E] hover:from-[#16213E] hover:to-[#0F3460] transition-all duration-300 group"
@@ -404,15 +401,12 @@ export default function LandingPage() {
                     </div>
                     <ChevronRight className="w-5 h-5 text-white/60 group-hover:text-[#00D4FF] group-hover:translate-x-1 transition-all" />
                   </Link>
-                </motion.div>
+                </div>
               </div>
             </div>
 
             {/* QR Code & Share Section */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-white rounded-xl overflow-hidden shadow-xl"
-            >
+            <div className="bg-white rounded-xl overflow-hidden shadow-xl">
               <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493]" />
               <div className="p-5">
                 <div className="flex flex-col items-center gap-4">
