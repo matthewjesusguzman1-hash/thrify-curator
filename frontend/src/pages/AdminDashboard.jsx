@@ -3735,7 +3735,7 @@ export default function AdminDashboard() {
                           <div className="mt-4 pt-4 border-t border-[#eee] text-center text-sm text-[#888]">
                             Rate: <span className="font-medium text-[#333]">${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'}/hr</span>
                             <span className="mx-2">•</span>
-                            Calculation: {formatHoursToHMS(employeePortalData.summary?.period_hours)} × ${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'}
+                            {employeePortalData.summary?.period_hours?.toFixed(2) || '0.00'} hrs × ${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'} = ${employeePortalData.summary?.estimated_pay?.toFixed(2) || '0.00'}
                           </div>
                         </div>
                       </div>
