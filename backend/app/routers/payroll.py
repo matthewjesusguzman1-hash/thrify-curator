@@ -385,15 +385,16 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     
     summary_table = Table(summary_data, colWidths=[2*inch, 2*inch])
     summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.97, 0.78, 0.86)),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.Color(0.36, 0.25, 0.22)),
+        ('BACKGROUND', (0, 0), (-1, 0), ACCENT_PINK),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0, colors.white),
         ('SPAN', (0, 0), (1, 0)),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_BG]),
     ]))
     elements.append(summary_table)
     elements.append(Spacer(1, 30))
