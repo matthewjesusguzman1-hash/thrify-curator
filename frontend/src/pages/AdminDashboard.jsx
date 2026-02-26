@@ -3996,6 +3996,15 @@ export default function AdminDashboard() {
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
+                      onClick={() => handleViewSubmissionPDF(selectedSubmission)}
+                      className="text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10"
+                      data-testid="view-pdf-btn"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View PDF
+                    </Button>
+                    <Button
+                      variant="outline"
                       onClick={() => handleDownloadSubmission(selectedSubmission)}
                       className="text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10"
                       data-testid="download-submission-btn"
