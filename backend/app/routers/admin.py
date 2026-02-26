@@ -1140,99 +1140,200 @@ async def get_shift_report_pdf(
     employee_id: Optional[str] = None,
     admin: dict = Depends(get_admin_user)
 ):
-    """Download shift report as PDF"""
+    """Download shift report as PDF with branded styling"""
     if not HAS_FPDF:
         raise HTTPException(status_code=500, detail="PDF generation not available")
     
     # Get report data
     report = await get_shift_report(start_date, end_date, employee_id, admin)
     
+    # Brand colors (RGB values)
+    DARK_BG = (26, 26, 46)  # #1A1A2E
+    ACCENT_PINK = (244, 63, 94)  # #F43F5E
+    ACCENT_PURPLE = (139, 92, 246)  # #8B5CF6
+    ACCENT_CYAN = (0, 212, 255)  # #00D4FF
+    LIGHT_BG = (249, 246, 247)  # #F9F6F7
+    TEXT_DARK = (51, 51, 51)  # #333333
+    TEXT_GRAY = (102, 102, 102)  # #666666
+    
     # Create PDF
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
     
+    # Header with dark background
+    pdf.set_fill_color(*DARK_BG)
+    pdf.rect(0, 0, 210, 35, 'F')
+    
     # Title
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "Thrifty Curator - Shift Report", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Period: {start_date[:10]} to {end_date[:10]}", ln=True, align="C")
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_y(8)
+    pdf.cell(0, 10, "Thrifty Curator", ln=True, align="C")
+    pdf.set_font("Helvetica", "", 11)
+    pdf.set_text_color(200, 200, 200)
+    pdf.cell(0, 6, "Shift Report", ln=True, align="C")
+    
+    pdf.set_y(40)
+    pdf.set_text_color(*TEXT_DARK)
+    
+    # Period info with accent color
+    pdf.set_fill_color(*ACCENT_PINK)
+    pdf.rect(10, 40, 190, 12, 'F')
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(0, 12, f"Period: {start_date[:10]} to {end_date[:10]}", ln=True, align="C")
     pdf.ln(5)
     
-    # Summary section
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "Summary by Employee", ln=True)
+    pdf.set_text_color(*TEXT_DARK)
+    
+    # Summary section header
+    pdf.set_fill_color(*ACCENT_PURPLE)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "  Summary by Employee", ln=True, fill=True)
+    pdf.set_text_color(*TEXT_DARK)
     pdf.set_font("Helvetica", "", 9)
     
-    # Summary table header
-    pdf.set_fill_color(240, 240, 240)
-    pdf.cell(50, 7, "Employee", border=1, fill=True)
-    pdf.cell(25, 7, "Hours", border=1, fill=True, align="C")
-    pdf.cell(20, 7, "Shifts", border=1, fill=True, align="C")
-    pdf.cell(25, 7, "Rate", border=1, fill=True, align="C")
-    pdf.cell(30, 7, "Est. Pay", border=1, fill=True, align="C")
+    # Summary table header with purple accent
+    pdf.set_fill_color(139, 92, 246)  # Purple
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(50, 7, "Employee", border=0, fill=True)
+    pdf.cell(25, 7, "Hours", border=0, fill=True, align="C")
+    pdf.cell(20, 7, "Shifts", border=0, fill=True, align="C")
+    pdf.cell(25, 7, "Rate", border=0, fill=True, align="C")
+    pdf.cell(30, 7, "Est. Pay", border=0, fill=True, align="C")
     pdf.ln()
     
     total_hours = 0
     total_pay = 0
+    row_alt = False
+    pdf.set_text_color(*TEXT_DARK)
+    pdf.set_font("Helvetica", "", 9)
+    
     for s in report["summary"]:
         # Use rounded hours for pay calculation (matches display)
         rounded_hours = round_hours_to_minute(s["total_hours"])
         pay = rounded_hours * s["hourly_rate"]
         total_hours += s["total_hours"]
         total_pay += pay
-        pdf.cell(50, 6, s["employee_name"][:22], border=1)
-        pdf.cell(25, 6, format_hours_hms(s['total_hours']), border=1, align="C")
-        pdf.cell(20, 6, str(s["total_shifts"]), border=1, align="C")
-        pdf.cell(25, 6, f"${s['hourly_rate']:.2f}/hr", border=1, align="C")
-        pdf.cell(30, 6, f"${pay:.2f}", border=1, align="C")
+        
+        # Alternating row colors
+        if row_alt:
+            pdf.set_fill_color(*LIGHT_BG)
+        else:
+            pdf.set_fill_color(255, 255, 255)
+        row_alt = not row_alt
+        
+        pdf.cell(50, 6, s["employee_name"][:22], border=0, fill=True)
+        pdf.cell(25, 6, format_hours_hms(s['total_hours']), border=0, fill=True, align="C")
+        pdf.cell(20, 6, str(s["total_shifts"]), border=0, fill=True, align="C")
+        pdf.cell(25, 6, f"${s['hourly_rate']:.2f}/hr", border=0, fill=True, align="C")
+        pdf.set_text_color(34, 139, 34)  # Green for money
+        pdf.cell(30, 6, f"${pay:.2f}", border=0, fill=True, align="C")
+        pdf.set_text_color(*TEXT_DARK)
         pdf.ln()
     
-    # Totals - pay already calculated from rounded hours per employee
+    # Totals row with dark background
+    pdf.set_fill_color(*DARK_BG)
+    pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(50, 7, "TOTAL", border=1, fill=True)
-    pdf.cell(25, 7, format_hours_hms(total_hours), border=1, fill=True, align="C")
-    pdf.cell(20, 7, str(len(report["entries"])), border=1, fill=True, align="C")
-    pdf.cell(25, 7, "-", border=1, fill=True, align="C")
-    pdf.cell(30, 7, f"${total_pay:.2f}", border=1, fill=True, align="C")
-    pdf.ln(10)
+    pdf.cell(50, 7, "TOTAL", border=0, fill=True)
+    pdf.cell(25, 7, format_hours_hms(total_hours), border=0, fill=True, align="C")
+    pdf.cell(20, 7, str(len(report["entries"])), border=0, fill=True, align="C")
+    pdf.cell(25, 7, "-", border=0, fill=True, align="C")
+    pdf.set_text_color(0, 212, 255)  # Cyan for total
+    pdf.cell(30, 7, f"${total_pay:.2f}", border=0, fill=True, align="C")
+    pdf.ln(12)
     
-    # Detailed entries
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "Detailed Shift Entries", ln=True)
+    pdf.set_text_color(*TEXT_DARK)
+    
+    # Detailed entries header
+    pdf.set_fill_color(*ACCENT_PINK)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "  Detailed Shift Entries", ln=True, fill=True)
+    pdf.set_text_color(*TEXT_DARK)
     pdf.set_font("Helvetica", "", 8)
     
-    # Table header
-    pdf.set_fill_color(240, 240, 240)
-    pdf.cell(28, 6, "Employee", border=1, fill=True)
-    pdf.cell(28, 6, "Clock In", border=1, fill=True)
-    pdf.cell(28, 6, "Clock Out", border=1, fill=True)
-    pdf.cell(18, 6, "Hours", border=1, fill=True, align="C")
-    pdf.cell(20, 6, "Rate", border=1, fill=True, align="C")
-    pdf.cell(20, 6, "Est. Pay", border=1, fill=True, align="C")
-    pdf.cell(38, 6, "Admin Note", border=1, fill=True)
+    # Table header with pink accent
+    pdf.set_fill_color(*ACCENT_PINK)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.cell(26, 6, "Employee", border=0, fill=True)
+    pdf.cell(26, 6, "Clock In", border=0, fill=True)
+    pdf.cell(26, 6, "Clock Out", border=0, fill=True)
+    pdf.cell(16, 6, "Hours", border=0, fill=True, align="C")
+    pdf.cell(18, 6, "Rate", border=0, fill=True, align="C")
+    pdf.cell(18, 6, "Est. Pay", border=0, fill=True, align="C")
+    pdf.cell(60, 6, "Admin Note", border=0, fill=True)
     pdf.ln()
+    
+    row_alt = False
+    pdf.set_text_color(*TEXT_DARK)
+    pdf.set_font("Helvetica", "", 7)
     
     for entry in report["entries"]:
         clock_in = entry["clock_in"][5:16].replace("T", " ") if entry["clock_in"] else ""
         clock_out = entry["clock_out"][5:16].replace("T", " ") if entry["clock_out"] else "Active"
-        note = (entry["admin_note"] or "")[:18]
-        if entry["admin_note"] and len(entry["admin_note"]) > 18:
-            note += "..."
+        admin_note = entry.get("admin_note") or ""
         hours = entry["total_hours"] or 0
         hourly_rate = entry.get("hourly_rate", 15.00)
         # Use rounded hours for pay calculation (matches display)
         rounded_hours = round_hours_to_minute(hours)
         est_pay = rounded_hours * hourly_rate
         
-        pdf.cell(28, 5, entry["employee_name"][:14], border=1)
-        pdf.cell(28, 5, clock_in, border=1)
-        pdf.cell(28, 5, clock_out, border=1)
-        pdf.cell(18, 5, format_hours_hms(hours), border=1, align="C")
-        pdf.cell(20, 5, f"${hourly_rate:.0f}/hr", border=1, align="C")
-        pdf.cell(20, 5, f"${est_pay:.2f}", border=1, align="C")
-        pdf.cell(38, 5, note, border=1)
-        pdf.ln()
+        # Alternating row colors
+        if row_alt:
+            pdf.set_fill_color(*LIGHT_BG)
+        else:
+            pdf.set_fill_color(255, 255, 255)
+        row_alt = not row_alt
+        
+        # Calculate row height based on admin note length
+        note_lines = 1
+        if admin_note:
+            # Estimate lines needed (approximately 35 chars per line at font size 7)
+            note_lines = max(1, (len(admin_note) // 35) + 1)
+        row_height = max(5, note_lines * 4)
+        
+        # Store Y position for multi-line note
+        y_before = pdf.get_y()
+        
+        pdf.cell(26, row_height, entry["employee_name"][:12], border=0, fill=True)
+        pdf.cell(26, row_height, clock_in, border=0, fill=True)
+        pdf.cell(26, row_height, clock_out, border=0, fill=True)
+        pdf.cell(16, row_height, format_hours_hms(hours), border=0, fill=True, align="C")
+        pdf.cell(18, row_height, f"${hourly_rate:.0f}/hr", border=0, fill=True, align="C")
+        pdf.set_text_color(34, 139, 34)  # Green for money
+        pdf.cell(18, row_height, f"${est_pay:.2f}", border=0, fill=True, align="C")
+        pdf.set_text_color(*TEXT_DARK)
+        
+        # Handle admin note with word wrap
+        if admin_note:
+            x_note = pdf.get_x()
+            y_note = y_before
+            pdf.set_xy(x_note, y_note)
+            pdf.set_font("Helvetica", "I", 6)
+            pdf.set_text_color(*TEXT_GRAY)
+            # Multi-cell for wrapping text
+            pdf.multi_cell(60, 4, admin_note, border=0, fill=True)
+            pdf.set_text_color(*TEXT_DARK)
+            pdf.set_font("Helvetica", "", 7)
+            # Move to next row
+            pdf.set_y(max(pdf.get_y(), y_before + row_height))
+        else:
+            pdf.cell(60, row_height, "-", border=0, fill=True)
+            pdf.ln()
+    
+    # Footer
+    pdf.ln(10)
+    pdf.set_fill_color(*DARK_BG)
+    pdf.rect(0, pdf.get_y(), 210, 15, 'F')
+    pdf.set_text_color(150, 150, 150)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.cell(0, 15, f"Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
     
     # Generate PDF bytes
     pdf_output = pdf.output()
