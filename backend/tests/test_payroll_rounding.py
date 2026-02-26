@@ -175,14 +175,17 @@ class TestRoundingLogic:
     
     def test_round_hours_to_minute_basic(self):
         """Test basic rounding to nearest minute"""
-        # 0.5 minutes (30 seconds) in hours = 30/3600 = 0.00833... hours
-        # This rounds to 1 minute = 1/60 hours = 0.0167
-        half_minute_in_hours = 30/3600
-        assert round_hours_to_minute(half_minute_in_hours) == round(1/60, 4)  # 0.5 min -> 1 min
+        # Python uses banker's rounding: round(0.5) = 0, round(1.5) = 2
+        # So 30 seconds (0.5 minutes) rounds to 0 minutes
         
-        # Less than 0.5 minutes (e.g., 20 seconds) should round to 0
-        less_than_half = 20/3600  # 20 seconds in hours
-        assert round_hours_to_minute(less_than_half) == 0  # < 0.5 min -> 0 min
+        # 31 seconds = 31/3600 hours = 0.5167 minutes -> rounds to 1 minute
+        just_over_half_min = 31/3600
+        result = round_hours_to_minute(just_over_half_min)
+        assert result == round(1/60, 4), f"31 seconds should round to 1 minute, got {result}"
+        
+        # 25 seconds = 25/3600 hours = 0.417 minutes -> rounds to 0 minutes
+        under_half = 25/3600
+        assert round_hours_to_minute(under_half) == 0  # < 0.5 min -> 0 min
         
         # Exactly 1 minute
         assert round_hours_to_minute(1/60) == round(1/60, 4)
