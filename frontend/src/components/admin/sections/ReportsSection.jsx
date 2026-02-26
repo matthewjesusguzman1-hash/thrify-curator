@@ -463,6 +463,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                   <th className="text-left p-2">Employee</th>
                   <th className="text-center p-2">Hours</th>
                   <th className="text-center p-2">Shifts</th>
+                  <th className="text-center p-2">Rate</th>
                   <th className="text-right p-2">Est. Pay</th>
                 </tr>
               </thead>
@@ -472,7 +473,8 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                     <td className="p-2 font-medium">{s.employee_name}</td>
                     <td className="p-2 text-center">{formatHoursToHMS(s.total_hours)}</td>
                     <td className="p-2 text-center">{s.total_shifts}</td>
-                    <td className="p-2 text-right">{formatCurrency(s.total_hours * s.hourly_rate)}</td>
+                    <td className="p-2 text-center text-[#666]">{formatCurrency(s.hourly_rate)}/hr</td>
+                    <td className="p-2 text-right font-medium text-green-600">{formatCurrency(s.total_hours * s.hourly_rate)}</td>
                   </tr>
                 ))}
               </tbody>
