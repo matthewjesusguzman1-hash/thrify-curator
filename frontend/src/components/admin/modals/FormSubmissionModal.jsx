@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { 
   X, Trash2, Download, Mail, Phone, MapPin,
-  Briefcase, Package, FileSignature
+  Briefcase, Package, FileSignature, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -48,6 +48,74 @@ export default function FormSubmissionModal({
       default:
         return "Consignment Agreement";
     }
+  };
+
+  // Generate pre-populated email based on form type
+  const getEmailContent = () => {
+    const firstName = submission.full_name?.split(' ')[0] || 'there';
+    
+    switch (submission.formType) {
+      case "job_applications":
+        return {
+          subject: `Re: Your Job Application - Thrifty Curator`,
+          body: `Hi ${firstName},
+
+Thank you for your interest in joining the Thrifty Curator team! We have received your application and are excited to learn more about you.
+
+We are currently reviewing applications and will be in touch soon regarding next steps.
+
+In the meantime, if you have any questions, please don't hesitate to reach out.
+
+Best regards,
+Thrifty Curator Team`
+        };
+      case "consignment_inquiries":
+        return {
+          subject: `Re: Your Consignment Inquiry - Thrifty Curator`,
+          body: `Hi ${firstName},
+
+Thank you for reaching out about consigning with Thrifty Curator! We're excited to hear about the items you'd like to consign.
+
+Based on your inquiry, we'd love to schedule a time to review your items. Here's what happens next:
+
+1. We'll arrange a time for you to bring in your items for evaluation
+2. Our team will assess each piece for quality and market value
+3. We'll provide you with a consignment agreement outlining terms
+
+Please let us know your availability for an appointment, and we'll get you scheduled.
+
+Looking forward to working with you!
+
+Best regards,
+Thrifty Curator Team`
+        };
+      default: // consignment_agreements
+        return {
+          subject: `Re: Your Consignment Agreement - Thrifty Curator`,
+          body: `Hi ${firstName},
+
+Thank you for signing the consignment agreement with Thrifty Curator! We're thrilled to partner with you.
+
+Your agreement has been received and processed. Here's what to expect:
+
+1. Your items will be photographed and listed in our store
+2. You'll receive updates when items sell
+3. Payments will be processed according to the agreed schedule
+
+If you have any questions about your agreement or would like to add more items, please don't hesitate to reach out.
+
+Thank you for choosing Thrifty Curator!
+
+Best regards,
+Thrifty Curator Team`
+        };
+    }
+  };
+
+  const handleSendEmail = () => {
+    const { subject, body } = getEmailContent();
+    const mailtoLink = `mailto:${submission.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoLink, '_blank');
   };
 
   return (
