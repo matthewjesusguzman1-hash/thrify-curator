@@ -585,16 +585,19 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
         if not active:
             raise HTTPException(status_code=400, detail="Employee is not clocked in")
         
-        # Calculate hours
+        # Calculate hours rounded to nearest minute
         last_clock_in = active.get("last_clock_in") or active.get("clock_in")
-        accumulated = active.get("accumulated_hours", 0.0)
+        accumulated_hours = active.get("accumulated_hours", 0.0)
         
         try:
             in_time = datetime.fromisoformat(last_clock_in.replace('Z', '+00:00'))
-            session_hours = (now - in_time).total_seconds() / 3600
-            total_hours = round(accumulated + session_hours, 2)
+            session_seconds = (now - in_time).total_seconds()
+            # Calculate total hours, rounded to nearest minute
+            accumulated_seconds = accumulated_hours * 3600
+            total_seconds = accumulated_seconds + session_seconds
+            total_hours = round_to_nearest_minute(total_seconds)
         except (ValueError, TypeError, AttributeError):
-            total_hours = accumulated
+            total_hours = accumulated_hours
         
         await db.time_entries.update_one(
             {"id": active["id"]},
@@ -602,6 +605,7 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
                 "$set": {
                     "clock_out": now_iso,
                     "total_hours": total_hours,
+                    "accumulated_hours": total_hours,
                     "admin_clocked_out": True,
                     "admin_out_id": admin["id"],
                     "admin_out_name": admin["name"]
