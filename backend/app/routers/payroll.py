@@ -329,22 +329,41 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     elements = []
     styles = getSampleStyleSheet()
     
+    # Brand colors
+    DARK_BG = colors.Color(26/255, 26/255, 46/255)  # #1A1A2E
+    ACCENT_PINK = colors.Color(244/255, 63/255, 94/255)  # #F43F5E
+    ACCENT_PURPLE = colors.Color(139/255, 92/255, 246/255)  # #8B5CF6
+    ACCENT_CYAN = colors.Color(0/255, 212/255, 255/255)  # #00D4FF
+    LIGHT_BG = colors.Color(249/255, 246/255, 247/255)  # #F9F6F7
+    GREEN_MONEY = colors.Color(34/255, 139/255, 34/255)  # Forest green
+    
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
-        fontSize=18,
+        fontSize=22,
         alignment=TA_CENTER,
-        spaceAfter=20
+        spaceAfter=5,
+        textColor=DARK_BG
     )
     subtitle_style = ParagraphStyle(
         'CustomSubtitle',
         parent=styles['Normal'],
         fontSize=12,
         alignment=TA_CENTER,
+        spaceAfter=10,
+        textColor=colors.Color(102/255, 102/255, 102/255)
+    )
+    section_header = ParagraphStyle(
+        'SectionHeader',
+        parent=styles['Heading2'],
+        fontSize=14,
+        textColor=ACCENT_PURPLE,
+        spaceBefore=15,
         spaceAfter=10
     )
     
-    elements.append(Paragraph("Thrifty Curator - Payroll Report", title_style))
+    elements.append(Paragraph("Thrifty Curator", title_style))
+    elements.append(Paragraph("Payroll Report", subtitle_style))
     
     period_text = f"Period: {period_start.strftime('%B %d, %Y')} - {period_end.strftime('%B %d, %Y')}"
     elements.append(Paragraph(period_text, subtitle_style))
