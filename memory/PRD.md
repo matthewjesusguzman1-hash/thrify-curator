@@ -251,10 +251,10 @@ Build a "Thrifty Curator" reselling application with:
     - Removed the inline pay period settings from the Payroll Summary section
   - **Per-Employee Pay Period Settings** (in Edit Employee modal):
     - Added new "Pay Period Settings" section to the Edit Employee modal
-    - Three options available:
-      1. **Use Global Pay Period**: Uses the default bi-weekly period for all employees
-      2. **Sync with Another Employee**: Match pay period with an existing employee (dropdown to select)
-      3. **Custom Pay Period**: Set a unique bi-weekly start date for this specific employee (date picker)
+    - Shows "Current Pay Period Range" at the top (e.g., "Feb 18 - Mar 3, 2026")
+    - **Calendar Popup**: Click "Select start date..." to open a calendar picker for choosing the pay period start date
+    - When a date is selected, shows preview: "New period will be: [date range] (Period #X)"
+    - **Sync with Another Employee**: Dropdown to match pay period with an existing employee
   - **Backend Updates**:
     - Added `pay_period_start_date` and `sync_pay_period_with` fields to user model
     - Updated `/api/admin/employees/{id}` endpoint to handle pay period settings
