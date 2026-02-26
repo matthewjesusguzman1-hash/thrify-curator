@@ -400,7 +400,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     elements.append(Spacer(1, 30))
     
     if employee_data:
-        elements.append(Paragraph("Employee Breakdown", styles['Heading2']))
+        elements.append(Paragraph("Employee Breakdown", section_header))
         elements.append(Spacer(1, 10))
         
         emp_table_data = [["Employee", "Hours", "Shifts", "Rate", "Gross Wages"]]
@@ -421,16 +421,17 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         
         emp_table = Table(emp_table_data, colWidths=[2.5*inch, 1*inch, 0.8*inch, 1*inch, 1.2*inch])
         emp_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.77, 0.63, 0.40)),
+            ('BACKGROUND', (0, 0), (-1, 0), ACCENT_PURPLE),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('TEXTCOLOR', (-1, 1), (-1, -1), GREEN_MONEY),  # Green for wages column
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(0.98, 0.96, 0.95)]),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 0, colors.white),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_BG]),
         ]))
         elements.append(emp_table)
         elements.append(Spacer(1, 30))
