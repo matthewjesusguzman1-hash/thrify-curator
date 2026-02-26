@@ -1679,73 +1679,108 @@ async def get_w9_report_pdf(
     employee_id: Optional[str] = None,
     admin: dict = Depends(get_admin_user)
 ):
-    """Download W-9 status report as PDF"""
+    """Download W-9 status report as PDF - styled like other forms"""
     if not HAS_FPDF:
         raise HTTPException(status_code=500, detail="PDF generation not available")
     
     report = await get_w9_report(employee_id, admin)
     
+    # Brand colors - Pink/Magenta theme for W9 (like Job Application)
+    HEADER_COLOR = (236, 72, 153)  # Pink #EC4899
+    SECTION_COLOR = (219, 39, 119)  # Darker pink
+    GREEN = (34, 139, 34)
+    ORANGE = (245, 158, 11)
+    RED = (220, 38, 38)
+    GRAY_LABEL = (128, 128, 128)
+    BLACK = (0, 0, 0)
+    LIGHT_GRAY = (200, 200, 200)
+    
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Title
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "Thrifty Curator - W-9 Status Report", ln=True, align="C")
-    pdf.ln(5)
+    # Header banner
+    pdf.set_fill_color(*HEADER_COLOR)
+    pdf.rect(0, 0, 210, 30, 'F')
     
-    # Generated date
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}", ln=True)
-    pdf.ln(5)
-    
-    # Summary section
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "Summary", ln=True)
+    # Title in header
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_y(8)
+    pdf.cell(0, 8, "THRIFTY CURATOR", ln=True, align="L")
     pdf.set_font("Helvetica", "", 11)
+    pdf.cell(0, 6, "W-9 Status Report", ln=True, align="L")
     
-    summary = report["summary"]
-    pdf.cell(0, 6, f"Total Employees: {summary['total_employees']}", ln=True)
-    pdf.set_text_color(0, 128, 0)
-    pdf.cell(0, 6, f"Approved: {summary['approved']}", ln=True)
-    pdf.set_text_color(255, 165, 0)
-    pdf.cell(0, 6, f"Pending: {summary['pending']}", ln=True)
-    pdf.set_text_color(255, 0, 0)
-    pdf.cell(0, 6, f"Not Submitted: {summary['not_submitted']}", ln=True)
-    pdf.set_text_color(0, 0, 0)
-    pdf.ln(10)
+    pdf.set_y(40)
+    pdf.set_x(10)
     
-    # Employee table
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "Employee W-9 Status", ln=True)
+    # REPORT DATE section
+    pdf.set_text_color(*SECTION_COLOR)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "REPORT DATE", ln=True)
+    pdf.set_draw_color(*LIGHT_GRAY)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
     pdf.ln(3)
     
-    # Table header
-    pdf.set_fill_color(200, 200, 200)
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(45, 7, "Name", border=1, fill=True)
-    pdf.cell(30, 7, "Start Date", border=1, fill=True, align="C")
-    pdf.cell(25, 7, "Role", border=1, fill=True, align="C")
-    pdf.cell(30, 7, "Status", border=1, fill=True, align="C")
-    pdf.cell(20, 7, "Docs", border=1, fill=True, align="C")
-    pdf.cell(30, 7, "Last Updated", border=1, fill=True, align="C")
-    pdf.ln()
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(*GRAY_LABEL)
+    pdf.cell(50, 6, "Generated:")
+    pdf.set_text_color(*BLACK)
+    pdf.cell(0, 6, datetime.now(timezone.utc).strftime('%B %d, %Y at %I:%M %p'), ln=True)
+    pdf.ln(8)
     
-    # Table rows
-    pdf.set_font("Helvetica", "", 9)
+    # SUMMARY section
+    pdf.set_text_color(*SECTION_COLOR)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "SUMMARY", ln=True)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(3)
+    
+    summary = report["summary"]
+    pdf.set_font("Helvetica", "", 10)
+    
+    pdf.set_text_color(*GRAY_LABEL)
+    pdf.cell(50, 6, "Total Employees:")
+    pdf.set_text_color(*BLACK)
+    pdf.cell(0, 6, str(summary['total_employees']), ln=True)
+    
+    pdf.set_text_color(*GRAY_LABEL)
+    pdf.cell(50, 6, "Approved:")
+    pdf.set_text_color(*GREEN)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(0, 6, str(summary['approved']), ln=True)
+    
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(*GRAY_LABEL)
+    pdf.cell(50, 6, "Pending:")
+    pdf.set_text_color(*ORANGE)
+    pdf.cell(0, 6, str(summary['pending']), ln=True)
+    
+    pdf.set_text_color(*GRAY_LABEL)
+    pdf.cell(50, 6, "Not Submitted:")
+    pdf.set_text_color(*RED)
+    pdf.cell(0, 6, str(summary['not_submitted']), ln=True)
+    pdf.ln(8)
+    
+    # EMPLOYEE STATUS section
+    pdf.set_text_color(*SECTION_COLOR)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "EMPLOYEE STATUS", ln=True)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(3)
+    
     for emp in report["employees"]:
         # Status color
         status = emp["w9_status"]
         if status == "approved":
-            pdf.set_fill_color(200, 255, 200)
+            status_color = GREEN
+            display_status = "Approved"
         elif status in ["submitted", "pending", "pending_review"]:
-            pdf.set_fill_color(255, 255, 200)
+            status_color = ORANGE
+            display_status = "Pending"
         else:
-            pdf.set_fill_color(255, 200, 200)
-        
-        name = emp["name"][:22] if len(emp["name"]) > 22 else emp["name"]
-        role = emp["role"]
-        last_updated = emp.get("last_updated", "")[:10] if emp.get("last_updated") else "N/A"
+            status_color = RED
+            display_status = "Not Submitted"
         
         # Format start date
         start_date = emp.get("start_date", "")
@@ -1757,17 +1792,44 @@ async def get_w9_report_pdf(
         else:
             start_date = "N/A"
         
-        # Format status for display
-        display_status = "Pending" if status in ["submitted", "pending", "pending_review"] else status.replace("_", " ").title()
+        last_updated = emp.get("last_updated", "")[:10] if emp.get("last_updated") else "N/A"
         
-        pdf.cell(45, 6, name, border=1)
-        pdf.cell(30, 6, start_date, border=1, align="C")
-        pdf.cell(25, 6, role, border=1, align="C")
-        pdf.cell(30, 6, display_status, border=1, fill=True, align="C")
-        pdf.cell(20, 6, str(emp["document_count"]), border=1, align="C")
-        pdf.cell(30, 6, last_updated, border=1, align="C")
-        pdf.ln()
-        pdf.set_fill_color(255, 255, 255)
+        # Employee name as sub-header
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(*BLACK)
+        pdf.cell(0, 6, emp["name"], ln=True)
+        
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*GRAY_LABEL)
+        pdf.cell(30, 5, "    Role:")
+        pdf.set_text_color(*BLACK)
+        pdf.cell(40, 5, emp["role"])
+        pdf.set_text_color(*GRAY_LABEL)
+        pdf.cell(30, 5, "Start Date:")
+        pdf.set_text_color(*BLACK)
+        pdf.cell(0, 5, start_date, ln=True)
+        
+        pdf.set_text_color(*GRAY_LABEL)
+        pdf.cell(30, 5, "    Status:")
+        pdf.set_text_color(*status_color)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(40, 5, display_status)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*GRAY_LABEL)
+        pdf.cell(30, 5, "Documents:")
+        pdf.set_text_color(*BLACK)
+        pdf.cell(20, 5, str(emp["document_count"]))
+        pdf.set_text_color(*GRAY_LABEL)
+        pdf.cell(25, 5, "Updated:")
+        pdf.set_text_color(*BLACK)
+        pdf.cell(0, 5, last_updated, ln=True)
+        pdf.ln(4)
+    
+    # Footer
+    pdf.set_y(-20)
+    pdf.set_text_color(150, 150, 150)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.cell(0, 10, f"Page 1 | Generated on {datetime.now(timezone.utc).strftime('%B %d, %Y')}", align="C")
     
     pdf_output = pdf.output()
     filename = f"w9_report_{datetime.now(timezone.utc).strftime('%Y%m%d')}.pdf"
