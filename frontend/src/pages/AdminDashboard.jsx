@@ -75,6 +75,7 @@ import PayrollModal from "@/components/admin/modals/PayrollModal";
 import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
 import FormSubmissionModal from "@/components/admin/modals/FormSubmissionModal";
 import { AddEmployeeModal, RemoveEmployeeModal } from "@/components/admin/modals/EmployeeModals";
+import { formatHoursToHMS } from "@/lib/utils";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
