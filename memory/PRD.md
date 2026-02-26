@@ -246,14 +246,18 @@ Build a "Thrifty Curator" reselling application with:
 
 - **Payroll Summary UI Cleanup & Fixed Pay Period** (Dec 2025):
   - **Pay Period System**:
-    - Pay period is now FIXED to start from the first Monday of the year (Jan 5, 2026 for 2026)
+    - Pay period is FIXED to start from the first Monday of the year (Jan 5, 2026 for 2026)
     - Bi-weekly periods automatically calculated from this anchor date
     - All employees share the same global pay period
+    - All payroll sections (Summary, Reports, Employee Portal) use the same calculation
   - **Payroll Summary Header**: Shows current pay period (e.g., "Pay Period: Feb 16 - Mar 1, 2026")
-  - **Edit Employee Modal**: Displays read-only current pay period info:
-    - Current period range (e.g., "Mon, Feb 16 - Sun, Mar 1, 2026")
-    - Period number and year start date (e.g., "Bi-weekly Period #4 (year starts Jan 5, 2026)")
-  - Removed per-employee pay period customization - everyone uses the same global pay period
+  - **Edit Employee Modal**: 
+    - Start Date field with calendar picker (for recording when employee began working)
+    - Calendar popup shows "Current Pay Period" header (e.g., "Feb 16 - Mar 1, 2026")
+    - Removed period number and year start text from pay period display
+  - **Backend Updates**:
+    - Unified `get_biweekly_period()` function to always use first Monday of year
+    - Removed dependency on configurable `pay_period_start_date` setting
 
 ## Recent Updates (Feb 23, 2026)
 - **Phone Number Support for Employees**: Added phone number field throughout the employee management system
