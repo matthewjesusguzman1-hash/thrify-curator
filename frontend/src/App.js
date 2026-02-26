@@ -1,5 +1,5 @@
 import "@/App.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import SplashScreen from "@/components/SplashScreen";
@@ -12,11 +12,14 @@ import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 
 function App() {
-  const [splashComplete, setSplashComplete] = useState(false);
+  // Check sessionStorage synchronously on initial render to prevent flicker
+  const [showSplash, setShowSplash] = useState(() => {
+    return !sessionStorage.getItem('hasSeenSplash');
+  });
 
   return (
     <div className="app-background">
-      <SplashScreen onComplete={() => setSplashComplete(true)} />
+      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
