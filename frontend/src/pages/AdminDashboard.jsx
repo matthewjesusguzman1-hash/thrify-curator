@@ -651,21 +651,33 @@ export default function AdminDashboard() {
       // Create object URL
       const url = URL.createObjectURL(blob);
       
-      // Create and click download link
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
+      // Detect iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
       
-      // Cleanup
-      setTimeout(() => {
+      if (isIOS) {
+        // On iOS, open the PDF in a new window - user can then use Share to save
+        const newWindow = window.open(url, '_blank');
+        if (newWindow) {
+          toast.success("PDF opened - use Share button to save");
+        } else {
+          // If popup blocked, try location change
+          window.location.href = url;
+          toast.success("PDF opening...");
+        }
+      } else {
+        // On desktop/Android, use download attribute
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
+        toast.success("PDF downloaded");
+      }
       
-      toast.success("PDF downloaded");
+      // Cleanup after delay
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error) {
       toast.dismiss("download-loading");
       console.error("Download error:", error);
