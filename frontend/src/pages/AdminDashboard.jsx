@@ -4329,7 +4329,7 @@ export default function AdminDashboard() {
                         <p className="text-sm text-[#888]">Employees</p>
                       </div>
                       <div className="bg-[#F9F6F7] rounded-xl p-4 text-center">
-                        <p className="text-2xl font-bold text-[#333]">{payrollReport.summary.total_hours.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-[#333]">{formatHoursToHMS(payrollReport.summary.total_hours, { showSeconds: false })}</p>
                         <p className="text-sm text-[#888]">Total Hours</p>
                       </div>
                       <div className="bg-[#F9F6F7] rounded-xl p-4 text-center">
@@ -4371,7 +4371,7 @@ export default function AdminDashboard() {
                                     </div>
                                   </div>
                                 </td>
-                                <td>{emp.total_hours.toFixed(2)} hrs</td>
+                                <td>{formatHoursToHMS(emp.total_hours)}</td>
                                 <td>{emp.total_shifts}</td>
                                 <td className={emp.has_custom_rate ? 'text-[#C5A065] font-medium' : ''}>
                                   ${emp.hourly_rate.toFixed(2)}
@@ -4384,7 +4384,7 @@ export default function AdminDashboard() {
                       </div>
                     ) : (
                       <p className="text-center text-[#888] py-8">No data found for this period</p>
-                    )}
+                    )}}
                   </div>
                 )}
                 
