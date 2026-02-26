@@ -3927,7 +3927,7 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <h2 className="font-playfair text-xl font-bold text-[#333]">{showEmployeeShiftsModal.name}'s Shifts</h2>
-                        <p className="text-sm text-[#888]">{showEmployeeShiftsModal.shifts} total shifts • {showEmployeeShiftsModal.hours?.toFixed(2)} hours</p>
+                        <p className="text-sm text-[#888]">{showEmployeeShiftsModal.shifts} total shifts • {formatHoursToHMS(showEmployeeShiftsModal.hours)}</p>
                       </div>
                     </div>
                     <button
