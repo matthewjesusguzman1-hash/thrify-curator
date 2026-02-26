@@ -424,7 +424,7 @@ export default function HoursByEmployeeSection({
                             <div className="flex items-center gap-3 mb-2">
                               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-[#8B5CF6]/10 text-[#6D28D9]">
                                 <Clock className="w-3 h-3" />
-                                {entry.total_hours || 0} hrs
+                                {formatHoursToHMS(entry.total_hours)}
                                 {entry.adjusted_by_admin && (
                                   <span className="text-[#D97706] ml-0.5" title="Hours adjusted by admin">*</span>
                                 )}
