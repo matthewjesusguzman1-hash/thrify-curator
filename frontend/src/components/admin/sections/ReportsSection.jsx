@@ -452,7 +452,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                     <td className="p-2">{formatDateTime(entry.clock_in)}</td>
                     <td className="p-2">{entry.clock_out ? formatDateTime(entry.clock_out) : <span className="text-green-600">Active</span>}</td>
                     <td className="p-2 text-center">
-                      {entry.total_hours?.toFixed(2) || "0.00"}
+                      {formatHoursToHMS(entry.total_hours)}
                       {entry.adjusted_by_admin && <span className="text-[#D97706] ml-1">*</span>}
                     </td>
                     <td className="p-2 text-right font-medium text-green-600">
