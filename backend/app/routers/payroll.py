@@ -436,11 +436,19 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         elements.append(emp_table)
         elements.append(Spacer(1, 30))
         
-        elements.append(Paragraph("Shift Details", styles['Heading2']))
+        elements.append(Paragraph("Shift Details", section_header))
         elements.append(Spacer(1, 10))
         
         for uid, data in employee_data.items():
-            elements.append(Paragraph(f"{data['name']} (${data['hourly_rate']:.2f}/hr)", styles['Heading3']))
+            emp_header_style = ParagraphStyle(
+                'EmpHeader',
+                parent=styles['Heading3'],
+                fontSize=11,
+                textColor=DARK_BG,
+                spaceBefore=10,
+                spaceAfter=5
+            )
+            elements.append(Paragraph(f"{data['name']} (${data['hourly_rate']:.2f}/hr)", emp_header_style))
             
             shift_data = [["Date", "Clock In", "Clock Out", "Hours"]]
             for shift in sorted(data["shifts"], key=lambda x: x["clock_in"]):
@@ -456,13 +464,15 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
             
             shift_table = Table(shift_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1*inch])
             shift_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.85, 0.85, 0.85)),
+                ('BACKGROUND', (0, 0), (-1, 0), ACCENT_CYAN),
+                ('TEXTCOLOR', (0, 0), (-1, 0), DARK_BG),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-                ('TOPPADDING', (0, 0), (-1, -1), 6),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0, colors.white),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_BG]),
             ]))
             elements.append(shift_table)
             elements.append(Spacer(1, 15))
