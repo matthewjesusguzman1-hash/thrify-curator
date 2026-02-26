@@ -352,13 +352,14 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     elements.append(Spacer(1, 20))
     
     total_hours = sum(e["total_hours"] for e in employee_data.values())
-    total_wages = sum(e["total_hours"] * e["hourly_rate"] for e in employee_data.values())
+    # Use rounded hours for pay calculation to match displayed time
+    total_wages = sum(round_hours_to_minute(e["total_hours"]) * e["hourly_rate"] for e in employee_data.values())
     total_shifts = sum(e["total_shifts"] for e in employee_data.values())
     
     summary_data = [
         ["Summary", ""],
         ["Total Employees", str(len(employee_data))],
-        ["Total Hours", f"{total_hours:.2f}"],
+        ["Total Hours", format_hours_hms(total_hours)],
         ["Total Shifts", str(total_shifts)],
         ["Total Wages", f"${total_wages:.2f}"]
     ]
@@ -385,12 +386,14 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         emp_table_data = [["Employee", "Hours", "Shifts", "Rate", "Gross Wages"]]
         
         for uid, data in employee_data.items():
-            hours = round(data["total_hours"], 2)
+            hours = data["total_hours"]
             emp_rate = data["hourly_rate"]
-            wages = round(hours * emp_rate, 2)
+            # Use rounded hours for pay calculation to match displayed time
+            rounded_hours = round_hours_to_minute(hours)
+            wages = round(rounded_hours * emp_rate, 2)
             emp_table_data.append([
                 data["name"],
-                f"{hours:.2f}",
+                format_hours_hms(hours),
                 str(data["total_shifts"]),
                 f"${emp_rate:.2f}",
                 f"${wages:.2f}"
