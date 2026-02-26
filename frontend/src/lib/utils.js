@@ -6,34 +6,38 @@ export function cn(...inputs) {
 }
 
 /**
- * Format decimal hours to h:m:s format
+ * Format decimal hours to h:m format (rounded to nearest minute)
+ * Used for all reporting, tracking, and viewing displays
  * @param {number} decimalHours - Hours in decimal format (e.g., 1.5 = 1 hour 30 minutes)
- * @param {object} options - Formatting options
- * @param {boolean} options.showSeconds - Whether to show seconds (default: true)
- * @param {boolean} options.compact - Use compact format like "1h 30m" vs "1 hr 30 min" (default: true)
- * @returns {string} Formatted time string
+ * @returns {string} Formatted time string (e.g., "1h 30m")
  */
-export function formatHoursToHMS(decimalHours, options = {}) {
-  const { showSeconds = true, compact = true } = options;
-  
+export function formatHoursToHMS(decimalHours) {
   if (decimalHours === null || decimalHours === undefined || isNaN(decimalHours)) {
-    return compact ? "0h 0m" : "0 hr 0 min";
+    return "0h 0m";
   }
   
-  const totalSeconds = Math.round(decimalHours * 3600);
+  // Round to nearest minute
+  const totalMinutes = Math.round(decimalHours * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  
+  return `${hours}h ${minutes}m`;
+}
+
+/**
+ * Format seconds to h:m:s format for live clock-in timer
+ * Shows real-time with seconds precision
+ * @param {number} totalSeconds - Total seconds elapsed
+ * @returns {string} Formatted time string (e.g., "1h 30m 45s")
+ */
+export function formatTimerHMS(totalSeconds) {
+  if (totalSeconds === null || totalSeconds === undefined || isNaN(totalSeconds) || totalSeconds < 0) {
+    return "0h 0m 0s";
+  }
+  
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+  const seconds = Math.floor(totalSeconds % 60);
   
-  if (compact) {
-    if (showSeconds && seconds > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    }
-    return `${hours}h ${minutes}m`;
-  } else {
-    if (showSeconds && seconds > 0) {
-      return `${hours} hr ${minutes} min ${seconds} sec`;
-    }
-    return `${hours} hr ${minutes} min`;
-  }
+  return `${hours}h ${minutes}m ${seconds}s`;
 }
