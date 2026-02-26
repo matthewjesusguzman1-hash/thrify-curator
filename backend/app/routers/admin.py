@@ -1129,7 +1129,7 @@ async def get_shift_report_pdf(
         total_hours += s["total_hours"]
         total_pay += pay
         pdf.cell(60, 6, s["employee_name"][:25], border=1)
-        pdf.cell(30, 6, f"{s['total_hours']:.2f}", border=1, align="C")
+        pdf.cell(30, 6, format_hours_hms(s['total_hours'], show_seconds=False), border=1, align="C")
         pdf.cell(30, 6, str(s["total_shifts"]), border=1, align="C")
         pdf.cell(35, 6, f"${pay:.2f}", border=1, align="C")
         pdf.ln()
@@ -1137,7 +1137,7 @@ async def get_shift_report_pdf(
     # Totals
     pdf.set_font("Helvetica", "B", 9)
     pdf.cell(60, 7, "TOTAL", border=1, fill=True)
-    pdf.cell(30, 7, f"{total_hours:.2f}", border=1, fill=True, align="C")
+    pdf.cell(30, 7, format_hours_hms(total_hours, show_seconds=False), border=1, fill=True, align="C")
     pdf.cell(30, 7, str(len(report["entries"])), border=1, fill=True, align="C")
     pdf.cell(35, 7, f"${total_pay:.2f}", border=1, fill=True, align="C")
     pdf.ln(10)
