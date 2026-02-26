@@ -49,6 +49,56 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [viewingW9, setViewingW9] = useState(null); // For W-9 preview modal
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Auto-refresh report when data changes (if report is already showing)
+  const refreshReport = useCallback(async () => {
+    if (!previewData || !isExpanded) return;
+    
+    setRefreshing(true);
+    try {
+      let response;
+      const { start, end } = getDateRange();
+      const employeeIds = getEmployeeIdsForFilter();
+      
+      if (previewData.type === "shifts") {
+        const params = new URLSearchParams({ start_date: start, end_date: end });
+        if (employeeIds && employeeIds.length === 1) {
+          params.append("employee_id", employeeIds[0]);
+        } else if (employeeIds && employeeIds.length > 1) {
+          params.append("employee_ids", employeeIds.join(","));
+        }
+        response = await axios.get(`${API}/admin/reports/shifts?${params.toString()}`, getAuthHeader());
+      } else if (previewData.type === "mileage") {
+        const params = new URLSearchParams({ start_date: start, end_date: end });
+        if (employeeIds && employeeIds.length === 1) {
+          params.append("employee_id", employeeIds[0]);
+        }
+        response = await axios.get(`${API}/admin/mileage/report?${params.toString()}`, getAuthHeader());
+      } else if (previewData.type === "w9") {
+        const params = new URLSearchParams();
+        if (employeeIds && employeeIds.length === 1) {
+          params.append("employee_id", employeeIds[0]);
+        }
+        response = await axios.get(`${API}/admin/reports/w9?${params.toString()}`, getAuthHeader());
+      }
+      
+      if (response) {
+        setPreviewData({ type: previewData.type, data: response.data });
+      }
+    } catch (error) {
+      console.error("Failed to refresh report:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [previewData, isExpanded, getAuthHeader]);
+
+  // Auto-refresh when data updates
+  useEffect(() => {
+    if (lastDataUpdate && previewData) {
+      refreshReport();
+    }
+  }, [lastDataUpdate]);
 
   // Default to Administrator for mileage reports
   const handleReportTypeChange = (type) => {
