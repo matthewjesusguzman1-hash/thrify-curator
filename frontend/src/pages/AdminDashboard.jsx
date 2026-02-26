@@ -3261,16 +3261,18 @@ export default function AdminDashboard() {
 
 
           {/* All Employees - Extracted Component */}
-          <AllEmployeesSection
-            employees={employees}
-            employeeClockStatuses={employeeClockStatuses}
-            payrollSettings={payrollSettings}
-            getAuthHeader={getAuthHeader}
-            formatDateTime={formatDateTime}
-            onViewEmployeePortal={handleViewEmployeePortal}
-            onRefreshEmployees={fetchData}
-            onDownloadBlankW9={handleDownloadBlankW9}
-          />
+          <div data-testid="employees-section">
+            <AllEmployeesSection
+              employees={employees}
+              employeeClockStatuses={employeeClockStatuses}
+              payrollSettings={payrollSettings}
+              getAuthHeader={getAuthHeader}
+              formatDateTime={formatDateTime}
+              onViewEmployeePortal={handleViewEmployeePortal}
+              onRefreshEmployees={fetchData}
+              onDownloadBlankW9={handleDownloadBlankW9}
+            />
+          </div>
 
 
           {/* Payroll Summary - Collapsible */}
