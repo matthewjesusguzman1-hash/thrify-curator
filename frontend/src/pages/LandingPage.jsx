@@ -105,15 +105,6 @@ const connectLinks = [
   { name: "Message Us", icon: MessageCircle, isMessaging: true, color: "#FF1493" },
 ];
 
-// Removed stagger animations to prevent flickering on page load/navigation
-const containerVariants = {
-  visible: { opacity: 1 }
-};
-
-const itemVariants = {
-  visible: { opacity: 1, y: 0 }
-};
-
 const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function LandingPage() {
