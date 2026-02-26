@@ -38,11 +38,17 @@ export default function TimeEntryModal({
   // Reset form when modal opens or entry changes
   useEffect(() => {
     if (mode === 'edit' && entry) {
-      // Convert ISO string to datetime-local format
+      // Convert ISO string to datetime-local format (in local timezone)
       const formatForInput = (isoString) => {
         if (!isoString) return "";
         const date = new Date(isoString);
-        return date.toISOString().slice(0, 16);
+        // Format as YYYY-MM-DDTHH:MM in local timezone
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
       };
       
       setFormData({
