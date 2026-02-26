@@ -1141,10 +1141,11 @@ async def get_shift_report_pdf(
     
     # Summary table header
     pdf.set_fill_color(240, 240, 240)
-    pdf.cell(60, 7, "Employee", border=1, fill=True)
-    pdf.cell(30, 7, "Hours", border=1, fill=True, align="C")
-    pdf.cell(30, 7, "Shifts", border=1, fill=True, align="C")
-    pdf.cell(35, 7, "Est. Pay", border=1, fill=True, align="C")
+    pdf.cell(50, 7, "Employee", border=1, fill=True)
+    pdf.cell(25, 7, "Hours", border=1, fill=True, align="C")
+    pdf.cell(20, 7, "Shifts", border=1, fill=True, align="C")
+    pdf.cell(25, 7, "Rate", border=1, fill=True, align="C")
+    pdf.cell(30, 7, "Est. Pay", border=1, fill=True, align="C")
     pdf.ln()
     
     total_hours = 0
@@ -1153,18 +1154,20 @@ async def get_shift_report_pdf(
         pay = s["total_hours"] * s["hourly_rate"]
         total_hours += s["total_hours"]
         total_pay += pay
-        pdf.cell(60, 6, s["employee_name"][:25], border=1)
-        pdf.cell(30, 6, format_hours_hms(s['total_hours']), border=1, align="C")
-        pdf.cell(30, 6, str(s["total_shifts"]), border=1, align="C")
-        pdf.cell(35, 6, f"${pay:.2f}", border=1, align="C")
+        pdf.cell(50, 6, s["employee_name"][:22], border=1)
+        pdf.cell(25, 6, format_hours_hms(s['total_hours']), border=1, align="C")
+        pdf.cell(20, 6, str(s["total_shifts"]), border=1, align="C")
+        pdf.cell(25, 6, f"${s['hourly_rate']:.2f}/hr", border=1, align="C")
+        pdf.cell(30, 6, f"${pay:.2f}", border=1, align="C")
         pdf.ln()
     
     # Totals
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(60, 7, "TOTAL", border=1, fill=True)
-    pdf.cell(30, 7, format_hours_hms(total_hours), border=1, fill=True, align="C")
-    pdf.cell(30, 7, str(len(report["entries"])), border=1, fill=True, align="C")
-    pdf.cell(35, 7, f"${total_pay:.2f}", border=1, fill=True, align="C")
+    pdf.cell(50, 7, "TOTAL", border=1, fill=True)
+    pdf.cell(25, 7, format_hours_hms(total_hours), border=1, fill=True, align="C")
+    pdf.cell(20, 7, str(len(report["entries"])), border=1, fill=True, align="C")
+    pdf.cell(25, 7, "-", border=1, fill=True, align="C")
+    pdf.cell(30, 7, f"${total_pay:.2f}", border=1, fill=True, align="C")
     pdf.ln(10)
     
     # Detailed entries
@@ -1174,30 +1177,32 @@ async def get_shift_report_pdf(
     
     # Table header
     pdf.set_fill_color(240, 240, 240)
-    pdf.cell(32, 6, "Employee", border=1, fill=True)
-    pdf.cell(32, 6, "Clock In", border=1, fill=True)
-    pdf.cell(32, 6, "Clock Out", border=1, fill=True)
-    pdf.cell(15, 6, "Hours", border=1, fill=True, align="C")
-    pdf.cell(22, 6, "Est. Pay", border=1, fill=True, align="C")
-    pdf.cell(47, 6, "Admin Note", border=1, fill=True)
+    pdf.cell(28, 6, "Employee", border=1, fill=True)
+    pdf.cell(28, 6, "Clock In", border=1, fill=True)
+    pdf.cell(28, 6, "Clock Out", border=1, fill=True)
+    pdf.cell(18, 6, "Hours", border=1, fill=True, align="C")
+    pdf.cell(20, 6, "Rate", border=1, fill=True, align="C")
+    pdf.cell(20, 6, "Est. Pay", border=1, fill=True, align="C")
+    pdf.cell(38, 6, "Admin Note", border=1, fill=True)
     pdf.ln()
     
     for entry in report["entries"]:
         clock_in = entry["clock_in"][5:16].replace("T", " ") if entry["clock_in"] else ""
         clock_out = entry["clock_out"][5:16].replace("T", " ") if entry["clock_out"] else "Active"
-        note = (entry["admin_note"] or "")[:22]
-        if entry["admin_note"] and len(entry["admin_note"]) > 22:
+        note = (entry["admin_note"] or "")[:18]
+        if entry["admin_note"] and len(entry["admin_note"]) > 18:
             note += "..."
         hours = entry["total_hours"] or 0
         hourly_rate = entry.get("hourly_rate", 15.00)
         est_pay = hours * hourly_rate
         
-        pdf.cell(32, 5, entry["employee_name"][:16], border=1)
-        pdf.cell(32, 5, clock_in, border=1)
-        pdf.cell(32, 5, clock_out, border=1)
-        pdf.cell(15, 5, format_hours_hms(hours), border=1, align="C")
-        pdf.cell(22, 5, f"${est_pay:.2f}", border=1, align="C")
-        pdf.cell(47, 5, note, border=1)
+        pdf.cell(28, 5, entry["employee_name"][:14], border=1)
+        pdf.cell(28, 5, clock_in, border=1)
+        pdf.cell(28, 5, clock_out, border=1)
+        pdf.cell(18, 5, format_hours_hms(hours), border=1, align="C")
+        pdf.cell(20, 5, f"${hourly_rate:.0f}/hr", border=1, align="C")
+        pdf.cell(20, 5, f"${est_pay:.2f}", border=1, align="C")
+        pdf.cell(38, 5, note, border=1)
         pdf.ln()
     
     # Generate PDF bytes
