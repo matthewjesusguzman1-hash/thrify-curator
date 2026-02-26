@@ -385,7 +385,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           </div>
           <div className="bg-white/10 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold">
-              {data.summary?.reduce((sum, s) => sum + s.total_hours, 0).toFixed(1)}
+              {formatHoursToHMS(data.summary?.reduce((sum, s) => sum + s.total_hours, 0), { showSeconds: false })}
             </p>
             <p className="text-sm opacity-80">Total Hours</p>
           </div>
@@ -419,7 +419,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 {data.summary.map((s, idx) => (
                   <tr key={idx} className="border-t border-gray-100">
                     <td className="p-2 font-medium">{s.employee_name}</td>
-                    <td className="p-2 text-center">{s.total_hours.toFixed(2)}</td>
+                    <td className="p-2 text-center">{formatHoursToHMS(s.total_hours)}</td>
                     <td className="p-2 text-center">{s.total_shifts}</td>
                     <td className="p-2 text-right">{formatCurrency(s.total_hours * s.hourly_rate)}</td>
                   </tr>
