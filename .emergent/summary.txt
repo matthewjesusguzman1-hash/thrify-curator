@@ -20,133 +20,110 @@ The user wants to build a Thrifty Curator reselling application.
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app has admin and employee portals, form management, and reporting. The last session focused on standardizing time display and pay calculations across the entire application. Time durations are now displayed in a human-readable  format (rounded to the nearest minute), while live timers show seconds. Pay calculations are now based on this rounded time to ensure the math displayed to the user is consistent. A real-time update mechanism was added to reports, and several critical bugs related to clock-in/out logic were resolved.
+A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app features admin and employee portals, form management, and reporting. The last session addressed several user-reported issues, including a critical payroll calculation bug, a timezone display error for pay periods, and a case-sensitivity issue with employee logins. Additionally, a new Previous Pay Period filter was added, and the styling of all downloadable PDF reports was updated to be consistent and branded. The agent is currently in the middle of a large refactoring task for the main admin dashboard component.
 
 **Last working item**:
-    - Last item agent was working: The user reported that payroll reports do not match the time worked. The agent identified that  was the source of the discrepancy, as it was using raw decimal hours for calculations (instead of rounded-to-the-minute values) and was incorrectly using  instead of  for lookups. The agent began fixing the  endpoint in that file.
+    - Last item agent was working: The agent was refactoring the monolithic  file (over 5000 lines) to improve maintainability. The goal was to extract large, inline modal definitions into separate, reusable components.
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? both
+    - Which testing method agent to use? frontend testing agent
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Payroll reports do not match the time worked (P0)
-
-  Issues Detail:
-  - Issue 1: 
-     - **Attempted fixes**: The agent started refactoring . A  helper was added, and the  function was partially updated to use the correct  key and the new rounding logic. The fix is not complete.
-     - **Next debug checklist**:
-        1.  Complete the modifications in , ensuring all endpoints (especially  and ) use  for pay calculations and the correct  field for data aggregation.
-        2.  Thoroughly test the payroll endpoints via  to confirm their output matches the logic in the main Reports section ().
-        3.  Verify the frontend Payroll Summary section on the Admin Dashboard accurately reflects the corrected backend data using the screenshot tool.
-     - **Why fix this issue and what will be achieved with the fix?**: This will resolve a critical data inconsistency and ensure all payroll-related information is accurate and uniform across the application, fulfilling a direct user request.
-     - **Status**:  IN PROGRESS
-     - **Is recurring issue?**: Y (Data consistency issues have been a recurring theme).
-     - **Should Test frontend/backend/both after fix?**: Both
-     - **Blocked on other issue**: None
+  - No pending issues.
 
 **In progress Task List**:
   - Task 1: Refactor  (P1)
 
  Task Detail:
   - Task 1: 
-     - **Description**: The main  component is overly large and complex. The refactoring process to break it down into smaller components is ongoing.
-     - **Where to resume**: Extract the remaining large, inline modals (, , and ) into their own dedicated component files under .
-     - **What will be achieved with this?**: Significantly improve code maintainability, readability, and developer velocity.
+     - **Where to resume**: The agent has already created three new component files for the modals: , , and . The next step is to complete the update to  by removing the old inline modal code and replacing it with the new component tags. After the replacement, the functionality of these modals must be verified.
+     - **What will be achieved with this?**: Significantly improve code maintainability, readability, and future development speed by breaking down a massive component into smaller, manageable pieces.
      - **Status**:  IN PROGRESS
      - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on something**: Blocked by the higher-priority payroll bug (Issue 1).
+     - **Blocked on something**: Nothing.
 
 **Upcoming and Future Tasks**
 *   **Future Tasks:**
+    *   **Refactor  (P2):** This file has grown significantly and could benefit from being broken down into smaller, more focused modules.
     *   **Deployment (P2):** Once all features are complete and verified, deploy the application.
 
 **Completed work in this session**
-- **Pay Calculation & Time Display Overhaul:**
-  - Standardized all pay calculations to use time rounded to the nearest minute, ensuring the displayed math is consistent for the user.
-  - Converted all static time duration displays from decimal hours (e.g., ) to a readable  format (e.g., ).
-  - Added the employee's pay rate () to all relevant tables in the payroll report (UI, PDF, and CSV).
-- **Real-Time Functionality:**
-  - Implemented a real-time update system for the Reports section, which now auto-refreshes when underlying data changes, and added a manual Refresh button.
-  - Added a live  timer to the admin's View Employee Portal modal, mirroring the timer on the employee's own dashboard.
-  - Implemented periodic data refreshes on the Admin and Employee dashboards to keep data current.
-- **Critical Bug Fixes:**
-  - **Clock-in Logic:** Fixed a major bug where starting a new shift on the same day would incorrectly reopen a previously completed shift. The logic now correctly creates a new time entry.
-  - **Admin Clock-in:** Resolved an issue that prevented an employee from clocking out if an admin had initiated their clock-in.
-- **Data Consistency:**
-  - Fixed a bug where payroll reports used a hardcoded default pay rate (5/hr) instead of the correct admin-configured rate (0/hr).
-  - Clarified the Calculation text on dashboards to show the precise decimal hours used for pay () alongside the rounded display time (), preventing user confusion.
+- **Payroll & Reporting Consistency Fix:** Resolved a critical bug where the Payroll Summary and the main Reports section showed different totals. The fix ensures all pay calculations are based on the sum of individually rounded shift times, providing consistent financial data across the app.
+- **Timezone Bug Fix:** Corrected an issue where pay period start dates were displayed incorrectly (off by one day) on the Employee Dashboard. The fix ensures UTC dates from the backend are formatted correctly without being affected by the user's local timezone.
+- **Employee Login Fix:** Fixed a bug that prevented newly created employees from logging in if their email's case did not match what was stored in the database. The login endpoint is now case-insensitive, and all new employee emails are stored in lowercase.
+- **PDF Report Redesign:** Overhauled all downloadable PDF reports (Shift, Payroll, W9, Mileage) to use a consistent, clean, and branded style with unique header colors for each report type, as requested by the user. This also fixed an issue where admin notes were truncated.
+- **Feature: Previous Pay Period Filter:** Added a new Previous Pay Period option to the Hours by Employee report filter, allowing admins to easily view historical data.
+- **Feature: Edit Time Entry UX Improvement:** Updated the Edit Time Entry modal to pre-populate with the employee's current clock-in/out times, making it easier for admins to make adjustments.
 
 **Earlier issues found/mentioned but not fixed**
    - None.
 
 **Known issue recurrence from previous fork**
-  - The need to refactor  was carried over and remains in progress.
+  - The need to refactor  was carried over and is now in progress.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend**: React, TailwindCSS, , . A new helper at  centralizes hour-to-string formatting.
-- **Backend**: FastAPI, PyMongo, Pydantic. A  helper function has been added to backend modules to standardize time calculations.
-- **Core Logic**:
-    - **Time Handling**: Time is stored in the database with full second precision. For all display purposes (reports, dashboards), it is rounded to the nearest minute and shown as .
-    - **Pay Calculation**: Pay is now consistently calculated based on the *rounded* hour value to match the displayed time.
-    - **Real-Time Updates**: A  timestamp in the  state triggers re-fetching in child components like . Periodic polling has also been added.
+- **Time/Pay Rounding:** The core business logic now dictates that individual time entries are rounded to the nearest minute first. Pay is calculated for each rounded entry, and these values are then summed for totals. This ensures visual consistency between line items and summaries.
+- **Date/Timezone Handling:** A key fix involved differentiating between dates for display and dates for input. Display dates from the UTC backend are now formatted using UTC methods to prevent unwanted local timezone shifts.
+- **Component Refactoring:** The process of breaking down a large, monolithic React component () into smaller, single-purpose components (, etc.) is underway to improve maintainability.
+- **PDF Generation:** Using  as the standard library on the backend to generate consistently styled, branded PDF reports with programmatic control over layout and color.
 
 **key DB schema**
-  - **users**: No schema changes in this session.
-  - **time_entries**: No schema changes in this session.
+  - **users**: No schema changes. The  logic was updated to store emails in lowercase.
+  - **time_entries**: No schema changes.
 
 **changes in tech stack**
-  - None.
+  - The project has standardized on  for PDF generation, with the mileage report being rewritten to use it instead of  for styling consistency.
 
 **All files of reference**
-*   : **Currently being fixed.** The primary file for the current high-priority issue.
-*   : Contains updated clock-in/out logic.
-*   : Contains updated report generation logic.
-*   : Contains updated employee clock-in/out logic.
-*   : The central hub for many of the recent UI changes, including timers and real-time state management.
-*   : The frontend component for reports, which now includes real-time updates and new data columns.
-*   : The new frontend utility for time formatting.
+*   : **Currently being refactored.** This is the main file for the current task.
+*   : Contains logic for reports, employee management, and one of the mileage PDF endpoints.
+*   : Contains the updated case-insensitive login logic.
+*   : Contains the updated mileage PDF generation logic.
+*   : New component file created during the refactor.
+*   : New component file.
+*   : New component file.
 
 **Areas that need refactoring**:
-- : This remains the highest priority for refactoring to improve maintainability.
-- : This file has grown significantly and could benefit from being broken down into smaller, more focused modules (e.g., separating user management from time tracking functions).
+- : This remains the highest priority and is currently in progress.
+- : This file is large and is a candidate for future refactoring after the frontend dashboard is stabilized.
 
 **key api endpoints**
-- : **BROKEN/INCORRECT.** Currently being fixed to provide accurate, consistent payroll data.
-- : Logic was fixed to correctly handle multiple shifts on the same day.
-- : Logic was fixed for the same reason.
-- : Updated to include pay rate and use consistent, rounded time for calculations.
+- : **FIXED**. Now handles case-insensitive emails.
+- : **FIXED**. Backend calculations now align with frontend display logic.
+- : **FIXED**. Styled with .
+- : **FIXED**. An alternate endpoint that was also found and updated to the new style.
+- : **UPDATED** with new styling.
+- : **UPDATED** with new styling.
 
 **Critical Info for New Agent**
-- **Your immediate task (P0) is to fix the payroll discrepancy.** The root cause is in . You must finish the work started by the previous agent: ensure all calculations use time rounded to the nearest minute and that data is fetched using the correct  key.
-- **Consistency is key.** The user wants the math they see to be the math that is used. All pay calculations MUST be derived from the displayed  time values, not the raw, precise time stored in the database.
-- After fixing the payroll bug, the next priority (P1) is to continue refactoring the monolithic  component.
+- **Your immediate task is to continue the refactoring of .** The previous agent created the new component files for the modals. Your next step is to remove the large blocks of inline modal code from  and replace them with the imported components.
+- After the refactor, it is critical to perform thorough frontend testing. Verify that all modals (Employee Portal View, W9 Viewer, etc.) can be opened and that their internal functionality (displaying data, clocking in/out, submitting forms) works as expected.
+- Be aware of the recent fixes around pay calculation and date display. The core principle is that pay is calculated from time rounded *per shift*. Dates are provided in UTC and must be formatted carefully on the frontend to avoid timezone-related bugs.
 
 **documents and test reports created in this job**
   -  (updated)
   - 
-  - 
-  - (and several others from testing cycles)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1.  **Request:** Add a live h:m:s timer to the admin's employee portal view. **Status:** COMPLETED.
-2.  **Reported Issue:** Employee cannot clock out after an admin has clocked them in. **Status:** COMPLETED (Fixed).
-3.  **Request:** Calculate estimated pay using the displayed time (rounded to the nearest minute), not the precise stored time. **Status:** COMPLETED.
-4.  **Reported Issue:** The Hours by Employee section shows decimal hours, not  format. **Status:** COMPLETED (Fixed).
-5.  **Reported Issue:** Pay calculation for minutes seems incorrect (e.g., 2 minutes = ). **Status:** COMPLETED (Fixed, was a rounding/display issue, now 1 min = /bin/bash.33).
-6.  **Reported Issue:** Payroll reports do not match the time worked. **Status:** IN PROGRESS (This is the current ).
-7.  **Initial user message was a request from the agent to confirm the plan**
-8.  **User approved agent's plan**
-9.  **User asked to change label to Est. pay from Pay**
-10. **The user wants the time to be reflected in hours, minutes, and seconds in recent shifts and reports.**
+1.  **Request:** Fix mileage report download to match styling of other reports. **Status:** COMPLETED.
+2.  **Reported Issue:** User confirms mileage report still looks wrong. **Status:** ADDRESSED (Agent found a second, un-styled endpoint and fixed it).
+3.  **Reported Issue:** A newly created employee cannot log into the employee portal. **Status:** ADDRESSED (Agent identified and fixed it as a case-sensitivity issue).
+4.  **Reported Issue:** User provided a screenshot showing Email not registered error for a new employee. **Status:** COMPLETED (This led to the case-sensitivity fix).
+5.  **User Message:** P1 - User approved starting the P1 refactoring task. **Status:** IN PROGRESS.
+6.  **Request:** When viewing reports, make all text in admin notes fully visible. Also, add colors to the reports to match the app theme. **Status:** COMPLETED.
+7.  **Reported Issue:** User did not like the first attempt at colored reports and provided examples of the desired style. **Status:** COMPLETED (Agent re-styled all PDFs to match user's examples).
+8.  **Request:** Make mileage and W9 report downloads have a similar color layout to shift reports, but with different colors for each form. **Status:** COMPLETED.
+9.  **Request:** When editing an employee's time, pre-fill the modal with the currently claimed times to make adjustments easier. **Status:** COMPLETED.
+10. **Request:** In the Hours by Employee report, add a filter option for the Previous Pay Period. **Status:** COMPLETED.
 
 **Project Health Check:**
-- **Broken**: The payroll summary functionality, both on the backend () and its corresponding frontend section, is providing incorrect data.
+- **Broken**: None. All reported bugs have been addressed.
 - **Mocked**: None.
-- **Needs Attention**:  requires significant refactoring.
+- **Needs Attention**:  is undergoing a critical refactoring to reduce its complexity.
 
 **3rd Party Integrations**
 *   
@@ -155,15 +132,17 @@ A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app has 
 *   
 *   
 *   
+*    (partially replaced by fpdf2)
 
 **Testing status**
-  - Testing agent used after significant changes: YES
+  - Testing agent used after significant changes: YES (for the payroll logic fix).
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None
-  - Known regressions: The payroll summary data is incorrect, which could be considered a regression.
+  - Test files created: None by the main agent.
+  - Known regressions: None.
 
 **Credentials to test flow:**
 - **Admin Access:** From the login page (), enter code  (for Matthew Guzman) or  (for Eunice Guzman).
+- **Employee Access:** From the login page (), use an email address of an employee created via the admin dashboard (e.g., ). The login is passwordless.
 
 **What agent forgot to execute**
-- The agent did not forget any tasks but was in the middle of fixing the payroll discrepancy in  when the session ended. This fix needs to be completed and verified.</analysis>
+- The agent was in the middle of a multi-step refactoring task. It successfully created the new component files but had not yet finished the  operation to remove the old inline code from . This is the immediate next step.</analysis>
