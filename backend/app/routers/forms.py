@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from app.database import db
 from app.dependencies import get_admin_user
 from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus
+from app.models.notifications import AdminNotification
 
 router = APIRouter(tags=["Forms"])
 
@@ -12,6 +13,17 @@ router = APIRouter(tags=["Forms"])
 async def submit_job_application(application: JobApplication):
     doc = application.model_dump()
     await db.job_applications.insert_one(doc)
+    
+    # Create notification for admin
+    notification = AdminNotification(
+        type="job_application",
+        employee_id=application.id,
+        employee_name=application.full_name,
+        message=f"New job application from {application.full_name}",
+        details={"email": application.email, "phone": application.phone or ""}
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
     return application
 
 
@@ -19,6 +31,17 @@ async def submit_job_application(application: JobApplication):
 async def submit_consignment_inquiry(inquiry: ConsignmentInquiry):
     doc = inquiry.model_dump()
     await db.consignment_inquiries.insert_one(doc)
+    
+    # Create notification for admin
+    notification = AdminNotification(
+        type="consignment_inquiry",
+        employee_id=inquiry.id,
+        employee_name=inquiry.full_name,
+        message=f"New consignment inquiry from {inquiry.full_name}",
+        details={"email": inquiry.email}
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
     return inquiry
 
 
@@ -26,6 +49,17 @@ async def submit_consignment_inquiry(inquiry: ConsignmentInquiry):
 async def submit_consignment_agreement(agreement: ConsignmentAgreement):
     doc = agreement.model_dump()
     await db.consignment_agreements.insert_one(doc)
+    
+    # Create notification for admin
+    notification = AdminNotification(
+        type="consignment_agreement",
+        employee_id=agreement.id,
+        employee_name=agreement.consignor_name,
+        message=f"New consignment agreement signed by {agreement.consignor_name}",
+        details={"email": agreement.consignor_email}
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
     return agreement
 
 
