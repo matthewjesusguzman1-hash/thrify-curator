@@ -3530,6 +3530,7 @@ export default function AdminDashboard() {
             payPeriodStart={payrollSettings.pay_period_start_date}
             getAuthHeader={getAuthHeader}
             payrollSettings={payrollSettings}
+            lastDataUpdate={lastDataUpdate}
           />
 
           {/* Submission Details Modal */}
