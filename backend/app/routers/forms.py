@@ -54,9 +54,9 @@ async def submit_consignment_agreement(agreement: ConsignmentAgreement):
     notification = AdminNotification(
         type="consignment_agreement",
         employee_id=agreement.id,
-        employee_name=agreement.consignor_name,
-        message=f"New consignment agreement signed by {agreement.consignor_name}",
-        details={"email": agreement.consignor_email}
+        employee_name=agreement.full_name,
+        message=f"New consignment agreement signed by {agreement.full_name}",
+        details={"email": agreement.email}
     )
     await db.admin_notifications.insert_one(notification.model_dump())
     
