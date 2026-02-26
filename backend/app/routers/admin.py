@@ -42,6 +42,16 @@ def format_hours_hms(decimal_hours: float) -> str:
     return f"{hours}h {minutes}m"
 
 
+def round_to_nearest_minute(seconds: float) -> float:
+    """Convert seconds to hours, rounded to the nearest minute.
+    
+    Example: 1872 seconds = 31.2 minutes → rounds to 31 minutes = 0.5167 hours
+    Returns hours as a float rounded to 4 decimal places for precision.
+    """
+    total_minutes = round(seconds / 60)  # Round to nearest minute
+    return round(total_minutes / 60, 4)  # Convert to hours with 4 decimal precision
+
+
 @router.post("/create-employee", response_model=UserResponse)
 async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(get_admin_user)):
     existing = await db.users.find_one({"email": employee_data.email})
