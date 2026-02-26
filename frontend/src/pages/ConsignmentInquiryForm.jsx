@@ -132,8 +132,12 @@ export default function ConsignmentInquiryForm() {
             <h2 className="font-poppins text-2xl font-bold text-[#1A1A2E] mb-2">
               Inquiry Received!
             </h2>
-            <p className="text-[#666] mb-6">
+            <p className="text-[#666] mb-4">
               Thank you for your interest in consigning with us. We'll review your items and contact you within 2-3 business days.
+            </p>
+            <p className="text-sm text-[#888] mb-6 bg-[#F9F6F7] rounded-lg p-3">
+              <Mail className="w-4 h-4 inline mr-2 text-[#FF1493]" />
+              We will reply to you via email at the address you provided.
             </p>
             <Link to="/">
               <Button className="bg-gradient-to-r from-[#FF1493] to-[#8B5CF6] hover:from-[#E91E8C] hover:to-[#6D28D9] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">

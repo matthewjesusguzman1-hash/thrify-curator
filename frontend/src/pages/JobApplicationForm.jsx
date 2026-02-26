@@ -91,8 +91,12 @@ export default function JobApplicationForm() {
             <h2 className="font-poppins text-2xl font-bold text-[#1A1A2E] mb-2">
               Application Received!
             </h2>
-            <p className="text-[#666] mb-6">
+            <p className="text-[#666] mb-4">
               Thank you for your interest in joining our team. We'll review your application and get back to you soon.
+            </p>
+            <p className="text-sm text-[#888] mb-6 bg-[#F9F6F7] rounded-lg p-3">
+              <Mail className="w-4 h-4 inline mr-2 text-[#00D4FF]" />
+              We will reply to you via email at the address you provided.
             </p>
             <Link to="/">
               <Button className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#6D28D9] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">

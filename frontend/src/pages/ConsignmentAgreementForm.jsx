@@ -77,8 +77,12 @@ export default function ConsignmentAgreementForm() {
             <h2 className="font-poppins text-2xl font-bold text-[#1A1A2E] mb-2">
               Agreement Signed!
             </h2>
-            <p className="text-[#666] mb-6">
+            <p className="text-[#666] mb-4">
               Thank you for signing the consignment agreement. We'll send you a confirmation email with next steps.
+            </p>
+            <p className="text-sm text-[#888] mb-6 bg-[#F9F6F7] rounded-lg p-3">
+              <Mail className="w-4 h-4 inline mr-2 text-[#8B5CF6]" />
+              We will reply to you via email at the address you provided.
             </p>
             <Link to="/">
               <Button className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
