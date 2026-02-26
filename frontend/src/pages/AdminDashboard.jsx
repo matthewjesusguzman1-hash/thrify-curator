@@ -3765,7 +3765,7 @@ export default function AdminDashboard() {
                                       ? 'bg-[#8B5CF6]/20 text-[#6D28D9]' 
                                       : 'bg-green-100 text-green-700'
                                   }`}>
-                                    {entry.clock_out ? `${entry.total_hours || 0} hrs` : 'Active'}
+                                    {entry.clock_out ? formatHoursToHMS(entry.total_hours) : 'Active'}
                                   </span>
                                 </div>
                               ))}
