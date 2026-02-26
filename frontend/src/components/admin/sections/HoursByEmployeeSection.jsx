@@ -370,11 +370,12 @@ export default function HoursByEmployeeSection({
                   </div>
                   
                   <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="w-[140px] h-9">
+                    <SelectTrigger className="w-[180px] h-9">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="period">Pay Period</SelectItem>
+                      <SelectItem value="period">Current Pay Period</SelectItem>
+                      <SelectItem value="prev_period">Previous Pay Period</SelectItem>
                       <SelectItem value="month">Month</SelectItem>
                       <SelectItem value="year">Year</SelectItem>
                     </SelectContent>
