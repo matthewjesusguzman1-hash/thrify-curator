@@ -2688,7 +2688,11 @@ export default function AdminDashboard() {
                             <p className="text-xs text-[#888]">
                               {(() => {
                                 const period = calculateBiweeklyPeriod();
-                                return period ? `Bi-weekly Period #${period.periodNumber} (starts Jan 6, 2025)` : '';
+                                if (period) {
+                                  const anchorStr = period.anchorDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                  return `Bi-weekly Period #${period.periodNumber} (year starts ${anchorStr})`;
+                                }
+                                return '';
                               })()}
                             </p>
                           </div>
