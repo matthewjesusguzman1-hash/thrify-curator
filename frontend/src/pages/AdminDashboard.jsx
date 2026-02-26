@@ -613,6 +613,8 @@ export default function AdminDashboard() {
   // View form submission PDF in new tab
   const handleViewSubmissionPDF = async (submission) => {
     try {
+      toast.loading("Loading PDF...", { id: "pdf-loading" });
+      
       const endpoint = submission.formType === "job_applications" 
         ? "job-applications" 
         : submission.formType === "consignment_inquiries" 
@@ -627,14 +629,23 @@ export default function AdminDashboard() {
         }
       );
       
+      toast.dismiss("pdf-loading");
+      
       // Open PDF in new tab for viewing
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      
+      // For mobile compatibility, create a link and click it
+      const newWindow = window.open(url, '_blank');
+      if (!newWindow) {
+        // If popup blocked, try opening in same window
+        window.location.href = url;
+      }
       
       // Clean up after a delay
-      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      setTimeout(() => window.URL.revokeObjectURL(url), 30000);
     } catch (error) {
+      toast.dismiss("pdf-loading");
       console.error("View error:", error);
       toast.error("Failed to open PDF");
     }
@@ -643,6 +654,8 @@ export default function AdminDashboard() {
   // Download form submission as PDF
   const handleDownloadSubmission = async (submission) => {
     try {
+      toast.loading("Preparing download...", { id: "download-loading" });
+      
       const endpoint = submission.formType === "job_applications" 
         ? "job-applications" 
         : submission.formType === "consignment_inquiries" 
@@ -656,6 +669,8 @@ export default function AdminDashboard() {
           responseType: 'blob'
         }
       );
+      
+      toast.dismiss("download-loading");
       
       // Force download using anchor element
       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -668,22 +683,28 @@ export default function AdminDashboard() {
           : "Consignment_Agreement";
       const filename = `${submission.full_name.replace(/\s+/g, "_")}_${formType}.pdf`;
       
-      // Create hidden anchor and force click
+      // Create anchor and force download - works on mobile
       const link = document.createElement('a');
-      link.style.display = 'none';
       link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
+      link.download = filename;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       
-      // Cleanup
+      // Append to body, click, then remove
+      document.body.appendChild(link);
+      
+      // Use timeout for mobile Safari compatibility
       setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 1000);
       }, 100);
       
-      toast.success("PDF downloaded");
+      toast.success("PDF ready for download");
     } catch (error) {
+      toast.dismiss("download-loading");
       console.error("Download error:", error);
       toast.error("Failed to download PDF");
     }
