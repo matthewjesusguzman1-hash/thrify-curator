@@ -235,13 +235,11 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     """Generate PDF payroll report"""
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     if not settings:
-        settings = {"pay_period_start_date": "2026-01-06", "default_hourly_rate": 15.00}
+        settings = {"default_hourly_rate": 15.00}
     
     if request.period_type == "biweekly":
-        period_start, period_end = get_biweekly_period(
-            settings["pay_period_start_date"], 
-            request.period_index or 0
-        )
+        # Use first Monday of year as anchor
+        period_start, period_end = get_biweekly_period(period_index=request.period_index or 0)
     elif request.period_type == "monthly":
         period_start, period_end = get_monthly_period(request.period_index or 0)
     elif request.period_type == "yearly":
