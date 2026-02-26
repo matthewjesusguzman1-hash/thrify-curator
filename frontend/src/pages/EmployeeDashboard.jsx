@@ -692,7 +692,7 @@ export default function EmployeeDashboard() {
                 <div className="bg-gradient-to-br from-[#FF1493]/10 to-[#FF1493]/5 rounded-xl p-4 text-center">
                   <DollarSign className="w-6 h-6 text-[#FF1493] mx-auto mb-2" />
                   <p className="text-2xl font-bold text-[#1A1A2E]" data-testid="estimated-pay">
-                    {formatCurrency(summary.estimated_pay)}
+                    {formatCurrency(roundHoursToMinute(summary.period_hours) * summary.hourly_rate)}
                   </p>
                   <p className="text-xs text-gray-500">Est. Pay</p>
                 </div>
@@ -703,7 +703,7 @@ export default function EmployeeDashboard() {
                 <p className="text-sm text-gray-500">
                   Rate: <span className="font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</span>
                   <span className="mx-2">•</span>
-                  {summary.period_hours?.toFixed(2) || '0.00'} hrs × {formatCurrency(summary.hourly_rate)} = {formatCurrency(summary.estimated_pay)}
+                  {formatHoursToHMS(summary.period_hours)} × {formatCurrency(summary.hourly_rate)} = {formatCurrency(roundHoursToMinute(summary.period_hours) * summary.hourly_rate)}
                 </p>
               </div>
             </div>
