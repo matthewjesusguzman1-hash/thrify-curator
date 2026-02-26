@@ -3285,7 +3285,14 @@ export default function AdminDashboard() {
                 <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center">
                   <DollarSign className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="font-playfair text-xl font-semibold text-[#333]">Payroll Summary</h2>
+                <div>
+                  <h2 className="font-playfair text-xl font-semibold text-[#333]">Payroll Summary</h2>
+                  {payrollSummary.current_period?.start && payrollSummary.current_period?.end && (
+                    <p className="text-xs text-[#888]">
+                      Pay Period: {new Date(payrollSummary.current_period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(payrollSummary.current_period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
               </div>
               {showStatsSection ? (
                 <ChevronUp className="w-5 h-5 text-[#888]" />
@@ -3314,9 +3321,6 @@ export default function AdminDashboard() {
                             ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
                           </p>
                           <p className="text-sm font-medium text-[#666]">Current Pay Period</p>
-                          <p className="text-xs text-[#888]">
-                            {payrollSummary.current_period?.hours?.toFixed(1) || '0'} hrs worked
-                          </p>
                         </div>
                       </div>
                       {payrollSummary.current_period?.start && payrollSummary.current_period?.end && (
