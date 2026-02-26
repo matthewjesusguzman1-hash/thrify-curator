@@ -150,21 +150,23 @@ async def auto_clock_out(user: dict = Depends(get_current_user)):
     # Calculate hours based on last_clock_in to clock_out_time
     last_clock_in = active.get("last_clock_in", active["clock_in"])
     clock_in_time = datetime.fromisoformat(last_clock_in)
-    session_hours = round((clock_out_time - clock_in_time).total_seconds() / 3600, 2)
+    session_seconds = (clock_out_time - clock_in_time).total_seconds()
     
     # Ensure non-negative hours
-    if session_hours < 0:
-        session_hours = 0
+    if session_seconds < 0:
+        session_seconds = 0
     
-    accumulated_hours = active.get("accumulated_hours", 0.0) + session_hours
-    total_hours = round(accumulated_hours, 2)
+    # Calculate total hours, rounded to nearest minute
+    accumulated_seconds = active.get("accumulated_hours", 0.0) * 3600
+    total_seconds = accumulated_seconds + session_seconds
+    total_hours = round_to_nearest_minute(total_seconds)
     
     await db.time_entries.update_one(
         {"id": active["id"]},
         {"$set": {
             "clock_out": clock_out_iso, 
             "total_hours": total_hours, 
-            "accumulated_hours": accumulated_hours,
+            "accumulated_hours": total_hours,
             "auto_clocked_out": True
         }}
     )
