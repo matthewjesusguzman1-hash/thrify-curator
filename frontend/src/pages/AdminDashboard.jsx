@@ -2066,6 +2066,12 @@ export default function AdminDashboard() {
                                   ? 'bg-orange-500'
                                   : notification.type === 'new_message'
                                   ? 'bg-pink-500'
+                                  : notification.type === 'job_application'
+                                  ? 'bg-purple-500'
+                                  : notification.type === 'consignment_inquiry'
+                                  ? 'bg-cyan-500'
+                                  : notification.type === 'consignment_agreement'
+                                  ? 'bg-emerald-500'
                                   : 'bg-blue-500'
                               }`}>
                                 {notification.type === 'clock_in' 
@@ -2076,6 +2082,12 @@ export default function AdminDashboard() {
                                   ? <FileText className="w-5 h-5 text-white" />
                                   : notification.type === 'new_message'
                                   ? <MessageSquare className="w-5 h-5 text-white" />
+                                  : notification.type === 'job_application'
+                                  ? <Briefcase className="w-5 h-5 text-white" />
+                                  : notification.type === 'consignment_inquiry'
+                                  ? <Package className="w-5 h-5 text-white" />
+                                  : notification.type === 'consignment_agreement'
+                                  ? <FileSignature className="w-5 h-5 text-white" />
                                   : <Bell className="w-5 h-5 text-white" />
                                 }
                               </div>
@@ -2092,12 +2104,21 @@ export default function AdminDashboard() {
                                       ? 'bg-orange-100 text-orange-800'
                                       : notification.type === 'new_message'
                                       ? 'bg-pink-100 text-pink-800'
+                                      : notification.type === 'job_application'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : notification.type === 'consignment_inquiry'
+                                      ? 'bg-cyan-100 text-cyan-800'
+                                      : notification.type === 'consignment_agreement'
+                                      ? 'bg-emerald-100 text-emerald-800'
                                       : 'bg-blue-100 text-blue-800'
                                   }`}>
                                     {notification.type === 'clock_in' ? 'IN' 
                                       : notification.type === 'clock_out' ? 'OUT'
                                       : notification.type === 'w9_submission' || notification.type === 'w9_submitted' ? 'W-9'
                                       : notification.type === 'new_message' ? 'MSG'
+                                      : notification.type === 'job_application' ? 'JOB'
+                                      : notification.type === 'consignment_inquiry' ? 'INQ'
+                                      : notification.type === 'consignment_agreement' ? 'AGR'
                                       : 'INFO'}
                                   </span>
                                   <span className="notification-time text-xs">
