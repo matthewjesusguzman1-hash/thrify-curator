@@ -165,3 +165,294 @@ async def get_forms_summary(admin: dict = Depends(get_admin_user)):
         "consignment_inquiries": {"total": inquiries, "new": inquiries_new},
         "consignment_agreements": {"total": agreements, "new": agreements_new}
     }
+
+
+# PDF Download endpoints
+from fastapi.responses import Response
+from fpdf import FPDF
+from datetime import datetime
+
+
+def format_date(iso_string):
+    """Format ISO date string to readable format"""
+    try:
+        dt = datetime.fromisoformat(iso_string.replace('Z', '+00:00'))
+        return dt.strftime("%B %d, %Y at %I:%M %p")
+    except:
+        return iso_string or "N/A"
+
+
+class FormPDF(FPDF):
+    def __init__(self, title, accent_color):
+        super().__init__()
+        self.title_text = title
+        self.accent_color = accent_color
+        
+    def header(self):
+        # Header background
+        self.set_fill_color(*self.accent_color)
+        self.rect(0, 0, 210, 35, 'F')
+        
+        # Logo/Brand
+        self.set_font('Helvetica', 'B', 20)
+        self.set_text_color(255, 255, 255)
+        self.set_xy(15, 10)
+        self.cell(0, 10, 'THRIFTY CURATOR', 0, 1, 'L')
+        
+        # Title
+        self.set_font('Helvetica', '', 12)
+        self.set_xy(15, 22)
+        self.cell(0, 6, self.title_text, 0, 1, 'L')
+        
+        self.ln(20)
+        
+    def footer(self):
+        self.set_y(-20)
+        self.set_font('Helvetica', 'I', 8)
+        self.set_text_color(128, 128, 128)
+        self.cell(0, 10, f'Page {self.page_no()} | Generated on {datetime.now().strftime("%B %d, %Y")}', 0, 0, 'C')
+        
+    def section_header(self, title):
+        self.set_font('Helvetica', 'B', 11)
+        self.set_text_color(*self.accent_color)
+        self.cell(0, 8, title.upper(), 0, 1, 'L')
+        self.set_draw_color(*self.accent_color)
+        self.line(self.get_x(), self.get_y(), self.get_x() + 180, self.get_y())
+        self.ln(3)
+        
+    def field(self, label, value, indent=False):
+        x_start = 20 if indent else 15
+        self.set_x(x_start)
+        self.set_font('Helvetica', 'B', 9)
+        self.set_text_color(100, 100, 100)
+        self.cell(45, 6, label + ":", 0, 0, 'L')
+        self.set_font('Helvetica', '', 10)
+        self.set_text_color(30, 30, 30)
+        # Handle long text
+        if len(str(value)) > 70:
+            self.ln(6)
+            self.set_x(x_start)
+            self.multi_cell(170, 5, str(value))
+        else:
+            self.cell(0, 6, str(value), 0, 1, 'L')
+            
+    def field_multiline(self, label, value):
+        self.set_x(15)
+        self.set_font('Helvetica', 'B', 9)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 6, label + ":", 0, 1, 'L')
+        self.set_x(15)
+        self.set_font('Helvetica', '', 10)
+        self.set_text_color(30, 30, 30)
+        # Light gray background for multiline content
+        self.set_fill_color(248, 248, 248)
+        y_start = self.get_y()
+        self.multi_cell(180, 5, str(value), 0, 'L', True)
+        self.ln(3)
+        
+    def yes_no_field(self, label, value):
+        self.set_x(15)
+        self.set_font('Helvetica', 'B', 9)
+        self.set_text_color(100, 100, 100)
+        self.cell(80, 6, label + ":", 0, 0, 'L')
+        self.set_font('Helvetica', 'B', 10)
+        if value:
+            self.set_text_color(34, 139, 34)  # Green
+            self.cell(0, 6, "YES", 0, 1, 'L')
+        else:
+            self.set_text_color(220, 20, 60)  # Red
+            self.cell(0, 6, "NO", 0, 1, 'L')
+            
+    def status_badge(self, status):
+        status_colors = {
+            'new': (59, 130, 246),      # Blue
+            'reviewed': (234, 179, 8),   # Yellow
+            'contacted': (34, 197, 94),  # Green
+            'archived': (156, 163, 175)  # Gray
+        }
+        color = status_colors.get(status, (59, 130, 246))
+        self.set_fill_color(*color)
+        self.set_text_color(255, 255, 255)
+        self.set_font('Helvetica', 'B', 9)
+        self.cell(25, 7, (status or 'new').upper(), 0, 1, 'C', True)
+        self.ln(2)
+
+
+@router.get("/admin/forms/job-applications/{submission_id}/pdf")
+async def download_job_application_pdf(submission_id: str, admin: dict = Depends(get_admin_user)):
+    """Download job application as PDF"""
+    submission = await db.job_applications.find_one({"id": submission_id}, {"_id": 0})
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    # Create PDF
+    pdf = FormPDF("Job Application", (255, 20, 147))  # Pink
+    pdf.add_page()
+    
+    # Status
+    pdf.section_header("Application Status")
+    pdf.status_badge(submission.get('status'))
+    pdf.ln(5)
+    
+    # Applicant Information
+    pdf.section_header("Applicant Information")
+    pdf.field("Full Name", submission.get('full_name', 'N/A'))
+    pdf.field("Email", submission.get('email', 'N/A'))
+    pdf.field("Phone", submission.get('phone', 'N/A'))
+    pdf.field("Address", submission.get('address', 'N/A'))
+    pdf.field("Submitted", format_date(submission.get('submitted_at')))
+    pdf.ln(5)
+    
+    # Experience
+    if submission.get('resume_text'):
+        pdf.section_header("Resume / Experience")
+        pdf.field_multiline("Details", submission.get('resume_text'))
+    
+    # Why Join
+    if submission.get('why_join'):
+        pdf.section_header("Why Join Us")
+        pdf.field_multiline("Response", submission.get('why_join'))
+    
+    # Availability
+    if submission.get('availability'):
+        pdf.section_header("Availability")
+        pdf.field("Schedule", submission.get('availability'))
+        pdf.ln(3)
+    
+    # Tasks
+    if submission.get('tasks_able_to_perform'):
+        pdf.section_header("Tasks Able to Perform")
+        tasks = ', '.join(submission.get('tasks_able_to_perform', []))
+        pdf.field("Selected Tasks", tasks if tasks else 'None specified')
+        pdf.ln(3)
+    
+    # Background & Transportation
+    pdf.section_header("Additional Information")
+    pdf.yes_no_field("Background Check Consent", submission.get('background_check_consent'))
+    pdf.yes_no_field("Reliable Transportation", submission.get('has_reliable_transportation'))
+    
+    # Generate PDF bytes
+    pdf_bytes = pdf.output()
+    
+    filename = f"{submission.get('full_name', 'applicant').replace(' ', '_')}_Job_Application.pdf"
+    return Response(
+        content=bytes(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/admin/forms/consignment-inquiries/{submission_id}/pdf")
+async def download_consignment_inquiry_pdf(submission_id: str, admin: dict = Depends(get_admin_user)):
+    """Download consignment inquiry as PDF"""
+    submission = await db.consignment_inquiries.find_one({"id": submission_id}, {"_id": 0})
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    # Create PDF
+    pdf = FormPDF("Consignment Inquiry", (0, 212, 255))  # Cyan
+    pdf.add_page()
+    
+    # Status
+    pdf.section_header("Inquiry Status")
+    pdf.status_badge(submission.get('status'))
+    pdf.ln(5)
+    
+    # Contact Information
+    pdf.section_header("Contact Information")
+    pdf.field("Full Name", submission.get('full_name', 'N/A'))
+    pdf.field("Email", submission.get('email', 'N/A'))
+    pdf.field("Phone", submission.get('phone', 'N/A'))
+    pdf.field("Submitted", format_date(submission.get('submitted_at')))
+    pdf.ln(5)
+    
+    # Item Details
+    pdf.section_header("Item Details")
+    if submission.get('item_types'):
+        pdf.field("Item Types", ', '.join(submission.get('item_types', [])))
+    if submission.get('other_item_type'):
+        pdf.field("Other Type", submission.get('other_item_type'))
+    if submission.get('item_condition'):
+        pdf.field("Condition", submission.get('item_condition'))
+    pdf.ln(3)
+    
+    # Item Description
+    if submission.get('item_description'):
+        pdf.section_header("Item Description")
+        pdf.field_multiline("Details", submission.get('item_description'))
+    
+    # Environment
+    pdf.section_header("Environment Information")
+    pdf.yes_no_field("Smoke-Free Environment", submission.get('smoke_free'))
+    pdf.yes_no_field("Pet-Free Environment", submission.get('pet_free'))
+    
+    # Generate PDF bytes
+    pdf_bytes = pdf.output()
+    
+    filename = f"{submission.get('full_name', 'inquiry').replace(' ', '_')}_Consignment_Inquiry.pdf"
+    return Response(
+        content=bytes(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/admin/forms/consignment-agreements/{submission_id}/pdf")
+async def download_consignment_agreement_pdf(submission_id: str, admin: dict = Depends(get_admin_user)):
+    """Download consignment agreement as PDF"""
+    submission = await db.consignment_agreements.find_one({"id": submission_id}, {"_id": 0})
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    # Create PDF
+    pdf = FormPDF("Consignment Agreement", (139, 92, 246))  # Purple
+    pdf.add_page()
+    
+    # Status
+    pdf.section_header("Agreement Status")
+    pdf.status_badge(submission.get('status'))
+    pdf.ln(5)
+    
+    # Consignor Information
+    pdf.section_header("Consignor Information")
+    pdf.field("Full Name", submission.get('full_name', 'N/A'))
+    pdf.field("Email", submission.get('email', 'N/A'))
+    pdf.field("Phone", submission.get('phone', 'N/A'))
+    pdf.field("Address", submission.get('address', 'N/A'))
+    pdf.ln(5)
+    
+    # Agreement Details
+    pdf.section_header("Agreement Details")
+    pdf.field("Agreed Percentage", submission.get('agreed_percentage', 'N/A'))
+    pdf.field("Signature Date", submission.get('signature_date', 'N/A'))
+    pdf.field("Submitted", format_date(submission.get('submitted_at')))
+    pdf.ln(3)
+    
+    # Items Description
+    if submission.get('items_description'):
+        pdf.section_header("Items Description")
+        pdf.field_multiline("Details", submission.get('items_description'))
+    
+    # Signature
+    pdf.section_header("Signature")
+    pdf.set_x(15)
+    pdf.set_font('Helvetica', 'I', 14)
+    pdf.set_text_color(30, 30, 30)
+    pdf.cell(0, 10, submission.get('signature', 'N/A'), 0, 1, 'L')
+    pdf.set_draw_color(100, 100, 100)
+    pdf.line(15, pdf.get_y(), 100, pdf.get_y())
+    pdf.ln(5)
+    
+    # Terms Agreement
+    pdf.section_header("Terms")
+    pdf.yes_no_field("Agreed to Terms & Conditions", submission.get('agreed_to_terms'))
+    
+    # Generate PDF bytes
+    pdf_bytes = pdf.output()
+    
+    filename = f"{submission.get('full_name', 'agreement').replace(' ', '_')}_Consignment_Agreement.pdf"
+    return Response(
+        content=bytes(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
