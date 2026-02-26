@@ -523,61 +523,35 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
         if active:
             raise HTTPException(status_code=400, detail="Employee is already clocked in")
         
-        # Check for existing entry today
-        today_entry = await db.time_entries.find_one(
-            {
-                "user_id": employee_id,
-                "shift_date": today_start.strftime("%Y-%m-%d")
-            },
-            {"_id": 0}
-        )
+        # Use "Administrator" for admin users instead of their personal name (for both employee and admin acting)
+        employee_display_name = "Administrator" if employee.get("role") == "admin" else employee["name"]
+        admin_display_name = "Administrator" if admin.get("role") == "admin" else admin["name"]
         
-        if today_entry:
-            # Resume existing shift
-            await db.time_entries.update_one(
-                {"id": today_entry["id"]},
-                {
-                    "$set": {
-                        "clock_out": None,
-                        "last_clock_in": now_iso
-                    }
-                }
-            )
-            return {
-                "message": f"Clocked in {employee['name']} (resumed shift)",
-                "action": "in",
-                "timestamp": now_iso,
-                "employee_name": employee["name"]
-            }
-        else:
-            # Use "Administrator" for admin users instead of their personal name (for both employee and admin acting)
-            employee_display_name = "Administrator" if employee.get("role") == "admin" else employee["name"]
-            admin_display_name = "Administrator" if admin.get("role") == "admin" else admin["name"]
-            
-            # Create new entry
-            entry_id = str(uuid.uuid4())
-            entry = {
-                "id": entry_id,
-                "user_id": employee_id,
-                "user_name": employee_display_name,
-                "clock_in": now_iso,
-                "clock_out": None,
-                "shift_date": today_start.strftime("%Y-%m-%d"),
-                "last_clock_in": now_iso,
-                "accumulated_hours": 0.0,
-                "total_hours": None,
-                "admin_clocked": True,
-                "admin_id": admin["id"],
-                "admin_name": admin_display_name
-            }
-            await db.time_entries.insert_one(entry)
-            return {
-                "message": f"Clocked in {employee_display_name}",
-                "action": "in",
-                "timestamp": now_iso,
-                "employee_name": employee_display_name,
-                "entry_id": entry_id
-            }
+        # Always create new entry for each clock-in
+        # This ensures that completed shifts are not accidentally reopened
+        entry_id = str(uuid.uuid4())
+        entry = {
+            "id": entry_id,
+            "user_id": employee_id,
+            "user_name": employee_display_name,
+            "clock_in": now_iso,
+            "clock_out": None,
+            "shift_date": today_start.strftime("%Y-%m-%d"),
+            "last_clock_in": now_iso,
+            "accumulated_hours": 0.0,
+            "total_hours": None,
+            "admin_clocked": True,
+            "admin_id": admin["id"],
+            "admin_name": admin_display_name
+        }
+        await db.time_entries.insert_one(entry)
+        return {
+            "message": f"Clocked in {employee_display_name}",
+            "action": "in",
+            "timestamp": now_iso,
+            "employee_name": employee_display_name,
+            "entry_id": entry_id
+        }
     
     else:  # clock_action == "out"
         # Find active shift
