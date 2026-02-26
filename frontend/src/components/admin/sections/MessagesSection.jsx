@@ -135,6 +135,10 @@ export default function MessagesSection() {
   };
 
   const handleDelete = async (messageId) => {
+    if (!window.confirm("Are you sure you want to delete this message? This action cannot be undone.")) {
+      return;
+    }
+    
     const token = getToken();
     setDeletingId(messageId);
     try {
