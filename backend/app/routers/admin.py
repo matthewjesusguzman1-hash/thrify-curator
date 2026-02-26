@@ -1503,12 +1503,19 @@ async def get_w9_report_csv(
     writer.writerow([])
     
     # Employee details
-    writer.writerow(["Employee Name", "Email", "Role", "W-9 Status", "Document Count", "Last Updated"])
+    writer.writerow(["Employee Name", "Email", "Role", "Start Date", "W-9 Status", "Document Count", "Last Updated"])
     for emp in report["employees"]:
+        start_date = emp.get("start_date", "")
+        if start_date:
+            try:
+                start_date = datetime.fromisoformat(start_date).strftime("%b %d, %Y")
+            except:
+                pass
         writer.writerow([
             emp["name"],
             emp["email"],
             emp["role"],
+            start_date or "N/A",
             emp["w9_status"],
             emp["document_count"],
             emp.get("last_updated", "")[:10] if emp.get("last_updated") else "N/A"
