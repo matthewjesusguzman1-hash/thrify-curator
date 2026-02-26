@@ -250,13 +250,15 @@ Build a "Thrifty Curator" reselling application with:
     - Added pay period date range to the Payroll Summary header (e.g., "Pay Period: Feb 18 - Mar 3, 2026")
     - Removed the inline pay period settings from the Payroll Summary section
   - **Per-Employee Pay Period Settings** (in Edit Employee modal):
-    - Added new "Pay Period Settings" section to the Edit Employee modal
-    - Shows "Current Pay Period Range" at the top (e.g., "Feb 18 - Mar 3, 2026")
-    - **Calendar Popup**: Click "Select start date..." to open a calendar picker for choosing the pay period start date
-    - When a date is selected, shows preview: "New period will be: [date range] (Period #X)"
-    - **Sync with Another Employee**: Dropdown to match pay period with an existing employee
+    - **Global Pay Period**: Defaults to first Monday of the year, following bi-weekly thereafter
+    - **Calendar Popup**: Click "Select start date..." to open a full calendar picker
+    - **Current Pay Period Display**: When a date is selected, shows:
+      - The selected date (e.g., "Tuesday, February 10, 2026")
+      - Current pay period range (e.g., "Tue, Feb 24 - Mon, Mar 9, 2026")
+      - Bi-weekly period number (e.g., "Bi-weekly Period #2")
+    - Removed sync with another employee option
   - **Backend Updates**:
-    - Added `pay_period_start_date` and `sync_pay_period_with` fields to user model
+    - Added `pay_period_start_date` field to user model
     - Updated `/api/admin/employees/{id}` endpoint to handle pay period settings
 
 ## Recent Updates (Feb 23, 2026)
