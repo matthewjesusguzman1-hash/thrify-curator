@@ -67,13 +67,25 @@ export default function HoursByEmployeeSection({
     }));
   }, [timeEntries]);
 
-  // Get biweekly period dates
+  // Get first Monday of a given year
+  const getFirstMondayOfYear = (year) => {
+    const jan1 = new Date(year, 0, 1);
+    const dayOfWeek = jan1.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysToAdd = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : 8 - dayOfWeek);
+    return new Date(year, 0, 1 + daysToAdd);
+  };
+
+  // Get biweekly period dates - always based on first Monday of the year
   const getBiweeklyPeriod = () => {
-    const startDate = payPeriodStart ? new Date(payPeriodStart) : new Date('2026-01-06');
     const today = new Date();
-    const daysSinceStart = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    today.setHours(0, 0, 0, 0);
+    
+    // Use first Monday of current year as the anchor
+    const firstMonday = getFirstMondayOfYear(today.getFullYear());
+    
+    const daysSinceStart = Math.floor((today - firstMonday) / (1000 * 60 * 60 * 24));
     const periodNumber = Math.floor(daysSinceStart / 14);
-    const periodStart = new Date(startDate);
+    const periodStart = new Date(firstMonday);
     periodStart.setDate(periodStart.getDate() + (periodNumber * 14));
     const periodEnd = new Date(periodStart);
     periodEnd.setDate(periodEnd.getDate() + 13);
