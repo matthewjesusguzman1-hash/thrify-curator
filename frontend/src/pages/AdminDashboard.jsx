@@ -2008,14 +2008,6 @@ export default function AdminDashboard() {
         }
       }
       
-      // Handle pay period start date
-      if (editEmployeeData.pay_period_start_date) {
-        updatePayload.pay_period_start_date = editEmployeeData.pay_period_start_date;
-      } else {
-        // Clear custom pay period - use global settings (first Monday of year)
-        updatePayload.pay_period_start_date = "";
-      }
-      
       await axios.put(`${API}/admin/employees/${editingEmployee.id}`, updatePayload, getAuthHeader());
       
       toast.success(`${editEmployeeData.name}'s details updated successfully!`);
