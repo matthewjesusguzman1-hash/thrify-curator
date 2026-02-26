@@ -3400,11 +3400,15 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <h2 className="font-playfair text-xl font-semibold text-[#333]">Payroll Summary</h2>
-                  {payrollSummary.current_period?.start && payrollSummary.current_period?.end && (
-                    <p className="text-xs text-[#888]">
-                      Pay Period: {new Date(payrollSummary.current_period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(payrollSummary.current_period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </p>
-                  )}
+                  <p className="text-xs text-[#888]">
+                    Pay Period: {(() => {
+                      const period = calculateBiweeklyPeriod(payrollSettings.pay_period_start_date);
+                      if (period) {
+                        return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                      }
+                      return 'Not configured';
+                    })()}
+                  </p>
                 </div>
               </div>
               {showStatsSection ? (
