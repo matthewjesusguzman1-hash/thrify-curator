@@ -3772,14 +3772,14 @@ export default function AdminDashboard() {
                             </div>
                             <div className="bg-[#F5F0FF] rounded-xl p-4 text-center">
                               <DollarSign className="w-6 h-6 text-[#8B5CF6] mx-auto mb-2" />
-                              <p className="text-2xl font-bold text-[#333]">${employeePortalData.summary?.estimated_pay?.toFixed(2) || '0.00'}</p>
+                              <p className="text-2xl font-bold text-[#333]">${(roundHoursToMinute(employeePortalData.summary?.period_hours || 0) * (employeePortalData.summary?.hourly_rate || 15)).toFixed(2)}</p>
                               <p className="text-xs text-[#888]">Est. Pay</p>
                             </div>
                           </div>
                           <div className="mt-4 pt-4 border-t border-[#eee] text-center text-sm text-[#888]">
                             Rate: <span className="font-medium text-[#333]">${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'}/hr</span>
                             <span className="mx-2">•</span>
-                            {employeePortalData.summary?.period_hours?.toFixed(2) || '0.00'} hrs × ${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'} = ${employeePortalData.summary?.estimated_pay?.toFixed(2) || '0.00'}
+                            {formatHoursToHMS(employeePortalData.summary?.period_hours)} × ${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'} = ${(roundHoursToMinute(employeePortalData.summary?.period_hours || 0) * (employeePortalData.summary?.hourly_rate || 15)).toFixed(2)}
                           </div>
                         </div>
                       </div>
