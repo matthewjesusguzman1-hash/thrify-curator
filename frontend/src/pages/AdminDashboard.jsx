@@ -2152,11 +2152,10 @@ export default function AdminDashboard() {
   const formatDate = (isoString) => {
     if (!isoString) return 'N/A';
     try {
-      return new Date(isoString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      });
+      // Parse as UTC and format without timezone conversion
+      const date = new Date(isoString);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
     } catch {
       return 'N/A';
     }
