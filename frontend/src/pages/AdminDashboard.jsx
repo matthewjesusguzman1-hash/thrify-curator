@@ -648,36 +648,38 @@ export default function AdminDashboard() {
           : "Consignment_Agreement";
       const filename = `${submission.full_name.replace(/\s+/g, "_")}_${formType}.pdf`;
       
-      // Create object URL
-      const url = URL.createObjectURL(blob);
-      
-      // Detect iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      
-      if (isIOS) {
-        // On iOS, open the PDF in a new window - user can then use Share to save
-        const newWindow = window.open(url, '_blank');
-        if (newWindow) {
-          toast.success("PDF opened - use Share button to save");
-        } else {
-          // If popup blocked, try location change
-          window.location.href = url;
-          toast.success("PDF opening...");
+      // Try Web Share API first (works great on iOS)
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        const shareData = { files: [file] };
+        
+        if (navigator.canShare(shareData)) {
+          try {
+            await navigator.share(shareData);
+            toast.success("PDF shared/saved");
+            return;
+          } catch (shareError) {
+            // User cancelled or share failed, fall through to other methods
+            if (shareError.name !== 'AbortError') {
+              console.log("Share failed, trying fallback");
+            }
+          }
         }
-      } else {
-        // On desktop/Android, use download attribute
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        toast.success("PDF downloaded");
       }
+      
+      // Fallback: Create object URL and download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       
       // Cleanup after delay
       setTimeout(() => URL.revokeObjectURL(url), 60000);
+      toast.success("PDF downloaded");
     } catch (error) {
       toast.dismiss("download-loading");
       console.error("Download error:", error);
