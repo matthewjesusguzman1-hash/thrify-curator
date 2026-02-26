@@ -181,7 +181,8 @@ export default function AdminDashboard() {
     email: "",
     role: "employee",
     hourly_rate: "",
-    phone: ""
+    phone: "",
+    start_date: ""
   });
   const [savingEmployee, setSavingEmployee] = useState(false);
   const [editEmployeeW9s, setEditEmployeeW9s] = useState([]); // W-9 documents for editing employee
