@@ -1061,7 +1061,7 @@ async def download_shift_report_csv(
     
     # Header
     writer.writerow([
-        "Employee Name", "Clock In", "Clock Out", "Hours", "Est. Pay", "Admin Note", "Adjusted"
+        "Employee Name", "Clock In", "Clock Out", "Hours", "Rate", "Est. Pay", "Admin Note", "Adjusted"
     ])
     
     # Data rows
@@ -1076,6 +1076,7 @@ async def download_shift_report_csv(
             clock_in,
             clock_out,
             format_hours_hms(hours),
+            f"${hourly_rate:.2f}/hr",
             f"${est_pay:.2f}",
             entry["admin_note"] or "",
             "Yes" if entry["adjusted_by_admin"] else "No"
@@ -1084,13 +1085,14 @@ async def download_shift_report_csv(
     # Summary section
     writer.writerow([])
     writer.writerow(["=== SUMMARY ==="])
-    writer.writerow(["Employee", "Total Hours", "Total Shifts", "Estimated Pay"])
+    writer.writerow(["Employee", "Total Hours", "Total Shifts", "Rate", "Estimated Pay"])
     for s in report["summary"]:
         pay = s["total_hours"] * s["hourly_rate"]
         writer.writerow([
             s["employee_name"],
             format_hours_hms(s['total_hours']),
             s["total_shifts"],
+            f"${s['hourly_rate']:.2f}/hr",
             f"${pay:.2f}"
         ])
     
