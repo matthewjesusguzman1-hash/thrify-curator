@@ -92,6 +92,13 @@ export default function EmployeeDashboard() {
 
     setUser(JSON.parse(userData));
     fetchData();
+    
+    // Refresh data periodically to keep pay summary up to date (every 60 seconds)
+    const refreshInterval = setInterval(() => {
+      fetchData();
+    }, 60000);
+    
+    return () => clearInterval(refreshInterval);
   }, [navigate]);
 
   // Timer effect
