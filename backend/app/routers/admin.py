@@ -43,13 +43,10 @@ def format_hours_hms(decimal_hours: float) -> str:
 
 
 def round_to_nearest_minute(seconds: float) -> float:
-    """Convert seconds to hours, rounded to the nearest minute.
-    
-    Example: 1872 seconds = 31.2 minutes → rounds to 31 minutes = 0.5167 hours
-    Returns hours as a float rounded to 4 decimal places for precision.
+    """Convert seconds to hours with full precision.
+    Time is stored precisely - rounding to minute is done only for display.
     """
-    total_minutes = round(seconds / 60)  # Round to nearest minute
-    return round(total_minutes / 60, 4)  # Convert to hours with 4 decimal precision
+    return round(seconds / 3600, 4)  # Store with 4 decimal precision
 
 
 @router.post("/create-employee", response_model=UserResponse)
