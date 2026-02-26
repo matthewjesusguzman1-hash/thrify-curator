@@ -238,12 +238,7 @@ export default function LandingPage() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             {/* Shop Our Stores */}
             <div className="bg-white rounded-xl overflow-hidden shadow-xl">
               <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC]" />
@@ -348,15 +343,10 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Right Column */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             {/* Forms & Applications */}
             <div className="bg-white rounded-xl overflow-hidden shadow-xl">
               <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
