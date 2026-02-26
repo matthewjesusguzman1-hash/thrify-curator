@@ -489,6 +489,7 @@ async def update_time_entry(entry_id: str, update_data: EditTimeEntryRequest, ad
     clock_out = update_data.clock_out or entry.get("clock_out")
     
     # If total_hours is explicitly provided, use it directly (override mode)
+    # The value should already be rounded to nearest minute from frontend
     if update_data.total_hours is not None:
         update_fields["total_hours"] = update_data.total_hours
         update_fields["adjusted_by_admin"] = True  # Mark as manually adjusted
@@ -497,7 +498,9 @@ async def update_time_entry(entry_id: str, update_data: EditTimeEntryRequest, ad
         try:
             in_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
             out_time = datetime.fromisoformat(clock_out.replace('Z', '+00:00'))
-            calculated_hours = round((out_time - in_time).total_seconds() / 3600, 2)
+            # Round to nearest minute
+            total_seconds = (out_time - in_time).total_seconds()
+            calculated_hours = round_to_nearest_minute(total_seconds)
             update_fields["total_hours"] = calculated_hours
             update_fields["adjusted_by_admin"] = False  # Calculated from times
         except ValueError:
