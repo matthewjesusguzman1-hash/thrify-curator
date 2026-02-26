@@ -1463,6 +1463,7 @@ async def get_w9_report(
             "name": display_name,
             "email": user.get("email", ""),
             "role": user.get("role", "employee"),
+            "start_date": user.get("start_date"),
             "w9_status": latest_status,
             "document_count": len(user_w9s),
             "last_updated": last_updated
