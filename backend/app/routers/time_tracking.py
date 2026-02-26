@@ -75,9 +75,8 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         last_clock_in = active.get("last_clock_in", active["clock_in"])
         clock_in_time = datetime.fromisoformat(last_clock_in)
         clock_out_time = now
-        # Round session to nearest minute
+        # Calculate session time in seconds
         session_seconds = (clock_out_time - clock_in_time).total_seconds()
-        session_hours = round_to_nearest_minute(session_seconds)
         
         # Calculate total hours (accumulated + current session), rounded to nearest minute
         accumulated_seconds = active.get("accumulated_hours", 0.0) * 3600
