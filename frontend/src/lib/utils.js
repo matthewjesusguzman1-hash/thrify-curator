@@ -6,6 +6,20 @@ export function cn(...inputs) {
 }
 
 /**
+ * Round decimal hours to nearest minute and return as decimal hours
+ * Used for pay calculations to match displayed time
+ * @param {number} decimalHours - Hours in decimal format
+ * @returns {number} Hours rounded to nearest minute as decimal
+ */
+export function roundHoursToMinute(decimalHours) {
+  if (decimalHours === null || decimalHours === undefined || isNaN(decimalHours)) {
+    return 0;
+  }
+  const totalMinutes = Math.round(decimalHours * 60);
+  return totalMinutes / 60;
+}
+
+/**
  * Format decimal hours to h:m format (rounded to nearest minute)
  * Used for all reporting, tracking, and viewing displays
  * @param {number} decimalHours - Hours in decimal format (e.g., 1.5 = 1 hour 30 minutes)
