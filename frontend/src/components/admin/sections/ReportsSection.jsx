@@ -446,7 +446,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           </div>
           <div className="bg-white/10 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold">
-              {formatCurrency(data.summary?.reduce((sum, s) => sum + (s.total_hours * s.hourly_rate), 0))}
+              {formatCurrency(data.summary?.reduce((sum, s) => sum + (roundHoursToMinute(s.total_hours) * s.hourly_rate), 0))}
             </p>
             <p className="text-sm opacity-80">Est. Total Pay</p>
           </div>
