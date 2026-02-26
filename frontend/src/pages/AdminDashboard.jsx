@@ -648,6 +648,8 @@ export default function AdminDashboard() {
       setEmployees(employeesRes.data);
       setTimeEntries(entriesRes.data);
       setSummary(summaryRes.data);
+      // Update timestamp to trigger report refresh
+      setLastDataUpdate(Date.now());
     } catch (error) {
       if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem("token");
