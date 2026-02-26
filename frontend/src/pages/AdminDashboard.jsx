@@ -2681,130 +2681,74 @@ export default function AdminDashboard() {
                             <Calendar className="w-5 h-5 text-white" />
                           </div>
                           <div>
-                            <span className="font-medium text-[#333]">Pay Period Settings</span>
-                            <p className="text-xs text-[#888]">Configure pay period start date for this employee</p>
+                            <span className="font-medium text-[#333]">Pay Period Start Date</span>
+                            <p className="text-xs text-[#888]">Select when this employee's pay period begins</p>
                           </div>
                         </div>
                         
-                        {/* Current Pay Period Display */}
-                        <div className="bg-white rounded-lg p-3 mb-4 border border-[#00D4FF]/20">
-                          <p className="text-xs text-[#888] mb-1">Current Pay Period Range</p>
-                          <p className="text-sm font-semibold text-[#333]" data-testid="employee-current-period">
-                            {(() => {
-                              const startDate = editEmployeeData.pay_period_start_date || payrollSettings.pay_period_start_date;
-                              if (startDate) {
-                                const period = calculateBiweeklyPeriod(startDate);
-                                if (period) {
-                                  return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-                                }
-                              }
-                              return 'Not configured';
-                            })()}
-                          </p>
-                        </div>
-
                         {/* Pay Period Start Date with Calendar */}
-                        <div className="space-y-3">
-                          <div>
-                            <Label className="text-sm text-[#666] mb-2 block">Pay Period Start Date</Label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className="w-full justify-start text-left font-normal h-10 border-[#eee]"
-                                  data-testid="pay-period-calendar-trigger"
-                                >
-                                  <Calendar className="mr-2 h-4 w-4 text-[#00D4FF]" />
-                                  {editEmployeeData.pay_period_start_date ? (
-                                    <span>{new Date(editEmployeeData.pay_period_start_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                                  ) : (
-                                    <span className="text-[#888]">Select start date...</span>
-                                  )}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <DayPicker
-                                  mode="single"
-                                  selected={editEmployeeData.pay_period_start_date ? new Date(editEmployeeData.pay_period_start_date + 'T00:00:00') : undefined}
-                                  onSelect={(date) => {
-                                    if (date) {
-                                      const dateStr = date.toISOString().split('T')[0];
-                                      setEditEmployeeData({
-                                        ...editEmployeeData,
-                                        pay_period_start_date: dateStr,
-                                        sync_pay_period_with: ""
-                                      });
-                                    }
-                                  }}
-                                  className="rounded-md border"
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            {editEmployeeData.pay_period_start_date && (
-                              <p className="text-xs text-[#00A8CC] mt-2">
-                                New period will be: {(() => {
+                        <div>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-start text-left font-normal h-11 border-[#00D4FF]/30 hover:border-[#00D4FF] hover:bg-[#00D4FF]/5"
+                                data-testid="pay-period-calendar-trigger"
+                              >
+                                <Calendar className="mr-2 h-4 w-4 text-[#00D4FF]" />
+                                {editEmployeeData.pay_period_start_date ? (
+                                  <span className="text-[#333]">{new Date(editEmployeeData.pay_period_start_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                                ) : (
+                                  <span className="text-[#888]">Select start date...</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <DayPicker
+                                mode="single"
+                                selected={editEmployeeData.pay_period_start_date ? new Date(editEmployeeData.pay_period_start_date + 'T00:00:00') : undefined}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    const dateStr = date.toISOString().split('T')[0];
+                                    setEditEmployeeData({
+                                      ...editEmployeeData,
+                                      pay_period_start_date: dateStr
+                                    });
+                                  }
+                                }}
+                                className="rounded-md border"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          
+                          {/* Current Pay Period Range - shown when date is selected */}
+                          {editEmployeeData.pay_period_start_date && (
+                            <div className="mt-3 p-3 bg-white rounded-lg border border-[#00D4FF]/20">
+                              <p className="text-xs text-[#888] mb-1">Current Pay Period</p>
+                              <p className="text-base font-semibold text-[#00A8CC]" data-testid="employee-current-period">
+                                {(() => {
                                   const period = calculateBiweeklyPeriod(editEmployeeData.pay_period_start_date);
                                   if (period) {
-                                    return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} (Period #${period.periodNumber})`;
+                                    return `${period.start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`;
                                   }
                                   return 'Invalid date';
                                 })()}
                               </p>
-                            )}
-                          </div>
-
-                          {/* Divider */}
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 h-px bg-[#eee]"></div>
-                            <span className="text-xs text-[#888]">or</span>
-                            <div className="flex-1 h-px bg-[#eee]"></div>
-                          </div>
-
-                          {/* Sync with Another Employee */}
-                          <div>
-                            <Label className="text-sm text-[#666] mb-2 block">Sync with Another Employee</Label>
-                            <Select
-                              value={editEmployeeData.sync_pay_period_with || ""}
-                              onValueChange={(value) => {
-                                if (value === "none") {
-                                  setEditEmployeeData({
-                                    ...editEmployeeData,
-                                    sync_pay_period_with: "",
-                                    pay_period_start_date: ""
-                                  });
-                                } else {
-                                  // Get the selected employee's pay period
-                                  const syncEmployee = employees.find(e => e.id === value);
-                                  setEditEmployeeData({
-                                    ...editEmployeeData,
-                                    sync_pay_period_with: value,
-                                    pay_period_start_date: syncEmployee?.pay_period_start_date || ""
-                                  });
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-10 border-[#eee]" data-testid="sync-employee-select">
-                                <SelectValue placeholder="Select employee to sync with..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">
-                                  <span className="text-[#888]">None (use global settings)</span>
-                                </SelectItem>
-                                {employees
-                                  .filter(e => e.id !== editingEmployee?.id && e.role !== 'admin')
-                                  .map((emp) => (
-                                    <SelectItem key={emp.id} value={emp.id}>
-                                      {emp.name}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                            {editEmployeeData.sync_pay_period_with && (
-                              <p className="text-xs text-[#8B5CF6] mt-2">
-                                Will sync pay period with: {employees.find(e => e.id === editEmployeeData.sync_pay_period_with)?.name}
+                              <p className="text-xs text-[#888] mt-1">
+                                {(() => {
+                                  const period = calculateBiweeklyPeriod(editEmployeeData.pay_period_start_date);
+                                  return period ? `Bi-weekly Period #${period.periodNumber}` : '';
+                                })()}
                               </p>
-                            )}
-                          </div>
+                            </div>
+                          )}
+                          
+                          {/* Helper text when no date selected */}
+                          {!editEmployeeData.pay_period_start_date && (
+                            <p className="text-xs text-[#888] mt-2">
+                              Using global pay period (starts first Monday of the year)
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
