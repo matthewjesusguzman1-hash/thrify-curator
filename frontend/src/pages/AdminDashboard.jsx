@@ -3744,11 +3744,11 @@ export default function AdminDashboard() {
                                     </div>
                                   </div>
                                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                    entry.total_hours 
+                                    entry.clock_out 
                                       ? 'bg-[#8B5CF6]/20 text-[#6D28D9]' 
                                       : 'bg-green-100 text-green-700'
                                   }`}>
-                                    {entry.total_hours ? `${entry.total_hours} hrs` : 'Active'}
+                                    {entry.clock_out ? `${entry.total_hours || 0} hrs` : 'Active'}
                                   </span>
                                 </div>
                               ))}
