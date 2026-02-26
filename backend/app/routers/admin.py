@@ -127,34 +127,12 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
     if update_data.phone is not None:
         update_fields["phone"] = update_data.phone
     
-    # Handle pay period settings
-    if update_data.sync_pay_period_with is not None:
-        if update_data.sync_pay_period_with == "":
-            # Clear sync - use global settings
-            update_fields["sync_pay_period_with"] = None
-            update_fields["pay_period_start_date"] = None
+    # Handle employee start date
+    if update_data.start_date is not None:
+        if update_data.start_date == "":
+            update_fields["start_date"] = None
         else:
-            # Sync with another employee
-            sync_employee = await db.users.find_one({"id": update_data.sync_pay_period_with}, {"_id": 0})
-            if not sync_employee:
-                raise HTTPException(status_code=404, detail="Sync employee not found")
-            update_fields["sync_pay_period_with"] = update_data.sync_pay_period_with
-            # Copy the pay period from the synced employee, or use their synced source
-            if sync_employee.get("pay_period_start_date"):
-                update_fields["pay_period_start_date"] = sync_employee.get("pay_period_start_date")
-            elif sync_employee.get("sync_pay_period_with"):
-                # Get the source employee's pay period
-                source = await db.users.find_one({"id": sync_employee["sync_pay_period_with"]}, {"_id": 0})
-                if source and source.get("pay_period_start_date"):
-                    update_fields["pay_period_start_date"] = source.get("pay_period_start_date")
-    elif update_data.pay_period_start_date is not None:
-        if update_data.pay_period_start_date == "":
-            # Clear custom pay period - use global settings
-            update_fields["pay_period_start_date"] = None
-            update_fields["sync_pay_period_with"] = None
-        else:
-            update_fields["pay_period_start_date"] = update_data.pay_period_start_date
-            update_fields["sync_pay_period_with"] = None  # Clear sync when setting custom
+            update_fields["start_date"] = update_data.start_date
     
     if not update_fields:
         raise HTTPException(status_code=400, detail="No valid fields to update")
