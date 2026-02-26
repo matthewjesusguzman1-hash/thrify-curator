@@ -140,10 +140,10 @@ test.describe('Reports Section - Est. Pay Column Feature', () => {
     const reportsToggle = page.getByTestId('reports-toggle');
     await reportsToggle.click();
     
-    // Verify report type selector is visible
-    await expect(page.getByText('Payroll/Shift Report')).toBeVisible();
-    await expect(page.getByText('Mileage Report')).toBeVisible();
-    await expect(page.getByText('W-9 Report')).toBeVisible();
+    // Verify report type selector is visible - use more specific selectors
+    await expect(page.locator('button:has-text("Payroll/Shift Report")')).toBeVisible();
+    await expect(page.locator('button:has-text("Mileage Report")')).toBeVisible();
+    await expect(page.locator('button:has-text("W-9 Report")')).toBeVisible();
     
     // Screenshot the expanded reports section
     await page.screenshot({ path: '.screenshots/reports-section-expanded.jpeg', quality: 20 });
@@ -228,16 +228,10 @@ test.describe('Reports Section - Est. Pay Column Feature', () => {
     // Wait for download to start
     const download = await downloadPromise;
     
-    // Verify download filename
+    // Verify download filename (frontend uses 'shifts_report_' pattern)
     const filename = download.suggestedFilename();
-    expect(filename).toContain('shift_report_');
+    expect(filename).toContain('shifts_report_');
     expect(filename).toContain('.csv');
-    
-    // Save download and verify content contains Est. Pay
-    const path = await download.path();
-    if (path) {
-      // Download completed successfully - additional verification if needed
-    }
   });
 
   test('Frontend: PDF download button triggers download', async ({ page }) => {
@@ -267,9 +261,9 @@ test.describe('Reports Section - Est. Pay Column Feature', () => {
     // Wait for download to start
     const download = await downloadPromise;
     
-    // Verify download filename
+    // Verify download filename (frontend uses 'shifts_report_' pattern)
     const filename = download.suggestedFilename();
-    expect(filename).toContain('shift_report_');
+    expect(filename).toContain('shifts_report_');
     expect(filename).toContain('.pdf');
   });
 
