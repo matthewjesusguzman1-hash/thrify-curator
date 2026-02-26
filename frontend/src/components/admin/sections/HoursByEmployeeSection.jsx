@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatHoursToHMS } from "@/lib/utils";
+import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
 
 export default function HoursByEmployeeSection({
   timeEntries,
