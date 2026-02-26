@@ -3964,11 +3964,11 @@ export default function AdminDashboard() {
                           </div>
                           <div className="flex items-center gap-3">
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              shift.total_hours 
+                              shift.clock_out 
                                 ? 'bg-[#00D4FF]/20 text-[#00A8CC]' 
                                 : 'bg-green-100 text-green-700'
                             }`}>
-                              {shift.total_hours ? `${shift.total_hours} hrs` : 'Active'}
+                              {shift.clock_out ? `${shift.total_hours || 0} hrs` : 'Active'}
                             </span>
                             <div className="flex items-center gap-1">
                               <Button
