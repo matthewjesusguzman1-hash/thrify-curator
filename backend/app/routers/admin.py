@@ -1164,7 +1164,9 @@ async def get_shift_report_pdf(
     total_hours = 0
     total_pay = 0
     for s in report["summary"]:
-        pay = s["total_hours"] * s["hourly_rate"]
+        # Use rounded hours for pay calculation (matches display)
+        rounded_hours = round_hours_to_minute(s["total_hours"])
+        pay = rounded_hours * s["hourly_rate"]
         total_hours += s["total_hours"]
         total_pay += pay
         pdf.cell(50, 6, s["employee_name"][:22], border=1)
@@ -1174,7 +1176,8 @@ async def get_shift_report_pdf(
         pdf.cell(30, 6, f"${pay:.2f}", border=1, align="C")
         pdf.ln()
     
-    # Totals
+    # Totals - also use rounded hours for total pay
+    total_rounded = round_hours_to_minute(total_hours)
     pdf.set_font("Helvetica", "B", 9)
     pdf.cell(50, 7, "TOTAL", border=1, fill=True)
     pdf.cell(25, 7, format_hours_hms(total_hours), border=1, fill=True, align="C")
@@ -1207,7 +1210,9 @@ async def get_shift_report_pdf(
             note += "..."
         hours = entry["total_hours"] or 0
         hourly_rate = entry.get("hourly_rate", 15.00)
-        est_pay = hours * hourly_rate
+        # Use rounded hours for pay calculation (matches display)
+        rounded_hours = round_hours_to_minute(hours)
+        est_pay = rounded_hours * hourly_rate
         
         pdf.cell(28, 5, entry["employee_name"][:14], border=1)
         pdf.cell(28, 5, clock_in, border=1)
