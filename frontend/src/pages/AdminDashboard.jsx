@@ -1978,8 +1978,7 @@ export default function AdminDashboard() {
       role: employee.role,
       hourly_rate: employee.hourly_rate?.toString() || "",
       phone: employee.phone || "",
-      pay_period_start_date: employee.pay_period_start_date || "",
-      sync_pay_period_with: employee.sync_pay_period_with || ""
+      pay_period_start_date: employee.pay_period_start_date || ""
     });
     setShowEditEmployee(true);
     setEditEmployeeW9s([]);
