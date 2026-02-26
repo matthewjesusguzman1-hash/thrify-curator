@@ -28,6 +28,21 @@ os.makedirs(W9_UPLOAD_DIR, exist_ok=True)
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
+def format_hours_hms(decimal_hours: float, show_seconds: bool = True) -> str:
+    """Convert decimal hours to h:m:s format (e.g., 1.5 -> '1h 30m')"""
+    if decimal_hours is None or decimal_hours < 0:
+        return "0h 0m"
+    
+    total_seconds = round(decimal_hours * 3600)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    
+    if show_seconds and seconds > 0:
+        return f"{hours}h {minutes}m {seconds}s"
+    return f"{hours}h {minutes}m"
+
+
 @router.post("/create-employee", response_model=UserResponse)
 async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(get_admin_user)):
     existing = await db.users.find_one({"email": employee_data.email})
