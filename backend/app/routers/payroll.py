@@ -478,7 +478,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
             elements.append(Spacer(1, 15))
     
     elements.append(Spacer(1, 20))
-    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER, textColor=colors.grey)
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER, textColor=colors.Color(0.5, 0.5, 0.5))
     elements.append(Paragraph(f"Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", footer_style))
     
     doc.build(elements)
