@@ -3718,7 +3718,7 @@ export default function AdminDashboard() {
                           <div className="grid grid-cols-3 gap-4">
                             <div className="bg-[#F0F9FF] rounded-xl p-4 text-center">
                               <Clock className="w-6 h-6 text-[#00D4FF] mx-auto mb-2" />
-                              <p className="text-2xl font-bold text-[#333]">{employeePortalData.summary?.period_hours?.toFixed(1) || 0}</p>
+                              <p className="text-2xl font-bold text-[#333]">{formatHoursToHMS(employeePortalData.summary?.period_hours, { showSeconds: false })}</p>
                               <p className="text-xs text-[#888]">Hours</p>
                             </div>
                             <div className="bg-[#FFF0F5] rounded-xl p-4 text-center">
@@ -3735,7 +3735,7 @@ export default function AdminDashboard() {
                           <div className="mt-4 pt-4 border-t border-[#eee] text-center text-sm text-[#888]">
                             Rate: <span className="font-medium text-[#333]">${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'}/hr</span>
                             <span className="mx-2">•</span>
-                            Calculation: {employeePortalData.summary?.period_hours?.toFixed(1) || 0} hrs × ${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'}
+                            Calculation: {formatHoursToHMS(employeePortalData.summary?.period_hours, { showSeconds: false })} × ${employeePortalData.summary?.hourly_rate?.toFixed(2) || '15.00'}
                           </div>
                         </div>
                       </div>
