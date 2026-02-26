@@ -658,7 +658,9 @@ async def create_time_entry(entry_data: CreateTimeEntryRequest, admin: dict = De
         try:
             clock_out_dt = datetime.fromisoformat(entry_data.clock_out.replace('Z', '+00:00'))
             clock_out_str = entry_data.clock_out
-            total_hours = round((clock_out_dt - clock_in_dt).total_seconds() / 3600, 2)
+            # Round to nearest minute
+            total_seconds = (clock_out_dt - clock_in_dt).total_seconds()
+            total_hours = round_to_nearest_minute(total_seconds)
             
             if total_hours < 0:
                 raise HTTPException(status_code=400, detail="Clock out must be after clock in")
