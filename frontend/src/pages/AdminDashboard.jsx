@@ -129,6 +129,9 @@ export default function AdminDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   
+  // Track data updates for real-time sync
+  const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
+  
   // Current admin info
   const [currentAdminName, setCurrentAdminName] = useState("Administrator");
   
