@@ -52,7 +52,8 @@ import {
   Save,
   Car,
   RefreshCw,
-  MessageSquare
+  MessageSquare,
+  Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
