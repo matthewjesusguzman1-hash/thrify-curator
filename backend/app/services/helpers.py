@@ -1,10 +1,20 @@
 from datetime import datetime, timezone, timedelta
 
 
-def get_biweekly_period(start_date_str: str, period_index: int = 0):
-    """Calculate biweekly period dates based on configured start date"""
-    start_base = datetime.fromisoformat(start_date_str).replace(tzinfo=timezone.utc)
+def get_first_monday_of_year(year: int) -> datetime:
+    """Get the first Monday of a given year"""
+    jan1 = datetime(year, 1, 1, tzinfo=timezone.utc)
+    day_of_week = jan1.weekday()  # 0 = Monday, 6 = Sunday
+    days_to_add = (7 - day_of_week) % 7 if day_of_week != 0 else 0
+    return jan1 + timedelta(days=days_to_add)
+
+
+def get_biweekly_period(start_date_str: str = None, period_index: int = 0):
+    """Calculate biweekly period dates based on first Monday of the year"""
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Always use first Monday of current year as the anchor
+    start_base = get_first_monday_of_year(today.year)
     
     days_since_start = (today - start_base).days
     current_period_num = days_since_start // 14
