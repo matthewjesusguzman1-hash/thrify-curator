@@ -60,7 +60,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     # Use first Monday of year as anchor (no custom start date needed)
     period_start, period_end = get_biweekly_period(period_index=0)
     
-    employees = await db.users.find({"role": "employee"}, {"_id": 0, "id": 1, "hourly_rate": 1}).to_list(100)
+    employees = await db.users.find({}, {"_id": 0, "id": 1, "hourly_rate": 1}).to_list(100)
     employee_rates = {emp["id"]: emp.get("hourly_rate") or default_rate for emp in employees}
     
     # Get time entries with date filter for better performance
@@ -88,8 +88,11 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
         if clock_in_dt and period_start_dt <= clock_in_dt < period_end_dt:
             hours = entry.get("total_hours") or 0
             current_period_hours += hours
-            emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
-            current_period_amount += hours * emp_rate
+            # Use user_id (not employee_id) to match time_entries schema
+            emp_rate = employee_rates.get(entry.get("user_id"), default_rate)
+            # Use rounded hours for pay calculation
+            rounded_hours = round_hours_to_minute(hours)
+            current_period_amount += rounded_hours * emp_rate
     
     # Filter entries for current month
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -103,8 +106,9 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
         clock_in_dt = parse_clock_in(entry)
         if clock_in_dt and month_start <= clock_in_dt < month_end:
             hours = entry.get("total_hours") or 0
-            emp_rate = employee_rates.get(entry.get("employee_id"), default_rate)
-            month_total += hours * emp_rate
+            emp_rate = employee_rates.get(entry.get("user_id"), default_rate)
+            rounded_hours = round_hours_to_minute(hours)
+            month_total += rounded_hours * emp_rate
     
     # Filter entries for current year
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
