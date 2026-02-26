@@ -610,6 +610,64 @@ export default function AdminDashboard() {
     }
   };
 
+  // Download form submission as text file
+  const handleDownloadSubmission = (submission) => {
+    const formType = submission.formType === "job_applications" 
+      ? "Job Application"
+      : submission.formType === "consignment_inquiries"
+        ? "Consignment Inquiry"
+        : "Consignment Agreement";
+    
+    let content = `${formType}\n`;
+    content += `${"=".repeat(50)}\n\n`;
+    content += `Name: ${submission.full_name}\n`;
+    content += `Email: ${submission.email}\n`;
+    content += `Phone: ${submission.phone}\n`;
+    if (submission.address) content += `Address: ${submission.address}\n`;
+    content += `Submitted: ${formatSubmissionDate(submission.submitted_at)}\n`;
+    content += `Status: ${submission.status || "new"}\n`;
+    content += `\n${"-".repeat(50)}\n\n`;
+    
+    if (submission.formType === "job_applications") {
+      if (submission.resume_text) content += `Resume/Experience:\n${submission.resume_text}\n\n`;
+      if (submission.why_join) content += `Why Join Us:\n${submission.why_join}\n\n`;
+      if (submission.availability) content += `Availability: ${submission.availability}\n\n`;
+      if (submission.tasks_able_to_perform?.length > 0) {
+        content += `Tasks Able to Perform: ${submission.tasks_able_to_perform.join(", ")}\n\n`;
+      }
+      content += `Background Check Consent: ${submission.background_check_consent ? "Yes" : "No"}\n`;
+      content += `Reliable Transportation: ${submission.has_reliable_transportation ? "Yes" : "No"}\n`;
+    } else if (submission.formType === "consignment_inquiries") {
+      if (submission.item_types?.length > 0) {
+        content += `Item Types: ${submission.item_types.join(", ")}\n\n`;
+      }
+      if (submission.other_item_type) content += `Other Item Type: ${submission.other_item_type}\n\n`;
+      if (submission.item_description) content += `Item Description:\n${submission.item_description}\n\n`;
+      if (submission.item_condition) content += `Item Condition: ${submission.item_condition}\n\n`;
+      content += `Smoke-Free Environment: ${submission.smoke_free ? "Yes" : "No"}\n`;
+      content += `Pet-Free Environment: ${submission.pet_free ? "Yes" : "No"}\n`;
+    } else if (submission.formType === "consignment_agreements") {
+      if (submission.items_description) content += `Items Description:\n${submission.items_description}\n\n`;
+      content += `Agreed Percentage: ${submission.agreed_percentage}\n`;
+      content += `Signature: ${submission.signature}\n`;
+      content += `Signature Date: ${submission.signature_date || "N/A"}\n`;
+      content += `Agreed to Terms: ${submission.agreed_to_terms ? "Yes" : "No"}\n`;
+    }
+    
+    // Create and download the file
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${submission.full_name.replace(/\s+/g, "_")}_${formType.replace(/\s+/g, "_")}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success("Submission downloaded");
+  };
+
   // Fetch clock status for all employees
   const fetchEmployeeClockStatuses = useCallback(async () => {
     try {
