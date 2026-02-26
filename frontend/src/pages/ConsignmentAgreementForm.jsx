@@ -20,7 +20,7 @@ export default function ConsignmentAgreementForm() {
     phone: "",
     address: "",
     items_description: "",
-    agreed_percentage: "50-50",
+    custom_split: "",
     signature: "",
     signature_date: "",
     agreed_to_terms: false
@@ -51,8 +51,15 @@ export default function ConsignmentAgreementForm() {
 
     setLoading(true);
 
+    // Prepare submission data - use custom split if provided, otherwise default to 50/50
+    const submissionData = {
+      ...formData,
+      agreed_percentage: formData.custom_split.trim() || "50/50"
+    };
+    delete submissionData.custom_split;
+
     try {
-      await axios.post(`${API}/forms/consignment-agreement`, formData);
+      await axios.post(`${API}/forms/consignment-agreement`, submissionData);
       setSubmitted(true);
       toast.success("Agreement submitted successfully!");
     } catch (error) {
