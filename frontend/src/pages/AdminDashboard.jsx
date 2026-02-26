@@ -3253,7 +3253,7 @@ export default function AdminDashboard() {
                               </td>
                               <td>
                                 {shift.total_hours 
-                                  ? `${shift.total_hours.toFixed(2)} hrs`
+                                  ? formatHoursToHMS(shift.total_hours)
                                   : '-'
                                 }
                               </td>
