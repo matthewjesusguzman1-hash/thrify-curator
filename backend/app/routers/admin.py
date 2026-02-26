@@ -1170,7 +1170,7 @@ async def get_shift_report_pdf(
         pdf.cell(32, 5, entry["employee_name"][:16], border=1)
         pdf.cell(32, 5, clock_in, border=1)
         pdf.cell(32, 5, clock_out, border=1)
-        pdf.cell(15, 5, f"{hours:.2f}", border=1, align="C")
+        pdf.cell(15, 5, format_hours_hms(hours), border=1, align="C")
         pdf.cell(22, 5, f"${est_pay:.2f}", border=1, align="C")
         pdf.cell(47, 5, note, border=1)
         pdf.ln()
