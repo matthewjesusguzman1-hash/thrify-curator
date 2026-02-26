@@ -224,10 +224,11 @@ Build a "Thrifty Curator" reselling application with:
 - Inventory integration with platforms
 
 ## Next Tasks
-1. **Refactor backend/server.py** - Break into modular structure (routers, models, services)
-2. **Refactor AdminDashboard.jsx** - Decompose into smaller components
+1. **[COMPLETED] Refactor backend/server.py** - Break into modular structure (routers, models, services) ✅
+2. **[COMPLETED] Refactor AdminDashboard.jsx** - Decompose modals into smaller components ✅
 3. Deploy the application
 4. Configure Resend API key for production email notifications
+5. **Refactor backend/app/routers/admin.py** - This file has grown significantly and could benefit from being broken down into smaller, more focused modules
 
 ## Testing Status
 - Backend: 100% pass (93 tests + 16 form submission tests)
