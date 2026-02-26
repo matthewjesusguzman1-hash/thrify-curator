@@ -1999,7 +1999,8 @@ export default function AdminDashboard() {
         name: editEmployeeData.name,
         email: editEmployeeData.email,
         role: editEmployeeData.role,
-        phone: editEmployeeData.phone || null
+        phone: editEmployeeData.phone || null,
+        start_date: editEmployeeData.start_date || null
       };
       
       // Only include hourly_rate if it's a valid number
