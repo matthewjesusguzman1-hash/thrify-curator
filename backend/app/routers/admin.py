@@ -1052,7 +1052,7 @@ async def download_shift_report_csv(
             entry["employee_name"],
             clock_in,
             clock_out,
-            f"{hours:.2f}",
+            format_hours_hms(hours),
             f"${est_pay:.2f}",
             entry["admin_note"] or "",
             "Yes" if entry["adjusted_by_admin"] else "No"
@@ -1066,7 +1066,7 @@ async def download_shift_report_csv(
         pay = s["total_hours"] * s["hourly_rate"]
         writer.writerow([
             s["employee_name"],
-            f"{s['total_hours']:.2f}",
+            format_hours_hms(s['total_hours']),
             s["total_shifts"],
             f"${pay:.2f}"
         ])
