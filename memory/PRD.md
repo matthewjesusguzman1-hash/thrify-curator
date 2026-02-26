@@ -244,22 +244,16 @@ Build a "Thrifty Curator" reselling application with:
   - First-time visitors still see the branded splash screen
   - Return visitors now see the landing page content immediately without any flicker
 
-- **Payroll Summary UI Cleanup & Per-Employee Pay Period Settings** (Dec 2025):
-  - **Payroll Summary Changes**:
-    - Removed "Bi-weekly Period" text and "X hrs tracked" from the payroll summary section
-    - Added pay period date range to the Payroll Summary header (e.g., "Pay Period: Feb 18 - Mar 3, 2026")
-    - Removed the inline pay period settings from the Payroll Summary section
-  - **Per-Employee Pay Period Settings** (in Edit Employee modal):
-    - **Global Pay Period**: Defaults to first Monday of the year, following bi-weekly thereafter
-    - **Calendar Popup**: Click "Select start date..." to open a full calendar picker
-    - **Current Pay Period Display**: When a date is selected, shows:
-      - The selected date (e.g., "Tuesday, February 10, 2026")
-      - Current pay period range (e.g., "Tue, Feb 24 - Mon, Mar 9, 2026")
-      - Bi-weekly period number (e.g., "Bi-weekly Period #2")
-    - Removed sync with another employee option
-  - **Backend Updates**:
-    - Added `pay_period_start_date` field to user model
-    - Updated `/api/admin/employees/{id}` endpoint to handle pay period settings
+- **Payroll Summary UI Cleanup & Fixed Pay Period** (Dec 2025):
+  - **Pay Period System**:
+    - Pay period is now FIXED to start from the first Monday of the year (Jan 5, 2026 for 2026)
+    - Bi-weekly periods automatically calculated from this anchor date
+    - All employees share the same global pay period
+  - **Payroll Summary Header**: Shows current pay period (e.g., "Pay Period: Feb 16 - Mar 1, 2026")
+  - **Edit Employee Modal**: Displays read-only current pay period info:
+    - Current period range (e.g., "Mon, Feb 16 - Sun, Mar 1, 2026")
+    - Period number and year start date (e.g., "Bi-weekly Period #4 (year starts Jan 5, 2026)")
+  - Removed per-employee pay period customization - everyone uses the same global pay period
 
 ## Recent Updates (Feb 23, 2026)
 - **Phone Number Support for Employees**: Added phone number field throughout the employee management system
