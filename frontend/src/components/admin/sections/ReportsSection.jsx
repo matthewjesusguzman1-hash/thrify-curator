@@ -569,6 +569,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
               <thead>
                 <tr className="bg-gray-50">
                   <th className="text-left p-2">Employee</th>
+                  <th className="text-left p-2">Start Date</th>
                   <th className="text-left p-2">Role</th>
                   <th className="text-center p-2">Status</th>
                   <th className="text-left p-2">Last Updated</th>
@@ -579,6 +580,9 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 {data.employees.map((emp, idx) => (
                   <tr key={idx} className="border-t border-gray-100">
                     <td className="p-2 font-medium">{emp.name}</td>
+                    <td className="p-2 text-[#666]">
+                      {emp.start_date ? new Date(emp.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+                    </td>
                     <td className="p-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         emp.role === 'admin' 
