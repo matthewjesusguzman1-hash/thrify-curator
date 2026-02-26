@@ -502,6 +502,100 @@ export default function AdminDashboard() {
     }
   }, [showNotifications, unreadCount, getAuthHeader]);
 
+  // Handle notification click - scroll to section and open item
+  const handleNotificationClick = async (notification) => {
+    // Close the notification panel
+    setShowNotifications(false);
+    
+    // Small delay to let panel close
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Determine which section to scroll to and what to open
+    switch (notification.type) {
+      case 'clock_in':
+      case 'clock_out':
+        // Scroll to Hours by Employee section
+        const hoursSection = document.querySelector('[data-testid="hours-section"]');
+        if (hoursSection) {
+          hoursSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Expand the section if collapsed
+          const hoursToggle = document.querySelector('[data-testid="hours-section-toggle"]');
+          if (hoursToggle) {
+            hoursToggle.click();
+          }
+        }
+        break;
+        
+      case 'w9_submission':
+      case 'w9_submitted':
+        // Scroll to All Employees section
+        const employeesSection = document.querySelector('[data-testid="employees-section"]');
+        if (employeesSection) {
+          employeesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Expand the section if collapsed
+          const empToggle = document.querySelector('[data-testid="employees-section-toggle"]');
+          if (empToggle) {
+            empToggle.click();
+          }
+        }
+        break;
+        
+      case 'new_message':
+        // Scroll to Messages section
+        const messagesSection = document.querySelector('[data-testid="messages-section"]');
+        if (messagesSection) {
+          messagesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Expand the section
+          const msgToggle = document.querySelector('[data-testid="messages-section-toggle"]');
+          if (msgToggle) {
+            msgToggle.click();
+          }
+        }
+        break;
+        
+      case 'job_application':
+      case 'consignment_inquiry':
+      case 'consignment_agreement':
+        // Scroll to Form Submissions section
+        const formSection = document.querySelector('[data-testid="form-submissions-section"]');
+        if (formSection) {
+          formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Expand the section
+          const formToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
+          if (formToggle) {
+            formToggle.click();
+          }
+          
+          // Try to find and open the specific submission
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Select the appropriate tab based on notification type
+          if (notification.type === 'job_application') {
+            const jobTab = document.querySelector('[data-testid="tab-job-applications"]');
+            if (jobTab) jobTab.click();
+          } else if (notification.type === 'consignment_inquiry') {
+            const inquiryTab = document.querySelector('[data-testid="tab-consignment-inquiries"]');
+            if (inquiryTab) inquiryTab.click();
+          } else if (notification.type === 'consignment_agreement') {
+            const agreementTab = document.querySelector('[data-testid="tab-consignment-agreements"]');
+            if (agreementTab) agreementTab.click();
+          }
+          
+          // Try to open the specific submission by ID
+          await new Promise(resolve => setTimeout(resolve, 300));
+          const viewBtn = document.querySelector(`[data-testid*="${notification.employee_id}"]`);
+          if (viewBtn) {
+            viewBtn.click();
+          }
+        }
+        break;
+        
+      default:
+        // Default: scroll to top of dashboard
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
