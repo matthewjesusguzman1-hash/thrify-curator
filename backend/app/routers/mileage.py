@@ -527,7 +527,7 @@ async def export_mileage_pdf(
     end_date: Optional[str] = None,
     admin: dict = Depends(get_admin_user)
 ):
-    """Export mileage entries as PDF for tax filing"""
+    """Export mileage entries as PDF for tax filing - styled like other forms"""
     from fastapi.responses import StreamingResponse
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import letter
@@ -554,37 +554,134 @@ async def export_mileage_pdf(
     # IRS standard mileage rate for 2026
     IRS_RATE = 0.725
     
+    # Brand colors - Orange/Amber theme for mileage
+    HEADER_COLOR = colors.Color(245/255, 158/255, 11/255)  # Amber #F59E0B
+    SECTION_COLOR = colors.Color(217/255, 119/255, 6/255)  # Darker amber
+    GREEN = colors.Color(34/255, 139/255, 34/255)
+    GRAY_LABEL = colors.Color(128/255, 128/255, 128/255)
+    BLACK = colors.black
+    LIGHT_GRAY = colors.Color(200/255, 200/255, 200/255)
+    
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.3*inch, bottomMargin=0.5*inch, leftMargin=0.5*inch, rightMargin=0.5*inch)
     
     styles = getSampleStyleSheet()
+    
+    # Custom styles
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
-        fontSize=18,
-        alignment=TA_CENTER,
-        spaceAfter=20
+        fontSize=20,
+        alignment=0,
+        spaceAfter=2,
+        textColor=colors.white,
+        fontName='Helvetica-Bold'
     )
     subtitle_style = ParagraphStyle(
         'CustomSubtitle',
         parent=styles['Normal'],
-        fontSize=12,
-        alignment=TA_CENTER,
-        textColor=colors.gray,
-        spaceAfter=30
+        fontSize=11,
+        alignment=0,
+        spaceAfter=0,
+        textColor=colors.white
+    )
+    section_style = ParagraphStyle(
+        'SectionHeader',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=SECTION_COLOR,
+        spaceBefore=15,
+        spaceAfter=3,
+        fontName='Helvetica-Bold'
+    )
+    label_style = ParagraphStyle(
+        'Label',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=GRAY_LABEL,
+        leftIndent=10
+    )
+    value_style = ParagraphStyle(
+        'Value',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=BLACK
+    )
+    green_value_style = ParagraphStyle(
+        'GreenValue',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=GREEN,
+        fontName='Helvetica-Bold'
     )
     
     elements = []
     
-    # Title
-    elements.append(Paragraph("Business Mileage Log", title_style))
-    elements.append(Paragraph(f"{period_label} - IRS Standard Mileage Rate: ${IRS_RATE}/mile", subtitle_style))
+    # Header table with amber background
+    header_data = [
+        [Paragraph("THRIFTY CURATOR", title_style)],
+        [Paragraph("Mileage Log", subtitle_style)]
+    ]
+    header_table = Table(header_data, colWidths=[7.5*inch])
+    header_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), HEADER_COLOR),
+        ('TOPPADDING', (0, 0), (-1, 0), 15),
+        ('BOTTOMPADDING', (0, -1), (-1, -1), 15),
+        ('LEFTPADDING', (0, 0), (-1, -1), 15),
+    ]))
+    elements.append(header_table)
+    elements.append(Spacer(1, 20))
     
-    # Prepare table data
-    table_data = [["Date", "From", "To", "Miles", "Purpose", "Deduction"]]
+    # REPORT PERIOD section
+    elements.append(Paragraph("REPORT PERIOD", section_style))
+    elements.append(Table([[""]], colWidths=[7.5*inch], rowHeights=[1], style=[('LINEBELOW', (0, 0), (-1, -1), 0.5, LIGHT_GRAY)]))
+    elements.append(Spacer(1, 5))
     
+    period_data = [
+        [Paragraph("Period:", label_style), Paragraph(period_label, value_style)],
+        [Paragraph("IRS Rate (2026):", label_style), Paragraph(f"${IRS_RATE}/mile", value_style)],
+    ]
+    period_table = Table(period_data, colWidths=[1.5*inch, 5.5*inch])
+    period_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    elements.append(period_table)
+    elements.append(Spacer(1, 10))
+    
+    # Calculate totals
     total_miles = 0
     total_deduction = 0
+    for entry in entries:
+        miles = entry.get("total_miles", 0)
+        deduction = round(miles * IRS_RATE, 2)
+        total_miles += miles
+        total_deduction += deduction
+    
+    # SUMMARY section
+    elements.append(Paragraph("SUMMARY", section_style))
+    elements.append(Table([[""]], colWidths=[7.5*inch], rowHeights=[1], style=[('LINEBELOW', (0, 0), (-1, -1), 0.5, LIGHT_GRAY)]))
+    elements.append(Spacer(1, 5))
+    
+    summary_data = [
+        [Paragraph("Total Entries:", label_style), Paragraph(str(len(entries)), value_style)],
+        [Paragraph("Total Miles:", label_style), Paragraph(f"{total_miles:.1f} miles", value_style)],
+        [Paragraph("Total Deduction:", label_style), Paragraph(f"${total_deduction:.2f}", green_value_style)],
+    ]
+    summary_table = Table(summary_data, colWidths=[1.5*inch, 5.5*inch])
+    summary_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 15))
+    
+    # MILEAGE ENTRIES section
+    elements.append(Paragraph("MILEAGE ENTRIES", section_style))
+    elements.append(Table([[""]], colWidths=[7.5*inch], rowHeights=[1], style=[('LINEBELOW', (0, 0), (-1, -1), 0.5, LIGHT_GRAY)]))
+    elements.append(Spacer(1, 5))
     
     for entry in entries:
         purpose = entry.get("purpose", "other")
@@ -593,67 +690,42 @@ async def export_mileage_pdf(
         elif purpose == "post_office":
             purpose_display = "Post Office"
         elif purpose == "other":
-            purpose_display = entry.get('purpose_other', 'Other')[:15]
+            purpose_display = entry.get('purpose_other', 'Other')
         else:
-            purpose_display = purpose[:15]
+            purpose_display = purpose
         
         miles = entry.get("total_miles", 0)
         deduction = round(miles * IRS_RATE, 2)
-        total_miles += miles
-        total_deduction += deduction
         
-        # Truncate addresses for table
-        start_addr = (entry.get("start_address", "") or "")[:20]
-        end_addr = (entry.get("end_address", "") or "")[:20]
+        start_addr = entry.get("start_address", "") or ""
+        end_addr = entry.get("end_address", "") or ""
         
-        table_data.append([
-            entry.get("date", ""),
-            start_addr,
-            end_addr,
-            f"{miles:.1f}",
-            purpose_display,
-            f"${deduction:.2f}"
-        ])
+        # Entry date as header
+        entry_date_style = ParagraphStyle('EntryDate', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', textColor=BLACK, leftIndent=10)
+        elements.append(Paragraph(entry.get("date", ""), entry_date_style))
+        
+        entry_data = [
+            [Paragraph("From:", label_style), Paragraph(start_addr[:40] if start_addr else "-", value_style),
+             Paragraph("To:", label_style), Paragraph(end_addr[:40] if end_addr else "-", value_style)],
+            [Paragraph("Purpose:", label_style), Paragraph(purpose_display, value_style),
+             Paragraph("Miles:", label_style), Paragraph(f"{miles:.1f}", value_style)],
+            [Paragraph("Deduction:", label_style), Paragraph(f"${deduction:.2f}", green_value_style),
+             Paragraph("", label_style), Paragraph("", value_style)],
+        ]
+        entry_table = Table(entry_data, colWidths=[1*inch, 2.5*inch, 0.8*inch, 2.5*inch])
+        entry_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 1),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+            ('LEFTPADDING', (0, 0), (0, -1), 20),
+        ]))
+        elements.append(entry_table)
+        elements.append(Spacer(1, 8))
     
-    # Add totals row
-    table_data.append(["", "", "TOTAL:", f"{total_miles:.1f}", "", f"${total_deduction:.2f}"])
-    
-    # Create table
-    col_widths = [0.9*inch, 1.3*inch, 1.3*inch, 0.7*inch, 1.1*inch, 0.9*inch]
-    table = Table(table_data, colWidths=col_widths)
-    
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0, 0.5, 0.5)),  # Teal header
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.Color(0.9, 0.95, 0.95)),  # Light teal total row
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-        ('GRID', (0, 0), (-1, -2), 0.5, colors.gray),
-        ('BOX', (0, -1), (-1, -1), 1, colors.Color(0, 0.5, 0.5)),
-        ('FONTSIZE', (0, 1), (-1, -1), 9),
-        ('TOPPADDING', (0, 1), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-    ]))
-    
-    elements.append(table)
-    elements.append(Spacer(1, 30))
-    
-    # Summary section
-    summary_style = ParagraphStyle(
-        'Summary',
-        parent=styles['Normal'],
-        fontSize=10,
-        textColor=colors.gray
-    )
-    elements.append(Paragraph(f"Total Business Miles: {total_miles:.1f}", styles['Normal']))
-    elements.append(Paragraph(f"IRS Standard Mileage Rate (2026): ${IRS_RATE} per mile", styles['Normal']))
-    elements.append(Paragraph(f"<b>Total Deduction: ${total_deduction:.2f}</b>", styles['Normal']))
+    # Footer
     elements.append(Spacer(1, 20))
-    elements.append(Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", summary_style))
-    elements.append(Paragraph("Thrifty Curator - Business Mileage Tracking", summary_style))
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER, textColor=colors.Color(0.6, 0.6, 0.6))
+    elements.append(Paragraph(f"Page 1 | Generated on {datetime.now(timezone.utc).strftime('%B %d, %Y')}", footer_style))
     
     doc.build(elements)
     buffer.seek(0)
