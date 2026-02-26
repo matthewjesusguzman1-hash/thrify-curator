@@ -126,7 +126,7 @@ test.describe('Payroll Rounding Fix - Frontend Tests', () => {
     const filename = download.suggestedFilename();
     
     // Verify filename contains expected pattern
-    expect(filename).toContain('shift_report_');
+    expect(filename).toContain('shifts_report_');
     expect(filename).toContain('.csv');
     
     // Save and read the file content
@@ -167,7 +167,7 @@ test.describe('Payroll Rounding Fix - Frontend Tests', () => {
     const filename = download.suggestedFilename();
     
     // Verify filename contains expected pattern
-    expect(filename).toContain('shift_report_');
+    expect(filename).toContain('shifts_report_');
     expect(filename).toContain('.pdf');
   });
 
@@ -298,7 +298,7 @@ test.describe('Payroll Rounding Fix - Frontend Tests', () => {
     await page.waitForLoadState('networkidle');
     
     // Check if there's data with Est. Pay values
-    const estPayCell = page.locator('td:has-text(/^\\$\\d+\\.\\d{2}$/)');
+    const estPayCell = page.locator('td').filter({ hasText: /^\$\d+\.\d{2}$/ });
     const hasEstPayCells = await estPayCell.count() > 0;
     
     if (hasEstPayCells) {
