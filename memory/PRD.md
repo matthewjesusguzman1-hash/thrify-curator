@@ -1456,3 +1456,45 @@ Added "Est. Pay" column to the Payroll/Shift Report Shift Details table, showing
 - `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Added Est. Pay column to Shift Details table
 - `/app/backend/app/routers/admin.py` - Added Est. Pay to CSV and PDF exports
 
+
+## Hours Format & Clock-in Bug Fix (Feb 26, 2026)
+
+### Hours Format (h:m:s)
+All time displays now show hours in human-readable format (e.g., "1h 30m 45s") instead of decimal format (e.g., "1.51"):
+
+**Files Updated:**
+- `/app/frontend/src/lib/utils.js` - Added `formatHoursToHMS()` utility function
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Updated all hours displays
+- `/app/frontend/src/pages/EmployeeDashboard.jsx` - Updated recent shifts, period hours
+- `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Updated report views
+- `/app/frontend/src/components/admin/sections/HoursByEmployeeSection.jsx` - Updated hours display
+- `/app/backend/app/routers/admin.py` - Added `format_hours_hms()` for CSV/PDF exports
+
+**Locations Updated:**
+- Reports section summary (Total Hours)
+- By Employee table
+- Shift Details table
+- Hours by Employee section
+- Employee Portal - Recent Shifts
+- Employee Portal - Current Pay Period summary
+- Employee Shifts Modal
+- Payroll Report
+- CSV and PDF exports
+
+### Clock-in Bug Fix
+Fixed issue where clocking in after admin clock-out could reopen an already-closed shift:
+
+**Problem:**
+- When admin clocked out an employee, the shift was properly closed
+- If the employee clocked in again the same day, the old logic searched for `shift_date` and reopened the closed shift
+- This caused confusion in time tracking
+
+**Solution:**
+- Modified `/app/backend/app/routers/time_tracking.py` - Employee clock-in always creates new entry
+- Modified `/app/backend/app/routers/admin.py` - Admin clock-in always creates new entry
+- Each clock-in now creates a fresh time entry instead of potentially reopening closed shifts
+
+### Test Results
+- Frontend: 100% (19/19 tests passed)
+- Backend: 88% (30/34 - 4 unrelated W9 test failures)
+- Test file: `/app/tests/e2e/hours-format-clockin.spec.ts`
