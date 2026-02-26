@@ -4384,7 +4384,7 @@ export default function AdminDashboard() {
                       </div>
                     ) : (
                       <p className="text-center text-[#888] py-8">No data found for this period</p>
-                    )}}
+                    )}
                   </div>
                 )}
                 
