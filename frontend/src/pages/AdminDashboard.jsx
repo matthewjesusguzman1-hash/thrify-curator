@@ -510,50 +510,40 @@ export default function AdminDashboard() {
     // Small delay to let panel close
     await new Promise(resolve => setTimeout(resolve, 300));
     
+    // Helper function to expand section only if collapsed
+    const expandSectionIfNeeded = (sectionSelector, toggleSelector) => {
+      const section = document.querySelector(sectionSelector);
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Check if section content is visible (expanded)
+        // Look for the section's content area - if it has height > 0, it's expanded
+        const toggle = document.querySelector(toggleSelector);
+        if (toggle) {
+          // Check for ChevronDown icon which indicates collapsed state
+          const chevronDown = toggle.querySelector('svg.lucide-chevron-down');
+          // If ChevronDown is present, section is collapsed - click to expand
+          if (chevronDown) {
+            setTimeout(() => toggle.click(), 300);
+          }
+        }
+      }
+    };
+    
     // Determine which section to scroll to and what to open
     switch (notification.type) {
       case 'clock_in':
       case 'clock_out':
-        // Scroll to Hours by Employee section
-        const hoursSection = document.querySelector('[data-testid="hours-section"]');
-        if (hoursSection) {
-          hoursSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // Expand the section if collapsed
-          await new Promise(resolve => setTimeout(resolve, 300));
-          const hoursToggle = document.querySelector('[data-testid="hours-by-employee-toggle"]');
-          if (hoursToggle) {
-            hoursToggle.click();
-          }
-        }
+        expandSectionIfNeeded('[data-testid="hours-section"]', '[data-testid="hours-by-employee-toggle"]');
         break;
         
       case 'w9_submission':
       case 'w9_submitted':
-        // Scroll to All Employees section
-        const employeesSection = document.querySelector('[data-testid="employees-section"]');
-        if (employeesSection) {
-          employeesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // Expand the section if collapsed
-          await new Promise(resolve => setTimeout(resolve, 300));
-          const empToggle = document.querySelector('[data-testid="employees-section-toggle"]');
-          if (empToggle) {
-            empToggle.click();
-          }
-        }
+        expandSectionIfNeeded('[data-testid="employees-section"]', '[data-testid="employees-section-toggle"]');
         break;
         
       case 'new_message':
-        // Scroll to Messages section
-        const messagesSection = document.querySelector('[data-testid="messages-section"]');
-        if (messagesSection) {
-          messagesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // Expand the section
-          await new Promise(resolve => setTimeout(resolve, 300));
-          const msgToggle = document.querySelector('[data-testid="messages-section-toggle"]');
-          if (msgToggle) {
-            msgToggle.click();
-          }
-        }
+        expandSectionIfNeeded('[data-testid="messages-section"]', '[data-testid="messages-section-toggle"]');
         break;
         
       case 'job_application':
@@ -563,17 +553,20 @@ export default function AdminDashboard() {
         const formSection = document.querySelector('[data-testid="form-submissions-section"]');
         if (formSection) {
           formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // Expand the section
-          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Check if section is collapsed
           const formToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
           if (formToggle) {
-            formToggle.click();
+            const chevronDown = formToggle.querySelector('svg.lucide-chevron-down');
+            if (chevronDown) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+              formToggle.click();
+            }
           }
           
-          // Try to find and open the specific submission
+          // Wait for section to expand then select the appropriate tab
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Select the appropriate tab based on notification type
           if (notification.type === 'job_application') {
             const jobTab = document.querySelector('[data-testid="tab-job-applications"]');
             if (jobTab) jobTab.click();
