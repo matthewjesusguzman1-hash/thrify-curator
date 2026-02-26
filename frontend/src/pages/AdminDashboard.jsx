@@ -1477,6 +1477,10 @@ export default function AdminDashboard() {
     setEmployeeW9List([]);
     setW9ViewerFromPortal(fromPortal);
     
+    // Get employee's start date
+    const employee = employees.find(e => e.id === employeeId);
+    const employeeStartDate = employee?.start_date || null;
+    
     try {
       // Get all W-9 documents for this employee
       const statusRes = await axios.get(`${API}/admin/employees/${employeeId}/w9/status`, getAuthHeader());
@@ -1502,6 +1506,7 @@ export default function AdminDashboard() {
       setViewingW9({
         employeeId,
         employeeName,
+        employeeStartDate,
         docId: firstDoc.id,
         url,
         contentType: response.headers['content-type'],
