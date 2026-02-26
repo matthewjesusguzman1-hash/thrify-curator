@@ -332,10 +332,10 @@ export default function AllEmployeesSection({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
             <div className="mt-4 pt-4 border-t border-[#eee]">
