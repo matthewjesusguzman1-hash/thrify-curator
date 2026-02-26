@@ -3216,7 +3216,7 @@ export default function AdminDashboard() {
                       <span className="text-xs">Total Hours</span>
                     </div>
                     <p className="font-bold text-[#C5A065] text-lg">
-                      {getEmployeeStats(selectedEmployee.id).totalHours} hrs
+                      {formatHoursToHMS(parseFloat(getEmployeeStats(selectedEmployee.id).totalHours))}
                     </p>
                   </div>
                 </div>
