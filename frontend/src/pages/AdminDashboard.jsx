@@ -632,8 +632,11 @@ export default function AdminDashboard() {
     fetchPayrollSummary();
     fetchFormSubmissions(); // Auto-fetch form submissions on page load
     
-    // Poll for new notifications every 30 seconds
-    const pollInterval = setInterval(fetchNotifications, 30000);
+    // Poll for new notifications and data every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchNotifications();
+      fetchData(); // Also refresh main data to keep all sections in sync
+    }, 30000);
     return () => clearInterval(pollInterval);
   }, [navigate, fetchNotifications, fetchPayrollSettings, fetchPayrollSummary, fetchFormSubmissions]);
 
