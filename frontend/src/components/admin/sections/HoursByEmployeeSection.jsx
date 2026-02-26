@@ -181,10 +181,22 @@ export default function HoursByEmployeeSection({
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
+  // Format period dates using UTC to avoid timezone issues
+  const formatPeriodDate = (date, includeYear = false) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (includeYear) {
+      return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    }
+    return `${months[date.getMonth()]} ${date.getDate()}`;
+  };
+
   const getFilterLabel = () => {
     if (filterType === "period") {
-      const { start, end } = getBiweeklyPeriod();
-      return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      const { start, end } = getBiweeklyPeriod(0);
+      return `${formatPeriodDate(start)} - ${formatPeriodDate(end, true)}`;
+    } else if (filterType === "prev_period") {
+      const { start, end } = getBiweeklyPeriod(-1);
+      return `${formatPeriodDate(start)} - ${formatPeriodDate(end, true)}`;
     } else if (filterType === "month") {
       return `${months[selectedMonth]} ${selectedYear}`;
     } else {
