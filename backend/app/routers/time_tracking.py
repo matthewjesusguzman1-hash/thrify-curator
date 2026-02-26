@@ -75,14 +75,18 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         last_clock_in = active.get("last_clock_in", active["clock_in"])
         clock_in_time = datetime.fromisoformat(last_clock_in)
         clock_out_time = now
-        session_hours = round((clock_out_time - clock_in_time).total_seconds() / 3600, 2)
+        # Round session to nearest minute
+        session_seconds = (clock_out_time - clock_in_time).total_seconds()
+        session_hours = round_to_nearest_minute(session_seconds)
         
-        accumulated_hours = active.get("accumulated_hours", 0.0) + session_hours
-        total_hours = round(accumulated_hours, 2)
+        # Calculate total hours (accumulated + current session), rounded to nearest minute
+        accumulated_seconds = active.get("accumulated_hours", 0.0) * 3600
+        total_seconds = accumulated_seconds + session_seconds
+        total_hours = round_to_nearest_minute(total_seconds)
         
         await db.time_entries.update_one(
             {"id": active["id"]},
-            {"$set": {"clock_out": now_iso, "total_hours": total_hours, "accumulated_hours": accumulated_hours}}
+            {"$set": {"clock_out": now_iso, "total_hours": total_hours, "accumulated_hours": total_hours}}
         )
         
         active["clock_out"] = now_iso
