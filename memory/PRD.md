@@ -1574,3 +1574,34 @@ Updated all pay period date formatting functions to use UTC methods:
 
 - Individual shifts: 1h 0m ($20.00) + 0h 1m ($0.33) + 0h 0m ($0.00) + 0h 1m ($0.33) = $20.66
 - All values are now consistent across the application
+
+## AdminDashboard.jsx Modal Refactoring (Feb 26, 2026)
+
+### Task
+Extract inline modal components from AdminDashboard.jsx to improve maintainability and code organization.
+
+### Changes Made
+Extracted three large inline modal definitions into separate, reusable component files:
+
+1. **EmployeePortalViewModal.jsx** (~413 lines)
+   - Employee portal view modal showing clock status, pay period summary, recent shifts, and W-9 section
+   - Located: `/app/frontend/src/components/admin/modals/EmployeePortalViewModal.jsx`
+
+2. **W9ViewerModal.jsx** (~288 lines)
+   - W-9 document viewer with sidebar list, document preview, and admin actions
+   - Located: `/app/frontend/src/components/admin/modals/W9ViewerModal.jsx`
+
+3. **PortalW9Modal.jsx** (~229 lines)
+   - Dark-themed W-9 modal for viewing from within Employee Portal View
+   - Includes inline preview modal
+   - Located: `/app/frontend/src/components/admin/modals/PortalW9Modal.jsx`
+
+### Results
+- **AdminDashboard.jsx reduced from 5,023 lines to 4,232 lines** (~800 lines removed)
+- All modal functionality preserved and verified working
+- Imports already in place at lines 78-80
+
+### Testing Status
+- Frontend tests: 100% (6/6 modal tests passed)
+- All modal open/close functionality verified
+- Employee Portal View, W9 Viewer, and Portal W9 modals all working correctly
