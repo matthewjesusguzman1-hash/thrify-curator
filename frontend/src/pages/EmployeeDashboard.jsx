@@ -667,7 +667,7 @@ export default function EmployeeDashboard() {
                 <div className="bg-gradient-to-br from-[#00D4FF]/10 to-[#00D4FF]/5 rounded-xl p-4 text-center">
                   <Clock className="w-6 h-6 text-[#00D4FF] mx-auto mb-2" />
                   <p className="text-2xl font-bold text-[#1A1A2E]" data-testid="period-hours">
-                    {summary.period_hours}
+                    {formatHoursToHMS(summary.period_hours, { showSeconds: false })}
                   </p>
                   <p className="text-xs text-gray-500">Hours</p>
                 </div>
@@ -696,7 +696,7 @@ export default function EmployeeDashboard() {
                 <p className="text-sm text-gray-500">
                   Rate: <span className="font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</span>
                   <span className="mx-2">•</span>
-                  Calculation: {summary.period_hours} hrs × {formatCurrency(summary.hourly_rate)}
+                  Calculation: {formatHoursToHMS(summary.period_hours, { showSeconds: false })} × {formatCurrency(summary.hourly_rate)}
                 </p>
               </div>
             </div>
