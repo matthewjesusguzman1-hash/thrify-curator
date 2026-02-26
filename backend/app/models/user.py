@@ -27,6 +27,8 @@ class UserResponse(BaseModel):
     role: str
     hourly_rate: Optional[float] = None
     phone: Optional[str] = None
+    pay_period_start_date: Optional[str] = None  # Custom pay period start date
+    sync_pay_period_with: Optional[str] = None  # Employee ID to sync pay period with
     created_at: str
     has_w9: Optional[bool] = None
     w9_uploaded_at: Optional[str] = None
