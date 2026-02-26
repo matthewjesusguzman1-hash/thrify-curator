@@ -2385,94 +2385,15 @@ export default function AdminDashboard() {
           />
 
           {/* Remove Employee Modal */}
-          {showRemoveEmployee && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowRemoveEmployee(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-                data-testid="remove-employee-modal"
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-playfair text-xl font-bold text-[#333]">Remove Employee</h2>
-                  <button
-                    onClick={() => setShowRemoveEmployee(false)}
-                    className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                  >
-                    <X className="w-5 h-5 text-gray-600" />
-                  </button>
-                </div>
-
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-red-600">
-                    Warning: This will permanently delete the employee and all their time entries. This action cannot be undone.
-                  </p>
-                </div>
-
-                <div className="form-group">
-                  <Label className="form-label">Select Employee to Remove</Label>
-                  <Select
-                    value={selectedEmployeeToRemove}
-                    onValueChange={setSelectedEmployeeToRemove}
-                  >
-                    <SelectTrigger className="form-input" data-testid="remove-employee-select">
-                      <SelectValue placeholder="Select an employee..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employees.filter(e => e.role !== 'admin').map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name} ({emp.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedEmployeeToRemove && (
-                  <div className="mt-4 p-3 bg-[#F9F6F7] rounded-xl">
-                    {(() => {
-                      const emp = employees.find(e => e.id === selectedEmployeeToRemove);
-                      const stats = getEmployeeStats(selectedEmployeeToRemove);
-                      return emp ? (
-                        <div className="text-sm">
-                          <p className="font-medium text-[#333]">{emp.name}</p>
-                          <p className="text-[#666]">{emp.email}</p>
-                          <p className="text-[#888] mt-2">
-                            {stats.totalShifts} shifts • {stats.totalHours} hours logged
-                          </p>
-                        </div>
-                      ) : null;
-                    })()}
-                  </div>
-                )}
-
-                <div className="flex gap-3 mt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowRemoveEmployee(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleRemoveEmployeeSubmit}
-                    disabled={removingEmployee || !selectedEmployeeToRemove}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                    data-testid="confirm-remove-employee-btn"
-                  >
-                    {removingEmployee ? "Removing..." : "Remove Employee"}
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
+          <RemoveEmployeeModal
+            show={showRemoveEmployee}
+            onClose={() => setShowRemoveEmployee(false)}
+            employees={employees.filter(e => e.role !== 'admin')}
+            employeeToRemove={selectedEmployeeToRemove}
+            setEmployeeToRemove={setSelectedEmployeeToRemove}
+            handleRemoveEmployee={handleRemoveEmployeeSubmit}
+            removingEmployee={removingEmployee}
+          />
 
           {/* Edit Employee Modal */}
           {showEditEmployee && (
