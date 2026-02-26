@@ -3630,15 +3630,21 @@ export default function AdminDashboard() {
                         <div className="p-6 text-center">
                           {employeeClockStatus?.is_clocked_in ? (
                             <>
-                              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 mb-4">
-                                <PlayCircle className="w-4 h-4" />
-                                Currently Clocked In
+                              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 mb-2">
+                                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                Currently Working
                               </div>
-                              {employeeClockStatus.clock_in_time && (
-                                <p className="text-sm text-gray-500 mb-4">
-                                  Since {new Date(employeeClockStatus.clock_in_time).toLocaleTimeString()}
+                              {/* Live Timer Display */}
+                              <div className="my-4">
+                                <p className="text-4xl font-bold font-mono text-[#333]" data-testid="portal-timer">
+                                  {formatPortalTime(portalElapsedTime)}
                                 </p>
-                              )}
+                                {employeeClockStatus.clock_in_time && (
+                                  <p className="text-sm text-gray-500 mt-2">
+                                    Since {new Date(employeeClockStatus.clock_in_time).toLocaleTimeString()}
+                                  </p>
+                                )}
+                              </div>
                             </>
                           ) : (
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-600 mb-4">
