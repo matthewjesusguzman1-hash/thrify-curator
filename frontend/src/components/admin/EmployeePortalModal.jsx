@@ -19,17 +19,18 @@ export default function EmployeePortalModal({
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
+    // Parse as UTC and format without timezone conversion
+    const date = new Date(dateStr);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
   };
 
   const formatPeriod = (start, end) => {
     if (!start || !end) return '';
     const startDate = new Date(start);
     const endDate = new Date(end);
-    return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[startDate.getUTCMonth()]} ${startDate.getUTCDate()} - ${months[endDate.getUTCMonth()]} ${endDate.getUTCDate()}, ${endDate.getUTCFullYear()}`;
   };
 
   return (
