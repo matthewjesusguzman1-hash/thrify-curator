@@ -2714,6 +2714,14 @@ export default function AdminDashboard() {
                               }
                             }}
                             className="rounded-md border-0"
+                            modifiersStyles={{
+                              selected: {
+                                backgroundColor: '#00D4FF',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                borderRadius: '8px'
+                              }
+                            }}
                           />
                         </PopoverContent>
                       </Popover>
