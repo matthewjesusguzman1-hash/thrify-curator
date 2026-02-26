@@ -621,14 +621,24 @@ export default function AdminDashboard() {
           ? "consignment-inquiries" 
           : "consignment-agreements";
       
-      const response = await axios.get(
+      const token = localStorage.getItem("token");
+      
+      // Fetch the PDF
+      const response = await fetch(
         `${API}/admin/forms/${endpoint}/${submission.id}/pdf`,
         {
-          ...getAuthHeader(),
-          responseType: 'blob'
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         }
       );
       
+      if (!response.ok) {
+        throw new Error('Failed to fetch PDF');
+      }
+      
+      const blob = await response.blob();
       toast.dismiss("download-loading");
       
       const formType = submission.formType === "job_applications" 
@@ -638,30 +648,24 @@ export default function AdminDashboard() {
           : "Consignment_Agreement";
       const filename = `${submission.full_name.replace(/\s+/g, "_")}_${formType}.pdf`;
       
-      // Create blob URL
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
+      // Create object URL
+      const url = URL.createObjectURL(blob);
       
-      // Check if on iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      // Create and click download link
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
       
-      if (isIOS) {
-        // On iOS, open in new tab (Safari will show share/save options)
-        window.open(url, '_blank');
-        toast.success("PDF opened - tap Share to save");
-      } else {
-        // On other devices, trigger download
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success("PDF downloaded");
-      }
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
       
-      // Cleanup after delay
-      setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+      toast.success("PDF downloaded");
     } catch (error) {
       toast.dismiss("download-loading");
       console.error("Download error:", error);
