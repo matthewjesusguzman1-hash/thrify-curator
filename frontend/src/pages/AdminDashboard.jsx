@@ -75,6 +75,9 @@ import PayrollModal from "@/components/admin/modals/PayrollModal";
 import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
 import FormSubmissionModal from "@/components/admin/modals/FormSubmissionModal";
 import { AddEmployeeModal, RemoveEmployeeModal } from "@/components/admin/modals/EmployeeModals";
+import EmployeePortalViewModal from "@/components/admin/modals/EmployeePortalViewModal";
+import W9ViewerModal from "@/components/admin/modals/W9ViewerModal";
+import PortalW9Modal from "@/components/admin/modals/PortalW9Modal";
 import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
