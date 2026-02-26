@@ -104,7 +104,10 @@ export default function HoursByEmployeeSection({
       const entryDate = new Date(entry.clock_in);
       
       if (filterType === "period") {
-        const { start, end } = getBiweeklyPeriod();
+        const { start, end } = getBiweeklyPeriod(0);
+        return entryDate >= start && entryDate <= end;
+      } else if (filterType === "prev_period") {
+        const { start, end } = getBiweeklyPeriod(-1);
         return entryDate >= start && entryDate <= end;
       } else if (filterType === "month") {
         return entryDate.getMonth() === selectedMonth && 
