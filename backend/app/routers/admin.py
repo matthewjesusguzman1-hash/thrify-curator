@@ -1079,7 +1079,9 @@ async def download_shift_report_csv(
         clock_out = entry["clock_out"][:16].replace("T", " ") if entry["clock_out"] else "Active"
         hours = entry["total_hours"] or 0
         hourly_rate = entry.get("hourly_rate", 15.00)
-        est_pay = hours * hourly_rate
+        # Use rounded hours for pay calculation (matches display)
+        rounded_hours = round_hours_to_minute(hours)
+        est_pay = rounded_hours * hourly_rate
         writer.writerow([
             entry["employee_name"],
             clock_in,
@@ -1096,7 +1098,9 @@ async def download_shift_report_csv(
     writer.writerow(["=== SUMMARY ==="])
     writer.writerow(["Employee", "Total Hours", "Total Shifts", "Rate", "Estimated Pay"])
     for s in report["summary"]:
-        pay = s["total_hours"] * s["hourly_rate"]
+        # Use rounded hours for pay calculation (matches display)
+        rounded_hours = round_hours_to_minute(s["total_hours"])
+        pay = rounded_hours * s["hourly_rate"]
         writer.writerow([
             s["employee_name"],
             format_hours_hms(s['total_hours']),
