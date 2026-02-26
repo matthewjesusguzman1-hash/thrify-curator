@@ -1186,10 +1186,20 @@ export default function AdminDashboard() {
     const clockIn = new Date(shift.clock_in);
     const clockOut = shift.clock_out ? new Date(shift.clock_out) : null;
     
+    // Format as local datetime for datetime-local input (YYYY-MM-DDTHH:mm)
+    const formatLocalDateTime = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    
     setEditingShift(shift);
     setShiftFormData({
-      clock_in: clockIn.toISOString().slice(0, 16),
-      clock_out: clockOut ? clockOut.toISOString().slice(0, 16) : "",
+      clock_in: formatLocalDateTime(clockIn),
+      clock_out: clockOut ? formatLocalDateTime(clockOut) : "",
     });
     setShowEditShiftModal(true);
   };
