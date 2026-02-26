@@ -349,17 +349,26 @@ Thrifty Curator Team`
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-[#F9F6F7] flex justify-between items-center gap-2">
+        <div className="p-4 bg-[#F9F6F7] flex flex-col sm:flex-row justify-between items-center gap-3">
           <Button
             variant="outline"
             onClick={() => onDelete(submission.formType, submission.id)}
-            className="text-red-500 border-red-200 hover:bg-red-50"
+            className="text-red-500 border-red-200 hover:bg-red-50 w-full sm:w-auto"
             data-testid="delete-submission-btn"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Delete
           </Button>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={handleSendEmail}
+              className="text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10"
+              data-testid="email-submission-btn"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Send Email
+            </Button>
             <Button
               variant="outline"
               onClick={() => onDownload(submission)}
