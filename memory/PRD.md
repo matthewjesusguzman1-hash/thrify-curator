@@ -250,14 +250,18 @@ Build a "Thrifty Curator" reselling application with:
     - Bi-weekly periods automatically calculated from this anchor date
     - All employees share the same global pay period
     - All payroll sections (Summary, Reports, Employee Portal) use the same calculation
-  - **Payroll Summary Header**: Shows current pay period (e.g., "Pay Period: Feb 16 - Mar 1, 2026")
+  - **Consistent Pay Period Display**: All areas now show matching pay period (e.g., "Feb 16 - Mar 1, 2026")
   - **Edit Employee Modal**: 
     - Start Date field with calendar picker (for recording when employee began working)
-    - Calendar popup shows "Current Pay Period" header (e.g., "Feb 16 - Mar 1, 2026")
-    - Removed period number and year start text from pay period display
+    - Calendar popup shows "Current Pay Period" header
+    - Selected date is highlighted with teal circle
+  - **W-9 Report Updates**:
+    - Added "Start Date" column to W-9 Submission Report table
+    - Start date included in CSV and PDF exports
+    - W-9 Viewer modal header shows employee start date
   - **Backend Updates**:
     - Unified `get_biweekly_period()` function to always use first Monday of year
-    - Removed dependency on configurable `pay_period_start_date` setting
+    - Added `start_date` field to employee records and W-9 reports
 
 ## Recent Updates (Feb 23, 2026)
 - **Phone Number Support for Employees**: Added phone number field throughout the employee management system
