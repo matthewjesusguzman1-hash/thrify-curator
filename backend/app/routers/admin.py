@@ -984,6 +984,12 @@ async def get_shift_report(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format")
     
+    # Get default hourly rate from payroll settings
+    payroll_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
+    default_rate = 15.00
+    if payroll_settings:
+        default_rate = payroll_settings.get("default_hourly_rate", 15.00)
+    
     # Build query
     query = {
         "clock_in": {"$gte": start.isoformat(), "$lte": end.isoformat()}
@@ -1005,6 +1011,8 @@ async def get_shift_report(
     report_data = []
     for entry in entries:
         emp = employee_map.get(entry["user_id"], {})
+        # Use employee's custom rate if set, otherwise use default from payroll settings
+        emp_rate = emp.get("hourly_rate") if emp.get("hourly_rate") is not None else default_rate
         report_data.append({
             "employee_id": entry["user_id"],
             "employee_name": entry.get("user_name") or emp.get("name", "Unknown"),
@@ -1013,7 +1021,7 @@ async def get_shift_report(
             "total_hours": entry.get("total_hours", 0),
             "admin_note": entry.get("admin_note"),
             "adjusted_by_admin": entry.get("adjusted_by_admin", False),
-            "hourly_rate": emp.get("hourly_rate", 15.00)
+            "hourly_rate": emp_rate
         })
     
     # Calculate summary by employee
