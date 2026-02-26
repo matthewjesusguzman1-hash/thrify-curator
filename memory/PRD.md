@@ -1420,3 +1420,39 @@ User reported that "Mark as read" and "Clear All" buttons were not visible in th
 - ✅ "Clear all" button visible and functional (clears all notifications, shows toast "All notifications cleared")
 - ✅ Panel works correctly on both desktop and mobile views
 
+
+## Est. Pay Column in Payroll Reports (Feb 26, 2026)
+
+### Feature Implemented
+Added "Est. Pay" column to the Payroll/Shift Report Shift Details table, showing the calculated pay for each individual shift.
+
+### Changes Made
+
+1. **Frontend (ReportsSection.jsx)**:
+   - Added "Est. Pay" column header to Shift Details table
+   - Displays calculated pay: `total_hours × hourly_rate`
+   - Formatted as currency (green text) using Intl.NumberFormat
+   - Falls back to $15/hr if hourly_rate is not set
+
+2. **Backend CSV Export (admin.py)**:
+   - Added "Est. Pay" column to shift entries in CSV export
+   - Each shift row now includes: Employee Name, Clock In, Clock Out, Hours, **Est. Pay**, Admin Note, Adjusted
+   - Summary section continues to show "Estimated Pay" per employee
+
+3. **Backend PDF Export (admin.py)**:
+   - Added "Est. Pay" column to Detailed Shift Entries table
+   - Adjusted column widths to fit new column
+   - Each shift row shows currency-formatted est. pay
+
+### Test Results
+- Backend: 10/10 tests passed
+- Frontend: 9/9 tests passed  
+- Test report: `/app/test_reports/iteration_4.json`
+- Test files:
+  - `/app/backend/tests/test_reports_est_pay.py`
+  - `/app/tests/e2e/reports-est-pay.spec.ts`
+
+### Files Modified
+- `/app/frontend/src/components/admin/sections/ReportsSection.jsx` - Added Est. Pay column to Shift Details table
+- `/app/backend/app/routers/admin.py` - Added Est. Pay to CSV and PDF exports
+
