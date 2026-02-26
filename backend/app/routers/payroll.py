@@ -431,21 +431,25 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         ["Total Wages", f"${total_wages:.2f}"]
     ]
     
-    summary_table = Table(summary_data, colWidths=[2*inch, 2*inch])
+    # SUMMARY section
+    elements.append(Paragraph("SUMMARY", section_style))
+    elements.append(Table([[""]], colWidths=[7.5*inch], rowHeights=[1], style=[('LINEBELOW', (0, 0), (-1, -1), 0.5, LIGHT_GRAY)]))
+    elements.append(Spacer(1, 5))
+    
+    summary_data = [
+        [Paragraph("Total Employees:", label_style), Paragraph(str(len(employee_data)), value_style)],
+        [Paragraph("Total Hours:", label_style), Paragraph(format_hours_hms(total_hours), value_style)],
+        [Paragraph("Total Shifts:", label_style), Paragraph(str(total_shifts), value_style)],
+        [Paragraph("Total Wages:", label_style), Paragraph(f"${total_wages:.2f}", green_value_style)],
+    ]
+    summary_table = Table(summary_data, colWidths=[1.5*inch, 5.5*inch])
     summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), ACCENT_PINK),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('GRID', (0, 0), (-1, -1), 0, colors.white),
-        ('SPAN', (0, 0), (1, 0)),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_BG]),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ]))
     elements.append(summary_table)
-    elements.append(Spacer(1, 30))
+    elements.append(Spacer(1, 15))
     
     if employee_data:
         elements.append(Paragraph("Employee Breakdown", section_header))
