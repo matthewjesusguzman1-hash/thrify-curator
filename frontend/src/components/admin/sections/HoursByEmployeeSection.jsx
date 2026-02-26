@@ -35,7 +35,7 @@ export default function HoursByEmployeeSection({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [filterType, setFilterType] = useState("period"); // period, month, year
+  const [filterType, setFilterType] = useState("period"); // period, prev_period, month, year
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [expandedNoteId, setExpandedNoteId] = useState(null);
