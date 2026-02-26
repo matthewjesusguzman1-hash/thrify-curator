@@ -1547,5 +1547,30 @@ Updated backend endpoints to use individually-rounded hours:
 ### Verification
 - Payroll Summary shows $20.67 for current period, month, and year
 - Reports section shows 1h 2m total hours and $20.67 total pay
+
+## Pay Period Date Display Fix (Feb 26, 2026)
+
+### Issue
+Pay period dates were showing incorrectly (e.g., "Feb 15 - Mar 1" instead of "Feb 16 - Mar 1") in:
+- Employee Dashboard
+- Admin's Employee Portal View modal
+
+### Root Cause
+The `formatDate()` functions were using JavaScript's local timezone conversion (`toLocaleDateString()`), which shifted UTC dates back by one day for users in timezones behind UTC.
+
+### Solution
+Updated all pay period date formatting functions to use UTC methods:
+- Changed from: `new Date(isoString).toLocaleDateString(...)`
+- Changed to: Using `getUTCMonth()` and `getUTCDate()` to format dates without timezone conversion
+
+### Files Modified
+- `/app/frontend/src/pages/EmployeeDashboard.jsx` - Updated `formatDate()` function
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Updated `formatDate()` function
+- `/app/frontend/src/components/admin/EmployeePortalModal.jsx` - Updated `formatDate()` and `formatPeriod()` functions
+
+### Verification
+- Employee Dashboard now shows "Feb 16 - Mar 1" ✓
+- Admin Employee Portal View shows "Feb 16 - Mar 1, 2026" ✓
+
 - Individual shifts: 1h 0m ($20.00) + 0h 1m ($0.33) + 0h 0m ($0.00) + 0h 1m ($0.33) = $20.66
 - All values are now consistent across the application
