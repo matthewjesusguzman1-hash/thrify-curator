@@ -523,6 +523,91 @@ async def get_trip_waypoints(trip_id: str, admin: dict = Depends(get_admin_user)
     }
 
 
+@router.post("/{trip_id}/reprocess-route")
+async def reprocess_trip_route(trip_id: str, admin: dict = Depends(get_admin_user)):
+    """
+    Re-process a completed trip with OSRM map matching.
+    This will snap GPS waypoints to roads and recalculate the distance.
+    """
+    trip = await db.mileage_entries.find_one({"id": trip_id}, {"_id": 0})
+    
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Build complete route: start -> waypoints -> end
+    waypoints = trip.get("waypoints", [])
+    start_location = trip.get("start_location")
+    end_location = trip.get("end_location")
+    
+    all_waypoints = []
+    
+    if start_location and start_location.get("latitude") and start_location.get("longitude"):
+        all_waypoints.append({
+            "latitude": start_location.get("latitude"),
+            "longitude": start_location.get("longitude"),
+            "timestamp": trip.get("start_time"),
+            "accuracy": start_location.get("accuracy")
+        })
+    
+    for wp in waypoints:
+        if wp.get("latitude") and wp.get("longitude"):
+            all_waypoints.append({
+                "latitude": wp.get("latitude"),
+                "longitude": wp.get("longitude"),
+                "timestamp": wp.get("timestamp"),
+                "accuracy": wp.get("accuracy")
+            })
+    
+    if end_location and end_location.get("latitude") and end_location.get("longitude"):
+        all_waypoints.append({
+            "latitude": end_location.get("latitude"),
+            "longitude": end_location.get("longitude"),
+            "timestamp": trip.get("end_time"),
+            "accuracy": end_location.get("accuracy")
+        })
+    
+    if len(all_waypoints) < 2:
+        raise HTTPException(status_code=400, detail="Not enough waypoints to process route")
+    
+    # Perform map matching
+    map_match_result = await match_waypoints_to_roads(all_waypoints)
+    
+    road_distance_miles = map_match_result.get("road_distance_miles", 0)
+    matched_coordinates = map_match_result.get("matched_coordinates", [])
+    match_confidence = map_match_result.get("confidence", 0)
+    matched_geometry = map_match_result.get("geometry")
+    
+    # Update the trip with matched data
+    update_data = {
+        "matched_coordinates": matched_coordinates,
+        "matched_geometry": matched_geometry,
+        "match_confidence": match_confidence,
+        "is_road_matched": match_confidence > 0,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Only update total_miles if we got a confident match
+    if match_confidence > 0.5 and road_distance_miles > 0:
+        update_data["total_miles"] = road_distance_miles
+    
+    await db.mileage_entries.update_one(
+        {"id": trip_id},
+        {"$set": update_data}
+    )
+    
+    # Return the result
+    return {
+        "trip_id": trip_id,
+        "original_miles": trip.get("total_miles", 0),
+        "road_matched_miles": road_distance_miles,
+        "confidence": match_confidence,
+        "matched_waypoint_count": len(matched_coordinates),
+        "original_waypoint_count": len(all_waypoints),
+        "is_road_matched": match_confidence > 0,
+        "error": map_match_result.get("error")
+    }
+
+
 @router.get("/summary", response_model=MileageSummary)
 async def get_mileage_summary(
     year: Optional[int] = None,
