@@ -3,17 +3,31 @@
 /* Prevent white flash on iOS over-scroll */
 html {
     background-color: #1A1A2E;
-    /* Extend background beyond viewport for rubber-band scrolling */
     background: linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
     min-height: 100%;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
 }
 
 body {
     background-color: #1A1A2E;
     background: linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
     min-height: 100%;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
     margin: 0;
     padding: 0;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+#root {
+    background-color: #1A1A2E;
+    background: linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
 }
 
 /* Safe area padding for iOS devices with notch/Dynamic Island */
