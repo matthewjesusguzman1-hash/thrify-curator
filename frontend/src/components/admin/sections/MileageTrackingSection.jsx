@@ -112,6 +112,122 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     notes: ""
   });
 
+  // Calculate distance between two GPS coordinates in meters
+  const calculateDistance = useCallback((lat1, lon1, lat2, lon2) => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }, []);
+
+  // Enable screen wake lock to prevent device from sleeping
+  const enableWakeLock = useCallback(async () => {
+    try {
+      // Try native Wake Lock API first (Chrome 84+, Edge 84+)
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        setIsScreenAwake(true);
+        console.log('Wake Lock activated');
+        
+        // Re-acquire wake lock if released (e.g., when tab becomes visible again)
+        wakeLockRef.current.addEventListener('release', () => {
+          console.log('Wake Lock released');
+          setIsScreenAwake(false);
+        });
+      }
+    } catch (err) {
+      console.log('Wake Lock API not available or failed:', err);
+    }
+    
+    // Also use NoSleep.js as fallback for broader compatibility
+    try {
+      if (!noSleepRef.current) {
+        noSleepRef.current = new NoSleep();
+      }
+      await noSleepRef.current.enable();
+      setIsScreenAwake(true);
+      console.log('NoSleep enabled');
+    } catch (err) {
+      console.error('NoSleep failed:', err);
+    }
+  }, []);
+
+  // Disable screen wake lock
+  const disableWakeLock = useCallback(() => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release();
+      wakeLockRef.current = null;
+    }
+    if (noSleepRef.current) {
+      noSleepRef.current.disable();
+    }
+    setIsScreenAwake(false);
+    console.log('Wake Lock disabled');
+  }, []);
+
+  // Handle visibility change - resume tracking when app comes back to foreground
+  const handleVisibilityChange = useCallback(() => {
+    if (document.visibilityState === 'visible' && isTracking && !isPaused) {
+      console.log('App returned to foreground - resuming GPS tracking');
+      setTrackingWarning(null);
+      
+      // Re-enable wake lock
+      enableWakeLock();
+      
+      // Force an immediate location update
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const newLocation = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              timestamp: new Date().toISOString()
+            };
+            
+            // Only record if accuracy is acceptable
+            if (pos.coords.accuracy <= GPS_CONFIG.MIN_ACCURACY_METERS) {
+              setCurrentLocation(newLocation);
+              setGpsAccuracy(pos.coords.accuracy);
+              setLastUpdateTime(new Date());
+              
+              axios.post(`${API}/admin/mileage/update-location`, {
+                location: newLocation
+              }, getAuthHeader()).then(() => {
+                fetchCumulativeDistance();
+              }).catch(console.error);
+            }
+          },
+          (error) => console.error("Visibility change location error:", error),
+          GPS_CONFIG.HIGH_ACCURACY
+        );
+      }
+    } else if (document.visibilityState === 'hidden' && isTracking && !isPaused) {
+      setTrackingWarning('App in background - tracking may be limited. Keep app open for best accuracy.');
+    }
+  }, [isTracking, isPaused, enableWakeLock, getAuthHeader, fetchCumulativeDistance]);
+
+  // Set up visibility change listener
+  useEffect(() => {
+    visibilityHandlerRef.current = handleVisibilityChange;
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [handleVisibilityChange]);
+
+  // Cleanup wake lock on unmount
+  useEffect(() => {
+    return () => {
+      disableWakeLock();
+    };
+  }, [disableWakeLock]);
+
   // Fetch current cumulative distance from server
   const fetchCumulativeDistance = useCallback(async () => {
     try {
