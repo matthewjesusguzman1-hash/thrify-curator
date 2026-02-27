@@ -394,6 +394,92 @@ async def get_active_trip_distance(admin: dict = Depends(get_admin_user)):
     }
 
 
+@router.get("/active-trip/waypoints")
+async def get_active_trip_waypoints(admin: dict = Depends(get_admin_user)):
+    """Get all waypoints for the current active trip (for live map display)"""
+    trip = await db.mileage_entries.find_one(
+        {"user_id": admin["id"], "status": {"$in": ["active", "paused"]}},
+        {"_id": 0}
+    )
+    
+    if not trip:
+        return {"waypoints": []}
+    
+    waypoints = trip.get("waypoints", [])
+    start_location = trip.get("start_location")
+    
+    # Include start location as first waypoint
+    all_waypoints = []
+    if start_location:
+        all_waypoints.append({
+            "latitude": start_location.get("latitude"),
+            "longitude": start_location.get("longitude"),
+            "timestamp": trip.get("start_time"),
+            "accuracy": start_location.get("accuracy")
+        })
+    
+    # Add all recorded waypoints
+    for wp in waypoints:
+        all_waypoints.append({
+            "latitude": wp.get("latitude"),
+            "longitude": wp.get("longitude"),
+            "timestamp": wp.get("timestamp"),
+            "accuracy": wp.get("accuracy")
+        })
+    
+    return {"waypoints": all_waypoints}
+
+
+@router.get("/{trip_id}/waypoints")
+async def get_trip_waypoints(trip_id: str, admin: dict = Depends(get_admin_user)):
+    """Get all waypoints for a completed trip (for map display)"""
+    trip = await db.mileage_entries.find_one(
+        {"id": trip_id},
+        {"_id": 0}
+    )
+    
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    waypoints = trip.get("waypoints", [])
+    start_location = trip.get("start_location")
+    end_location = trip.get("end_location")
+    
+    # Build complete route: start -> waypoints -> end
+    all_waypoints = []
+    
+    if start_location:
+        all_waypoints.append({
+            "latitude": start_location.get("latitude"),
+            "longitude": start_location.get("longitude"),
+            "timestamp": trip.get("start_time"),
+            "accuracy": start_location.get("accuracy")
+        })
+    
+    for wp in waypoints:
+        all_waypoints.append({
+            "latitude": wp.get("latitude"),
+            "longitude": wp.get("longitude"),
+            "timestamp": wp.get("timestamp"),
+            "accuracy": wp.get("accuracy")
+        })
+    
+    if end_location:
+        all_waypoints.append({
+            "latitude": end_location.get("latitude"),
+            "longitude": end_location.get("longitude"),
+            "timestamp": trip.get("end_time"),
+            "accuracy": end_location.get("accuracy")
+        })
+    
+    return {
+        "waypoints": all_waypoints,
+        "total_miles": trip.get("total_miles", 0),
+        "start_address": trip.get("start_address"),
+        "end_address": trip.get("end_address")
+    }
+
+
 @router.get("/summary", response_model=MileageSummary)
 async def get_mileage_summary(
     year: Optional[int] = None,
