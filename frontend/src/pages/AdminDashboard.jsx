@@ -2173,7 +2173,7 @@ export default function AdminDashboard() {
         className="dashboard-header" 
         style={{ 
           background: 'linear-gradient(90deg, #1A1A2E 0%, #16213E 100%)',
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 48px)'
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)'
         }}
       >
         <div className="flex items-center gap-3">
