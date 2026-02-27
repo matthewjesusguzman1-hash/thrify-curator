@@ -101,7 +101,7 @@ export default function TripMap({
   const center = getCenter();
 
   return (
-    <div style={{ height, width: '100%', borderRadius: '12px', overflow: 'hidden' }}>
+    <div style={{ height, width: '100%', borderRadius: '12px', overflow: 'hidden', position: 'relative', zIndex: 0 }}>
       <MapContainer
         ref={mapRef}
         center={center}
