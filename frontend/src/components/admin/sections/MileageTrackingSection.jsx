@@ -190,6 +190,27 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     }
   }, [getAuthHeader]);
 
+  // Fetch waypoints for active trip (for map display)
+  const fetchTripWaypoints = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/mileage/active-trip/waypoints`, getAuthHeader());
+      setTripWaypoints(response.data.waypoints || []);
+    } catch (error) {
+      console.error("Failed to fetch waypoints:", error);
+    }
+  }, [getAuthHeader]);
+
+  // Fetch waypoints for a completed trip
+  const fetchCompletedTripWaypoints = useCallback(async (tripId) => {
+    try {
+      const response = await axios.get(`${API}/admin/mileage/${tripId}/waypoints`, getAuthHeader());
+      return response.data.waypoints || [];
+    } catch (error) {
+      console.error("Failed to fetch trip waypoints:", error);
+      return [];
+    }
+  }, [getAuthHeader]);
+
   // Handle visibility change - resume tracking when app comes back to foreground
   const handleVisibilityChange = useCallback(() => {
     if (document.visibilityState === 'visible' && isTracking && !isPaused) {
