@@ -91,7 +91,14 @@ function App() {
   });
 
   return (
-    <div className="app-background">
+    <div 
+      className="app-background"
+      style={{ 
+        background: 'linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%)',
+        backgroundColor: '#1A1A2E',
+        minHeight: '100vh'
+      }}
+    >
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       <BrowserRouter>
         <AnimatedRoutes />
