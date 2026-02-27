@@ -1922,6 +1922,11 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                       <h3 className="text-white font-semibold">Trip Route</h3>
                       <p className="text-white/60 text-sm">
                         {viewingTripMap.date} • {viewingTripMap.total_miles?.toFixed(1)} miles
+                        {viewingTripMap.isRoadMatched && (
+                          <span className="ml-2 px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full">
+                            Road-Matched
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1939,9 +1944,12 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                 {viewingTripMap.waypoints && viewingTripMap.waypoints.length > 0 ? (
                   <TripMap
                     waypoints={viewingTripMap.waypoints}
+                    matchedCoordinates={viewingTripMap.matchedCoordinates || []}
+                    isRoadMatched={viewingTripMap.isRoadMatched || false}
+                    matchConfidence={viewingTripMap.matchConfidence || 0}
                     isLiveTracking={false}
                     height="400px"
-                    showWaypoints={true}
+                    showWaypoints={!viewingTripMap.isRoadMatched}
                   />
                 ) : (
                   <div className="h-[400px] flex items-center justify-center bg-gray-100 rounded-xl">
@@ -1958,24 +1966,52 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <p className="text-gray-500 text-xs mb-1">Start</p>
-                    <p className="text-[#333] font-medium">{viewingTripMap.start_address || 'N/A'}</p>
+                    <p className="text-[#333] font-medium">{viewingTripMap.startAddress || viewingTripMap.start_address || 'N/A'}</p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <p className="text-gray-500 text-xs mb-1">End</p>
-                    <p className="text-[#333] font-medium">{viewingTripMap.end_address || 'N/A'}</p>
+                    <p className="text-[#333] font-medium">{viewingTripMap.endAddress || viewingTripMap.end_address || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between bg-emerald-50 p-3 rounded-lg">
+                
+                {/* Road-matching status */}
+                <div className={`flex items-center justify-between p-3 rounded-lg ${viewingTripMap.isRoadMatched ? 'bg-green-50' : 'bg-emerald-50'}`}>
                   <div className="flex items-center gap-2">
-                    <Route className="w-4 h-4 text-emerald-600" />
-                    <span className="text-sm text-emerald-700">
-                      {viewingTripMap.waypoints?.length || 0} waypoints recorded
-                    </span>
+                    {viewingTripMap.isRoadMatched ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm text-green-700">
+                          Road-matched ({Math.round((viewingTripMap.matchConfidence || 0) * 100)}% confidence)
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Route className="w-4 h-4 text-emerald-600" />
+                        <span className="text-sm text-emerald-700">
+                          {viewingTripMap.waypoints?.length || 0} GPS waypoints
+                        </span>
+                      </>
+                    )}
                   </div>
-                  <span className="font-bold text-emerald-600">
-                    {viewingTripMap.total_miles?.toFixed(2)} mi
+                  <span className={`font-bold ${viewingTripMap.isRoadMatched ? 'text-green-600' : 'text-emerald-600'}`}>
+                    {(viewingTripMap.totalMiles || viewingTripMap.total_miles)?.toFixed(2)} mi
                   </span>
                 </div>
+
+                {/* Legend for road-matched routes */}
+                {viewingTripMap.isRoadMatched && (
+                  <div className="flex items-center gap-4 text-xs text-gray-500 px-1">
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-1 bg-green-500 rounded"></div>
+                      <span>Road-matched route</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-0.5 bg-gray-400 rounded" style={{ borderStyle: 'dashed' }}></div>
+                      <span>Original GPS path</span>
+                    </div>
+                  </div>
+                )}
+
                 {viewingTripMap.notes && (
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <p className="text-gray-500 text-xs mb-1">Notes</p>
