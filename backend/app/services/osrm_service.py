@@ -471,6 +471,15 @@ async def process_trip_with_gap_filling(waypoints: List[Dict]) -> Dict:
     # Step 3: Road-match the complete route
     match_result = await match_waypoints_to_roads(filled_waypoints)
     
+    # If map matching failed but we have gap-filled distance, use that
+    if match_result.get("is_fallback") and fill_result and fill_result.get("total_gap_distance_miles", 0) > 0:
+        # Use the routing-based distance from gap filling as it's more accurate than straight-line
+        match_result["road_distance_miles"] = fill_result["total_gap_distance_miles"]
+        match_result["road_distance_meters"] = fill_result["total_gap_distance_meters"]
+        match_result["confidence"] = 0.7  # Medium confidence since we used routing
+        match_result["error"] = "Map matching unavailable, using routing-based distance"
+        logger.info(f"Using gap-fill routing distance: {fill_result['total_gap_distance_miles']:.2f} mi")
+    
     # Combine results
     result = {
         **match_result,
