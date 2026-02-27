@@ -1837,6 +1837,110 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
           </motion.div>
         </motion.div>
       )}
+
+      {/* Trip Map Modal */}
+      <AnimatePresence>
+        {viewingTripMap && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setViewingTripMap(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-[#1A1A2E] to-[#16213E]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                      <Map className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold">Trip Route</h3>
+                      <p className="text-white/60 text-sm">
+                        {viewingTripMap.date} • {viewingTripMap.total_miles?.toFixed(1)} miles
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setViewingTripMap(null)}
+                    className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Map */}
+              <div className="p-4">
+                {viewingTripMap.waypoints && viewingTripMap.waypoints.length > 0 ? (
+                  <TripMap
+                    waypoints={viewingTripMap.waypoints}
+                    isLiveTracking={false}
+                    height="400px"
+                    showWaypoints={true}
+                  />
+                ) : (
+                  <div className="h-[400px] flex items-center justify-center bg-gray-100 rounded-xl">
+                    <div className="text-center">
+                      <Map className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500">No route data available</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Trip Details */}
+              <div className="px-4 pb-4 space-y-2">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-gray-500 text-xs mb-1">Start</p>
+                    <p className="text-[#333] font-medium">{viewingTripMap.start_address || 'N/A'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-gray-500 text-xs mb-1">End</p>
+                    <p className="text-[#333] font-medium">{viewingTripMap.end_address || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between bg-emerald-50 p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Route className="w-4 h-4 text-emerald-600" />
+                    <span className="text-sm text-emerald-700">
+                      {viewingTripMap.waypoints?.length || 0} waypoints recorded
+                    </span>
+                  </div>
+                  <span className="font-bold text-emerald-600">
+                    {viewingTripMap.total_miles?.toFixed(2)} mi
+                  </span>
+                </div>
+                {viewingTripMap.notes && (
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-gray-500 text-xs mb-1">Notes</p>
+                    <p className="text-[#333] text-sm">{viewingTripMap.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-gray-200">
+                <Button
+                  onClick={() => setViewingTripMap(null)}
+                  className="w-full bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white"
+                >
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
