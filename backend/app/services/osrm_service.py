@@ -385,7 +385,14 @@ async def fill_gaps_with_routing(waypoints: List[Dict], gaps: List[Dict]) -> Dic
                     # Add intermediate points from the route (skip first and last as they're the gap boundaries)
                     coords = geometry["coordinates"]
                     if len(coords) > 2:
-                        for coord in coords[1:-1]:
+                        # Sample down to max 10 intermediate points per gap to avoid OSRM limits
+                        intermediate_coords = coords[1:-1]
+                        max_intermediate = 10
+                        if len(intermediate_coords) > max_intermediate:
+                            step = len(intermediate_coords) / max_intermediate
+                            intermediate_coords = [intermediate_coords[int(i * step)] for i in range(max_intermediate)]
+                        
+                        for coord in intermediate_coords:
                             filled_waypoints.append({
                                 "longitude": coord[0],
                                 "latitude": coord[1],
