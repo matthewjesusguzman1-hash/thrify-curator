@@ -83,7 +83,7 @@ class StartTripRequest(BaseModel):
 class EndTripRequest(BaseModel):
     end_location: LocationData
     end_address: Optional[str] = None
-    total_miles: float
+    total_miles: Optional[float] = None  # Optional - backend calculates from waypoints/OSRM
     purpose: TripPurpose
     purpose_other: Optional[str] = None
     notes: Optional[str] = None
