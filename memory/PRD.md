@@ -1751,3 +1751,41 @@ Implemented OSRM (Open Source Routing Machine) map-matching to improve mileage t
 
 ### External Dependency
 - OSRM Public API: `http://router.project-osrm.org` (no API key required)
+
+## Automatic GPS Gap Filling (Feb 27, 2026)
+
+### Feature Overview
+Enhanced the OSRM integration to automatically detect and fill gaps in GPS data caused by poor signal or connectivity issues.
+
+### How Gap Filling Works
+1. **Gap Detection**: Analyzes consecutive waypoints for:
+   - Time gaps > 60 seconds (default threshold)
+   - Distance jumps > 500 meters (default threshold)
+   
+2. **Gap Filling**: When a gap is detected:
+   - Uses OSRM Routing API to calculate the actual road route between gap endpoints
+   - Extracts intermediate waypoints from the route geometry
+   - Marks these points as `is_interpolated: true` for transparency
+
+3. **Road Matching**: After gap filling:
+   - Full route (original + interpolated) is road-matched with OSRM
+   - Final distance reflects actual roads traveled, not GPS straight lines
+
+### New Functions Added (osrm_service.py)
+- `detect_gps_gaps()` - Identifies time and distance gaps in GPS data
+- `fill_gaps_with_routing()` - Uses OSRM routing to fill detected gaps
+- `process_trip_with_gap_filling()` - Full pipeline combining detection, filling, and road-matching
+
+### UI Changes
+- Reprocess toast now shows gap filling info: "Route matched! Distance: X mi • Y/Z GPS gaps filled"
+- Road-Matched badge shows "+X gaps" when gaps were filled
+- All gap information stored in database for transparency
+
+### Database Schema Updates
+- `gaps_detected` (int) - Number of GPS signal gaps found
+- `gaps_filled` (int) - Number of gaps successfully filled with OSRM routing
+
+### Benefits
+- **More Accurate Distances**: Captures full route even with intermittent GPS
+- **Better Coverage**: Works in areas with poor cellular/GPS reception
+- **Transparency**: Shows exactly how many gaps were detected and filled
