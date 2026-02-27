@@ -19,7 +19,10 @@ import {
   CheckCircle,
   AlertTriangle,
   Smartphone,
-  Zap
+  Zap,
+  Map,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import axios from "axios";
 import NoSleep from "nosleep.js";
+import TripMap from "@/components/TripMap";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ACTIVE_TRIP_KEY = "thrifty_curator_active_trip";
