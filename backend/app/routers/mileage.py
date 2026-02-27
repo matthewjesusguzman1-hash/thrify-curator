@@ -302,22 +302,39 @@ async def end_trip(trip_data: EndTripRequest, admin: dict = Depends(get_admin_us
             "accuracy": end_loc.accuracy
         })
     
-    # Use OSRM map matching to snap to roads and get accurate distance
+    # Use OSRM map matching with gap filling for accurate distance
     map_match_result = None
     road_distance_miles = 0
     matched_coordinates = []
     match_confidence = 0
     matched_geometry = None
+    gaps_detected = 0
+    gaps_filled = 0
     
     if len(all_waypoints) >= 2:
         try:
-            map_match_result = await match_waypoints_to_roads(all_waypoints)
+            # Use enhanced processing with gap detection and filling
+            from app.services.osrm_service import process_trip_with_gap_filling
+            map_match_result = await process_trip_with_gap_filling(all_waypoints)
             road_distance_miles = map_match_result.get("road_distance_miles", 0)
             matched_coordinates = map_match_result.get("matched_coordinates", [])
             match_confidence = map_match_result.get("confidence", 0)
             matched_geometry = map_match_result.get("geometry")
+            gaps_detected = map_match_result.get("gaps_detected", 0)
+            gaps_filled = map_match_result.get("gaps_filled", 0)
+            
+            if gaps_detected > 0:
+                print(f"Trip processing: Detected {gaps_detected} GPS gaps, filled {gaps_filled} with routing")
         except Exception as e:
-            print(f"Map matching error: {e}")
+            print(f"Enhanced map matching error: {e}, falling back to basic matching")
+            try:
+                map_match_result = await match_waypoints_to_roads(all_waypoints)
+                road_distance_miles = map_match_result.get("road_distance_miles", 0)
+                matched_coordinates = map_match_result.get("matched_coordinates", [])
+                match_confidence = map_match_result.get("confidence", 0)
+                matched_geometry = map_match_result.get("geometry")
+            except Exception as e2:
+                print(f"Basic map matching also failed: {e2}")
     
     # Fallback to straight-line calculation if map matching failed
     if road_distance_miles <= 0:
