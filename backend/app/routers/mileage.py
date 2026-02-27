@@ -488,7 +488,12 @@ async def get_trip_waypoints(trip_id: str, admin: dict = Depends(get_admin_user)
     start_location = trip.get("start_location")
     end_location = trip.get("end_location")
     
-    # Build complete route: start -> waypoints -> end
+    # Check for road-matched coordinates (preferred for display)
+    matched_coordinates = trip.get("matched_coordinates", [])
+    is_road_matched = trip.get("is_road_matched", False)
+    match_confidence = trip.get("match_confidence", 0)
+    
+    # Build complete raw route: start -> waypoints -> end
     all_waypoints = []
     
     if start_location:
@@ -517,6 +522,9 @@ async def get_trip_waypoints(trip_id: str, admin: dict = Depends(get_admin_user)
     
     return {
         "waypoints": all_waypoints,
+        "matched_coordinates": matched_coordinates,
+        "is_road_matched": is_road_matched,
+        "match_confidence": match_confidence,
         "total_miles": trip.get("total_miles", 0),
         "start_address": trip.get("start_address"),
         "end_address": trip.get("end_address")
