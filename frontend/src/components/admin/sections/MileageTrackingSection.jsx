@@ -204,12 +204,41 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
   const fetchCompletedTripWaypoints = useCallback(async (tripId) => {
     try {
       const response = await axios.get(`${API}/admin/mileage/${tripId}/waypoints`, getAuthHeader());
-      return response.data.waypoints || [];
+      return {
+        waypoints: response.data.waypoints || [],
+        matchedCoordinates: response.data.matched_coordinates || [],
+        isRoadMatched: response.data.is_road_matched || false,
+        matchConfidence: response.data.match_confidence || 0,
+        totalMiles: response.data.total_miles || 0,
+        startAddress: response.data.start_address,
+        endAddress: response.data.end_address
+      };
     } catch (error) {
       console.error("Failed to fetch trip waypoints:", error);
-      return [];
+      return { waypoints: [], matchedCoordinates: [], isRoadMatched: false, matchConfidence: 0 };
     }
   }, [getAuthHeader]);
+
+  // Reprocess a trip with OSRM road-matching
+  const reprocessTripRoute = useCallback(async (tripId) => {
+    try {
+      toast.info("Processing route with road-matching...");
+      const response = await axios.post(`${API}/admin/mileage/${tripId}/reprocess-route`, {}, getAuthHeader());
+      
+      if (response.data.is_road_matched) {
+        toast.success(`Route matched! Distance updated: ${response.data.road_matched_miles.toFixed(2)} mi (${Math.round(response.data.confidence * 100)}% confidence)`);
+        fetchMileageEntries(); // Refresh the list
+        return response.data;
+      } else {
+        toast.warning("Could not match route to roads. Using original GPS distance.");
+        return response.data;
+      }
+    } catch (error) {
+      console.error("Failed to reprocess trip:", error);
+      toast.error(error.response?.data?.detail || "Failed to reprocess route");
+      return null;
+    }
+  }, [getAuthHeader, fetchMileageEntries]);
 
   // Handle visibility change - resume tracking when app comes back to foreground
   const handleVisibilityChange = useCallback(() => {
