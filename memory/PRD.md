@@ -1608,3 +1608,42 @@ Extracted three large inline modal definitions into separate, reusable component
 - Frontend tests: 100% (6/6 modal tests passed)
 - All modal open/close functionality verified
 - Employee Portal View, W9 Viewer, and Portal W9 modals all working correctly
+
+## Mileage Tracking Improvements (Feb 26, 2026)
+
+### User Request
+Improve mileage tracking accuracy and ensure continuous tracking until paused or trip ended, primarily for mobile use.
+
+### Changes Implemented
+
+1. **Screen Wake Lock**
+   - Added NoSleep.js library for cross-browser wake lock support
+   - Implemented native Wake Lock API (Chrome 84+) as primary method
+   - Screen stays awake during active trip tracking
+   - Wake lock disabled when trip is paused (to save battery)
+
+2. **Improved GPS Configuration**
+   - Reduced polling interval from 10 seconds to 5 seconds
+   - Increased timeout from 5s to 15s for better GPS lock on mobile
+   - Added accuracy filtering (ignores readings > 100m accuracy)
+   - Added minimum distance filter (5m) to reduce GPS noise
+
+3. **Visibility Change Handling**
+   - Auto-resumes tracking immediately when app returns to foreground
+   - Shows warning when app goes to background
+   - Forces location update when visibility restored
+
+4. **Enhanced UI Indicators**
+   - GPS accuracy indicator (green < 20m, yellow < 50m, red > 50m)
+   - Screen wake status indicator
+   - "Last updated X seconds ago" timer
+   - Warning banners for tracking issues
+
+### Technical Notes
+- True background GPS tracking with screen locked is NOT possible with web technology (browser security restriction)
+- Best accuracy achieved by keeping app open and screen visible
+- NoSleep.js prevents screen from sleeping during active tracking
+- Waypoints are still recorded to server for distance calculation
+
+### Dependencies Added
+- `nosleep.js@0.12.0`
