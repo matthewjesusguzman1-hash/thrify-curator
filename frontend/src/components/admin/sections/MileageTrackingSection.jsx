@@ -718,6 +718,9 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         localStorage.removeItem('mileage_interval_id');
       }
       
+      // Disable wake lock
+      disableWakeLock();
+      
       localStorage.removeItem(ACTIVE_TRIP_KEY);
       
       setIsTracking(false);
@@ -726,6 +729,10 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       setCurrentLocation(null);
       setCumulativeMiles(0);
       setWaypointCount(0);
+      setGpsAccuracy(null);
+      setLastUpdateTime(null);
+      setTrackingWarning(null);
+      lastLocationRef.current = null;
       
       // Notify parent component
       if (onTripStatusChange) {
@@ -758,14 +765,18 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         localStorage.removeItem('mileage_interval_id');
       }
       
+      // Disable wake lock while paused to save battery
+      disableWakeLock();
+      
       setIsPaused(true);
+      setTrackingWarning(null);
       
       // Notify parent component
       if (onTripStatusChange) {
         onTripStatusChange({ isActive: true, isPaused: true });
       }
       
-      toast.success("Trip paused - GPS tracking stopped");
+      toast.success("Trip paused - GPS tracking stopped, screen can sleep");
       
     } catch (error) {
       console.error("Failed to pause trip:", error);
