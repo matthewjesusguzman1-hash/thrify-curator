@@ -452,7 +452,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     localStorage.setItem('mileage_interval_id', intervalId.toString());
   }, [getAuthHeader, fetchCumulativeDistance, enableWakeLock, calculateDistance]);
 
-  // Start GPS tracking
+  // Start GPS tracking - IMPROVED with wake lock and accuracy filtering
   const startMileageTracking = async () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation is not supported by your browser");
@@ -460,17 +460,22 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     }
     
     try {
+      // Enable wake lock first to keep screen awake
+      await enableWakeLock();
+      
       const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
+        navigator.geolocation.getCurrentPosition(resolve, reject, GPS_CONFIG.HIGH_ACCURACY);
       });
+      
+      // Warn if initial accuracy is poor
+      if (position.coords.accuracy > GPS_CONFIG.MIN_ACCURACY_METERS) {
+        toast.warning(`GPS accuracy is ${Math.round(position.coords.accuracy)}m - move to open area for better tracking`);
+      }
       
       const startLocation = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
         timestamp: new Date().toISOString()
       };
       
@@ -485,15 +490,39 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       setActiveTripData(tripData);
       setIsTracking(true);
       setCurrentLocation(startLocation);
+      setGpsAccuracy(position.coords.accuracy);
+      setLastUpdateTime(new Date());
+      lastLocationRef.current = startLocation;
       setCumulativeMiles(0);
       setWaypointCount(0);
       
       // Store in localStorage for persistence across sessions
       localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(tripData));
       
-      // Start watching position with high frequency for accurate mileage tracking
+      // Start watching position with improved accuracy filtering
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
+          // Filter out inaccurate readings
+          if (pos.coords.accuracy > GPS_CONFIG.MIN_ACCURACY_METERS) {
+            console.log(`Ignoring inaccurate GPS: ${pos.coords.accuracy}m`);
+            return;
+          }
+
+          // Check minimum distance to reduce noise
+          if (lastLocationRef.current) {
+            const distance = calculateDistance(
+              lastLocationRef.current.latitude,
+              lastLocationRef.current.longitude,
+              pos.coords.latitude,
+              pos.coords.longitude
+            );
+            if (distance < GPS_CONFIG.MIN_DISTANCE_METERS) {
+              setGpsAccuracy(pos.coords.accuracy);
+              setLastUpdateTime(new Date());
+              return;
+            }
+          }
+
           const newLocation = {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
@@ -501,6 +530,10 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
             timestamp: new Date().toISOString()
           };
           setCurrentLocation(newLocation);
+          setGpsAccuracy(pos.coords.accuracy);
+          setLastUpdateTime(new Date());
+          lastLocationRef.current = newLocation;
+          setTrackingWarning(null);
           
           // Send waypoint to server for accurate mileage calculation
           axios.post(`${API}/admin/mileage/update-location`, {
@@ -509,21 +542,42 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
             fetchCumulativeDistance();
           }).catch(console.error);
         },
-        (error) => console.error("Location tracking error:", error),
-        { 
-          enableHighAccuracy: true, 
-          timeout: 5000,      // 5 second timeout
-          maximumAge: 1000    // Only accept positions less than 1 second old for accuracy
-        }
+        (error) => {
+          console.error("Location tracking error:", error);
+          if (error.code === error.PERMISSION_DENIED) {
+            setTrackingWarning("Location permission denied");
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            setTrackingWarning("GPS signal lost - move to open area");
+          } else if (error.code === error.TIMEOUT) {
+            setTrackingWarning("GPS taking too long - retrying...");
+          }
+        },
+        GPS_CONFIG.WATCH_OPTIONS
       );
       
       setTrackingWatchId(watchId);
       
-      // Also set up interval-based polling as backup for more consistent waypoints
+      // Backup interval polling every 5 seconds (improved from 10)
       const intervalId = setInterval(async () => {
-        if (navigator.geolocation) {
+        if (navigator.geolocation && document.visibilityState === 'visible') {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
+              if (pos.coords.accuracy > GPS_CONFIG.MIN_ACCURACY_METERS) return;
+
+              if (lastLocationRef.current) {
+                const distance = calculateDistance(
+                  lastLocationRef.current.latitude,
+                  lastLocationRef.current.longitude,
+                  pos.coords.latitude,
+                  pos.coords.longitude
+                );
+                if (distance < GPS_CONFIG.MIN_DISTANCE_METERS) {
+                  setGpsAccuracy(pos.coords.accuracy);
+                  setLastUpdateTime(new Date());
+                  return;
+                }
+              }
+
               const newLocation = {
                 latitude: pos.coords.latitude,
                 longitude: pos.coords.longitude,
@@ -531,8 +585,10 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                 timestamp: new Date().toISOString()
               };
               setCurrentLocation(newLocation);
+              setGpsAccuracy(pos.coords.accuracy);
+              setLastUpdateTime(new Date());
+              lastLocationRef.current = newLocation;
               
-              // Send waypoint to server
               axios.post(`${API}/admin/mileage/update-location`, {
                 location: newLocation
               }, getAuthHeader()).then(() => {
@@ -540,10 +596,10 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
               }).catch(console.error);
             },
             (error) => console.error("Interval location error:", error),
-            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            GPS_CONFIG.HIGH_ACCURACY
           );
         }
-      }, 10000); // Poll every 10 seconds as backup
+      }, GPS_CONFIG.POLLING_INTERVAL);
       
       // Store interval ID for cleanup
       localStorage.setItem('mileage_interval_id', intervalId.toString());
@@ -553,10 +609,11 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         onTripStatusChange({ isActive: true, isPaused: false });
       }
       
-      toast.success("Trip tracking started! GPS waypoints will be recorded continuously for accurate mileage.");
+      toast.success("Trip tracking started! Keep app open for continuous tracking. Screen will stay awake.");
       
     } catch (error) {
       console.error("Failed to start tracking:", error);
+      disableWakeLock(); // Disable wake lock if start failed
       toast.error(error.response?.data?.detail || "Failed to start trip tracking");
     }
   };
