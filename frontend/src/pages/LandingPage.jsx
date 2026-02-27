@@ -467,6 +467,18 @@ export default function LandingPage() {
                     <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Scan to Visit</p>
                   </div>
 
+                  {/* Add to Home Screen Button */}
+                  {!isInstalled && (
+                    <button
+                      onClick={handleInstallClick}
+                      className="w-full py-3 px-6 rounded-lg bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all duration-300 flex items-center justify-center gap-2"
+                      data-testid="install-app-button"
+                    >
+                      <Smartphone className="w-4 h-4" />
+                      Add to Home Screen
+                    </button>
+                  )}
+
                   {/* Share Button */}
                   <button
                     onClick={handleShare}
