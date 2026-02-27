@@ -54,6 +54,8 @@ class MileageEntryResponse(BaseModel):
     notes: Optional[str] = None
     is_tracking: bool = False
     waypoint_count: int = 0
+    is_road_matched: bool = False
+    match_confidence: float = 0
     created_at: str
     updated_at: Optional[str] = None
 
