@@ -37,7 +37,14 @@ async def get_mileage_entries(
             query["date"] = {"$gte": f"{year}-01-01", "$lt": f"{year + 1}-01-01"}
     
     entries = await db.mileage_entries.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
-    return [MileageEntryResponse(**entry) for entry in entries]
+    
+    # Add waypoint_count to each entry
+    result = []
+    for entry in entries:
+        entry['waypoint_count'] = len(entry.get('waypoints', []))
+        result.append(MileageEntryResponse(**entry))
+    
+    return result
 
 
 @router.post("/entries", response_model=MileageEntryResponse)
