@@ -1,0 +1,78 @@
+{
+  "summary": "OSRM Map-Matching Integration Testing Complete - All backend and frontend tests pass. The OSRM integration for accurate mileage tracking is working correctly. Backend endpoints include reprocess-route and waypoints APIs with road-matched data. Frontend displays GPS Only/Road-Matched badges, reprocess buttons, and map visualization.",
+  "mode": "generate",
+  "baseline_commit": "be0ccd6a6229a965bac6e3e3b722432935e85c9e",
+  "head_commit": "26902ac67d3a07907248666acc4fcc24828b3810",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 2,
+    "passed": 33,
+    "failed": 0,
+    "skipped": 0,
+    "details": {
+      "backend_mileage_api": "11/11 passed - Mileage CRUD and auth tests",
+      "backend_osrm_integration": "10/10 passed - OSRM map-matching integration tests",
+      "frontend_osrm_mileage": "12/12 passed - OSRM mileage UI tests"
+    }
+  },
+  "specs_created": [
+    "/app/backend/tests/test_osrm_integration.py",
+    "/app/tests/e2e/osrm-mileage.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_mileage_api.py",
+    "/app/backend/tests/test_osrm_integration.py",
+    "/app/tests/e2e/osrm-mileage.spec.ts",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_osrm_integration.py",
+    "/app/tests/e2e/osrm-mileage.spec.ts"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 tests passed)",
+    "frontend": "100% (12/12 tests passed)"
+  },
+  "features_tested": {
+    "Backend OSRM Endpoints": {
+      "GET /api/admin/mileage/entries includes is_road_matched field": "PASSED",
+      "GET /api/admin/mileage/entries includes match_confidence field": "PASSED",
+      "GET /api/admin/mileage/{trip_id}/waypoints returns road-matched data": "PASSED",
+      "POST /api/admin/mileage/{trip_id}/reprocess-route requires auth": "PASSED",
+      "POST /api/admin/mileage/{trip_id}/reprocess-route returns expected fields": "PASSED",
+      "POST /api/admin/mileage/{trip_id}/reprocess-route fails with insufficient waypoints": "PASSED",
+      "Manual entries have default OSRM fields (is_road_matched=false, match_confidence=0)": "PASSED",
+      "OSRM integration with real coordinates": "PASSED"
+    },
+    "Frontend OSRM UI": {
+      "Mileage section exists and can be expanded": "PASSED",
+      "Mileage summary displays correctly": "PASSED",
+      "Recent Trips section shows trip entries": "PASSED",
+      "GPS Only badge displayed for non-road-matched trips": "PASSED",
+      "Road-Matched badge displayed for processed trips": "PASSED",
+      "Reprocess button visible for GPS-only trips": "PASSED",
+      "View Map button visible for trips with waypoints": "PASSED",
+      "Add Entry button opens modal": "PASSED",
+      "Start Trip button exists and is clickable": "PASSED",
+      "Trip waypoint count is displayed correctly": "PASSED",
+      "Edit and Delete buttons exist for trip entries": "PASSED",
+      "View Map opens TripMap modal for trip with waypoints": "PASSED"
+    }
+  },
+  "seed_data_creation": "Used existing test data - trips with GPS waypoints were already present",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "OSRM map-matching integration is fully functional. Backend tests in test_osrm_integration.py cover: entries fields (is_road_matched, match_confidence), waypoints endpoint, reprocess-route endpoint, and OSRM service integration. Frontend tests in osrm-mileage.spec.ts cover: mileage section UI, GPS Only/Road-Matched badges, reprocess buttons, view map functionality, and trip management.",
+  "rca_of_issue": "N/A - All features working correctly"
+}
