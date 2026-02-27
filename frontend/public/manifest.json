@@ -1,19 +1,31 @@
 {
   "short_name": "Thrifty Curator",
   "name": "Thrifty Curator - Curated Resale Finds",
-  "description": "Shop curated resale finds across multiple platforms",
+  "description": "Manage your thrift reselling business - track mileage, employees, payroll, and more",
   "icons": [
     {
       "src": "https://customer-assets.emergentagent.com/job_5bad4b6e-1f45-47e6-8f7d-d2555a90922c/artifacts/zlyv9l51_IMG_0092.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "https://customer-assets.emergentagent.com/job_5bad4b6e-1f45-47e6-8f7d-d2555a90922c/artifacts/zlyv9l51_IMG_0092.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "https://customer-assets.emergentagent.com/job_5bad4b6e-1f45-47e6-8f7d-d2555a90922c/artifacts/zlyv9l51_IMG_0092.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "https://customer-assets.emergentagent.com/job_5bad4b6e-1f45-47e6-8f7d-d2555a90922c/artifacts/zlyv9l51_IMG_0092.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",
@@ -22,5 +34,23 @@
   "background_color": "#1A1A2E",
   "orientation": "portrait-primary",
   "scope": "/",
-  "categories": ["shopping", "lifestyle"]
+  "categories": ["shopping", "lifestyle", "business"],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "shortcuts": [
+    {
+      "name": "Admin Dashboard",
+      "short_name": "Admin",
+      "description": "Open admin dashboard",
+      "url": "/admin",
+      "icons": [{ "src": "https://customer-assets.emergentagent.com/job_5bad4b6e-1f45-47e6-8f7d-d2555a90922c/artifacts/zlyv9l51_IMG_0092.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Employee Portal",
+      "short_name": "Employee",
+      "description": "Open employee dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "https://customer-assets.emergentagent.com/job_5bad4b6e-1f45-47e6-8f7d-d2555a90922c/artifacts/zlyv9l51_IMG_0092.png", "sizes": "192x192" }]
+    }
+  ]
 }
