@@ -1699,3 +1699,55 @@ Implement PWA "Add to Home Screen" functionality for better mobile app-like expe
 - Service worker registered in App.js on load
 - PWA prompt respects user dismissal (won't show again for 7 days on iOS)
 - Shortcut links provide quick access to Admin and Employee dashboards
+
+## OSRM Map-Matching Integration Complete (Feb 27, 2026)
+
+### Feature Overview
+Implemented OSRM (Open Source Routing Machine) map-matching to improve mileage tracking accuracy by "snapping" GPS routes to actual roads.
+
+### Changes Implemented
+
+1. **Backend OSRM Service** (`/app/backend/app/services/osrm_service.py`)
+   - Map-matching API calls to OSRM public server
+   - Intelligent waypoint sampling (max 100 points for API limits)
+   - Confidence scoring based on match quality
+   - Fallback to raw GPS calculation if matching fails
+
+2. **Backend API Endpoints Updated**
+   - `POST /api/admin/mileage/end` - Now auto-processes with OSRM when trip ends
+   - `POST /api/admin/mileage/{trip_id}/reprocess-route` - Reprocess existing trips with road-matching
+   - `GET /api/admin/mileage/{trip_id}/waypoints` - Returns both raw and matched coordinates
+
+3. **Database Schema Updated** (`MileageEntry` model)
+   - `is_road_matched` (bool) - Whether trip was successfully road-matched
+   - `match_confidence` (float 0-1) - Quality score of road matching
+   - `matched_coordinates` (list) - Road-snapped coordinate points
+
+4. **Frontend Trip Display** (`MileageTrackingSection.jsx`)
+   - "GPS Only" badge (amber) for trips not yet road-matched
+   - "Road-Matched" badge (green) for processed trips
+   - Reprocess button (🔄) for GPS-only trips to trigger road-matching
+   - Status indicators show processing status
+
+5. **Map Visualization** (`TripMap.jsx`)
+   - Road-matched routes shown in green
+   - Raw GPS path shown as dashed gray (when road-matched available)
+   - "Road-Matched (X% confidence)" badge on map
+   - Automatic prioritization of matched coordinates over raw GPS
+
+### How It Works
+1. User ends a trip or clicks "Reprocess Route"
+2. Backend sends GPS waypoints to OSRM Map Matching API
+3. OSRM returns road-snapped coordinates and accurate road distance
+4. Data saved to database with confidence score
+5. Frontend displays clean road-aligned route on map
+
+### Test Results
+- Backend: 100% (21/21 tests passed)
+- Frontend: 100% (12/12 tests passed)
+- Test specs created:
+  - `/app/backend/tests/test_osrm_integration.py`
+  - `/app/tests/e2e/osrm-mileage.spec.ts`
+
+### External Dependency
+- OSRM Public API: `http://router.project-osrm.org` (no API key required)
