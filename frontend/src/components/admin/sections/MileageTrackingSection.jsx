@@ -1458,7 +1458,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                                     </div>
                                   )}
                                   <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                                       {getPurposeBadge(entry.purpose, entry.purpose_other)}
                                       <span className="text-xs text-[#888]">{entry.date}</span>
                                       {entry.user_name && (
@@ -1470,6 +1470,17 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                                         <span className="text-xs text-emerald-600 flex items-center gap-1">
                                           <Route className="w-3 h-3" />
                                           {entry.waypoint_count} pts
+                                        </span>
+                                      )}
+                                      {/* Road-matched indicator */}
+                                      {entry.is_road_matched ? (
+                                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium flex items-center gap-1">
+                                          <CheckCircle className="w-3 h-3" />
+                                          Road-Matched
+                                        </span>
+                                      ) : entry.waypoint_count > 0 && (
+                                        <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">
+                                          GPS Only
                                         </span>
                                       )}
                                     </div>
@@ -1484,6 +1495,21 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                                     <span className="font-semibold text-emerald-600">{entry.total_miles.toFixed(1)} mi</span>
                                     {!selectMode && (
                                       <div className="flex gap-1">
+                                        {/* Reprocess Route Button (only for GPS trips not yet road-matched) */}
+                                        {entry.waypoint_count > 0 && !entry.is_road_matched && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              await reprocessTripRoute(entry.id);
+                                            }}
+                                            className="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                            title="Reprocess with road-matching"
+                                          >
+                                            <RefreshCw className="w-4 h-4" />
+                                          </Button>
+                                        )}
                                         {/* View Map Button */}
                                         {entry.waypoint_count > 0 && (
                                           <Button
@@ -1491,10 +1517,10 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                                             size="sm"
                                             onClick={async (e) => {
                                               e.stopPropagation();
-                                              const waypoints = await fetchCompletedTripWaypoints(entry.id);
+                                              const tripData = await fetchCompletedTripWaypoints(entry.id);
                                               setViewingTripMap({
                                                 ...entry,
-                                                waypoints
+                                                ...tripData
                                               });
                                             }}
                                             className="h-8 w-8 p-0 text-[#00D4FF]"
