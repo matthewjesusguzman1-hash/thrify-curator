@@ -1454,6 +1454,25 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                                     <span className="font-semibold text-emerald-600">{entry.total_miles.toFixed(1)} mi</span>
                                     {!selectMode && (
                                       <div className="flex gap-1">
+                                        {/* View Map Button */}
+                                        {entry.waypoint_count > 0 && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              const waypoints = await fetchCompletedTripWaypoints(entry.id);
+                                              setViewingTripMap({
+                                                ...entry,
+                                                waypoints
+                                              });
+                                            }}
+                                            className="h-8 w-8 p-0 text-[#00D4FF]"
+                                            title="View trip map"
+                                          >
+                                            <Map className="w-4 h-4" />
+                                          </Button>
+                                        )}
                                         <Button
                                           variant="ghost"
                                           size="sm"
