@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_f87e31a4-f19a-4a3f-9c26-c5ad57e131e1/artifacts/vh1p37dl_IMG_0092.png";
@@ -6,25 +6,41 @@ const LOGO_URL = "https://customer-assets.emergentagent.com/job_f87e31a4-f19a-4a
 export default function SplashScreen({ onComplete }) {
   const [isVisible, setIsVisible] = useState(true);
 
+  const handleComplete = useCallback(() => {
+    setIsVisible(false);
+    sessionStorage.setItem('hasSeenSplash', 'true');
+    if (onComplete) {
+      onComplete();
+    }
+  }, [onComplete]);
+
   useEffect(() => {
     // Check if we should show splash (only on mobile or first visit)
     const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
     
     if (hasSeenSplash) {
       setIsVisible(false);
-      onComplete?.();
+      if (onComplete) {
+        onComplete();
+      }
       return;
     }
 
-    // Show splash for 4 seconds
+    // Show splash for 3 seconds (reduced from 4 for better UX)
     const timer = setTimeout(() => {
-      setIsVisible(false);
-      sessionStorage.setItem('hasSeenSplash', 'true');
-      onComplete?.();
-    }, 4000);
+      handleComplete();
+    }, 3000);
 
-    return () => clearTimeout(timer);
-  }, [onComplete]);
+    // Fallback: ensure splash dismisses even if timer fails
+    const fallbackTimer = setTimeout(() => {
+      handleComplete();
+    }, 5000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(fallbackTimer);
+    };
+  }, [onComplete, handleComplete]);
 
   return (
     <AnimatePresence>
