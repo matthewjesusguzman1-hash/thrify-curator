@@ -1,15 +1,13 @@
 // Thrifty Curator Service Worker
 // Provides offline capabilities and background sync for mileage tracking
 
-const CACHE_NAME = 'thrifty-curator-v2';  // Updated cache version
+const CACHE_NAME = 'thrifty-curator-v3';  // Force cache refresh
 const OFFLINE_URL = '/offline.html';
 
-// Assets to cache for offline use
+// Assets to cache for offline use - minimal set
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/tc-logo.png'
+  '/offline.html',
+  '/manifest.json'
 ];
 
 // Install event - cache static assets
@@ -44,7 +42,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - NETWORK FIRST for HTML, cache for assets
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
@@ -54,6 +52,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // For HTML pages - always try network first
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => caches.match(OFFLINE_URL))
+    );
+    return;
+  }
+
+  // For other assets - try cache first, then network
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) {
