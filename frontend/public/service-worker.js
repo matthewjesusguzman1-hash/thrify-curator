@@ -1,7 +1,7 @@
 // Thrifty Curator Service Worker
 // Provides offline capabilities and background sync for mileage tracking
 
-const CACHE_NAME = 'thrifty-curator-v1';
+const CACHE_NAME = 'thrifty-curator-v2';  // Updated cache version
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache for offline use
