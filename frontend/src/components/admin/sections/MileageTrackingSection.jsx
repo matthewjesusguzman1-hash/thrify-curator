@@ -65,12 +65,22 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
   const [cumulativeMiles, setCumulativeMiles] = useState(0);
   const [waypointCount, setWaypointCount] = useState(0);
   
+  // Enhanced tracking state
+  const [gpsAccuracy, setGpsAccuracy] = useState(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState(null);
+  const [isScreenAwake, setIsScreenAwake] = useState(false);
+  const [trackingWarning, setTrackingWarning] = useState(null);
+  
   // Multi-select state
   const [selectedTrips, setSelectedTrips] = useState(new Set());
   const [selectMode, setSelectMode] = useState(false);
   
   // Refs for tracking
   const locationUpdateInterval = useRef(null);
+  const noSleepRef = useRef(null);
+  const wakeLockRef = useRef(null);
+  const lastLocationRef = useRef(null);
+  const visibilityHandlerRef = useRef(null);
   
   // Modal states
   const [showAddMileageModal, setShowAddMileageModal] = useState(false);
