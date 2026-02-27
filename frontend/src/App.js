@@ -1,8 +1,10 @@
 import "@/App.css";
 import { useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import { Toaster } from "@/components/ui/sonner";
 import SplashScreen from "@/components/SplashScreen";
+import PageTransition from "@/components/PageTransition";
 import LandingPage from "@/pages/LandingPage";
 import JobApplicationForm from "@/pages/JobApplicationForm";
 import ConsignmentInquiryForm from "@/pages/ConsignmentInquiryForm";
@@ -35,6 +37,53 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Animated Routes component
+function AnimatedRoutes() {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={
+          <PageTransition>
+            <LandingPage />
+          </PageTransition>
+        } />
+        <Route path="/job-application" element={
+          <PageTransition variant="slide">
+            <JobApplicationForm />
+          </PageTransition>
+        } />
+        <Route path="/consignment-inquiry" element={
+          <PageTransition variant="slide">
+            <ConsignmentInquiryForm />
+          </PageTransition>
+        } />
+        <Route path="/consignment-agreement" element={
+          <PageTransition variant="slide">
+            <ConsignmentAgreementForm />
+          </PageTransition>
+        } />
+        <Route path="/login" element={
+          <PageTransition variant="fadeUp">
+            <AuthPage />
+          </PageTransition>
+        } />
+        <Route path="/dashboard" element={
+          <PageTransition variant="fadeUp">
+            <EmployeeDashboard />
+          </PageTransition>
+        } />
+        <Route path="/admin" element={
+          <PageTransition variant="fadeUp">
+            <AdminDashboard />
+          </PageTransition>
+        } />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
 function App() {
   // Check sessionStorage synchronously on initial render to prevent flicker
   const [showSplash, setShowSplash] = useState(() => {
@@ -45,15 +94,7 @@ function App() {
     <div className="app-background">
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/job-application" element={<JobApplicationForm />} />
-          <Route path="/consignment-inquiry" element={<ConsignmentInquiryForm />} />
-          <Route path="/consignment-agreement" element={<ConsignmentAgreementForm />} />
-          <Route path="/login" element={<AuthPage />} />
-          <Route path="/dashboard" element={<EmployeeDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-        </Routes>
+        <AnimatedRoutes />
       </BrowserRouter>
       <Toaster position="top-center" richColors />
     </div>
