@@ -268,45 +268,76 @@ async def end_trip(trip_data: EndTripRequest, admin: dict = Depends(get_admin_us
     if not trip:
         raise HTTPException(status_code=404, detail="No active trip found")
     
-    # Calculate cumulative distance from all waypoints
-    def haversine_distance(lat1, lon1, lat2, lon2):
-        """Calculate distance in miles between two GPS coordinates"""
-        R = 3959  # Earth's radius in miles
-        d_lat = math.radians(lat2 - lat1)
-        d_lon = math.radians(lon2 - lon1)
-        a = math.sin(d_lat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon/2)**2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-        return R * c
-    
     # Build the complete path: start -> waypoints -> end
     waypoints = trip.get("waypoints", [])
-    path_points = []
+    all_waypoints = []
     
     # Add start location
     start_loc = trip.get("start_location", {})
-    if start_loc:
-        path_points.append((start_loc.get("latitude"), start_loc.get("longitude")))
+    if start_loc and start_loc.get("latitude") and start_loc.get("longitude"):
+        all_waypoints.append({
+            "latitude": start_loc.get("latitude"),
+            "longitude": start_loc.get("longitude"),
+            "timestamp": trip.get("start_time"),
+            "accuracy": start_loc.get("accuracy")
+        })
     
     # Add all waypoints
     for wp in waypoints:
         if wp.get("latitude") and wp.get("longitude"):
-            path_points.append((wp.get("latitude"), wp.get("longitude")))
+            all_waypoints.append({
+                "latitude": wp.get("latitude"),
+                "longitude": wp.get("longitude"),
+                "timestamp": wp.get("timestamp"),
+                "accuracy": wp.get("accuracy")
+            })
     
     # Add end location
     end_loc = trip_data.end_location
-    if end_loc:
-        path_points.append((end_loc.latitude, end_loc.longitude))
+    if end_loc and end_loc.latitude and end_loc.longitude:
+        all_waypoints.append({
+            "latitude": end_loc.latitude,
+            "longitude": end_loc.longitude,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "accuracy": end_loc.accuracy
+        })
     
-    # Calculate cumulative distance along the route
-    cumulative_miles = 0.0
-    for i in range(1, len(path_points)):
-        prev = path_points[i-1]
-        curr = path_points[i]
-        if prev[0] and prev[1] and curr[0] and curr[1]:
-            cumulative_miles += haversine_distance(prev[0], prev[1], curr[0], curr[1])
+    # Use OSRM map matching to snap to roads and get accurate distance
+    map_match_result = None
+    road_distance_miles = 0
+    matched_coordinates = []
+    match_confidence = 0
+    matched_geometry = None
     
-    # Use the calculated cumulative distance (override client-side calculation)
-    total_miles = round(cumulative_miles, 1) if cumulative_miles > 0 else trip_data.total_miles
+    if len(all_waypoints) >= 2:
+        try:
+            map_match_result = await match_waypoints_to_roads(all_waypoints)
+            road_distance_miles = map_match_result.get("road_distance_miles", 0)
+            matched_coordinates = map_match_result.get("matched_coordinates", [])
+            match_confidence = map_match_result.get("confidence", 0)
+            matched_geometry = map_match_result.get("geometry")
+        except Exception as e:
+            print(f"Map matching error: {e}")
+    
+    # Fallback to straight-line calculation if map matching failed
+    if road_distance_miles <= 0:
+        def haversine_distance(lat1, lon1, lat2, lon2):
+            R = 3959  # Earth's radius in miles
+            d_lat = math.radians(lat2 - lat1)
+            d_lon = math.radians(lon2 - lon1)
+            a = math.sin(d_lat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon/2)**2
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+            return R * c
+        
+        cumulative_miles = 0.0
+        for i in range(1, len(all_waypoints)):
+            prev = all_waypoints[i-1]
+            curr = all_waypoints[i]
+            cumulative_miles += haversine_distance(
+                prev["latitude"], prev["longitude"],
+                curr["latitude"], curr["longitude"]
+            )
+        road_distance_miles = round(cumulative_miles, 2)
     
     # Use the admin's actual name from their login code, or from the trip doc
     admin_name = admin.get("admin_name") or trip.get("user_name", "Administrator")
@@ -326,13 +357,17 @@ async def end_trip(trip_data: EndTripRequest, admin: dict = Depends(get_admin_us
         "end_location": trip_data.end_location.model_dump(),
         "start_address": trip.get("start_address"),
         "end_address": trip_data.end_address,
-        "total_miles": total_miles,
+        "total_miles": round(road_distance_miles, 2),
         "purpose": trip_data.purpose.value,
         "purpose_other": trip_data.purpose_other if trip_data.purpose == "other" else None,
         "notes": trip_data.notes,
         "is_tracking": False,
-        "waypoints": waypoints,
+        "waypoints": waypoints,  # Original GPS waypoints
         "waypoint_count": len(waypoints),
+        "matched_coordinates": matched_coordinates,  # Road-snapped coordinates
+        "matched_geometry": matched_geometry,  # GeoJSON for map display
+        "match_confidence": match_confidence,
+        "is_road_matched": match_confidence > 0,
         "created_at": now,
         "updated_at": None
     }
