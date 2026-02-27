@@ -596,13 +596,16 @@ async def reprocess_trip_route(trip_id: str, admin: dict = Depends(get_admin_use
     if len(all_waypoints) < 2:
         raise HTTPException(status_code=400, detail="Not enough waypoints to process route")
     
-    # Perform map matching
-    map_match_result = await match_waypoints_to_roads(all_waypoints)
+    # Perform map matching with gap filling
+    from app.services.osrm_service import process_trip_with_gap_filling
+    map_match_result = await process_trip_with_gap_filling(all_waypoints)
     
     road_distance_miles = map_match_result.get("road_distance_miles", 0)
     matched_coordinates = map_match_result.get("matched_coordinates", [])
     match_confidence = map_match_result.get("confidence", 0)
     matched_geometry = map_match_result.get("geometry")
+    gaps_detected = map_match_result.get("gaps_detected", 0)
+    gaps_filled = map_match_result.get("gaps_filled", 0)
     
     # Update the trip with matched data
     update_data = {
@@ -610,6 +613,8 @@ async def reprocess_trip_route(trip_id: str, admin: dict = Depends(get_admin_use
         "matched_geometry": matched_geometry,
         "match_confidence": match_confidence,
         "is_road_matched": match_confidence > 0,
+        "gaps_detected": gaps_detected,
+        "gaps_filled": gaps_filled,
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
