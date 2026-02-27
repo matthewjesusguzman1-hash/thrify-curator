@@ -467,6 +467,17 @@ export default function LandingPage() {
                     <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Scan to Visit</p>
                   </div>
 
+                  {/* Share Button */}
+                  <button
+                    onClick={handleShare}
+                    disabled={shareLoading}
+                    className="w-full py-3 px-6 rounded-lg bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white font-semibold hover:shadow-lg hover:shadow-[#00D4FF]/30 transition-all duration-300 flex items-center justify-center gap-2"
+                    data-testid="share-button"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    {shareLoading ? "Sharing..." : "Share Thrifty Curator"}
+                  </button>
+
                   {/* Add to Home Screen Button */}
                   {!isInstalled && (
                     <button
@@ -478,17 +489,6 @@ export default function LandingPage() {
                       Add to Home Screen
                     </button>
                   )}
-
-                  {/* Share Button */}
-                  <button
-                    onClick={handleShare}
-                    disabled={shareLoading}
-                    className="w-full py-3 px-6 rounded-lg bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white font-semibold hover:shadow-lg hover:shadow-[#00D4FF]/30 transition-all duration-300 flex items-center justify-center gap-2"
-                    data-testid="share-button"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    {shareLoading ? "Sharing..." : "Share Thrifty Curator"}
-                  </button>
                 </div>
               </div>
             </div>
