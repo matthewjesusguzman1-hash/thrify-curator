@@ -1496,9 +1496,14 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-sm text-[#666]">
-                                      {entry.start_address} → {entry.end_address}
-                                    </p>
+                                    {/* Only show addresses if they're actual addresses, not GPS coordinates */}
+                                    {entry.start_address && entry.end_address && 
+                                     !entry.start_address.match(/^-?\d+\.\d+,\s*-?\d+\.\d+$/) && 
+                                     !entry.end_address.match(/^-?\d+\.\d+,\s*-?\d+\.\d+$/) && (
+                                      <p className="text-sm text-[#666]">
+                                        {entry.start_address} → {entry.end_address}
+                                      </p>
+                                    )}
                                     {entry.notes && (
                                       <p className="text-xs text-[#aaa] mt-1">{entry.notes}</p>
                                     )}
