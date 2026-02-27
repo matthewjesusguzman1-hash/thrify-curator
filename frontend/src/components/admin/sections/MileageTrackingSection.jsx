@@ -1296,8 +1296,8 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                         )}
                       </div>
                       
-                      {/* Live Map */}
-                      {showLiveMap && !isPaused && (
+                      {/* Live Map - Hidden when End Trip modal is open */}
+                      {showLiveMap && !isPaused && !showEndTripModal && (
                         <div className="mt-2">
                           <TripMap
                             waypoints={tripWaypoints}
