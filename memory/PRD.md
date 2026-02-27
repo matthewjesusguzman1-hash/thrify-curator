@@ -1647,3 +1647,55 @@ Improve mileage tracking accuracy and ensure continuous tracking until paused or
 
 ### Dependencies Added
 - `nosleep.js@0.12.0`
+
+## PWA (Progressive Web App) Implementation (Feb 27, 2026)
+
+### User Request
+Implement PWA "Add to Home Screen" functionality for better mobile app-like experience.
+
+### Changes Implemented
+
+1. **Service Worker** (`/public/service-worker.js`)
+   - Caches static assets for offline use
+   - Network-first strategy for API calls
+   - Background sync support for mileage data
+   - Auto-updates when new version available
+
+2. **PWA Install Prompt** (`/components/PWAInstallPrompt.jsx`)
+   - Shows install banner after 3 seconds (first visit only)
+   - iOS-specific instructions modal (Safari Add to Home Screen)
+   - Benefits list: Better GPS tracking, works offline, quick access
+   - Dismissible with "remember" functionality
+
+3. **Enhanced Manifest** (`/public/manifest.json`)
+   - Added app shortcuts (Admin Dashboard, Employee Portal)
+   - Improved icon configuration (separate maskable icons)
+   - Updated description and categories
+
+4. **Offline Page** (`/public/offline.html`)
+   - Branded offline fallback page
+   - Retry button to reload
+
+### PWA Benefits
+- **Standalone Mode**: Runs without browser UI (fullscreen)
+- **Home Screen Icon**: Quick launch from device home screen
+- **Offline Support**: Basic functionality when offline
+- **Better Performance**: Cached assets load faster
+- **App Shortcuts**: Quick access to specific sections (long-press icon)
+
+### How to Install
+**Android/Chrome:**
+1. Visit the site
+2. Tap "Install" when prompted, OR
+3. Tap browser menu (⋮) → "Add to Home Screen"
+
+**iOS/Safari:**
+1. Visit the site in Safari
+2. Tap Share button (square with arrow)
+3. Scroll down and tap "Add to Home Screen"
+4. Tap "Add"
+
+### Technical Notes
+- Service worker registered in App.js on load
+- PWA prompt respects user dismissal (won't show again for 7 days on iOS)
+- Shortcut links provide quick access to Admin and Employee dashboards
