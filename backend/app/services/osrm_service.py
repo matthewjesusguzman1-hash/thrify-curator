@@ -295,7 +295,7 @@ def detect_gps_gaps(waypoints: List[Dict], time_gap_threshold: int = 60, distanc
             return ts
         try:
             return datetime.fromisoformat(ts.replace('Z', '+00:00'))
-        except:
+        except (ValueError, AttributeError):
             return None
     
     gaps = []
