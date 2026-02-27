@@ -228,6 +228,17 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     };
   }, [disableWakeLock]);
 
+  // Update "Updated X seconds ago" display every second when tracking
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    if (isTracking && !isPaused && lastUpdateTime) {
+      const timer = setInterval(() => {
+        forceUpdate(n => n + 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isTracking, isPaused, lastUpdateTime]);
+
   // Fetch current cumulative distance from server
   const fetchCumulativeDistance = useCallback(async () => {
     try {
