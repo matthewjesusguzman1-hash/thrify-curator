@@ -115,8 +115,8 @@ export default function TripMap({
         />
         
         {/* Auto-fit bounds for completed trips */}
-        {!isLiveTracking && waypoints.length > 1 && (
-          <FitBounds waypoints={waypoints} />
+        {!isLiveTracking && displayCoordinates.length > 1 && (
+          <FitBounds waypoints={displayCoordinates} />
         )}
         
         {/* Center on location for live tracking */}
@@ -124,43 +124,62 @@ export default function TripMap({
           <CenterOnLocation location={currentLocation} follow={followLocation} />
         )}
         
-        {/* Route polyline */}
+        {/* Raw GPS polyline (shown faded when road-matched route is available) */}
+        {isRoadMatched && rawPolylinePositions.length > 1 && (
+          <Polyline
+            positions={rawPolylinePositions}
+            color="#94a3b8"
+            weight={2}
+            opacity={0.4}
+            dashArray="5, 10"
+          />
+        )}
+        
+        {/* Main route polyline (road-matched if available) */}
         {polylinePositions.length > 1 && (
           <Polyline
             positions={polylinePositions}
-            color="#FF1493"
+            color={isRoadMatched ? "#22c55e" : "#FF1493"}
             weight={4}
             opacity={0.8}
           />
         )}
         
         {/* Start marker */}
-        {waypoints.length > 0 && (
+        {displayCoordinates.length > 0 && (
           <Marker 
-            position={[waypoints[0].latitude, waypoints[0].longitude]} 
+            position={[displayCoordinates[0].latitude, displayCoordinates[0].longitude]} 
             icon={startIcon}
           >
             <Popup>
               <div className="text-sm">
                 <strong>Start</strong>
-                <br />
-                {new Date(waypoints[0].timestamp).toLocaleTimeString()}
+                {displayCoordinates[0].timestamp && (
+                  <>
+                    <br />
+                    {new Date(displayCoordinates[0].timestamp).toLocaleTimeString()}
+                  </>
+                )}
               </div>
             </Popup>
           </Marker>
         )}
         
         {/* End marker (for completed trips) */}
-        {!isLiveTracking && waypoints.length > 1 && (
+        {!isLiveTracking && displayCoordinates.length > 1 && (
           <Marker 
-            position={[waypoints[waypoints.length - 1].latitude, waypoints[waypoints.length - 1].longitude]} 
+            position={[displayCoordinates[displayCoordinates.length - 1].latitude, displayCoordinates[displayCoordinates.length - 1].longitude]} 
             icon={endIcon}
           >
             <Popup>
               <div className="text-sm">
                 <strong>End</strong>
-                <br />
-                {new Date(waypoints[waypoints.length - 1].timestamp).toLocaleTimeString()}
+                {displayCoordinates[displayCoordinates.length - 1].timestamp && (
+                  <>
+                    <br />
+                    {new Date(displayCoordinates[displayCoordinates.length - 1].timestamp).toLocaleTimeString()}
+                  </>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -201,6 +220,29 @@ export default function TripMap({
             })}
           />
         ))}
+        
+        {/* Road-matched indicator badge */}
+        {isRoadMatched && matchConfidence > 0 && (
+          <div 
+            style={{
+              position: 'absolute',
+              bottom: '10px',
+              left: '10px',
+              zIndex: 1000,
+              backgroundColor: 'rgba(34, 197, 94, 0.9)',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            ✓ Road-Matched ({Math.round(matchConfidence * 100)}%)
+          </div>
+        )}
       </MapContainer>
     </div>
   );
