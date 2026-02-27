@@ -169,6 +169,17 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     console.log('Wake Lock disabled');
   }, []);
 
+  // Fetch current cumulative distance from server - MUST be defined before handleVisibilityChange
+  const fetchCumulativeDistance = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/mileage/active-trip/distance`, getAuthHeader());
+      setCumulativeMiles(response.data.cumulative_miles || 0);
+      setWaypointCount(response.data.waypoint_count || 0);
+    } catch (error) {
+      console.error("Failed to fetch cumulative distance:", error);
+    }
+  }, [getAuthHeader]);
+
   // Handle visibility change - resume tracking when app comes back to foreground
   const handleVisibilityChange = useCallback(() => {
     if (document.visibilityState === 'visible' && isTracking && !isPaused) {
