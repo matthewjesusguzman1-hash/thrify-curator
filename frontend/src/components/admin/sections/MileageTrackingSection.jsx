@@ -1221,6 +1221,39 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                           ? 'GPS tracking paused. Click Resume to continue tracking your route.'
                           : 'Keep app open & screen on for best accuracy. Tracking continues while app is visible.'}
                       </p>
+                      
+                      {/* Live Map Toggle */}
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                        <button
+                          onClick={() => setShowLiveMap(!showLiveMap)}
+                          className="flex items-center gap-2 text-sm text-[#00D4FF] hover:text-[#00A8CC] transition-colors"
+                        >
+                          <Map className="w-4 h-4" />
+                          {showLiveMap ? 'Hide Map' : 'Show Live Map'}
+                        </button>
+                        {showLiveMap && (
+                          <button
+                            onClick={() => setFollowLocation(!followLocation)}
+                            className={`flex items-center gap-1 text-xs ${followLocation ? 'text-emerald-600' : 'text-gray-500'}`}
+                          >
+                            {followLocation ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                            {followLocation ? 'Following' : 'Manual'}
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Live Map */}
+                      {showLiveMap && !isPaused && (
+                        <div className="mt-2">
+                          <TripMap
+                            waypoints={tripWaypoints}
+                            currentLocation={currentLocation}
+                            isLiveTracking={true}
+                            followLocation={followLocation}
+                            height="250px"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
