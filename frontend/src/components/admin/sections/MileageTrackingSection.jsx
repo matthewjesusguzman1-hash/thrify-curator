@@ -250,17 +250,6 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     }
   }, [isTracking, isPaused, lastUpdateTime]);
 
-  // Fetch current cumulative distance from server
-  const fetchCumulativeDistance = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API}/admin/mileage/active-trip/distance`, getAuthHeader());
-      setCumulativeMiles(response.data.cumulative_miles || 0);
-      setWaypointCount(response.data.waypoint_count || 0);
-    } catch (error) {
-      console.error("Failed to fetch cumulative distance:", error);
-    }
-  }, [getAuthHeader]);
-
   // Fetch mileage entries
   const fetchMileageEntries = useCallback(async () => {
     setLoadingMileage(true);
