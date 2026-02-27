@@ -1484,6 +1484,11 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                                         <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium flex items-center gap-1">
                                           <CheckCircle className="w-3 h-3" />
                                           Road-Matched
+                                          {entry.gaps_filled > 0 && (
+                                            <span className="ml-1 text-blue-600" title={`${entry.gaps_filled} GPS gaps were automatically filled`}>
+                                              +{entry.gaps_filled} gaps
+                                            </span>
+                                          )}
                                         </span>
                                       ) : entry.waypoint_count > 0 && (
                                         <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">
