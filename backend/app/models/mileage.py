@@ -15,6 +15,7 @@ class LocationData(BaseModel):
     longitude: float
     address: Optional[str] = None
     timestamp: Optional[str] = None
+    accuracy: Optional[float] = None  # GPS accuracy in meters
 
 
 class MileageEntryCreate(BaseModel):
