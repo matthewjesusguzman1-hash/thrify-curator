@@ -29,6 +29,10 @@ export default function PageTransition({ children }) {
       exit="exit"
       variants={fadeVariants}
       className="w-full min-h-screen"
+      style={{ 
+        background: 'linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%)',
+        minHeight: '100vh'
+      }}
     >
       {children}
     </motion.div>
