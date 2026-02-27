@@ -636,6 +636,8 @@ async def reprocess_trip_route(trip_id: str, admin: dict = Depends(get_admin_use
         "matched_waypoint_count": len(matched_coordinates),
         "original_waypoint_count": len(all_waypoints),
         "is_road_matched": match_confidence > 0,
+        "gaps_detected": gaps_detected,
+        "gaps_filled": gaps_filled,
         "error": map_match_result.get("error")
     }
 
