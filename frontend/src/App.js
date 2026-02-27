@@ -96,7 +96,18 @@ function App() {
       <BrowserRouter>
         <AnimatedRoutes />
       </BrowserRouter>
-      <Toaster position="top-center" richColors />
+      <Toaster 
+        position="top-center" 
+        richColors 
+        toastOptions={{
+          style: {
+            marginTop: 'env(safe-area-inset-top, 50px)',
+          },
+        }}
+        style={{
+          top: 'env(safe-area-inset-top, 50px)',
+        }}
+      />
     </div>
   );
 }
