@@ -1121,6 +1121,15 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                           <span>Trip Paused</span>
                         </div>
                       )}
+                      
+                      {/* Warning Banner */}
+                      {trackingWarning && !isPaused && (
+                        <div className="flex items-center gap-2 p-2 bg-yellow-100 text-yellow-800 rounded-lg text-xs mb-2">
+                          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                          <span>{trackingWarning}</span>
+                        </div>
+                      )}
+                      
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Route className={`w-4 h-4 ${isPaused ? 'text-amber-600' : 'text-emerald-600'}`} />
@@ -1128,6 +1137,34 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                         </div>
                         <span className={`text-lg font-bold ${isPaused ? 'text-amber-600' : 'text-emerald-600'}`}>{cumulativeMiles.toFixed(2)} mi</span>
                       </div>
+                      
+                      {/* GPS Status Indicators */}
+                      {!isPaused && (
+                        <div className="flex items-center justify-between text-xs bg-white/80 p-2 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            {/* GPS Signal Indicator */}
+                            <div className="flex items-center gap-1">
+                              <Zap className={`w-3 h-3 ${gpsAccuracy && gpsAccuracy <= 20 ? 'text-green-500' : gpsAccuracy && gpsAccuracy <= 50 ? 'text-yellow-500' : 'text-red-500'}`} />
+                              <span className="text-[#666]">
+                                GPS: {gpsAccuracy ? `${Math.round(gpsAccuracy)}m` : 'Acquiring...'}
+                              </span>
+                            </div>
+                            {/* Screen Wake Status */}
+                            <div className="flex items-center gap-1">
+                              <Smartphone className={`w-3 h-3 ${isScreenAwake ? 'text-green-500' : 'text-gray-400'}`} />
+                              <span className={isScreenAwake ? 'text-green-600' : 'text-gray-500'}>
+                                {isScreenAwake ? 'Screen Locked' : 'May Sleep'}
+                              </span>
+                            </div>
+                          </div>
+                          {lastUpdateTime && (
+                            <span className="text-[#999]">
+                              Updated {Math.round((new Date() - lastUpdateTime) / 1000)}s ago
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
                       <div className="flex items-center justify-between text-xs text-[#666]">
                         <span>Waypoints recorded: {waypointCount}</span>
                         {currentLocation && !isPaused && (
@@ -1140,7 +1177,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                       <p className={`text-xs p-2 rounded ${isPaused ? 'text-amber-600 bg-amber-100' : 'text-emerald-600 bg-emerald-50'}`}>
                         {isPaused 
                           ? 'GPS tracking paused. Click Resume to continue tracking your route.'
-                          : 'Tracking continues in background. Return to this page to end your trip.'}
+                          : 'Keep app open & screen on for best accuracy. Tracking continues while app is visible.'}
                       </p>
                     </div>
                   )}
