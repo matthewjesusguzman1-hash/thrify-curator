@@ -60,6 +60,9 @@ function CenterOnLocation({ location, follow }) {
 
 export default function TripMap({ 
   waypoints = [], 
+  matchedCoordinates = [],  // Road-snapped coordinates (preferred)
+  isRoadMatched = false,
+  matchConfidence = 0,
   currentLocation = null,
   isLiveTracking = false,
   followLocation = true,
@@ -73,14 +76,22 @@ export default function TripMap({
     if (currentLocation) {
       return [currentLocation.latitude, currentLocation.longitude];
     }
-    if (waypoints.length > 0) {
-      return [waypoints[0].latitude, waypoints[0].longitude];
+    // Prefer matched coordinates for center if available
+    const coordsToUse = (isRoadMatched && matchedCoordinates.length > 0) ? matchedCoordinates : waypoints;
+    if (coordsToUse.length > 0) {
+      return [coordsToUse[0].latitude, coordsToUse[0].longitude];
     }
     return [37.7749, -122.4194]; // Default to San Francisco
   };
 
-  // Create polyline coordinates from waypoints
-  const polylinePositions = waypoints.map(wp => [wp.latitude, wp.longitude]);
+  // Use road-matched coordinates if available, otherwise use raw waypoints
+  const displayCoordinates = (isRoadMatched && matchedCoordinates.length > 0) ? matchedCoordinates : waypoints;
+  
+  // Create polyline coordinates
+  const polylinePositions = displayCoordinates.map(wp => [wp.latitude, wp.longitude]);
+  
+  // Also create raw waypoints polyline for comparison (semi-transparent)
+  const rawPolylinePositions = waypoints.map(wp => [wp.latitude, wp.longitude]);
   
   // Add current location to polyline if live tracking
   if (isLiveTracking && currentLocation) {
