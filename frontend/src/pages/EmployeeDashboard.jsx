@@ -504,7 +504,7 @@ export default function EmployeeDashboard() {
       {/* Header */}
       <header 
         className="bg-white/10 backdrop-blur-md border-b border-white/10 px-4 pb-3" 
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 48px)' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
