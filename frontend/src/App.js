@@ -1,5 +1,5 @@
 import "@/App.css";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import SplashScreen from "@/components/SplashScreen";
@@ -10,7 +10,6 @@ import ConsignmentAgreementForm from "@/pages/ConsignmentAgreementForm";
 import AuthPage from "@/pages/AuthPage";
 import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
@@ -57,7 +56,6 @@ function App() {
         </Routes>
       </BrowserRouter>
       <Toaster position="top-center" richColors />
-      <PWAInstallPrompt />
     </div>
   );
 }
