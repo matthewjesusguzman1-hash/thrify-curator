@@ -338,7 +338,14 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       const response = await axios.post(`${API}/admin/mileage/${tripId}/reprocess-route`, {}, getAuthHeader());
       
       if (response.data.is_road_matched) {
-        toast.success(`Route matched! Distance updated: ${response.data.road_matched_miles.toFixed(2)} mi (${Math.round(response.data.confidence * 100)}% confidence)`);
+        let message = `Route matched! Distance: ${response.data.road_matched_miles.toFixed(2)} mi (${Math.round(response.data.confidence * 100)}% confidence)`;
+        
+        // Show gap filling info if any gaps were detected
+        if (response.data.gaps_detected > 0) {
+          message += ` • ${response.data.gaps_filled}/${response.data.gaps_detected} GPS gaps filled`;
+        }
+        
+        toast.success(message);
         fetchMileageEntries(); // Refresh the list
         return response.data;
       } else {
