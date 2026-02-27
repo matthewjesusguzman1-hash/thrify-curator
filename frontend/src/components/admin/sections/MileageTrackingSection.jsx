@@ -791,7 +791,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       
       setIsPaused(false);
       
-      // Resume GPS tracking
+      // Resume GPS tracking (this also re-enables wake lock)
       resumeTracking();
       
       // Notify parent component
@@ -799,7 +799,7 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         onTripStatusChange({ isActive: true, isPaused: false });
       }
       
-      toast.success("Trip resumed - GPS tracking restarted");
+      toast.success("Trip resumed - GPS tracking restarted, screen will stay awake");
       
     } catch (error) {
       console.error("Failed to resume trip:", error);
