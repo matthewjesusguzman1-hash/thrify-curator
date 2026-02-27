@@ -662,6 +662,9 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         localStorage.removeItem('mileage_interval_id');
       }
       
+      // Disable wake lock
+      disableWakeLock();
+      
       // Clear localStorage
       localStorage.removeItem(ACTIVE_TRIP_KEY);
       
@@ -673,6 +676,10 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
       setShowEndTripModal(false);
       setEndTripData({ purpose: "thrifting", purpose_other: "", notes: "" });
       setIsPaused(false);
+      setGpsAccuracy(null);
+      setLastUpdateTime(null);
+      setTrackingWarning(null);
+      lastLocationRef.current = null;
       
       // Notify parent component
       if (onTripStatusChange) {
