@@ -56,6 +56,8 @@ class MileageEntryResponse(BaseModel):
     waypoint_count: int = 0
     is_road_matched: bool = False
     match_confidence: float = 0
+    gaps_detected: int = 0  # Number of GPS signal gaps found
+    gaps_filled: int = 0  # Number of gaps filled with OSRM routing
     created_at: str
     updated_at: Optional[str] = None
 
