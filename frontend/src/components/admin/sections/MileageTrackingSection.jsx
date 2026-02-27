@@ -299,16 +299,26 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
     }
   }, [headerTripActive, headerTripPaused, fetchMileageEntries]);
 
-  // Resume tracking for an existing trip
+  // Resume tracking for an existing trip - IMPROVED with accuracy filtering
   const resumeTracking = useCallback(() => {
     if (!navigator.geolocation) {
       console.error("Geolocation not supported");
+      setTrackingWarning("Geolocation not supported on this device");
       return;
     }
 
-    // Get current position first
+    // Enable wake lock to keep screen awake
+    enableWakeLock();
+
+    // Get current position first with high accuracy
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        // Filter out inaccurate readings
+        if (position.coords.accuracy > GPS_CONFIG.MIN_ACCURACY_METERS) {
+          console.log(`Ignoring inaccurate GPS reading: ${position.coords.accuracy}m`);
+          return;
+        }
+
         const newLocation = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -316,19 +326,47 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
           timestamp: new Date().toISOString()
         };
         setCurrentLocation(newLocation);
+        setGpsAccuracy(position.coords.accuracy);
+        setLastUpdateTime(new Date());
+        lastLocationRef.current = newLocation;
         
         // Send to server
         axios.post(`${API}/admin/mileage/update-location`, {
           location: newLocation
         }, getAuthHeader()).catch(console.error);
       },
-      (error) => console.error("Failed to get current position:", error),
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      (error) => {
+        console.error("Failed to get current position:", error);
+        setTrackingWarning("GPS signal weak - move to open area");
+      },
+      GPS_CONFIG.HIGH_ACCURACY
     );
 
-    // Start watching position with high frequency
+    // Start watching position with improved options
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
+        // Filter out inaccurate readings
+        if (pos.coords.accuracy > GPS_CONFIG.MIN_ACCURACY_METERS) {
+          console.log(`Ignoring inaccurate GPS: ${pos.coords.accuracy}m`);
+          return;
+        }
+
+        // Check minimum distance to reduce noise
+        if (lastLocationRef.current) {
+          const distance = calculateDistance(
+            lastLocationRef.current.latitude,
+            lastLocationRef.current.longitude,
+            pos.coords.latitude,
+            pos.coords.longitude
+          );
+          if (distance < GPS_CONFIG.MIN_DISTANCE_METERS) {
+            // Still update UI but don't send to server
+            setGpsAccuracy(pos.coords.accuracy);
+            setLastUpdateTime(new Date());
+            return;
+          }
+        }
+
         const newLocation = {
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
@@ -336,26 +374,58 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
           timestamp: new Date().toISOString()
         };
         setCurrentLocation(newLocation);
+        setGpsAccuracy(pos.coords.accuracy);
+        setLastUpdateTime(new Date());
+        lastLocationRef.current = newLocation;
+        setTrackingWarning(null);
         
         // Send waypoint to server
         axios.post(`${API}/admin/mileage/update-location`, {
           location: newLocation
         }, getAuthHeader()).then(() => {
-          // Update cumulative distance
           fetchCumulativeDistance();
         }).catch(console.error);
       },
-      (error) => console.error("Location tracking error:", error),
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 1000 }
+      (error) => {
+        console.error("Location tracking error:", error);
+        if (error.code === error.PERMISSION_DENIED) {
+          setTrackingWarning("Location permission denied");
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          setTrackingWarning("GPS signal lost - move to open area");
+        } else if (error.code === error.TIMEOUT) {
+          setTrackingWarning("GPS taking too long - retrying...");
+        }
+      },
+      GPS_CONFIG.WATCH_OPTIONS
     );
     
     setTrackingWatchId(watchId);
     
-    // Also restart backup interval polling
+    // Backup interval polling every 5 seconds (reduced from 10)
     const intervalId = setInterval(async () => {
-      if (navigator.geolocation) {
+      if (navigator.geolocation && document.visibilityState === 'visible') {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
+            // Filter out inaccurate readings
+            if (pos.coords.accuracy > GPS_CONFIG.MIN_ACCURACY_METERS) {
+              return;
+            }
+
+            // Check minimum distance
+            if (lastLocationRef.current) {
+              const distance = calculateDistance(
+                lastLocationRef.current.latitude,
+                lastLocationRef.current.longitude,
+                pos.coords.latitude,
+                pos.coords.longitude
+              );
+              if (distance < GPS_CONFIG.MIN_DISTANCE_METERS) {
+                setGpsAccuracy(pos.coords.accuracy);
+                setLastUpdateTime(new Date());
+                return;
+              }
+            }
+
             const newLocation = {
               latitude: pos.coords.latitude,
               longitude: pos.coords.longitude,
@@ -363,6 +433,9 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
               timestamp: new Date().toISOString()
             };
             setCurrentLocation(newLocation);
+            setGpsAccuracy(pos.coords.accuracy);
+            setLastUpdateTime(new Date());
+            lastLocationRef.current = newLocation;
             
             axios.post(`${API}/admin/mileage/update-location`, {
               location: newLocation
@@ -371,13 +444,13 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
             }).catch(console.error);
           },
           (error) => console.error("Interval location error:", error),
-          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+          GPS_CONFIG.HIGH_ACCURACY
         );
       }
-    }, 10000);
+    }, GPS_CONFIG.POLLING_INTERVAL);
     
     localStorage.setItem('mileage_interval_id', intervalId.toString());
-  }, [getAuthHeader, fetchCumulativeDistance]);
+  }, [getAuthHeader, fetchCumulativeDistance, enableWakeLock, calculateDistance]);
 
   // Start GPS tracking
   const startMileageTracking = async () => {
