@@ -16,7 +16,10 @@ import {
   ChevronUp,
   Route,
   Check,
-  CheckCircle
+  CheckCircle,
+  AlertTriangle,
+  Smartphone,
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,9 +27,27 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import axios from "axios";
+import NoSleep from "nosleep.js";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ACTIVE_TRIP_KEY = "thrifty_curator_active_trip";
+
+// GPS tracking configuration for improved accuracy
+const GPS_CONFIG = {
+  HIGH_ACCURACY: {
+    enableHighAccuracy: true,
+    timeout: 15000,        // 15 second timeout for better mobile GPS lock
+    maximumAge: 0          // Always get fresh position
+  },
+  WATCH_OPTIONS: {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 2000       // Accept positions up to 2 seconds old during continuous tracking
+  },
+  POLLING_INTERVAL: 5000,  // Poll every 5 seconds for more accurate tracking
+  MIN_ACCURACY_METERS: 100, // Ignore readings with accuracy worse than 100m
+  MIN_DISTANCE_METERS: 5    // Minimum distance to record a new waypoint (reduces noise)
+};
 
 export default function MileageTrackingSection({ getAuthHeader, onTripStatusChange, forceExpand, headerTripActive, headerTripPaused }) {
   // Section visibility
