@@ -53,6 +53,7 @@ class MileageEntryResponse(BaseModel):
     purpose_other: Optional[str] = None
     notes: Optional[str] = None
     is_tracking: bool = False
+    waypoint_count: int = 0
     created_at: str
     updated_at: Optional[str] = None
 
