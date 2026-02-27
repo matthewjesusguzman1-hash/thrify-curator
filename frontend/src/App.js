@@ -10,6 +10,31 @@ import ConsignmentAgreementForm from "@/pages/ConsignmentAgreementForm";
 import AuthPage from "@/pages/AuthPage";
 import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+
+// Register service worker for PWA functionality
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then((registration) => {
+        console.log('ServiceWorker registered:', registration.scope);
+        
+        // Check for updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New content available, refresh recommended
+              console.log('New content available, refresh for updates');
+            }
+          });
+        });
+      })
+      .catch((error) => {
+        console.log('ServiceWorker registration failed:', error);
+      });
+  });
+}
 
 function App() {
   // Check sessionStorage synchronously on initial render to prevent flicker
@@ -32,6 +57,7 @@ function App() {
         </Routes>
       </BrowserRouter>
       <Toaster position="top-center" richColors />
+      <PWAInstallPrompt />
     </div>
   );
 }
