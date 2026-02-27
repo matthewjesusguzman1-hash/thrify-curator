@@ -1980,16 +1980,26 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
 
               {/* Trip Details */}
               <div className="px-4 pb-4 space-y-2">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-gray-500 text-xs mb-1">Start</p>
-                    <p className="text-[#333] font-medium">{viewingTripMap.startAddress || viewingTripMap.start_address || 'N/A'}</p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-gray-500 text-xs mb-1">End</p>
-                    <p className="text-[#333] font-medium">{viewingTripMap.endAddress || viewingTripMap.end_address || 'N/A'}</p>
-                  </div>
-                </div>
+                {/* Only show start/end addresses if they're real addresses, not GPS coordinates */}
+                {(() => {
+                  const startAddr = viewingTripMap.startAddress || viewingTripMap.start_address;
+                  const endAddr = viewingTripMap.endAddress || viewingTripMap.end_address;
+                  const isGpsCoord = (addr) => addr && /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(addr);
+                  const hasRealAddresses = startAddr && endAddr && !isGpsCoord(startAddr) && !isGpsCoord(endAddr);
+                  
+                  return hasRealAddresses ? (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-500 text-xs mb-1">Start</p>
+                        <p className="text-[#333] font-medium">{startAddr}</p>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-500 text-xs mb-1">End</p>
+                        <p className="text-[#333] font-medium">{endAddr}</p>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
                 
                 {/* Road-matching status */}
                 <div className={`flex items-center justify-between p-3 rounded-lg ${viewingTripMap.isRoadMatched ? 'bg-green-50' : 'bg-emerald-50'}`}>
