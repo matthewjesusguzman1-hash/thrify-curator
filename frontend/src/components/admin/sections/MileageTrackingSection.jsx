@@ -304,21 +304,38 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
         if (!activeTripRes.data.is_paused) {
           resumeTracking();
         }
-        // Fetch current distance
+        // Fetch current distance and waypoints
         fetchCumulativeDistance();
+        fetchTripWaypoints();
       } else {
         // Clear localStorage if no active trip on server
         localStorage.removeItem(ACTIVE_TRIP_KEY);
         setIsTracking(false);
         setIsPaused(false);
         setActiveTripData(null);
+        setTripWaypoints([]);
       }
     } catch (error) {
       console.error("Failed to fetch mileage data:", error);
     } finally {
       setLoadingMileage(false);
     }
-  }, [getAuthHeader, fetchCumulativeDistance]);
+  }, [getAuthHeader, fetchCumulativeDistance, fetchTripWaypoints]);
+
+  // Periodically fetch waypoints during live tracking for map updates
+  useEffect(() => {
+    if (isTracking && !isPaused && showLiveMap) {
+      // Fetch waypoints every 10 seconds for map updates
+      const interval = setInterval(() => {
+        fetchTripWaypoints();
+      }, 10000);
+      
+      // Also fetch immediately
+      fetchTripWaypoints();
+      
+      return () => clearInterval(interval);
+    }
+  }, [isTracking, isPaused, showLiveMap, fetchTripWaypoints]);
 
   // Auto-expand when forceExpand prop changes to true
   useEffect(() => {
