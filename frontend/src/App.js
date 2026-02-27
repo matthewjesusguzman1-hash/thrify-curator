@@ -50,32 +50,32 @@ function AnimatedRoutes() {
           </PageTransition>
         } />
         <Route path="/job-application" element={
-          <PageTransition variant="slide">
+          <PageTransition>
             <JobApplicationForm />
           </PageTransition>
         } />
         <Route path="/consignment-inquiry" element={
-          <PageTransition variant="slide">
+          <PageTransition>
             <ConsignmentInquiryForm />
           </PageTransition>
         } />
         <Route path="/consignment-agreement" element={
-          <PageTransition variant="slide">
+          <PageTransition>
             <ConsignmentAgreementForm />
           </PageTransition>
         } />
         <Route path="/login" element={
-          <PageTransition variant="fadeUp">
+          <PageTransition>
             <AuthPage />
           </PageTransition>
         } />
         <Route path="/dashboard" element={
-          <PageTransition variant="fadeUp">
+          <PageTransition>
             <EmployeeDashboard />
           </PageTransition>
         } />
         <Route path="/admin" element={
-          <PageTransition variant="fadeUp">
+          <PageTransition>
             <AdminDashboard />
           </PageTransition>
         } />
