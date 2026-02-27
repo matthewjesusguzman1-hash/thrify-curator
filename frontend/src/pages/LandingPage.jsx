@@ -655,6 +655,88 @@ export default function LandingPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* iOS Install Instructions Modal */}
+      <AnimatePresence>
+        {showIOSModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowIOSModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493]" />
+              
+              <div className="p-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-[#00D4FF] to-[#8B5CF6] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Smartphone className="w-8 h-8 text-white" />
+                </div>
+                
+                <h2 className="text-xl font-bold text-center text-[#1A1A2E] mb-2">
+                  Install on iPhone
+                </h2>
+                <p className="text-[#666] text-center text-sm mb-6">
+                  Follow these steps to add Thrifty Curator to your home screen:
+                </p>
+
+                {/* Steps */}
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-[#007AFF] rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm">
+                      1
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#1A1A2E]">Tap the Share button</p>
+                      <p className="text-xs text-[#666]">
+                        The square with an arrow pointing up at the bottom of Safari
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-[#007AFF] rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm">
+                      2
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#1A1A2E]">Scroll down and tap</p>
+                      <p className="text-xs text-[#666]">
+                        "Add to Home Screen"
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-[#007AFF] rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm">
+                      3
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#1A1A2E]">Tap "Add"</p>
+                      <p className="text-xs text-[#666]">
+                        In the top right corner
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => setShowIOSModal(false)}
+                  className="w-full mt-6 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] hover:from-[#E91E8C] hover:to-[#C91E7C] text-white"
+                >
+                  Got it!
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
