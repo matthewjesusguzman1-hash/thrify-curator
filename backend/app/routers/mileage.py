@@ -10,6 +10,7 @@ from app.models.mileage import (
     StartTripRequest, EndTripRequest, UpdateTripLocationRequest,
     ActiveTripResponse, MileageSummary, LocationData
 )
+from app.services.osrm_service import match_waypoints_to_roads
 
 router = APIRouter(prefix="/admin/mileage", tags=["Mileage Tracking"])
 
