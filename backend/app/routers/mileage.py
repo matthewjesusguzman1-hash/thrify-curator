@@ -385,6 +385,8 @@ async def end_trip(trip_data: EndTripRequest, admin: dict = Depends(get_admin_us
         "matched_geometry": matched_geometry,  # GeoJSON for map display
         "match_confidence": match_confidence,
         "is_road_matched": match_confidence > 0,
+        "gaps_detected": gaps_detected,  # Number of GPS signal gaps found
+        "gaps_filled": gaps_filled,  # Number of gaps filled with routing
         "created_at": now,
         "updated_at": None
     }
