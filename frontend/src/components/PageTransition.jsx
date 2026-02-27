@@ -1,66 +1,16 @@
 import { motion } from "framer-motion";
 
-// Page transition variants
+// Page transition variants - MORE NOTICEABLE
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: 20,
-    scale: 0.98
+    y: 40,
+    scale: 0.95
   },
   enter: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: {
-      duration: 0.4,
-      ease: [0.22, 1, 0.36, 1], // Custom easing for smooth feel
-      staggerChildren: 0.1
-    }
-  },
-  exit: {
-    opacity: 0,
-    y: -10,
-    scale: 0.99,
-    transition: {
-      duration: 0.25,
-      ease: [0.22, 1, 0.36, 1]
-    }
-  }
-};
-
-// Slide from right variant (for forward navigation feel)
-const slideVariants = {
-  initial: {
-    opacity: 0,
-    x: 60
-  },
-  enter: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      duration: 0.4,
-      ease: [0.22, 1, 0.36, 1]
-    }
-  },
-  exit: {
-    opacity: 0,
-    x: -30,
-    transition: {
-      duration: 0.25,
-      ease: [0.22, 1, 0.36, 1]
-    }
-  }
-};
-
-// Fade up variant (subtle and elegant)
-const fadeUpVariants = {
-  initial: {
-    opacity: 0,
-    y: 30
-  },
-  enter: {
-    opacity: 1,
-    y: 0,
     transition: {
       duration: 0.5,
       ease: [0.22, 1, 0.36, 1]
@@ -68,9 +18,58 @@ const fadeUpVariants = {
   },
   exit: {
     opacity: 0,
-    y: -20,
+    y: -30,
+    scale: 0.97,
     transition: {
-      duration: 0.3,
+      duration: 0.35,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  }
+};
+
+// Slide from right variant - MORE DRAMATIC
+const slideVariants = {
+  initial: {
+    opacity: 0,
+    x: 100
+  },
+  enter: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  },
+  exit: {
+    opacity: 0,
+    x: -60,
+    transition: {
+      duration: 0.35,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  }
+};
+
+// Fade up variant - MORE NOTICEABLE
+const fadeUpVariants = {
+  initial: {
+    opacity: 0,
+    y: 60
+  },
+  enter: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -40,
+    transition: {
+      duration: 0.35,
       ease: [0.22, 1, 0.36, 1]
     }
   }
