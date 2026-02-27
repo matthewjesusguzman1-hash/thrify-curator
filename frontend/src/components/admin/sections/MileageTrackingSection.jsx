@@ -75,6 +75,12 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
   const [isScreenAwake, setIsScreenAwake] = useState(false);
   const [trackingWarning, setTrackingWarning] = useState(null);
   
+  // Map state
+  const [showLiveMap, setShowLiveMap] = useState(true);
+  const [tripWaypoints, setTripWaypoints] = useState([]);
+  const [followLocation, setFollowLocation] = useState(true);
+  const [viewingTripMap, setViewingTripMap] = useState(null);
+  
   // Multi-select state
   const [selectedTrips, setSelectedTrips] = useState(new Set());
   const [selectMode, setSelectMode] = useState(false);
