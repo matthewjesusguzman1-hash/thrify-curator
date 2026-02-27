@@ -1,15 +1,15 @@
 import { motion } from "framer-motion";
 
-// Page transition variants - MORE NOTICEABLE
-const pageVariants = {
+// Blur Fade transition - Pages fade with blur effect
+const blurFadeVariants = {
   initial: {
     opacity: 0,
-    y: 40,
-    scale: 0.95
+    filter: "blur(20px)",
+    scale: 1.02
   },
   enter: {
     opacity: 1,
-    y: 0,
+    filter: "blur(0px)",
     scale: 1,
     transition: {
       duration: 0.5,
@@ -18,8 +18,8 @@ const pageVariants = {
   },
   exit: {
     opacity: 0,
-    y: -30,
-    scale: 0.97,
+    filter: "blur(15px)",
+    scale: 0.98,
     transition: {
       duration: 0.35,
       ease: [0.22, 1, 0.36, 1]
@@ -27,7 +27,7 @@ const pageVariants = {
   }
 };
 
-// Slide from right variant - MORE DRAMATIC
+// Slide variant (kept as alternative)
 const slideVariants = {
   initial: {
     opacity: 0,
@@ -51,7 +51,7 @@ const slideVariants = {
   }
 };
 
-// Fade up variant - MORE NOTICEABLE
+// Fade up variant (kept as alternative)
 const fadeUpVariants = {
   initial: {
     opacity: 0,
@@ -76,11 +76,12 @@ const fadeUpVariants = {
 };
 
 export default function PageTransition({ children, variant = "default" }) {
+  // Default is now blur fade
   const variants = variant === "slide" 
     ? slideVariants 
     : variant === "fadeUp" 
     ? fadeUpVariants 
-    : pageVariants;
+    : blurFadeVariants;
 
   return (
     <motion.div
@@ -96,4 +97,4 @@ export default function PageTransition({ children, variant = "default" }) {
 }
 
 // Export variants for custom use
-export { pageVariants, slideVariants, fadeUpVariants };
+export { blurFadeVariants, slideVariants, fadeUpVariants };
