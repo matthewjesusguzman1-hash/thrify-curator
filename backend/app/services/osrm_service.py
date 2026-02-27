@@ -405,7 +405,7 @@ async def fill_gaps_with_routing(waypoints: List[Dict], gaps: List[Dict]) -> Dic
                     "time_gap_seconds": gap.get("time_gap_seconds"),
                     "straight_line_distance_m": gap["straight_line_distance"],
                     "road_distance_m": gap_distance,
-                    "points_added": len(coords) - 2 if geometry and geometry.get("coordinates") else 0,
+                    "points_added": len(intermediate_coords) if geometry and geometry.get("coordinates") else 0,
                     "filled": True
                 })
             else:
