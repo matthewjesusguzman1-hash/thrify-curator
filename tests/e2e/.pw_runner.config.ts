@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260226_223847/results.json' }],
   ],
   use: {
-    baseURL: 'https://thrifty-curator-6.preview.emergentagent.com',
+    baseURL: 'https://curator-app-2.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

@@ -4,43 +4,47 @@ The user wants to build a Thrifty Curator reselling application.
 **PRODUCT REQUIREMENTS (Consolidated):**
 *   **Core Functionality:** A full-stack application with a Black Bold theme, passwordless authentication, and distinct portals for two Admins (Matthew Guzman, Eunice Guzman) and Employees.
 *   **Landing Page & Forms:** A themed, animated landing page and various forms (Job Applications, Consignment). Forms should provide clear feedback on submission.
-*   **Admin Dashboard:**
-    *   A comprehensive dashboard for managing employees, payroll, mileage, and messages.
-    *   Header must display the logged-in admin's name.
-    *   Sections should be visually distinct.
-*   **Payroll & Time Tracking:**
-    *   The pay period is bi-weekly, starting from the first Monday of the year. This calculation must be consistent across all sections.
-    *   Pay calculations must be based on time rounded to the nearest minute, and this should be reflected consistently across all reports and displays.
-    *   The pay rate for each employee must be visible in reports.
-    *   Employees can clock in/out. A live timer () should be visible on both the employee dashboard and the admin's portal view when an employee is clocked in.
-    *   An employee must be able to clock out even if an admin clocked them in.
-    *   Clocking in again on the same day must create a new shift, not reopen a completed one.
-*   **Reporting:** A centralized Reports section. All reports must refresh in real-time as underlying data (like time entries) changes.
+*   **Admin Dashboard:** A comprehensive dashboard for managing employees, payroll, mileage, and messages.
+*   **Payroll & Time Tracking:** Core payroll and time tracking features are implemented.
+*   **Reporting:** A centralized Reports section with downloadable PDFs.
+*   **Mileage Tracking:** An advanced mileage tracking system for employees.
+    *   Must be mobile-first.
+    *   Needs to track continuously, even when the screen is locked (within browser limitations).
+    *   Tracked trips should be viewable on a map.
+    *   Mileage calculation should be highly accurate by snapping the GPS route to actual roads and filling in gaps from poor connectivity.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app features admin and employee portals, form management, and reporting. The last session addressed several user-reported issues, including a critical payroll calculation bug, a timezone display error for pay periods, and a case-sensitivity issue with employee logins. Additionally, a new Previous Pay Period filter was added, and the styling of all downloadable PDF reports was updated to be consistent and branded. The agent is currently in the middle of a large refactoring task for the main admin dashboard component.
+A full-stack React/FastAPI/MongoDB application. The app has admin/employee portals, form management, reporting, and a mileage tracking system. The agent has completed a major refactoring of the , implemented numerous UI/UX improvements for mobile use (PWA, safe area padding, page transitions), and added a live map view for trips using Leaflet. The agent is currently in the middle of integrating OSRM (Open Source Routing Machine) to implement a road-snapping feature for more accurate mileage calculation.
 
 **Last working item**:
-    - Last item agent was working: The agent was refactoring the monolithic  file (over 5000 lines) to improve maintainability. The goal was to extract large, inline modal definitions into separate, reusable components.
+    - Last item agent was working: Implementing OSRM (Open Source Routing Machine) map matching to improve mileage accuracy. This involves sending raw GPS waypoints to the OSRM API to get a route that is snapped to actual roads, which also calculates a more accurate travel distance.
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? frontend testing agent
+    - Which testing method agent to use? backend testing agent
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
   - No pending issues.
 
 **In progress Task List**:
-  - Task 1: Refactor  (P1)
+  - Task 1: Complete OSRM Map Matching Integration (P0)
 
  Task Detail:
   - Task 1: 
-     - **Where to resume**: The agent has already created three new component files for the modals: , , and . The next step is to complete the update to  by removing the old inline modal code and replacing it with the new component tags. After the replacement, the functionality of these modals must be verified.
-     - **What will be achieved with this?**: Significantly improve code maintainability, readability, and future development speed by breaking down a massive component into smaller, manageable pieces.
+     - **Where to resume**: The agent has created the backend service  and added new fields (, , ) to the  Pydantic model. The  endpoint in  was also updated.
+     - **Next Steps:**
+        1.  **Backend:** Fully implement the logic in  for:
+            *   The  function, to call the  and save the road-snapped data when a trip is completed.
+            *   The new  endpoint, to allow existing trips to be re-calculated with road-snapping.
+        2.  **Frontend:**
+            *   Add a button in the Recent Trips section on  to trigger the  endpoint for a specific trip.
+            *   Update the  component to display the  if they exist, otherwise fall back to the raw waypoints. This will show the clean, road-aligned route on the map.
+            *   Update the UI to display the more accurate  instead of the raw calculated distance.
+     - **What will be achieved with this?**: Mileage calculations will become significantly more accurate by reflecting the actual road network distance, not just the straight-line distance between GPS points. It will also fill in gaps from lost GPS signal and display a clean route on the map.
      - **Status**:  IN PROGRESS
-     - **Should Test frontend/backend/both after fix?**: Frontend
+     - **Should Test frontend/backend/both after fix?**: Both
      - **Blocked on something**: Nothing.
 
 **Upcoming and Future Tasks**
@@ -49,81 +53,85 @@ A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app feat
     *   **Deployment (P2):** Once all features are complete and verified, deploy the application.
 
 **Completed work in this session**
-- **Payroll & Reporting Consistency Fix:** Resolved a critical bug where the Payroll Summary and the main Reports section showed different totals. The fix ensures all pay calculations are based on the sum of individually rounded shift times, providing consistent financial data across the app.
-- **Timezone Bug Fix:** Corrected an issue where pay period start dates were displayed incorrectly (off by one day) on the Employee Dashboard. The fix ensures UTC dates from the backend are formatted correctly without being affected by the user's local timezone.
-- **Employee Login Fix:** Fixed a bug that prevented newly created employees from logging in if their email's case did not match what was stored in the database. The login endpoint is now case-insensitive, and all new employee emails are stored in lowercase.
-- **PDF Report Redesign:** Overhauled all downloadable PDF reports (Shift, Payroll, W9, Mileage) to use a consistent, clean, and branded style with unique header colors for each report type, as requested by the user. This also fixed an issue where admin notes were truncated.
-- **Feature: Previous Pay Period Filter:** Added a new Previous Pay Period option to the Hours by Employee report filter, allowing admins to easily view historical data.
-- **Feature: Edit Time Entry UX Improvement:** Updated the Edit Time Entry modal to pre-populate with the employee's current clock-in/out times, making it easier for admins to make adjustments.
+- **Refactor :** Successfully refactored the massive 5000+ line  component by extracting three large modals (, , ) into their own separate components, significantly improving maintainability.
+- **Feature: Leaflet Map Integration:** Added map views for both live-tracking trips and completed trips using Leaflet.js. Created new backend endpoints to serve waypoint data.
+- **Feature: PWA Functionality:** Converted the application into a Progressive Web App (PWA) by adding a service worker and an Add to Home Screen button on the landing page for a more native-like mobile experience.
+- **Feature: Live Tracking Improvements:** Enhanced the mileage tracking feature by adding a screen wake lock (), faster waypoint collection, auto-resumption of tracking on app focus, and a clearer UI for tracking status.
+- **Feature: Page Transitions:** Implemented app-wide page transitions using Framer Motion, iterating from blur-fade to a final, clean fade-only effect based on user feedback.
+- **Bugfix: Login Page Blank Screen:** Resolved an initialization error () in  that was causing the login page to fail.
+- **Bugfix: Deployment Blank Screen:** Addressed a blank screen issue on deployment by updating the service worker caching strategy to be more robust and prevent stale content from being served.
+- **Bugfix: Over-scroll White Background:** Fixed an issue on iOS where over-scrolling revealed a white background by applying the app's dark theme gradient to the  and  elements.
+- **UI/UX Polish:**
+    - Adjusted dashboard headers to reduce excessive padding and bring content closer to the safe area on mobile.
+    - Ensured toast notifications appear below the iPhone's status bar/Dynamic Island by adding safe area padding.
+    - Re-ordered and styled the Add to Home Screen button on the landing page based on user requests.
+    - Removed the automatic PWA install popup to rely solely on the manual button.
 
 **Earlier issues found/mentioned but not fixed**
    - None.
 
 **Known issue recurrence from previous fork**
-  - The need to refactor  was carried over and is now in progress.
+  - None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Time/Pay Rounding:** The core business logic now dictates that individual time entries are rounded to the nearest minute first. Pay is calculated for each rounded entry, and these values are then summed for totals. This ensures visual consistency between line items and summaries.
-- **Date/Timezone Handling:** A key fix involved differentiating between dates for display and dates for input. Display dates from the UTC backend are now formatted using UTC methods to prevent unwanted local timezone shifts.
-- **Component Refactoring:** The process of breaking down a large, monolithic React component () into smaller, single-purpose components (, etc.) is underway to improve maintainability.
-- **PDF Generation:** Using  as the standard library on the backend to generate consistently styled, branded PDF reports with programmatic control over layout and color.
+- **Map Matching (OSRM):** Using the Open Source Routing Machine to snap raw GPS coordinates to the road network, enabling accurate distance calculation and clean route visualization.
+- **Map Display (Leaflet):** Using the Leaflet.js library to render interactive maps, display polylines (routes), and place markers for trip start/end points.
+- **Progressive Web App (PWA):** Using a service worker and a web app manifest () to enable native-like features such as Add to Home Screen and potential offline capabilities.
+- **Mobile Safe Area:** Using CSS () to prevent UI elements like toasts and headers from being obscured by the iPhone's notch or Dynamic Island.
+- **Screen Wake Lock:** Using  and the Screen Wake Lock API to prevent the device's screen from turning off during an active mileage tracking session, improving tracking reliability.
+- **Animated Page Transitions (Framer Motion):** Using the  and  components from Framer Motion to create smooth, animated transitions between page routes.
 
 **key DB schema**
-  - **users**: No schema changes. The  logic was updated to store emails in lowercase.
-  - **time_entries**: No schema changes.
+  - **mileage_entries**: Added  (float),  (list of dicts), and  (string, e.g., processed, pending).
 
 **changes in tech stack**
-  - The project has standardized on  for PDF generation, with the mileage report being rewritten to use it instead of  for styling consistency.
+  - **Added:** ,  for map display.
+  - **Added:**  for screen wake lock.
+  - **External Dependency:** OSRM public API () for map matching.
 
 **All files of reference**
-*   : **Currently being refactored.** This is the main file for the current task.
-*   : Contains logic for reports, employee management, and one of the mileage PDF endpoints.
-*   : Contains the updated case-insensitive login logic.
-*   : Contains the updated mileage PDF generation logic.
-*   : New component file created during the refactor.
-*   : New component file.
-*   : New component file.
+*   : Main backend file for the current task.
+*   : The new service for handling OSRM API calls.
+*   : The primary frontend component for displaying tracking info, history, and maps.
+*   : The reusable map component.
 
 **Areas that need refactoring**:
-- : This remains the highest priority and is currently in progress.
-- : This file is large and is a candidate for future refactoring after the frontend dashboard is stabilized.
+- : This file is large and remains a candidate for future refactoring.
 
 **key api endpoints**
-- : **FIXED**. Now handles case-insensitive emails.
-- : **FIXED**. Backend calculations now align with frontend display logic.
-- : **FIXED**. Styled with .
-- : **FIXED**. An alternate endpoint that was also found and updated to the new style.
-- : **UPDATED** with new styling.
-- : **UPDATED** with new styling.
+- : **NEW**. Fetches the waypoints for a specific trip.
+- : **IN PROGRESS**. To be implemented for reprocessing a trip with OSRM.
+- : **NEEDS UPDATE**. The existing endpoint to end a trip needs to be modified to call the new OSRM service.
 
 **Critical Info for New Agent**
-- **Your immediate task is to continue the refactoring of .** The previous agent created the new component files for the modals. Your next step is to remove the large blocks of inline modal code from  and replace them with the imported components.
-- After the refactor, it is critical to perform thorough frontend testing. Verify that all modals (Employee Portal View, W9 Viewer, etc.) can be opened and that their internal functionality (displaying data, clocking in/out, submitting forms) works as expected.
-- Be aware of the recent fixes around pay calculation and date display. The core principle is that pay is calculated from time rounded *per shift*. Dates are provided in UTC and must be formatted carefully on the frontend to avoid timezone-related bugs.
+- **Your immediate task is to complete the OSRM map-matching integration.** This is a multi-step process involving both backend and frontend changes.
+- **Backend:** Focus on . You need to integrate the  into the  function and finish implementing the new  endpoint.
+- **Frontend:** Focus on  and . You need to add a Re-process Route button for past trips. The map display must be updated to prioritize showing the  over raw waypoints. Also, ensure the displayed distance uses .
+- **Testing:** After implementation, thoroughly test the end-to-end flow: start a trip, end it (which should trigger OSRM processing), and then view the accurate distance and road-snapped route on the map. Also, test the re-processing feature on an existing trip.
 
 **documents and test reports created in this job**
   -  (updated)
-  - 
+  -  (from AdminDashboard refactor)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1.  **Request:** Fix mileage report download to match styling of other reports. **Status:** COMPLETED.
-2.  **Reported Issue:** User confirms mileage report still looks wrong. **Status:** ADDRESSED (Agent found a second, un-styled endpoint and fixed it).
-3.  **Reported Issue:** A newly created employee cannot log into the employee portal. **Status:** ADDRESSED (Agent identified and fixed it as a case-sensitivity issue).
-4.  **Reported Issue:** User provided a screenshot showing Email not registered error for a new employee. **Status:** COMPLETED (This led to the case-sensitivity fix).
-5.  **User Message:** P1 - User approved starting the P1 refactoring task. **Status:** IN PROGRESS.
-6.  **Request:** When viewing reports, make all text in admin notes fully visible. Also, add colors to the reports to match the app theme. **Status:** COMPLETED.
-7.  **Reported Issue:** User did not like the first attempt at colored reports and provided examples of the desired style. **Status:** COMPLETED (Agent re-styled all PDFs to match user's examples).
-8.  **Request:** Make mileage and W9 report downloads have a similar color layout to shift reports, but with different colors for each form. **Status:** COMPLETED.
-9.  **Request:** When editing an employee's time, pre-fill the modal with the currently claimed times to make adjustments easier. **Status:** COMPLETED.
-10. **Request:** In the Hours by Employee report, add a filter option for the Previous Pay Period. **Status:** COMPLETED.
+1.  **Request:** Add map display for trips. **Status:** COMPLETED (Leaflet was implemented).
+2.  **Request:** Improve mileage accuracy by snapping the route to roads. **Status:** IN PROGRESS (OSRM integration started).
+3.  **Confirmation:** User approved using OSRM. **Status:** ACKNOWLEDGED.
+4.  **Reported Issue:** That did not fix the white over-scroll issue. **Status:** ADDRESSED (Agent applied a more robust fix across multiple layers).
+5.  **Request:** Fix white background appearing on over-scroll. **Status:** COMPLETED.
+6.  **Reported Issue:** App is completely blank after deployment. **Status:** ADDRESSED (Agent identified a service worker caching issue and provided a fix and user instructions).
+7.  **Request:** Move Admin Dashboard header closer to the top on mobile. **Status:** COMPLETED.
+8.  **Request:** Ensure toast notifications are not blocked by the Dynamic Island. **Status:** COMPLETED.
+9.  **Request:** Change page transition to fade only. **Status:** COMPLETED.
+10. **Request:** Try blur fade page transition. **Status:** COMPLETED (and then superseded by fade only).
 
 **Project Health Check:**
-- **Broken**: None. All reported bugs have been addressed.
+- **Broken**: None.
 - **Mocked**: None.
-- **Needs Attention**:  is undergoing a critical refactoring to reduce its complexity.
+- **Needs Attention**: The mileage tracking feature is in the middle of a significant upgrade (OSRM integration).
 
 **3rd Party Integrations**
 *   
@@ -132,12 +140,15 @@ A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app feat
 *   
 *   
 *   
-*    (partially replaced by fpdf2)
+*    (partially replaced)
+*    & : For map display.
+*   : For screen wake lock.
+*   **OSRM (Open Source Routing Machine):** External API used for map matching/road-snapping. No key required.
 
 **Testing status**
-  - Testing agent used after significant changes: YES (for the payroll logic fix).
+  - Testing agent used after significant changes: YES (For AdminDashboard refactor).
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None by the main agent.
+  - Test files created: None.
   - Known regressions: None.
 
 **Credentials to test flow:**
@@ -145,4 +156,4 @@ A full-stack React/FastAPI/MongoDB application for Thrifty Curator. The app feat
 - **Employee Access:** From the login page (), use an email address of an employee created via the admin dashboard (e.g., ). The login is passwordless.
 
 **What agent forgot to execute**
-- The agent was in the middle of a multi-step refactoring task. It successfully created the new component files but had not yet finished the  operation to remove the old inline code from . This is the immediate next step.</analysis>
+- The agent started the OSRM integration but did not complete it. The backend logic for processing trips ( and the new  endpoint) is incomplete, and no frontend changes have been made yet to consume the new road-snapped data or trigger the reprocessing.</analysis>
