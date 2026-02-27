@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -19,7 +19,9 @@ import {
   X,
   User,
   Mail,
-  CheckCircle
+  CheckCircle,
+  Smartphone,
+  Download
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
