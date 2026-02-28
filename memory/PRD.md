@@ -1938,26 +1938,35 @@ The Reports section has been updated to match the new simplified monthly mileage
 
 ## Year-to-Date Mileage Card & Report Cleanup (Feb 28, 2026) - COMPLETED ✅
 
-### User Request
+### User Request (Part 1)
 1. Add a "Year-to-Date Summary" card at the top of the Reports section
 2. Remove the mileage report option from Reports section
 
-### Changes Made
-
-**Frontend (`/app/frontend/src/components/admin/sections/ReportsSection.jsx`):**
-- Added Year-to-Date Mileage Summary card at top of expanded Reports section
-  - Fetches data from `/api/admin/mileage/yearly-summary?year={currentYear}` on section expand
-  - Displays: Months Logged, Total Miles, Est. Tax Deduction
-  - Shows IRS rate and directs users to "Mileage Log" section for data entry
+### Changes Made (Part 1)
+- Added Year-to-Date Mileage Summary card to Reports section
 - Removed "Mileage Log Report" from report type options
 - Updated report types grid from 3 columns to 2 columns
 - Updated section description to "Generate payroll/shift and W-9 reports"
-- Removed all mileage-related code from preview, download, and refresh functions
+
+### User Request (Part 2) - Subsequent Update
+1. Move the YTD Mileage Summary card to the Mileage Log section (replacing the old reminder banner + 3 stat cards)
+2. Remove the YTD card from Reports section
+
+### Changes Made (Part 2)
+
+**Frontend (`/app/frontend/src/components/admin/sections/MonthlyMileageSection.jsx`):**
+- Replaced reminder banner and 3 separate stat cards with new blue gradient summary card
+- New card shows: Months Logged, Total Miles, Est. Tax Deduction, IRS rate
+- Removed reminder-related code (showReminder, Bell icons, AlertCircle)
+
+**Frontend (`/app/frontend/src/components/admin/sections/ReportsSection.jsx`):**
+- Removed YTD Mileage Summary card
+- Removed related state/effects (mileageYTD, loadingMileageYTD)
+- Reports section now starts directly with Report Type selector
 
 ### Testing Status
 - **Backend Tests**: 19/19 PASSED (100%)
-- **Frontend E2E Tests**: 17/17 PASSED (100%)
-- All YTD card features verified working
+- **Frontend E2E Tests**: 20/20 PASSED (100%)
 
 ---
 
