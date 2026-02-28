@@ -81,6 +81,10 @@ test.describe('Admin Login and Mileage Reports', () => {
     await page.getByTestId('report-filter-type').click();
     await page.getByRole('option', { name: 'Year' }).click();
     
+    // Select 2025 year (where we have test data)
+    await page.locator('button:has-text("2026")').click();
+    await page.getByRole('option', { name: '2025' }).click();
+    
     // Preview
     await page.getByTestId('preview-report-btn').click();
     
@@ -89,6 +93,9 @@ test.describe('Admin Login and Mileage Reports', () => {
     
     // Scroll to make table visible
     await page.evaluate(() => window.scrollBy(0, 400));
+    
+    // Wait for entries to load - check for Monthly Entries header
+    await expect(page.getByText('Monthly Entries')).toBeVisible({ timeout: 5000 });
     
     // Verify table headers exist - use th elements
     const monthHeader = page.locator('th:has-text("Month")').first();
@@ -102,6 +109,9 @@ test.describe('Admin Login and Mileage Reports', () => {
     await expect(milesHeader).toBeVisible();
     await expect(deductionHeader).toBeVisible();
     await expect(notesHeader).toBeVisible();
+    
+    // Verify IRS rate note
+    await expect(page.getByText(/IRS standard mileage rates/i)).toBeVisible();
     
     // Screenshot of preview
     await page.screenshot({ path: 'mileage-report-preview.jpeg', quality: 20, fullPage: false });
