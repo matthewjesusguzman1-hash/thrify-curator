@@ -141,8 +141,8 @@ test.describe('Reports Section - Est. Pay Column Feature', () => {
     await reportsToggle.click();
     
     // Verify report type selector is visible - use more specific selectors
+    // Note: Mileage Report option was removed, now only Payroll/Shift and W-9 remain
     await expect(page.locator('button:has-text("Payroll/Shift Report")')).toBeVisible();
-    await expect(page.locator('button:has-text("Mileage Report")')).toBeVisible();
     await expect(page.locator('button:has-text("W-9 Report")')).toBeVisible();
     
     // Screenshot the expanded reports section
