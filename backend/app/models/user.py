@@ -32,6 +32,7 @@ class UserResponse(BaseModel):
     has_w9: Optional[bool] = None
     w9_uploaded_at: Optional[str] = None
     w9_status: Optional[str] = None
+    admin_code: Optional[str] = None  # Admin access code (only for admin users)
 
 
 class TokenResponse(BaseModel):
