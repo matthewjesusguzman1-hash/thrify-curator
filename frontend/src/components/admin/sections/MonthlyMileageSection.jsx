@@ -195,12 +195,6 @@ export default function MonthlyMileageSection({ getAuthHeader }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {showReminder && (
-              <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
-                <Bell className="w-3 h-3" />
-                Entry needed
-              </div>
-            )}
             {isExpanded ? (
               <ChevronUp className="w-5 h-5 text-[#888]" />
             ) : (
