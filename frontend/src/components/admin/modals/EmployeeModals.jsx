@@ -283,11 +283,11 @@ export function AddEmployeeModal({
               </Button>
               <Button
                 type="submit"
-                disabled={addingEmployee || (newEmployee.role === "admin" && (!newEmployee.admin_code || newEmployee.admin_code.length !== 4))}
+                disabled={addingEmployee || (isOwner && newEmployee.role === "admin" && (!newEmployee.admin_code || newEmployee.admin_code.length !== 4))}
                 className="btn-primary flex-1"
                 data-testid="submit-new-employee-btn"
               >
-                {addingEmployee ? "Creating..." : `Create ${newEmployee.role === "admin" ? "Admin" : "Employee"}`}
+                {addingEmployee ? "Creating..." : `Create ${isOwner && newEmployee.role === "admin" ? "Admin" : "Employee"}`}
               </Button>
             </div>
           </form>
