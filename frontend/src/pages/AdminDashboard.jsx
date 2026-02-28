@@ -2501,7 +2501,7 @@ export default function AdminDashboard() {
                       <Label className="form-label">Role *</Label>
                       <Select
                         value={editEmployeeData.role}
-                        onValueChange={(value) => setEditEmployeeData({ ...editEmployeeData, role: value })}
+                        onValueChange={(value) => setEditEmployeeData({ ...editEmployeeData, role: value, admin_code: value === 'employee' ? '' : editEmployeeData.admin_code })}
                       >
                         <SelectTrigger className="form-input" data-testid="edit-employee-role">
                           <SelectValue placeholder="Select role..." />
@@ -2513,6 +2513,31 @@ export default function AdminDashboard() {
                       </Select>
                       <p className="text-xs text-[#888] mt-1">Changing to Admin gives full dashboard access</p>
                     </div>
+
+                    {/* Admin Code - only shown when role is admin */}
+                    {editEmployeeData.role === 'admin' && (
+                      <div className="form-group">
+                        <Label className="form-label flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-[#8B5CF6]" />
+                          Admin Access Code *
+                        </Label>
+                        <Input
+                          type="text"
+                          value={editEmployeeData.admin_code || ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                            setEditEmployeeData({ ...editEmployeeData, admin_code: value });
+                          }}
+                          placeholder="4-digit code (e.g., 1234)"
+                          required
+                          maxLength={4}
+                          pattern="\d{4}"
+                          className="form-input font-mono text-lg tracking-widest"
+                          data-testid="edit-employee-admin-code"
+                        />
+                        <p className="text-xs text-[#888] mt-1">This 4-digit code will be used for admin login</p>
+                      </div>
+                    )}
 
                     <div className="form-group">
                       <Label className="form-label">Hourly Rate</Label>
