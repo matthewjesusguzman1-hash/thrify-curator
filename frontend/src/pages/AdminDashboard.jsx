@@ -63,7 +63,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DayPicker } from "react-day-picker";
 import { toast } from "sonner";
 import axios from "axios";
-import MileageTrackingSection from "@/components/admin/sections/MileageTrackingSection";
+import MonthlyMileageSection from "@/components/admin/sections/MonthlyMileageSection";
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
 import MessagesSection from "@/components/admin/sections/MessagesSection";
