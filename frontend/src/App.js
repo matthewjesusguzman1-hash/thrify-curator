@@ -79,11 +79,6 @@ function AnimatedRoutes() {
             <AdminDashboard />
           </PageTransition>
         } />
-        <Route path="/quick-start" element={
-          <PageTransition>
-            <QuickStartTrip />
-          </PageTransition>
-        } />
       </Routes>
     </AnimatePresence>
   );
