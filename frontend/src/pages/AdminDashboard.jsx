@@ -2376,6 +2376,7 @@ export default function AdminDashboard() {
             handleAddEmployee={handleAddEmployee}
             handleDownloadBlankW9={handleDownloadBlankW9}
             addingEmployee={addingEmployee}
+            isOwner={isOwner}
           />
 
           {/* Remove Employee Modal */}
