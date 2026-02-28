@@ -1570,7 +1570,7 @@ async def download_mileage_report_pdf(
     pdf.set_font("Helvetica", "", 10)
     
     pdf.set_text_color(*GRAY_LABEL)
-    pdf.cell(50, 6, "Total Trips:")
+    pdf.cell(50, 6, "Months Logged:")
     pdf.set_text_color(*BLACK)
     pdf.cell(0, 6, str(report['total_trips']), ln=True)
     
