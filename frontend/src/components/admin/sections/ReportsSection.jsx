@@ -88,7 +88,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
 
   const reportTypes = [
     { id: "shifts", label: "Payroll/Shift Report", icon: Clock, description: "Clock in/out times, hours worked, and pay" },
-    { id: "mileage", label: "Mileage Log Report", icon: Receipt, description: "Monthly mileage entries and tax deductions" },
     { id: "w9", label: "W-9 Report", icon: FileSignature, description: "Employee W-9 submission status" }
   ];
 
