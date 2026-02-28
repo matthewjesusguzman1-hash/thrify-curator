@@ -11,9 +11,6 @@ import {
   ChevronUp,
   Calendar,
   DollarSign,
-  AlertCircle,
-  Bell,
-  BellOff,
   Receipt
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
