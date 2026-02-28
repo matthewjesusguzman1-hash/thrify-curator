@@ -1209,7 +1209,20 @@ export default function AdminDashboard() {
     setAddingEmployee(true);
 
     try {
-      const response = await axios.post(`${API}/admin/create-employee`, newEmployee, getAuthHeader());
+      // Prepare payload including role and admin_code if applicable
+      const payload = {
+        name: newEmployee.name,
+        email: newEmployee.email,
+        phone: newEmployee.phone,
+        role: newEmployee.role || "employee"
+      };
+      
+      // Include admin_code if role is admin
+      if (payload.role === "admin" && newEmployee.admin_code) {
+        payload.admin_code = newEmployee.admin_code;
+      }
+      
+      const response = await axios.post(`${API}/admin/create-employee`, payload, getAuthHeader());
       const newEmployeeId = response.data.id;
       
       // If W-9 file was attached, upload it
@@ -1227,15 +1240,15 @@ export default function AdminDashboard() {
               }
             }
           );
-          toast.success(`Employee ${newEmployee.name} created with W-9!`);
+          toast.success(`${newEmployee.role === "admin" ? "Admin" : "Employee"} ${newEmployee.name} created with W-9!`);
         } catch (w9Error) {
-          toast.success(`Employee ${newEmployee.name} created! W-9 upload failed.`);
+          toast.success(`${newEmployee.role === "admin" ? "Admin" : "Employee"} ${newEmployee.name} created! W-9 upload failed.`);
         }
       } else {
-        toast.success(`Employee ${newEmployee.name} created successfully!`);
+        toast.success(`${newEmployee.role === "admin" ? "Admin" : "Employee"} ${newEmployee.name} created successfully!`);
       }
       
-      setNewEmployee({ name: "", email: "", phone: "" });
+      setNewEmployee({ name: "", email: "", phone: "", role: "employee", admin_code: "" });
       setNewEmployeeW9File(null);
       setSelectedJobApp("");
       setShowAddEmployee(false);
