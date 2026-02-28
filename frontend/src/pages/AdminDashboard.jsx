@@ -93,7 +93,7 @@ export default function AdminDashboard() {
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showRemoveEmployee, setShowRemoveEmployee] = useState(false);
   const [selectedEmployeeToRemove, setSelectedEmployeeToRemove] = useState("");
-  const [newEmployee, setNewEmployee] = useState({ name: "", email: "", phone: "" });
+  const [newEmployee, setNewEmployee] = useState({ name: "", email: "", phone: "", role: "employee", admin_code: "" });
   const [addingEmployee, setAddingEmployee] = useState(false);
   const [removingEmployee, setRemovingEmployee] = useState(false);
   const [selectedJobApp, setSelectedJobApp] = useState("");
