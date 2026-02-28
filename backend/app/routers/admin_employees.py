@@ -10,6 +10,14 @@ from app.models.user import UserResponse, CreateEmployee, UpdateEmployeeDetails,
 
 router = APIRouter(prefix="/admin", tags=["Admin - Employees"])
 
+# Business owner emails - only these users can assign admin roles
+OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
+
+
+def is_owner(admin_email: str) -> bool:
+    """Check if the admin is a business owner."""
+    return admin_email.lower() in [e.lower() for e in OWNER_EMAILS]
+
 
 @router.post("/create-employee", response_model=UserResponse)
 async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(get_admin_user)):
@@ -24,6 +32,10 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
     role = employee_data.role or "employee"
     if role not in ["employee", "admin"]:
         raise HTTPException(status_code=400, detail="Invalid role. Must be 'employee' or 'admin'")
+    
+    # Only business owners can create admins
+    if role == "admin" and not is_owner(admin.get("email", "")):
+        raise HTTPException(status_code=403, detail="Only business owners can create admin accounts")
     
     # If creating an admin, validate admin_code
     admin_code = None
