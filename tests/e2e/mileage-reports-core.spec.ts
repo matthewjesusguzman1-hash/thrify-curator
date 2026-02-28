@@ -74,8 +74,8 @@ test.describe('Admin Login and Reports Section', () => {
     await expect(page.getByText('Payroll/Shift Report')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Clock in/out times, hours worked, and pay')).toBeVisible();
     
-    // Should see W-9 Report option
-    await expect(page.getByText('W-9 Report')).toBeVisible();
+    // Should see W-9 Report option - use role button to be specific
+    await expect(page.getByRole('button', { name: /W-9 Report/ })).toBeVisible();
     await expect(page.getByText('Employee W-9 submission status')).toBeVisible();
     
     // Should NOT see Mileage Log Report option (removed)
