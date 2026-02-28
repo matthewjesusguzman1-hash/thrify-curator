@@ -1901,7 +1901,8 @@ export default function AdminDashboard() {
       role: employee.role,
       hourly_rate: employee.hourly_rate?.toString() || "",
       phone: employee.phone || "",
-      start_date: employee.start_date || ""
+      start_date: employee.start_date || "",
+      admin_code: employee.admin_code || ""
     });
     setShowEditEmployee(true);
     setEditEmployeeW9s([]);
@@ -1932,6 +1933,11 @@ export default function AdminDashboard() {
         phone: editEmployeeData.phone || null,
         start_date: editEmployeeData.start_date || null
       };
+      
+      // Include admin_code if role is admin
+      if (editEmployeeData.role === 'admin') {
+        updatePayload.admin_code = editEmployeeData.admin_code;
+      }
       
       // Only include hourly_rate if it's a valid number
       if (editEmployeeData.hourly_rate !== "") {
