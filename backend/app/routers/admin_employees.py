@@ -130,7 +130,6 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
         raise HTTPException(status_code=404, detail="Employee not found")
     
     # Check if trying to edit a business owner
-    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
     if employee.get("email", "").lower() in [e.lower() for e in OWNER_EMAILS]:
         raise HTTPException(status_code=400, detail="Cannot edit business owner account")
     
@@ -157,6 +156,11 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
     if update_data.role:
         if update_data.role not in ["employee", "admin"]:
             raise HTTPException(status_code=400, detail="Invalid role. Must be 'employee' or 'admin'")
+        
+        # Only business owners can change roles to admin
+        if update_data.role == "admin" and not is_owner(admin.get("email", "")):
+            raise HTTPException(status_code=403, detail="Only business owners can assign admin roles")
+        
         update_fields["role"] = update_data.role
         
         # If changing to admin, admin_code is required
