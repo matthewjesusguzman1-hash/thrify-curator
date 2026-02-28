@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Car,
+  FileText,
   Plus,
   Edit2,
   Trash2,
@@ -12,9 +12,9 @@ import {
   Calendar,
   DollarSign,
   AlertCircle,
-  Check,
   Bell,
-  BellOff
+  BellOff,
+  Receipt
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-export default function MonthlyMileageSection({ getAuthHeader, isExpanded: forceExpand }) {
+export default function MonthlyMileageSection({ getAuthHeader }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [yearlyData, setYearlyData] = useState(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
