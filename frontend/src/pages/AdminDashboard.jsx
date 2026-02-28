@@ -2430,9 +2430,9 @@ export default function AdminDashboard() {
                         <SelectValue placeholder="Select an employee..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.filter(e => e.role !== 'admin').map((emp) => (
+                        {employees.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id}>
-                            {emp.name} ({emp.email})
+                            {emp.name} ({emp.email}) {emp.role === 'admin' ? '⭐ Admin' : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>
