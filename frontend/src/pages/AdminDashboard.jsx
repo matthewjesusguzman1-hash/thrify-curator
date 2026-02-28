@@ -288,6 +288,10 @@ export default function AdminDashboard() {
 
   // Back to top button state
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+
+  // Business owner emails - only these users can assign admin roles
+  const OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"];
 
   // Load admin name from localStorage on mount
   useEffect(() => {
@@ -297,6 +301,10 @@ export default function AdminDashboard() {
         const user = JSON.parse(userData);
         if (user.name) {
           setCurrentAdminName(user.name);
+        }
+        // Check if current user is a business owner
+        if (user.email && OWNER_EMAILS.includes(user.email.toLowerCase())) {
+          setIsOwner(true);
         }
       } catch (e) {
         console.error("Error parsing user data:", e);
