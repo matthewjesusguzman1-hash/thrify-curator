@@ -87,10 +87,21 @@ test.describe('Admin Login and Mileage Reports', () => {
     // Wait for preview - look for summary text
     await expect(page.getByText('Mileage Log Summary')).toBeVisible({ timeout: 15000 });
     
-    // Verify table columns
-    await expect(page.getByRole('columnheader', { name: 'Month' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Year' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Miles' })).toBeVisible();
+    // Scroll to make table visible
+    await page.evaluate(() => window.scrollBy(0, 400));
+    
+    // Verify table headers exist - use th elements
+    const monthHeader = page.locator('th:has-text("Month")').first();
+    const yearHeader = page.locator('th:has-text("Year")').first();
+    const milesHeader = page.locator('th:has-text("Miles")').first();
+    const deductionHeader = page.locator('th:has-text("Deduction")').first();
+    const notesHeader = page.locator('th:has-text("Notes")').first();
+    
+    await expect(monthHeader).toBeVisible({ timeout: 5000 });
+    await expect(yearHeader).toBeVisible();
+    await expect(milesHeader).toBeVisible();
+    await expect(deductionHeader).toBeVisible();
+    await expect(notesHeader).toBeVisible();
     
     // Screenshot of preview
     await page.screenshot({ path: 'mileage-report-preview.jpeg', quality: 20, fullPage: false });
