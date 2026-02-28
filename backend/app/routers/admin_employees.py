@@ -44,10 +44,15 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
 
 @router.get("/employees", response_model=List[UserResponse])
 async def get_all_employees(admin: dict = Depends(get_admin_user)):
-    """Get all employees with W-9 status (excludes admin users)."""
-    # Only get non-admin users for employee management
+    """Get all employees with W-9 status (excludes business owners)."""
+    # Exclude business owners (Matthew and Eunice) but include other admins
+    OWNER_EMAILS = [
+        "matthewjesusguzman1@gmail.com",
+        "euniceguzman@thriftycurator.com"
+    ]
+    
     users = await db.users.find(
-        {"role": {"$ne": "admin"}}, 
+        {"email": {"$nin": OWNER_EMAILS}}, 
         {"_id": 0, "password_hash": 0}
     ).sort("created_at", -1).to_list(500)
     
