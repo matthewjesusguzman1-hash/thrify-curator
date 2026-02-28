@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { 
   X, Upload, FileText, Briefcase, UserPlus, UserMinus, 
-  Eye, Download, CheckCircle, Trash2
+  Eye, Download, CheckCircle, Trash2, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +76,7 @@ export function AddEmployeeModal({
                     const app = formSubmissions.jobApplications.find(a => a.id === value);
                     if (app) {
                       setNewEmployee({
+                        ...newEmployee,
                         name: app.full_name,
                         email: app.email,
                         phone: app.phone || ""
@@ -139,6 +140,53 @@ export function AddEmployeeModal({
                 data-testid="new-employee-phone"
               />
             </div>
+
+            {/* Role Selection */}
+            <div className="form-group">
+              <Label className="form-label">Role *</Label>
+              <Select
+                value={newEmployee.role || "employee"}
+                onValueChange={(value) => setNewEmployee({ 
+                  ...newEmployee, 
+                  role: value,
+                  admin_code: value === "employee" ? "" : newEmployee.admin_code 
+                })}
+              >
+                <SelectTrigger className="form-input" data-testid="new-employee-role">
+                  <SelectValue placeholder="Select role..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="employee">Employee</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-[#888] mt-1">Admin role gives full dashboard access</p>
+            </div>
+
+            {/* Admin Code - only shown when role is admin */}
+            {newEmployee.role === "admin" && (
+              <div className="form-group">
+                <Label className="form-label flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-[#8B5CF6]" />
+                  Admin Access Code *
+                </Label>
+                <Input
+                  type="text"
+                  value={newEmployee.admin_code || ""}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setNewEmployee({ ...newEmployee, admin_code: value });
+                  }}
+                  placeholder="4-digit code (e.g., 1234)"
+                  required
+                  maxLength={4}
+                  pattern="\d{4}"
+                  className="form-input font-mono text-lg tracking-widest"
+                  data-testid="new-employee-admin-code"
+                />
+                <p className="text-xs text-[#888] mt-1">This 4-digit code will be used for admin login</p>
+              </div>
+            )}
 
             {/* W-9 Form Section */}
             <div className="form-group">
@@ -232,11 +280,11 @@ export function AddEmployeeModal({
               </Button>
               <Button
                 type="submit"
-                disabled={addingEmployee}
+                disabled={addingEmployee || (newEmployee.role === "admin" && (!newEmployee.admin_code || newEmployee.admin_code.length !== 4))}
                 className="btn-primary flex-1"
                 data-testid="submit-new-employee-btn"
               >
-                {addingEmployee ? "Creating..." : "Create Employee"}
+                {addingEmployee ? "Creating..." : `Create ${newEmployee.role === "admin" ? "Admin" : "Employee"}`}
               </Button>
             </div>
           </form>
