@@ -222,70 +222,35 @@ export default function MonthlyMileageSection({ getAuthHeader }) {
               className="border-t border-gray-100"
             >
               <div className="p-4 space-y-4">
-                {/* Reminder Banner */}
-                {showReminder && (
-                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <AlertCircle className="w-5 h-5 text-amber-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-amber-800">
-                            Enter {reminderStatus.month_name} {reminderStatus.year} Mileage
-                          </h4>
-                          <p className="text-sm text-amber-700 mt-1">
-                            Don't forget to log your business miles from last month for your tax records.
-                            {reminderStatus.days_overdue > 0 && (
-                              <span className="font-medium"> ({reminderStatus.days_overdue} days overdue)</span>
-                            )}
-                          </p>
-                        </div>
+                {/* Year-to-Date Summary Card */}
+                {yearlyData && (
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl p-4 text-white" data-testid="mileage-ytd-card">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                        <Receipt className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{selectedYear} Mileage Summary</h3>
+                        <p className="text-sm opacity-80">Year-to-Date for Tax Purposes</p>
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-3 ml-13">
-                      <Button
-                        size="sm"
-                        onClick={() => openAddForMonth(reminderStatus.year, reminderStatus.month)}
-                        className="bg-amber-600 hover:bg-amber-700 text-white"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Enter Mileage
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleDismissReminder}
-                        className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                      >
-                        <BellOff className="w-4 h-4 mr-1" />
-                        Skip This Month
-                      </Button>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-white/10 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold">{yearlyData.months_entered || 0}</p>
+                        <p className="text-sm opacity-80">Months Logged</p>
+                      </div>
+                      <div className="bg-white/10 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold">{yearlyData.total_miles.toLocaleString()}</p>
+                        <p className="text-sm opacity-80">Total Miles</p>
+                      </div>
+                      <div className="bg-white/10 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold">${yearlyData.total_tax_deduction.toLocaleString()}</p>
+                        <p className="text-sm opacity-80">Est. Tax Deduction</p>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Year Summary Cards */}
-                {yearlyData && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4">
-                      <p className="text-sm text-emerald-600 font-medium">Total Miles ({selectedYear})</p>
-                      <p className="text-3xl font-bold text-emerald-700 mt-1">
-                        {yearlyData.total_miles.toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4">
-                      <p className="text-sm text-blue-600 font-medium">Est. Tax Deduction</p>
-                      <p className="text-3xl font-bold text-blue-700 mt-1">
-                        ${yearlyData.total_tax_deduction.toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4">
-                      <p className="text-sm text-purple-600 font-medium">IRS Rate ({selectedYear})</p>
-                      <p className="text-3xl font-bold text-purple-700 mt-1">
-                        ${yearlyData.irs_rate}/mi
-                      </p>
-                    </div>
+                    <p className="text-xs opacity-70 mt-3 text-center">
+                      Using IRS rate: ${yearlyData.irs_rate}/mile
+                    </p>
                   </div>
                 )}
 
