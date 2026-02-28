@@ -57,6 +57,7 @@ class UpdateEmployeeDetails(BaseModel):
     role: Optional[str] = None
     phone: Optional[str] = None
     start_date: Optional[str] = None  # Employee's start/hire date
+    admin_code: Optional[str] = None  # Admin access code (required when role is admin)
 
 
 class W9RejectRequest(BaseModel):
