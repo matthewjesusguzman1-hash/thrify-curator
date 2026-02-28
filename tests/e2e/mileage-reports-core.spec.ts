@@ -39,12 +39,9 @@ test.describe('Admin Login and Reports Section', () => {
     // Reports section should be visible
     const reportsSection = page.getByTestId('reports-section');
     await expect(reportsSection).toBeVisible({ timeout: 10000 });
-    
-    // Screenshot
-    await page.screenshot({ path: 'admin-dashboard-loaded.jpeg', quality: 20, fullPage: false });
   });
 
-  test('Reports section description shows "payroll/shift and W-9 reports" (no mileage)', async ({ page }) => {
+  test('Reports section description shows "payroll/shift and W-9 reports"', async ({ page }) => {
     // Login
     await page.goto(`${PAGE_URL}/login`);
     await page.waitForLoadState('domcontentloaded');
@@ -52,7 +49,7 @@ test.describe('Admin Login and Reports Section', () => {
     await page.getByTestId('login-submit-btn').click();
     await page.waitForURL(/\/admin/, { timeout: 15000 });
     
-    // Verify Reports section description - mileage reference removed
+    // Verify Reports section description
     const reportsSection = page.getByTestId('reports-section');
     await expect(reportsSection).toBeVisible({ timeout: 10000 });
     await expect(reportsSection.getByText('Generate payroll/shift and W-9 reports')).toBeVisible();
@@ -80,12 +77,9 @@ test.describe('Admin Login and Reports Section', () => {
     
     // Should NOT see Mileage Log Report option (removed)
     await expect(page.getByText('Mileage Log Report')).not.toBeVisible();
-    
-    // Screenshot
-    await page.screenshot({ path: 'reports-section-options.jpeg', quality: 20, fullPage: false });
   });
 
-  test('Year-to-Date Mileage Summary card appears in Reports section', async ({ page }) => {
+  test('Reports section no longer has YTD Mileage Summary card (moved to Mileage Log)', async ({ page }) => {
     // Login
     await page.goto(`${PAGE_URL}/login`);
     await page.waitForLoadState('domcontentloaded');
@@ -93,51 +87,20 @@ test.describe('Admin Login and Reports Section', () => {
     await page.getByTestId('login-submit-btn').click();
     await page.waitForURL(/\/admin/, { timeout: 15000 });
     
-    // Scroll to Reports section
+    // Scroll to Reports section and expand
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    
-    // Expand Reports section
     await page.getByTestId('reports-toggle').click();
     
-    // YTD Mileage Summary card should be visible
-    const ytdCard = page.getByTestId('mileage-ytd-card');
-    await expect(ytdCard).toBeVisible({ timeout: 10000 });
+    // Wait for expansion
+    await expect(page.getByText('Payroll/Shift Report')).toBeVisible({ timeout: 5000 });
     
-    // Verify card title contains current year
-    const currentYear = new Date().getFullYear();
-    await expect(ytdCard.getByText(`${currentYear} Mileage Summary`)).toBeVisible();
-    await expect(ytdCard.getByText('Year-to-Date for Tax Purposes')).toBeVisible();
+    // Verify NO mileage-ytd-card exists in Reports section
+    const reportsSection = page.getByTestId('reports-section');
+    const ytdCardInReports = reportsSection.getByTestId('mileage-ytd-card');
+    await expect(ytdCardInReports).not.toBeVisible();
     
-    // Screenshot
-    await page.screenshot({ path: 'ytd-mileage-card.jpeg', quality: 20, fullPage: false });
-  });
-
-  test('YTD Mileage Summary card shows Months Logged, Total Miles, and Est. Tax Deduction', async ({ page }) => {
-    // Login
-    await page.goto(`${PAGE_URL}/login`);
-    await page.waitForLoadState('domcontentloaded');
-    await page.getByTestId('login-email').fill(ADMIN_CODE);
-    await page.getByTestId('login-submit-btn').click();
-    await page.waitForURL(/\/admin/, { timeout: 15000 });
-    
-    // Scroll to Reports section
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    
-    // Expand Reports section
-    await page.getByTestId('reports-toggle').click();
-    
-    // Wait for YTD card to load
-    const ytdCard = page.getByTestId('mileage-ytd-card');
-    await expect(ytdCard).toBeVisible({ timeout: 10000 });
-    
-    // Verify the three metrics are displayed
-    await expect(ytdCard.getByText('Months Logged')).toBeVisible();
-    await expect(ytdCard.getByText('Total Miles')).toBeVisible();
-    await expect(ytdCard.getByText('Est. Tax Deduction')).toBeVisible();
-    
-    // Verify IRS rate note is present
-    await expect(ytdCard.getByText(/Using IRS rate/)).toBeVisible();
-    await expect(ytdCard.getByText(/Log mileage in the "Mileage Log" section/)).toBeVisible();
+    // Reports section should start with Report Type selector
+    await expect(reportsSection.getByText('Report Type')).toBeVisible();
   });
 
   test('CSV and PDF download buttons are enabled for Payroll/Shift Report', async ({ page }) => {
@@ -167,7 +130,7 @@ test.describe('Admin Login and Reports Section', () => {
   });
 });
 
-test.describe('Monthly Mileage Log Section', () => {
+test.describe('Monthly Mileage Log Section - Blue Gradient Summary Card', () => {
   test.beforeEach(async ({ page }) => {
     // Skip splash screen
     await page.addInitScript(() => {
@@ -188,16 +151,81 @@ test.describe('Monthly Mileage Log Section', () => {
     await expect(page.getByText('Monthly business mileage for tax deductions')).toBeVisible();
   });
 
-  test('Mileage Log section can be expanded', async ({ page }) => {
-    // Click to expand
+  test('Mileage Log section expands to show blue gradient summary card', async ({ page }) => {
+    // Scroll to and click to expand
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.getByText('Mileage Log').first().click();
     
-    // Should see yearly summary stats
-    await expect(page.getByText(/Total Miles/i).first()).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(/Est. Tax Deduction/i).first()).toBeVisible();
-    await expect(page.getByText(/IRS Rate/i)).toBeVisible();
+    // Wait for the mileage-ytd-card to be visible
+    const ytdCard = page.getByTestId('mileage-ytd-card');
+    await expect(ytdCard).toBeVisible({ timeout: 10000 });
     
-    // Screenshot
-    await page.screenshot({ path: 'mileage-section-expanded.jpeg', quality: 20, fullPage: false });
+    // Verify the card title contains current year
+    const currentYear = new Date().getFullYear();
+    await expect(ytdCard.getByText(`${currentYear} Mileage Summary`)).toBeVisible();
+    await expect(ytdCard.getByText('Year-to-Date for Tax Purposes')).toBeVisible();
+  });
+
+  test('Blue gradient summary card shows Months Logged, Total Miles, and Est. Tax Deduction', async ({ page }) => {
+    // Scroll to and expand Mileage Log
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.getByText('Mileage Log').first().click();
+    
+    // Wait for YTD card
+    const ytdCard = page.getByTestId('mileage-ytd-card');
+    await expect(ytdCard).toBeVisible({ timeout: 10000 });
+    
+    // Verify the three metrics are displayed
+    await expect(ytdCard.getByText('Months Logged')).toBeVisible();
+    await expect(ytdCard.getByText('Total Miles')).toBeVisible();
+    await expect(ytdCard.getByText('Est. Tax Deduction')).toBeVisible();
+  });
+
+  test('Blue gradient summary card shows IRS rate at bottom', async ({ page }) => {
+    // Scroll to and expand Mileage Log
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.getByText('Mileage Log').first().click();
+    
+    // Wait for YTD card
+    const ytdCard = page.getByTestId('mileage-ytd-card');
+    await expect(ytdCard).toBeVisible({ timeout: 10000 });
+    
+    // Verify IRS rate note is present
+    await expect(ytdCard.getByText(/Using IRS rate/)).toBeVisible();
+  });
+
+  test('Mileage Log section shows monthly entries grid', async ({ page }) => {
+    // Scroll to and expand
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.getByText('Mileage Log').first().click();
+    
+    // Wait for section to expand
+    const ytdCard = page.getByTestId('mileage-ytd-card');
+    await expect(ytdCard).toBeVisible({ timeout: 10000 });
+    
+    // Verify monthly entries grid - should see month names
+    await expect(page.getByText('January')).toBeVisible();
+    await expect(page.getByText('February')).toBeVisible();
+    await expect(page.getByText('March')).toBeVisible();
+  });
+
+  test('Add Entry button is visible and clickable', async ({ page }) => {
+    // Scroll to and expand
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.getByText('Mileage Log').first().click();
+    
+    // Wait for section to expand
+    const ytdCard = page.getByTestId('mileage-ytd-card');
+    await expect(ytdCard).toBeVisible({ timeout: 10000 });
+    
+    // Find Add Entry button
+    const addEntryBtn = page.getByRole('button', { name: /Add Entry/ });
+    await expect(addEntryBtn).toBeVisible();
+    
+    // Click Add Entry button
+    await addEntryBtn.click();
+    
+    // Modal should appear with "Add Monthly Mileage" title
+    await expect(page.getByText('Add Monthly Mileage')).toBeVisible({ timeout: 5000 });
   });
 });
