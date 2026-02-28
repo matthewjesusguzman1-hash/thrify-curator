@@ -12,7 +12,6 @@ import ConsignmentAgreementForm from "@/pages/ConsignmentAgreementForm";
 import AuthPage from "@/pages/AuthPage";
 import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
-import QuickStartTrip from "@/pages/QuickStartTrip";
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
