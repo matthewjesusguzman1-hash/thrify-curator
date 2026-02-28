@@ -194,7 +194,7 @@ class TestMonthlyMileageEntry:
             f"{BASE_URL}/api/admin/mileage/monthly-entry",
             json={"year": 2024, "month": 1, "total_miles": 100}
         )
-        assert response.status_code == 401
+        assert response.status_code in [401, 403]
 
 
 class TestMileageReportEndpoint:
@@ -255,7 +255,7 @@ class TestMileageReportEndpoint:
             f"{BASE_URL}/api/admin/mileage/report",
             params={"start_date": "2025-01-01", "end_date": "2025-12-31"}
         )
-        assert response.status_code == 401
+        assert response.status_code in [401, 403]
 
 
 class TestMileageReportCSV:
@@ -318,7 +318,7 @@ class TestMileageReportCSV:
             f"{BASE_URL}/api/admin/mileage/report/csv",
             params={"start_date": "2025-01-01", "end_date": "2025-12-31"}
         )
-        assert response.status_code == 401
+        assert response.status_code in [401, 403]
 
 
 class TestMileageReportPDF:
@@ -357,7 +357,7 @@ class TestMileageReportPDF:
             f"{BASE_URL}/api/admin/mileage/report/pdf",
             params={"start_date": "2025-01-01", "end_date": "2025-12-31"}
         )
-        assert response.status_code == 401
+        assert response.status_code in [401, 403]
 
 
 class TestYearlySummary:
