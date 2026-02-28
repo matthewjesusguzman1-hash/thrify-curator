@@ -44,8 +44,12 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
 
 @router.get("/employees", response_model=List[UserResponse])
 async def get_all_employees(admin: dict = Depends(get_admin_user)):
-    """Get all employees with W-9 status."""
-    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(500)
+    """Get all employees with W-9 status (excludes admin users)."""
+    # Only get non-admin users for employee management
+    users = await db.users.find(
+        {"role": {"$ne": "admin"}}, 
+        {"_id": 0, "password_hash": 0}
+    ).sort("created_at", -1).to_list(500)
     
     user_ids = [u["id"] for u in users]
     w9_docs = await db.w9_documents.find(
