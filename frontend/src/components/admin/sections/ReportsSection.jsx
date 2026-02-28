@@ -534,17 +534,14 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   );
 
   const renderMileagePreview = (data) => {
-    // IRS standard mileage rate for 2026 (72.5 cents per mile)
-    const MILEAGE_RATE = 0.725;
-    
     return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
-      <div className="bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white p-4">
-        <h3 className="font-semibold text-lg mb-2">Mileage Report Summary</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-4">
+        <h3 className="font-semibold text-lg mb-2">Mileage Log Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="bg-white/10 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold">{data.total_trips || 0}</p>
-            <p className="text-sm opacity-80">Total Trips</p>
+            <p className="text-sm opacity-80">Months Logged</p>
           </div>
           <div className="bg-white/10 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold">{(data.total_miles || 0).toFixed(1)}</p>
@@ -552,52 +549,37 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           </div>
           <div className="bg-white/10 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold">{formatCurrency(data.total_deduction)}</p>
-            <p className="text-sm opacity-80">Total Deduction</p>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold">{data.employees?.length || 0}</p>
-            <p className="text-sm opacity-80">Employees</p>
+            <p className="text-sm opacity-80">Est. Tax Deduction</p>
           </div>
         </div>
       </div>
 
       {data.entries?.length > 0 && (
         <div className="p-4 max-h-[350px] overflow-y-auto">
-          <h4 className="font-medium text-[#333] mb-3">Trip Details ({data.entries.length} trips)</h4>
+          <h4 className="font-medium text-[#333] mb-3">Monthly Entries ({data.entries.length})</h4>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="text-left p-2">Employee</th>
-                  <th className="text-left p-2">Date</th>
-                  <th className="text-left p-2">From → To</th>
-                  <th className="text-left p-2">Purpose</th>
+                  <th className="text-left p-2">Month</th>
+                  <th className="text-left p-2">Year</th>
                   <th className="text-center p-2">Miles</th>
                   <th className="text-right p-2">Deduction</th>
+                  <th className="text-left p-2">Notes</th>
                 </tr>
               </thead>
               <tbody>
-                {data.entries.slice(0, 20).map((entry, idx) => {
-                  const miles = entry.total_miles || 0;
-                  const deduction = miles * MILEAGE_RATE;
-                  return (
+                {data.entries.map((entry, idx) => (
                   <tr key={idx} className="border-t border-gray-100">
-                    <td className="p-2">{entry.user_name}</td>
-                    <td className="p-2">{new Date(entry.date).toLocaleDateString()}</td>
-                    <td className="p-2 max-w-[150px] truncate" title={`${entry.start_address} → ${entry.end_address}`}>
-                      {entry.start_address || '-'} → {entry.end_address || '-'}
-                    </td>
-                    <td className="p-2 max-w-[100px] truncate" title={entry.purpose}>{entry.purpose}</td>
-                    <td className="p-2 text-center">{miles.toFixed(1)}</td>
-                    <td className="p-2 text-right text-green-600">{formatCurrency(deduction)}</td>
+                    <td className="p-2 font-medium">{entry.month_name}</td>
+                    <td className="p-2">{entry.year}</td>
+                    <td className="p-2 text-center">{(entry.total_miles || 0).toFixed(1)}</td>
+                    <td className="p-2 text-right text-green-600">{formatCurrency(entry.deduction)}</td>
+                    <td className="p-2 text-gray-500 max-w-[150px] truncate">{entry.notes || '-'}</td>
                   </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
-            {data.entries.length > 20 && (
-              <p className="text-sm text-[#888] text-center mt-2">Showing first 20 of {data.entries.length} entries. Download for full report.</p>
-            )}
           </div>
         </div>
       )}
@@ -607,6 +589,12 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           No mileage entries found for this period
         </div>
       )}
+      
+      <div className="px-4 pb-4">
+        <p className="text-xs text-gray-500">
+          Tax deductions calculated using IRS standard mileage rates: 2024: $0.67/mi | 2025: $0.70/mi | 2026: $0.725/mi
+        </p>
+      </div>
     </div>
     );
   };
