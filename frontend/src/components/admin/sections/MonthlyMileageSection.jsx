@@ -169,9 +169,6 @@ export default function MonthlyMileageSection({ getAuthHeader }) {
     setShowAddModal(true);
   };
 
-  // Check if reminder should be shown
-  const showReminder = reminderStatus && !reminderStatus.is_entered && !reminderStatus.is_dismissed;
-
   return (
     <>
       {/* Main Section */}
