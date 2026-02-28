@@ -289,13 +289,6 @@ export default function AdminDashboard() {
   const [uploadingW9, setUploadingW9] = useState(null);
   const w9InputRef = useRef(null);
 
-  // Mileage trip state for header button
-  const [headerTripActive, setHeaderTripActive] = useState(false);
-  const [headerTripPaused, setHeaderTripPaused] = useState(false);
-  const [headerTripLoading, setHeaderTripLoading] = useState(false);
-  const [forceMileageExpand, setForceMileageExpand] = useState(false);
-  const mileageSectionRef = useRef(null);
-
   // Back to top button state
   const [showBackToTop, setShowBackToTop] = useState(false);
 
