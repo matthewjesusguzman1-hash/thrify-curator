@@ -13,22 +13,46 @@ router = APIRouter(prefix="/admin", tags=["Admin - Employees"])
 
 @router.post("/create-employee", response_model=UserResponse)
 async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(get_admin_user)):
-    """Create a new employee."""
+    """Create a new employee or admin."""
     email_normalized = employee_data.email.lower().strip()
     
     existing = await db.users.find_one({"email": {"$regex": f"^{email_normalized}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # Determine role (default to employee)
+    role = employee_data.role or "employee"
+    if role not in ["employee", "admin"]:
+        raise HTTPException(status_code=400, detail="Invalid role. Must be 'employee' or 'admin'")
+    
+    # If creating an admin, validate admin_code
+    admin_code = None
+    if role == "admin":
+        if not employee_data.admin_code:
+            raise HTTPException(status_code=400, detail="Admin code is required when creating an admin")
+        if not employee_data.admin_code.isdigit() or len(employee_data.admin_code) != 4:
+            raise HTTPException(status_code=400, detail="Admin code must be exactly 4 digits")
+        # Check if code is already in use
+        existing_code = await db.users.find_one({"admin_code": employee_data.admin_code})
+        if existing_code:
+            raise HTTPException(status_code=400, detail="This admin code is already in use")
+        # Check reserved codes
+        if employee_data.admin_code in ["4399", "0826"]:
+            raise HTTPException(status_code=400, detail="This admin code is reserved")
+        admin_code = employee_data.admin_code
+    
     user_id = str(uuid.uuid4())
     user_doc = {
         "id": user_id,
         "email": email_normalized,
         "name": employee_data.name,
-        "role": "employee",
+        "role": role,
         "phone": employee_data.phone,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    
+    if admin_code:
+        user_doc["admin_code"] = admin_code
     
     await db.users.insert_one(user_doc)
     
@@ -36,8 +60,9 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
         id=user_id,
         email=email_normalized,
         name=employee_data.name,
-        role="employee",
+        role=role,
         phone=employee_data.phone,
+        admin_code=admin_code,
         created_at=user_doc["created_at"]
     )
 
