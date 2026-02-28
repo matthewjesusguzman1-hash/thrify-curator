@@ -45,6 +45,8 @@ class CreateEmployee(BaseModel):
     name: str
     email: EmailStr
     phone: Optional[str] = None
+    role: Optional[str] = "employee"  # Default to employee
+    admin_code: Optional[str] = None  # Required when role is admin
 
 
 class UpdateEmployeeRate(BaseModel):
