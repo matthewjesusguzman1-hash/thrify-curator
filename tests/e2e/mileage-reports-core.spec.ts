@@ -209,7 +209,7 @@ test.describe('Monthly Mileage Log Section - Blue Gradient Summary Card', () => 
     await expect(page.getByText('March')).toBeVisible();
   });
 
-  test('Add Entry button is visible and clickable', async ({ page }) => {
+  test('Add Entry button is visible and clickable in Mileage Log section', async ({ page }) => {
     // Scroll to and expand
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.getByText('Mileage Log').first().click();
@@ -218,8 +218,8 @@ test.describe('Monthly Mileage Log Section - Blue Gradient Summary Card', () => 
     const ytdCard = page.getByTestId('mileage-ytd-card');
     await expect(ytdCard).toBeVisible({ timeout: 10000 });
     
-    // Find Add Entry button
-    const addEntryBtn = page.getByRole('button', { name: /Add Entry/ });
+    // Find Add Entry button within the Mileage Log context (use .nth(1) as it's the second Add Entry on page)
+    const addEntryBtn = page.getByRole('button', { name: /Add Entry/ }).nth(1);
     await expect(addEntryBtn).toBeVisible();
     
     // Click Add Entry button
