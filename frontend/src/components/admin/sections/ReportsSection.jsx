@@ -205,12 +205,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           params.append("employee_ids", employeeIds.join(","));
         }
         response = await axios.get(`${API}/admin/reports/shifts?${params.toString()}`, getAuthHeader());
-      } else if (previewData.type === "mileage") {
-        const params = new URLSearchParams({ start_date: start, end_date: end });
-        if (employeeIds && employeeIds.length === 1) {
-          params.append("employee_id", employeeIds[0]);
-        }
-        response = await axios.get(`${API}/admin/mileage/report?${params.toString()}`, getAuthHeader());
       } else if (previewData.type === "w9") {
         const params = new URLSearchParams();
         if (employeeIds && employeeIds.length === 1) {
