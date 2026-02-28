@@ -142,30 +142,32 @@ export function AddEmployeeModal({
               />
             </div>
 
-            {/* Role Selection */}
-            <div className="form-group">
-              <Label className="form-label">Role *</Label>
-              <Select
-                value={newEmployee.role || "employee"}
-                onValueChange={(value) => setNewEmployee({ 
-                  ...newEmployee, 
-                  role: value,
-                  admin_code: value === "employee" ? "" : newEmployee.admin_code 
-                })}
-              >
-                <SelectTrigger className="form-input" data-testid="new-employee-role">
-                  <SelectValue placeholder="Select role..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="employee">Employee</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-[#888] mt-1">Admin role gives full dashboard access</p>
-            </div>
+            {/* Role Selection - Only shown for business owners */}
+            {isOwner && (
+              <div className="form-group">
+                <Label className="form-label">Role *</Label>
+                <Select
+                  value={newEmployee.role || "employee"}
+                  onValueChange={(value) => setNewEmployee({ 
+                    ...newEmployee, 
+                    role: value,
+                    admin_code: value === "employee" ? "" : newEmployee.admin_code 
+                  })}
+                >
+                  <SelectTrigger className="form-input" data-testid="new-employee-role">
+                    <SelectValue placeholder="Select role..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="employee">Employee</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-[#888] mt-1">Admin role gives full dashboard access</p>
+              </div>
+            )}
 
-            {/* Admin Code - only shown when role is admin */}
-            {newEmployee.role === "admin" && (
+            {/* Admin Code - only shown when role is admin AND user is owner */}
+            {isOwner && newEmployee.role === "admin" && (
               <div className="form-group">
                 <Label className="form-label flex items-center gap-2">
                   <Shield className="w-4 h-4 text-[#8B5CF6]" />
