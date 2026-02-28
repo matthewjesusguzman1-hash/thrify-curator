@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, UserCog } from "lucide-react";
+import { X, UserCog, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,8 @@ export default function EditEmployeeModal({ isOpen, onClose, employee, defaultRa
     name: "",
     email: "",
     role: "employee",
-    hourly_rate: ""
+    hourly_rate: "",
+    admin_code: ""
   });
 
   useEffect(() => {
@@ -22,7 +23,8 @@ export default function EditEmployeeModal({ isOpen, onClose, employee, defaultRa
         role: employee.role || "employee",
         hourly_rate: employee.hourly_rate !== null && employee.hourly_rate !== undefined 
           ? employee.hourly_rate.toString() 
-          : ""
+          : "",
+        admin_code: employee.admin_code || ""
       });
     }
   }, [employee]);
@@ -35,6 +37,10 @@ export default function EditEmployeeModal({ isOpen, onClose, employee, defaultRa
       role: formData.role,
       hourly_rate: formData.hourly_rate === "" ? null : parseFloat(formData.hourly_rate)
     };
+    // Include admin_code if role is admin
+    if (formData.role === "admin") {
+      updateData.admin_code = formData.admin_code;
+    }
     await onSave(employee.id, updateData);
   };
 
@@ -99,7 +105,7 @@ export default function EditEmployeeModal({ isOpen, onClose, employee, defaultRa
                 <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Role</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value })}
+                  onValueChange={(value) => setFormData({ ...formData, role: value, admin_code: value === "employee" ? "" : formData.admin_code })}
                 >
                   <SelectTrigger className="border-2 border-gray-200 focus:border-[#8B5CF6]" data-testid="edit-employee-role">
                     <SelectValue placeholder="Select role" />
@@ -110,6 +116,34 @@ export default function EditEmployeeModal({ isOpen, onClose, employee, defaultRa
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Admin Code field - only shown when role is admin */}
+              {formData.role === "admin" && (
+                <div>
+                  <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-[#8B5CF6]" />
+                    Admin Access Code *
+                  </Label>
+                  <Input
+                    type="text"
+                    value={formData.admin_code}
+                    onChange={(e) => {
+                      // Only allow digits, max 4 characters
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setFormData({ ...formData, admin_code: value });
+                    }}
+                    placeholder="4-digit code (e.g., 1234)"
+                    required
+                    maxLength={4}
+                    pattern="\d{4}"
+                    className="border-2 border-gray-200 focus:border-[#8B5CF6] font-mono text-lg tracking-widest"
+                    data-testid="edit-employee-admin-code"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    This code will be used for admin login. Must be exactly 4 digits.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
@@ -138,7 +172,7 @@ export default function EditEmployeeModal({ isOpen, onClose, employee, defaultRa
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (formData.role === "admin" && formData.admin_code.length !== 4)}
                 className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-semibold py-3"
                 data-testid="submit-edit-employee"
               >
