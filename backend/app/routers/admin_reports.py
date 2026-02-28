@@ -876,7 +876,7 @@ async def get_w9_report_pdf(
         if start_date:
             try:
                 start_date = datetime.fromisoformat(start_date).strftime("%b %d, %Y")
-            except:
+            except (ValueError, TypeError):
                 start_date = "N/A"
         else:
             start_date = "N/A"
