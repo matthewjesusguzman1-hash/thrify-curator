@@ -47,7 +47,6 @@ import {
   Filter,
   Monitor,
   Save,
-  Car,
   RefreshCw,
   MessageSquare,
   Mail
