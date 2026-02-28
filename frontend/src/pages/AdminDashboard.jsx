@@ -3357,10 +3357,7 @@ export default function AdminDashboard() {
 
 
           {/* Monthly Mileage Section */}
-          <MonthlyMileageSection 
-            getAuthHeader={getAuthHeader} 
-            isExpanded={forceMileageExpand}
-          />
+          <MonthlyMileageSection getAuthHeader={getAuthHeader} />
 
           {/* Reports Section - After Mileage Tracking */}
           <ReportsSection
