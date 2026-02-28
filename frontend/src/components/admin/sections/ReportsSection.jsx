@@ -692,7 +692,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                 ) : mileageYTD ? (
                   <div className="grid grid-cols-3 gap-4">
                     <div className="bg-white/10 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold">{mileageYTD.months_logged || 0}</p>
+                      <p className="text-2xl font-bold">{mileageYTD.months_entered || 0}</p>
                       <p className="text-sm opacity-80">Months Logged</p>
                     </div>
                     <div className="bg-white/10 rounded-lg p-3 text-center">
