@@ -77,13 +77,6 @@ export default function MonthlyMileageSection({ getAuthHeader }) {
     }
   }, [isExpanded, fetchYearlySummary, fetchReminderStatus]);
 
-  // Auto-expand if forceExpand is set
-  useEffect(() => {
-    if (forceExpand) {
-      setIsExpanded(true);
-    }
-  }, [forceExpand]);
-
   // Save entry
   const handleSaveEntry = async () => {
     if (!formData.total_miles || parseFloat(formData.total_miles) < 0) {
