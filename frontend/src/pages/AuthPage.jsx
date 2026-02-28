@@ -11,8 +11,8 @@ import axios from "axios";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
 
-// Admin codes - map to their respective admin emails
-const ADMIN_CODES = {
+// Business owner codes - these map directly to their emails
+const OWNER_CODES = {
   "4399": "matthewjesusguzman1@gmail.com",
   "0826": "euniceguzman@thriftycurator.com"
 };
@@ -20,6 +20,8 @@ const ADMIN_CODES = {
 export default function AuthPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [adminCode, setAdminCode] = useState("");
+  const [showAdminCode, setShowAdminCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
