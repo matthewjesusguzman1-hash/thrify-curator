@@ -1345,53 +1345,111 @@ async def get_mileage_report(
     employee_id: Optional[str] = None,
     admin: dict = Depends(get_admin_user)
 ):
-    """Get mileage report data for the given date range"""
+    """Get mileage report data for the given date range (monthly entries)"""
+    import calendar
+    
     try:
         start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
         end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-        end = end.replace(hour=23, minute=59, second=59)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format")
     
-    # Build query
+    # Get the year and month range
+    start_year, start_month = start.year, start.month
+    end_year, end_month = end.year, end.month
+    
+    # Build query for monthly entries
+    # We need entries where (year > start_year) OR (year == start_year AND month >= start_month)
+    # AND (year < end_year) OR (year == end_year AND month <= end_month)
     query = {
-        "date": {"$gte": start.isoformat()[:10], "$lte": end.isoformat()[:10]}
+        "$or": [
+            {"year": {"$gt": start_year, "$lt": end_year}},
+            {"year": start_year, "month": {"$gte": start_month}} if start_year == end_year else {"year": start_year, "month": {"$gte": start_month}},
+            {"year": end_year, "month": {"$lte": end_month}} if start_year != end_year else None
+        ]
     }
-    if employee_id:
-        query["user_id"] = employee_id
+    # Simplify query - just get entries in the year range and filter
+    query = {"year": {"$gte": start_year, "$lte": end_year}}
     
-    entries = await db.mileage_entries.find(query, {"_id": 0}).sort("date", 1).to_list(1000)
+    entries = await db.monthly_mileage.find(query, {"_id": 0}).sort([("year", 1), ("month", 1)]).to_list(100)
     
-    # IRS standard mileage rate for 2026 (72.5 cents per mile)
-    MILEAGE_RATE = 0.725
-    
-    # Calculate totals - use total_miles field from database
-    total_miles = sum(e.get("total_miles", 0) for e in entries)
-    total_deduction = total_miles * MILEAGE_RATE
-    
-    # Group by employee
-    employee_summary = {}
+    # Filter entries to exact month range
+    filtered_entries = []
     for entry in entries:
-        uid = entry.get("user_id")
+        entry_year = entry.get("year")
+        entry_month = entry.get("month")
+        
+        # Check if within range
+        if entry_year == start_year and entry_year == end_year:
+            if start_month <= entry_month <= end_month:
+                filtered_entries.append(entry)
+        elif entry_year == start_year:
+            if entry_month >= start_month:
+                filtered_entries.append(entry)
+        elif entry_year == end_year:
+            if entry_month <= end_month:
+                filtered_entries.append(entry)
+        elif start_year < entry_year < end_year:
+            filtered_entries.append(entry)
+    
+    entries = filtered_entries
+    
+    # IRS rates by year
+    IRS_RATES = {2024: 0.67, 2025: 0.70, 2026: 0.725}
+    
+    # Calculate totals
+    total_miles = 0
+    total_deduction = 0
+    
+    # Format entries for report display
+    formatted_entries = []
+    for entry in entries:
+        year = entry.get("year", 2026)
+        month = entry.get("month", 1)
+        miles = entry.get("total_miles", 0)
+        rate = IRS_RATES.get(year, 0.725)
+        deduction = miles * rate
+        
+        total_miles += miles
+        total_deduction += deduction
+        
+        formatted_entries.append({
+            "user_id": entry.get("user_id"),
+            "user_name": entry.get("user_name", "Admin"),
+            "date": f"{year}-{month:02d}-01",
+            "month_name": calendar.month_name[month],
+            "year": year,
+            "month": month,
+            "total_miles": miles,
+            "deduction": deduction,
+            "notes": entry.get("notes"),
+            "start_address": calendar.month_name[month],  # Use month name as "from"
+            "end_address": str(year),  # Use year as "to" for display
+            "purpose": "Monthly Log"
+        })
+    
+    # Group by user
+    employee_summary = {}
+    for entry in formatted_entries:
+        uid = entry.get("user_id", "admin")
         if uid not in employee_summary:
             employee_summary[uid] = {
                 "user_id": uid,
-                "user_name": entry.get("user_name", "Unknown"),
+                "user_name": entry.get("user_name", "Admin"),
                 "total_miles": 0,
                 "total_deduction": 0,
                 "trip_count": 0
             }
-        miles = entry.get("total_miles", 0)
-        employee_summary[uid]["total_miles"] += miles
-        employee_summary[uid]["total_deduction"] += miles * MILEAGE_RATE
+        employee_summary[uid]["total_miles"] += entry.get("total_miles", 0)
+        employee_summary[uid]["total_deduction"] += entry.get("deduction", 0)
         employee_summary[uid]["trip_count"] += 1
     
     return {
         "start_date": start_date,
         "end_date": end_date,
-        "entries": entries,
+        "entries": formatted_entries,
         "employees": list(employee_summary.values()),
-        "total_trips": len(entries),
+        "total_trips": len(formatted_entries),  # Actually monthly entries
         "total_miles": total_miles,
         "total_deduction": total_deduction
     }
