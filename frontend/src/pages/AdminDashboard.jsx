@@ -2526,25 +2526,28 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    <div className="form-group">
-                      <Label className="form-label">Role *</Label>
-                      <Select
-                        value={editEmployeeData.role}
-                        onValueChange={(value) => setEditEmployeeData({ ...editEmployeeData, role: value, admin_code: value === 'employee' ? '' : editEmployeeData.admin_code })}
-                      >
-                        <SelectTrigger className="form-input" data-testid="edit-employee-role">
-                          <SelectValue placeholder="Select role..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="employee">Employee</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-[#888] mt-1">Changing to Admin gives full dashboard access</p>
-                    </div>
+                    {/* Role Selection - Only shown for business owners */}
+                    {isOwner && (
+                      <div className="form-group">
+                        <Label className="form-label">Role *</Label>
+                        <Select
+                          value={editEmployeeData.role}
+                          onValueChange={(value) => setEditEmployeeData({ ...editEmployeeData, role: value, admin_code: value === 'employee' ? '' : editEmployeeData.admin_code })}
+                        >
+                          <SelectTrigger className="form-input" data-testid="edit-employee-role">
+                            <SelectValue placeholder="Select role..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="employee">Employee</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-[#888] mt-1">Changing to Admin gives full dashboard access</p>
+                      </div>
+                    )}
 
-                    {/* Admin Code - only shown when role is admin */}
-                    {editEmployeeData.role === 'admin' && (
+                    {/* Admin Code - only shown when role is admin AND user is owner */}
+                    {isOwner && editEmployeeData.role === 'admin' && (
                       <div className="form-group">
                         <Label className="form-label flex items-center gap-2">
                           <Shield className="w-4 h-4 text-[#8B5CF6]" />
