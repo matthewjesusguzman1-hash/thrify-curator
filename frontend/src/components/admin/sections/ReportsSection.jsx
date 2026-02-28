@@ -718,7 +718,7 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
                   <Briefcase className="w-4 h-4 inline mr-1" />
                   Report Type
                 </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {reportTypes.map((type) => (
                     <button
                       key={type.id}
