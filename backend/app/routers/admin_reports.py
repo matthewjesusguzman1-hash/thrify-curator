@@ -749,7 +749,7 @@ async def get_w9_report_csv(
         if start_date:
             try:
                 start_date = datetime.fromisoformat(start_date).strftime("%b %d, %Y")
-            except:
+            except (ValueError, TypeError):
                 pass
         writer.writerow([
             emp["name"],
