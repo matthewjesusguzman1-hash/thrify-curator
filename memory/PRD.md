@@ -1897,3 +1897,47 @@ Completely removed GPS-based mileage tracking and replaced with a simple monthly
 ### Database Collections
 - `monthly_mileage` - Stores monthly entries (year, month, total_miles, notes)
 - `mileage_reminders` - Tracks dismissed reminders
+
+---
+
+## Mileage Reports Update (Feb 28, 2026) - COMPLETED ✅
+
+### Task: Align Reports Section with New Monthly Mileage System
+
+The Reports section has been updated to match the new simplified monthly mileage logging system.
+
+### Changes Made
+
+**Backend (`/app/backend/app/routers/admin.py`):**
+- Updated mileage report endpoint to query `monthly_mileage` collection
+- Report now returns monthly entries with: month_name, year, total_miles, tax_deduction, notes
+- PDF generation updated to use monthly data format
+- CSV generation updated with new columns
+
+**Frontend (`/app/frontend/src/components/admin/sections/ReportsSection.jsx`):**
+- Updated mileage report preview table columns: Month, Year, Miles, Notes
+- Updated report description to "Mileage Log Report - Monthly Summary"
+- Updated icon to Receipt
+
+### Testing Status
+- **Backend Tests**: 19/19 PASSED (100%)
+- **Frontend E2E Tests**: 6/6 PASSED (100%)
+- All features verified working:
+  - Admin login with codes 4399/0826
+  - Monthly mileage entry creation/update
+  - Mileage report API returns correct data
+  - CSV download with correct columns
+  - PDF download generates valid file
+  - Frontend displays correct table columns
+
+### Test Files Created
+- `/app/backend/tests/test_monthly_mileage_reports.py`
+- `/app/tests/e2e/mileage-reports-core.spec.ts`
+
+---
+
+## Next Tasks / Backlog
+
+### P2 (Low Priority)
+- **Refactor admin.py**: Split large admin.py file into smaller focused modules (reports.py, employees.py, etc.)
+- **Deployment**: Deploy application to production
