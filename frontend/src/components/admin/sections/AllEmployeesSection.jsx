@@ -37,7 +37,8 @@ export default function AllEmployeesSection({
   formatDateTime,
   onViewEmployeePortal,
   onRefreshEmployees,
-  onDownloadBlankW9
+  onDownloadBlankW9,
+  isOwner = false
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [editingRateId, setEditingRateId] = useState(null);
