@@ -178,21 +178,48 @@ export default function AuthPage() {
 
           <form onSubmit={handleLogin} data-testid="login-form">
             <div className="space-y-2">
-              <Label className="text-white/80 text-sm">Email</Label>
+              <Label className="text-white/80 text-sm">Email or Admin Code</Label>
               <Input
                 type="text"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Reset admin code field if email changes
+                  if (showAdminCode) {
+                    setShowAdminCode(false);
+                    setAdminCode("");
+                  }
+                }}
                 required
-                placeholder="your@email.com"
+                placeholder="your@email.com or 4-digit code"
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00D4FF] focus:ring-[#00D4FF]/20"
                 data-testid="login-email"
               />
             </div>
 
+            {/* Admin Access Code field - shown when admin tries to login with email */}
+            {showAdminCode && (
+              <div className="space-y-2 mt-4">
+                <Label className="text-white/80 text-sm">Admin Access Code</Label>
+                <Input
+                  type="text"
+                  value={adminCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setAdminCode(value);
+                  }}
+                  required
+                  maxLength={4}
+                  placeholder="4-digit code"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00D4FF] focus:ring-[#00D4FF]/20 font-mono text-lg tracking-widest text-center"
+                  data-testid="login-admin-code"
+                />
+              </div>
+            )}
+
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || (showAdminCode && adminCode.length !== 4)}
               className="w-full mt-6 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] hover:from-[#00A8CC] hover:to-[#0088AA] text-white font-semibold shadow-lg shadow-[#00D4FF]/30 transition-all flex items-center justify-center gap-2"
               data-testid="login-submit-btn"
             >
