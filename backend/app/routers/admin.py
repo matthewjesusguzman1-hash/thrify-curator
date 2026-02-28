@@ -1462,49 +1462,41 @@ async def download_mileage_report_csv(
     employee_id: Optional[str] = None,
     admin: dict = Depends(get_admin_user)
 ):
-    """Download mileage report as CSV"""
+    """Download mileage report as CSV (monthly entries)"""
     report = await get_mileage_report(start_date, end_date, employee_id, admin)
-    
-    # IRS standard mileage rate (72.5 cents per mile)
-    MILEAGE_RATE = 0.725
     
     output = io.StringIO()
     writer = csv.writer(output)
     
     # Header
-    writer.writerow(["Employee", "Date", "From", "To", "Purpose", "Miles", "Deduction"])
+    writer.writerow(["Month", "Year", "Total Miles", "Tax Deduction", "Notes"])
     
     # Data rows
     for entry in report["entries"]:
-        miles = entry.get("total_miles", 0)
-        deduction = miles * MILEAGE_RATE
         writer.writerow([
-            entry.get("user_name", "Unknown"),
-            entry.get("date", ""),
-            entry.get("start_address", ""),
-            entry.get("end_address", ""),
-            entry.get("purpose", ""),
-            f"{miles:.1f}",
-            f"${deduction:.2f}"
+            entry.get("month_name", ""),
+            entry.get("year", ""),
+            f"{entry.get('total_miles', 0):.1f}",
+            f"${entry.get('deduction', 0):.2f}",
+            entry.get("notes", "") or ""
         ])
     
     # Summary
     writer.writerow([])
     writer.writerow(["=== SUMMARY ==="])
-    writer.writerow(["Employee", "Total Miles", "Total Deduction", "Trips"])
-    for emp in report["employees"]:
-        writer.writerow([
-            emp["user_name"],
-            f"{emp['total_miles']:.1f}",
-            f"${emp['total_deduction']:.2f}",
-            emp["trip_count"]
-        ])
+    writer.writerow(["Months Logged", "Total Miles", "Total Tax Deduction"])
+    writer.writerow([
+        report["total_trips"],
+        f"{report['total_miles']:.1f}",
+        f"${report['total_deduction']:.2f}"
+    ])
     
     writer.writerow([])
-    writer.writerow(["GRAND TOTAL", f"{report['total_miles']:.1f}", f"${report['total_deduction']:.2f}", report["total_trips"]])
+    writer.writerow(["Note: Tax deductions calculated using IRS standard mileage rates"])
+    writer.writerow(["2024: $0.67/mile, 2025: $0.70/mile, 2026: $0.725/mile"])
     
     output.seek(0)
-    filename = f"mileage_report_{start_date[:10]}_to_{end_date[:10]}.csv"
+    filename = f"mileage_log_{start_date[:10]}_to_{end_date[:10]}.csv"
     
     return StreamingResponse(
         io.BytesIO(output.getvalue().encode()),
