@@ -1616,39 +1616,49 @@ async def download_mileage_report_pdf(
         
         pdf.ln(5)
     
-    # TRIP DETAILS section
+    # MONTHLY ENTRIES section (instead of TRIP DETAILS)
     if report["entries"]:
         pdf.set_text_color(*SECTION_COLOR)
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 8, "TRIP DETAILS", ln=True)
+        pdf.cell(0, 8, "MONTHLY ENTRIES", ln=True)
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(3)
         
-        MILEAGE_RATE = 0.725
-        
-        for entry in report["entries"][:50]:
-            purpose = entry.get("purpose", "") or "Other"
+        for entry in report["entries"]:
+            month_name = entry.get("month_name", "")
+            year = entry.get("year", "")
             miles = entry.get("total_miles", 0)
-            deduction = miles * MILEAGE_RATE
+            deduction = entry.get("deduction", 0)
+            notes = entry.get("notes", "") or ""
             
             pdf.set_font("Helvetica", "B", 9)
             pdf.set_text_color(*BLACK)
-            pdf.cell(0, 5, f"{entry.get('date', '')[:10]} - {entry.get('user_name', '')}", ln=True)
+            pdf.cell(0, 5, f"{month_name} {year}", ln=True)
             
             pdf.set_font("Helvetica", "", 8)
             pdf.set_text_color(*GRAY_LABEL)
-            pdf.cell(25, 4, "    Purpose:")
+            pdf.cell(18, 4, "    Miles:")
             pdf.set_text_color(*BLACK)
-            pdf.cell(60, 4, purpose[:30])
-            pdf.set_text_color(*GRAY_LABEL)
-            pdf.cell(18, 4, "Miles:")
-            pdf.set_text_color(*BLACK)
-            pdf.cell(20, 4, f"{miles:.1f}")
+            pdf.cell(25, 4, f"{miles:.1f}")
             pdf.set_text_color(*GRAY_LABEL)
             pdf.cell(25, 4, "Deduction:")
             pdf.set_text_color(*GREEN)
-            pdf.cell(0, 4, f"${deduction:.2f}", ln=True)
+            pdf.cell(25, 4, f"${deduction:.2f}")
+            if notes:
+                pdf.set_text_color(*GRAY_LABEL)
+                pdf.cell(15, 4, "Notes:")
+                pdf.set_text_color(*BLACK)
+                pdf.cell(0, 4, notes[:40], ln=True)
+            else:
+                pdf.ln()
             pdf.ln(2)
+    
+    # IRS Rate Note
+    pdf.ln(5)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 4, "Tax deductions calculated using IRS standard mileage rates:", ln=True)
+    pdf.cell(0, 4, "2024: $0.67/mile | 2025: $0.70/mile | 2026: $0.725/mile", ln=True)
     
     # Footer
     pdf.set_y(-20)
