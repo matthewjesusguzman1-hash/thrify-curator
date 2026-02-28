@@ -3541,21 +3541,10 @@ export default function AdminDashboard() {
           <PaymentRecordsSection getAuthHeader={getAuthHeader} />
 
 
-          {/* Mileage Tracking Section */}
-          <MileageTrackingSection 
+          {/* Monthly Mileage Section */}
+          <MonthlyMileageSection 
             getAuthHeader={getAuthHeader} 
-            onTripStatusChange={(status) => {
-              if (typeof status === 'object') {
-                setHeaderTripActive(status.isActive);
-                setHeaderTripPaused(status.isPaused);
-              } else {
-                // Backward compatibility for boolean
-                setHeaderTripActive(status);
-              }
-            }}
-            forceExpand={forceMileageExpand}
-            headerTripActive={headerTripActive}
-            headerTripPaused={headerTripPaused}
+            isExpanded={forceMileageExpand}
           />
 
           {/* Reports Section - After Mileage Tracking */}
