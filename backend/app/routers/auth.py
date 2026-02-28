@@ -52,8 +52,8 @@ async def login(credentials: UserLogin):
     
     # Admin users must use their admin code to login
     if user["role"] == "admin":
-        # Each admin code maps to a specific admin
-        ADMIN_CODES = {
+        # Built-in owner codes (cannot be changed)
+        OWNER_CODES = {
             "4399": {"email": "matthewjesusguzman1@gmail.com", "name": "Matthew Guzman"},
             "0826": {"email": "euniceguzman@thriftycurator.com", "name": "Eunice Guzman"}
         }
@@ -62,24 +62,43 @@ async def login(credentials: UserLogin):
         if not credentials.admin_code:
             raise HTTPException(status_code=401, detail="Admin access requires an access code")
         
-        # Verify the code is valid
-        admin_info = ADMIN_CODES.get(credentials.admin_code)
-        if not admin_info:
-            raise HTTPException(status_code=401, detail="Invalid access code")
-        
-        # Store which admin code was used in the token payload
-        token = create_token(user["id"], user["email"], user["role"], admin_code=credentials.admin_code, admin_name=admin_info["name"])
-        
-        return TokenResponse(
-            access_token=token,
-            user=UserResponse(
-                id=user["id"],
-                email=user["email"],
-                name=admin_info["name"],  # Use the admin name from code
-                role=user["role"],
-                created_at=user["created_at"]
+        # First check owner codes
+        owner_info = OWNER_CODES.get(credentials.admin_code)
+        if owner_info:
+            # Verify the code matches the user's email
+            if user["email"].lower() != owner_info["email"].lower():
+                raise HTTPException(status_code=401, detail="Invalid access code for this account")
+            
+            token = create_token(user["id"], user["email"], user["role"], admin_code=credentials.admin_code, admin_name=owner_info["name"])
+            
+            return TokenResponse(
+                access_token=token,
+                user=UserResponse(
+                    id=user["id"],
+                    email=user["email"],
+                    name=owner_info["name"],
+                    role=user["role"],
+                    created_at=user["created_at"]
+                )
             )
-        )
+        
+        # Check user's stored admin code
+        user_admin_code = user.get("admin_code")
+        if user_admin_code and credentials.admin_code == user_admin_code:
+            token = create_token(user["id"], user["email"], user["role"], admin_code=credentials.admin_code, admin_name=user["name"])
+            
+            return TokenResponse(
+                access_token=token,
+                user=UserResponse(
+                    id=user["id"],
+                    email=user["email"],
+                    name=user["name"],
+                    role=user["role"],
+                    created_at=user["created_at"]
+                )
+            )
+        
+        raise HTTPException(status_code=401, detail="Invalid access code")
     
     token = create_token(user["id"], user["email"], user["role"])
     
