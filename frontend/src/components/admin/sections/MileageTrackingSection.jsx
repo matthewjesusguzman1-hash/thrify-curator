@@ -2218,6 +2218,226 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
             </motion.div>
           </motion.div>
         )}
+
+        {/* Forgot to Track Modal */}
+        {showForgotToTrackModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowForgotToTrackModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-amber-500 to-orange-500">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold">Forgot to Track</h3>
+                      <p className="text-white/80 text-sm">Add a trip you forgot to track</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowForgotToTrackModal(false)}
+                    className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 space-y-4">
+                {/* Date */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Date</Label>
+                  <Input
+                    type="date"
+                    value={forgotTripData.date}
+                    onChange={(e) => setForgotTripData(prev => ({ ...prev, date: e.target.value }))}
+                    className="mt-1"
+                  />
+                </div>
+
+                {/* Start Address */}
+                <div className="relative">
+                  <Label className="text-sm font-medium text-gray-700">Start Address</Label>
+                  <div className="relative mt-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                    <Input
+                      placeholder="Enter starting location..."
+                      value={forgotTripData.start_address}
+                      onChange={(e) => handleAddressInput(e.target.value, 'start')}
+                      onFocus={() => setShowStartSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowStartSuggestions(false), 200)}
+                      className="pl-10"
+                    />
+                  </div>
+                  {showStartSuggestions && addressSuggestions.start.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {addressSuggestions.start.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => selectAddress(suggestion, 'start')}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                        >
+                          <span className="line-clamp-2">{suggestion.display_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* End Address */}
+                <div className="relative">
+                  <Label className="text-sm font-medium text-gray-700">End Address</Label>
+                  <div className="relative mt-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                    <Input
+                      placeholder="Enter destination..."
+                      value={forgotTripData.end_address}
+                      onChange={(e) => handleAddressInput(e.target.value, 'end')}
+                      onFocus={() => setShowEndSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowEndSuggestions(false), 200)}
+                      className="pl-10"
+                    />
+                  </div>
+                  {showEndSuggestions && addressSuggestions.end.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {addressSuggestions.end.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => selectAddress(suggestion, 'end')}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                        >
+                          <span className="line-clamp-2">{suggestion.display_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Calculate Route Button */}
+                <Button
+                  onClick={calculateForgotRoute}
+                  disabled={isCalculatingRoute || !forgotTripData.start_address || !forgotTripData.end_address}
+                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white"
+                >
+                  {isCalculatingRoute ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Calculating...
+                    </>
+                  ) : (
+                    <>
+                      <Route className="w-4 h-4 mr-2" />
+                      Calculate Route
+                    </>
+                  )}
+                </Button>
+
+                {/* Route Preview */}
+                {forgotTripRoute && (
+                  <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Distance</span>
+                      <span className="text-xl font-bold text-emerald-600">{forgotTripRoute.distance_miles.toFixed(2)} mi</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Est. Drive Time</span>
+                      <span className="font-medium">{forgotTripRoute.duration_minutes} min</span>
+                    </div>
+                    {forgotTripRoute.geometry && (
+                      <div className="mt-2">
+                        <TripMap
+                          waypoints={forgotTripRoute.geometry.coordinates.map(c => ({
+                            latitude: c[1],
+                            longitude: c[0]
+                          }))}
+                          isLiveTracking={false}
+                          height="200px"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Purpose */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Purpose</Label>
+                  <Select
+                    value={forgotTripData.purpose}
+                    onValueChange={(value) => setForgotTripData(prev => ({ ...prev, purpose: value }))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="thrifting">Thrifting</SelectItem>
+                      <SelectItem value="delivery">Delivery</SelectItem>
+                      <SelectItem value="pickup">Pickup</SelectItem>
+                      <SelectItem value="sourcing">Sourcing</SelectItem>
+                      <SelectItem value="business">Business</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {forgotTripData.purpose === "other" && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Purpose Description</Label>
+                    <Input
+                      placeholder="Describe the purpose..."
+                      value={forgotTripData.purpose_other}
+                      onChange={(e) => setForgotTripData(prev => ({ ...prev, purpose_other: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+
+                {/* Notes */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Notes (optional)</Label>
+                  <Input
+                    placeholder="Add any notes..."
+                    value={forgotTripData.notes}
+                    onChange={(e) => setForgotTripData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-gray-200 flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowForgotToTrackModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={saveForgotTrip}
+                  disabled={!forgotTripRoute}
+                  className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Trip
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </>
   );
