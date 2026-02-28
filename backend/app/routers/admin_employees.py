@@ -92,8 +92,10 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
-    if employee.get("role") == "admin":
-        raise HTTPException(status_code=400, detail="Cannot edit admin account")
+    # Check if trying to edit a business owner
+    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
+    if employee.get("email", "").lower() in [e.lower() for e in OWNER_EMAILS]:
+        raise HTTPException(status_code=400, detail="Cannot edit business owner account")
     
     update_fields = {}
     
@@ -119,6 +121,44 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
         if update_data.role not in ["employee", "admin"]:
             raise HTTPException(status_code=400, detail="Invalid role. Must be 'employee' or 'admin'")
         update_fields["role"] = update_data.role
+        
+        # If changing to admin, admin_code is required
+        if update_data.role == "admin":
+            if not update_data.admin_code:
+                raise HTTPException(status_code=400, detail="Admin code is required when setting role to admin")
+            # Validate admin code format (4 digits)
+            if not update_data.admin_code.isdigit() or len(update_data.admin_code) != 4:
+                raise HTTPException(status_code=400, detail="Admin code must be exactly 4 digits")
+            # Check if code is already in use by another user
+            existing_code = await db.users.find_one({
+                "admin_code": update_data.admin_code,
+                "id": {"$ne": employee_id}
+            })
+            if existing_code:
+                raise HTTPException(status_code=400, detail="This admin code is already in use")
+            # Check if it's a reserved owner code
+            if update_data.admin_code in ["4399", "0826"]:
+                raise HTTPException(status_code=400, detail="This admin code is reserved")
+            update_fields["admin_code"] = update_data.admin_code
+        else:
+            # If changing from admin to employee, remove admin code
+            update_fields["admin_code"] = None
+    
+    # Allow updating admin_code separately (for existing admins)
+    if update_data.admin_code is not None and update_data.role != "admin":
+        current_role = update_data.role or employee.get("role")
+        if current_role == "admin":
+            if not update_data.admin_code.isdigit() or len(update_data.admin_code) != 4:
+                raise HTTPException(status_code=400, detail="Admin code must be exactly 4 digits")
+            existing_code = await db.users.find_one({
+                "admin_code": update_data.admin_code,
+                "id": {"$ne": employee_id}
+            })
+            if existing_code:
+                raise HTTPException(status_code=400, detail="This admin code is already in use")
+            if update_data.admin_code in ["4399", "0826"]:
+                raise HTTPException(status_code=400, detail="This admin code is reserved")
+            update_fields["admin_code"] = update_data.admin_code
     
     if update_data.phone is not None:
         update_fields["phone"] = update_data.phone
