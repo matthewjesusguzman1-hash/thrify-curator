@@ -77,10 +77,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   const handleReportTypeChange = (type) => {
     setReportType(type);
     setPreviewData(null);
-    // Default mileage reports to Administrator
-    if (type === "mileage") {
-      setSelectedEmployee("administrator");
-    }
   };
 
   const months = [
