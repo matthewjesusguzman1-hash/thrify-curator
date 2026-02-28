@@ -180,8 +180,8 @@ class TestAdminTimeEntriesModule:
             assert "user_id" in entry
             assert "clock_in" in entry
 
-    def test_create_time_entry(self, auth_headers):
-        """Test POST /admin/time-entries creates new entry"""
+    def test_admin_clock_in_out(self, auth_headers):
+        """Test POST /admin/employee/{id}/clock for clock in/out"""
         # Get an employee
         emp_response = requests.get(f"{BASE_URL}/api/admin/employees", headers=auth_headers)
         employees = [e for e in emp_response.json() if e["role"] == "employee"]
@@ -191,26 +191,40 @@ class TestAdminTimeEntriesModule:
         
         employee = employees[0]
         
-        # Create time entry
-        response = requests.post(
-            f"{BASE_URL}/api/admin/time-entries",
-            headers=auth_headers,
-            json={
-                "user_id": employee["id"],
-                "user_name": employee["name"],
-                "clock_in": datetime.now(timezone.utc).isoformat(),
-                "total_hours": 2.5,
-                "admin_note": "Test entry"
-            }
+        # First check if already clocked in and clock out if so
+        status_response = requests.get(
+            f"{BASE_URL}/api/admin/employee/{employee['id']}/clock-status",
+            headers=auth_headers
         )
-        # This endpoint may return 200 or 201
-        assert response.status_code in [200, 201, 404]  # 404 if endpoint doesn't exist
+        if status_response.status_code == 200 and status_response.json().get("clocked_in"):
+            requests.post(
+                f"{BASE_URL}/api/admin/employee/{employee['id']}/clock",
+                headers=auth_headers,
+                json={"action": "out"}
+            )
         
-        if response.status_code in [200, 201]:
-            entry_id = response.json().get("id")
-            if entry_id:
-                # Clean up
-                requests.delete(f"{BASE_URL}/api/admin/time-entries/{entry_id}", headers=auth_headers)
+        # Test clock in
+        clock_in_response = requests.post(
+            f"{BASE_URL}/api/admin/employee/{employee['id']}/clock",
+            headers=auth_headers,
+            json={"action": "in"}
+        )
+        assert clock_in_response.status_code == 200
+        data = clock_in_response.json()
+        assert "entry_id" in data
+        entry_id = data["entry_id"]
+        
+        # Test clock out
+        clock_out_response = requests.post(
+            f"{BASE_URL}/api/admin/employee/{employee['id']}/clock",
+            headers=auth_headers,
+            json={"action": "out"}
+        )
+        assert clock_out_response.status_code == 200
+        
+        # Clean up
+        if entry_id:
+            requests.delete(f"{BASE_URL}/api/admin/time-entries/{entry_id}", headers=auth_headers)
 
 
 class TestAdminW9Module:
