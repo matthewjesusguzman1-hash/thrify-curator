@@ -654,42 +654,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
             className="overflow-hidden"
           >
             <div className="mt-4 pt-4 border-t border-[#eee]">
-              {/* Year-to-Date Mileage Summary Card */}
-              <div className="mb-6 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl p-4 text-white" data-testid="mileage-ytd-card">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Receipt className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{new Date().getFullYear()} Mileage Summary</h3>
-                    <p className="text-sm opacity-80">Year-to-Date for Tax Purposes</p>
-                  </div>
-                </div>
-                {loadingMileageYTD ? (
-                  <div className="text-center py-4 opacity-80">Loading...</div>
-                ) : mileageYTD ? (
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-white/10 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold">{mileageYTD.months_entered || 0}</p>
-                      <p className="text-sm opacity-80">Months Logged</p>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold">{(mileageYTD.total_miles || 0).toFixed(1)}</p>
-                      <p className="text-sm opacity-80">Total Miles</p>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold">{formatCurrency(mileageYTD.total_tax_deduction || 0)}</p>
-                      <p className="text-sm opacity-80">Est. Tax Deduction</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-4 opacity-80">No mileage data available</div>
-                )}
-                <p className="text-xs opacity-70 mt-3 text-center">
-                  Using IRS rate: ${mileageYTD?.irs_rate || 0.70}/mile • Log mileage in the "Mileage Log" section
-                </p>
-              </div>
-
               {/* Report Type Selector */}
               <div className="mb-6">
                 <Label className="text-sm font-medium text-[#666] mb-3 block">
