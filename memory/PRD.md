@@ -1835,3 +1835,65 @@ Updated manifest.json with shortcuts accessible by long-pressing the app icon:
 - Address search debounced to 300ms
 - Route geometry stored for map display
 - Trips marked as `entry_type: "forgot_to_track"` for audit trail
+
+## Major Refactor: GPS Tracking → Monthly Mileage Entry (Feb 28, 2026)
+
+### Change Summary
+Completely removed GPS-based mileage tracking and replaced with a simple monthly mileage entry system.
+
+### What Was Removed
+- Live GPS tracking with waypoints
+- OSRM road-matching service
+- Real-time map display (Leaflet/TripMap)
+- GPS gap detection and filling
+- Screen wake lock functionality
+- All GPS-related backend endpoints
+
+### Files Removed
+- `/app/frontend/src/components/admin/sections/MileageTrackingSection.jsx`
+- `/app/frontend/src/components/TripMap.jsx`
+- `/app/backend/app/services/osrm_service.py`
+- `/app/backend/app/routers/mileage.py`
+- `/app/backend/app/models/mileage.py`
+
+### What Was Added
+**New Monthly Mileage System:**
+
+1. **Simple Monthly Entry**
+   - Enter total miles per month
+   - Optional notes field
+   - Automatic tax deduction calculation using IRS rate
+
+2. **Yearly Summary**
+   - Total miles for the year
+   - Estimated tax deduction
+   - Visual grid of all 12 months
+
+3. **Monthly Reminder System**
+   - Reminder banner on 1st of each month
+   - Shows days overdue
+   - "Enter Mileage" button for quick entry
+   - "Skip This Month" to dismiss reminder
+
+### New Backend Endpoints
+- `GET /api/admin/mileage/monthly-entries` - Get all entries for a year
+- `POST /api/admin/mileage/monthly-entry` - Create/update monthly entry
+- `DELETE /api/admin/mileage/monthly-entry/{id}` - Delete entry
+- `GET /api/admin/mileage/yearly-summary` - Get year summary with tax calc
+- `GET /api/admin/mileage/reminder-status` - Check if reminder is pending
+- `POST /api/admin/mileage/dismiss-reminder` - Dismiss monthly reminder
+- `GET /api/admin/mileage/pending-months` - Get list of unentered months
+
+### New Files
+- `/app/frontend/src/components/admin/sections/MonthlyMileageSection.jsx`
+- `/app/backend/app/routers/monthly_mileage.py`
+- `/app/backend/app/models/monthly_mileage.py`
+
+### IRS Rates Configured
+- 2024: $0.67/mile
+- 2025: $0.70/mile
+- 2026: $0.725/mile
+
+### Database Collections
+- `monthly_mileage` - Stores monthly entries (year, month, total_miles, notes)
+- `mileage_reminders` - Tracks dismissed reminders
