@@ -50,28 +50,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
   const [previewData, setPreviewData] = useState(null);
   const [viewingW9, setViewingW9] = useState(null); // For W-9 preview modal
   const [refreshing, setRefreshing] = useState(false);
-  const [mileageYTD, setMileageYTD] = useState(null);
-  const [loadingMileageYTD, setLoadingMileageYTD] = useState(false);
-
-  // Fetch Year-to-Date mileage summary on mount and when section expands
-  useEffect(() => {
-    const fetchMileageYTD = async () => {
-      setLoadingMileageYTD(true);
-      try {
-        const year = new Date().getFullYear();
-        const response = await axios.get(`${API}/admin/mileage/yearly-summary?year=${year}`, getAuthHeader());
-        setMileageYTD(response.data);
-      } catch (error) {
-        console.error("Failed to fetch mileage YTD:", error);
-      } finally {
-        setLoadingMileageYTD(false);
-      }
-    };
-    
-    if (isExpanded && !mileageYTD) {
-      fetchMileageYTD();
-    }
-  }, [isExpanded, getAuthHeader]);
 
   // Default to Administrator for mileage reports
   const handleReportTypeChange = (type) => {
