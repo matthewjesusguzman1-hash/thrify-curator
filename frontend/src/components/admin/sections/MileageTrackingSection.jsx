@@ -101,23 +101,6 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
   const [showEditMileageModal, setShowEditMileageModal] = useState(false);
   const [editingMileageEntry, setEditingMileageEntry] = useState(null);
   const [showEndTripModal, setShowEndTripModal] = useState(false);
-  const [showForgotToTrackModal, setShowForgotToTrackModal] = useState(false);
-  
-  // "Forgot to Track" feature state
-  const [forgotTripData, setForgotTripData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    start_address: "",
-    end_address: "",
-    purpose: "thrifting",
-    purpose_other: "",
-    notes: ""
-  });
-  const [forgotTripRoute, setForgotTripRoute] = useState(null);
-  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
-  const [addressSuggestions, setAddressSuggestions] = useState({ start: [], end: [] });
-  const [showStartSuggestions, setShowStartSuggestions] = useState(false);
-  const [showEndSuggestions, setShowEndSuggestions] = useState(false);
-  const searchTimeoutRef = useRef(null);
   
   // Form data
   const [mileageFormData, setMileageFormData] = useState({
