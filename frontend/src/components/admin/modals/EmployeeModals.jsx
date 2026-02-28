@@ -27,7 +27,8 @@ export function AddEmployeeModal({
   formSubmissions,
   handleAddEmployee,
   handleDownloadBlankW9,
-  addingEmployee
+  addingEmployee,
+  isOwner = false
 }) {
   if (!show) return null;
 
