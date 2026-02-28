@@ -1305,16 +1305,27 @@ export default function MileageTrackingSection({ getAuthHeader, onTripStatusChan
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       {!isTracking ? (
-                        <Button
-                          onClick={startMileageTracking}
-                          className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
-                          data-testid="start-tracking-btn"
-                        >
-                          <PlayCircle className="w-4 h-4 mr-2" />
-                          Start Trip
-                        </Button>
+                        <>
+                          <Button
+                            onClick={startMileageTracking}
+                            className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
+                            data-testid="start-tracking-btn"
+                          >
+                            <PlayCircle className="w-4 h-4 mr-2" />
+                            Start Trip
+                          </Button>
+                          <Button
+                            onClick={() => setShowForgotToTrackModal(true)}
+                            variant="outline"
+                            className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                            data-testid="forgot-to-track-btn"
+                          >
+                            <Clock className="w-4 h-4 mr-2" />
+                            Forgot to Track
+                          </Button>
+                        </>
                       ) : (
                         <>
                           {isPaused ? (
