@@ -1936,6 +1936,31 @@ The Reports section has been updated to match the new simplified monthly mileage
 
 ---
 
+## Year-to-Date Mileage Card & Report Cleanup (Feb 28, 2026) - COMPLETED ✅
+
+### User Request
+1. Add a "Year-to-Date Summary" card at the top of the Reports section
+2. Remove the mileage report option from Reports section
+
+### Changes Made
+
+**Frontend (`/app/frontend/src/components/admin/sections/ReportsSection.jsx`):**
+- Added Year-to-Date Mileage Summary card at top of expanded Reports section
+  - Fetches data from `/api/admin/mileage/yearly-summary?year={currentYear}` on section expand
+  - Displays: Months Logged, Total Miles, Est. Tax Deduction
+  - Shows IRS rate and directs users to "Mileage Log" section for data entry
+- Removed "Mileage Log Report" from report type options
+- Updated report types grid from 3 columns to 2 columns
+- Updated section description to "Generate payroll/shift and W-9 reports"
+- Removed all mileage-related code from preview, download, and refresh functions
+
+### Testing Status
+- **Backend Tests**: 19/19 PASSED (100%)
+- **Frontend E2E Tests**: 17/17 PASSED (100%)
+- All YTD card features verified working
+
+---
+
 ## Next Tasks / Backlog
 
 ### P2 (Low Priority)
