@@ -11,7 +11,7 @@ import {
   FileSpreadsheet,
   File,
   Clock,
-  Car,
+  Receipt,
   Briefcase,
   FileSignature,
   CheckCircle,
