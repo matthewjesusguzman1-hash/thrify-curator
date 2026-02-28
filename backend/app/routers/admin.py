@@ -1540,7 +1540,7 @@ async def download_mileage_report_pdf(
     pdf.set_y(8)
     pdf.cell(0, 8, "THRIFTY CURATOR", ln=True, align="L")
     pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 6, "Mileage Report", ln=True, align="L")
+    pdf.cell(0, 6, "Mileage Log Report", ln=True, align="L")
     
     pdf.set_y(40)
     pdf.set_x(10)
