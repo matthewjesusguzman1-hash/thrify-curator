@@ -85,7 +85,21 @@ export default function AuthPage() {
         navigate("/dashboard");
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Login failed");
+      // Handle error - ensure we display a string, not an object
+      let errorMessage = "Login failed";
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        // Check if detail is a string or object
+        if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (Array.isArray(detail)) {
+          // Pydantic validation errors come as array
+          errorMessage = detail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
+        } else if (typeof detail === 'object') {
+          errorMessage = detail.msg || detail.message || JSON.stringify(detail);
+        }
+      }
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
