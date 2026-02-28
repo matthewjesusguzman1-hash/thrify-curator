@@ -62,15 +62,28 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      // Check if admin code is entered - convert to admin email
       const trimmedInput = email.trim();
-      const isAdminCode = ADMIN_CODES[trimmedInput] !== undefined;
-      const loginEmail = ADMIN_CODES[trimmedInput] || trimmedInput;
       
-      // Build login payload - include admin_code if using code-based login
-      const payload = { email: loginEmail };
-      if (isAdminCode) {
-        payload.admin_code = trimmedInput;
+      // Check if it's a business owner code (4-digit code that maps to owner email)
+      const isOwnerCode = OWNER_CODES[trimmedInput] !== undefined;
+      
+      let payload;
+      
+      if (isOwnerCode) {
+        // Owner code login - use mapped email and code
+        payload = { 
+          email: OWNER_CODES[trimmedInput],
+          admin_code: trimmedInput 
+        };
+      } else if (showAdminCode && adminCode) {
+        // Admin login with email + code
+        payload = { 
+          email: trimmedInput,
+          admin_code: adminCode 
+        };
+      } else {
+        // Regular employee login (email only)
+        payload = { email: trimmedInput };
       }
       
       const response = await axios.post(`${API}/auth/login`, payload);
@@ -94,6 +107,11 @@ export default function AuthPage() {
         // Check if detail is a string or object
         if (typeof detail === 'string') {
           errorMessage = detail;
+          // If admin code required, show the admin code field
+          if (detail.includes("access code")) {
+            setShowAdminCode(true);
+            errorMessage = "Please enter your admin access code";
+          }
         } else if (Array.isArray(detail)) {
           // Pydantic validation errors come as array
           errorMessage = detail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
