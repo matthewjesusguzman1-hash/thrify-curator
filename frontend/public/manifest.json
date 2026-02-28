@@ -39,13 +39,6 @@
   "related_applications": [],
   "shortcuts": [
     {
-      "name": "Quick Start Trip",
-      "short_name": "Start Trip",
-      "description": "Quickly start mileage tracking",
-      "url": "/quick-start",
-      "icons": [{ "src": "https://customer-assets.emergentagent.com/job_5bad4b6e-1f45-47e6-8f7d-d2555a90922c/artifacts/zlyv9l51_IMG_0092.png", "sizes": "192x192" }]
-    },
-    {
       "name": "Admin Dashboard",
       "short_name": "Admin",
       "description": "Open admin dashboard",
