@@ -1789,3 +1789,49 @@ Enhanced the OSRM integration to automatically detect and fill gaps in GPS data 
 - **More Accurate Distances**: Captures full route even with intermittent GPS
 - **Better Coverage**: Works in areas with poor cellular/GPS reception
 - **Transparency**: Shows exactly how many gaps were detected and filled
+
+## New Mileage Tracking Features (Feb 28, 2026)
+
+### 1. "Forgot to Track" Mode
+Allows users to add trips retroactively with automatic route calculation.
+
+**Features:**
+- Address autocomplete with Nominatim (OpenStreetMap) geocoding
+- OSRM routing to calculate accurate road distance
+- Route preview on map before saving
+- Date picker for historical trips
+- Purpose and notes fields
+
+**Backend Endpoints:**
+- `POST /api/admin/mileage/calculate-route` - Calculate route between two addresses
+- `POST /api/admin/mileage/forgot-to-track` - Save a retroactive trip
+- `GET /api/admin/mileage/geocode` - Address autocomplete search
+
+### 2. Quick Start Trip Page
+A dedicated page (`/quick-start`) for fast trip starting, designed for iOS home screen shortcuts.
+
+**Features:**
+- Gets user's GPS location on page load
+- Shows location accuracy
+- One-tap "Start Trip Now" button
+- Auto-redirects to dashboard after starting
+- Error handling for location/auth issues
+
+**iOS Usage:**
+1. Log in to the app once
+2. Navigate to yoursite.com/quick-start
+3. Use Safari's "Add to Home Screen" feature
+4. The shortcut will open directly to the Quick Start page
+
+### 3. PWA Shortcuts (Android)
+Updated manifest.json with shortcuts accessible by long-pressing the app icon:
+- **Quick Start Trip** - Opens /quick-start for fast trip starting
+- **Admin Dashboard** - Opens /admin
+- **Employee Portal** - Opens /dashboard
+
+### Technical Notes
+- Uses Nominatim API for geocoding (free, no key needed)
+- Uses OSRM for routing (free, no key needed)
+- Address search debounced to 300ms
+- Route geometry stored for map display
+- Trips marked as `entry_type: "forgot_to_track"` for audit trail
