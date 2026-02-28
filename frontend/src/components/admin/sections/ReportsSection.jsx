@@ -307,18 +307,6 @@ export default function ReportsSection({ employees, payPeriodStart, getAuthHeade
           ...getAuthHeader(),
           responseType: 'blob'
         });
-      } else if (reportType === "mileage") {
-        const params = new URLSearchParams({
-          start_date: start,
-          end_date: end
-        });
-        if (employeeIds && employeeIds.length === 1) {
-          params.append("employee_id", employeeIds[0]);
-        }
-        response = await axios.get(`${API}/admin/mileage/report/${format}?${params.toString()}`, {
-          ...getAuthHeader(),
-          responseType: 'blob'
-        });
       } else if (reportType === "w9") {
         const params = new URLSearchParams();
         if (employeeIds && employeeIds.length === 1) {
