@@ -18,7 +18,7 @@ import uuid
 
 from app.database import db
 from app.dependencies import get_admin_user
-from app.models.time_entry import ReportRequest
+from app.models.payroll import ReportRequest
 
 # Import time helpers
 from app.services.time_helpers import format_hours_hms, round_hours_to_minute, round_to_nearest_minute
