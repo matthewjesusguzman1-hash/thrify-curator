@@ -1322,7 +1322,7 @@ export default function AdminDashboard() {
   };
 
   const getEmployeeStats = (employeeId) => {
-    const empEntries = timeEntries.filter(e => e.user_id === employeeId && e.total_hours);
+    const empEntries = timeEntries.filter(e => e.user_id === employeeId);
     const totalHours = empEntries.reduce((sum, e) => sum + (e.total_hours || 0), 0);
     const totalShifts = empEntries.length;
     return { totalHours: totalHours.toFixed(2), totalShifts };
