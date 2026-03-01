@@ -3257,6 +3257,7 @@ export default function AdminDashboard() {
               onViewEmployeePortal={handleViewEmployeePortal}
               onRefreshEmployees={fetchData}
               onDownloadBlankW9={handleDownloadBlankW9}
+              isOwner={isOwner}
             />
           </div>
 
