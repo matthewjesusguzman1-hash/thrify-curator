@@ -178,7 +178,7 @@ export default function AuthPage() {
 
           <form onSubmit={handleLogin} data-testid="login-form">
             <div className="space-y-2">
-              <Label className="text-white/80 text-sm">Email or Admin Code</Label>
+              <Label className="text-white/80 text-sm">Email</Label>
               <Input
                 type="text"
                 value={email}
@@ -191,7 +191,7 @@ export default function AuthPage() {
                   }
                 }}
                 required
-                placeholder="your@email.com or 4-digit code"
+                placeholder="your@email.com"
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00D4FF] focus:ring-[#00D4FF]/20"
                 data-testid="login-email"
               />
