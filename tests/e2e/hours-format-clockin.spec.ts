@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts, removeEmergentBadge, loginAsAdmin } from '../fixtures/helpers';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://secondhand-shop-25.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://thrift-admin-hub.preview.emergentagent.com';
 const TEST_EMPLOYEE_EMAIL = 'testemployee@thriftycurator.com';
 const TEST_EMPLOYEE_ID = '6707c692-416d-4bd1-9596-2a9950419e2c';
 

@@ -7,7 +7,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://secondhand-shop-25.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://thrift-admin-hub.preview.emergentagent.com').rstrip('/')
 
 # Test data
 TEST_EMPLOYEE_ID = '6707c692-416d-4bd1-9596-2a9950419e2c'

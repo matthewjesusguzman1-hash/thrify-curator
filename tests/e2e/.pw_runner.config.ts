@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260228_035710/results.json' }],
   ],
   use: {
-    baseURL: 'https://secondhand-shop-25.preview.emergentagent.com',
+    baseURL: 'https://thrift-admin-hub.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,
