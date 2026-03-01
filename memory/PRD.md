@@ -2012,8 +2012,46 @@ The monolithic admin.py file has been broken down into maintainable, focused mod
 
 ---
 
+## Admin Role Bug Fixes (Mar 1, 2026) - COMPLETED ✅
+
+### Issues Fixed
+
+**Issue 1: Admins not visible in Edit Employee dropdown**
+- **Problem**: When owners (Matthew/Eunice) clicked "Edit" button, admin users were filtered out of the employee selection dropdown
+- **Root Cause**: N/A - Upon investigation, the dropdown was already showing all employees without filtering. The issue may have been a cache issue that the user experienced.
+- **Verification**: Confirmed via UI testing that all employees including admins appear in dropdown with "⭐ Admin" badge
+
+**Issue 2: Admin codes not visible for owners**
+- **Problem**: Business owners (Matthew/Eunice) could not see the admin codes they assigned to other admins in the employee list
+- **Solution**: 
+  - Added `isOwner` prop to `AllEmployeesSection` component
+  - Modified the "Role" column to conditionally display admin codes when:
+    1. The logged-in user is an owner (`isOwner === true`)
+    2. The employee has role "admin"
+    3. The employee has an `admin_code` assigned
+- **Result**: Admin codes now appear as "Code: XXXX" badge next to the admin role badge for owners only
+
+### Files Modified
+
+**Frontend:**
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Added `isOwner` prop to `AllEmployeesSection`
+- `/app/frontend/src/components/admin/sections/AllEmployeesSection.jsx` - Added conditional rendering of admin codes
+
+### Testing Status
+- **Frontend E2E Tests**: 22/22 PASSED (100%)
+- **New Test File**: `/app/tests/e2e/admin-role-bugfixes.spec.ts` (7 tests)
+
+### Credentials for Testing
+- **Owner Matthew**: Code 4399
+- **Owner Eunice**: Code 0826
+- **Non-owner admins**: Login with email, then enter their assigned 4-digit code
+
+---
+
 ## Next Tasks / Backlog
 
+### P1 (High Priority)
+- **Refactor AdminDashboard.jsx**: File is ~4000 lines and should be broken into smaller components for maintainability
+
 ### P2 (Low Priority)
-- **Refactor admin.py**: Split large admin.py file into smaller focused modules (reports.py, employees.py, etc.)
 - **Deployment**: Deploy application to production
