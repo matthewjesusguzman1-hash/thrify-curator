@@ -320,16 +320,16 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
 async def get_admin_summary(admin: dict = Depends(get_admin_user)):
     """Get overall admin dashboard summary."""
     users = await db.users.find({}, {"_id": 0}).to_list(100)
-    entries = await db.time_entries.find({"total_hours": {"$ne": None}}, {"_id": 0}).to_list(1000)
+    entries = await db.time_entries.find({}, {"_id": 0}).to_list(1000)
     
-    total_hours = sum(e.get("total_hours", 0) for e in entries)
+    total_hours = sum(e.get("total_hours", 0) or 0 for e in entries)
     
     user_hours = {}
     for entry in entries:
         uid = entry["user_id"]
         if uid not in user_hours:
             user_hours[uid] = {"name": entry["user_name"], "hours": 0, "shifts": 0}
-        user_hours[uid]["hours"] += entry.get("total_hours", 0)
+        user_hours[uid]["hours"] += entry.get("total_hours", 0) or 0
         user_hours[uid]["shifts"] += 1
     
     return {
