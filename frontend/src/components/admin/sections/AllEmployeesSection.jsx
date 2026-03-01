@@ -398,13 +398,24 @@ export default function AllEmployeesSection({
                             )}
                           </td>
                           <td>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              emp.role === 'admin' 
-                                ? 'bg-[#C5A065]/20 text-[#9A7B4F]' 
-                                : 'bg-[#F8C8DC]/30 text-[#5D4037]'
-                            }`}>
-                              {emp.role}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                emp.role === 'admin' 
+                                  ? 'bg-[#C5A065]/20 text-[#9A7B4F]' 
+                                  : 'bg-[#F8C8DC]/30 text-[#5D4037]'
+                              }`}>
+                                {emp.role}
+                              </span>
+                              {isOwner && emp.role === 'admin' && emp.admin_code && (
+                                <span 
+                                  className="px-2 py-0.5 rounded bg-[#1A1A2E]/10 text-[#1A1A2E] text-xs font-mono"
+                                  title="Admin Login Code"
+                                  data-testid={`admin-code-${emp.id}`}
+                                >
+                                  Code: {emp.admin_code}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td onClick={(e) => e.stopPropagation()}>
                             {emp.role !== 'admin' ? (
