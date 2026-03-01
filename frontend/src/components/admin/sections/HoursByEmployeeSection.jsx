@@ -91,6 +91,8 @@ export default function HoursByEmployeeSection({
     periodStart.setDate(periodStart.getDate() + (periodNumber * 14));
     const periodEnd = new Date(periodStart);
     periodEnd.setDate(periodEnd.getDate() + 13);
+    // Set end time to end of day to include all entries on the last day
+    periodEnd.setHours(23, 59, 59, 999);
     return { start: periodStart, end: periodEnd };
   };
 
