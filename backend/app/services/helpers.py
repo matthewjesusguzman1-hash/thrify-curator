@@ -1,8 +1,8 @@
 from datetime import datetime, timezone, timedelta
 
-# Use Pacific Time (UTC-8) as the business timezone for pay period calculations
-# This ensures pay periods align with US business hours
-BUSINESS_TZ_OFFSET = timedelta(hours=-8)
+# Use Central Time (UTC-6) as the business timezone for pay period calculations
+# This ensures pay periods align with US Central Time business hours
+BUSINESS_TZ_OFFSET = timedelta(hours=-6)
 
 
 def get_business_now():
