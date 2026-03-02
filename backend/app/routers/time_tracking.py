@@ -200,15 +200,15 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     from app.services.helpers import get_biweekly_period
     
     entries = await db.time_entries.find(
-        {"user_id": user["id"], "total_hours": {"$ne": None}}, {"_id": 0}
+        {"user_id": user["id"]}, {"_id": 0}
     ).to_list(1000)
     
-    total_hours = sum(e.get("total_hours", 0) for e in entries)
+    total_hours = sum(e.get("total_hours", 0) or 0 for e in entries)
     
     today = datetime.now(timezone.utc)
     week_start = today - timedelta(days=today.weekday())
     week_entries = [e for e in entries if datetime.fromisoformat(e["clock_in"].replace('Z', '+00:00')) >= week_start]
-    week_hours = sum(e.get("total_hours", 0) for e in week_entries)
+    week_hours = sum(e.get("total_hours", 0) or 0 for e in week_entries)
     
     payroll_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     default_rate = 15.00
@@ -234,7 +234,7 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
         except (ValueError, KeyError, TypeError):
             pass
     
-    period_hours = sum(e.get("total_hours", 0) for e in period_entries)
+    period_hours = sum(e.get("total_hours", 0) or 0 for e in period_entries)
     period_shifts = len(period_entries)
     
     user_doc = await db.users.find_one({"id": user["id"]}, {"_id": 0})
