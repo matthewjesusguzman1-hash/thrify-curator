@@ -1,5 +1,17 @@
 from datetime import datetime, timezone, timedelta
 
+# Use Pacific Time (UTC-8) as the business timezone for pay period calculations
+# This ensures pay periods align with US business hours
+BUSINESS_TZ_OFFSET = timedelta(hours=-8)
+
+
+def get_business_now():
+    """Get current time in business timezone (Pacific Time)"""
+    utc_now = datetime.now(timezone.utc)
+    # Create a timezone object for Pacific Time (UTC-8)
+    business_tz = timezone(BUSINESS_TZ_OFFSET)
+    return utc_now.astimezone(business_tz)
+
 
 def get_first_monday_of_year(year: int) -> datetime:
     """Get the first Monday of a given year"""
@@ -10,8 +22,11 @@ def get_first_monday_of_year(year: int) -> datetime:
 
 
 def get_biweekly_period(start_date_str: str = None, period_index: int = 0):
-    """Calculate biweekly period dates based on first Monday of the year"""
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    """Calculate biweekly period dates based on first Monday of the year.
+    Uses business timezone (Pacific Time) for determining current day."""
+    # Use business timezone for "today" calculation
+    business_now = get_business_now()
+    today = datetime(business_now.year, business_now.month, business_now.day, tzinfo=timezone.utc)
     
     # Always use first Monday of current year as the anchor
     start_base = get_first_monday_of_year(today.year)
