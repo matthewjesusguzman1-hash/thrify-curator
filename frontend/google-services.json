@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "740224266484",
+    "project_id": "thrifty-curator",
+    "storage_bucket": "thrifty-curator.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:740224266484:android:36fec58c4bb37283baeea1",
+        "android_client_info": {
+          "package_name": "com.thriftycurator.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBA6MpZMhNMHd-b0FF7l8EuE5NCmk9iffU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
