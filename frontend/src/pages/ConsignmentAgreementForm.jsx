@@ -251,8 +251,8 @@ export default function ConsignmentAgreementForm() {
     // Check what updates are being made
     const hasItems = isAddItemsExpanded && itemsToAdd && parseInt(itemsToAdd) > 0;
     const hasContactUpdate = wantsToUpdateContact && (updateEmail.trim() !== addItemsAgreement.email || updatePhone.trim() || updateAddress.trim());
-    const hasPaymentUpdate = wantsToUpdatePayment && updatePaymentMethod;
-    const hasProfitSplitUpdate = updateCustomSplit && updateCustomSplit !== addItemsAgreement.agreed_percentage;
+    const hasPaymentUpdate = wantsToUpdateContact && updatePaymentMethod && updatePaymentMethod !== addItemsAgreement.payment_method;
+    const hasProfitSplitUpdate = wantsToUpdateContact && updateCustomSplit && updateCustomSplit !== addItemsAgreement.agreed_percentage;
     const hasAdditionalInfo = updateAdditionalInfo.trim();
     const hasPhotos = updatePhotos.length > 0;
     
@@ -270,20 +270,20 @@ export default function ConsignmentAgreementForm() {
       return;
     }
     
-    // Require signature for any update
-    if (!updateSignature.trim()) {
-      toast.error("Please provide your signature");
-      return;
-    }
-    
-    if (!updateSignatureDate) {
-      toast.error("Please provide the signature date");
-      return;
-    }
-    
-    if (!acknowledgedTerms) {
-      toast.error("Please agree to the terms and conditions");
-      return;
+    // Only require signature if adding items
+    if (hasItems) {
+      if (!updateSignature.trim()) {
+        toast.error("Please provide your signature to add items");
+        return;
+      }
+      if (!updateSignatureDate) {
+        toast.error("Please provide the signature date");
+        return;
+      }
+      if (!acknowledgedTerms) {
+        toast.error("Please agree to the terms and conditions to add items");
+        return;
+      }
     }
     
     setLoading(true);
@@ -293,17 +293,17 @@ export default function ConsignmentAgreementForm() {
         full_name: addItemsAgreement.full_name,
         items_to_add: hasItems ? parseInt(itemsToAdd) : 0,
         items_description: itemsDescription,
-        acknowledged_terms: acknowledgedTerms,
+        acknowledged_terms: hasItems ? acknowledgedTerms : true,
         update_email: wantsToUpdateContact && updateEmail !== addItemsAgreement.email ? updateEmail : null,
         update_phone: wantsToUpdateContact ? updatePhone : null,
         update_address: wantsToUpdateContact ? updateAddress : null,
-        update_payment_method: wantsToUpdatePayment ? updatePaymentMethod : null,
-        update_payment_details: wantsToUpdatePayment ? updatePaymentDetails : null,
+        update_payment_method: hasPaymentUpdate ? updatePaymentMethod : null,
+        update_payment_details: hasPaymentUpdate ? updatePaymentDetails : null,
         update_profit_split: hasProfitSplitUpdate ? updateCustomSplit : null,
         additional_info: updateAdditionalInfo || null,
         photos: updatePhotos,
-        signature: updateSignature,
-        signature_date: updateSignatureDate
+        signature: hasItems ? updateSignature : null,
+        signature_date: hasItems ? updateSignatureDate : null
       });
       setItemsAdded(true);
       
@@ -734,498 +734,397 @@ export default function ConsignmentAgreementForm() {
                   </Button>
                 </>
               ) : (
-                // Step 2: Clean, organized update form
-                <div className="space-y-6">
-                  {/* Welcome Header */}
-                  <div className="bg-gradient-to-r from-[#10B981] to-[#059669] rounded-xl p-5 text-white">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold">Welcome back, {addItemsAgreement.full_name}!</h3>
-                        <p className="text-white/80 text-sm">Manage your consignment account</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-4 mt-4 text-sm">
-                      <div className="bg-white/10 px-3 py-1.5 rounded-full">
-                        <span className="opacity-80">Items:</span> <strong>{addItemsAgreement.items_description || "0"}</strong>
-                      </div>
-                      <div className="bg-white/10 px-3 py-1.5 rounded-full">
-                        <span className="opacity-80">Split:</span> <strong>{addItemsAgreement.agreed_percentage || "50/50"}</strong>
-                      </div>
-                      {addItemsAgreement.payment_method && (
-                        <div className="bg-white/10 px-3 py-1.5 rounded-full">
-                          <span className="opacity-80">Payment:</span> <strong>{PAYMENT_METHODS.find(m => m.id === addItemsAgreement.payment_method)?.label || addItemsAgreement.payment_method}</strong>
-                        </div>
-                      )}
-                    </div>
+                // Step 2: Update form matching original consignment form style
+                <div className="space-y-5">
+                  {/* Account Info Header */}
+                  <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg p-4">
+                    <p className="text-sm text-[#1A1A2E]">
+                      <strong>Agreement found for:</strong> {addItemsAgreement.full_name}
+                    </p>
+                    <p className="text-sm text-[#666] mt-1">
+                      Email: {addItemsAgreement.email} • Items: {addItemsAgreement.items_description || "0"} • Split: {addItemsAgreement.agreed_percentage || "50/50"}
+                    </p>
                   </div>
 
-                  {/* Payment History Card */}
-                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 overflow-hidden">
-                    <div className="flex items-center justify-between p-4 border-b border-amber-200">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
-                          <DollarSign className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="font-semibold text-[#1A1A2E]">Payment History</span>
+                  {/* Instructions */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>Instructions:</strong> Use the sections below to update your contact information or add more items to your consignment. 
+                      Expand each section as needed. If you are only updating your information (not adding items), you do not need to sign the form.
+                    </p>
+                  </div>
+
+                  {/* Payment History */}
+                  {paymentHistory && paymentHistory.payments.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-amber-800">Payment History</span>
+                        <span className="text-lg font-bold text-amber-600">${paymentHistory.total_paid.toFixed(2)} Total</span>
                       </div>
-                      {loadingPaymentHistory ? (
-                        <RefreshCw className="w-4 h-4 text-amber-600 animate-spin" />
-                      ) : paymentHistory && (
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-amber-600">${paymentHistory.total_paid.toFixed(2)}</p>
-                          <p className="text-xs text-amber-600/70">Total Received</p>
-                        </div>
-                      )}
+                      <div className="space-y-1 max-h-24 overflow-y-auto">
+                        {paymentHistory.payments.map((payment, index) => (
+                          <div key={index} className="flex items-center justify-between text-sm">
+                            <span className="text-amber-700">{payment.description || "Payout"} - {payment.check_date ? new Date(payment.check_date).toLocaleDateString() : ''}</span>
+                            <span className="font-medium text-green-600">${(payment.amount || 0).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="p-4">
-                      {loadingPaymentHistory ? (
-                        <div className="flex items-center justify-center py-6">
-                          <RefreshCw className="w-5 h-5 text-amber-400 animate-spin" />
+                  )}
+
+                  {/* UPDATE INFORMATION SECTION */}
+                  <div className="border-2 border-gray-200 rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setWantsToUpdateContact(!wantsToUpdateContact)}
+                      className={`w-full flex items-center justify-between p-4 transition-colors ${
+                        wantsToUpdateContact ? 'bg-[#8B5CF6]/10' : 'bg-gray-50 hover:bg-gray-100'
+                      }`}
+                      data-testid="toggle-contact-section"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          wantsToUpdateContact ? 'bg-[#8B5CF6]' : 'bg-gray-200'
+                        }`}>
+                          <User className={`w-5 h-5 ${wantsToUpdateContact ? 'text-white' : 'text-gray-500'}`} />
                         </div>
-                      ) : paymentHistory && paymentHistory.payments.length > 0 ? (
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {paymentHistory.payments.map((payment, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
-                              <div>
-                                <p className="text-sm font-medium text-[#1A1A2E]">
-                                  {payment.description || "Consignment Payout"}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {payment.check_date ? new Date(payment.check_date).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric'
-                                  }) : 'Date not specified'}
-                                </p>
-                              </div>
-                              <span className="text-lg font-bold text-green-600">
-                                ${(payment.amount || 0).toFixed(2)}
-                              </span>
+                        <div className="text-left">
+                          <p className="font-semibold text-[#1A1A2E]">Update My Information</p>
+                          <p className="text-xs text-gray-500">Change contact details, payment method, or profit split</p>
+                        </div>
+                      </div>
+                      {wantsToUpdateContact ? <ChevronUp className="w-5 h-5 text-[#8B5CF6]" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                    </button>
+                    
+                    <AnimatePresence>
+                      {wantsToUpdateContact && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-5 space-y-5 border-t border-gray-200">
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
+                              <Input
+                                type="email"
+                                value={updateEmail}
+                                onChange={(e) => setUpdateEmail(e.target.value)}
+                                placeholder="your@email.com"
+                                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                                data-testid="update-email"
+                              />
+                              {updateEmail !== addItemsAgreement.email && updateEmail.trim() && (
+                                <p className="text-xs text-amber-600 mt-1">Will update from: {addItemsAgreement.email}</p>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-center text-amber-600/60 py-6 text-sm">
-                          No payments recorded yet
-                        </p>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Section Divider */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-gray-200"></div>
-                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">What would you like to update?</span>
-                    <div className="flex-1 h-px bg-gray-200"></div>
-                  </div>
-
-                  {/* Update Options Grid */}
-                  <div className="grid gap-3">
-                    {/* Contact Info */}
-                    <div className={`rounded-xl border-2 transition-all ${wantsToUpdateContact ? 'border-blue-400 bg-blue-50/50' : 'border-gray-200 bg-white'}`}>
-                      <button
-                        type="button"
-                        onClick={() => setWantsToUpdateContact(!wantsToUpdateContact)}
-                        className="w-full flex items-center justify-between p-4"
-                        data-testid="toggle-contact-section"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${wantsToUpdateContact ? 'bg-blue-500' : 'bg-gray-100'}`}>
-                            <User className={`w-5 h-5 ${wantsToUpdateContact ? 'text-white' : 'text-gray-500'}`} />
-                          </div>
-                          <div className="text-left">
-                            <p className="font-semibold text-[#1A1A2E]">Contact Information</p>
-                            <p className="text-xs text-gray-500">Update email, phone, or address</p>
-                          </div>
-                        </div>
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${wantsToUpdateContact ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
-                          {wantsToUpdateContact && <Check className="w-4 h-4 text-white" />}
-                        </div>
-                      </button>
-                      <AnimatePresence>
-                        {wantsToUpdateContact && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="p-4 pt-0 space-y-3">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                  <Label className="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1">
-                                    <Mail className="w-3 h-3" /> Email
-                                  </Label>
-                                  <Input
-                                    type="email"
-                                    value={updateEmail}
-                                    onChange={(e) => setUpdateEmail(e.target.value)}
-                                    placeholder="your@email.com"
-                                    className="h-10 border-gray-200 focus:border-blue-400"
-                                    data-testid="update-email"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1">
-                                    <Phone className="w-3 h-3" /> Phone
-                                  </Label>
-                                  <Input
-                                    type="tel"
-                                    value={updatePhone}
-                                    onChange={(e) => setUpdatePhone(e.target.value)}
-                                    placeholder="(555) 123-4567"
-                                    className="h-10 border-gray-200 focus:border-blue-400"
-                                    data-testid="update-phone"
-                                  />
-                                </div>
-                              </div>
-                              <div>
-                                <Label className="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" /> Address
-                                </Label>
-                                <Input
-                                  value={updateAddress}
-                                  onChange={(e) => setUpdateAddress(e.target.value)}
-                                  placeholder="123 Main St, City, State ZIP"
-                                  className="h-10 border-gray-200 focus:border-blue-400"
-                                  data-testid="update-address"
-                                />
-                              </div>
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Phone Number</Label>
+                              <Input
+                                type="tel"
+                                value={updatePhone}
+                                onChange={(e) => setUpdatePhone(e.target.value)}
+                                placeholder="(555) 123-4567"
+                                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                                data-testid="update-phone"
+                              />
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
 
-                    {/* Payment Method */}
-                    <div className={`rounded-xl border-2 transition-all ${wantsToUpdatePayment ? 'border-purple-400 bg-purple-50/50' : 'border-gray-200 bg-white'}`}>
-                      <button
-                        type="button"
-                        onClick={() => setWantsToUpdatePayment(!wantsToUpdatePayment)}
-                        className="w-full flex items-center justify-between p-4"
-                        data-testid="toggle-payment-section"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${wantsToUpdatePayment ? 'bg-purple-500' : 'bg-gray-100'}`}>
-                            <CreditCard className={`w-5 h-5 ${wantsToUpdatePayment ? 'text-white' : 'text-gray-500'}`} />
-                          </div>
-                          <div className="text-left">
-                            <p className="font-semibold text-[#1A1A2E]">Payment Method</p>
-                            <p className="text-xs text-gray-500">
-                              Current: {PAYMENT_METHODS.find(m => m.id === addItemsAgreement.payment_method)?.label || 'Not set'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${wantsToUpdatePayment ? 'border-purple-500 bg-purple-500' : 'border-gray-300'}`}>
-                          {wantsToUpdatePayment && <Check className="w-4 h-4 text-white" />}
-                        </div>
-                      </button>
-                      <AnimatePresence>
-                        {wantsToUpdatePayment && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="p-4 pt-0 space-y-3">
-                              <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Address</Label>
+                              <Textarea
+                                value={updateAddress}
+                                onChange={(e) => setUpdateAddress(e.target.value)}
+                                placeholder="Street Address, City, State, ZIP Code"
+                                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg min-h-[80px]"
+                                data-testid="update-address"
+                              />
+                            </div>
+
+                            {/* Payment Method */}
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                Payment Method
+                                <span className="font-normal text-[#888] ml-2">
+                                  (Current: {PAYMENT_METHODS.find(m => m.id === addItemsAgreement.payment_method)?.label || 'Not set'})
+                                </span>
+                              </Label>
+                              <p className="text-xs text-[#888] mb-3">Select a new payment method if you want to change it</p>
+                              <div className="grid grid-cols-2 gap-3">
                                 {PAYMENT_METHODS.map((method) => (
                                   <button
                                     key={method.id}
                                     type="button"
                                     onClick={() => { setUpdatePaymentMethod(method.id); setUpdatePaymentDetails(""); }}
-                                    className={`p-2.5 rounded-lg border-2 transition-all text-center ${
+                                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
                                       updatePaymentMethod === method.id
-                                        ? "border-purple-500 bg-purple-100"
-                                        : "border-gray-200 hover:border-purple-300"
+                                        ? "border-[#8B5CF6] bg-[#8B5CF6]/10 shadow-md"
+                                        : "border-gray-200 hover:border-[#8B5CF6]/50 hover:bg-gray-50"
                                     }`}
                                     data-testid={`update-payment-${method.id}`}
                                   >
-                                    <span className={`text-sm font-medium ${updatePaymentMethod === method.id ? "text-purple-700" : "text-gray-600"}`}>
-                                      {method.label}
-                                    </span>
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                        updatePaymentMethod === method.id ? "bg-[#8B5CF6]" : "bg-gray-200"
+                                      }`}>
+                                        <CreditCard className={`w-5 h-5 ${updatePaymentMethod === method.id ? "text-white" : "text-gray-500"}`} />
+                                      </div>
+                                      <span className={`font-medium ${updatePaymentMethod === method.id ? "text-[#1A1A2E]" : "text-gray-600"}`}>
+                                        {method.label}
+                                      </span>
+                                    </div>
                                   </button>
                                 ))}
                               </div>
-                              {updatePaymentMethod && PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.needsDetails && (
-                                <div>
-                                  <Label className="text-xs font-medium text-gray-600 mb-1.5">
-                                    {PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.label} Username/Handle *
-                                  </Label>
-                                  <Input
-                                    type="text"
-                                    value={updatePaymentDetails}
-                                    onChange={(e) => setUpdatePaymentDetails(e.target.value)}
-                                    placeholder={PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.placeholder}
-                                    className="h-10 border-gray-200 focus:border-purple-400"
-                                    data-testid="update-payment-details"
-                                  />
+                            </div>
+
+                            {/* Payment Details */}
+                            {updatePaymentMethod && PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.needsDetails && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                className="overflow-hidden"
+                              >
+                                <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                  {PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.label} Details *
+                                </Label>
+                                <Input
+                                  type="text"
+                                  value={updatePaymentDetails}
+                                  onChange={(e) => setUpdatePaymentDetails(e.target.value)}
+                                  placeholder={PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.placeholder}
+                                  className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                                  data-testid="update-payment-details"
+                                />
+                              </motion.div>
+                            )}
+
+                            {/* Custom Profit Split */}
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                Custom Profit Split
+                                <span className="font-normal text-[#888] ml-2">(Current: {addItemsAgreement.agreed_percentage || "50/50"})</span>
+                              </Label>
+                              <Input
+                                type="text"
+                                value={updateCustomSplit}
+                                onChange={(e) => setUpdateCustomSplit(e.target.value)}
+                                placeholder="Leave blank to keep current split"
+                                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg placeholder:text-[#999] placeholder:italic"
+                                data-testid="update-custom-split"
+                              />
+                              <p className="text-xs text-[#888] mt-1">
+                                If a different split was agreed upon, enter it here (e.g., "60/40", "70/30")
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* ADD MORE ITEMS SECTION */}
+                  <div className="border-2 border-gray-200 rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddItemsExpanded(!isAddItemsExpanded)}
+                      className={`w-full flex items-center justify-between p-4 transition-colors ${
+                        isAddItemsExpanded ? 'bg-[#10B981]/10' : 'bg-gray-50 hover:bg-gray-100'
+                      }`}
+                      data-testid="toggle-add-items-section"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          isAddItemsExpanded ? 'bg-[#10B981]' : 'bg-gray-200'
+                        }`}>
+                          <Package className={`w-5 h-5 ${isAddItemsExpanded ? 'text-white' : 'text-gray-500'}`} />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold text-[#1A1A2E]">Add More Items to Consignment</p>
+                          <p className="text-xs text-gray-500">Consign additional items (requires signature)</p>
+                        </div>
+                      </div>
+                      {isAddItemsExpanded ? <ChevronUp className="w-5 h-5 text-[#10B981]" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                    </button>
+                    
+                    <AnimatePresence>
+                      {isAddItemsExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-5 space-y-5 border-t border-gray-200">
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Number of Items to Add *</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={itemsToAdd}
+                                onChange={(e) => setItemsToAdd(e.target.value)}
+                                placeholder="Enter number of items"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                                data-testid="items-to-add"
+                              />
+                            </div>
+
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                Item Description
+                                <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                              </Label>
+                              <Textarea
+                                value={itemsDescription}
+                                onChange={(e) => setItemsDescription(e.target.value)}
+                                placeholder="Brief description of items being added (e.g., '3 vintage dresses, 2 designer handbags')"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
+                                data-testid="items-description"
+                              />
+                            </div>
+
+                            {/* Additional Information */}
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                Additional Information
+                                <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                              </Label>
+                              <Textarea
+                                value={updateAdditionalInfo}
+                                onChange={(e) => setUpdateAdditionalInfo(e.target.value)}
+                                placeholder="Any additional information about your items (brand, condition, size, etc.)"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
+                                data-testid="update-additional-info"
+                              />
+                            </div>
+
+                            {/* Photo Upload */}
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                Upload Photos
+                                <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                              </Label>
+                              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#10B981] transition-colors">
+                                <input
+                                  type="file"
+                                  ref={updateFileInputRef}
+                                  onChange={(e) => handlePhotoUpload(e.target.files, true)}
+                                  accept="image/*"
+                                  multiple
+                                  className="hidden"
+                                  data-testid="update-photo-input"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => updateFileInputRef.current?.click()}
+                                  disabled={uploadingUpdatePhotos}
+                                  className="flex flex-col items-center gap-2 w-full"
+                                >
+                                  {uploadingUpdatePhotos ? (
+                                    <RefreshCw className="w-8 h-8 text-[#10B981] animate-spin" />
+                                  ) : (
+                                    <Upload className="w-8 h-8 text-gray-400" />
+                                  )}
+                                  <span className="text-sm text-gray-600">
+                                    {uploadingUpdatePhotos ? "Uploading..." : "Click to upload photos of your items"}
+                                  </span>
+                                </button>
+                              </div>
+                              
+                              {updatePhotos.length > 0 && (
+                                <div className="mt-3 grid grid-cols-3 gap-2">
+                                  {updatePhotos.map((photo, index) => (
+                                    <div key={index} className="relative group">
+                                      <img
+                                        src={`${process.env.REACT_APP_BACKEND_URL}${photo}`}
+                                        alt={`Upload ${index + 1}`}
+                                        className="w-full h-20 object-cover rounded-lg"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => removePhoto(index, true)}
+                                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
 
-                    {/* Profit Split */}
-                    <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                          <Percent className="w-5 h-5 text-gray-500" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-[#1A1A2E]">Profit Split</p>
-                          <p className="text-xs text-gray-500">Current: {addItemsAgreement.agreed_percentage || "50/50"}</p>
-                        </div>
-                      </div>
-                      <Input
-                        type="text"
-                        value={updateCustomSplit}
-                        onChange={(e) => setUpdateCustomSplit(e.target.value)}
-                        placeholder="Leave blank to keep current, or enter new (e.g., 60/40)"
-                        className="h-10 border-gray-200 focus:border-gray-400"
-                        data-testid="update-custom-split"
-                      />
-                    </div>
-
-                    {/* Add Items */}
-                    <div className={`rounded-xl border-2 transition-all ${isAddItemsExpanded ? 'border-emerald-400 bg-emerald-50/50' : 'border-gray-200 bg-white'}`}>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddItemsExpanded(!isAddItemsExpanded)}
-                        className="w-full flex items-center justify-between p-4"
-                        data-testid="toggle-add-items-section"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAddItemsExpanded ? 'bg-emerald-500' : 'bg-gray-100'}`}>
-                            <Package className={`w-5 h-5 ${isAddItemsExpanded ? 'text-white' : 'text-gray-500'}`} />
-                          </div>
-                          <div className="text-left">
-                            <p className="font-semibold text-[#1A1A2E]">Add More Items</p>
-                            <p className="text-xs text-gray-500">Consign additional items</p>
-                          </div>
-                        </div>
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isAddItemsExpanded ? 'border-emerald-500 bg-emerald-500' : 'border-gray-300'}`}>
-                          {isAddItemsExpanded && <Check className="w-4 h-4 text-white" />}
-                        </div>
-                      </button>
-                      <AnimatePresence>
-                        {isAddItemsExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="p-4 pt-0 space-y-3">
-                              <div>
-                                <Label className="text-xs font-medium text-gray-600 mb-1.5">Number of Items *</Label>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  value={itemsToAdd}
-                                  onChange={(e) => setItemsToAdd(e.target.value)}
-                                  placeholder="How many items are you adding?"
-                                  className="h-10 border-gray-200 focus:border-emerald-400"
-                                  data-testid="items-to-add"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs font-medium text-gray-600 mb-1.5">Description (Optional)</Label>
-                                <Textarea
-                                  value={itemsDescription}
-                                  onChange={(e) => setItemsDescription(e.target.value)}
-                                  placeholder="e.g., 3 vintage dresses, 2 designer handbags"
-                                  className="min-h-[70px] border-gray-200 focus:border-emerald-400"
-                                  data-testid="items-description"
-                                />
-                              </div>
+                            {/* Terms and Conditions */}
+                            <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
+                              <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
+                              <ul className="space-y-2 max-h-36 overflow-y-auto pr-2">
+                                <li>• The profit split will be agreed upon prior to acceptance of any items. Unless otherwise specified, the profit split will be considered 50/50.</li>
+                                <li>• There is no guarantee that your item will be sold.</li>
+                                <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
+                                <li>• The consignee has the right to refuse any item for sale at any time and will return the item to the consignor.</li>
+                                <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee until sold or released back.</li>
+                                <li>• The consignor accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee.</li>
+                              </ul>
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
 
-                    {/* Photos & Additional Info */}
-                    <div className={`rounded-xl border-2 transition-all ${isAdditionalInfoExpanded ? 'border-pink-400 bg-pink-50/50' : 'border-gray-200 bg-white'}`}>
-                      <button
-                        type="button"
-                        onClick={() => setIsAdditionalInfoExpanded(!isAdditionalInfoExpanded)}
-                        className="w-full flex items-center justify-between p-4"
-                        data-testid="toggle-additional-info-section"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdditionalInfoExpanded ? 'bg-pink-500' : 'bg-gray-100'}`}>
-                            <Image className={`w-5 h-5 ${isAdditionalInfoExpanded ? 'text-white' : 'text-gray-500'}`} />
-                          </div>
-                          <div className="text-left">
-                            <p className="font-semibold text-[#1A1A2E]">Photos & Details</p>
-                            <p className="text-xs text-gray-500">Add photos or extra information</p>
-                          </div>
-                        </div>
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isAdditionalInfoExpanded ? 'border-pink-500 bg-pink-500' : 'border-gray-300'}`}>
-                          {isAdditionalInfoExpanded && <Check className="w-4 h-4 text-white" />}
-                        </div>
-                      </button>
-                      <AnimatePresence>
-                        {isAdditionalInfoExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="p-4 pt-0 space-y-3">
-                              <div>
-                                <Label className="text-xs font-medium text-gray-600 mb-1.5">Additional Information</Label>
-                                <Textarea
-                                  value={updateAdditionalInfo}
-                                  onChange={(e) => setUpdateAdditionalInfo(e.target.value)}
-                                  placeholder="Brand names, condition, sizes, etc."
-                                  className="min-h-[70px] border-gray-200 focus:border-pink-400"
-                                  data-testid="update-additional-info"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs font-medium text-gray-600 mb-1.5">Upload Photos</Label>
-                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-pink-400 transition-colors">
-                                  <input
-                                    type="file"
-                                    ref={updateFileInputRef}
-                                    onChange={(e) => handlePhotoUpload(e.target.files, true)}
-                                    accept="image/*"
-                                    multiple
-                                    className="hidden"
-                                    data-testid="update-photo-input"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => updateFileInputRef.current?.click()}
-                                    disabled={uploadingUpdatePhotos}
-                                    className="flex flex-col items-center gap-2 w-full"
-                                  >
-                                    {uploadingUpdatePhotos ? (
-                                      <RefreshCw className="w-6 h-6 text-pink-500 animate-spin" />
-                                    ) : (
-                                      <Upload className="w-6 h-6 text-gray-400" />
-                                    )}
-                                    <span className="text-xs text-gray-500">
-                                      {uploadingUpdatePhotos ? "Uploading..." : "Click to upload photos"}
-                                    </span>
-                                  </button>
-                                </div>
-                                {updatePhotos.length > 0 && (
-                                  <div className="mt-2 grid grid-cols-4 gap-2">
-                                    {updatePhotos.map((photo, index) => (
-                                      <div key={index} className="relative group">
-                                        <img
-                                          src={`${process.env.REACT_APP_BACKEND_URL}${photo}`}
-                                          alt={`Upload ${index + 1}`}
-                                          className="w-full h-16 object-cover rounded-lg"
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={() => removePhoto(index, true)}
-                                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <X className="w-3 h-3" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
+                            {/* Signature Section */}
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Electronic Signature *</Label>
+                              <Input
+                                type="text"
+                                value={updateSignature}
+                                onChange={(e) => setUpdateSignature(e.target.value)}
+                                placeholder="Type your full name as signature"
+                                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg italic"
+                                data-testid="update-signature"
+                              />
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Date *</Label>
+                              <Input
+                                type="date"
+                                value={updateSignatureDate}
+                                onChange={(e) => setUpdateSignatureDate(e.target.value)}
+                                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                                data-testid="update-signature-date"
+                              />
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                id="acknowledge-terms"
+                                checked={acknowledgedTerms}
+                                onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
+                                className="w-6 h-6 mt-1 border-2 border-gray-300 data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
+                                data-testid="acknowledge-terms-checkbox"
+                              />
+                              <Label htmlFor="acknowledge-terms" className="text-sm text-gray-600 cursor-pointer">
+                                I have read and agree to the terms and conditions above. I understand that by typing my name above, I am providing an electronic signature.
+                              </Label>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
-                  {/* Section Divider */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-gray-200"></div>
-                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Review & Sign</span>
-                    <div className="flex-1 h-px bg-gray-200"></div>
-                  </div>
-
-                  {/* Terms Review Section */}
-                  <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
-                    <div className="flex items-center gap-2 mb-3">
-                      <FileText className="w-5 h-5 text-[#8B5CF6]" />
-                      <h4 className="font-semibold text-[#1A1A2E]">Terms & Conditions</h4>
-                    </div>
-                    <ul className="space-y-2 max-h-36 overflow-y-auto pr-2 text-xs">
-                      <li>• The profit split will be agreed upon prior to acceptance of any items. Unless otherwise specified, the profit split will be considered 50/50.</li>
-                      <li>• There is no guarantee that your item will be sold.</li>
-                      <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
-                      <li>• The consignee has the right to refuse any item for sale at any time and will return the item to the consignor.</li>
-                      <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee until sold or released back.</li>
-                      <li>• The consignor accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee.</li>
-                    </ul>
-                  </div>
-
-                  {/* Signature Section */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-[#1A1A2E] mb-2 block">Electronic Signature *</Label>
-                      <Input
-                        type="text"
-                        value={updateSignature}
-                        onChange={(e) => setUpdateSignature(e.target.value)}
-                        required
-                        placeholder="Type your full name"
-                        className="h-11 border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg italic"
-                        data-testid="update-signature"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-[#1A1A2E] mb-2 block">Date *</Label>
-                      <Input
-                        type="date"
-                        value={updateSignatureDate}
-                        onChange={(e) => setUpdateSignatureDate(e.target.value)}
-                        required
-                        className="h-11 border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                        data-testid="update-signature-date"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-                    <Checkbox
-                      id="update-terms"
-                      checked={acknowledgedTerms}
-                      onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
-                      className="w-5 h-5 mt-0.5 border-2 border-gray-300 data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
-                      data-testid="update-terms-checkbox"
-                    />
-                    <Label htmlFor="update-terms" className="text-sm text-gray-600 cursor-pointer leading-relaxed">
-                      I have read and agree to the terms and conditions above. I understand that by typing my name, I am providing an electronic signature.
-                    </Label>
-                  </div>
-
+                  {/* Submit Button */}
                   <Button
                     onClick={handleAddItems}
-                    disabled={loading || !acknowledgedTerms}
-                    className="w-full h-12 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={loading || (isAddItemsExpanded && itemsToAdd && parseInt(itemsToAdd) > 0 && !acknowledgedTerms)}
+                    className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     data-testid="submit-add-items-btn"
                   >
                     {loading ? (
-                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      "Submitting..."
                     ) : (
                       <>
-                        <Send className="w-5 h-5" />
-                        Submit Updates
+                        <Send className="w-4 h-4" />
+                        {isAddItemsExpanded && itemsToAdd && parseInt(itemsToAdd) > 0 ? "Add Items & Submit" : "Update Information"}
                       </>
                     )}
                   </Button>
