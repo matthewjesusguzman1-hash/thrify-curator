@@ -25,6 +25,12 @@ test.describe('Updates Tab in Form Submissions Section', () => {
     // Remove Emergent badge if present
     await removeEmergentBadge(page);
     
+    // First expand the Forms & Communications group (the collapsible parent)
+    await page.getByTestId('group-forms-toggle').click();
+    
+    // Wait for group to expand and Form Submissions section to be visible
+    await expect(page.getByTestId('form-submissions-section')).toBeVisible({ timeout: 5000 });
+    
     // Expand Form Submissions section
     await page.getByTestId('form-submissions-toggle').click();
     

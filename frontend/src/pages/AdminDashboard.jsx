@@ -67,6 +67,7 @@ import MessagesSection from "@/components/admin/sections/MessagesSection";
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
 import ReportsSection from "@/components/admin/sections/ReportsSection";
+import DashboardGroup from "@/components/admin/DashboardGroup";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
 import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
@@ -2521,189 +2522,187 @@ export default function AdminDashboard() {
           />
 
 
-          {/* All Employees - Extracted Component */}
-          <div data-testid="employees-section">
-            <AllEmployeesSection
-              employees={employees}
-              employeeClockStatuses={employeeClockStatuses}
-              payrollSettings={payrollSettings}
-              getAuthHeader={getAuthHeader}
-              formatDateTime={formatDateTime}
-              onViewEmployeePortal={handleViewEmployeePortal}
-              onRefreshEmployees={fetchData}
-              onDownloadBlankW9={handleDownloadBlankW9}
-              isOwner={isOwner}
-            />
-          </div>
-
-
-          {/* Payroll Summary - Collapsible */}
-          <div className="dashboard-card">
-            <div 
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => {
-                const willOpen = !showStatsSection;
-                setShowStatsSection(willOpen);
-                if (willOpen) {
-                  fetchPayrollSummary();
-                }
-              }}
-              data-testid="stats-section-toggle"
+          {/* ====== GROUPED DASHBOARD SECTIONS ====== */}
+          <div className="space-y-6">
+            
+            {/* GROUP 1: Team Management */}
+            <DashboardGroup
+              title="Team Management"
+              icon={Users}
+              gradient="from-[#00D4FF] to-[#00A8CC]"
+              defaultOpen={true}
+              badge={`${employees.length} employees`}
+              testId="group-team"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="font-playfair text-xl font-semibold text-[#333]">Payroll Summary</h2>
-                  <p className="text-xs text-[#888]">
-                    Pay Period: {(() => {
-                      const period = calculateBiweeklyPeriod();
-                      if (period) {
-                        return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-                      }
-                      return 'Not configured';
-                    })()}
-                  </p>
-                </div>
+              {/* All Employees Section */}
+              <div data-testid="employees-section">
+                <AllEmployeesSection
+                  employees={employees}
+                  employeeClockStatuses={employeeClockStatuses}
+                  payrollSettings={payrollSettings}
+                  getAuthHeader={getAuthHeader}
+                  formatDateTime={formatDateTime}
+                  onViewEmployeePortal={handleViewEmployeePortal}
+                  onRefreshEmployees={fetchData}
+                  onDownloadBlankW9={handleDownloadBlankW9}
+                  isOwner={isOwner}
+                />
               </div>
-              {showStatsSection ? (
-                <ChevronUp className="w-5 h-5 text-[#888]" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-[#888]" />
-              )}
-            </div>
-            <AnimatePresence>
-              {showStatsSection && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-[#eee]">
-                    {/* Current Pay Period */}
-                    <div className="p-5 bg-gradient-to-br from-[#00D4FF]/10 to-[#00A8CC]/5 rounded-xl border border-[#00D4FF]/20">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center shadow-lg shadow-[#00D4FF]/30">
-                          <DollarSign className="w-7 h-7 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-3xl font-bold text-[#00A8CC]" data-testid="period-payroll">
-                            ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
-                          </p>
-                          <p className="text-sm font-medium text-[#666]">Current Pay Period</p>
-                        </div>
+
+              {/* Hours by Employee Section */}
+              <div data-testid="hours-section">
+                <HoursByEmployeeSection
+                  timeEntries={timeEntries}
+                  employees={employees}
+                  formatDateTime={formatDateTime}
+                  onAddEntry={() => setShowAddEntry(true)}
+                  onEditEntry={handleEditEntry}
+                  onDeleteEntry={handleDeleteEntry}
+                  payPeriodStart={payrollSettings.pay_period_start_date}
+                />
+              </div>
+            </DashboardGroup>
+
+            {/* GROUP 2: Payroll & Payments */}
+            <DashboardGroup
+              title="Payroll & Payments"
+              icon={DollarSign}
+              gradient="from-[#8B5CF6] to-[#6D28D9]"
+              defaultOpen={false}
+              badge="Financial overview"
+              testId="group-payroll"
+            >
+              {/* Payroll Summary Stats */}
+              <div className="dashboard-card" data-testid="payroll-summary">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] rounded-xl flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#333]">Payroll Summary</h3>
+                    <p className="text-xs text-[#888]">
+                      Pay Period: {(() => {
+                        const period = calculateBiweeklyPeriod();
+                        if (period) {
+                          return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                        }
+                        return 'Not configured';
+                      })()}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Current Pay Period */}
+                  <div className="p-5 bg-gradient-to-br from-[#00D4FF]/10 to-[#00A8CC]/5 rounded-xl border border-[#00D4FF]/20">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center shadow-lg shadow-[#00D4FF]/30">
+                        <DollarSign className="w-7 h-7 text-white" />
                       </div>
-                      <p className="text-xs text-[#888] mt-3 pt-3 border-t border-[#00D4FF]/10">
-                        {(() => {
-                          const period = calculateBiweeklyPeriod();
-                          if (period) {
-                            return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-                          }
-                          return '';
-                        })()}
-                      </p>
-                    </div>
-                    
-                    {/* Month Total */}
-                    <div className="p-5 bg-gradient-to-br from-[#8B5CF6]/10 to-[#6D28D9]/5 rounded-xl border border-[#8B5CF6]/20">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] rounded-xl flex items-center justify-center shadow-lg shadow-[#8B5CF6]/30">
-                          <Calendar className="w-7 h-7 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-3xl font-bold text-[#6D28D9]" data-testid="month-total">
-                            ${payrollSummary.month_total?.toFixed(2) || '0.00'}
-                          </p>
-                          <p className="text-sm font-medium text-[#666]">This Month</p>
-                          <p className="text-xs text-[#888]">
-                            {new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Year Total */}
-                    <div className="p-5 bg-gradient-to-br from-[#FF1493]/10 to-[#E91E8C]/5 rounded-xl border border-[#FF1493]/20">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF1493]/30">
-                          <TrendingUp className="w-7 h-7 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-3xl font-bold text-[#E91E8C]" data-testid="year-total">
-                            ${payrollSummary.year_total?.toFixed(2) || '0.00'}
-                          </p>
-                          <p className="text-sm font-medium text-[#666]">This Year</p>
-                          <p className="text-xs text-[#888]">
-                            {new Date().getFullYear()} Total
-                          </p>
-                        </div>
+                      <div>
+                        <p className="text-3xl font-bold text-[#00A8CC]" data-testid="period-payroll">
+                          ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
+                        </p>
+                        <p className="text-sm font-medium text-[#666]">Current Pay Period</p>
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Month Total */}
+                  <div className="p-5 bg-gradient-to-br from-[#8B5CF6]/10 to-[#6D28D9]/5 rounded-xl border border-[#8B5CF6]/20">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] rounded-xl flex items-center justify-center shadow-lg shadow-[#8B5CF6]/30">
+                        <Calendar className="w-7 h-7 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold text-[#6D28D9]" data-testid="month-total">
+                          ${payrollSummary.month_total?.toFixed(2) || '0.00'}
+                        </p>
+                        <p className="text-sm font-medium text-[#666]">This Month</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Year Total */}
+                  <div className="p-5 bg-gradient-to-br from-[#FF1493]/10 to-[#E91E8C]/5 rounded-xl border border-[#FF1493]/20">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF1493]/30">
+                        <TrendingUp className="w-7 h-7 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold text-[#E91E8C]" data-testid="year-total">
+                          ${payrollSummary.year_total?.toFixed(2) || '0.00'}
+                        </p>
+                        <p className="text-sm font-medium text-[#666]">This Year</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                </motion.div>
-              )}
-            </AnimatePresence>
+              {/* Payment Records Section */}
+              <PaymentRecordsSection getAuthHeader={getAuthHeader} />
+            </DashboardGroup>
+
+            {/* GROUP 3: Forms & Communications */}
+            <DashboardGroup
+              title="Forms & Communications"
+              icon={MessageSquare}
+              gradient="from-[#FF1493] to-[#E91E8C]"
+              defaultOpen={false}
+              badge={`${formsSummary.total_new || 0} new submissions`}
+              testId="group-forms"
+            >
+              {/* Messages Section */}
+              <div data-testid="messages-section">
+                <MessagesSection />
+              </div>
+
+              {/* Form Submissions Section */}
+              <div data-testid="form-submissions-section">
+                <FormSubmissionsSection
+                  formSubmissions={formSubmissions}
+                  formsSummary={formsSummary}
+                  loadingForms={loadingForms}
+                  fetchFormSubmissions={fetchFormSubmissions}
+                  onViewSubmission={(submission) => {
+                    setSelectedSubmission(submission);
+                    setShowSubmissionDetails(true);
+                  }}
+                  onDeleteSubmission={handleDeleteSubmission}
+                  formatSubmissionDate={formatSubmissionDate}
+                  getStatusBadge={getStatusBadge}
+                  paymentMethodChanges={paymentMethodChanges}
+                  fetchPaymentMethodChanges={fetchPaymentMethodChanges}
+                  itemAdditions={itemAdditions}
+                  fetchItemAdditions={fetchItemAdditions}
+                />
+              </div>
+            </DashboardGroup>
+
+            {/* GROUP 4: Operations & Reports */}
+            <DashboardGroup
+              title="Operations & Reports"
+              icon={TrendingUp}
+              gradient="from-[#FFB800] to-[#F59E0B]"
+              defaultOpen={false}
+              badge="Mileage & analytics"
+              testId="group-operations"
+            >
+              {/* Monthly Mileage Section */}
+              <MonthlyMileageSection getAuthHeader={getAuthHeader} />
+
+              {/* Reports Section */}
+              <ReportsSection
+                employees={employees}
+                payPeriodStart={payrollSettings.pay_period_start_date}
+                getAuthHeader={getAuthHeader}
+                payrollSettings={payrollSettings}
+                lastDataUpdate={lastDataUpdate}
+              />
+            </DashboardGroup>
+
           </div>
-
-
-          {/* Hours by Employee - Unified Section with Shifts Modal */}
-          <div data-testid="hours-section">
-            <HoursByEmployeeSection
-              timeEntries={timeEntries}
-              employees={employees}
-              formatDateTime={formatDateTime}
-              onAddEntry={() => setShowAddEntry(true)}
-              onEditEntry={handleEditEntry}
-              onDeleteEntry={handleDeleteEntry}
-              payPeriodStart={payrollSettings.pay_period_start_date}
-            />
-          </div>
-
-          {/* Messages Section */}
-          <div data-testid="messages-section">
-            <MessagesSection />
-          </div>
-
-          {/* Form Submissions Section */}
-          <div data-testid="form-submissions-section">
-            <FormSubmissionsSection
-              formSubmissions={formSubmissions}
-              formsSummary={formsSummary}
-              loadingForms={loadingForms}
-              fetchFormSubmissions={fetchFormSubmissions}
-              onViewSubmission={(submission) => {
-                setSelectedSubmission(submission);
-                setShowSubmissionDetails(true);
-              }}
-              onDeleteSubmission={handleDeleteSubmission}
-              formatSubmissionDate={formatSubmissionDate}
-              getStatusBadge={getStatusBadge}
-              paymentMethodChanges={paymentMethodChanges}
-              fetchPaymentMethodChanges={fetchPaymentMethodChanges}
-              itemAdditions={itemAdditions}
-              fetchItemAdditions={fetchItemAdditions}
-            />
-          </div>
-
-          {/* Payment Records Section */}
-          <PaymentRecordsSection getAuthHeader={getAuthHeader} />
-
-
-          {/* Monthly Mileage Section */}
-          <MonthlyMileageSection getAuthHeader={getAuthHeader} />
-
-          {/* Reports Section - After Mileage Tracking */}
-          <ReportsSection
-            employees={employees}
-            payPeriodStart={payrollSettings.pay_period_start_date}
-            getAuthHeader={getAuthHeader}
-            payrollSettings={payrollSettings}
-            lastDataUpdate={lastDataUpdate}
-          />
+          {/* ====== END GROUPED SECTIONS ====== */}
 
           {/* Submission Details Modal */}
           {showSubmissionDetails && selectedSubmission && (

@@ -236,13 +236,29 @@ test.describe('Admin Dashboard loads correctly after refactoring', () => {
     await removeEmergentBadge(page);
   });
 
-  test('All major sections are visible on admin dashboard', async ({ page }) => {
-    // Verify major sections are present
+  test('All major sections are visible on admin dashboard (within groups)', async ({ page }) => {
+    // Verify major section groups and their titles are present
+    // Team Management group (open by default)
     await expect(page.locator('text=All Employees')).toBeVisible();
-    await expect(page.locator('text=Payroll Summary')).toBeVisible();
     await expect(page.locator('text=Hours by Employee')).toBeVisible();
-    await expect(page.locator('text=Messages')).toBeVisible();
-    await expect(page.locator('text=Form Submissions')).toBeVisible();
+    
+    // Payroll & Payments group (collapsed - check group title)
+    await expect(page.getByText('Payroll & Payments')).toBeVisible();
+    
+    // Forms & Communications group (collapsed - check group title)
+    await expect(page.getByText('Forms & Communications')).toBeVisible();
+    
+    // Operations & Reports group (collapsed - check group title)
+    await expect(page.getByText('Operations & Reports')).toBeVisible();
+    
+    // Expand Payroll & Payments to verify Payroll Summary is accessible
+    await page.getByTestId('group-payroll-toggle').click();
+    await expect(page.locator('text=Payroll Summary')).toBeVisible({ timeout: 3000 });
+    
+    // Expand Forms & Communications to verify Messages section is accessible
+    await page.getByTestId('group-forms-toggle').click();
+    // Use role heading to be more specific
+    await expect(page.getByRole('heading', { name: 'Messages' })).toBeVisible({ timeout: 3000 });
   });
 
   test('Add, Edit, Remove buttons are visible in dashboard header', async ({ page }) => {

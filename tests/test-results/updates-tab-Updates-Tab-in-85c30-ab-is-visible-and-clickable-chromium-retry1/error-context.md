@@ -1,0 +1,96 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - banner [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e12]: Matthew Guzman
+      - generic [ref=e13]:
+        - button "Alerts" [ref=e15] [cursor=pointer]:
+          - img
+          - generic [ref=e16]: Alerts
+        - link "Home" [ref=e17] [cursor=pointer]:
+          - /url: /
+          - button "Home" [ref=e18]:
+            - img
+            - text: Home
+        - link "My Dashboard" [ref=e19] [cursor=pointer]:
+          - /url: /dashboard
+          - button "My Dashboard" [ref=e20]
+        - button "Logout" [ref=e21] [cursor=pointer]:
+          - img
+          - text: Logout
+    - main [ref=e22]:
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - heading "Admin Dashboard" [level=1] [ref=e27]
+            - button [ref=e28] [cursor=pointer]:
+              - img
+          - generic [ref=e31]:
+            - button "Add" [ref=e32] [cursor=pointer]:
+              - img
+              - generic [ref=e33]: Add
+            - button "Edit" [ref=e34] [cursor=pointer]:
+              - img
+              - generic [ref=e35]: Edit
+            - button "Remove" [ref=e36] [cursor=pointer]:
+              - img
+              - generic [ref=e37]: Remove
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - button "Team Management 6 employees" [ref=e40] [cursor=pointer]:
+              - generic [ref=e41]:
+                - img [ref=e43]
+                - generic [ref=e48]:
+                  - heading "Team Management" [level=2] [ref=e49]
+                  - generic [ref=e51]: 6 employees
+              - img [ref=e53]
+            - generic [ref=e58]:
+              - generic [ref=e61] [cursor=pointer]:
+                - generic [ref=e62]:
+                  - img [ref=e64]
+                  - generic [ref=e69]:
+                    - heading "All Employees" [level=2] [ref=e70]
+                    - paragraph [ref=e72]: 6 total
+                - generic [ref=e73]:
+                  - button "Get W-9 Form" [ref=e74]:
+                    - img
+                    - text: Get W-9 Form
+                  - img [ref=e76]
+              - generic [ref=e80] [cursor=pointer]:
+                - generic [ref=e81]:
+                  - img [ref=e83]
+                  - generic [ref=e86]:
+                    - heading "Hours by Employee" [level=2] [ref=e87]
+                    - paragraph [ref=e88]: 2 employees
+                - generic [ref=e89]:
+                  - button "Add Entry" [ref=e90]:
+                    - img
+                    - text: Add Entry
+                  - img [ref=e92]
+          - button "Payroll & Payments Financial overview" [ref=e95] [cursor=pointer]:
+            - generic [ref=e96]:
+              - img [ref=e98]
+              - generic [ref=e100]:
+                - heading "Payroll & Payments" [level=2] [ref=e101]
+                - generic [ref=e103]: Financial overview
+            - img [ref=e105]
+          - button "Forms & Communications 0 new submissions" [ref=e108] [cursor=pointer]:
+            - generic [ref=e109]:
+              - img [ref=e111]
+              - generic [ref=e113]:
+                - heading "Forms & Communications" [level=2] [ref=e114]
+                - generic [ref=e116]: 0 new submissions
+            - img [ref=e118]
+          - button "Operations & Reports Mileage & analytics" [ref=e121] [cursor=pointer]:
+            - generic [ref=e122]:
+              - img [ref=e124]
+              - generic [ref=e127]:
+                - heading "Operations & Reports" [level=2] [ref=e128]
+                - generic [ref=e130]: Mileage & analytics
+            - img [ref=e132]
+  - region "Notifications alt+T"
+```
