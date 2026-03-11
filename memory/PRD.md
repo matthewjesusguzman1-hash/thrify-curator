@@ -2130,3 +2130,71 @@ The monolithic admin.py file has been broken down into maintainable, focused mod
 - Test files created:
   - `/app/tests/e2e/consignment-features.spec.ts`
   - `/app/backend/tests/test_consignment_features.py`
+
+
+
+## Unified Updates Tab in Form Submissions (Mar 11, 2026)
+
+### Feature Overview
+Replaced separate "Payment Changes" and "Item Additions" tabs with a unified "Updates" tab in the Form Submissions section. This consolidates all client-submitted updates into a single, easy-to-manage view.
+
+### User Request
+"Create a simplified 'Updates' section in form submissions with View, Download, Delete, and Message options."
+
+### Implementation Details
+
+#### Updates Tab Features
+1. **Combined List View**: Shows all payment method changes and item additions/info updates in one table
+2. **Type Badges**: 
+   - Amber "Payment Change" badge for payment method updates
+   - Green "+N Items" badge for item additions
+   - Blue "Info Update" badge for contact info changes
+3. **Changes Column**: Shows summary of what was changed (e.g., "zelle → cashapp", "Email", "Phone")
+4. **Sortable Columns**: Client name and Date columns are sortable
+
+#### Action Buttons
+1. **View** (purple eye icon): Opens a modal with full update details including:
+   - Client information (name, email, date)
+   - Payment method changes (old → new)
+   - Items added with descriptions
+   - Contact info updates (email, phone, address)
+   - Payment method updates
+   - Profit split changes
+   - Additional information/notes
+   - Uploaded photos
+   - Signature (if provided)
+
+2. **Download** (green download icon): 
+   - Item additions: Downloads professional PDF via backend endpoint
+   - Payment changes: Downloads text file with change details
+
+3. **Message** (cyan message icon): Opens modal with:
+   - Pre-filled email template addressed to the client
+   - Editable message content
+   - "Open Email Client" button that opens default email app
+
+4. **Delete** (red trash icon): 
+   - Confirmation dialog
+   - Removes update record from database
+   - Refreshes list after deletion
+
+### Backend Endpoints Added
+- `DELETE /api/admin/forms/item-additions/{update_id}` - Delete an update record
+- `GET /api/admin/forms/item-additions/{update_id}/pdf` - Download update as PDF
+
+### Files Modified
+- `/app/backend/app/routers/forms.py` - Added delete and PDF download endpoints
+- `/app/frontend/src/components/admin/sections/FormSubmissionsSection.jsx`:
+  - Added View Details modal
+  - Added Message Client modal with pre-filled email template
+  - Updated handleDownloadUpdate to download PDFs
+  - Added getEmailTemplate helper function
+  - Fixed full_name mapping for payment changes
+  - Replaced old tabs with unified Updates tab
+
+### Testing Status
+- **Backend Tests**: 13/13 PASSED (100%)
+- **Frontend E2E Tests**: 9/9 PASSED (100%)
+- Test files created:
+  - `/app/tests/e2e/updates-tab.spec.ts`
+  - `/app/backend/tests/test_updates_tab.py`
