@@ -2198,3 +2198,69 @@ Replaced separate "Payment Changes" and "Item Additions" tabs with a unified "Up
 - Test files created:
   - `/app/tests/e2e/updates-tab.spec.ts`
   - `/app/backend/tests/test_updates_tab.py`
+
+
+
+## Code Refactoring - AdminDashboard.jsx (Mar 11, 2026)
+
+### Overview
+Major refactoring of `AdminDashboard.jsx` to improve maintainability and code organization.
+
+### Size Reduction
+- **Before:** 4,176 lines
+- **After:** 3,145 lines
+- **Reduction:** ~1,031 lines (25%)
+
+### Components Extracted
+
+#### 1. EditEmployeeModal.jsx (589 lines)
+Located at: `/app/frontend/src/components/admin/modals/EditEmployeeModal.jsx`
+
+Features:
+- Employee selection dropdown when no employee is selected
+- Edit form with fields: name, email, phone, role, admin code, hourly rate, start date
+- Import from job application functionality
+- W-9 document management (view, download, upload, approve, delete)
+- Built-in W-9 viewer modal
+- Built-in W-9 management modal
+
+#### 2. EmployeeShiftsModal.jsx (309 lines)
+Located at: `/app/frontend/src/components/admin/modals/EmployeeShiftsModal.jsx`
+
+Features:
+- Shows employee's shift history with hours summary
+- Add new shift modal
+- Edit existing shift modal
+- Delete shift functionality
+- All shift CRUD operations handled internally
+
+### Shared Consignment Components Created
+
+#### 1. PaymentMethodSelector.jsx (73 lines)
+Located at: `/app/frontend/src/components/consignment/PaymentMethodSelector.jsx`
+- Reusable payment method selection grid
+- Handles details input for methods that need it (Venmo, PayPal, Zelle, etc.)
+
+#### 2. PhotoUploader.jsx (106 lines)
+Located at: `/app/frontend/src/components/consignment/PhotoUploader.jsx`
+- Drag-and-drop photo upload
+- Photo preview grid with remove buttons
+- Upload progress indicator
+- Max file size and count validation
+
+#### 3. TermsAndConditions.jsx (62 lines)
+Located at: `/app/frontend/src/components/consignment/TermsAndConditions.jsx`
+- Scrollable or static terms display
+- Checkbox for agreement
+
+### Testing Results
+- **Regression Tests:** 46/46 PASSED (100%)
+- **New Tests Created:** `/app/tests/e2e/refactored-modals.spec.ts`
+- All admin dashboard functionality verified working
+
+### Benefits of Refactoring
+1. Better code organization and separation of concerns
+2. Easier to maintain and debug individual components
+3. Reusable components can be used elsewhere in the application
+4. Improved testability with isolated component testing
+5. Reduced cognitive load when working on specific features
