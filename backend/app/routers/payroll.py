@@ -546,6 +546,8 @@ class CheckRecordUpload(BaseModel):
     check_date: Optional[str] = None
     amount: Optional[float] = None
     employee_name: Optional[str] = None
+    payment_type: Optional[str] = "employee"  # "employee" or "consignment"
+    consignment_client_email: Optional[str] = None  # For linking to consignment agreement
 
 class CheckRecordUpdate(BaseModel):
     description: Optional[str] = None
@@ -555,6 +557,8 @@ class CheckRecordUpdate(BaseModel):
     image_data: Optional[str] = None  # base64 encoded, optional for update
     filename: Optional[str] = None
     content_type: Optional[str] = None
+    payment_type: Optional[str] = None
+    consignment_client_email: Optional[str] = None
 
 @router.get("/check-records")
 async def get_check_records(admin: dict = Depends(get_admin_user)):
@@ -574,6 +578,8 @@ async def upload_check_record(data: CheckRecordUpload, admin: dict = Depends(get
         "check_date": data.check_date,
         "amount": data.amount,
         "employee_name": data.employee_name,
+        "payment_type": data.payment_type or "employee",
+        "consignment_client_email": data.consignment_client_email,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": admin.get("name", "Admin")
     }
@@ -613,6 +619,10 @@ async def update_check_record(record_id: str, data: CheckRecordUpdate, admin: di
         update_data["amount"] = data.amount
     if data.employee_name is not None:
         update_data["employee_name"] = data.employee_name
+    if data.payment_type is not None:
+        update_data["payment_type"] = data.payment_type
+    if data.consignment_client_email is not None:
+        update_data["consignment_client_email"] = data.consignment_client_email
     if data.image_data is not None:
         update_data["image_data"] = data.image_data
         update_data["filename"] = data.filename
@@ -643,3 +653,13 @@ async def get_check_image(record_id: str, admin: dict = Depends(get_admin_user))
         media_type=record.get("content_type", "image/jpeg"),
         headers={"Content-Disposition": f"inline; filename={record.get('filename', 'check.jpg')}"}
     )
+
+
+@router.get("/consignment-clients")
+async def get_consignment_clients(admin: dict = Depends(get_admin_user)):
+    """Get all consignment clients for payment selection"""
+    clients = await db.consignment_agreements.find(
+        {}, 
+        {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "payment_method": 1, "payment_details": 1}
+    ).sort("full_name", 1).to_list(500)
+    return clients

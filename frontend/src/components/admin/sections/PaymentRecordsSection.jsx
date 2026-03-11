@@ -10,7 +10,9 @@ import {
   Trash2,
   X,
   Search,
-  RefreshCw
+  RefreshCw,
+  Users,
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
   // Section visibility
   const [isExpanded, setIsExpanded] = useState(false);
   
+  // Tab state - "employee" or "consignment"
+  const [activeTab, setActiveTab] = useState("employee");
+  
   // Check records state
   const [checkRecords, setCheckRecords] = useState([]);
   const [checkThumbnails, setCheckThumbnails] = useState({});
@@ -34,23 +39,33 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     description: "",
     check_date: new Date().toISOString().split('T')[0],
     amount: "",
-    employee_name: ""
+    employee_name: "",
+    payment_type: "employee",
+    consignment_client_email: ""
   });
   const [pendingCheckImage, setPendingCheckImage] = useState(null);
   const [editingCheckRecord, setEditingCheckRecord] = useState(null);
   const [checkSearchQuery, setCheckSearchQuery] = useState("");
   const [expandedCheckRecords, setExpandedCheckRecords] = useState({});
   const checkInputRef = useRef(null);
+  
+  // Consignment clients for dropdown
+  const [consignmentClients, setConsignmentClients] = useState([]);
 
-  // Helper: Filter check records
+  // Helper: Filter check records by type and search
   const getFilteredCheckRecords = () => {
-    if (!checkSearchQuery.trim()) return checkRecords;
+    let filtered = checkRecords.filter(record => 
+      (record.payment_type || "employee") === activeTab
+    );
+    
+    if (!checkSearchQuery.trim()) return filtered;
     const query = checkSearchQuery.toLowerCase();
-    return checkRecords.filter(record => 
+    return filtered.filter(record => 
       (record.employee_name?.toLowerCase() || '').includes(query) ||
       (record.description?.toLowerCase() || '').includes(query) ||
       (record.check_date || '').includes(query) ||
-      (record.amount?.toString() || '').includes(query)
+      (record.amount?.toString() || '').includes(query) ||
+      (record.consignment_client_email?.toLowerCase() || '').includes(query)
     );
   };
 
@@ -92,8 +107,19 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
   useEffect(() => {
     if (isExpanded) {
       fetchCheckRecords();
+      fetchConsignmentClients();
     }
   }, [isExpanded, fetchCheckRecords]);
+
+  // Fetch consignment clients
+  const fetchConsignmentClients = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/payroll/consignment-clients`, getAuthHeader());
+      setConsignmentClients(response.data);
+    } catch (error) {
+      console.error("Failed to fetch consignment clients:", error);
+    }
+  };
 
   // Handle image file selection
   const handleCheckImageUpload = async (file) => {
@@ -138,6 +164,12 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       return;
     }
     
+    // Validate consignment client selection
+    if (activeTab === "consignment" && !checkUploadData.consignment_client_email && !editingCheckRecord) {
+      toast.error("Please select a consignment client");
+      return;
+    }
+    
     setUploadingCheck(true);
     
     try {
@@ -155,7 +187,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
           description: checkUploadData.description || null,
           check_date: checkUploadData.check_date || null,
           amount: parseAmount(checkUploadData.amount),
-          employee_name: checkUploadData.employee_name || null
+          employee_name: checkUploadData.employee_name || null,
+          payment_type: checkUploadData.payment_type || activeTab,
+          consignment_client_email: checkUploadData.consignment_client_email || null
         };
         
         // If new image was selected, include it
@@ -177,7 +211,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
           description: checkUploadData.description || null,
           check_date: checkUploadData.check_date || null,
           amount: parseAmount(checkUploadData.amount),
-          employee_name: checkUploadData.employee_name || null
+          employee_name: checkUploadData.employee_name || null,
+          payment_type: activeTab,
+          consignment_client_email: activeTab === "consignment" ? checkUploadData.consignment_client_email : null
         };
         
         await axios.post(`${API}/admin/payroll/check-records`, payload, getAuthHeader());
@@ -189,7 +225,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
         description: "", 
         check_date: new Date().toISOString().split('T')[0], 
         amount: "", 
-        employee_name: "" 
+        employee_name: "",
+        payment_type: activeTab,
+        consignment_client_email: ""
       });
       
       // Cleanup preview URL
@@ -218,7 +256,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       description: record.description || "",
       check_date: record.check_date || new Date().toISOString().split('T')[0],
       amount: formattedAmount,
-      employee_name: record.employee_name || ""
+      employee_name: record.employee_name || "",
+      payment_type: record.payment_type || "employee",
+      consignment_client_email: record.consignment_client_email || ""
     });
     // Clear any pending image
     if (pendingCheckImage?.previewUrl) {
@@ -235,7 +275,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       description: "",
       check_date: new Date().toISOString().split('T')[0],
       amount: "",
-      employee_name: ""
+      employee_name: "",
+      payment_type: activeTab,
+      consignment_client_email: ""
     });
     if (pendingCheckImage?.previewUrl) {
       URL.revokeObjectURL(pendingCheckImage.previewUrl);
@@ -301,7 +343,11 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
   };
 
   const filteredRecords = getFilteredCheckRecords();
-  const allExpanded = checkRecords.length > 0 && checkRecords.every(r => expandedCheckRecords[r.id]);
+  const allExpanded = filteredRecords.length > 0 && filteredRecords.every(r => expandedCheckRecords[r.id]);
+  
+  // Count records by type
+  const employeeRecordsCount = checkRecords.filter(r => (r.payment_type || "employee") === "employee").length;
+  const consignmentRecordsCount = checkRecords.filter(r => r.payment_type === "consignment").length;
 
   return (
     <>
@@ -323,7 +369,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-[#333]">Payment Records</h2>
-              <p className="text-xs text-[#888]">{checkRecords.length} records stored</p>
+              <p className="text-xs text-[#888]">{employeeRecordsCount} employee • {consignmentRecordsCount} consignment</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -356,21 +402,88 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
               className="overflow-hidden"
             >
               <div className="mt-4 pt-4 border-t border-[#eee]">
+                {/* Tab Navigation */}
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => { setActiveTab("employee"); handleCancelCheckEdit(); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      activeTab === "employee"
+                        ? "bg-purple-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                    data-testid="tab-employee-payments"
+                  >
+                    <Users className="w-4 h-4" />
+                    Employee Payments
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      activeTab === "employee" ? "bg-white/20" : "bg-gray-200"
+                    }`}>{employeeRecordsCount}</span>
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab("consignment"); handleCancelCheckEdit(); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      activeTab === "consignment"
+                        ? "bg-emerald-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                    data-testid="tab-consignment-payments"
+                  >
+                    <Package className="w-4 h-4" />
+                    Consignment Payments
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      activeTab === "consignment" ? "bg-white/20" : "bg-gray-200"
+                    }`}>{consignmentRecordsCount}</span>
+                  </button>
+                </div>
+
                 {/* Upload Section */}
-                <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl mb-4">
+                <div className={`p-4 rounded-xl mb-4 ${
+                  activeTab === "employee" 
+                    ? "bg-gradient-to-r from-purple-50 to-purple-100" 
+                    : "bg-gradient-to-r from-emerald-50 to-emerald-100"
+                }`}>
                   <h3 className="font-medium text-[#333] mb-3 flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-purple-600" />
-                    {editingCheckRecord ? 'Edit Payment Record' : 'Upload Payment Photo'}
+                    <Upload className={`w-4 h-4 ${activeTab === "employee" ? "text-purple-600" : "text-emerald-600"}`} />
+                    {editingCheckRecord ? 'Edit Payment Record' : activeTab === "employee" ? 'Upload Employee Payment' : 'Upload Consignment Payment'}
                   </h3>
+                  
+                  {/* Consignment Client Selection (only for consignment tab) */}
+                  {activeTab === "consignment" && !editingCheckRecord && (
+                    <div className="mb-3">
+                      <Label className="text-xs text-[#666]">Select Consignment Client *</Label>
+                      <select
+                        value={checkUploadData.consignment_client_email}
+                        onChange={(e) => {
+                          const client = consignmentClients.find(c => c.email === e.target.value);
+                          setCheckUploadData({ 
+                            ...checkUploadData, 
+                            consignment_client_email: e.target.value,
+                            employee_name: client?.full_name || ""
+                          });
+                        }}
+                        className="w-full h-9 text-sm border border-gray-300 rounded-md px-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        data-testid="select-consignment-client"
+                      >
+                        <option value="">-- Select a client --</option>
+                        {consignmentClients.map((client) => (
+                          <option key={client.email} value={client.email}>
+                            {client.full_name} ({client.email}) - {client.payment_method || "No payment method"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                     <div>
-                      <Label className="text-xs text-[#666]">Employee Name</Label>
+                      <Label className="text-xs text-[#666]">{activeTab === "employee" ? "Employee Name" : "Client Name"}</Label>
                       <Input
                         type="text"
-                        placeholder="John Doe"
+                        placeholder={activeTab === "employee" ? "John Doe" : "Client name"}
                         value={checkUploadData.employee_name}
                         onChange={(e) => setCheckUploadData({ ...checkUploadData, employee_name: e.target.value })}
                         className="h-9 text-sm"
+                        disabled={activeTab === "consignment" && !editingCheckRecord}
                       />
                     </div>
                     <div>
@@ -412,7 +525,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                       <Label className="text-xs text-[#666]">Description</Label>
                       <Input
                         type="text"
-                        placeholder="Weekly pay"
+                        placeholder={activeTab === "employee" ? "Weekly pay" : "Consignment payout"}
                         value={checkUploadData.description}
                         onChange={(e) => setCheckUploadData({ ...checkUploadData, description: e.target.value })}
                         className="h-9 text-sm"
@@ -431,12 +544,14 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         type="file"
                         accept="image/*"
                         onChange={(e) => handleCheckImageUpload(e.target.files[0])}
-                        className="block w-full text-sm text-gray-500
+                        className={`block w-full text-sm text-gray-500
                           file:mr-4 file:py-2 file:px-4
                           file:rounded-full file:border-0
                           file:text-sm file:font-semibold
-                          file:bg-purple-50 file:text-purple-700
-                          hover:file:bg-purple-100"
+                          ${activeTab === "employee" 
+                            ? "file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                            : "file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                          }`}
                       />
                     </div>
                     
@@ -446,7 +561,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         <img 
                           src={pendingCheckImage.previewUrl} 
                           alt="Preview" 
-                          className="w-16 h-16 object-cover rounded-lg border-2 border-purple-300"
+                          className={`w-16 h-16 object-cover rounded-lg border-2 ${
+                            activeTab === "employee" ? "border-purple-300" : "border-emerald-300"
+                          }`}
                         />
                         <button
                           onClick={() => {
@@ -489,7 +606,10 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         size="sm"
                         onClick={handleSubmitCheckRecord}
                         disabled={uploadingCheck || (!pendingCheckImage && !editingCheckRecord)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                        className={activeTab === "employee" 
+                          ? "bg-purple-600 hover:bg-purple-700 text-white"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                        }
                       >
                         {uploadingCheck ? "Saving..." : editingCheckRecord ? "Update" : "Submit"}
                       </Button>
@@ -535,12 +655,18 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                 {/* Records List */}
                 {loadingCheckRecords ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                    <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${
+                      activeTab === "employee" ? "border-purple-600" : "border-emerald-600"
+                    }`}></div>
                   </div>
                 ) : filteredRecords.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    <Camera className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                    <p>{checkSearchQuery ? 'No matching records found' : 'No payment records yet'}</p>
+                    {activeTab === "employee" ? (
+                      <Users className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    ) : (
+                      <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    )}
+                    <p>{checkSearchQuery ? 'No matching records found' : `No ${activeTab} payment records yet`}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -579,6 +705,11 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                               {record.amount && (
                                 <span className="text-green-600 font-medium">
                                   ${parseFloat(record.amount).toFixed(2)}
+                                </span>
+                              )}
+                              {record.consignment_client_email && (
+                                <span className="text-emerald-600 truncate max-w-[150px]" title={record.consignment_client_email}>
+                                  {record.consignment_client_email}
                                 </span>
                               )}
                             </div>
