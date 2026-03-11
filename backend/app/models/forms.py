@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
 
@@ -66,9 +66,11 @@ class ConsignmentItemAddition(BaseModel):
     agreement_id: str = ""  # Reference to original agreement
     full_name: str
     email: EmailStr
-    items_to_add: int
+    items_to_add: int = 0
     items_description: str = ""  # Optional description of new items
     acknowledged_terms: bool = False
+    update_phone: Optional[str] = None  # New phone number if updating
+    update_address: Optional[str] = None  # New address if updating
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 

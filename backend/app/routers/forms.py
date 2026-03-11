@@ -68,7 +68,7 @@ async def check_existing_agreement(email: str):
     """Check if user has an existing consignment agreement"""
     existing = await db.consignment_agreements.find_one(
         {"email": email.lower()}, 
-        {"_id": 0, "full_name": 1, "email": 1, "payment_method": 1, "payment_details": 1, "submitted_at": 1}
+        {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "address": 1, "payment_method": 1, "payment_details": 1, "items_description": 1, "submitted_at": 1}
     )
     if existing:
         return {"has_agreement": True, "agreement": existing}
@@ -142,7 +142,7 @@ async def get_payment_method_changes(admin: dict = Depends(get_admin_user)):
 
 @router.post("/forms/add-consignment-items", response_model=ConsignmentItemAddition)
 async def add_consignment_items(addition: ConsignmentItemAddition):
-    """Add more items to an existing consignment agreement"""
+    """Add more items to an existing consignment agreement or update contact info"""
     from datetime import datetime, timezone
     
     # Find existing agreement by email
@@ -160,25 +160,47 @@ async def add_consignment_items(addition: ConsignmentItemAddition):
     # Save to database
     await db.consignment_item_additions.insert_one(addition_dict)
     
-    # Update the original agreement's item count
-    current_items = int(existing.get("items_description", "0") or "0")
-    new_total = current_items + addition.items_to_add
-    await db.consignment_agreements.update_one(
-        {"email": addition.email.lower()},
-        {"$set": {"items_description": str(new_total)}}
-    )
+    # Build update fields for the agreement
+    update_fields = {}
+    
+    # Update item count if items were added
+    if addition.items_to_add > 0:
+        current_items = int(existing.get("items_description", "0") or "0")
+        new_total = current_items + addition.items_to_add
+        update_fields["items_description"] = str(new_total)
+    
+    # Update contact info if provided
+    if addition.update_phone:
+        update_fields["phone"] = addition.update_phone
+    if addition.update_address:
+        update_fields["address"] = addition.update_address
+    
+    # Apply updates to agreement
+    if update_fields:
+        await db.consignment_agreements.update_one(
+            {"email": addition.email.lower()},
+            {"$set": update_fields}
+        )
     
     # Create notification for admin
+    notification_message = []
+    if addition.items_to_add > 0:
+        notification_message.append(f"added {addition.items_to_add} more items")
+    if addition.update_phone or addition.update_address:
+        notification_message.append("updated contact info")
+    
     notification = AdminNotification(
         type="consignment_items_added",
         employee_id=addition_dict["id"],
         employee_name=addition_dict["full_name"],
-        message=f"{addition_dict['full_name']} added {addition.items_to_add} more items to consign",
+        message=f"{addition_dict['full_name']} {' and '.join(notification_message)}",
         details={
             "email": addition.email,
             "items_added": addition.items_to_add,
-            "new_total": new_total,
-            "description": addition.items_description
+            "new_total": update_fields.get("items_description", existing.get("items_description", "0")),
+            "description": addition.items_description,
+            "phone_updated": bool(addition.update_phone),
+            "address_updated": bool(addition.update_address)
         }
     )
     await db.admin_notifications.insert_one(notification.model_dump())

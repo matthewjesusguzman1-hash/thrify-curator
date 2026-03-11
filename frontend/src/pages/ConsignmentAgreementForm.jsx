@@ -57,6 +57,9 @@ export default function ConsignmentAgreementForm() {
   const [itemsDescription, setItemsDescription] = useState("");
   const [acknowledgedTerms, setAcknowledgedTerms] = useState(false);
   const [itemsAdded, setItemsAdded] = useState(false);
+  const [updatePhone, setUpdatePhone] = useState("");
+  const [updateAddress, setUpdateAddress] = useState("");
+  const [wantsToUpdateContact, setWantsToUpdateContact] = useState(false);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -144,6 +147,8 @@ export default function ConsignmentAgreementForm() {
       const response = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(addItemsEmail)}`);
       if (response.data.has_agreement) {
         setAddItemsAgreement(response.data.agreement);
+        setUpdatePhone(response.data.agreement.phone || "");
+        setUpdateAddress(response.data.agreement.address || "");
       } else {
         toast.error("No existing agreement found for this email. Please sign a new agreement first.");
         setShowAddItems(false);
@@ -158,12 +163,16 @@ export default function ConsignmentAgreementForm() {
 
   // Submit additional items
   const handleAddItems = async () => {
-    if (!itemsToAdd || parseInt(itemsToAdd) <= 0) {
-      toast.error("Please enter the number of items to add");
+    // At least one of items or contact update is required
+    const hasItems = itemsToAdd && parseInt(itemsToAdd) > 0;
+    const hasContactUpdate = wantsToUpdateContact && (updatePhone.trim() || updateAddress.trim());
+    
+    if (!hasItems && !hasContactUpdate) {
+      toast.error("Please enter items to add or update your contact information");
       return;
     }
     
-    if (!acknowledgedTerms) {
+    if (hasItems && !acknowledgedTerms) {
       toast.error("Please acknowledge the terms and conditions");
       return;
     }
@@ -173,14 +182,16 @@ export default function ConsignmentAgreementForm() {
       await axios.post(`${API}/forms/add-consignment-items`, {
         email: addItemsEmail,
         full_name: addItemsAgreement.full_name,
-        items_to_add: parseInt(itemsToAdd),
+        items_to_add: hasItems ? parseInt(itemsToAdd) : 0,
         items_description: itemsDescription,
-        acknowledged_terms: true
+        acknowledged_terms: acknowledgedTerms || !hasItems,
+        update_phone: wantsToUpdateContact ? updatePhone : null,
+        update_address: wantsToUpdateContact ? updateAddress : null
       });
       setItemsAdded(true);
-      toast.success("Items added successfully!");
+      toast.success(hasItems ? "Items added successfully!" : "Contact information updated successfully!");
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to add items");
+      toast.error(error.response?.data?.detail || "Failed to submit");
     } finally {
       setLoading(false);
     }
@@ -257,6 +268,8 @@ export default function ConsignmentAgreementForm() {
 
   // Items added success screen
   if (itemsAdded) {
+    const hasItems = itemsToAdd && parseInt(itemsToAdd) > 0;
+    const hasContactUpdate = wantsToUpdateContact;
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] py-8 px-4" data-testid="items-added-success">
         <div className="max-w-2xl mx-auto">
@@ -269,10 +282,15 @@ export default function ConsignmentAgreementForm() {
               <Package className="w-10 h-10 text-white" />
             </div>
             <h2 className="font-poppins text-2xl font-bold text-[#1A1A2E] mb-2">
-              Items Added Successfully!
+              {hasItems && hasContactUpdate ? "Items Added & Info Updated!" : hasItems ? "Items Added Successfully!" : "Information Updated!"}
             </h2>
             <p className="text-[#666] mb-6">
-              You have added <strong>{itemsToAdd} item{parseInt(itemsToAdd) !== 1 ? 's' : ''}</strong> to your consignment agreement.
+              {hasItems && (
+                <span>You have added <strong>{itemsToAdd} item{parseInt(itemsToAdd) !== 1 ? 's' : ''}</strong> to your consignment agreement. </span>
+              )}
+              {hasContactUpdate && (
+                <span>Your contact information has been updated.</span>
+              )}
             </p>
             <Link to="/">
               <Button className="bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
@@ -362,8 +380,8 @@ export default function ConsignmentAgreementForm() {
                   <Plus className="w-6 h-6 text-white" />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Add More Items</h3>
-                  <p className="text-[#666] text-sm">Have more items to consign? Add them to your existing agreement.</p>
+                  <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Update Info / Add Items</h3>
+                  <p className="text-[#666] text-sm">Update contact info or add more items to consign.</p>
                 </div>
               </div>
             </button>
@@ -545,7 +563,7 @@ export default function ConsignmentAgreementForm() {
           {/* Back Link and Logo Row */}
           <div className="relative mt-8 mb-6">
             <button 
-              onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); }}
+              onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setUpdatePhone(""); setUpdateAddress(""); }}
               className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#10B981] transition-colors"
               data-testid="back-to-choice-btn"
             >
@@ -566,8 +584,8 @@ export default function ConsignmentAgreementForm() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-8"
           >
-            <h1 className="font-poppins text-3xl font-bold text-white mb-2">Add More Items</h1>
-            <p className="text-white/60">Add items to your existing consignment agreement</p>
+            <h1 className="font-poppins text-3xl font-bold text-white mb-2">Update Info / Add Items</h1>
+            <p className="text-white/60">Update your contact info or add more items to consign</p>
           </motion.div>
 
           <motion.div
@@ -603,7 +621,7 @@ export default function ConsignmentAgreementForm() {
                   </Button>
                 </>
               ) : (
-                // Step 2: Show agreement info, terms review, and add items form
+                // Step 2: Show agreement info, contact update option, terms review, and add items form
                 <>
                   <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg p-4 mb-4">
                     <p className="text-sm text-[#1A1A2E]">
@@ -614,24 +632,66 @@ export default function ConsignmentAgreementForm() {
                     </p>
                   </div>
 
-                  {/* Terms Review Section */}
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <h4 className="font-semibold text-[#1A1A2E] mb-3">Consignment Terms Reminder</h4>
-                    <div className="text-sm text-[#666] space-y-2 max-h-48 overflow-y-auto">
-                      <p><strong>1. Consignment Period:</strong> Items are consigned for a period of 90 days from the date of this agreement.</p>
-                      <p><strong>2. Pricing:</strong> Thrifty Curator reserves the right to set and adjust pricing for all consigned items.</p>
-                      <p><strong>3. Profit Split:</strong> Profits will be split according to your agreed percentage upon sale of items.</p>
-                      <p><strong>4. Unsold Items:</strong> After the consignment period, unsold items may be donated, returned, or have their consignment period extended upon mutual agreement.</p>
-                      <p><strong>5. Liability:</strong> Thrifty Curator will exercise reasonable care but is not liable for loss, theft, or damage to consigned items.</p>
-                      <p><strong>6. Payment:</strong> Payments will be processed via your selected payment method within 14 days of item sale.</p>
-                    </div>
+                  {/* Update Contact Info Section */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setWantsToUpdateContact(!wantsToUpdateContact)}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <span className="font-semibold text-[#1A1A2E]">Update Contact Information</span>
+                      <span className={`transform transition-transform ${wantsToUpdateContact ? 'rotate-180' : ''}`}>
+                        ▼
+                      </span>
+                    </button>
+                    {wantsToUpdateContact && (
+                      <div className="p-4 space-y-4 border-t border-gray-200">
+                        <div>
+                          <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Phone Number</Label>
+                          <Input
+                            type="tel"
+                            value={updatePhone}
+                            onChange={(e) => setUpdatePhone(e.target.value)}
+                            placeholder="(555) 123-4567"
+                            className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                            data-testid="update-phone"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Address</Label>
+                          <Textarea
+                            value={updateAddress}
+                            onChange={(e) => setUpdateAddress(e.target.value)}
+                            placeholder="123 Main St, City, State ZIP"
+                            className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[60px]"
+                            data-testid="update-address"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Terms Review Section - Matches Original Agreement */}
+                  <div className="bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10 rounded-xl p-4 border border-[#10B981]/20">
+                    <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
+                    <ul className="text-sm text-gray-600 space-y-3 max-h-48 overflow-y-auto">
+                      <li>• The profit split will be agreed upon prior to acceptance of any items. Unless otherwise specified on this form, the profit split will be considered 50/50.</li>
+                      <li>• There is no guarantee that your item will be sold.</li>
+                      <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
+                      <li>• The consignee has the right to refuse any item for sale at any time and will return the item to the consignor.</li>
+                      <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee for the purposes of sale until sold or released back to the consignor.</li>
+                      <li>• The consignor accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee. All items are inspected prior to listing and its condition/defects are listed at the time the item is posted for sale.</li>
+                    </ul>
                   </div>
 
                   <div>
-                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Number of Items to Add *</Label>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                      Number of Items to Add
+                      <span className="font-normal text-[#888] ml-2">(Leave blank if only updating contact info)</span>
+                    </Label>
                     <Input
                       type="number"
-                      min="1"
+                      min="0"
                       value={itemsToAdd}
                       onChange={(e) => setItemsToAdd(e.target.value)}
                       placeholder="Enter number of items"
@@ -640,32 +700,36 @@ export default function ConsignmentAgreementForm() {
                     />
                   </div>
 
-                  <div>
-                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
-                      Item Description
-                      <span className="font-normal text-[#888] ml-2">(Optional)</span>
-                    </Label>
-                    <Textarea
-                      value={itemsDescription}
-                      onChange={(e) => setItemsDescription(e.target.value)}
-                      placeholder="Brief description of items being added (e.g., '3 vintage dresses, 2 designer handbags')"
-                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
-                      data-testid="items-description"
-                    />
-                  </div>
+                  {itemsToAdd && parseInt(itemsToAdd) > 0 && (
+                    <>
+                      <div>
+                        <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                          Item Description
+                          <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                        </Label>
+                        <Textarea
+                          value={itemsDescription}
+                          onChange={(e) => setItemsDescription(e.target.value)}
+                          placeholder="Brief description of items being added (e.g., '3 vintage dresses, 2 designer handbags')"
+                          className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
+                          data-testid="items-description"
+                        />
+                      </div>
 
-                  <div className="flex items-start space-x-3 p-4 bg-[#10B981]/5 rounded-lg border border-[#10B981]/20">
-                    <Checkbox
-                      id="acknowledge-terms"
-                      checked={acknowledgedTerms}
-                      onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
-                      className="mt-1 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981]"
-                      data-testid="acknowledge-terms-checkbox"
-                    />
-                    <Label htmlFor="acknowledge-terms" className="text-sm text-[#1A1A2E] cursor-pointer">
-                      I have reviewed the consignment terms above and agree that the additional items I am adding are subject to the same terms as my original consignment agreement.
-                    </Label>
-                  </div>
+                      <div className="flex items-start space-x-3 p-4 bg-[#10B981]/5 rounded-lg border border-[#10B981]/20">
+                        <Checkbox
+                          id="acknowledge-terms"
+                          checked={acknowledgedTerms}
+                          onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
+                          className="mt-1 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981]"
+                          data-testid="acknowledge-terms-checkbox"
+                        />
+                        <Label htmlFor="acknowledge-terms" className="text-sm text-[#1A1A2E] cursor-pointer">
+                          I have reviewed the consignment terms above and agree that the additional items I am adding are subject to the same terms as my original consignment agreement.
+                        </Label>
+                      </div>
+                    </>
+                  )}
 
                   <Button
                     onClick={handleAddItems}
@@ -673,7 +737,7 @@ export default function ConsignmentAgreementForm() {
                     className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
                     data-testid="submit-add-items-btn"
                   >
-                    {loading ? "Adding Items..." : "Add Items to Consignment"}
+                    {loading ? "Submitting..." : (itemsToAdd && parseInt(itemsToAdd) > 0) ? "Add Items to Consignment" : "Update Information"}
                   </Button>
                 </>
               )}
@@ -681,7 +745,7 @@ export default function ConsignmentAgreementForm() {
           </motion.div>
 
           <button 
-            onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); }}
+            onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setUpdatePhone(""); setUpdateAddress(""); }}
             className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
             data-testid="back-link"
           >
