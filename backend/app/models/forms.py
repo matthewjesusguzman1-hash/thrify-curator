@@ -46,10 +46,18 @@ class ConsignmentAgreement(BaseModel):
     address: str
     items_description: str
     agreed_percentage: str
+    payment_method: str = ""  # Check, Venmo, PayPal, Zelle, CashApp, Apple Pay
+    payment_details: str = ""  # Username/handle for the selected payment method
     signature: str
     signature_date: str = ""
     agreed_to_terms: bool
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class PaymentMethodUpdate(BaseModel):
+    email: str
+    payment_method: str
+    payment_details: str = ""
 
 
 class UpdateSubmissionStatus(BaseModel):

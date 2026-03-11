@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 
 from app.database import db
 from app.dependencies import get_admin_user
-from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus
+from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus, PaymentMethodUpdate
 from app.models.notifications import AdminNotification
 
 router = APIRouter(tags=["Forms"])
@@ -61,6 +61,41 @@ async def submit_consignment_agreement(agreement: ConsignmentAgreement):
     await db.admin_notifications.insert_one(notification.model_dump())
     
     return agreement
+
+
+@router.get("/forms/check-existing-agreement")
+async def check_existing_agreement(email: str):
+    """Check if user has an existing consignment agreement"""
+    existing = await db.consignment_agreements.find_one(
+        {"email": email.lower()}, 
+        {"_id": 0, "full_name": 1, "email": 1, "payment_method": 1, "payment_details": 1, "submitted_at": 1}
+    )
+    if existing:
+        return {"has_agreement": True, "agreement": existing}
+    return {"has_agreement": False}
+
+
+@router.post("/forms/update-payment-method")
+async def update_payment_method(update: PaymentMethodUpdate):
+    """Update payment method for existing consignment agreement"""
+    # Find existing agreement by email
+    existing = await db.consignment_agreements.find_one({"email": update.email.lower()})
+    if not existing:
+        raise HTTPException(status_code=404, detail="No existing agreement found for this email")
+    
+    # Update payment method
+    result = await db.consignment_agreements.update_one(
+        {"email": update.email.lower()},
+        {"$set": {
+            "payment_method": update.payment_method,
+            "payment_details": update.payment_details
+        }}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to update payment method")
+    
+    return {"success": True, "message": "Payment method updated successfully"}
 
 
 # Admin form management routes
