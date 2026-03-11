@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import uuid
 
 from app.database import db
-from app.services.push_notifications import push_service, NotificationTemplates
+from app.services.push_notifications import get_push_service, NotificationTemplates
 
 
 async def create_notification_with_push(
@@ -44,6 +44,7 @@ async def create_notification_with_push(
     await db.admin_notifications.insert_one(notification_doc)
     
     # Send push notification if service is enabled
+    push_service = get_push_service()
     if push_service.enabled:
         # Use provided title/body or generate from template
         title = push_title or get_push_title(notification_type, entity_name)

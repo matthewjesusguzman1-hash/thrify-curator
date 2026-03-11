@@ -6,42 +6,37 @@ This guide will help you build and deploy your Thrifty Curator app for iOS and A
 
 Your app is configured with:
 - **Capacitor** - Wraps your web app in a native shell
-- **Firebase Cloud Messaging (FCM)** - Push notifications for Android & iOS
+- **Firebase Admin SDK** - Push notifications for Android & iOS
 - **Apple Push Notification Service (APNs)** - iOS push notifications via FCM
+
+## ✅ Firebase Setup - COMPLETED!
+
+Your Firebase credentials are already configured:
+- Project: `thrifty-curator`
+- Credentials file: `/app/backend/firebase-credentials.json`
 
 ---
 
-## Step 1: Create a Firebase Project (Free)
-
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Click **"Create a project"** (or add to existing project)
-3. Name it: `thrifty-curator` (or your preference)
-4. Enable/disable Google Analytics (your choice)
-5. Click **Create project**
-
-### Get Firebase Server Key
-1. In Firebase Console, click the **gear icon** → **Project settings**
-2. Go to **Cloud Messaging** tab
-3. Under "Cloud Messaging API (Legacy)", click **Enable** if needed
-4. Copy the **Server key** 
-5. Add it to your backend environment:
-   ```
-   FIREBASE_SERVER_KEY=your_server_key_here
-   ```
+## Step 1: Add Apps in Firebase Console
 
 ### Add Android App
-1. Click **Add app** → Android icon
-2. Package name: `com.thriftycurator.app`
-3. App nickname: `Thrifty Curator`
-4. Download `google-services.json`
-5. Save this file - you'll need it later
+1. Go to [Firebase Console](https://console.firebase.google.com) → Your project
+2. Click **"Add app"** → Select **Android** icon
+3. Enter:
+   - Package name: `com.thriftycurator.app`
+   - App nickname: `Thrifty Curator`
+4. Click **Register app**
+5. Download `google-services.json` (save it for later)
+6. Skip the remaining steps, click **Continue to console**
 
 ### Add iOS App
-1. Click **Add app** → iOS icon
-2. Bundle ID: `com.thriftycurator.app`
-3. App nickname: `Thrifty Curator`
-4. Download `GoogleService-Info.plist`
-5. Save this file - you'll need it later
+1. Click **"Add app"** → Select **iOS** icon  
+2. Enter:
+   - Bundle ID: `com.thriftycurator.app`
+   - App nickname: `Thrifty Curator`
+3. Click **Register app**
+4. Download `GoogleService-Info.plist` (save it for later)
+5. Skip the remaining steps, click **Continue to console**
 
 ---
 

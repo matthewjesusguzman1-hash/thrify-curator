@@ -95,7 +95,9 @@ async def get_push_status(user: dict = Depends(get_current_user)):
 @router.post("/test")
 async def send_test_notification(request: TestNotificationRequest, admin: dict = Depends(get_admin_user)):
     """Send a test push notification to admin's devices"""
-    from app.services.push_notifications import push_service
+    from app.services.push_notifications import get_push_service
+    
+    push_service = get_push_service()
     
     admin_id = admin.get("user_id") or admin.get("id")
     tokens = await db.push_tokens.find(

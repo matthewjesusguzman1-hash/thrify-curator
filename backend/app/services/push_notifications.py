@@ -1,18 +1,36 @@
 import os
-import json
-import httpx
 from typing import List, Optional
 from datetime import datetime, timezone
 
-# Firebase Cloud Messaging endpoint
-FCM_URL = "https://fcm.googleapis.com/fcm/send"
+import firebase_admin
+from firebase_admin import credentials, messaging
+
+# Initialize Firebase Admin SDK
+_firebase_app = None
+
+def get_firebase_app():
+    global _firebase_app
+    if _firebase_app is None:
+        cred_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", "/app/backend/firebase-credentials.json")
+        if os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            _firebase_app = firebase_admin.initialize_app(cred)
+            print(f"Firebase Admin SDK initialized successfully")
+        else:
+            print(f"Firebase credentials not found at {cred_path}")
+    return _firebase_app
+
 
 class PushNotificationService:
     """Service for sending push notifications via Firebase Cloud Messaging"""
     
     def __init__(self):
-        self.server_key = os.environ.get("FIREBASE_SERVER_KEY")
-        self.enabled = bool(self.server_key)
+        self.app = get_firebase_app()
+        self.enabled = self.app is not None
+        if self.enabled:
+            print("Push notification service enabled")
+        else:
+            print("Push notification service disabled (no Firebase credentials)")
     
     async def send_notification(
         self,
@@ -38,41 +56,61 @@ class PushNotificationService:
         if not tokens:
             return {"success": False, "error": "No device tokens provided"}
         
+        # Convert data values to strings (FCM requirement)
+        string_data = {}
+        if data:
+            for key, value in data.items():
+                string_data[key] = str(value) if value is not None else ""
+        
         results = []
         
         for token in tokens:
-            payload = {
-                "to": token,
-                "notification": {
-                    "title": title,
-                    "body": body,
-                    "sound": "default",
-                },
-                "data": data or {},
-                "priority": "high"
-            }
-            
-            if badge is not None:
-                payload["notification"]["badge"] = badge
-            
             try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        FCM_URL,
-                        json=payload,
-                        headers={
-                            "Authorization": f"key={self.server_key}",
-                            "Content-Type": "application/json"
-                        },
-                        timeout=10.0
+                # Build the message
+                message = messaging.Message(
+                    notification=messaging.Notification(
+                        title=title,
+                        body=body,
+                    ),
+                    data=string_data,
+                    token=token,
+                    android=messaging.AndroidConfig(
+                        priority="high",
+                        notification=messaging.AndroidNotification(
+                            sound="default",
+                            click_action="FLUTTER_NOTIFICATION_CLICK"
+                        )
+                    ),
+                    apns=messaging.APNSConfig(
+                        payload=messaging.APNSPayload(
+                            aps=messaging.Aps(
+                                sound="default",
+                                badge=badge
+                            )
+                        )
                     )
-                    
-                    result = response.json()
-                    results.append({
-                        "token": token[:20] + "...",
-                        "success": result.get("success", 0) > 0,
-                        "response": result
-                    })
+                )
+                
+                # Send the message
+                response = messaging.send(message)
+                results.append({
+                    "token": token[:20] + "...",
+                    "success": True,
+                    "message_id": response
+                })
+                
+            except messaging.UnregisteredError:
+                results.append({
+                    "token": token[:20] + "...",
+                    "success": False,
+                    "error": "Token unregistered"
+                })
+            except messaging.SenderIdMismatchError:
+                results.append({
+                    "token": token[:20] + "...",
+                    "success": False,
+                    "error": "Sender ID mismatch"
+                })
             except Exception as e:
                 results.append({
                     "token": token[:20] + "...",
@@ -94,6 +132,9 @@ class PushNotificationService:
         data: Optional[dict] = None
     ) -> dict:
         """Send push notification to all admin users"""
+        if not self.enabled:
+            return {"success": False, "error": "Push notifications not configured"}
+        
         # Get all admin device tokens
         admin_tokens = await db.push_tokens.find(
             {"role": {"$in": ["admin", "owner"]}},
@@ -111,6 +152,63 @@ class PushNotificationService:
         payload_data["timestamp"] = datetime.now(timezone.utc).isoformat()
         
         return await self.send_notification(tokens, title, body, payload_data)
+    
+    async def send_multicast(
+        self,
+        tokens: List[str],
+        title: str,
+        body: str,
+        data: Optional[dict] = None
+    ) -> dict:
+        """Send push notification to multiple tokens at once (more efficient)"""
+        if not self.enabled:
+            return {"success": False, "error": "Push notifications not configured"}
+        
+        if not tokens:
+            return {"success": False, "error": "No device tokens provided"}
+        
+        # Convert data values to strings
+        string_data = {}
+        if data:
+            for key, value in data.items():
+                string_data[key] = str(value) if value is not None else ""
+        
+        try:
+            message = messaging.MulticastMessage(
+                notification=messaging.Notification(
+                    title=title,
+                    body=body,
+                ),
+                data=string_data,
+                tokens=tokens,
+                android=messaging.AndroidConfig(
+                    priority="high",
+                    notification=messaging.AndroidNotification(
+                        sound="default"
+                    )
+                ),
+                apns=messaging.APNSConfig(
+                    payload=messaging.APNSPayload(
+                        aps=messaging.Aps(
+                            sound="default"
+                        )
+                    )
+                )
+            )
+            
+            response = messaging.send_each_for_multicast(message)
+            
+            return {
+                "success": response.success_count > 0,
+                "success_count": response.success_count,
+                "failure_count": response.failure_count
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
 
 # Notification templates for different events
@@ -189,5 +287,19 @@ class NotificationTemplates:
         }
 
 
-# Global instance
-push_service = PushNotificationService()
+# Global instance - initialized lazily
+_push_service = None
+
+def get_push_service():
+    global _push_service
+    if _push_service is None:
+        _push_service = PushNotificationService()
+    return _push_service
+
+# For backward compatibility
+push_service = None
+
+def init_push_service():
+    global push_service
+    push_service = get_push_service()
+    return push_service
