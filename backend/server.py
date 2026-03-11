@@ -20,6 +20,7 @@ from app.routers import (
 )
 from app.routers.messages import router as messages_router
 from app.routers.monthly_mileage import router as monthly_mileage_router
+from app.routers.push_notifications import router as push_notifications_router
 
 # Configure logging
 logging.basicConfig(
@@ -137,6 +138,7 @@ app.include_router(payroll_router, prefix="/api")
 app.include_router(forms_router, prefix="/api")
 app.include_router(monthly_mileage_router, prefix="/api")
 app.include_router(messages_router, prefix="/api")
+app.include_router(push_notifications_router, prefix="/api")
 
 
 @app.get("/api/")

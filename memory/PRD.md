@@ -2317,3 +2317,53 @@ Created `/app/frontend/src/components/admin/DashboardGroup.jsx`:
 - `/app/frontend/src/pages/AdminDashboard.jsx` - Wrapped sections in DashboardGroup components
 - `/app/frontend/src/components/admin/DashboardGroup.jsx` - New component (created)
 - `/app/design_guidelines.json` - Updated with grouped layout specifications
+
+
+
+## Mobile App + Push Notifications Setup (Mar 11, 2026)
+
+### Overview
+Added Capacitor for mobile app wrapper and Firebase Cloud Messaging for push notifications on both iOS and Android.
+
+### What's Included
+
+#### Backend Services
+- `/app/backend/app/services/push_notifications.py` - FCM integration service
+- `/app/backend/app/services/notification_helper.py` - Helper functions for notifications
+- `/app/backend/app/routers/push_notifications.py` - API endpoints for token registration
+
+#### Frontend 
+- `/app/frontend/src/hooks/usePushNotifications.js` - React hook for push notifications
+- `/app/frontend/capacitor.config.json` - Capacitor configuration
+
+#### Documentation
+- `/app/MOBILE_APP_SETUP.md` - Complete setup guide
+
+### Push Notification Events
+| Event | Notification |
+|-------|--------------|
+| Employee clock in/out | ✅ |
+| W-9 submission | ✅ |
+| Job applications | ✅ |
+| Consignment inquiries | ✅ |
+| Consignment agreements | ✅ |
+| Payment method changes | ✅ |
+| Items added | ✅ |
+| New messages | ✅ |
+
+### Required External Setup
+1. **Firebase Project** (free) - For FCM push notifications
+2. **Apple Developer Account** ($99/year) - For iOS App Store
+3. **Google Play Developer** ($25 one-time) - For Android Play Store
+
+### API Endpoints Added
+- `POST /api/push/register` - Register device token
+- `DELETE /api/push/unregister` - Unregister device token
+- `GET /api/push/status` - Check registration status
+- `POST /api/push/test` - Send test notification (admin)
+- `GET /api/push/admin/tokens` - List all tokens (admin)
+
+### Environment Variable Required
+```
+FIREBASE_SERVER_KEY=your_firebase_server_key
+```

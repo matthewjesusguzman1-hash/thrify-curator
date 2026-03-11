@@ -1,0 +1,19 @@
+{
+  "appId": "com.thriftycurator.app",
+  "appName": "Thrifty Curator",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https",
+    "url": "https://consign-portal-1.preview.emergentagent.com",
+    "cleartext": false
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_notification",
+      "iconColor": "#00D4FF"
+    }
+  }
+}
