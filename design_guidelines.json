@@ -1,164 +1,124 @@
 {
-  "brand_identity": {
-    "name": "Thrifty Curator",
-    "tone": "Elegant, Feminine, Curated, Trustworthy, Organized",
-    "description": "A high-end resale and consignment app with a boutique feel.",
-    "aesthetic": "Pink/blush feminine theme with elegant styling, inspired by the 'Thrifty Curator' brand."
-  },
   "typography": {
-    "font_family": {
-      "headings": "Playfair Display, serif",
-      "body": "Lato, sans-serif",
-      "accents": "Cormorant Garamond, serif"
+    "font_family_headings": "Poppins, sans-serif",
+    "font_family_body": "Poppins, sans-serif",
+    "weights": {
+      "light": 300,
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700,
+      "black": 800
     },
     "scale": {
-      "h1": "text-4xl md:text-6xl font-playfair font-bold tracking-tight",
-      "h2": "text-3xl md:text-5xl font-playfair font-semibold",
-      "h3": "text-2xl md:text-3xl font-playfair font-medium",
-      "p": "text-base md:text-lg font-lato leading-relaxed text-charcoal-700",
-      "small": "text-sm font-lato text-charcoal-500",
-      "button": "text-sm md:text-base font-lato font-bold uppercase tracking-wider"
+      "h1": "text-3xl md:text-4xl lg:text-5xl tracking-tight",
+      "h2": "text-2xl md:text-3xl tracking-tight",
+      "h3": "text-xl md:text-2xl font-semibold",
+      "body": "text-base leading-relaxed",
+      "caption": "text-sm text-gray-400"
     }
   },
   "colors": {
-    "primary": {
-      "DEFAULT": "#F8C8DC",
-      "foreground": "#5D4037",
-      "light": "#FDEFF4",
-      "dark": "#E6A8C0"
-    },
-    "secondary": {
-      "DEFAULT": "#FFFFFF",
-      "foreground": "#333333"
-    },
-    "accent": {
-      "gold": "#C5A065",
-      "rose": "#D48C9E",
-      "charcoal": "#333333",
-      "soft_grey": "#F5F5F5"
-    },
     "background": {
-      "app": "#FFFAFA",
+      "app": "linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%)",
       "card": "#FFFFFF",
-      "dashboard": "#F9F6F7"
+      "dark_card": "#1A1A2E",
+      "group_header": "rgba(255, 255, 255, 0.05)"
     },
-    "status": {
-      "success": "#8BA88E",
-      "error": "#D48C9E",
-      "warning": "#EEDC82"
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#9CA3AF",
+      "dark": "#1A1A2E",
+      "muted": "#6B7280"
+    },
+    "accents": {
+      "cyan": "#00D4FF",
+      "pink": "#FF1493",
+      "purple": "#8B5CF6",
+      "amber": "#FFB800",
+      "emerald": "#10B981"
+    },
+    "gradients": {
+      "cyan_blue": "linear-gradient(90deg, #00D4FF 0%, #00A8CC 100%)",
+      "pink_magenta": "linear-gradient(90deg, #FF1493 0%, #E91E8C 100%)",
+      "purple_violet": "linear-gradient(90deg, #8B5CF6 0%, #6D28D9 100%)",
+      "bold_mix": "linear-gradient(90deg, #00D4FF 0%, #8B5CF6 50%, #FF1493 100%)"
     }
   },
-  "visual_enhancers": {
-    "shadows": {
-      "card": "0 4px 20px -2px rgba(248, 200, 220, 0.25)",
-      "hover": "0 10px 30px -5px rgba(248, 200, 220, 0.4)",
-      "button": "0 2px 10px rgba(212, 140, 158, 0.3)"
+  "layout_strategy": {
+    "type": "grouped_dashboard",
+    "container_max_width": "max-w-[1600px]",
+    "spacing": {
+      "section_gap": "gap-8",
+      "internal_padding": "p-6",
+      "group_margin": "mb-8"
     },
-    "borders": {
-      "radius": "rounded-2xl",
-      "width": "border-0 md:border",
-      "color": "border-pink-100"
-    },
-    "textures": {
-      "noise": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")",
-      "glass": "backdrop-blur-md bg-white/70 border border-white/40 shadow-sm"
-    }
+    "grid_structure": "grid grid-cols-1 xl:grid-cols-2 gap-8"
   },
   "components": {
-    "buttons": {
-      "primary": "bg-primary text-primary-foreground hover:bg-primary-dark shadow-button transition-all duration-300 rounded-full px-8 py-3 transform hover:-translate-y-0.5",
-      "secondary": "bg-white text-charcoal border border-pink-100 hover:border-primary hover:text-primary transition-all duration-300 rounded-full px-8 py-3",
-      "link_card": "w-full bg-white/80 hover:bg-white border border-pink-50 hover:border-pink-200 shadow-card hover:shadow-hover transition-all duration-300 rounded-xl p-4 flex items-center justify-between group cursor-pointer"
-    },
-    "forms": {
-      "input": "w-full bg-white border border-pink-100 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 outline-none transition-all placeholder:text-gray-400 text-charcoal-700",
-      "label": "block text-sm font-medium text-charcoal-600 mb-2 font-lato"
-    },
-    "cards": {
-      "dashboard": "bg-white rounded-2xl shadow-card p-6 border border-pink-50"
+    "DashboardGroup": {
+      "description": "A collapsible container component that wraps related sections.",
+      "props": {
+        "title": "string",
+        "icon": "LucideIcon",
+        "gradient": "string (css class or style)",
+        "defaultOpen": "boolean"
+      },
+      "styling": {
+        "wrapper": "bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden mb-6 transition-all duration-300",
+        "header": "flex items-center justify-between p-6 cursor-pointer hover:bg-white/5 transition-colors",
+        "content": "p-6 border-t border-white/10 space-y-8"
+      }
     }
   },
-  "layout": {
-    "landing_page": {
-      "structure": "max-w-md mx-auto min-h-screen p-6 flex flex-col items-center gap-8 relative overflow-hidden",
-      "hero": "flex flex-col items-center text-center gap-4 z-10",
-      "link_grid": "w-full flex flex-col gap-4 z-10"
+  "grouping_logic": {
+    "Team Management": {
+      "icon": "Users",
+      "gradient": "from-[#00D4FF] to-[#00A8CC]",
+      "sections": ["AllEmployeesSection", "HoursByEmployeeSection"],
+      "defaultOpen": true
     },
-    "dashboard": {
-      "structure": "min-h-screen bg-background-dashboard flex flex-col md:flex-row",
-      "sidebar": "w-full md:w-64 bg-white border-r border-pink-50 p-6 flex flex-col gap-2",
-      "content": "flex-1 p-6 md:p-12 overflow-y-auto"
+    "Payroll & Payments": {
+      "icon": "DollarSign",
+      "gradient": "from-[#8B5CF6] to-[#6D28D9]",
+      "sections": ["PayrollSummary (existing stats)", "PaymentRecordsSection"],
+      "defaultOpen": false
+    },
+    "Forms & Communications": {
+      "icon": "MessageSquare",
+      "gradient": "from-[#FF1493] to-[#E91E8C]",
+      "sections": ["MessagesSection", "FormSubmissionsSection"],
+      "defaultOpen": false
+    },
+    "Operations & Reports": {
+      "icon": "TrendingUp",
+      "gradient": "from-[#FFB800] to-[#F59E0B]",
+      "sections": ["MonthlyMileageSection", "ReportsSection"],
+      "defaultOpen": false
     }
   },
-  "motion": {
-    "transitions": "transition-all duration-300 ease-out",
-    "hover_lift": "hover:-translate-y-1 hover:shadow-lg",
-    "fade_in": "animate-in fade-in duration-500 slide-in-from-bottom-4"
+  "visual_enhancements": {
+    "glassmorphism": "backdrop-filter: blur(12px); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);",
+    "shadows": "shadow-xl shadow-black/20",
+    "borders": "border border-white/10",
+    "animations": "Use framer-motion for expand/collapse (AnimatePresence, height: auto)"
   },
-  "image_urls": {
-    "logo": {
-      "url": "https://customer-assets.emergentagent.com/job_c38502d5-e3cd-4d12-bde1-7a8331411fc2/artifacts/calba8ly_IMG_0042.jpg",
-      "description": "Thrifty Curator Official Logo",
-      "category": "Brand Assets"
-    },
-    "background_texture": {
-      "url": "https://images.unsplash.com/photo-1533986071448-db0602d71739?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwyfHxzb2Z0JTIwcGluayUyMHNpbGslMjBmYWJyaWMlMjB0ZXh0dXJlJTIwdG9wJTIwdmlld3xlbnwwfHx8fDE3NzE3OTMzOTZ8MA&ixlib=rb-4.1.0&q=85",
-      "description": "Soft pink silk texture for subtle backgrounds",
-      "category": "Textures"
-    }
-  },
-  "icons": {
-    "library": "react-icons/si",
-    "mapping": {
-      "ebay": "SiEbay",
-      "poshmark": "SiPoshmark",
-      "mercari": "SiMercari",
-      "depop": "SiDepop",
-      "facebook": "SiFacebook",
-      "tiktok": "SiTiktok"
-    }
-  },
-  "accessibility": {
-    "contrast": "Ensure text-charcoal-700 on pink-50 meets 4.5:1 ratio. Use darker pink for small text.",
-    "focus_states": "Visible focus ring with color-primary/50 offset-2",
-    "aria": "All form inputs must have associated labels. Icons must have aria-hidden=true if decorative."
-  },
-  "instructions_to_main_agent": {
-    "setup": [
-      "Install dependencies: `npm install react-icons framer-motion clsx tailwind-merge`",
-      "Configure Tailwind with the custom pink palette defined in 'colors'.",
-      "Add Playfair Display and Lato fonts via Google Fonts in index.html or CSS."
-    ],
-    "implementation_strategy": {
-      "landing_page": "Create a 'Linktree' style mobile-first page. Use the logo at the top. List the selling platforms as elegant cards with icons on the left and platform name on the right. Add a 'Share' button that triggers the native share API.",
-      "forms": "Use a clean, single-column layout for forms. Input fields should be large and touch-friendly (min-height 48px). Validate inputs before submission.",
-      "employee_dashboard": "Create a simple card-based interface. Large 'Clock In' (Green/Teal) and 'Clock Out' (Red/Pink) buttons. Display current status clearly. Show a list of recent shifts.",
-      "admin_dashboard": "Table view of all employee hours. Filter by date range. Use Shadcn Table component customized with pink headers."
-    },
-    "universal_rules": [
-      "DO NOT use generic blue for links/buttons. Use the defined Primary Pink or Charcoal.",
-      "Ensure the logo is prominent on the landing page.",
-      "Use the 'Glass' texture for cards on the landing page over the background texture.",
-      "All interactive elements must have `data-testid` attributes."
-    ]
-  },
+  "instructions_to_main_agent": [
+    "1. Create a new component `DashboardGroup` in `/app/frontend/src/components/admin/DashboardGroup.jsx`.",
+    "2. `DashboardGroup` must use `framer-motion` for smooth collapsing.",
+    "3. In `AdminDashboard.jsx`, import `DashboardGroup`.",
+    "4. Refactor the `return` statement of `AdminDashboard.jsx` to wrap existing sections into the 4 groups defined in `grouping_logic`.",
+    "5. Use a 2-column grid layout (on XL screens) for the groups: Team and Payroll in left col, Forms and Operations in right col? OR just a vertical stack of 4 groups. Vertical stack is safer for mobile responsiveness, but a masonry or grid layout is better for wide screens. Let's use `grid-cols-1 xl:grid-cols-2` for the groups container.",
+    "6. KEEP all existing functionality (modals, states, data fetching). Just move the rendered sections into the groups.",
+    "7. Ensure the `Payroll Summary` card's internal collapse logic doesn't conflict. You might want to force it open inside the group, or remove its internal collapse header and let the Group handle visibility.",
+    "8. Maintain the 'Black Bold' aesthetic. The Groups should look like dark glass panels.",
+    "9. Add `data-testid` to all new toggle buttons and groups."
+  ],
   "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
-    "You tend to converge toward generic, 'on distribution' outputs. Avoid this: make creative, distinctive frontends that surprise and delight.",
-    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
-    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
-    "Create depth through layered design elements with z-index hierarchy",
-    "Use glass-morphism effects with backdrop filters (12-24px blur)",
-    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
-    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text",
-    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
-    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯📚🎭🎬 etc for icons.",
-    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
-    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
-    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
-    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
-    "Prioritize using pre-existing components from src/components/ui when applicable",
-    "Components MUST use named exports (export const ComponentName = ...)",
-    "Pages MUST use default exports (export default function PageName() {...})",
-    "Use `sonner` for toasts"
+    "Do not use gradients for dark colors.",
+    "Ensure text contrast is high (4.5:1).",
+    "Use 'Poppins' font family.",
+    "Use lucide-react icons.",
+    "Maintain the existing dark theme background."
   ]
 }
