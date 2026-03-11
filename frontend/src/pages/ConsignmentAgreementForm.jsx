@@ -75,6 +75,7 @@ export default function ConsignmentAgreementForm() {
   const [updateSignature, setUpdateSignature] = useState("");
   const [updateSignatureDate, setUpdateSignatureDate] = useState("");
   const [isAddItemsExpanded, setIsAddItemsExpanded] = useState(false);
+  const [isAdditionalInfoExpanded, setIsAdditionalInfoExpanded] = useState(false);
   const [uploadingUpdatePhotos, setUploadingUpdatePhotos] = useState(false);
   const updateFileInputRef = useRef(null);
 
@@ -260,8 +261,8 @@ export default function ConsignmentAgreementForm() {
       return;
     }
     
-    if (hasItems && !acknowledgedTerms) {
-      toast.error("Please acknowledge the terms and conditions");
+    if (!acknowledgedTerms) {
+      toast.error("Please agree to the terms and conditions");
       return;
     }
     
@@ -272,7 +273,7 @@ export default function ConsignmentAgreementForm() {
         full_name: addItemsAgreement.full_name,
         items_to_add: hasItems ? parseInt(itemsToAdd) : 0,
         items_description: itemsDescription,
-        acknowledged_terms: acknowledgedTerms || !hasItems,
+        acknowledged_terms: acknowledgedTerms,
         update_email: wantsToUpdateContact && updateEmail !== addItemsAgreement.email ? updateEmail : null,
         update_phone: wantsToUpdateContact ? updatePhone : null,
         update_address: wantsToUpdateContact ? updateAddress : null,
@@ -937,96 +938,108 @@ export default function ConsignmentAgreementForm() {
                                 data-testid="items-description"
                               />
                             </div>
-
-                            {itemsToAdd && parseInt(itemsToAdd) > 0 && (
-                              <div className="flex items-start space-x-3 p-4 bg-[#10B981]/5 rounded-lg border border-[#10B981]/20">
-                                <Checkbox
-                                  id="acknowledge-terms"
-                                  checked={acknowledgedTerms}
-                                  onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
-                                  className="mt-1 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981]"
-                                  data-testid="acknowledge-terms-checkbox"
-                                />
-                                <Label htmlFor="acknowledge-terms" className="text-sm text-[#1A1A2E] cursor-pointer">
-                                  I have reviewed the consignment terms and agree that the additional items I am adding are subject to the same terms as my original agreement.
-                                </Label>
-                              </div>
-                            )}
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
 
-                  {/* Additional Information Section */}
-                  <div>
-                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
-                      Additional Information
-                      <span className="font-normal text-[#888] ml-2">(Optional)</span>
-                    </Label>
-                    <Textarea
-                      value={updateAdditionalInfo}
-                      onChange={(e) => setUpdateAdditionalInfo(e.target.value)}
-                      placeholder="Any additional information about your items (brand, condition, size, etc.)"
-                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
-                      data-testid="update-additional-info"
-                    />
-                  </div>
-
-                  {/* Photo Upload Section */}
-                  <div>
-                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
-                      Upload Photos
-                      <span className="font-normal text-[#888] ml-2">(Optional)</span>
-                    </Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#10B981] transition-colors">
-                      <input
-                        type="file"
-                        ref={updateFileInputRef}
-                        onChange={(e) => handlePhotoUpload(e.target.files, true)}
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        data-testid="update-photo-input"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => updateFileInputRef.current?.click()}
-                        disabled={uploadingUpdatePhotos}
-                        className="flex flex-col items-center gap-2 w-full"
-                      >
-                        {uploadingUpdatePhotos ? (
-                          <RefreshCw className="w-8 h-8 text-[#10B981] animate-spin" />
-                        ) : (
-                          <Upload className="w-8 h-8 text-gray-400" />
-                        )}
-                        <span className="text-sm text-gray-600">
-                          {uploadingUpdatePhotos ? "Uploading..." : "Click to upload photos of your items"}
-                        </span>
-                      </button>
-                    </div>
-                    
-                    {/* Photo Preview */}
-                    {updatePhotos.length > 0 && (
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        {updatePhotos.map((photo, index) => (
-                          <div key={index} className="relative group">
-                            <img
-                              src={`${process.env.REACT_APP_BACKEND_URL}${photo}`}
-                              alt={`Upload ${index + 1}`}
-                              className="w-full h-20 object-cover rounded-lg"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removePhoto(index, true)}
-                              className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
+                  {/* Additional Information & Photos Section - Collapsible */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setIsAdditionalInfoExpanded(!isAdditionalInfoExpanded)}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      data-testid="toggle-additional-info-section"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Image className="w-5 h-5 text-gray-500" />
+                        <span className="font-semibold text-[#1A1A2E]">Additional Information & Photos</span>
                       </div>
-                    )}
+                      {isAdditionalInfoExpanded ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+                    </button>
+                    <AnimatePresence>
+                      {isAdditionalInfoExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-4 space-y-4 border-t border-gray-200">
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                Additional Information
+                                <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                              </Label>
+                              <Textarea
+                                value={updateAdditionalInfo}
+                                onChange={(e) => setUpdateAdditionalInfo(e.target.value)}
+                                placeholder="Any additional information about your items (brand, condition, size, etc.)"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
+                                data-testid="update-additional-info"
+                              />
+                            </div>
+
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                Upload Photos
+                                <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                              </Label>
+                              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#10B981] transition-colors">
+                                <input
+                                  type="file"
+                                  ref={updateFileInputRef}
+                                  onChange={(e) => handlePhotoUpload(e.target.files, true)}
+                                  accept="image/*"
+                                  multiple
+                                  className="hidden"
+                                  data-testid="update-photo-input"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => updateFileInputRef.current?.click()}
+                                  disabled={uploadingUpdatePhotos}
+                                  className="flex flex-col items-center gap-2 w-full"
+                                >
+                                  {uploadingUpdatePhotos ? (
+                                    <RefreshCw className="w-8 h-8 text-[#10B981] animate-spin" />
+                                  ) : (
+                                    <Upload className="w-8 h-8 text-gray-400" />
+                                  )}
+                                  <span className="text-sm text-gray-600">
+                                    {uploadingUpdatePhotos ? "Uploading..." : "Click to upload photos of your items"}
+                                  </span>
+                                </button>
+                              </div>
+                              
+                              {/* Photo Preview */}
+                              {updatePhotos.length > 0 && (
+                                <div className="mt-3 grid grid-cols-3 gap-2">
+                                  {updatePhotos.map((photo, index) => (
+                                    <div key={index} className="relative group">
+                                      <img
+                                        src={`${process.env.REACT_APP_BACKEND_URL}${photo}`}
+                                        alt={`Upload ${index + 1}`}
+                                        className="w-full h-20 object-cover rounded-lg"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => removePhoto(index, true)}
+                                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Terms Review Section - Always Visible */}
@@ -1042,39 +1055,59 @@ export default function ConsignmentAgreementForm() {
                     </ul>
                   </div>
 
-                  {/* Signature Section */}
-                  <div className="space-y-4 pt-4 border-t border-gray-200">
-                    <h4 className="font-semibold text-[#1A1A2E]">Signature Required</h4>
-                    <div>
-                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Electronic Signature *</Label>
-                      <Input
-                        type="text"
-                        value={updateSignature}
-                        onChange={(e) => setUpdateSignature(e.target.value)}
-                        placeholder="Type your full name as signature"
-                        className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg italic"
-                        data-testid="update-signature"
+                  {/* Signature Section - Matching original form style */}
+                  <div>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Electronic Signature *</Label>
+                    <Input
+                      type="text"
+                      value={updateSignature}
+                      onChange={(e) => setUpdateSignature(e.target.value)}
+                      placeholder="Type your full name as signature"
+                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg italic"
+                      data-testid="update-signature"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Date *</Label>
+                    <Input
+                      type="date"
+                      value={updateSignatureDate}
+                      onChange={(e) => setUpdateSignatureDate(e.target.value)}
+                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                      data-testid="update-signature-date"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="update-terms"
+                        checked={acknowledgedTerms}
+                        onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
+                        className="w-6 h-6 mt-1 border-2 border-gray-300 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981]"
+                        data-testid="update-terms-checkbox"
                       />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Date *</Label>
-                      <Input
-                        type="date"
-                        value={updateSignatureDate}
-                        onChange={(e) => setUpdateSignatureDate(e.target.value)}
-                        className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
-                        data-testid="update-signature-date"
-                      />
+                      <Label htmlFor="update-terms" className="text-sm text-gray-600 cursor-pointer">
+                        I have read and agree to the terms and conditions above. I understand that by typing my name above, I am providing an electronic signature.
+                      </Label>
                     </div>
                   </div>
 
                   <Button
                     onClick={handleAddItems}
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
+                    disabled={loading || !acknowledgedTerms}
+                    className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     data-testid="submit-add-items-btn"
                   >
-                    {loading ? "Submitting..." : "Submit Update"}
+                    {loading ? (
+                      "Submitting..."
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Submit Update
+                      </>
+                    )}
                   </Button>
                 </>
               )}
