@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts, removeEmergentBadge } from '../fixtures/helpers';
 
-const BASE_URL = 'https://thrift-admin-hub.preview.emergentagent.com';
+const BASE_URL = 'https://consign-hub-3.preview.emergentagent.com';
 
 test.describe('Admin Modal Refactoring Tests', () => {
   test.beforeEach(async ({ page }) => {

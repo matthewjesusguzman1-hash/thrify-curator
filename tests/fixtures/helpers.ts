@@ -51,3 +51,9 @@ export async function removeEmergentBadge(page: Page) {
     if (badge) badge.remove();
   });
 }
+
+export async function skipSplashScreen(page: Page) {
+  await page.evaluate(() => {
+    sessionStorage.setItem('hasSeenSplash', 'true');
+  });
+}

@@ -1,0 +1,86 @@
+{
+  "summary": "Generate mode testing complete for new consignment agreement features. All features tested successfully: Custom profit split field, Additional information field, Photo upload API, Collapsible sections in update form, Signature/Date fields, and Payment validation (Check doesn't require details). 16 backend tests and 16 frontend E2E tests all passed.",
+  "mode": "generate",
+  "baseline_commit": "35cc3b91a84fbff79571d0251a280875cf031626",
+  "head_commit": "d431752126c14986e881e07e4e6a0627b5b9181d",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 1,
+    "passed": 16,
+    "failed": 0,
+    "skipped": 0,
+    "details": {
+      "consignment_features": "16/16 frontend tests passed",
+      "backend_tests": "16/16 pytest tests passed"
+    }
+  },
+  "specs_created": [
+    "/app/tests/e2e/consignment-features.spec.ts",
+    "/app/backend/tests/test_consignment_features.py"
+  ],
+  "specs_updated": [
+    "/app/tests/fixtures/helpers.ts"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/consignment-features.spec.ts",
+    "/app/backend/tests/test_consignment_features.py",
+    "/app/test_reports/pytest/pytest_consignment_results.xml"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/consignment-features.spec.ts",
+    "/app/backend/tests/test_consignment_features.py",
+    "/app/tests/fixtures/helpers.ts"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (16/16 tests passed)"
+  },
+  "features_tested": {
+    "custom_profit_split_new_form": {
+      "status": "PASSED",
+      "description": "Custom Profit Split field in new agreement form works correctly"
+    },
+    "additional_info_new_form": {
+      "status": "PASSED",
+      "description": "Additional Information field in new agreement form works correctly"
+    },
+    "photo_upload_api": {
+      "status": "PASSED",
+      "description": "Photo upload endpoint /api/forms/upload-photos works correctly for single and multiple photos"
+    },
+    "photo_upload_ui": {
+      "status": "PASSED",
+      "description": "Photo upload UI elements present in both forms"
+    },
+    "update_form_collapsible_sections": {
+      "status": "PASSED",
+      "description": "Collapsible sections for Contact Info, Payment Method, and Add Items work correctly"
+    },
+    "signature_date_update_form": {
+      "status": "PASSED",
+      "description": "Signature and Date fields present and functional in update form"
+    },
+    "payment_validation_check": {
+      "status": "PASSED",
+      "description": "Check payment method doesn't require payment details"
+    },
+    "payment_validation_other_methods": {
+      "status": "PASSED",
+      "description": "Venmo, PayPal, Zelle, CashApp, Apple Pay require payment details"
+    }
+  },
+  "seed_data_creation": "Used existing testuser@example.com for update form tests. Created new test agreements for backend tests (auto-cleaned via unique emails).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New consignment features all working: Custom profit split, Additional info, Photo upload, Collapsible update sections, Signature/Date fields. Test file consignment-features.spec.ts covers all new features. Backend test file test_consignment_features.py covers API endpoints. Helper function skipSplashScreen added to fixtures for handling splash screen."
+}

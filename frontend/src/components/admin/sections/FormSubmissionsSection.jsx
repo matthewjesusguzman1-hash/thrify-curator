@@ -596,30 +596,64 @@ export default function FormSubmissionsSection({
                   ) : (
                     <div className="overflow-x-auto">
                       <p className="text-sm text-[#666] mb-3">
-                        Showing {itemAdditions.length} item addition{itemAdditions.length !== 1 ? 's' : ''}
+                        Showing {itemAdditions.length} update{itemAdditions.length !== 1 ? 's' : ''}
                       </p>
                       <table className="forms-table w-full">
                         <thead>
                           <tr>
                             <SortableHeader table="itemAdditions" sortKey="full_name">Name</SortableHeader>
                             <SortableHeader table="itemAdditions" sortKey="email">Email</SortableHeader>
-                            <SortableHeader table="itemAdditions" sortKey="items_to_add">Items Added</SortableHeader>
-                            <th>Description</th>
+                            <SortableHeader table="itemAdditions" sortKey="items_to_add">Items</SortableHeader>
+                            <th>Updates</th>
+                            <th>Additional Info</th>
                             <SortableHeader table="itemAdditions" sortKey="submitted_at">Date</SortableHeader>
                           </tr>
                         </thead>
                         <tbody>
                           {getSortedData(itemAdditions, 'itemAdditions').map((addition) => (
                             <tr key={addition.id} data-testid={`item-addition-row-${addition.id}`}>
-                              <td className="font-medium">{addition.full_name}</td>
+                              <td className="font-medium">
+                                {addition.full_name}
+                                {addition.signature && (
+                                  <p className="text-xs text-[#888] italic mt-1">Signed: {addition.signature}</p>
+                                )}
+                              </td>
                               <td>{addition.email}</td>
                               <td>
-                                <span className="px-3 py-1 bg-[#10B981]/10 text-[#10B981] rounded-full font-bold">
-                                  +{addition.items_to_add}
-                                </span>
+                                {addition.items_to_add > 0 ? (
+                                  <span className="px-3 py-1 bg-[#10B981]/10 text-[#10B981] rounded-full font-bold">
+                                    +{addition.items_to_add}
+                                  </span>
+                                ) : (
+                                  <span className="text-[#888]">-</span>
+                                )}
                               </td>
-                              <td className="text-sm text-[#666] max-w-[200px] truncate">
-                                {addition.items_description || '-'}
+                              <td className="text-sm text-[#666]">
+                                <div className="flex flex-wrap gap-1">
+                                  {addition.update_email && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Email</span>
+                                  )}
+                                  {addition.update_phone && (
+                                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Phone</span>
+                                  )}
+                                  {addition.update_address && (
+                                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">Address</span>
+                                  )}
+                                  {addition.update_payment_method && (
+                                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">{addition.update_payment_method}</span>
+                                  )}
+                                  {addition.update_profit_split && (
+                                    <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">Split: {addition.update_profit_split}</span>
+                                  )}
+                                  {addition.photos && addition.photos.length > 0 && (
+                                    <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded text-xs">{addition.photos.length} photos</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="text-sm text-[#666] max-w-[200px]">
+                                <div className="truncate" title={addition.additional_info || addition.items_description || '-'}>
+                                  {addition.additional_info || addition.items_description || '-'}
+                                </div>
                               </td>
                               <td className="text-sm text-[#888]">{formatSubmissionDate(addition.submitted_at)}</td>
                             </tr>

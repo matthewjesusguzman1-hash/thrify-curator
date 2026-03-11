@@ -48,6 +48,8 @@ class ConsignmentAgreement(BaseModel):
     agreed_percentage: str
     payment_method: str = ""  # Check, Venmo, PayPal, Zelle, CashApp, Apple Pay
     payment_details: str = ""  # Username/handle for the selected payment method
+    additional_info: str = ""  # Additional information about items
+    photos: List[str] = []  # List of uploaded photo URLs/paths
     signature: str
     signature_date: str = ""
     agreed_to_terms: bool
@@ -74,6 +76,11 @@ class ConsignmentItemAddition(BaseModel):
     update_address: Optional[str] = None  # New address if updating
     update_payment_method: Optional[str] = None  # New payment method if updating
     update_payment_details: Optional[str] = None  # New payment details if updating
+    update_profit_split: Optional[str] = None  # Custom profit split if updating
+    additional_info: Optional[str] = None  # Additional information about items
+    photos: List[str] = []  # List of uploaded photo URLs/paths
+    signature: Optional[str] = None  # Electronic signature for the update
+    signature_date: Optional[str] = None  # Date of signature
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 

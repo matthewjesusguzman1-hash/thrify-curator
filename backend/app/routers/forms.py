@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from typing import List
+import os
+import uuid as uuid_module
 
 from app.database import db
 from app.dependencies import get_admin_user
@@ -6,6 +9,38 @@ from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgre
 from app.models.notifications import AdminNotification
 
 router = APIRouter(tags=["Forms"])
+
+# Ensure upload directory exists
+UPLOAD_DIR = "/app/uploads/consignment_photos"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+@router.post("/forms/upload-photos")
+async def upload_consignment_photos(files: List[UploadFile] = File(...)):
+    """Upload photos for consignment forms. Returns list of file paths."""
+    uploaded_paths = []
+    
+    for file in files:
+        # Validate file type
+        if not file.content_type or not file.content_type.startswith("image/"):
+            continue
+        
+        # Generate unique filename
+        ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        unique_filename = f"{uuid_module.uuid4()}.{ext}"
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
+        # Save file
+        try:
+            contents = await file.read()
+            with open(file_path, "wb") as f:
+                f.write(contents)
+            uploaded_paths.append(f"/uploads/consignment_photos/{unique_filename}")
+        except Exception as e:
+            print(f"Error saving file {file.filename}: {e}")
+            continue
+    
+    return {"uploaded_paths": uploaded_paths}
 
 
 # Public form submission routes
@@ -68,7 +103,7 @@ async def check_existing_agreement(email: str):
     """Check if user has an existing consignment agreement"""
     existing = await db.consignment_agreements.find_one(
         {"email": email.lower()}, 
-        {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "address": 1, "payment_method": 1, "payment_details": 1, "items_description": 1, "submitted_at": 1}
+        {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "address": 1, "payment_method": 1, "payment_details": 1, "items_description": 1, "submitted_at": 1, "agreed_percentage": 1}
     )
     if existing:
         return {"has_agreement": True, "agreement": existing}
@@ -182,6 +217,10 @@ async def add_consignment_items(addition: ConsignmentItemAddition):
         update_fields["payment_method"] = addition.update_payment_method
         update_fields["payment_details"] = addition.update_payment_details or ""
     
+    # Update profit split if provided
+    if addition.update_profit_split:
+        update_fields["agreed_percentage"] = addition.update_profit_split
+    
     # Apply updates to agreement
     if update_fields:
         await db.consignment_agreements.update_one(
@@ -197,6 +236,8 @@ async def add_consignment_items(addition: ConsignmentItemAddition):
         notification_parts.append("updated contact info")
     if addition.update_payment_method:
         notification_parts.append("changed payment method")
+    if addition.update_profit_split:
+        notification_parts.append("updated profit split")
     
     notification = AdminNotification(
         type="consignment_items_added",
@@ -212,7 +253,12 @@ async def add_consignment_items(addition: ConsignmentItemAddition):
             "phone_updated": bool(addition.update_phone),
             "address_updated": bool(addition.update_address),
             "payment_updated": bool(addition.update_payment_method),
-            "new_payment_method": addition.update_payment_method
+            "new_payment_method": addition.update_payment_method,
+            "profit_split_updated": bool(addition.update_profit_split),
+            "new_profit_split": addition.update_profit_split,
+            "additional_info": addition.additional_info,
+            "photos_count": len(addition.photos) if addition.photos else 0,
+            "signature": addition.signature
         }
     )
     await db.admin_notifications.insert_one(notification.model_dump())

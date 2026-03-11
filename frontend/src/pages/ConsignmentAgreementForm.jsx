@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,7 @@ export default function ConsignmentAgreementForm() {
     address: "",
     items_description: "",
     custom_split: "",
+    additional_info: "",
     payment_method: "",
     payment_details: "",
     signature: "",
@@ -38,6 +39,9 @@ export default function ConsignmentAgreementForm() {
   });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [newAgreementPhotos, setNewAgreementPhotos] = useState([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const fileInputRef = useRef(null);
   
   // State for change payment method flow
   const [showInitialChoice, setShowInitialChoice] = useState(true);
@@ -64,11 +68,60 @@ export default function ConsignmentAgreementForm() {
   const [wantsToUpdatePayment, setWantsToUpdatePayment] = useState(false);
   const [updatePaymentMethod, setUpdatePaymentMethod] = useState("");
   const [updatePaymentDetails, setUpdatePaymentDetails] = useState("");
+  const [wantsToAddItems, setWantsToAddItems] = useState(false);
+  const [updateCustomSplit, setUpdateCustomSplit] = useState("");
+  const [updateAdditionalInfo, setUpdateAdditionalInfo] = useState("");
+  const [updatePhotos, setUpdatePhotos] = useState([]);
+  const [updateSignature, setUpdateSignature] = useState("");
+  const [updateSignatureDate, setUpdateSignatureDate] = useState("");
+  const [isAddItemsExpanded, setIsAddItemsExpanded] = useState(false);
+  const [uploadingUpdatePhotos, setUploadingUpdatePhotos] = useState(false);
+  const updateFileInputRef = useRef(null);
 
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Photo upload handler
+  const handlePhotoUpload = async (files, isUpdate = false) => {
+    if (!files || files.length === 0) return;
+    
+    const setter = isUpdate ? setUploadingUpdatePhotos : setUploadingPhotos;
+    const currentPhotos = isUpdate ? updatePhotos : newAgreementPhotos;
+    const photoSetter = isUpdate ? setUpdatePhotos : setNewAgreementPhotos;
+    
+    setter(true);
+    
+    try {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+      
+      const response = await axios.post(`${API}/forms/upload-photos`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      
+      if (response.data.uploaded_paths) {
+        photoSetter([...currentPhotos, ...response.data.uploaded_paths]);
+        toast.success(`${response.data.uploaded_paths.length} photo(s) uploaded`);
+      }
+    } catch (error) {
+      toast.error("Failed to upload photos");
+      console.error("Upload error:", error);
+    } finally {
+      setter(false);
+    }
+  };
+
+  const removePhoto = (index, isUpdate = false) => {
+    if (isUpdate) {
+      setUpdatePhotos(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setNewAgreementPhotos(prev => prev.filter((_, i) => i !== index));
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -156,6 +209,10 @@ export default function ConsignmentAgreementForm() {
         setUpdateAddress(response.data.agreement.address || "");
         setUpdatePaymentMethod(response.data.agreement.payment_method || "");
         setUpdatePaymentDetails(response.data.agreement.payment_details || "");
+        setUpdateCustomSplit(response.data.agreement.agreed_percentage || "50/50");
+        // Set today's date as default for signature date
+        const today = new Date().toISOString().split('T')[0];
+        setUpdateSignatureDate(today);
       } else {
         toast.error("No existing agreement found for this email. Please sign a new agreement first.");
         setShowAddItems(false);
@@ -170,10 +227,13 @@ export default function ConsignmentAgreementForm() {
 
   // Submit additional items
   const handleAddItems = async () => {
-    // At least one of items or updates is required
-    const hasItems = itemsToAdd && parseInt(itemsToAdd) > 0;
+    // Check what updates are being made
+    const hasItems = isAddItemsExpanded && itemsToAdd && parseInt(itemsToAdd) > 0;
     const hasContactUpdate = wantsToUpdateContact && (updateEmail.trim() !== addItemsAgreement.email || updatePhone.trim() || updateAddress.trim());
     const hasPaymentUpdate = wantsToUpdatePayment && updatePaymentMethod;
+    const hasProfitSplitUpdate = updateCustomSplit && updateCustomSplit !== addItemsAgreement.agreed_percentage;
+    const hasAdditionalInfo = updateAdditionalInfo.trim();
+    const hasPhotos = updatePhotos.length > 0;
     
     // Validate payment method details if needed
     if (hasPaymentUpdate) {
@@ -184,8 +244,19 @@ export default function ConsignmentAgreementForm() {
       }
     }
     
-    if (!hasItems && !hasContactUpdate && !hasPaymentUpdate) {
-      toast.error("Please enter items to add or update your information");
+    if (!hasItems && !hasContactUpdate && !hasPaymentUpdate && !hasProfitSplitUpdate && !hasAdditionalInfo && !hasPhotos) {
+      toast.error("Please make at least one update or add items");
+      return;
+    }
+    
+    // Require signature for any update
+    if (!updateSignature.trim()) {
+      toast.error("Please provide your signature");
+      return;
+    }
+    
+    if (!updateSignatureDate) {
+      toast.error("Please provide the signature date");
       return;
     }
     
@@ -206,7 +277,12 @@ export default function ConsignmentAgreementForm() {
         update_phone: wantsToUpdateContact ? updatePhone : null,
         update_address: wantsToUpdateContact ? updateAddress : null,
         update_payment_method: wantsToUpdatePayment ? updatePaymentMethod : null,
-        update_payment_details: wantsToUpdatePayment ? updatePaymentDetails : null
+        update_payment_details: wantsToUpdatePayment ? updatePaymentDetails : null,
+        update_profit_split: hasProfitSplitUpdate ? updateCustomSplit : null,
+        additional_info: updateAdditionalInfo || null,
+        photos: updatePhotos,
+        signature: updateSignature,
+        signature_date: updateSignatureDate
       });
       setItemsAdded(true);
       
@@ -214,6 +290,8 @@ export default function ConsignmentAgreementForm() {
       if (hasItems) successMsg.push("Items added");
       if (hasContactUpdate) successMsg.push("Contact info updated");
       if (hasPaymentUpdate) successMsg.push("Payment method updated");
+      if (hasProfitSplitUpdate) successMsg.push("Profit split updated");
+      if (hasAdditionalInfo || hasPhotos) successMsg.push("Additional info saved");
       toast.success(successMsg.join(" & ") + " successfully!");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to submit");
@@ -246,7 +324,8 @@ export default function ConsignmentAgreementForm() {
     // Prepare submission data - use custom split if provided, otherwise default to 50/50
     const submissionData = {
       ...formData,
-      agreed_percentage: formData.custom_split.trim() || "50/50"
+      agreed_percentage: formData.custom_split.trim() || "50/50",
+      photos: newAgreementPhotos
     };
     delete submissionData.custom_split;
 
@@ -293,7 +372,7 @@ export default function ConsignmentAgreementForm() {
 
   // Items added success screen
   if (itemsAdded) {
-    const hasItems = itemsToAdd && parseInt(itemsToAdd) > 0;
+    const hasItems = wantsToAddItems && itemsToAdd && parseInt(itemsToAdd) > 0;
     const hasContactUpdate = wantsToUpdateContact;
     const hasPaymentUpdate = wantsToUpdatePayment;
     return (
@@ -643,6 +722,11 @@ export default function ConsignmentAgreementForm() {
                     <p className="text-sm text-[#666] mt-1">
                       Current items on consignment: <strong>{addItemsAgreement.items_description || "0"}</strong>
                     </p>
+                    {addItemsAgreement.agreed_percentage && (
+                      <p className="text-sm text-[#666] mt-1">
+                        Current profit split: <strong>{addItemsAgreement.agreed_percentage}</strong>
+                      </p>
+                    )}
                   </div>
 
                   {/* Update Contact Info Section */}
@@ -651,51 +735,60 @@ export default function ConsignmentAgreementForm() {
                       type="button"
                       onClick={() => setWantsToUpdateContact(!wantsToUpdateContact)}
                       className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      data-testid="toggle-contact-section"
                     >
                       <span className="font-semibold text-[#1A1A2E]">Update Contact Information</span>
-                      <span className={`transform transition-transform ${wantsToUpdateContact ? 'rotate-180' : ''}`}>
-                        ▼
-                      </span>
+                      {wantsToUpdateContact ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
                     </button>
-                    {wantsToUpdateContact && (
-                      <div className="p-4 space-y-4 border-t border-gray-200">
-                        <div>
-                          <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
-                          <Input
-                            type="email"
-                            value={updateEmail}
-                            onChange={(e) => setUpdateEmail(e.target.value)}
-                            placeholder="your@email.com"
-                            className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
-                            data-testid="update-email"
-                          />
-                          {updateEmail !== addItemsAgreement.email && updateEmail.trim() && (
-                            <p className="text-xs text-amber-600 mt-1">Email will be updated from {addItemsAgreement.email}</p>
-                          )}
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Phone Number</Label>
-                          <Input
-                            type="tel"
-                            value={updatePhone}
-                            onChange={(e) => setUpdatePhone(e.target.value)}
-                            placeholder="(555) 123-4567"
-                            className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
-                            data-testid="update-phone"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Address</Label>
-                          <Textarea
-                            value={updateAddress}
-                            onChange={(e) => setUpdateAddress(e.target.value)}
-                            placeholder="123 Main St, City, State ZIP"
-                            className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[60px]"
-                            data-testid="update-address"
-                          />
-                        </div>
-                      </div>
-                    )}
+                    <AnimatePresence>
+                      {wantsToUpdateContact && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-4 space-y-4 border-t border-gray-200">
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
+                              <Input
+                                type="email"
+                                value={updateEmail}
+                                onChange={(e) => setUpdateEmail(e.target.value)}
+                                placeholder="your@email.com"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                                data-testid="update-email"
+                              />
+                              {updateEmail !== addItemsAgreement.email && updateEmail.trim() && (
+                                <p className="text-xs text-amber-600 mt-1">Email will be updated from {addItemsAgreement.email}</p>
+                              )}
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Phone Number</Label>
+                              <Input
+                                type="tel"
+                                value={updatePhone}
+                                onChange={(e) => setUpdatePhone(e.target.value)}
+                                placeholder="(555) 123-4567"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                                data-testid="update-phone"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Address</Label>
+                              <Textarea
+                                value={updateAddress}
+                                onChange={(e) => setUpdateAddress(e.target.value)}
+                                placeholder="123 Main St, City, State ZIP"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[60px]"
+                                data-testid="update-address"
+                              />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Update Payment Method Section */}
@@ -704,6 +797,7 @@ export default function ConsignmentAgreementForm() {
                       type="button"
                       onClick={() => setWantsToUpdatePayment(!wantsToUpdatePayment)}
                       className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      data-testid="toggle-payment-section"
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-[#1A1A2E]">Update Payment Method</span>
@@ -713,63 +807,229 @@ export default function ConsignmentAgreementForm() {
                           </span>
                         )}
                       </div>
-                      <span className={`transform transition-transform ${wantsToUpdatePayment ? 'rotate-180' : ''}`}>
-                        ▼
-                      </span>
+                      {wantsToUpdatePayment ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
                     </button>
-                    {wantsToUpdatePayment && (
-                      <div className="p-4 space-y-4 border-t border-gray-200">
-                        <div className="grid grid-cols-2 gap-3">
-                          {PAYMENT_METHODS.map((method) => (
-                            <button
-                              key={method.id}
-                              type="button"
-                              onClick={() => { setUpdatePaymentMethod(method.id); setUpdatePaymentDetails(""); }}
-                              className={`p-3 rounded-lg border-2 transition-all duration-200 text-left ${
-                                updatePaymentMethod === method.id
-                                  ? "border-[#10B981] bg-[#10B981]/10 shadow-md"
-                                  : "border-gray-200 hover:border-[#10B981]/50 hover:bg-gray-50"
-                              }`}
-                              data-testid={`update-payment-${method.id}`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                  updatePaymentMethod === method.id ? "bg-[#10B981]" : "bg-gray-200"
-                                }`}>
-                                  <CreditCard className={`w-4 h-4 ${updatePaymentMethod === method.id ? "text-white" : "text-gray-500"}`} />
-                                </div>
-                                <span className={`text-sm font-medium ${updatePaymentMethod === method.id ? "text-[#1A1A2E]" : "text-gray-600"}`}>
-                                  {method.label}
-                                </span>
+                    <AnimatePresence>
+                      {wantsToUpdatePayment && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-4 space-y-4 border-t border-gray-200">
+                            <div className="grid grid-cols-2 gap-3">
+                              {PAYMENT_METHODS.map((method) => (
+                                <button
+                                  key={method.id}
+                                  type="button"
+                                  onClick={() => { setUpdatePaymentMethod(method.id); setUpdatePaymentDetails(""); }}
+                                  className={`p-3 rounded-lg border-2 transition-all duration-200 text-left ${
+                                    updatePaymentMethod === method.id
+                                      ? "border-[#10B981] bg-[#10B981]/10 shadow-md"
+                                      : "border-gray-200 hover:border-[#10B981]/50 hover:bg-gray-50"
+                                  }`}
+                                  data-testid={`update-payment-${method.id}`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                      updatePaymentMethod === method.id ? "bg-[#10B981]" : "bg-gray-200"
+                                    }`}>
+                                      <CreditCard className={`w-4 h-4 ${updatePaymentMethod === method.id ? "text-white" : "text-gray-500"}`} />
+                                    </div>
+                                    <span className={`text-sm font-medium ${updatePaymentMethod === method.id ? "text-[#1A1A2E]" : "text-gray-600"}`}>
+                                      {method.label}
+                                    </span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                            
+                            {updatePaymentMethod && PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.needsDetails && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                className="overflow-hidden"
+                              >
+                                <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                  {PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.label} Details *
+                                </Label>
+                                <Input
+                                  type="text"
+                                  value={updatePaymentDetails}
+                                  onChange={(e) => setUpdatePaymentDetails(e.target.value)}
+                                  placeholder={PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.placeholder}
+                                  className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                                  data-testid="update-payment-details"
+                                />
+                              </motion.div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Custom Profit Split Section */}
+                  <div>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                      Custom Profit Split
+                      <span className="font-normal text-[#888] ml-2">(Leave blank to keep current: {addItemsAgreement.agreed_percentage || "50/50"})</span>
+                    </Label>
+                    <Input
+                      type="text"
+                      value={updateCustomSplit}
+                      onChange={(e) => setUpdateCustomSplit(e.target.value)}
+                      placeholder="e.g., 60/40, 70/30"
+                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg placeholder:text-[#999] placeholder:italic"
+                      data-testid="update-custom-split"
+                    />
+                  </div>
+
+                  {/* Add Items Section - Collapsible */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddItemsExpanded(!isAddItemsExpanded)}
+                      className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10 hover:from-[#10B981]/20 hover:to-[#059669]/20 transition-colors"
+                      data-testid="toggle-add-items-section"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Package className="w-5 h-5 text-[#10B981]" />
+                        <span className="font-semibold text-[#1A1A2E]">Add More Items to Consignment</span>
+                      </div>
+                      {isAddItemsExpanded ? <ChevronUp className="w-5 h-5 text-[#10B981]" /> : <ChevronDown className="w-5 h-5 text-[#10B981]" />}
+                    </button>
+                    <AnimatePresence>
+                      {isAddItemsExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-4 space-y-4 border-t border-gray-200">
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Number of Items to Add *</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={itemsToAdd}
+                                onChange={(e) => setItemsToAdd(e.target.value)}
+                                placeholder="Enter number of items"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                                data-testid="items-to-add"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                Item Description
+                                <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                              </Label>
+                              <Textarea
+                                value={itemsDescription}
+                                onChange={(e) => setItemsDescription(e.target.value)}
+                                placeholder="Brief description of items being added (e.g., '3 vintage dresses, 2 designer handbags')"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
+                                data-testid="items-description"
+                              />
+                            </div>
+
+                            {itemsToAdd && parseInt(itemsToAdd) > 0 && (
+                              <div className="flex items-start space-x-3 p-4 bg-[#10B981]/5 rounded-lg border border-[#10B981]/20">
+                                <Checkbox
+                                  id="acknowledge-terms"
+                                  checked={acknowledgedTerms}
+                                  onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
+                                  className="mt-1 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981]"
+                                  data-testid="acknowledge-terms-checkbox"
+                                />
+                                <Label htmlFor="acknowledge-terms" className="text-sm text-[#1A1A2E] cursor-pointer">
+                                  I have reviewed the consignment terms and agree that the additional items I am adding are subject to the same terms as my original agreement.
+                                </Label>
                               </div>
-                            </button>
-                          ))}
-                        </div>
-                        
-                        {updatePaymentMethod && PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.needsDetails && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            className="overflow-hidden"
-                          >
-                            <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
-                              {PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.label} Details
-                            </Label>
-                            <Input
-                              type="text"
-                              value={updatePaymentDetails}
-                              onChange={(e) => setUpdatePaymentDetails(e.target.value)}
-                              placeholder={PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.placeholder}
-                              className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
-                              data-testid="update-payment-details"
-                            />
-                          </motion.div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Additional Information Section */}
+                  <div>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                      Additional Information
+                      <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                    </Label>
+                    <Textarea
+                      value={updateAdditionalInfo}
+                      onChange={(e) => setUpdateAdditionalInfo(e.target.value)}
+                      placeholder="Any additional information about your items (brand, condition, size, etc.)"
+                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
+                      data-testid="update-additional-info"
+                    />
+                  </div>
+
+                  {/* Photo Upload Section */}
+                  <div>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                      Upload Photos
+                      <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                    </Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#10B981] transition-colors">
+                      <input
+                        type="file"
+                        ref={updateFileInputRef}
+                        onChange={(e) => handlePhotoUpload(e.target.files, true)}
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        data-testid="update-photo-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateFileInputRef.current?.click()}
+                        disabled={uploadingUpdatePhotos}
+                        className="flex flex-col items-center gap-2 w-full"
+                      >
+                        {uploadingUpdatePhotos ? (
+                          <RefreshCw className="w-8 h-8 text-[#10B981] animate-spin" />
+                        ) : (
+                          <Upload className="w-8 h-8 text-gray-400" />
                         )}
+                        <span className="text-sm text-gray-600">
+                          {uploadingUpdatePhotos ? "Uploading..." : "Click to upload photos of your items"}
+                        </span>
+                      </button>
+                    </div>
+                    
+                    {/* Photo Preview */}
+                    {updatePhotos.length > 0 && (
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        {updatePhotos.map((photo, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={`${process.env.REACT_APP_BACKEND_URL}${photo}`}
+                              alt={`Upload ${index + 1}`}
+                              className="w-full h-20 object-cover rounded-lg"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removePhoto(index, true)}
+                              className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
 
-                  {/* Terms Review Section - Matches Original Agreement */}
+                  {/* Terms Review Section - Always Visible */}
                   <div className="bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10 rounded-xl p-4 border border-[#10B981]/20">
                     <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
                     <ul className="text-sm text-gray-600 space-y-3 max-h-48 overflow-y-auto">
@@ -782,52 +1042,31 @@ export default function ConsignmentAgreementForm() {
                     </ul>
                   </div>
 
-                  <div>
-                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
-                      Number of Items to Add
-                      <span className="font-normal text-[#888] ml-2">(Leave blank if only updating contact info)</span>
-                    </Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={itemsToAdd}
-                      onChange={(e) => setItemsToAdd(e.target.value)}
-                      placeholder="Enter number of items"
-                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
-                      data-testid="items-to-add"
-                    />
+                  {/* Signature Section */}
+                  <div className="space-y-4 pt-4 border-t border-gray-200">
+                    <h4 className="font-semibold text-[#1A1A2E]">Signature Required</h4>
+                    <div>
+                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Electronic Signature *</Label>
+                      <Input
+                        type="text"
+                        value={updateSignature}
+                        onChange={(e) => setUpdateSignature(e.target.value)}
+                        placeholder="Type your full name as signature"
+                        className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg italic"
+                        data-testid="update-signature"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Date *</Label>
+                      <Input
+                        type="date"
+                        value={updateSignatureDate}
+                        onChange={(e) => setUpdateSignatureDate(e.target.value)}
+                        className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                        data-testid="update-signature-date"
+                      />
+                    </div>
                   </div>
-
-                  {itemsToAdd && parseInt(itemsToAdd) > 0 && (
-                    <>
-                      <div>
-                        <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
-                          Item Description
-                          <span className="font-normal text-[#888] ml-2">(Optional)</span>
-                        </Label>
-                        <Textarea
-                          value={itemsDescription}
-                          onChange={(e) => setItemsDescription(e.target.value)}
-                          placeholder="Brief description of items being added (e.g., '3 vintage dresses, 2 designer handbags')"
-                          className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
-                          data-testid="items-description"
-                        />
-                      </div>
-
-                      <div className="flex items-start space-x-3 p-4 bg-[#10B981]/5 rounded-lg border border-[#10B981]/20">
-                        <Checkbox
-                          id="acknowledge-terms"
-                          checked={acknowledgedTerms}
-                          onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
-                          className="mt-1 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981]"
-                          data-testid="acknowledge-terms-checkbox"
-                        />
-                        <Label htmlFor="acknowledge-terms" className="text-sm text-[#1A1A2E] cursor-pointer">
-                          I have reviewed the consignment terms above and agree that the additional items I am adding are subject to the same terms as my original consignment agreement.
-                        </Label>
-                      </div>
-                    </>
-                  )}
 
                   <Button
                     onClick={handleAddItems}
@@ -835,7 +1074,7 @@ export default function ConsignmentAgreementForm() {
                     className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
                     data-testid="submit-add-items-btn"
                   >
-                    {loading ? "Submitting..." : (itemsToAdd && parseInt(itemsToAdd) > 0) ? "Add Items to Consignment" : "Update Information"}
+                    {loading ? "Submitting..." : "Submit Update"}
                   </Button>
                 </>
               )}
@@ -1079,6 +1318,78 @@ export default function ConsignmentAgreementForm() {
                 </p>
               </motion.div>
             )}
+
+            {/* Additional Information Section */}
+            <div>
+              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                Additional Information
+                <span className="font-normal text-[#888] ml-2">(Optional)</span>
+              </Label>
+              <Textarea
+                name="additional_info"
+                value={formData.additional_info}
+                onChange={handleChange}
+                placeholder="Any additional information about your items (brand, condition, size, etc.)"
+                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg min-h-[80px]"
+                data-testid="input-additional-info"
+              />
+            </div>
+
+            {/* Photo Upload Section */}
+            <div>
+              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                Upload Photos
+                <span className="font-normal text-[#888] ml-2">(Optional)</span>
+              </Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#8B5CF6] transition-colors">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => handlePhotoUpload(e.target.files, false)}
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  data-testid="new-agreement-photo-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhotos}
+                  className="flex flex-col items-center gap-2 w-full"
+                >
+                  {uploadingPhotos ? (
+                    <RefreshCw className="w-8 h-8 text-[#8B5CF6] animate-spin" />
+                  ) : (
+                    <Upload className="w-8 h-8 text-gray-400" />
+                  )}
+                  <span className="text-sm text-gray-600">
+                    {uploadingPhotos ? "Uploading..." : "Click to upload photos of your items"}
+                  </span>
+                </button>
+              </div>
+              
+              {/* Photo Preview */}
+              {newAgreementPhotos.length > 0 && (
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {newAgreementPhotos.map((photo, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={`${process.env.REACT_APP_BACKEND_URL}${photo}`}
+                        alt={`Upload ${index + 1}`}
+                        className="w-full h-20 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index, false)}
+                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Terms and Conditions */}
             <div>

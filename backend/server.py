@@ -1,8 +1,10 @@
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 import logging
 import base64
+import os
 from datetime import datetime, timezone
 import jwt
 
@@ -26,8 +28,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Ensure upload directory exists
+UPLOAD_DIR = "/app/uploads"
+os.makedirs(f"{UPLOAD_DIR}/consignment_photos", exist_ok=True)
+
 # Create the main app
 app = FastAPI(title="Thrifty Curator API", version="2.0.0")
+
+# Mount static files for uploads
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # Health check endpoint for Kubernetes
 @app.get("/health")
