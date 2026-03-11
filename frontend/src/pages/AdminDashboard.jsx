@@ -540,21 +540,34 @@ export default function AdminDashboard() {
     // Small delay to let panel close
     await new Promise(resolve => setTimeout(resolve, 300));
     
+    // Helper function to expand a DashboardGroup if collapsed
+    const expandGroupIfNeeded = async (groupTestId) => {
+      const groupToggle = document.querySelector(`[data-testid="${groupTestId}-toggle"]`);
+      if (groupToggle) {
+        // Check if group is collapsed (chevron pointing down)
+        const chevronDown = groupToggle.querySelector('svg.lucide-chevron-down');
+        if (chevronDown) {
+          groupToggle.click();
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
+      }
+    };
+    
     // Helper function to expand section only if collapsed
-    const expandSectionIfNeeded = (sectionSelector, toggleSelector) => {
+    const expandSectionIfNeeded = async (sectionSelector, toggleSelector) => {
       const section = document.querySelector(sectionSelector);
       if (section) {
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
         
         // Check if section content is visible (expanded)
-        // Look for the section's content area - if it has height > 0, it's expanded
         const toggle = document.querySelector(toggleSelector);
         if (toggle) {
           // Check for ChevronDown icon which indicates collapsed state
           const chevronDown = toggle.querySelector('svg.lucide-chevron-down');
           // If ChevronDown is present, section is collapsed - click to expand
           if (chevronDown) {
-            setTimeout(() => toggle.click(), 300);
+            await new Promise(resolve => setTimeout(resolve, 300));
+            toggle.click();
           }
         }
       }
@@ -564,21 +577,30 @@ export default function AdminDashboard() {
     switch (notification.type) {
       case 'clock_in':
       case 'clock_out':
-        expandSectionIfNeeded('[data-testid="hours-section"]', '[data-testid="hours-by-employee-toggle"]');
+        // Team Management group contains Hours by Employee
+        await expandGroupIfNeeded('group-team');
+        await expandSectionIfNeeded('[data-testid="hours-section"]', '[data-testid="hours-by-employee-toggle"]');
         break;
         
       case 'w9_submission':
       case 'w9_submitted':
-        expandSectionIfNeeded('[data-testid="employees-section"]', '[data-testid="employees-section-toggle"]');
+        // Team Management group contains All Employees
+        await expandGroupIfNeeded('group-team');
+        await expandSectionIfNeeded('[data-testid="employees-section"]', '[data-testid="employees-section-toggle"]');
         break;
         
       case 'new_message':
-        expandSectionIfNeeded('[data-testid="messages-section"]', '[data-testid="messages-section-toggle"]');
+        // Forms & Communications group contains Messages
+        await expandGroupIfNeeded('group-forms');
+        await expandSectionIfNeeded('[data-testid="messages-section"]', '[data-testid="messages-section-toggle"]');
         break;
         
       case 'job_application':
       case 'consignment_inquiry':
       case 'consignment_agreement':
+        // Forms & Communications group contains Form Submissions
+        await expandGroupIfNeeded('group-forms');
+        
         // Scroll to Form Submissions section
         const formSection = document.querySelector('[data-testid="form-submissions-section"]');
         if (formSection) {
@@ -618,48 +640,29 @@ export default function AdminDashboard() {
         break;
       
       case 'payment_method_change':
-        // Scroll to Form Submissions section and open Payment Changes tab
-        const paymentFormSection = document.querySelector('[data-testid="form-submissions-section"]');
-        if (paymentFormSection) {
-          paymentFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          
-          // Check if section is collapsed
-          const paymentFormToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
-          if (paymentFormToggle) {
-            const chevronDown = paymentFormToggle.querySelector('svg.lucide-chevron-down');
-            if (chevronDown) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-              paymentFormToggle.click();
-            }
-          }
-          
-          // Wait for section to expand then select Payment Changes tab
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const paymentTab = document.querySelector('[data-testid="tab-payment-changes"]');
-          if (paymentTab) paymentTab.click();
-        }
-        break;
-      
       case 'consignment_items_added':
-        // Scroll to Form Submissions section and open Item Additions tab
-        const itemsFormSection = document.querySelector('[data-testid="form-submissions-section"]');
-        if (itemsFormSection) {
-          itemsFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Forms & Communications group contains Form Submissions -> Updates tab
+        await expandGroupIfNeeded('group-forms');
+        
+        // Scroll to Form Submissions section and open Updates tab
+        const updatesFormSection = document.querySelector('[data-testid="form-submissions-section"]');
+        if (updatesFormSection) {
+          updatesFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
           
           // Check if section is collapsed
-          const itemsFormToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
-          if (itemsFormToggle) {
-            const chevronDown = itemsFormToggle.querySelector('svg.lucide-chevron-down');
+          const updatesFormToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
+          if (updatesFormToggle) {
+            const chevronDown = updatesFormToggle.querySelector('svg.lucide-chevron-down');
             if (chevronDown) {
               await new Promise(resolve => setTimeout(resolve, 300));
-              itemsFormToggle.click();
+              updatesFormToggle.click();
             }
           }
           
-          // Wait for section to expand then select Item Additions tab
+          // Wait for section to expand then select Updates tab
           await new Promise(resolve => setTimeout(resolve, 500));
-          const itemsTab = document.querySelector('[data-testid="tab-item-additions"]');
-          if (itemsTab) itemsTab.click();
+          const updatesTab = document.querySelector('[data-testid="tab-updates"]');
+          if (updatesTab) updatesTab.click();
         }
         break;
         
