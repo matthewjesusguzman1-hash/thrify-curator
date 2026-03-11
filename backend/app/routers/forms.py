@@ -292,6 +292,105 @@ async def get_consignment_item_additions(admin: dict = Depends(get_admin_user)):
     return additions
 
 
+@router.delete("/admin/forms/item-additions/{update_id}")
+async def delete_item_addition(update_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a consignment item addition/update record"""
+    result = await db.consignment_item_additions.delete_one({"id": update_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Update record not found")
+    return {"message": "Update deleted successfully"}
+
+
+@router.get("/admin/forms/item-additions/{update_id}/pdf")
+async def download_item_addition_pdf(update_id: str, admin: dict = Depends(get_admin_user)):
+    """Download a consignment item addition/update as PDF"""
+    update = await db.consignment_item_additions.find_one({"id": update_id}, {"_id": 0})
+    if not update:
+        raise HTTPException(status_code=404, detail="Update record not found")
+    
+    # Create PDF
+    pdf = FormPDF("Consignment Client Update", (16, 185, 129))  # Emerald green
+    pdf.add_page()
+    
+    # Client Information
+    pdf.section_header("Client Information")
+    pdf.field("Full Name", update.get('full_name', 'N/A'))
+    pdf.field("Email", update.get('email', 'N/A'))
+    pdf.field("Submitted", format_date(update.get('submitted_at')))
+    pdf.ln(5)
+    
+    # Update Summary
+    pdf.section_header("Update Summary")
+    
+    # Items Added
+    items_to_add = update.get('items_to_add', 0)
+    if items_to_add > 0:
+        pdf.field("Items Added", f"+{items_to_add}")
+        if update.get('items_description'):
+            pdf.field("Item Description", update.get('items_description'))
+    
+    # Contact Info Updates
+    if update.get('update_email') or update.get('update_phone') or update.get('update_address'):
+        pdf.ln(3)
+        pdf.section_header("Contact Information Updates")
+        if update.get('update_email'):
+            pdf.field("New Email", update.get('update_email'))
+        if update.get('update_phone'):
+            pdf.field("New Phone", update.get('update_phone'))
+        if update.get('update_address'):
+            pdf.field("New Address", update.get('update_address'))
+    
+    # Payment Updates
+    if update.get('update_payment_method'):
+        pdf.ln(3)
+        pdf.section_header("Payment Method Update")
+        pdf.field("New Method", update.get('update_payment_method'))
+        if update.get('update_payment_details'):
+            pdf.field("Details", update.get('update_payment_details'))
+    
+    # Profit Split Update
+    if update.get('update_profit_split'):
+        pdf.ln(3)
+        pdf.section_header("Profit Split Update")
+        pdf.field("New Split", update.get('update_profit_split'))
+    
+    # Additional Information
+    if update.get('additional_info'):
+        pdf.ln(3)
+        pdf.section_header("Additional Information")
+        pdf.field_multiline("Notes", update.get('additional_info'))
+    
+    # Photos
+    if update.get('photos') and len(update.get('photos', [])) > 0:
+        pdf.ln(3)
+        pdf.section_header("Uploaded Photos")
+        pdf.field("Number of Photos", str(len(update.get('photos', []))))
+    
+    # Signature
+    if update.get('signature'):
+        pdf.ln(3)
+        pdf.section_header("Signature")
+        pdf.set_x(15)
+        pdf.set_font('Helvetica', 'I', 14)
+        pdf.set_text_color(30, 30, 30)
+        pdf.cell(0, 10, update.get('signature', 'N/A'), 0, 1, 'L')
+        pdf.set_draw_color(100, 100, 100)
+        pdf.line(15, pdf.get_y(), 100, pdf.get_y())
+        if update.get('signature_date'):
+            pdf.ln(3)
+            pdf.field("Date Signed", update.get('signature_date'))
+    
+    # Generate PDF bytes
+    pdf_bytes = pdf.output()
+    
+    filename = f"{update.get('full_name', 'client').replace(' ', '_')}_Update_{update.get('submitted_at', '')[:10]}.pdf"
+    return Response(
+        content=bytes(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 # Admin form management routes
 @router.get("/admin/forms/job-applications")
 async def get_job_applications(admin: dict = Depends(get_admin_user)):
@@ -407,7 +506,7 @@ def format_date(iso_string):
     try:
         dt = datetime.fromisoformat(iso_string.replace('Z', '+00:00'))
         return dt.strftime("%B %d, %Y at %I:%M %p")
-    except:
+    except (ValueError, AttributeError):
         return iso_string or "N/A"
 
 
@@ -475,7 +574,6 @@ class FormPDF(FPDF):
         self.set_text_color(30, 30, 30)
         # Light gray background for multiline content
         self.set_fill_color(248, 248, 248)
-        y_start = self.get_y()
         self.multi_cell(180, 5, str(value), 0, 'L', True)
         self.ln(3)
         

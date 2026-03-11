@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts, removeEmergentBadge, loginAsAdmin } from '../fixtures/helpers';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://consign-hub-3.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://consign-portal-1.preview.emergentagent.com';
 
 test.describe('Payroll Rounding Fix - Frontend Tests', () => {
   let authToken: string;

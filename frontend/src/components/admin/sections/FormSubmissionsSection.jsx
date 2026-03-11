@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -23,9 +25,20 @@ import {
   Trash2,
   ArrowUpDown,
   RefreshCw,
+  Download,
+  MessageSquare,
+  Mail,
+  Phone,
+  MapPin,
   CreditCard,
-  Plus
+  Calendar,
+  User,
+  Edit3
 } from "lucide-react";
+import { toast } from "sonner";
+import axios from "axios";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function FormSubmissionsSection({
   formSubmissions,
@@ -39,7 +52,8 @@ export default function FormSubmissionsSection({
   paymentMethodChanges,
   fetchPaymentMethodChanges,
   itemAdditions,
-  fetchItemAdditions
+  fetchItemAdditions,
+  getAuthHeader
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState("job_applications");
@@ -49,9 +63,14 @@ export default function FormSubmissionsSection({
     jobApplications: { key: "submitted_at", direction: "desc" },
     consignmentInquiries: { key: "submitted_at", direction: "desc" },
     consignmentAgreements: { key: "submitted_at", direction: "desc" },
-    paymentChanges: { key: "changed_at", direction: "desc" },
-    itemAdditions: { key: "submitted_at", direction: "desc" }
+    updates: { key: "submitted_at", direction: "desc" }
   });
+  
+  // Modal states
+  const [viewingUpdate, setViewingUpdate] = useState(null);
+  const [messageModal, setMessageModal] = useState({ open: false, update: null });
+  const [messageContent, setMessageContent] = useState("");
+  const [deletingUpdate, setDeletingUpdate] = useState(null);
 
   // Auto-refresh when section is expanded
   useEffect(() => {
@@ -96,6 +115,159 @@ export default function FormSubmissionsSection({
       if (aVal > bVal) return direction === "asc" ? 1 : -1;
       return 0;
     });
+  };
+
+  // Combine all updates into a single list
+  const getAllUpdates = () => {
+    const updates = [];
+    
+    // Add item additions/updates
+    if (itemAdditions) {
+      itemAdditions.forEach(item => {
+        updates.push({
+          ...item,
+          type: 'update',
+          source: 'item_addition'
+        });
+      });
+    }
+    
+    // Add payment method changes
+    if (paymentMethodChanges) {
+      paymentMethodChanges.forEach(change => {
+        updates.push({
+          id: change.id || `payment-${change.changed_at}`,
+          full_name: change.full_name || change.user_name || 'Unknown',
+          email: change.email || change.user_email,
+          type: 'payment_change',
+          source: 'payment_change',
+          submitted_at: change.changed_at,
+          old_payment_method: change.old_payment_method,
+          new_payment_method: change.new_payment_method,
+          old_payment_details: change.old_payment_details,
+          new_payment_details: change.new_payment_details
+        });
+      });
+    }
+    
+    // Sort by date descending
+    return updates.sort((a, b) => new Date(b.submitted_at || b.changed_at || 0) - new Date(a.submitted_at || a.changed_at || 0));
+  };
+
+  // Filter updates based on search
+  const getFilteredUpdates = () => {
+    const allUpdates = getAllUpdates();
+    if (!formSearchQuery.trim()) return allUpdates;
+    
+    const query = formSearchQuery.toLowerCase();
+    return allUpdates.filter(update => {
+      const name = (update.full_name || '').toLowerCase();
+      const email = (update.email || '').toLowerCase();
+      return name.includes(query) || email.includes(query);
+    });
+  };
+
+  // Handle delete update
+  const handleDeleteUpdate = async (update) => {
+    if (!window.confirm(`Are you sure you want to delete this update from ${update.full_name}?`)) {
+      return;
+    }
+    
+    setDeletingUpdate(update.id);
+    try {
+      await axios.delete(`${API}/admin/forms/item-additions/${update.id}`, getAuthHeader());
+      toast.success("Update deleted successfully");
+      if (fetchItemAdditions) fetchItemAdditions();
+    } catch (error) {
+      toast.error("Failed to delete update");
+    } finally {
+      setDeletingUpdate(null);
+    }
+  };
+
+  // Handle download update as PDF
+  const handleDownloadUpdate = async (update) => {
+    if (update.source === 'payment_change') {
+      // For payment changes, generate a simple text download (no backend endpoint for these)
+      let content = `PAYMENT METHOD CHANGE RECORD\n`;
+      content += `============================\n\n`;
+      content += `Name: ${update.full_name}\n`;
+      content += `Email: ${update.email}\n`;
+      content += `Date: ${formatSubmissionDate(update.submitted_at || update.changed_at)}\n\n`;
+      content += `Previous Method: ${update.old_payment_method || 'Not set'}\n`;
+      content += `New Method: ${update.new_payment_method}\n`;
+      if (update.old_payment_details) content += `Previous Details: ${update.old_payment_details}\n`;
+      if (update.new_payment_details) content += `New Details: ${update.new_payment_details}\n`;
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payment_change_${update.full_name.replace(/\s+/g, '_')}_${new Date(update.submitted_at || update.changed_at).toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Payment change downloaded");
+    } else {
+      // For item additions/updates, download PDF from backend
+      try {
+        const response = await axios.get(
+          `${API}/admin/forms/item-additions/${update.id}/pdf`,
+          { ...getAuthHeader(), responseType: 'blob' }
+        );
+        const url = URL.createObjectURL(response.data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${update.full_name.replace(/\s+/g, '_')}_Update.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success("Update PDF downloaded");
+      } catch (error) {
+        toast.error("Failed to download PDF");
+        console.error("PDF download error:", error);
+      }
+    }
+  };
+
+  // Generate email template for contacting client
+  const getEmailTemplate = (update) => {
+    const updateType = update.source === 'payment_change' 
+      ? 'payment method change' 
+      : update.items_to_add > 0 
+        ? 'item addition' 
+        : 'information update';
+    
+    return `Dear ${update.full_name},
+
+Thank you for submitting your ${updateType} request to Thrifty Curator.
+
+We have received your update and wanted to confirm the following:
+${update.source === 'payment_change' 
+  ? `- Payment method changed to: ${update.new_payment_method}`
+  : update.items_to_add > 0 
+    ? `- Items to add: ${update.items_to_add}\n${update.items_description ? `- Description: ${update.items_description}` : ''}`
+    : '- Contact information has been updated'}
+
+If you have any questions or need further assistance, please don't hesitate to reach out.
+
+Best regards,
+Thrifty Curator Team`;
+  };
+
+  // Handle send message - opens email client with pre-filled template
+  const handleSendMessage = () => {
+    if (!messageModal.update) return;
+    
+    const subject = encodeURIComponent(`Re: Your Consignment Update - Thrifty Curator`);
+    const body = encodeURIComponent(messageContent);
+    window.location.href = `mailto:${messageModal.update.email}?subject=${subject}&body=${body}`;
+    
+    toast.success(`Opening email client for ${messageModal.update.email}`);
+    setMessageModal({ open: false, update: null });
+    setMessageContent("");
   };
 
   const getFilteredFormSubmissions = (submissions) => {
@@ -255,36 +427,19 @@ export default function FormSubmissionsSection({
                   )}
                 </button>
                 <button
-                  onClick={() => setActiveFormTab("payment_changes")}
+                  onClick={() => setActiveFormTab("updates")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeFormTab === "payment_changes"
-                      ? "bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-md"
-                      : "bg-[#F9F6F7] text-[#666] hover:bg-[#F0EAEB]"
-                  }`}
-                  data-testid="tab-payment-changes"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  Payment Changes
-                  {paymentMethodChanges?.length > 0 && (
-                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                      {paymentMethodChanges.length}
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={() => setActiveFormTab("item_additions")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeFormTab === "item_additions"
+                    activeFormTab === "updates"
                       ? "bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-md"
                       : "bg-[#F9F6F7] text-[#666] hover:bg-[#F0EAEB]"
                   }`}
-                  data-testid="tab-item-additions"
+                  data-testid="tab-updates"
                 >
-                  <Plus className="w-4 h-4" />
-                  Item Additions
-                  {itemAdditions?.length > 0 && (
+                  <Edit3 className="w-4 h-4" />
+                  Updates
+                  {(itemAdditions?.length > 0 || paymentMethodChanges?.length > 0) && (
                     <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                      {itemAdditions.length}
+                      {(itemAdditions?.length || 0) + (paymentMethodChanges?.length || 0)}
                     </span>
                   )}
                 </button>
@@ -529,133 +684,136 @@ export default function FormSubmissionsSection({
                 </div>
               )}
 
-              {/* Payment Method Changes Tab */}
-              {activeFormTab === "payment_changes" && (
-                <div data-testid="payment-changes-list">
+              {/* Unified Updates Tab */}
+              {activeFormTab === "updates" && (
+                <div data-testid="updates-list">
                   {loadingForms ? (
                     <p className="text-center text-[#888] py-8">Loading...</p>
-                  ) : !paymentMethodChanges?.length ? (
-                    <p className="text-center text-[#888] py-8">No payment method changes yet</p>
+                  ) : getFilteredUpdates().length === 0 ? (
+                    <p className="text-center text-[#888] py-8">
+                      {formSearchQuery ? "No matching updates found" : "No client updates yet"}
+                    </p>
                   ) : (
                     <div className="overflow-x-auto">
                       <p className="text-sm text-[#666] mb-3">
-                        Showing {paymentMethodChanges.length} payment method change{paymentMethodChanges.length !== 1 ? 's' : ''}
+                        Showing {getFilteredUpdates().length} of {getAllUpdates().length} update{getAllUpdates().length !== 1 ? 's' : ''}
                       </p>
-                      <table className="forms-table w-full">
+                      <table className="data-table">
                         <thead>
                           <tr>
-                            <SortableHeader table="paymentChanges" sortKey="full_name">Name</SortableHeader>
-                            <SortableHeader table="paymentChanges" sortKey="email">Email</SortableHeader>
-                            <th>Previous Method</th>
-                            <th>New Method</th>
-                            <SortableHeader table="paymentChanges" sortKey="changed_at">Changed</SortableHeader>
+                            <SortableHeader table="updates" sortKey="full_name">Client</SortableHeader>
+                            <th>Type</th>
+                            <th>Changes</th>
+                            <SortableHeader table="updates" sortKey="submitted_at">Date</SortableHeader>
+                            <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {getSortedData(paymentMethodChanges, 'paymentChanges').map((change) => (
-                            <tr key={change.id} data-testid={`payment-change-row-${change.id}`}>
-                              <td className="font-medium">{change.full_name}</td>
-                              <td>{change.email}</td>
+                          {getSortedData(getFilteredUpdates(), 'updates').map((update) => (
+                            <tr key={update.id} data-testid={`update-row-${update.id}`}>
                               <td>
-                                <div className="flex flex-col">
-                                  <span className="text-red-500 line-through text-sm">
-                                    {change.old_payment_method || 'Not set'}
+                                <div className="font-medium">{update.full_name}</div>
+                                <div className="text-xs text-[#888]">{update.email}</div>
+                              </td>
+                              <td>
+                                {update.source === 'payment_change' ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                                    <CreditCard className="w-3 h-3" />
+                                    Payment Change
                                   </span>
-                                  {change.old_payment_details && (
-                                    <span className="text-xs text-[#888] line-through">{change.old_payment_details}</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td>
-                                <div className="flex flex-col">
-                                  <span className="text-green-600 font-medium">
-                                    {change.new_payment_method}
-                                  </span>
-                                  {change.new_payment_details && (
-                                    <span className="text-xs text-[#888]">{change.new_payment_details}</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="text-sm text-[#888]">{formatSubmissionDate(change.changed_at)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Item Additions Tab */}
-              {activeFormTab === "item_additions" && (
-                <div data-testid="item-additions-list">
-                  {loadingForms ? (
-                    <p className="text-center text-[#888] py-8">Loading...</p>
-                  ) : !itemAdditions?.length ? (
-                    <p className="text-center text-[#888] py-8">No item additions yet</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <p className="text-sm text-[#666] mb-3">
-                        Showing {itemAdditions.length} update{itemAdditions.length !== 1 ? 's' : ''}
-                      </p>
-                      <table className="forms-table w-full">
-                        <thead>
-                          <tr>
-                            <SortableHeader table="itemAdditions" sortKey="full_name">Name</SortableHeader>
-                            <SortableHeader table="itemAdditions" sortKey="email">Email</SortableHeader>
-                            <SortableHeader table="itemAdditions" sortKey="items_to_add">Items</SortableHeader>
-                            <th>Updates</th>
-                            <th>Additional Info</th>
-                            <SortableHeader table="itemAdditions" sortKey="submitted_at">Date</SortableHeader>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {getSortedData(itemAdditions, 'itemAdditions').map((addition) => (
-                            <tr key={addition.id} data-testid={`item-addition-row-${addition.id}`}>
-                              <td className="font-medium">
-                                {addition.full_name}
-                                {addition.signature && (
-                                  <p className="text-xs text-[#888] italic mt-1">Signed: {addition.signature}</p>
-                                )}
-                              </td>
-                              <td>{addition.email}</td>
-                              <td>
-                                {addition.items_to_add > 0 ? (
-                                  <span className="px-3 py-1 bg-[#10B981]/10 text-[#10B981] rounded-full font-bold">
-                                    +{addition.items_to_add}
+                                ) : update.items_to_add > 0 ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                                    <Package className="w-3 h-3" />
+                                    +{update.items_to_add} Items
                                   </span>
                                 ) : (
-                                  <span className="text-[#888]">-</span>
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                    <User className="w-3 h-3" />
+                                    Info Update
+                                  </span>
                                 )}
                               </td>
-                              <td className="text-sm text-[#666]">
-                                <div className="flex flex-wrap gap-1">
-                                  {addition.update_email && (
-                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Email</span>
-                                  )}
-                                  {addition.update_phone && (
-                                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Phone</span>
-                                  )}
-                                  {addition.update_address && (
-                                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">Address</span>
-                                  )}
-                                  {addition.update_payment_method && (
-                                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">{addition.update_payment_method}</span>
-                                  )}
-                                  {addition.update_profit_split && (
-                                    <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">Split: {addition.update_profit_split}</span>
-                                  )}
-                                  {addition.photos && addition.photos.length > 0 && (
-                                    <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded text-xs">{addition.photos.length} photos</span>
+                              <td className="text-sm">
+                                <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                  {update.source === 'payment_change' ? (
+                                    <span className="text-[#666]">
+                                      {update.old_payment_method || 'None'} → {update.new_payment_method}
+                                    </span>
+                                  ) : (
+                                    <>
+                                      {update.update_email && (
+                                        <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs">Email</span>
+                                      )}
+                                      {update.update_phone && (
+                                        <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-xs">Phone</span>
+                                      )}
+                                      {update.update_address && (
+                                        <span className="px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-xs">Address</span>
+                                      )}
+                                      {update.update_payment_method && (
+                                        <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-xs">Payment</span>
+                                      )}
+                                      {update.update_profit_split && (
+                                        <span className="px-1.5 py-0.5 bg-green-50 text-green-600 rounded text-xs">Split</span>
+                                      )}
+                                      {update.photos && update.photos.length > 0 && (
+                                        <span className="px-1.5 py-0.5 bg-pink-50 text-pink-600 rounded text-xs">{update.photos.length} photos</span>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               </td>
-                              <td className="text-sm text-[#666] max-w-[200px]">
-                                <div className="truncate" title={addition.additional_info || addition.items_description || '-'}>
-                                  {addition.additional_info || addition.items_description || '-'}
+                              <td className="text-sm text-[#888]">
+                                {formatSubmissionDate(update.submitted_at || update.changed_at)}
+                              </td>
+                              <td>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setViewingUpdate(update)}
+                                    className="text-[#8B5CF6] hover:text-[#6D28D9] hover:bg-[#8B5CF6]/10"
+                                    title="View Details"
+                                    data-testid={`view-update-${update.id}`}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDownloadUpdate(update)}
+                                    className="text-[#10B981] hover:text-[#059669] hover:bg-[#10B981]/10"
+                                    title="Download PDF"
+                                    data-testid={`download-update-${update.id}`}
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setMessageModal({ open: true, update });
+                                      setMessageContent(getEmailTemplate(update));
+                                    }}
+                                    className="text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10"
+                                    title="Message Client"
+                                    data-testid={`message-update-${update.id}`}
+                                  >
+                                    <MessageSquare className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteUpdate(update)}
+                                    disabled={deletingUpdate === update.id}
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    title="Delete"
+                                    data-testid={`delete-update-${update.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
                                 </div>
                               </td>
-                              <td className="text-sm text-[#888]">{formatSubmissionDate(addition.submitted_at)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -665,6 +823,303 @@ export default function FormSubmissionsSection({
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* View Update Details Modal */}
+      <AnimatePresence>
+        {viewingUpdate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setViewingUpdate(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+              data-testid="view-update-modal"
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-[#10B981] to-[#059669] p-4 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-white">Update Details</h3>
+                  <button
+                    onClick={() => setViewingUpdate(null)}
+                    className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-4">
+                {/* Client Info */}
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-[#333] flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Client Information
+                  </h4>
+                  <div className="bg-[#F9F6F7] rounded-xl p-3 space-y-1">
+                    <p className="font-medium text-[#333]">{viewingUpdate.full_name}</p>
+                    <p className="text-sm text-[#666] flex items-center gap-1">
+                      <Mail className="w-3 h-3" /> {viewingUpdate.email}
+                    </p>
+                    <p className="text-sm text-[#888] flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> {formatSubmissionDate(viewingUpdate.submitted_at || viewingUpdate.changed_at)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Update Type & Details */}
+                {viewingUpdate.source === 'payment_change' ? (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-[#333] flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Payment Method Change
+                    </h4>
+                    <div className="bg-[#F9F6F7] rounded-xl p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-500 line-through">{viewingUpdate.old_payment_method || 'None'}</span>
+                        <span className="text-[#888]">→</span>
+                        <span className="text-green-600 font-medium">{viewingUpdate.new_payment_method}</span>
+                      </div>
+                      {viewingUpdate.new_payment_details && (
+                        <p className="text-sm text-[#666]">Details: {viewingUpdate.new_payment_details}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Items Added */}
+                    {viewingUpdate.items_to_add > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-[#333] flex items-center gap-2">
+                          <Package className="w-4 h-4" />
+                          Items Added
+                        </h4>
+                        <div className="bg-emerald-50 rounded-xl p-3">
+                          <p className="text-emerald-700 font-bold text-lg">+{viewingUpdate.items_to_add} items</p>
+                          {viewingUpdate.items_description && (
+                            <p className="text-sm text-[#666] mt-1">{viewingUpdate.items_description}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contact Info Updates */}
+                    {(viewingUpdate.update_email || viewingUpdate.update_phone || viewingUpdate.update_address) && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-[#333] flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          Contact Info Updates
+                        </h4>
+                        <div className="bg-[#F9F6F7] rounded-xl p-3 space-y-1">
+                          {viewingUpdate.update_email && (
+                            <p className="text-sm flex items-center gap-2">
+                              <Mail className="w-3 h-3 text-blue-500" />
+                              <span className="text-[#666]">New Email:</span>
+                              <span className="font-medium">{viewingUpdate.update_email}</span>
+                            </p>
+                          )}
+                          {viewingUpdate.update_phone && (
+                            <p className="text-sm flex items-center gap-2">
+                              <Phone className="w-3 h-3 text-purple-500" />
+                              <span className="text-[#666]">New Phone:</span>
+                              <span className="font-medium">{viewingUpdate.update_phone}</span>
+                            </p>
+                          )}
+                          {viewingUpdate.update_address && (
+                            <p className="text-sm flex items-center gap-2">
+                              <MapPin className="w-3 h-3 text-orange-500" />
+                              <span className="text-[#666]">New Address:</span>
+                              <span className="font-medium">{viewingUpdate.update_address}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment Method Update */}
+                    {viewingUpdate.update_payment_method && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-[#333] flex items-center gap-2">
+                          <CreditCard className="w-4 h-4" />
+                          Payment Method Update
+                        </h4>
+                        <div className="bg-amber-50 rounded-xl p-3">
+                          <p className="text-amber-700 font-medium">{viewingUpdate.update_payment_method}</p>
+                          {viewingUpdate.update_payment_details && (
+                            <p className="text-sm text-[#666] mt-1">{viewingUpdate.update_payment_details}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Profit Split Update */}
+                    {viewingUpdate.update_profit_split && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-[#333]">Profit Split Update</h4>
+                        <div className="bg-green-50 rounded-xl p-3">
+                          <p className="text-green-700 font-medium">{viewingUpdate.update_profit_split}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Info */}
+                    {viewingUpdate.additional_info && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-[#333]">Additional Information</h4>
+                        <div className="bg-[#F9F6F7] rounded-xl p-3">
+                          <p className="text-sm text-[#666] whitespace-pre-wrap">{viewingUpdate.additional_info}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Photos */}
+                    {viewingUpdate.photos && viewingUpdate.photos.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-[#333]">Uploaded Photos ({viewingUpdate.photos.length})</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {viewingUpdate.photos.map((photo, index) => (
+                            <a 
+                              key={index} 
+                              href={photo.startsWith('http') ? photo : `${process.env.REACT_APP_BACKEND_URL}${photo}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block rounded-lg overflow-hidden border border-[#eee] hover:border-[#8B5CF6] transition-colors"
+                            >
+                              <img 
+                                src={photo.startsWith('http') ? photo : `${process.env.REACT_APP_BACKEND_URL}${photo}`}
+                                alt={`Photo ${index + 1}`}
+                                className="w-full h-24 object-cover"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Signature */}
+                    {viewingUpdate.signature && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-[#333]">Signature</h4>
+                        <div className="bg-[#F9F6F7] rounded-xl p-3">
+                          <p className="font-serif italic text-lg text-[#333]">{viewingUpdate.signature}</p>
+                          {viewingUpdate.signature_date && (
+                            <p className="text-xs text-[#888] mt-1">Signed on: {viewingUpdate.signature_date}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="sticky bottom-0 bg-[#F9F6F7] p-4 rounded-b-2xl border-t border-[#eee] flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewingUpdate(null)}
+                  className="text-[#666]"
+                >
+                  Close
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handleDownloadUpdate(viewingUpdate)}
+                  className="bg-[#10B981] hover:bg-[#059669] text-white"
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Download PDF
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Message Client Modal */}
+      <AnimatePresence>
+        {messageModal.open && messageModal.update && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setMessageModal({ open: false, update: null })}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl max-w-lg w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+              data-testid="message-modal"
+            >
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] p-4 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Message Client</h3>
+                    <p className="text-sm text-white/80">{messageModal.update.email}</p>
+                  </div>
+                  <button
+                    onClick={() => setMessageModal({ open: false, update: null })}
+                    className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-4">
+                <div className="bg-blue-50 rounded-xl p-3 text-sm text-blue-700">
+                  <p>This will open your default email client with the message below pre-filled. You can edit it before sending.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message-content" className="text-[#333]">Email Message</Label>
+                  <Textarea
+                    id="message-content"
+                    value={messageContent}
+                    onChange={(e) => setMessageContent(e.target.value)}
+                    rows={10}
+                    className="resize-none text-sm"
+                    placeholder="Enter your message..."
+                    data-testid="message-textarea"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-[#F9F6F7] p-4 rounded-b-2xl border-t border-[#eee] flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMessageModal({ open: false, update: null })}
+                  className="text-[#666]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSendMessage}
+                  className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] hover:from-[#00A8CC] hover:to-[#008BA8] text-white"
+                >
+                  <Mail className="w-4 h-4 mr-1" />
+                  Open Email Client
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
