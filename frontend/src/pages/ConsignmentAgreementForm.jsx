@@ -1046,7 +1046,7 @@ export default function ConsignmentAgreementForm() {
                   <div>
                     <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 mb-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
                       <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
-                      <ul className="space-y-3 max-h-48 overflow-y-auto">
+                      <ul className="space-y-3 max-h-48 overflow-y-auto pr-2">
                         <li>• The profit split will be agreed upon prior to acceptance of any items. Unless otherwise specified on this form, the profit split will be considered 50/50.</li>
                         <li>• There is no guarantee that your item will be sold.</li>
                         <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
@@ -1063,6 +1063,7 @@ export default function ConsignmentAgreementForm() {
                       type="text"
                       value={updateSignature}
                       onChange={(e) => setUpdateSignature(e.target.value)}
+                      required
                       placeholder="Type your full name as signature"
                       className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg italic"
                       data-testid="update-signature"
@@ -1075,6 +1076,7 @@ export default function ConsignmentAgreementForm() {
                       type="date"
                       value={updateSignatureDate}
                       onChange={(e) => setUpdateSignatureDate(e.target.value)}
+                      required
                       className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
                       data-testid="update-signature-date"
                     />
@@ -1106,7 +1108,7 @@ export default function ConsignmentAgreementForm() {
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        Submit Update
+                        Sign Agreement
                       </>
                     )}
                   </Button>
