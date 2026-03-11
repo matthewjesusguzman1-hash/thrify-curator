@@ -2533,7 +2533,7 @@ export default function AdminDashboard() {
               title="Team Management"
               icon={Users}
               gradient="from-[#00D4FF] to-[#00A8CC]"
-              defaultOpen={true}
+              defaultOpen={false}
               badge={`${employees.length} employees`}
               testId="group-team"
             >
