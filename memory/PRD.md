@@ -2052,6 +2052,81 @@ The monolithic admin.py file has been broken down into maintainable, focused mod
 
 ### P1 (High Priority)
 - **Refactor AdminDashboard.jsx**: File is ~4000 lines and should be broken into smaller components for maintainability
+- **Refactor ConsignmentAgreementForm.jsx**: File is ~1400 lines and should be broken into smaller components (NewAgreementForm, UpdateInfoForm, etc.)
 
 ### P2 (Low Priority)
 - **Deployment**: Deploy application to production
+
+---
+
+## Consignment Form Enhancements (Mar 11, 2026) - COMPLETED ✅
+
+### Features Implemented
+
+**1. Custom Profit Split Field**
+- Added to both new agreement form and update form
+- Default remains 50/50 if not specified
+- Displayed in update form showing current split from agreement
+
+**2. Additional Information Field**
+- Added textarea for extra item details (brand, condition, size, etc.)
+- Available in both new agreement and update flows
+- Optional field
+
+**3. Photo Upload**
+- New `/api/forms/upload-photos` endpoint for multi-file uploads
+- Images stored in `/app/uploads/consignment_photos/`
+- Static file serving enabled via FastAPI StaticFiles mount
+- Photo preview grid with remove functionality
+- Available in both new agreement and update flows
+
+**4. Collapsible Sections in Update Form**
+- Update Contact Information - collapsible
+- Update Payment Method - collapsible
+- Add More Items to Consignment - collapsible with package icon
+- Terms & Conditions - always visible
+- Uses AnimatePresence for smooth animations
+
+**5. Signature & Date in Update Form**
+- Required for all updates (contact, payment, items, profit split)
+- Electronic signature (typed name) + date picker
+- Validation ensures both fields are filled before submission
+
+**6. Payment Validation Enhancement**
+- Check payment method does not require additional details
+- All other methods (Venmo, PayPal, Zelle, CashApp, Apple Pay) require details
+- Error shown if payment method selected but details left blank
+
+### Backend Changes
+- Updated `ConsignmentAgreement` model: added `additional_info`, `photos` fields
+- Updated `ConsignmentItemAddition` model: added `update_profit_split`, `additional_info`, `photos`, `signature`, `signature_date`
+- New endpoint: `POST /api/forms/upload-photos` - handles multi-file image uploads
+- Modified: `/api/forms/add-consignment-items` - accepts new fields
+- Modified: `/api/forms/check-existing-agreement` - returns `agreed_percentage`
+- Static files served at `/uploads/*`
+
+### Frontend Changes
+- **ConsignmentAgreementForm.jsx** (~1400 lines):
+  - Added photo upload state and handlers
+  - New collapsible UI sections with ChevronUp/ChevronDown icons
+  - Photo preview grid with remove buttons
+  - Signature section with validation
+  - Payment details validation for non-Check methods
+
+- **FormSubmissionsSection.jsx**:
+  - Item Additions tab now shows: profit split updates, photos count, additional info
+  - Signature displayed under name in submissions table
+
+### Files Modified
+- `/app/backend/app/models/forms.py` - Updated models
+- `/app/backend/app/routers/forms.py` - Upload endpoint, field handling
+- `/app/backend/server.py` - Static file serving
+- `/app/frontend/src/pages/ConsignmentAgreementForm.jsx` - All UI changes
+- `/app/frontend/src/components/admin/sections/FormSubmissionsSection.jsx` - Admin display updates
+
+### Testing Status
+- **Backend Tests**: 16/16 PASSED (100%)
+- **Frontend E2E Tests**: 16/16 PASSED (100%)
+- Test files created:
+  - `/app/tests/e2e/consignment-features.spec.ts`
+  - `/app/backend/tests/test_consignment_features.py`
