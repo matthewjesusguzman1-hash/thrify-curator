@@ -2264,3 +2264,56 @@ Located at: `/app/frontend/src/components/consignment/TermsAndConditions.jsx`
 3. Reusable components can be used elsewhere in the application
 4. Improved testability with isolated component testing
 5. Reduced cognitive load when working on specific features
+
+
+
+## Dashboard Simplification - Grouped Layout (Mar 11, 2026)
+
+### Overview
+Simplified the admin dashboard by grouping the 8 existing sections into 4 logical collapsible groups, making navigation cleaner and easier.
+
+### User Request
+"I want to simplify the admin dashboard so it is cleaner and easier to navigate. I want all the features to remain. Too many sections are visible. It would help to group the sections by type."
+
+### New Group Structure
+
+| Group | Icon Color | Sections Included | Default State |
+|-------|------------|-------------------|---------------|
+| **Team Management** | Cyan | All Employees, Hours by Employee | Open |
+| **Payroll & Payments** | Purple | Payroll Summary, Payment Records | Collapsed |
+| **Forms & Communications** | Pink | Messages, Form Submissions | Collapsed |
+| **Operations & Reports** | Amber | Mileage Log, Reports | Collapsed |
+
+### Implementation Details
+
+#### DashboardGroup Component
+Created `/app/frontend/src/components/admin/DashboardGroup.jsx`:
+- Collapsible panel with glassmorphism styling
+- Animated expand/collapse with framer-motion
+- Gradient icon badges per group
+- Badge text showing count/summary
+- Click anywhere on header to toggle
+
+#### Visual Design
+- Dark glass panels (`bg-white/5 backdrop-blur-sm`)
+- Color-coded gradient icons for each group
+- Top gradient line when expanded
+- Smooth 0.3s animations
+- Chevron rotation indicator
+
+### Benefits
+1. **Reduced Visual Clutter**: From 8 visible sections to 4 group headers
+2. **Logical Organization**: Related features grouped together
+3. **Faster Navigation**: Quickly identify and access relevant section groups
+4. **Space Efficient**: Only expanded groups show content
+5. **Mobile Friendly**: Collapsed groups work well on smaller screens
+
+### Testing Results
+- **All Tests Passed**: 41/41 (100%)
+- **New Tests Created**: `/app/tests/e2e/dashboard-groups.spec.ts` (14 tests)
+- **Updated Tests**: `refactored-modals.spec.ts`, `updates-tab.spec.ts`
+
+### Files Changed
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Wrapped sections in DashboardGroup components
+- `/app/frontend/src/components/admin/DashboardGroup.jsx` - New component (created)
+- `/app/design_guidelines.json` - Updated with grouped layout specifications
