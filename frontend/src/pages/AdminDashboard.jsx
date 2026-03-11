@@ -205,6 +205,7 @@ export default function AdminDashboard() {
     consignment_inquiries: { total: 0, new: 0 },
     consignment_agreements: { total: 0, new: 0 }
   });
+  const [paymentMethodChanges, setPaymentMethodChanges] = useState([]);
   const [activeFormTab, setActiveFormTab] = useState("job_applications");
   const [loadingForms, setLoadingForms] = useState(false);
   const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
@@ -488,6 +489,15 @@ export default function AdminDashboard() {
       console.error("Failed to fetch form submissions:", error);
     } finally {
       setLoadingForms(false);
+    }
+  }, [getAuthHeader]);
+
+  const fetchPaymentMethodChanges = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/forms/payment-method-changes`, getAuthHeader());
+      setPaymentMethodChanges(response.data);
+    } catch (error) {
+      console.error("Failed to fetch payment method changes:", error);
     }
   }, [getAuthHeader]);
 
@@ -3407,6 +3417,8 @@ export default function AdminDashboard() {
               onDeleteSubmission={handleDeleteSubmission}
               formatSubmissionDate={formatSubmissionDate}
               getStatusBadge={getStatusBadge}
+              paymentMethodChanges={paymentMethodChanges}
+              fetchPaymentMethodChanges={fetchPaymentMethodChanges}
             />
           </div>
 

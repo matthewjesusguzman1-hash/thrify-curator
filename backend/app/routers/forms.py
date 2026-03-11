@@ -83,6 +83,9 @@ async def update_payment_method(update: PaymentMethodUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="No existing agreement found for this email")
     
+    old_payment_method = existing.get("payment_method", "Not set")
+    old_payment_details = existing.get("payment_details", "")
+    
     # Update payment method
     result = await db.consignment_agreements.update_one(
         {"email": update.email.lower()},
@@ -95,7 +98,46 @@ async def update_payment_method(update: PaymentMethodUpdate):
     if result.modified_count == 0:
         raise HTTPException(status_code=400, detail="Failed to update payment method")
     
+    # Create notification for admin
+    from datetime import datetime, timezone
+    import uuid
+    notification = AdminNotification(
+        type="payment_method_change",
+        employee_id=existing.get("id", ""),
+        employee_name=existing.get("full_name", "Unknown"),
+        message=f"Payment method changed by {existing.get('full_name', 'Unknown')}",
+        details={
+            "email": update.email,
+            "old_method": old_payment_method,
+            "new_method": update.payment_method,
+            "old_details": old_payment_details,
+            "new_details": update.payment_details
+        }
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Log the payment method change
+    change_log = {
+        "id": str(uuid.uuid4()),
+        "agreement_id": existing.get("id", ""),
+        "full_name": existing.get("full_name", "Unknown"),
+        "email": update.email.lower(),
+        "old_payment_method": old_payment_method,
+        "old_payment_details": old_payment_details,
+        "new_payment_method": update.payment_method,
+        "new_payment_details": update.payment_details,
+        "changed_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.payment_method_changes.insert_one(change_log)
+    
     return {"success": True, "message": "Payment method updated successfully"}
+
+
+@router.get("/admin/forms/payment-method-changes")
+async def get_payment_method_changes(admin: dict = Depends(get_admin_user)):
+    """Get all payment method change logs for admin review"""
+    changes = await db.payment_method_changes.find({}, {"_id": 0}).sort("changed_at", -1).to_list(500)
+    return changes
 
 
 # Admin form management routes

@@ -22,7 +22,8 @@ import {
   Eye,
   Trash2,
   ArrowUpDown,
-  RefreshCw
+  RefreshCw,
+  CreditCard
 } from "lucide-react";
 
 export default function FormSubmissionsSection({
@@ -33,7 +34,9 @@ export default function FormSubmissionsSection({
   onViewSubmission,
   onDeleteSubmission,
   formatSubmissionDate,
-  getStatusBadge
+  getStatusBadge,
+  paymentMethodChanges,
+  fetchPaymentMethodChanges
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState("job_applications");
@@ -42,15 +45,19 @@ export default function FormSubmissionsSection({
   const [sortConfig, setSortConfig] = useState({
     jobApplications: { key: "submitted_at", direction: "desc" },
     consignmentInquiries: { key: "submitted_at", direction: "desc" },
-    consignmentAgreements: { key: "submitted_at", direction: "desc" }
+    consignmentAgreements: { key: "submitted_at", direction: "desc" },
+    paymentChanges: { key: "changed_at", direction: "desc" }
   });
 
   // Auto-refresh when section is expanded
   useEffect(() => {
     if (isExpanded) {
       fetchFormSubmissions();
+      if (fetchPaymentMethodChanges) {
+        fetchPaymentMethodChanges();
+      }
     }
-  }, [isExpanded, fetchFormSubmissions]);
+  }, [isExpanded, fetchFormSubmissions, fetchPaymentMethodChanges]);
 
   const handleSort = (table, key) => {
     setSortConfig(prev => ({
@@ -237,6 +244,23 @@ export default function FormSubmissionsSection({
                   {formsSummary?.consignment_agreements?.new > 0 && (
                     <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
                       {formsSummary.consignment_agreements.new}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveFormTab("payment_changes")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeFormTab === "payment_changes"
+                      ? "bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-md"
+                      : "bg-[#F9F6F7] text-[#666] hover:bg-[#F0EAEB]"
+                  }`}
+                  data-testid="tab-payment-changes"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Payment Changes
+                  {paymentMethodChanges?.length > 0 && (
+                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                      {paymentMethodChanges.length}
                     </span>
                   )}
                 </button>
@@ -472,6 +496,63 @@ export default function FormSubmissionsSection({
                                   </Button>
                                 </div>
                               </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Payment Method Changes Tab */}
+              {activeFormTab === "payment_changes" && (
+                <div data-testid="payment-changes-list">
+                  {loadingForms ? (
+                    <p className="text-center text-[#888] py-8">Loading...</p>
+                  ) : !paymentMethodChanges?.length ? (
+                    <p className="text-center text-[#888] py-8">No payment method changes yet</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <p className="text-sm text-[#666] mb-3">
+                        Showing {paymentMethodChanges.length} payment method change{paymentMethodChanges.length !== 1 ? 's' : ''}
+                      </p>
+                      <table className="forms-table w-full">
+                        <thead>
+                          <tr>
+                            <SortableHeader table="paymentChanges" sortKey="full_name">Name</SortableHeader>
+                            <SortableHeader table="paymentChanges" sortKey="email">Email</SortableHeader>
+                            <th>Previous Method</th>
+                            <th>New Method</th>
+                            <SortableHeader table="paymentChanges" sortKey="changed_at">Changed</SortableHeader>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {getSortedData(paymentMethodChanges, 'paymentChanges').map((change) => (
+                            <tr key={change.id} data-testid={`payment-change-row-${change.id}`}>
+                              <td className="font-medium">{change.full_name}</td>
+                              <td>{change.email}</td>
+                              <td>
+                                <div className="flex flex-col">
+                                  <span className="text-red-500 line-through text-sm">
+                                    {change.old_payment_method || 'Not set'}
+                                  </span>
+                                  {change.old_payment_details && (
+                                    <span className="text-xs text-[#888] line-through">{change.old_payment_details}</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td>
+                                <div className="flex flex-col">
+                                  <span className="text-green-600 font-medium">
+                                    {change.new_payment_method}
+                                  </span>
+                                  {change.new_payment_details && (
+                                    <span className="text-xs text-[#888]">{change.new_payment_details}</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="text-sm text-[#888]">{formatSubmissionDate(change.changed_at)}</td>
                             </tr>
                           ))}
                         </tbody>
