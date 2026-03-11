@@ -663,3 +663,22 @@ async def get_consignment_clients(admin: dict = Depends(get_admin_user)):
         {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "payment_method": 1, "payment_details": 1}
     ).sort("full_name", 1).to_list(500)
     return clients
+
+
+@router.get("/client-payment-history/{email}")
+async def get_client_payment_history(email: str):
+    """Get payment history for a consignment client (public endpoint for clients to view their payments)"""
+    # Find all payments made to this client
+    payments = await db.payroll_check_records.find(
+        {"consignment_client_email": email.lower(), "payment_type": "consignment"},
+        {"_id": 0, "image_data": 0}  # Exclude image data for performance
+    ).sort("check_date", -1).to_list(100)
+    
+    # Calculate total paid
+    total_paid = sum(p.get("amount", 0) or 0 for p in payments)
+    
+    return {
+        "payments": payments,
+        "total_paid": round(total_paid, 2),
+        "payment_count": len(payments)
+    }

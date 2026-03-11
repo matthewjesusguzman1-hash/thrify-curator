@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,6 +78,10 @@ export default function ConsignmentAgreementForm() {
   const [isAdditionalInfoExpanded, setIsAdditionalInfoExpanded] = useState(false);
   const [uploadingUpdatePhotos, setUploadingUpdatePhotos] = useState(false);
   const updateFileInputRef = useRef(null);
+  
+  // Payment history state
+  const [paymentHistory, setPaymentHistory] = useState(null);
+  const [loadingPaymentHistory, setLoadingPaymentHistory] = useState(false);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -121,6 +125,20 @@ export default function ConsignmentAgreementForm() {
       setUpdatePhotos(prev => prev.filter((_, i) => i !== index));
     } else {
       setNewAgreementPhotos(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  // Fetch payment history for a client
+  const fetchPaymentHistory = async (email) => {
+    setLoadingPaymentHistory(true);
+    try {
+      const response = await axios.get(`${API}/forms/payment-history/${encodeURIComponent(email)}`);
+      setPaymentHistory(response.data);
+    } catch (error) {
+      console.error("Failed to fetch payment history:", error);
+      setPaymentHistory({ payments: [], total_paid: 0, payment_count: 0 });
+    } finally {
+      setLoadingPaymentHistory(false);
     }
   };
 
@@ -214,6 +232,8 @@ export default function ConsignmentAgreementForm() {
         // Set today's date as default for signature date
         const today = new Date().toISOString().split('T')[0];
         setUpdateSignatureDate(today);
+        // Fetch payment history
+        fetchPaymentHistory(addItemsEmail);
       } else {
         toast.error("No existing agreement found for this email. Please sign a new agreement first.");
         setShowAddItems(false);
@@ -728,6 +748,56 @@ export default function ConsignmentAgreementForm() {
                         Current profit split: <strong>{addItemsAgreement.agreed_percentage}</strong>
                       </p>
                     )}
+                  </div>
+
+                  {/* Payment History Section */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-amber-600" />
+                        <span className="font-semibold text-[#1A1A2E]">Payment History</span>
+                      </div>
+                      {loadingPaymentHistory ? (
+                        <RefreshCw className="w-4 h-4 text-amber-600 animate-spin" />
+                      ) : paymentHistory && (
+                        <span className="text-sm font-medium text-amber-600">
+                          Total Received: ${paymentHistory.total_paid.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-4 border-t border-gray-200">
+                      {loadingPaymentHistory ? (
+                        <div className="flex items-center justify-center py-4">
+                          <RefreshCw className="w-5 h-5 text-gray-400 animate-spin" />
+                        </div>
+                      ) : paymentHistory && paymentHistory.payments.length > 0 ? (
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {paymentHistory.payments.map((payment, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div>
+                                <p className="text-sm font-medium text-[#1A1A2E]">
+                                  {payment.description || "Consignment Payout"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {payment.check_date ? new Date(payment.check_date).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  }) : 'Date not specified'}
+                                </p>
+                              </div>
+                              <span className="text-lg font-bold text-green-600">
+                                ${(payment.amount || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-center text-gray-500 py-4 text-sm">
+                          No payments recorded yet
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Update Contact Info Section */}
