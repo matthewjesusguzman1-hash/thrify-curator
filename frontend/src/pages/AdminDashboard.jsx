@@ -207,6 +207,7 @@ export default function AdminDashboard() {
     consignment_agreements: { total: 0, new: 0 }
   });
   const [paymentMethodChanges, setPaymentMethodChanges] = useState([]);
+  const [itemAdditions, setItemAdditions] = useState([]);
   const [activeFormTab, setActiveFormTab] = useState("job_applications");
   const [loadingForms, setLoadingForms] = useState(false);
   const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
@@ -502,6 +503,15 @@ export default function AdminDashboard() {
     }
   }, [getAuthHeader]);
 
+  const fetchItemAdditions = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/forms/consignment-item-additions`, getAuthHeader());
+      setItemAdditions(response.data);
+    } catch (error) {
+      console.error("Failed to fetch item additions:", error);
+    }
+  }, [getAuthHeader]);
+
   // Close notification dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -636,6 +646,29 @@ export default function AdminDashboard() {
           await new Promise(resolve => setTimeout(resolve, 500));
           const paymentTab = document.querySelector('[data-testid="tab-payment-changes"]');
           if (paymentTab) paymentTab.click();
+        }
+        break;
+      
+      case 'consignment_items_added':
+        // Scroll to Form Submissions section and open Item Additions tab
+        const itemsFormSection = document.querySelector('[data-testid="form-submissions-section"]');
+        if (itemsFormSection) {
+          itemsFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          
+          // Check if section is collapsed
+          const itemsFormToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
+          if (itemsFormToggle) {
+            const chevronDown = itemsFormToggle.querySelector('svg.lucide-chevron-down');
+            if (chevronDown) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+              itemsFormToggle.click();
+            }
+          }
+          
+          // Wait for section to expand then select Item Additions tab
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const itemsTab = document.querySelector('[data-testid="tab-item-additions"]');
+          if (itemsTab) itemsTab.click();
         }
         break;
         
@@ -2219,6 +2252,8 @@ export default function AdminDashboard() {
                                   ? 'bg-emerald-500'
                                   : notification.type === 'payment_method_change'
                                   ? 'bg-amber-500'
+                                  : notification.type === 'consignment_items_added'
+                                  ? 'bg-teal-500'
                                   : 'bg-blue-500'
                               }`}>
                                 {notification.type === 'clock_in' 
@@ -2237,6 +2272,8 @@ export default function AdminDashboard() {
                                   ? <FileSignature className="w-5 h-5 text-white" />
                                   : notification.type === 'payment_method_change'
                                   ? <CreditCard className="w-5 h-5 text-white" />
+                                  : notification.type === 'consignment_items_added'
+                                  ? <Package className="w-5 h-5 text-white" />
                                   : <Bell className="w-5 h-5 text-white" />
                                 }
                               </div>
@@ -2261,6 +2298,8 @@ export default function AdminDashboard() {
                                       ? 'bg-emerald-100 text-emerald-800'
                                       : notification.type === 'payment_method_change'
                                       ? 'bg-amber-100 text-amber-800'
+                                      : notification.type === 'consignment_items_added'
+                                      ? 'bg-teal-100 text-teal-800'
                                       : 'bg-blue-100 text-blue-800'
                                   }`}>
                                     {notification.type === 'clock_in' ? 'IN' 
@@ -2271,6 +2310,7 @@ export default function AdminDashboard() {
                                       : notification.type === 'consignment_inquiry' ? 'INQ'
                                       : notification.type === 'consignment_agreement' ? 'AGR'
                                       : notification.type === 'payment_method_change' ? 'PAY'
+                                      : notification.type === 'consignment_items_added' ? 'ITEM'
                                       : 'INFO'}
                                   </span>
                                   <span className="notification-time text-xs">
@@ -3450,6 +3490,8 @@ export default function AdminDashboard() {
               getStatusBadge={getStatusBadge}
               paymentMethodChanges={paymentMethodChanges}
               fetchPaymentMethodChanges={fetchPaymentMethodChanges}
+              itemAdditions={itemAdditions}
+              fetchItemAdditions={fetchItemAdditions}
             />
           </div>
 

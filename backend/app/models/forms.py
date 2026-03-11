@@ -60,5 +60,17 @@ class PaymentMethodUpdate(BaseModel):
     payment_details: str = ""
 
 
+class ConsignmentItemAddition(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    agreement_id: str = ""  # Reference to original agreement
+    full_name: str
+    email: EmailStr
+    items_to_add: int
+    items_description: str = ""  # Optional description of new items
+    acknowledged_terms: bool = False
+    submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
 class UpdateSubmissionStatus(BaseModel):
     status: str  # "new", "reviewed", "contacted", "archived"

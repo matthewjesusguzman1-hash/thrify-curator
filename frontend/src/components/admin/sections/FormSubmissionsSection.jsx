@@ -23,7 +23,8 @@ import {
   Trash2,
   ArrowUpDown,
   RefreshCw,
-  CreditCard
+  CreditCard,
+  Plus
 } from "lucide-react";
 
 export default function FormSubmissionsSection({
@@ -36,7 +37,9 @@ export default function FormSubmissionsSection({
   formatSubmissionDate,
   getStatusBadge,
   paymentMethodChanges,
-  fetchPaymentMethodChanges
+  fetchPaymentMethodChanges,
+  itemAdditions,
+  fetchItemAdditions
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState("job_applications");
@@ -46,7 +49,8 @@ export default function FormSubmissionsSection({
     jobApplications: { key: "submitted_at", direction: "desc" },
     consignmentInquiries: { key: "submitted_at", direction: "desc" },
     consignmentAgreements: { key: "submitted_at", direction: "desc" },
-    paymentChanges: { key: "changed_at", direction: "desc" }
+    paymentChanges: { key: "changed_at", direction: "desc" },
+    itemAdditions: { key: "submitted_at", direction: "desc" }
   });
 
   // Auto-refresh when section is expanded
@@ -56,8 +60,11 @@ export default function FormSubmissionsSection({
       if (fetchPaymentMethodChanges) {
         fetchPaymentMethodChanges();
       }
+      if (fetchItemAdditions) {
+        fetchItemAdditions();
+      }
     }
-  }, [isExpanded, fetchFormSubmissions, fetchPaymentMethodChanges]);
+  }, [isExpanded, fetchFormSubmissions, fetchPaymentMethodChanges, fetchItemAdditions]);
 
   const handleSort = (table, key) => {
     setSortConfig(prev => ({
@@ -261,6 +268,23 @@ export default function FormSubmissionsSection({
                   {paymentMethodChanges?.length > 0 && (
                     <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
                       {paymentMethodChanges.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveFormTab("item_additions")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeFormTab === "item_additions"
+                      ? "bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-md"
+                      : "bg-[#F9F6F7] text-[#666] hover:bg-[#F0EAEB]"
+                  }`}
+                  data-testid="tab-item-additions"
+                >
+                  <Plus className="w-4 h-4" />
+                  Item Additions
+                  {itemAdditions?.length > 0 && (
+                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                      {itemAdditions.length}
                     </span>
                   )}
                 </button>
@@ -553,6 +577,51 @@ export default function FormSubmissionsSection({
                                 </div>
                               </td>
                               <td className="text-sm text-[#888]">{formatSubmissionDate(change.changed_at)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Item Additions Tab */}
+              {activeFormTab === "item_additions" && (
+                <div data-testid="item-additions-list">
+                  {loadingForms ? (
+                    <p className="text-center text-[#888] py-8">Loading...</p>
+                  ) : !itemAdditions?.length ? (
+                    <p className="text-center text-[#888] py-8">No item additions yet</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <p className="text-sm text-[#666] mb-3">
+                        Showing {itemAdditions.length} item addition{itemAdditions.length !== 1 ? 's' : ''}
+                      </p>
+                      <table className="forms-table w-full">
+                        <thead>
+                          <tr>
+                            <SortableHeader table="itemAdditions" sortKey="full_name">Name</SortableHeader>
+                            <SortableHeader table="itemAdditions" sortKey="email">Email</SortableHeader>
+                            <SortableHeader table="itemAdditions" sortKey="items_to_add">Items Added</SortableHeader>
+                            <th>Description</th>
+                            <SortableHeader table="itemAdditions" sortKey="submitted_at">Date</SortableHeader>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {getSortedData(itemAdditions, 'itemAdditions').map((addition) => (
+                            <tr key={addition.id} data-testid={`item-addition-row-${addition.id}`}>
+                              <td className="font-medium">{addition.full_name}</td>
+                              <td>{addition.email}</td>
+                              <td>
+                                <span className="px-3 py-1 bg-[#10B981]/10 text-[#10B981] rounded-full font-bold">
+                                  +{addition.items_to_add}
+                                </span>
+                              </td>
+                              <td className="text-sm text-[#666] max-w-[200px] truncate">
+                                {addition.items_description || '-'}
+                              </td>
+                              <td className="text-sm text-[#888]">{formatSubmissionDate(addition.submitted_at)}</td>
                             </tr>
                           ))}
                         </tbody>

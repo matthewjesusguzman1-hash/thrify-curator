@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 
 from app.database import db
 from app.dependencies import get_admin_user
-from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus, PaymentMethodUpdate
+from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus, PaymentMethodUpdate, ConsignmentItemAddition
 from app.models.notifications import AdminNotification
 
 router = APIRouter(tags=["Forms"])
@@ -138,6 +138,59 @@ async def get_payment_method_changes(admin: dict = Depends(get_admin_user)):
     """Get all payment method change logs for admin review"""
     changes = await db.payment_method_changes.find({}, {"_id": 0}).sort("changed_at", -1).to_list(500)
     return changes
+
+
+@router.post("/forms/add-consignment-items", response_model=ConsignmentItemAddition)
+async def add_consignment_items(addition: ConsignmentItemAddition):
+    """Add more items to an existing consignment agreement"""
+    from datetime import datetime, timezone
+    
+    # Find existing agreement by email
+    existing = await db.consignment_agreements.find_one({"email": addition.email.lower()})
+    if not existing:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="No existing agreement found for this email")
+    
+    # Set the agreement_id and full_name from existing agreement
+    addition_dict = addition.model_dump()
+    addition_dict["agreement_id"] = existing.get("id", "")
+    addition_dict["full_name"] = existing.get("full_name", addition.full_name)
+    addition_dict["email"] = addition.email.lower()
+    
+    # Save to database
+    await db.consignment_item_additions.insert_one(addition_dict)
+    
+    # Update the original agreement's item count
+    current_items = int(existing.get("items_description", "0") or "0")
+    new_total = current_items + addition.items_to_add
+    await db.consignment_agreements.update_one(
+        {"email": addition.email.lower()},
+        {"$set": {"items_description": str(new_total)}}
+    )
+    
+    # Create notification for admin
+    notification = AdminNotification(
+        type="consignment_items_added",
+        employee_id=addition_dict["id"],
+        employee_name=addition_dict["full_name"],
+        message=f"{addition_dict['full_name']} added {addition.items_to_add} more items to consign",
+        details={
+            "email": addition.email,
+            "items_added": addition.items_to_add,
+            "new_total": new_total,
+            "description": addition.items_description
+        }
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
+    return ConsignmentItemAddition(**addition_dict)
+
+
+@router.get("/admin/forms/consignment-item-additions")
+async def get_consignment_item_additions(admin: dict = Depends(get_admin_user)):
+    """Get all consignment item addition logs for admin review"""
+    additions = await db.consignment_item_additions.find({}, {"_id": 0}).sort("submitted_at", -1).to_list(500)
+    return additions
 
 
 # Admin form management routes

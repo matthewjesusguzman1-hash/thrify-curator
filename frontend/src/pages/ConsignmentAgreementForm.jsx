@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +48,15 @@ export default function ConsignmentAgreementForm() {
   const [changePaymentMethod, setChangePaymentMethod] = useState("");
   const [changePaymentDetails, setChangePaymentDetails] = useState("");
   const [paymentUpdated, setPaymentUpdated] = useState(false);
+  
+  // State for add more items flow
+  const [showAddItems, setShowAddItems] = useState(false);
+  const [addItemsEmail, setAddItemsEmail] = useState("");
+  const [addItemsAgreement, setAddItemsAgreement] = useState(null);
+  const [itemsToAdd, setItemsToAdd] = useState("");
+  const [itemsDescription, setItemsDescription] = useState("");
+  const [acknowledgedTerms, setAcknowledgedTerms] = useState(false);
+  const [itemsAdded, setItemsAdded] = useState(false);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -123,6 +132,60 @@ export default function ConsignmentAgreementForm() {
     }
   };
 
+  // Check for existing agreement (for add items flow)
+  const handleCheckAddItemsAgreement = async () => {
+    if (!addItemsEmail.trim()) {
+      toast.error("Please enter your email address");
+      return;
+    }
+    
+    setCheckingEmail(true);
+    try {
+      const response = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(addItemsEmail)}`);
+      if (response.data.has_agreement) {
+        setAddItemsAgreement(response.data.agreement);
+      } else {
+        toast.error("No existing agreement found for this email. Please sign a new agreement first.");
+        setShowAddItems(false);
+        setShowInitialChoice(false);
+      }
+    } catch (error) {
+      toast.error("Failed to check for existing agreement");
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  // Submit additional items
+  const handleAddItems = async () => {
+    if (!itemsToAdd || parseInt(itemsToAdd) <= 0) {
+      toast.error("Please enter the number of items to add");
+      return;
+    }
+    
+    if (!acknowledgedTerms) {
+      toast.error("Please acknowledge the terms and conditions");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await axios.post(`${API}/forms/add-consignment-items`, {
+        email: addItemsEmail,
+        full_name: addItemsAgreement.full_name,
+        items_to_add: parseInt(itemsToAdd),
+        items_description: itemsDescription,
+        acknowledged_terms: true
+      });
+      setItemsAdded(true);
+      toast.success("Items added successfully!");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to add items");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -183,6 +246,36 @@ export default function ConsignmentAgreementForm() {
             </p>
             <Link to="/">
               <Button className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
+                Back to Home
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // Items added success screen
+  if (itemsAdded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] py-8 px-4" data-testid="items-added-success">
+        <div className="max-w-2xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-2xl p-8 text-center"
+          >
+            <div className="w-20 h-20 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-full flex items-center justify-center mx-auto mb-6">
+              <Package className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="font-poppins text-2xl font-bold text-[#1A1A2E] mb-2">
+              Items Added Successfully!
+            </h2>
+            <p className="text-[#666] mb-6">
+              You have added <strong>{itemsToAdd} item{parseInt(itemsToAdd) !== 1 ? 's' : ''}</strong> to your consignment agreement.
+            </p>
+            <Link to="/">
+              <Button className="bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
                 Back to Home
               </Button>
             </Link>
@@ -255,6 +348,22 @@ export default function ConsignmentAgreementForm() {
                 <div className="text-left">
                   <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Change Payment Method</h3>
                   <p className="text-[#666] text-sm">Already signed? Update your payment preferences.</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => { setShowInitialChoice(false); setShowAddItems(true); }}
+              className="w-full bg-white rounded-xl shadow-2xl p-6 hover:shadow-3xl transition-all duration-300 group"
+              data-testid="add-more-items-btn"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Plus className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Add More Items</h3>
+                  <p className="text-[#666] text-sm">Have more items to consign? Add them to your existing agreement.</p>
                 </div>
               </div>
             </button>
@@ -417,6 +526,162 @@ export default function ConsignmentAgreementForm() {
 
           <button 
             onClick={() => { setShowInitialChoice(true); setShowChangePayment(false); setExistingAgreement(null); setChangePaymentEmail(""); }}
+            className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
+            data-testid="back-link"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Add more items flow
+  if (showAddItems) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] py-8 px-4" data-testid="add-items-page">
+        <div className="max-w-2xl mx-auto">
+          {/* Back Link and Logo Row */}
+          <div className="relative mt-8 mb-6">
+            <button 
+              onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); }}
+              className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#10B981] transition-colors"
+              data-testid="back-to-choice-btn"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back
+            </button>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-24 h-24 mx-auto rounded-xl overflow-hidden shadow-2xl ring-4 ring-white/20"
+            >
+              <img src={LOGO_URL} alt="Thrifty Curator Logo" className="w-full h-full object-cover" />
+            </motion.div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
+            <h1 className="font-poppins text-3xl font-bold text-white mb-2">Add More Items</h1>
+            <p className="text-white/60">Add items to your existing consignment agreement</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-xl shadow-2xl overflow-hidden"
+          >
+            <div className="h-1.5 bg-gradient-to-r from-[#10B981] to-[#059669]" />
+            <div className="p-6 space-y-5">
+              {!addItemsAgreement ? (
+                // Step 1: Enter email to find existing agreement
+                <>
+                  <div>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
+                    <p className="text-xs text-[#888] mb-2">Enter the email you used when signing your agreement</p>
+                    <Input
+                      type="email"
+                      value={addItemsEmail}
+                      onChange={(e) => setAddItemsEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                      data-testid="add-items-email"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleCheckAddItemsAgreement}
+                    disabled={checkingEmail}
+                    className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
+                    data-testid="find-agreement-btn"
+                  >
+                    {checkingEmail ? "Checking..." : "Find My Agreement"}
+                  </Button>
+                </>
+              ) : (
+                // Step 2: Show agreement info, terms review, and add items form
+                <>
+                  <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-[#1A1A2E]">
+                      <strong>Agreement found for:</strong> {addItemsAgreement.full_name}
+                    </p>
+                    <p className="text-sm text-[#666] mt-1">
+                      Current items on consignment: <strong>{addItemsAgreement.items_description || "0"}</strong>
+                    </p>
+                  </div>
+
+                  {/* Terms Review Section */}
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <h4 className="font-semibold text-[#1A1A2E] mb-3">Consignment Terms Reminder</h4>
+                    <div className="text-sm text-[#666] space-y-2 max-h-48 overflow-y-auto">
+                      <p><strong>1. Consignment Period:</strong> Items are consigned for a period of 90 days from the date of this agreement.</p>
+                      <p><strong>2. Pricing:</strong> Thrifty Curator reserves the right to set and adjust pricing for all consigned items.</p>
+                      <p><strong>3. Profit Split:</strong> Profits will be split according to your agreed percentage upon sale of items.</p>
+                      <p><strong>4. Unsold Items:</strong> After the consignment period, unsold items may be donated, returned, or have their consignment period extended upon mutual agreement.</p>
+                      <p><strong>5. Liability:</strong> Thrifty Curator will exercise reasonable care but is not liable for loss, theft, or damage to consigned items.</p>
+                      <p><strong>6. Payment:</strong> Payments will be processed via your selected payment method within 14 days of item sale.</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Number of Items to Add *</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={itemsToAdd}
+                      onChange={(e) => setItemsToAdd(e.target.value)}
+                      placeholder="Enter number of items"
+                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                      data-testid="items-to-add"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                      Item Description
+                      <span className="font-normal text-[#888] ml-2">(Optional)</span>
+                    </Label>
+                    <Textarea
+                      value={itemsDescription}
+                      onChange={(e) => setItemsDescription(e.target.value)}
+                      placeholder="Brief description of items being added (e.g., '3 vintage dresses, 2 designer handbags')"
+                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg min-h-[80px]"
+                      data-testid="items-description"
+                    />
+                  </div>
+
+                  <div className="flex items-start space-x-3 p-4 bg-[#10B981]/5 rounded-lg border border-[#10B981]/20">
+                    <Checkbox
+                      id="acknowledge-terms"
+                      checked={acknowledgedTerms}
+                      onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
+                      className="mt-1 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981]"
+                      data-testid="acknowledge-terms-checkbox"
+                    />
+                    <Label htmlFor="acknowledge-terms" className="text-sm text-[#1A1A2E] cursor-pointer">
+                      I have reviewed the consignment terms above and agree that the additional items I am adding are subject to the same terms as my original consignment agreement.
+                    </Label>
+                  </div>
+
+                  <Button
+                    onClick={handleAddItems}
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
+                    data-testid="submit-add-items-btn"
+                  >
+                    {loading ? "Adding Items..." : "Add Items to Consignment"}
+                  </Button>
+                </>
+              )}
+            </div>
+          </motion.div>
+
+          <button 
+            onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); }}
             className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
             data-testid="back-link"
           >
