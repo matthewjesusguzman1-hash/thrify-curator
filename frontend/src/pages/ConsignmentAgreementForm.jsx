@@ -1042,20 +1042,21 @@ export default function ConsignmentAgreementForm() {
                     </AnimatePresence>
                   </div>
 
-                  {/* Terms Review Section - Always Visible */}
-                  <div className="bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10 rounded-xl p-4 border border-[#10B981]/20">
-                    <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
-                    <ul className="text-sm text-gray-600 space-y-3 max-h-48 overflow-y-auto">
-                      <li>• The profit split will be agreed upon prior to acceptance of any items. Unless otherwise specified on this form, the profit split will be considered 50/50.</li>
-                      <li>• There is no guarantee that your item will be sold.</li>
-                      <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
-                      <li>• The consignee has the right to refuse any item for sale at any time and will return the item to the consignor.</li>
-                      <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee for the purposes of sale until sold or released back to the consignor.</li>
-                      <li>• The consignor accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee. All items are inspected prior to listing and its condition/defects are listed at the time the item is posted for sale.</li>
-                    </ul>
+                  {/* Terms Review Section - Always Visible with scroll */}
+                  <div>
+                    <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 mb-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
+                      <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
+                      <ul className="space-y-3 max-h-48 overflow-y-auto">
+                        <li>• The profit split will be agreed upon prior to acceptance of any items. Unless otherwise specified on this form, the profit split will be considered 50/50.</li>
+                        <li>• There is no guarantee that your item will be sold.</li>
+                        <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
+                        <li>• The consignee has the right to refuse any item for sale at any time and will return the item to the consignor.</li>
+                        <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee for the purposes of sale until sold or released back to the consignor.</li>
+                        <li>• The consignor accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee. All items are inspected prior to listing and its condition/defects are listed at the time the item is posted for sale.</li>
+                      </ul>
+                    </div>
                   </div>
 
-                  {/* Signature Section - Matching original form style */}
                   <div>
                     <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Electronic Signature *</Label>
                     <Input
@@ -1063,7 +1064,7 @@ export default function ConsignmentAgreementForm() {
                       value={updateSignature}
                       onChange={(e) => setUpdateSignature(e.target.value)}
                       placeholder="Type your full name as signature"
-                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg italic"
+                      className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg italic"
                       data-testid="update-signature"
                     />
                   </div>
@@ -1074,7 +1075,7 @@ export default function ConsignmentAgreementForm() {
                       type="date"
                       value={updateSignatureDate}
                       onChange={(e) => setUpdateSignatureDate(e.target.value)}
-                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                      className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
                       data-testid="update-signature-date"
                     />
                   </div>
@@ -1085,7 +1086,7 @@ export default function ConsignmentAgreementForm() {
                         id="update-terms"
                         checked={acknowledgedTerms}
                         onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
-                        className="w-6 h-6 mt-1 border-2 border-gray-300 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981]"
+                        className="w-6 h-6 mt-1 border-2 border-gray-300 data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
                         data-testid="update-terms-checkbox"
                       />
                       <Label htmlFor="update-terms" className="text-sm text-gray-600 cursor-pointer">
@@ -1097,7 +1098,7 @@ export default function ConsignmentAgreementForm() {
                   <Button
                     onClick={handleAddItems}
                     disabled={loading || !acknowledgedTerms}
-                    className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     data-testid="submit-add-items-btn"
                   >
                     {loading ? (
