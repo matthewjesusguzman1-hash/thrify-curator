@@ -49,7 +49,8 @@ import {
   Save,
   RefreshCw,
   MessageSquare,
-  Mail
+  Mail,
+  CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -612,6 +613,29 @@ export default function AdminDashboard() {
           if (viewBtn) {
             viewBtn.click();
           }
+        }
+        break;
+      
+      case 'payment_method_change':
+        // Scroll to Form Submissions section and open Payment Changes tab
+        const paymentFormSection = document.querySelector('[data-testid="form-submissions-section"]');
+        if (paymentFormSection) {
+          paymentFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          
+          // Check if section is collapsed
+          const paymentFormToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
+          if (paymentFormToggle) {
+            const chevronDown = paymentFormToggle.querySelector('svg.lucide-chevron-down');
+            if (chevronDown) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+              paymentFormToggle.click();
+            }
+          }
+          
+          // Wait for section to expand then select Payment Changes tab
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const paymentTab = document.querySelector('[data-testid="tab-payment-changes"]');
+          if (paymentTab) paymentTab.click();
         }
         break;
         
@@ -2193,6 +2217,8 @@ export default function AdminDashboard() {
                                   ? 'bg-cyan-500'
                                   : notification.type === 'consignment_agreement'
                                   ? 'bg-emerald-500'
+                                  : notification.type === 'payment_method_change'
+                                  ? 'bg-amber-500'
                                   : 'bg-blue-500'
                               }`}>
                                 {notification.type === 'clock_in' 
@@ -2209,6 +2235,8 @@ export default function AdminDashboard() {
                                   ? <Package className="w-5 h-5 text-white" />
                                   : notification.type === 'consignment_agreement'
                                   ? <FileSignature className="w-5 h-5 text-white" />
+                                  : notification.type === 'payment_method_change'
+                                  ? <CreditCard className="w-5 h-5 text-white" />
                                   : <Bell className="w-5 h-5 text-white" />
                                 }
                               </div>
@@ -2231,6 +2259,8 @@ export default function AdminDashboard() {
                                       ? 'bg-cyan-100 text-cyan-800'
                                       : notification.type === 'consignment_agreement'
                                       ? 'bg-emerald-100 text-emerald-800'
+                                      : notification.type === 'payment_method_change'
+                                      ? 'bg-amber-100 text-amber-800'
                                       : 'bg-blue-100 text-blue-800'
                                   }`}>
                                     {notification.type === 'clock_in' ? 'IN' 
@@ -2240,6 +2270,7 @@ export default function AdminDashboard() {
                                       : notification.type === 'job_application' ? 'JOB'
                                       : notification.type === 'consignment_inquiry' ? 'INQ'
                                       : notification.type === 'consignment_agreement' ? 'AGR'
+                                      : notification.type === 'payment_method_change' ? 'PAY'
                                       : 'INFO'}
                                   </span>
                                   <span className="notification-time text-xs">
