@@ -57,9 +57,13 @@ export default function ConsignmentAgreementForm() {
   const [itemsDescription, setItemsDescription] = useState("");
   const [acknowledgedTerms, setAcknowledgedTerms] = useState(false);
   const [itemsAdded, setItemsAdded] = useState(false);
+  const [updateEmail, setUpdateEmail] = useState("");
   const [updatePhone, setUpdatePhone] = useState("");
   const [updateAddress, setUpdateAddress] = useState("");
   const [wantsToUpdateContact, setWantsToUpdateContact] = useState(false);
+  const [wantsToUpdatePayment, setWantsToUpdatePayment] = useState(false);
+  const [updatePaymentMethod, setUpdatePaymentMethod] = useState("");
+  const [updatePaymentDetails, setUpdatePaymentDetails] = useState("");
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -147,8 +151,11 @@ export default function ConsignmentAgreementForm() {
       const response = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(addItemsEmail)}`);
       if (response.data.has_agreement) {
         setAddItemsAgreement(response.data.agreement);
+        setUpdateEmail(response.data.agreement.email || addItemsEmail);
         setUpdatePhone(response.data.agreement.phone || "");
         setUpdateAddress(response.data.agreement.address || "");
+        setUpdatePaymentMethod(response.data.agreement.payment_method || "");
+        setUpdatePaymentDetails(response.data.agreement.payment_details || "");
       } else {
         toast.error("No existing agreement found for this email. Please sign a new agreement first.");
         setShowAddItems(false);
@@ -163,12 +170,22 @@ export default function ConsignmentAgreementForm() {
 
   // Submit additional items
   const handleAddItems = async () => {
-    // At least one of items or contact update is required
+    // At least one of items or updates is required
     const hasItems = itemsToAdd && parseInt(itemsToAdd) > 0;
-    const hasContactUpdate = wantsToUpdateContact && (updatePhone.trim() || updateAddress.trim());
+    const hasContactUpdate = wantsToUpdateContact && (updateEmail.trim() !== addItemsAgreement.email || updatePhone.trim() || updateAddress.trim());
+    const hasPaymentUpdate = wantsToUpdatePayment && updatePaymentMethod;
     
-    if (!hasItems && !hasContactUpdate) {
-      toast.error("Please enter items to add or update your contact information");
+    // Validate payment method details if needed
+    if (hasPaymentUpdate) {
+      const selectedMethod = PAYMENT_METHODS.find(m => m.id === updatePaymentMethod);
+      if (selectedMethod?.needsDetails && !updatePaymentDetails.trim()) {
+        toast.error(`Please enter your ${selectedMethod.label} details`);
+        return;
+      }
+    }
+    
+    if (!hasItems && !hasContactUpdate && !hasPaymentUpdate) {
+      toast.error("Please enter items to add or update your information");
       return;
     }
     
@@ -185,11 +202,19 @@ export default function ConsignmentAgreementForm() {
         items_to_add: hasItems ? parseInt(itemsToAdd) : 0,
         items_description: itemsDescription,
         acknowledged_terms: acknowledgedTerms || !hasItems,
+        update_email: wantsToUpdateContact && updateEmail !== addItemsAgreement.email ? updateEmail : null,
         update_phone: wantsToUpdateContact ? updatePhone : null,
-        update_address: wantsToUpdateContact ? updateAddress : null
+        update_address: wantsToUpdateContact ? updateAddress : null,
+        update_payment_method: wantsToUpdatePayment ? updatePaymentMethod : null,
+        update_payment_details: wantsToUpdatePayment ? updatePaymentDetails : null
       });
       setItemsAdded(true);
-      toast.success(hasItems ? "Items added successfully!" : "Contact information updated successfully!");
+      
+      let successMsg = [];
+      if (hasItems) successMsg.push("Items added");
+      if (hasContactUpdate) successMsg.push("Contact info updated");
+      if (hasPaymentUpdate) successMsg.push("Payment method updated");
+      toast.success(successMsg.join(" & ") + " successfully!");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to submit");
     } finally {
@@ -270,6 +295,7 @@ export default function ConsignmentAgreementForm() {
   if (itemsAdded) {
     const hasItems = itemsToAdd && parseInt(itemsToAdd) > 0;
     const hasContactUpdate = wantsToUpdateContact;
+    const hasPaymentUpdate = wantsToUpdatePayment;
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] py-8 px-4" data-testid="items-added-success">
         <div className="max-w-2xl mx-auto">
@@ -282,16 +308,19 @@ export default function ConsignmentAgreementForm() {
               <Package className="w-10 h-10 text-white" />
             </div>
             <h2 className="font-poppins text-2xl font-bold text-[#1A1A2E] mb-2">
-              {hasItems && hasContactUpdate ? "Items Added & Info Updated!" : hasItems ? "Items Added Successfully!" : "Information Updated!"}
+              Update Successful!
             </h2>
-            <p className="text-[#666] mb-6">
+            <div className="text-[#666] mb-6 space-y-1">
               {hasItems && (
-                <span>You have added <strong>{itemsToAdd} item{parseInt(itemsToAdd) !== 1 ? 's' : ''}</strong> to your consignment agreement. </span>
+                <p>Added <strong>{itemsToAdd} item{parseInt(itemsToAdd) !== 1 ? 's' : ''}</strong> to your consignment.</p>
               )}
               {hasContactUpdate && (
-                <span>Your contact information has been updated.</span>
+                <p>Contact information has been updated.</p>
               )}
-            </p>
+              {hasPaymentUpdate && (
+                <p>Payment method updated to <strong>{PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.label}</strong>.</p>
+              )}
+            </div>
             <Link to="/">
               <Button className="bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
                 Back to Home
@@ -355,22 +384,6 @@ export default function ConsignmentAgreementForm() {
             </button>
 
             <button
-              onClick={() => { setShowInitialChoice(false); setShowChangePayment(true); }}
-              className="w-full bg-white rounded-xl shadow-2xl p-6 hover:shadow-3xl transition-all duration-300 group"
-              data-testid="change-payment-btn"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-r from-[#F59E0B] to-[#D97706] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <RefreshCw className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Change Payment Method</h3>
-                  <p className="text-[#666] text-sm">Already signed? Update your payment preferences.</p>
-                </div>
-              </div>
-            </button>
-
-            <button
               onClick={() => { setShowInitialChoice(false); setShowAddItems(true); }}
               className="w-full bg-white rounded-xl shadow-2xl p-6 hover:shadow-3xl transition-all duration-300 group"
               data-testid="add-more-items-btn"
@@ -381,7 +394,7 @@ export default function ConsignmentAgreementForm() {
                 </div>
                 <div className="text-left">
                   <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Update Info / Add Items</h3>
-                  <p className="text-[#666] text-sm">Update contact info or add more items to consign.</p>
+                  <p className="text-[#666] text-sm">Update contact info, payment method, or add more items.</p>
                 </div>
               </div>
             </button>
@@ -563,7 +576,7 @@ export default function ConsignmentAgreementForm() {
           {/* Back Link and Logo Row */}
           <div className="relative mt-8 mb-6">
             <button 
-              onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setUpdatePhone(""); setUpdateAddress(""); }}
+              onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setWantsToUpdatePayment(false); setUpdateEmail(""); setUpdatePhone(""); setUpdateAddress(""); setUpdatePaymentMethod(""); setUpdatePaymentDetails(""); }}
               className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#10B981] transition-colors"
               data-testid="back-to-choice-btn"
             >
@@ -647,6 +660,20 @@ export default function ConsignmentAgreementForm() {
                     {wantsToUpdateContact && (
                       <div className="p-4 space-y-4 border-t border-gray-200">
                         <div>
+                          <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
+                          <Input
+                            type="email"
+                            value={updateEmail}
+                            onChange={(e) => setUpdateEmail(e.target.value)}
+                            placeholder="your@email.com"
+                            className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                            data-testid="update-email"
+                          />
+                          {updateEmail !== addItemsAgreement.email && updateEmail.trim() && (
+                            <p className="text-xs text-amber-600 mt-1">Email will be updated from {addItemsAgreement.email}</p>
+                          )}
+                        </div>
+                        <div>
                           <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Phone Number</Label>
                           <Input
                             type="tel"
@@ -667,6 +694,77 @@ export default function ConsignmentAgreementForm() {
                             data-testid="update-address"
                           />
                         </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Update Payment Method Section */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setWantsToUpdatePayment(!wantsToUpdatePayment)}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-[#1A1A2E]">Update Payment Method</span>
+                        {addItemsAgreement.payment_method && (
+                          <span className="text-xs text-[#888]">
+                            (Current: {PAYMENT_METHODS.find(m => m.id === addItemsAgreement.payment_method)?.label || addItemsAgreement.payment_method})
+                          </span>
+                        )}
+                      </div>
+                      <span className={`transform transition-transform ${wantsToUpdatePayment ? 'rotate-180' : ''}`}>
+                        ▼
+                      </span>
+                    </button>
+                    {wantsToUpdatePayment && (
+                      <div className="p-4 space-y-4 border-t border-gray-200">
+                        <div className="grid grid-cols-2 gap-3">
+                          {PAYMENT_METHODS.map((method) => (
+                            <button
+                              key={method.id}
+                              type="button"
+                              onClick={() => { setUpdatePaymentMethod(method.id); setUpdatePaymentDetails(""); }}
+                              className={`p-3 rounded-lg border-2 transition-all duration-200 text-left ${
+                                updatePaymentMethod === method.id
+                                  ? "border-[#10B981] bg-[#10B981]/10 shadow-md"
+                                  : "border-gray-200 hover:border-[#10B981]/50 hover:bg-gray-50"
+                              }`}
+                              data-testid={`update-payment-${method.id}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                  updatePaymentMethod === method.id ? "bg-[#10B981]" : "bg-gray-200"
+                                }`}>
+                                  <CreditCard className={`w-4 h-4 ${updatePaymentMethod === method.id ? "text-white" : "text-gray-500"}`} />
+                                </div>
+                                <span className={`text-sm font-medium ${updatePaymentMethod === method.id ? "text-[#1A1A2E]" : "text-gray-600"}`}>
+                                  {method.label}
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {updatePaymentMethod && PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.needsDetails && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="overflow-hidden"
+                          >
+                            <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                              {PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.label} Details
+                            </Label>
+                            <Input
+                              type="text"
+                              value={updatePaymentDetails}
+                              onChange={(e) => setUpdatePaymentDetails(e.target.value)}
+                              placeholder={PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.placeholder}
+                              className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                              data-testid="update-payment-details"
+                            />
+                          </motion.div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -745,7 +843,7 @@ export default function ConsignmentAgreementForm() {
           </motion.div>
 
           <button 
-            onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setUpdatePhone(""); setUpdateAddress(""); }}
+            onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setWantsToUpdatePayment(false); setUpdateEmail(""); setUpdatePhone(""); setUpdateAddress(""); setUpdatePaymentMethod(""); setUpdatePaymentDetails(""); }}
             className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
             data-testid="back-link"
           >

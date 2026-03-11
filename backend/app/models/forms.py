@@ -69,8 +69,11 @@ class ConsignmentItemAddition(BaseModel):
     items_to_add: int = 0
     items_description: str = ""  # Optional description of new items
     acknowledged_terms: bool = False
+    update_email: Optional[str] = None  # New email if updating
     update_phone: Optional[str] = None  # New phone number if updating
     update_address: Optional[str] = None  # New address if updating
+    update_payment_method: Optional[str] = None  # New payment method if updating
+    update_payment_details: Optional[str] = None  # New payment details if updating
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 

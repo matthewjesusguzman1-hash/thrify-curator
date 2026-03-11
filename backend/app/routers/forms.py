@@ -142,7 +142,7 @@ async def get_payment_method_changes(admin: dict = Depends(get_admin_user)):
 
 @router.post("/forms/add-consignment-items", response_model=ConsignmentItemAddition)
 async def add_consignment_items(addition: ConsignmentItemAddition):
-    """Add more items to an existing consignment agreement or update contact info"""
+    """Add more items to an existing consignment agreement or update contact/payment info"""
     from datetime import datetime, timezone
     
     # Find existing agreement by email
@@ -170,10 +170,17 @@ async def add_consignment_items(addition: ConsignmentItemAddition):
         update_fields["items_description"] = str(new_total)
     
     # Update contact info if provided
+    if addition.update_email:
+        update_fields["email"] = addition.update_email.lower()
     if addition.update_phone:
         update_fields["phone"] = addition.update_phone
     if addition.update_address:
         update_fields["address"] = addition.update_address
+    
+    # Update payment method if provided
+    if addition.update_payment_method:
+        update_fields["payment_method"] = addition.update_payment_method
+        update_fields["payment_details"] = addition.update_payment_details or ""
     
     # Apply updates to agreement
     if update_fields:
@@ -183,24 +190,29 @@ async def add_consignment_items(addition: ConsignmentItemAddition):
         )
     
     # Create notification for admin
-    notification_message = []
+    notification_parts = []
     if addition.items_to_add > 0:
-        notification_message.append(f"added {addition.items_to_add} more items")
-    if addition.update_phone or addition.update_address:
-        notification_message.append("updated contact info")
+        notification_parts.append(f"added {addition.items_to_add} items")
+    if addition.update_email or addition.update_phone or addition.update_address:
+        notification_parts.append("updated contact info")
+    if addition.update_payment_method:
+        notification_parts.append("changed payment method")
     
     notification = AdminNotification(
         type="consignment_items_added",
         employee_id=addition_dict["id"],
         employee_name=addition_dict["full_name"],
-        message=f"{addition_dict['full_name']} {' and '.join(notification_message)}",
+        message=f"{addition_dict['full_name']} {', '.join(notification_parts)}" if notification_parts else f"{addition_dict['full_name']} updated their agreement",
         details={
             "email": addition.email,
             "items_added": addition.items_to_add,
             "new_total": update_fields.get("items_description", existing.get("items_description", "0")),
             "description": addition.items_description,
+            "email_updated": bool(addition.update_email),
             "phone_updated": bool(addition.update_phone),
-            "address_updated": bool(addition.update_address)
+            "address_updated": bool(addition.update_address),
+            "payment_updated": bool(addition.update_payment_method),
+            "new_payment_method": addition.update_payment_method
         }
     )
     await db.admin_notifications.insert_one(notification.model_dump())
