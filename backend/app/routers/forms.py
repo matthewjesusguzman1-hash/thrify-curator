@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from typing import List
+from datetime import datetime, timezone
 import os
 import uuid as uuid_module
 
 from app.database import db
 from app.dependencies import get_admin_user
-from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus, PaymentMethodUpdate, ConsignmentItemAddition
+from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus, PaymentMethodUpdate, ConsignmentItemAddition, ConsignmentApproval
 from app.models.notifications import AdminNotification
 
 router = APIRouter(tags=["Forms"])
@@ -474,6 +475,101 @@ async def delete_consignment_agreement(submission_id: str, admin: dict = Depends
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Submission not found")
     return {"message": "Submission deleted"}
+
+
+@router.put("/admin/forms/consignment-agreements/{submission_id}/approve")
+async def approve_consignment_agreement(submission_id: str, approval: ConsignmentApproval, admin: dict = Depends(get_admin_user)):
+    """Approve or reject a consignment agreement with item acceptance details"""
+    update_data = {
+        "approval_status": approval.approval_status,
+        "items_accepted": approval.items_accepted,
+        "rejected_items_action": approval.rejected_items_action,
+        "admin_notes": approval.admin_notes,
+        "reviewed_at": datetime.now(timezone.utc).isoformat(),
+        "reviewed_by": admin.get("name", admin.get("email", "Admin"))
+    }
+    
+    result = await db.consignment_agreements.update_one(
+        {"id": submission_id},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Agreement not found")
+    
+    # Get agreement details for notification
+    agreement = await db.consignment_agreements.find_one({"id": submission_id}, {"_id": 0})
+    
+    # Create notification
+    status_text = "approved" if approval.approval_status == "approved" else "rejected"
+    notification = AdminNotification(
+        type="consignment_approval",
+        employee_id=submission_id,
+        employee_name=agreement.get("full_name", "Unknown") if agreement else "Unknown",
+        message=f"Consignment agreement {status_text} - {approval.items_accepted} items accepted",
+        details={
+            "approval_status": approval.approval_status,
+            "items_accepted": approval.items_accepted,
+            "rejected_items_action": approval.rejected_items_action,
+            "admin_notes": approval.admin_notes
+        }
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
+    return {"message": f"Agreement {status_text}", "approval_status": approval.approval_status}
+
+
+@router.put("/admin/forms/item-additions/{submission_id}/approve")
+async def approve_item_addition(submission_id: str, approval: ConsignmentApproval, admin: dict = Depends(get_admin_user)):
+    """Approve or reject an item addition with item acceptance details"""
+    update_data = {
+        "approval_status": approval.approval_status,
+        "items_accepted": approval.items_accepted,
+        "rejected_items_action": approval.rejected_items_action,
+        "admin_notes": approval.admin_notes,
+        "reviewed_at": datetime.now(timezone.utc).isoformat(),
+        "reviewed_by": admin.get("name", admin.get("email", "Admin"))
+    }
+    
+    result = await db.consignment_item_additions.update_one(
+        {"id": submission_id},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item addition not found")
+    
+    # Get addition details for notification
+    addition = await db.consignment_item_additions.find_one({"id": submission_id}, {"_id": 0})
+    
+    # Create notification
+    status_text = "approved" if approval.approval_status == "approved" else "rejected"
+    notification = AdminNotification(
+        type="item_addition_approval",
+        employee_id=submission_id,
+        employee_name=addition.get("full_name", "Unknown") if addition else "Unknown",
+        message=f"Item addition {status_text} - {approval.items_accepted} items accepted",
+        details={
+            "approval_status": approval.approval_status,
+            "items_accepted": approval.items_accepted,
+            "rejected_items_action": approval.rejected_items_action,
+            "admin_notes": approval.admin_notes
+        }
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
+    return {"message": f"Item addition {status_text}", "approval_status": approval.approval_status}
+
+
+@router.get("/admin/forms/pending-approvals")
+async def get_pending_approvals(admin: dict = Depends(get_admin_user)):
+    """Get count of pending consignment approvals"""
+    pending_agreements = await db.consignment_agreements.count_documents({"approval_status": "pending"})
+    pending_additions = await db.consignment_item_additions.count_documents({"approval_status": "pending"})
+    
+    return {
+        "pending_agreements": pending_agreements,
+        "pending_additions": pending_additions,
+        "total_pending": pending_agreements + pending_additions
+    }
 
 
 @router.get("/admin/forms/summary")

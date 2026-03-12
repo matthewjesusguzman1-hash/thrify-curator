@@ -54,6 +54,13 @@ class ConsignmentAgreement(BaseModel):
     signature_date: str = ""
     agreed_to_terms: bool
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # Approval workflow fields
+    approval_status: str = "pending"  # pending, approved, rejected
+    items_accepted: int = 0  # Number of items accepted for consignment
+    rejected_items_action: str = ""  # "return" or "donate"
+    admin_notes: str = ""  # Notes from admin during review
+    reviewed_at: Optional[str] = None  # Timestamp when reviewed
+    reviewed_by: Optional[str] = None  # Admin who reviewed
 
 
 class PaymentMethodUpdate(BaseModel):
@@ -82,6 +89,21 @@ class ConsignmentItemAddition(BaseModel):
     signature: Optional[str] = None  # Electronic signature for the update
     signature_date: Optional[str] = None  # Date of signature
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # Approval workflow fields
+    approval_status: str = "pending"  # pending, approved, rejected
+    items_accepted: int = 0  # Number of items accepted for consignment
+    rejected_items_action: str = ""  # "return" or "donate"
+    admin_notes: str = ""  # Notes from admin during review
+    reviewed_at: Optional[str] = None  # Timestamp when reviewed
+    reviewed_by: Optional[str] = None  # Admin who reviewed
+
+
+class ConsignmentApproval(BaseModel):
+    """Model for approving/rejecting consignment submissions"""
+    approval_status: str  # "approved" or "rejected"
+    items_accepted: int = 0  # Number of items accepted
+    rejected_items_action: str = ""  # "return" or "donate"
+    admin_notes: str = ""  # Notes from admin
 
 
 class UpdateSubmissionStatus(BaseModel):

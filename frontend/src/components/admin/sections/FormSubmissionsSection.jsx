@@ -33,7 +33,12 @@ import {
   CreditCard,
   Calendar,
   User,
-  Edit3
+  Edit3,
+  CheckCircle,
+  XCircle,
+  Clock,
+  RotateCcw,
+  Gift
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -71,6 +76,19 @@ export default function FormSubmissionsSection({
   const [messageModal, setMessageModal] = useState({ open: false, update: null });
   const [messageContent, setMessageContent] = useState("");
   const [deletingUpdate, setDeletingUpdate] = useState(null);
+  
+  // Approval modal state
+  const [approvalModal, setApprovalModal] = useState({ 
+    open: false, 
+    submission: null, 
+    type: null // 'agreement' or 'addition'
+  });
+  const [approvalForm, setApprovalForm] = useState({
+    approval_status: "approved",
+    items_accepted: 0,
+    rejected_items_action: "return",
+    admin_notes: ""
+  });
 
   // Auto-refresh when section is expanded
   useEffect(() => {
@@ -268,6 +286,73 @@ Thrifty Curator Team`;
     toast.success(`Opening email client for ${messageModal.update.email}`);
     setMessageModal({ open: false, update: null });
     setMessageContent("");
+  };
+
+  // Open approval modal for consignment agreement or item addition
+  const openApprovalModal = (submission, type) => {
+    const totalItems = type === 'agreement' 
+      ? parseInt(submission.items_description) || 0
+      : submission.items_to_add || 0;
+    
+    setApprovalForm({
+      approval_status: "approved",
+      items_accepted: totalItems,
+      rejected_items_action: "return",
+      admin_notes: ""
+    });
+    setApprovalModal({ open: true, submission, type });
+  };
+
+  // Handle approval submission
+  const handleApproval = async () => {
+    const { submission, type } = approvalModal;
+    if (!submission) return;
+    
+    try {
+      const endpoint = type === 'agreement'
+        ? `${API}/admin/forms/consignment-agreements/${submission.id}/approve`
+        : `${API}/admin/forms/item-additions/${submission.id}/approve`;
+      
+      await axios.put(endpoint, approvalForm, getAuthHeader());
+      
+      toast.success(
+        approvalForm.approval_status === 'approved' 
+          ? `Approved! ${approvalForm.items_accepted} items accepted for consignment`
+          : `Submission marked as rejected`
+      );
+      
+      setApprovalModal({ open: false, submission: null, type: null });
+      fetchFormSubmissions();
+      if (fetchItemAdditions) fetchItemAdditions();
+    } catch (error) {
+      console.error("Approval error:", error);
+      toast.error("Failed to process approval");
+    }
+  };
+
+  // Get approval status badge
+  const getApprovalStatusBadge = (status) => {
+    switch (status) {
+      case 'approved':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">
+            <CheckCircle className="w-3 h-3" /> Approved
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">
+            <XCircle className="w-3 h-3" /> Rejected
+          </span>
+        );
+      case 'pending':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">
+            <Clock className="w-3 h-3" /> Pending Review
+          </span>
+        );
+    }
   };
 
   const getFilteredFormSubmissions = (submissions) => {
@@ -641,7 +726,7 @@ Thrifty Curator Team`;
                             <SortableHeader table="consignmentAgreements" sortKey="email">Email</SortableHeader>
                             <SortableHeader table="consignmentAgreements" sortKey="agreed_percentage">Percentage</SortableHeader>
                             <SortableHeader table="consignmentAgreements" sortKey="submitted_at">Signed</SortableHeader>
-                            <SortableHeader table="consignmentAgreements" sortKey="status">Status</SortableHeader>
+                            <th>Approval</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -652,7 +737,14 @@ Thrifty Curator Team`;
                               <td>{agreement.email}</td>
                               <td>{agreement.agreed_percentage}</td>
                               <td className="text-sm text-[#888]">{formatSubmissionDate(agreement.submitted_at)}</td>
-                              <td>{getStatusBadge(agreement.status)}</td>
+                              <td>
+                                <div className="flex flex-col gap-1">
+                                  {getApprovalStatusBadge(agreement.approval_status || 'pending')}
+                                  {agreement.approval_status === 'approved' && agreement.items_accepted > 0 && (
+                                    <span className="text-xs text-green-600">{agreement.items_accepted} items</span>
+                                  )}
+                                </div>
+                              </td>
                               <td>
                                 <div className="flex items-center gap-1">
                                   <Button
@@ -664,6 +756,18 @@ Thrifty Curator Team`;
                                   >
                                     <Eye className="w-4 h-4" />
                                   </Button>
+                                  {(!agreement.approval_status || agreement.approval_status === 'pending') && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openApprovalModal(agreement, 'agreement')}
+                                      className="text-green-600 hover:text-green-800"
+                                      data-testid={`approve-agreement-${agreement.id}`}
+                                      title="Review & Approve"
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -705,6 +809,7 @@ Thrifty Curator Team`;
                             <th>Type</th>
                             <th>Changes</th>
                             <SortableHeader table="updates" sortKey="submitted_at">Date</SortableHeader>
+                            <th>Approval</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -767,6 +872,18 @@ Thrifty Curator Team`;
                                 {formatSubmissionDate(update.submitted_at || update.changed_at)}
                               </td>
                               <td>
+                                {update.source === 'item_addition' && update.items_to_add > 0 ? (
+                                  <div className="flex flex-col gap-1">
+                                    {getApprovalStatusBadge(update.approval_status || 'pending')}
+                                    {update.approval_status === 'approved' && update.items_accepted > 0 && (
+                                      <span className="text-xs text-green-600">{update.items_accepted} items</span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-[#888]">N/A</span>
+                                )}
+                              </td>
+                              <td>
                                 <div className="flex items-center gap-1">
                                   <Button
                                     variant="ghost"
@@ -801,6 +918,18 @@ Thrifty Curator Team`;
                                   >
                                     <MessageSquare className="w-4 h-4" />
                                   </Button>
+                                  {update.source === 'item_addition' && update.items_to_add > 0 && (!update.approval_status || update.approval_status === 'pending') && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openApprovalModal(update, 'addition')}
+                                      className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                                      title="Review & Approve"
+                                      data-testid={`approve-update-${update.id}`}
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -823,6 +952,144 @@ Thrifty Curator Team`;
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Approval Modal */}
+      <AnimatePresence>
+        {approvalModal.open && approvalModal.submission && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setApprovalModal({ open: false, submission: null, type: null })}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+              data-testid="approval-modal"
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-[#10B981] to-[#059669] p-4 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-white">Review Consignment</h3>
+                  <button
+                    onClick={() => setApprovalModal({ open: false, submission: null, type: null })}
+                    className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+                <p className="text-white/80 text-sm mt-1">
+                  {approvalModal.submission?.full_name}
+                </p>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-5">
+                {/* Decision */}
+                <div className="space-y-2">
+                  <Label className="font-medium">Decision</Label>
+                  <Select
+                    value={approvalForm.approval_status}
+                    onValueChange={(value) => setApprovalForm({ ...approvalForm, approval_status: value })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="approved">
+                        <span className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" /> Approve
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="rejected">
+                        <span className="flex items-center gap-2">
+                          <XCircle className="w-4 h-4 text-red-600" /> Reject
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Items Accepted */}
+                <div className="space-y-2">
+                  <Label className="font-medium">Items Accepted for Consignment</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={approvalForm.items_accepted}
+                    onChange={(e) => setApprovalForm({ ...approvalForm, items_accepted: parseInt(e.target.value) || 0 })}
+                    className="w-full"
+                    data-testid="items-accepted-input"
+                  />
+                  <p className="text-xs text-[#888]">Enter the number of items you're accepting</p>
+                </div>
+
+                {/* Rejected Items Action */}
+                <div className="space-y-2">
+                  <Label className="font-medium">What happens to items not consigned?</Label>
+                  <Select
+                    value={approvalForm.rejected_items_action}
+                    onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select action..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="return">
+                        <span className="flex items-center gap-2">
+                          <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="donate">
+                        <span className="flex items-center gap-2">
+                          <Gift className="w-4 h-4 text-purple-600" /> Donate
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Admin Notes */}
+                <div className="space-y-2">
+                  <Label className="font-medium">Notes (Optional)</Label>
+                  <Textarea
+                    value={approvalForm.admin_notes}
+                    onChange={(e) => setApprovalForm({ ...approvalForm, admin_notes: e.target.value })}
+                    placeholder="Any notes about this review..."
+                    rows={3}
+                    className="w-full"
+                    data-testid="admin-notes-input"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t p-4 flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setApprovalModal({ open: false, submission: null, type: null })}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleApproval}
+                  className={approvalForm.approval_status === 'approved' 
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "bg-red-600 hover:bg-red-700 text-white"
+                  }
+                  data-testid="submit-approval-btn"
+                >
+                  {approvalForm.approval_status === 'approved' ? 'Approve' : 'Reject'}
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

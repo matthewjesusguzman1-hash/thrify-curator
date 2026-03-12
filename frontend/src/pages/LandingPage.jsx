@@ -29,14 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
-
-// Import reCAPTCHA hook (will be undefined if provider not available)
-let useGoogleReCaptcha;
-try {
-  useGoogleReCaptcha = require("react-google-recaptcha-v3").useGoogleReCaptcha;
-} catch (e) {
-  useGoogleReCaptcha = () => ({ executeRecaptcha: null });
-}
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
 const TIKTOK_URL = process.env.REACT_APP_TIKTOK_URL;
@@ -104,7 +97,7 @@ const platforms = [
 const formLinks = [
   { name: "Job Application", icon: Briefcase, path: "/job-application", accent: "cyan" },
   { name: "Consignment Inquiry", icon: FileText, path: "/consignment-inquiry", accent: "pink" },
-  { name: "Consignment Agreement", icon: ClipboardCheck, path: "/consignment-agreement", accent: "purple" },
+  { name: "Consignment Portal", icon: ClipboardCheck, path: "/consignment-agreement", accent: "purple" },
 ];
 
 // Connect links
@@ -123,8 +116,8 @@ const isCapacitor = typeof window !== 'undefined' && window.Capacitor !== undefi
 export default function LandingPage() {
   const [shareLoading, setShareLoading] = useState(false);
   
-  // reCAPTCHA hook - only available on web when provider is present
-  const { executeRecaptcha } = useGoogleReCaptcha ? useGoogleReCaptcha() : { executeRecaptcha: null };
+  // reCAPTCHA hook - always call it (hook rules), but may return null executeRecaptcha
+  const { executeRecaptcha } = useGoogleReCaptcha();
   
   // PWA Install state
   const [deferredPrompt, setDeferredPrompt] = useState(null);
