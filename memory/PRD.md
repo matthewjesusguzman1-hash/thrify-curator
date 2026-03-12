@@ -2417,3 +2417,42 @@ RECAPTCHA_THRESHOLD=0.5
 - Capacitor apps are detected via `window.Capacitor`
 - reCAPTCHA is NOT loaded for mobile apps
 - Honeypot + Rate Limiting still protect mobile
+
+
+
+## Consignment Approval Workflow Bug Fix (March 12, 2026)
+
+### Issue
+Admin dashboard "Fail to approve" error when attempting to approve "Add Items" submissions from the Updates tab.
+
+### Root Cause
+Two bugs were identified:
+
+1. **Double `/api` in URL Path** (FormSubmissionsSection.jsx):
+   - The `API` constant was defined as `${process.env.REACT_APP_BACKEND_URL}/api`
+   - The `handleItemAdditionApproval` function incorrectly used `${API}/api/admin/forms/...`
+   - This resulted in duplicate path: `https://domain.com/api/api/admin/forms/...`
+
+2. **Wrong localStorage Key** (FormSubmissionModal.jsx):
+   - `getAuthHeader()` was using `localStorage.getItem("adminToken")`
+   - The app stores tokens under `localStorage.getItem("token")`
+   - This caused "Not authenticated" errors
+
+### Fixes Applied
+1. Changed line 295 in `FormSubmissionsSection.jsx`:
+   - From: `${API}/api/admin/forms/item-additions/${viewingUpdate.id}/approve`
+   - To: `${API}/admin/forms/item-additions/${viewingUpdate.id}/approve`
+
+2. Changed line 47 in `FormSubmissionModal.jsx`:
+   - From: `localStorage.getItem("adminToken")`
+   - To: `localStorage.getItem("token")`
+
+### Testing
+- Backend API endpoints verified with curl
+- E2E tests created: `/app/tests/e2e/approval-workflows.spec.ts`
+- Both item additions and consignment agreements approval workflows passing
+
+### Related Files
+- `/app/frontend/src/components/admin/sections/FormSubmissionsSection.jsx`
+- `/app/frontend/src/components/admin/modals/FormSubmissionModal.jsx`
+- `/app/backend/app/routers/forms.py`
