@@ -1137,7 +1137,17 @@ Thrifty Curator Team`;
                                   onValueChange={(value) => setApprovalForm({ ...approvalForm, approval_status: value })}
                                 >
                                   <SelectTrigger className="w-full bg-white">
-                                    <SelectValue />
+                                    <SelectValue>
+                                      {approvalForm.approval_status === 'approved' ? (
+                                        <span className="flex items-center gap-2">
+                                          <CheckCircle className="w-4 h-4 text-green-600" /> Approve
+                                        </span>
+                                      ) : (
+                                        <span className="flex items-center gap-2">
+                                          <XCircle className="w-4 h-4 text-red-600" /> Reject
+                                        </span>
+                                      )}
+                                    </SelectValue>
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="approved">
@@ -1177,7 +1187,17 @@ Thrifty Curator Team`;
                                 onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
                               >
                                 <SelectTrigger className="w-full bg-white">
-                                  <SelectValue placeholder="Select action..." />
+                                  <SelectValue>
+                                    {approvalForm.rejected_items_action === 'donate' ? (
+                                      <span className="flex items-center gap-2">
+                                        <Gift className="w-4 h-4 text-purple-600" /> Donate
+                                      </span>
+                                    ) : (
+                                      <span className="flex items-center gap-2">
+                                        <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
+                                      </span>
+                                    )}
+                                  </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="return">
@@ -1229,26 +1249,6 @@ Thrifty Curator Team`;
                     )}
                   </>
                 )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="sticky bottom-0 bg-[#F9F6F7] p-4 rounded-b-2xl border-t border-[#eee] flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setViewingUpdate(null)}
-                  className="text-[#666]"
-                >
-                  Close
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleDownloadUpdate(viewingUpdate)}
-                  className="bg-[#10B981] hover:bg-[#059669] text-white"
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  Download PDF
-                </Button>
               </div>
             </motion.div>
           </motion.div>
