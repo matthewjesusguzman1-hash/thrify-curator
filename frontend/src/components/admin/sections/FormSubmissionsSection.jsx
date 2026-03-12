@@ -64,7 +64,6 @@ export default function FormSubmissionsSection({
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState("job_applications");
   const [formSearchQuery, setFormSearchQuery] = useState("");
-  const [formStatusFilter, setFormStatusFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState({
     jobApplications: { key: "submitted_at", direction: "desc" },
     consignmentInquiries: { key: "submitted_at", direction: "desc" },
@@ -77,15 +76,6 @@ export default function FormSubmissionsSection({
   const [messageModal, setMessageModal] = useState({ open: false, update: null });
   const [messageContent, setMessageContent] = useState("");
   const [deletingUpdate, setDeletingUpdate] = useState(null);
-  
-  // Approval form state for item additions
-  const [approvalForm, setApprovalForm] = useState({
-    approval_status: "approved",
-    items_accepted: 0,
-    rejected_items_action: "return",
-    admin_notes: ""
-  });
-  const [submittingApproval, setSubmittingApproval] = useState(false);
 
   // Auto-refresh when section is expanded
   useEffect(() => {
@@ -285,48 +275,13 @@ Thrifty Curator Team`;
     setMessageContent("");
   };
 
-  // Handle approval for item additions
-  const handleItemAdditionApproval = async () => {
-    if (!viewingUpdate) return;
-    
-    setSubmittingApproval(true);
-    try {
-      await axios.put(
-        `${API}/admin/forms/item-additions/${viewingUpdate.id}/approve`,
-        approvalForm,
-        getAuthHeader()
-      );
-      
-      toast.success(
-        approvalForm.approval_status === 'approved' 
-          ? `Approved! ${approvalForm.items_accepted} items accepted for consignment`
-          : `Submission marked as rejected`
-      );
-      
-      setViewingUpdate(null);
-      fetchFormSubmissions();
-      if (fetchItemAdditions) fetchItemAdditions();
-    } catch (error) {
-      console.error("Approval error:", error);
-      toast.error("Failed to process approval. Please try again.");
-    } finally {
-      setSubmittingApproval(false);
-    }
-  };
-
-  // Reset approval form when opening a new update
+  // Handle view update - route to the appropriate modal
   const handleViewUpdate = (update) => {
     // Route item additions through the main FormSubmissionModal
     if (update.items_to_add > 0 || update.source === 'item_addition') {
       onViewSubmission({ ...update, formType: "item_additions" });
     } else {
       // For payment changes and other updates, use the inline modal
-      setApprovalForm({
-        approval_status: update.approval_status || "approved",
-        items_accepted: update.items_accepted || update.items_to_add || 0,
-        rejected_items_action: update.rejected_items_action || "return",
-        admin_notes: update.admin_notes || ""
-      });
       setViewingUpdate(update);
     }
   };
@@ -343,10 +298,6 @@ Thrifty Curator Team`;
         const phone = (item.phone || '').toLowerCase();
         return name.includes(query) || email.includes(query) || phone.includes(query);
       });
-    }
-    
-    if (formStatusFilter !== 'all') {
-      filtered = filtered.filter(item => item.status === formStatusFilter);
     }
     
     return filtered;
@@ -519,28 +470,12 @@ Thrifty Curator Team`;
                     data-testid="form-search-input"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-[#888]" />
-                  <Select value={formStatusFilter} onValueChange={setFormStatusFilter}>
-                    <SelectTrigger className="w-[140px] h-9 text-sm bg-white">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="reviewed">Reviewed</SelectItem>
-                      <SelectItem value="contacted">Contacted</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {(formSearchQuery || formStatusFilter !== 'all') && (
+                {formSearchQuery && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
                       setFormSearchQuery("");
-                      setFormStatusFilter("all");
                     }}
                     className="text-[#888] hover:text-[#333]"
                   >
@@ -1100,7 +1035,7 @@ Thrifty Curator Team`;
                         </div>
 
                         {/* Show review details if already reviewed */}
-                        {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' ? (
+                        {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' && (
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-3">
                               <div className="p-3 bg-white rounded-lg">
@@ -1130,125 +1065,6 @@ Thrifty Curator Team`;
                                 {viewingUpdate.reviewed_by && ` by ${viewingUpdate.reviewed_by}`}
                               </p>
                             )}
-                          </div>
-                        ) : (
-                          /* Show approval form if pending */
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              {/* Decision */}
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium">Decision</Label>
-                                <Select
-                                  value={approvalForm.approval_status}
-                                  onValueChange={(value) => setApprovalForm({ ...approvalForm, approval_status: value })}
-                                >
-                                  <SelectTrigger className="w-full bg-white">
-                                    <SelectValue>
-                                      {approvalForm.approval_status === 'approved' ? (
-                                        <span className="flex items-center gap-2">
-                                          <CheckCircle className="w-4 h-4 text-green-600" /> Approve
-                                        </span>
-                                      ) : (
-                                        <span className="flex items-center gap-2">
-                                          <XCircle className="w-4 h-4 text-red-600" /> Reject
-                                        </span>
-                                      )}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="approved">
-                                      <span className="flex items-center gap-2">
-                                        <CheckCircle className="w-4 h-4 text-green-600" /> Approve
-                                      </span>
-                                    </SelectItem>
-                                    <SelectItem value="rejected">
-                                      <span className="flex items-center gap-2">
-                                        <XCircle className="w-4 h-4 text-red-600" /> Reject
-                                      </span>
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {/* Items Accepted */}
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium">Items Accepted</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={viewingUpdate.items_to_add}
-                                  value={approvalForm.items_accepted}
-                                  onChange={(e) => setApprovalForm({ ...approvalForm, items_accepted: parseInt(e.target.value) || 0 })}
-                                  className="bg-white"
-                                  data-testid="items-accepted-input"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Rejected Items Action */}
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">What happens to items not consigned?</Label>
-                              <Select
-                                value={approvalForm.rejected_items_action}
-                                onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
-                              >
-                                <SelectTrigger className="w-full bg-white">
-                                  <SelectValue>
-                                    {approvalForm.rejected_items_action === 'donate' ? (
-                                      <span className="flex items-center gap-2">
-                                        <Gift className="w-4 h-4 text-purple-600" /> Donate
-                                      </span>
-                                    ) : (
-                                      <span className="flex items-center gap-2">
-                                        <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
-                                      </span>
-                                    )}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="return">
-                                    <span className="flex items-center gap-2">
-                                      <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
-                                    </span>
-                                  </SelectItem>
-                                  <SelectItem value="donate">
-                                    <span className="flex items-center gap-2">
-                                      <Gift className="w-4 h-4 text-purple-600" /> Donate
-                                    </span>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Admin Notes */}
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Notes (Optional)</Label>
-                              <Textarea
-                                value={approvalForm.admin_notes}
-                                onChange={(e) => setApprovalForm({ ...approvalForm, admin_notes: e.target.value })}
-                                placeholder="Any notes about this review..."
-                                rows={2}
-                                className="bg-white"
-                                data-testid="admin-notes-input"
-                              />
-                            </div>
-
-                            {/* Submit Button */}
-                            <Button
-                              onClick={handleItemAdditionApproval}
-                              disabled={submittingApproval}
-                              className={`w-full ${approvalForm.approval_status === 'approved' 
-                                ? "bg-green-600 hover:bg-green-700 text-white"
-                                : "bg-red-600 hover:bg-red-700 text-white"
-                              }`}
-                              data-testid="submit-approval-btn"
-                            >
-                              {submittingApproval ? "Processing..." : (
-                                approvalForm.approval_status === 'approved' 
-                                  ? `Approve (${approvalForm.items_accepted} of ${viewingUpdate.items_to_add} items)`
-                                  : 'Reject Submission'
-                              )}
-                            </Button>
                           </div>
                         )}
                       </div>
