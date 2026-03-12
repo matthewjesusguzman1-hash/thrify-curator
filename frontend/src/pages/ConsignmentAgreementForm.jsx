@@ -998,24 +998,15 @@ export default function ConsignmentAgreementForm() {
                               </motion.div>
                             )}
 
-                            {/* Custom Profit Split */}
-                            <div>
-                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
-                                Custom Profit Split
-                                <span className="font-normal text-[#888] ml-2">(Current: {addItemsAgreement.agreed_percentage || "50/50"})</span>
-                              </Label>
-                              <Input
-                                type="text"
-                                value={updateCustomSplit}
-                                onChange={(e) => setUpdateCustomSplit(e.target.value)}
-                                placeholder="Leave blank to keep current split"
-                                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg placeholder:text-[#999] placeholder:italic"
-                                data-testid="update-custom-split"
-                              />
-                              <p className="text-xs text-[#888] mt-1">
-                                If a different split was agreed upon, enter it here (e.g., "60/40", "70/30")
-                              </p>
-                            </div>
+                            {/* Submit Button for Contact Updates */}
+                            <Button
+                              onClick={handleAddItems}
+                              disabled={loading}
+                              className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-medium py-2.5 rounded-lg"
+                              data-testid="submit-contact-update-btn"
+                            >
+                              {loading ? "Saving..." : "Save Changes"}
+                            </Button>
                           </div>
                         </motion.div>
                       )}
@@ -1152,6 +1143,25 @@ export default function ConsignmentAgreementForm() {
                               )}
                             </div>
 
+                            {/* Profit Split */}
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                Profit Split
+                                <span className="font-normal text-[#888] ml-2">(Current: {addItemsAgreement.agreed_percentage || "50/50"})</span>
+                              </Label>
+                              <Input
+                                type="text"
+                                value={updateCustomSplit}
+                                onChange={(e) => setUpdateCustomSplit(e.target.value)}
+                                placeholder="Leave blank to keep current split"
+                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg placeholder:text-[#999] placeholder:italic"
+                                data-testid="update-custom-split"
+                              />
+                              <p className="text-xs text-[#888] mt-1">
+                                If a different split was agreed upon, enter it here (e.g., "60/40", "70/30")
+                              </p>
+                            </div>
+
                             {/* Terms and Conditions */}
                             <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
                               <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
@@ -1194,35 +1204,28 @@ export default function ConsignmentAgreementForm() {
                                 id="acknowledge-terms"
                                 checked={acknowledgedTerms}
                                 onCheckedChange={(checked) => setAcknowledgedTerms(checked)}
-                                className="w-6 h-6 mt-1 border-2 border-gray-300 data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
+                                className="w-6 h-6 mt-1 border-2 border-gray-300 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981]"
                                 data-testid="acknowledge-terms-checkbox"
                               />
                               <Label htmlFor="acknowledge-terms" className="text-sm text-gray-600 cursor-pointer">
                                 I have read and agree to the terms and conditions above. I understand that by typing my name above, I am providing an electronic signature.
                               </Label>
                             </div>
+
+                            {/* Submit Button for Add Items */}
+                            <Button
+                              onClick={handleAddItems}
+                              disabled={loading || !acknowledgedTerms}
+                              className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-medium py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                              data-testid="submit-add-items-btn"
+                            >
+                              {loading ? "Submitting..." : "Add Items & Submit"}
+                            </Button>
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
-
-                  {/* Submit Button */}
-                  <Button
-                    onClick={handleAddItems}
-                    disabled={loading || (isAddItemsExpanded && itemsToAdd && parseInt(itemsToAdd) > 0 && !acknowledgedTerms)}
-                    className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    data-testid="submit-add-items-btn"
-                  >
-                    {loading ? (
-                      "Submitting..."
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        {isAddItemsExpanded && itemsToAdd && parseInt(itemsToAdd) > 0 ? "Add Items & Submit" : "Update Information"}
-                      </>
-                    )}
-                  </Button>
                 </div>
               )}
             </div>
