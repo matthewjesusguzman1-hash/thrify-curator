@@ -300,6 +300,13 @@ async def add_consignment_items(addition: ConsignmentItemAddition):
     addition_dict["full_name"] = existing.get("full_name", addition.full_name)
     addition_dict["email"] = addition.email.lower()
     
+    # Set approval status based on whether items are being added
+    # Info-only updates don't need approval - they're applied immediately
+    if addition.items_to_add > 0:
+        addition_dict["approval_status"] = "pending"  # Items need admin approval
+    else:
+        addition_dict["approval_status"] = "info_update"  # No approval needed, just a record
+    
     # Save to database
     await db.consignment_item_additions.insert_one(addition_dict)
     

@@ -1079,7 +1079,7 @@ Thrifty Curator Team`;
                             <CheckCircle className="w-5 h-5 text-[#8B5CF6]" />
                             Consignment Review
                           </h3>
-                          {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' ? (
+                          {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' && viewingUpdate.approval_status !== 'info_update' ? (
                             <span className={`inline-flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full ${
                               viewingUpdate.approval_status === 'approved' 
                                 ? 'bg-green-100 text-green-700' 
@@ -1098,7 +1098,7 @@ Thrifty Curator Team`;
                           )}
                         </div>
 
-                        {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' ? (
+                        {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' && viewingUpdate.approval_status !== 'info_update' ? (
                           /* Show review details if already reviewed */
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-3">

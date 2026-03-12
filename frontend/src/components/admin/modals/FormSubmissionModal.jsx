@@ -727,169 +727,171 @@ Thrifty Curator Team`
                 </div>
               )}
 
-              {/* Consignment Review Section */}
-              <div className="mt-6 p-4 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10 rounded-xl border border-[#10B981]/20">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-[#333] flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-[#10B981]" />
-                    Consignment Review
-                  </h3>
-                  {getApprovalStatusBadge(submission.approval_status || 'pending')}
-                </div>
-
-                {submission.approval_status && submission.approval_status !== 'pending' ? (
-                  /* Show review details if already reviewed */
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-white rounded-lg">
-                        <p className="text-xs text-[#888]">Items Accepted</p>
-                        <p className="font-bold text-green-600 text-lg">{submission.items_accepted || 0}</p>
-                      </div>
-                      <div className="p-3 bg-white rounded-lg">
-                        <p className="text-xs text-[#888]">Non-Consigned Items</p>
-                        <p className="font-medium text-[#333] flex items-center gap-1">
-                          {submission.rejected_items_action === 'donate' ? (
-                            <><Gift className="w-4 h-4 text-purple-500" /> Will be Donated</>
-                          ) : (
-                            <><RotateCcw className="w-4 h-4 text-blue-500" /> Will be Returned</>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    {submission.admin_notes && (
-                      <div className="p-3 bg-white rounded-lg">
-                        <p className="text-xs text-[#888]">Admin Notes</p>
-                        <p className="text-[#333] text-sm">{submission.admin_notes}</p>
-                      </div>
-                    )}
-                    {submission.reviewed_at && (
-                      <p className="text-xs text-[#888] text-right">
-                        Reviewed: {formatSubmissionDate(submission.reviewed_at)}
-                        {submission.reviewed_by && ` by ${submission.reviewed_by}`}
-                      </p>
-                    )}
+              {/* Consignment Review Section - Only show for item additions, not info-only updates */}
+              {submission.items_to_add > 0 && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10 rounded-xl border border-[#10B981]/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-[#333] flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-[#10B981]" />
+                      Consignment Review
+                    </h3>
+                    {getApprovalStatusBadge(submission.approval_status || 'pending')}
                   </div>
-                ) : (
-                  /* Show approval form if pending */
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Decision */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Decision</Label>
-                        <Select
-                          value={approvalForm.approval_status}
-                          onValueChange={(value) => setApprovalForm({ ...approvalForm, approval_status: value })}
-                        >
-                          <SelectTrigger className="w-full bg-white">
-                            <SelectValue>
-                              {approvalForm.approval_status === 'approved' ? (
+
+                  {submission.approval_status && submission.approval_status !== 'pending' && submission.approval_status !== 'info_update' ? (
+                    /* Show review details if already reviewed */
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-xs text-[#888]">Items Accepted</p>
+                          <p className="font-bold text-green-600 text-lg">{submission.items_accepted || 0}</p>
+                        </div>
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-xs text-[#888]">Non-Consigned Items</p>
+                          <p className="font-medium text-[#333] flex items-center gap-1">
+                            {submission.rejected_items_action === 'donate' ? (
+                              <><Gift className="w-4 h-4 text-purple-500" /> Will be Donated</>
+                            ) : (
+                              <><RotateCcw className="w-4 h-4 text-blue-500" /> Will be Returned</>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      {submission.admin_notes && (
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-xs text-[#888]">Admin Notes</p>
+                          <p className="text-[#333] text-sm">{submission.admin_notes}</p>
+                        </div>
+                      )}
+                      {submission.reviewed_at && (
+                        <p className="text-xs text-[#888] text-right">
+                          Reviewed: {formatSubmissionDate(submission.reviewed_at)}
+                          {submission.reviewed_by && ` by ${submission.reviewed_by}`}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    /* Show approval form if pending */
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Decision */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Decision</Label>
+                          <Select
+                            value={approvalForm.approval_status}
+                            onValueChange={(value) => setApprovalForm({ ...approvalForm, approval_status: value })}
+                          >
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue>
+                                {approvalForm.approval_status === 'approved' ? (
+                                  <span className="flex items-center gap-2">
+                                    <CheckCircle className="w-4 h-4 text-green-600" /> Approve
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-2">
+                                    <XCircle className="w-4 h-4 text-red-600" /> Reject
+                                  </span>
+                                )}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="approved">
                                 <span className="flex items-center gap-2">
                                   <CheckCircle className="w-4 h-4 text-green-600" /> Approve
                                 </span>
-                              ) : (
+                              </SelectItem>
+                              <SelectItem value="rejected">
                                 <span className="flex items-center gap-2">
                                   <XCircle className="w-4 h-4 text-red-600" /> Reject
+                                </span>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Items Accepted */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Items Accepted</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={submission.items_to_add || 999}
+                            value={approvalForm.items_accepted}
+                            onChange={(e) => setApprovalForm({ ...approvalForm, items_accepted: parseInt(e.target.value) || 0 })}
+                            className="bg-white"
+                            data-testid="items-accepted-input"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Rejected Items Action */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">What happens to items not consigned?</Label>
+                        <Select
+                          value={approvalForm.rejected_items_action}
+                          onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
+                        >
+                          <SelectTrigger className="w-full bg-white">
+                            <SelectValue>
+                              {approvalForm.rejected_items_action === 'donate' ? (
+                                <span className="flex items-center gap-2">
+                                  <Gift className="w-4 h-4 text-purple-600" /> Donate
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-2">
+                                  <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
                                 </span>
                               )}
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="approved">
+                            <SelectItem value="return">
                               <span className="flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-600" /> Approve
+                                <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
                               </span>
                             </SelectItem>
-                            <SelectItem value="rejected">
+                            <SelectItem value="donate">
                               <span className="flex items-center gap-2">
-                                <XCircle className="w-4 h-4 text-red-600" /> Reject
+                                <Gift className="w-4 h-4 text-purple-600" /> Donate
                               </span>
                             </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
-                      {/* Items Accepted */}
+                      {/* Admin Notes */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Items Accepted</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max={submission.items_to_add || 999}
-                          value={approvalForm.items_accepted}
-                          onChange={(e) => setApprovalForm({ ...approvalForm, items_accepted: parseInt(e.target.value) || 0 })}
+                        <Label className="text-sm font-medium">Notes (Optional)</Label>
+                        <Textarea
+                          value={approvalForm.admin_notes}
+                          onChange={(e) => setApprovalForm({ ...approvalForm, admin_notes: e.target.value })}
+                          placeholder="Any notes about this review..."
+                          rows={2}
                           className="bg-white"
-                          data-testid="items-accepted-input"
+                          data-testid="admin-notes-input"
                         />
                       </div>
-                    </div>
 
-                    {/* Rejected Items Action */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">What happens to items not consigned?</Label>
-                      <Select
-                        value={approvalForm.rejected_items_action}
-                        onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
+                      {/* Submit Button */}
+                      <Button
+                        onClick={handleApproval}
+                        disabled={submittingApproval}
+                        className={`w-full ${approvalForm.approval_status === 'approved' 
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-red-600 hover:bg-red-700 text-white"
+                        }`}
+                        data-testid="submit-approval-btn"
                       >
-                        <SelectTrigger className="w-full bg-white">
-                          <SelectValue>
-                            {approvalForm.rejected_items_action === 'donate' ? (
-                              <span className="flex items-center gap-2">
-                                <Gift className="w-4 h-4 text-purple-600" /> Donate
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-2">
-                                <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
-                              </span>
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="return">
-                            <span className="flex items-center gap-2">
-                              <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="donate">
-                            <span className="flex items-center gap-2">
-                              <Gift className="w-4 h-4 text-purple-600" /> Donate
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {submittingApproval ? "Processing..." : (
+                          approvalForm.approval_status === 'approved' 
+                            ? `Approve (${approvalForm.items_accepted} items)`
+                            : 'Reject Submission'
+                        )}
+                      </Button>
                     </div>
-
-                    {/* Admin Notes */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Notes (Optional)</Label>
-                      <Textarea
-                        value={approvalForm.admin_notes}
-                        onChange={(e) => setApprovalForm({ ...approvalForm, admin_notes: e.target.value })}
-                        placeholder="Any notes about this review..."
-                        rows={2}
-                        className="bg-white"
-                        data-testid="admin-notes-input"
-                      />
-                    </div>
-
-                    {/* Submit Button */}
-                    <Button
-                      onClick={handleApproval}
-                      disabled={submittingApproval}
-                      className={`w-full ${approvalForm.approval_status === 'approved' 
-                        ? "bg-green-600 hover:bg-green-700 text-white"
-                        : "bg-red-600 hover:bg-red-700 text-white"
-                      }`}
-                      data-testid="submit-approval-btn"
-                    >
-                      {submittingApproval ? "Processing..." : (
-                        approvalForm.approval_status === 'approved' 
-                          ? `Approve (${approvalForm.items_accepted} items)`
-                          : 'Reject Submission'
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
