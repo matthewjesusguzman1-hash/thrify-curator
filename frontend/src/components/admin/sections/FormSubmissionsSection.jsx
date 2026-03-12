@@ -718,39 +718,6 @@ Thrifty Curator Team`;
                                   >
                                     <Eye className="w-4 h-4" />
                                   </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onDownloadSubmission && onDownloadSubmission(agreement)}
-                                    className="text-[#10B981] hover:text-[#059669] hover:bg-[#10B981]/10"
-                                    title="Download PDF"
-                                    data-testid={`download-agreement-${agreement.id}`}
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      const mailtoLink = `mailto:${agreement.email}?subject=Your Consignment Agreement - Thrifty Curator&body=Hi ${agreement.full_name},%0D%0A%0D%0AThank you for submitting your consignment agreement.%0D%0A%0D%0ABest regards,%0D%0AThrifty Curator Team`;
-                                      window.location.href = mailtoLink;
-                                    }}
-                                    className="text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10"
-                                    title="Email Client"
-                                    data-testid={`email-agreement-${agreement.id}`}
-                                  >
-                                    <Mail className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onDeleteSubmission("consignment_agreements", agreement.id)}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    title="Delete"
-                                    data-testid={`delete-agreement-${agreement.id}`}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -851,44 +818,10 @@ Thrifty Curator Team`;
                                     size="sm"
                                     onClick={() => handleViewUpdate(update)}
                                     className="text-[#8B5CF6] hover:text-[#6D28D9] hover:bg-[#8B5CF6]/10"
-                                    title="View Details"
+                                    title="View & Review"
                                     data-testid={`view-update-${update.id}`}
                                   >
                                     <Eye className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDownloadUpdate(update)}
-                                    className="text-[#10B981] hover:text-[#059669] hover:bg-[#10B981]/10"
-                                    title="Download PDF"
-                                    data-testid={`download-update-${update.id}`}
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setMessageModal({ open: true, update });
-                                      setMessageContent(getEmailTemplate(update));
-                                    }}
-                                    className="text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10"
-                                    title="Message Client"
-                                    data-testid={`message-update-${update.id}`}
-                                  >
-                                    <MessageSquare className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteUpdate(update)}
-                                    disabled={deletingUpdate === update.id}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    title="Delete"
-                                    data-testid={`delete-update-${update.id}`}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </div>
                               </td>
@@ -936,8 +869,44 @@ Thrifty Curator Team`;
                 </div>
               </div>
 
+              {/* Action Buttons Bar */}
+              <div className="flex items-center justify-end gap-2 px-6 py-3 bg-[#F9F6F7] border-b">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownloadUpdate(viewingUpdate)}
+                  className="text-[#10B981] border-[#10B981] hover:bg-[#10B981]/10"
+                >
+                  <Download className="w-4 h-4 mr-1" /> Download
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setMessageModal({ open: true, update: viewingUpdate });
+                    setMessageContent(getEmailTemplate(viewingUpdate));
+                    setViewingUpdate(null);
+                  }}
+                  className="text-[#00D4FF] border-[#00D4FF] hover:bg-[#00D4FF]/10"
+                >
+                  <Mail className="w-4 h-4 mr-1" /> Email
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handleDeleteUpdate(viewingUpdate);
+                    setViewingUpdate(null);
+                  }}
+                  disabled={deletingUpdate === viewingUpdate?.id}
+                  className="text-red-500 border-red-500 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" /> Delete
+                </Button>
+              </div>
+
               {/* Modal Body */}
-              <div className="p-6 space-y-4">
+              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
                 {/* Client Info */}
                 <div className="space-y-2">
                   <h4 className="font-semibold text-[#333] flex items-center gap-2">

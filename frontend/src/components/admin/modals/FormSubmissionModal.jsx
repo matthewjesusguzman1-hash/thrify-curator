@@ -234,6 +234,37 @@ Thrifty Curator Team`
           </div>
         </div>
 
+        {/* Action Buttons Bar */}
+        <div className="flex items-center justify-end gap-2 px-6 py-3 bg-[#F9F6F7] border-b">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onDownload && onDownload(submission)}
+            className="text-[#10B981] border-[#10B981] hover:bg-[#10B981]/10"
+          >
+            <Download className="w-4 h-4 mr-1" /> Download
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendEmail}
+            className="text-[#00D4FF] border-[#00D4FF] hover:bg-[#00D4FF]/10"
+          >
+            <Send className="w-4 h-4 mr-1" /> Email
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              onDelete(submission.formType, submission.id);
+              onClose();
+            }}
+            className="text-red-500 border-red-500 hover:bg-red-50"
+          >
+            <Trash2 className="w-4 h-4 mr-1" /> Delete
+          </Button>
+        </div>
+
         {/* Modal Content */}
         <div className="p-6 max-h-[60vh] overflow-y-auto">
           {/* Status Update */}
