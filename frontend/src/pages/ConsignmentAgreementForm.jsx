@@ -755,163 +755,113 @@ export default function ConsignmentAgreementForm() {
                 </>
               ) : (
                 // Step 2: Update form matching original consignment form style
-                <div className="space-y-5">
-                  {/* Account Info Header */}
-                  <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg p-4">
-                    <p className="text-sm text-[#1A1A2E]">
-                      <strong>Agreement found for:</strong> {addItemsAgreement.full_name}
-                    </p>
+                <div className="space-y-4">
+                  {/* Welcome Header */}
+                  <div className="text-center pb-2">
+                    <p className="text-lg font-semibold text-[#1A1A2E]">Welcome back, {addItemsAgreement.full_name}!</p>
                     <p className="text-sm text-[#666] mt-1">
-                      Email: {addItemsAgreement.email} • Items: {addItemsAgreement.items_description || "0"} • Split: {addItemsAgreement.agreed_percentage || "50/50"}
+                      {addItemsAgreement.email} • {addItemsAgreement.agreed_percentage || "50/50"} split
                     </p>
                   </div>
 
-                  {/* Instructions */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-800">
-                      <strong>Instructions:</strong> Use the sections below to update your contact information or add more items to your consignment. 
-                      Expand each section as needed. If you are only updating your information (not adding items), you do not need to sign the form.
-                    </p>
-                  </div>
-
-                  {/* Payment History */}
+                  {/* Payment History - Compact */}
                   {paymentHistory && paymentHistory.payments.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold text-amber-800">Payment History</span>
-                        <span className="text-lg font-bold text-amber-600">${paymentHistory.total_paid.toFixed(2)} Total</span>
-                      </div>
-                      <div className="space-y-1 max-h-24 overflow-y-auto">
-                        {paymentHistory.payments.map((payment, index) => (
-                          <div key={index} className="flex items-center justify-between text-sm">
-                            <span className="text-amber-700">{payment.description || "Payout"} - {payment.check_date ? new Date(payment.check_date).toLocaleDateString() : ''}</span>
-                            <span className="font-medium text-green-600">${(payment.amount || 0).toFixed(2)}</span>
-                          </div>
-                        ))}
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-amber-600" />
+                          <span className="text-sm font-medium text-amber-800">Total Earned</span>
+                        </div>
+                        <span className="text-lg font-bold text-green-600">${paymentHistory.total_paid.toFixed(2)}</span>
                       </div>
                     </div>
                   )}
 
                   {/* My Submissions Section */}
                   {userSubmissions && userSubmissions.submissions && userSubmissions.submissions.length > 0 && (
-                    <div className="border-2 border-[#00D4FF]/30 rounded-xl overflow-hidden">
+                    <div className="border border-gray-200 rounded-xl overflow-hidden">
                       <button
                         type="button"
                         onClick={() => setShowSubmissionsExpanded(!showSubmissionsExpanded)}
-                        className={`w-full flex items-center justify-between p-4 transition-colors ${
-                          showSubmissionsExpanded ? 'bg-[#00D4FF]/10' : 'bg-gray-50 hover:bg-gray-100'
+                        className={`w-full flex items-center justify-between p-3 transition-colors ${
+                          showSubmissionsExpanded ? 'bg-[#00D4FF]/5' : 'bg-gray-50 hover:bg-gray-100'
                         }`}
                         data-testid="toggle-submissions-section"
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                             showSubmissionsExpanded ? 'bg-[#00D4FF]' : 'bg-gray-200'
                           }`}>
-                            <Eye className={`w-5 h-5 ${showSubmissionsExpanded ? 'text-white' : 'text-gray-600'}`} />
+                            <FileText className={`w-4 h-4 ${showSubmissionsExpanded ? 'text-white' : 'text-gray-600'}`} />
                           </div>
-                          <div className="text-left">
-                            <h3 className={`font-semibold ${showSubmissionsExpanded ? 'text-[#00D4FF]' : 'text-[#1A1A2E]'}`}>
-                              My Submissions ({userSubmissions.submissions.length})
-                            </h3>
-                            <p className="text-xs text-[#888]">View your submission history and approval status</p>
-                          </div>
+                          <span className={`font-medium ${showSubmissionsExpanded ? 'text-[#00D4FF]' : 'text-[#1A1A2E]'}`}>
+                            My Submissions ({userSubmissions.submissions.length})
+                          </span>
                         </div>
                         {showSubmissionsExpanded ? <ChevronUp className="w-5 h-5 text-[#00D4FF]" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                       </button>
                       
                       {showSubmissionsExpanded && (
-                        <div className="p-4 border-t border-[#00D4FF]/20 space-y-3 max-h-80 overflow-y-auto">
+                        <div className="p-3 border-t border-gray-100 space-y-2 max-h-64 overflow-y-auto bg-gray-50/50">
                           {userSubmissions.submissions.map((submission, index) => (
                             <div 
                               key={submission.id || index}
-                              className="border border-gray-200 rounded-lg p-3 hover:border-[#00D4FF]/50 transition-colors bg-white"
+                              className="flex items-center justify-between gap-3 p-2.5 bg-white rounded-lg border border-gray-100"
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1 min-w-0">
-                                  {/* Submission Type & Date */}
-                                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                                      submission.type === 'consignment_agreement' 
-                                        ? 'bg-purple-100 text-purple-700'
-                                        : submission.items_to_add > 0
-                                          ? 'bg-emerald-100 text-emerald-700'
-                                          : 'bg-blue-100 text-blue-700'
-                                    }`}>
-                                      {submission.type === 'consignment_agreement' ? (
-                                        <FileText className="w-3 h-3" />
-                                      ) : submission.items_to_add > 0 ? (
-                                        <Package className="w-3 h-3" />
-                                      ) : (
-                                        <User className="w-3 h-3" />
-                                      )}
-                                      {submission.type_label}
-                                    </span>
-                                    <span className="text-xs text-[#888]">
-                                      {submission.submitted_at ? new Date(submission.submitted_at).toLocaleDateString() : 'N/A'}
-                                    </span>
-                                  </div>
-                                  
-                                  {/* Description */}
-                                  {submission.items_description && (
-                                    <p className="text-xs text-[#666] mb-1 line-clamp-1">
-                                      {submission.items_description}
-                                    </p>
-                                  )}
-                                  
-                                  {/* Items Added */}
-                                  {submission.items_to_add > 0 && (
-                                    <p className="text-xs text-emerald-600 font-medium">
-                                      +{submission.items_to_add} items submitted
-                                    </p>
-                                  )}
-                                  
-                                  {/* Approval Details */}
-                                  {submission.approval_status && submission.approval_status !== 'pending' && (
-                                    <div className="flex flex-wrap gap-2 mt-1.5 text-xs">
-                                      {submission.items_accepted !== undefined && submission.items_accepted !== null && (
-                                        <span className="text-green-600">
-                                          <CheckCircle className="w-3 h-3 inline mr-0.5" />
-                                          {submission.items_accepted} accepted
-                                        </span>
-                                      )}
-                                      {submission.rejected_items_action && (
-                                        <span className={submission.rejected_items_action === 'donate' ? 'text-purple-600' : 'text-blue-600'}>
-                                          {submission.rejected_items_action === 'donate' ? (
-                                            <><Gift className="w-3 h-3 inline mr-0.5" />Donated</>
-                                          ) : (
-                                            <><RotateCcw className="w-3 h-3 inline mr-0.5" />Returned</>
-                                          )}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                  {submission.admin_notes && (
-                                    <p className="text-xs text-[#888] mt-1 bg-gray-50 rounded p-1.5 line-clamp-2">
-                                      <strong>Note:</strong> {submission.admin_notes}
-                                    </p>
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {/* Type Icon */}
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                  submission.type === 'consignment_agreement' 
+                                    ? 'bg-purple-100'
+                                    : submission.items_to_add > 0
+                                      ? 'bg-emerald-100'
+                                      : 'bg-blue-100'
+                                }`}>
+                                  {submission.type === 'consignment_agreement' ? (
+                                    <FileText className="w-3.5 h-3.5 text-purple-600" />
+                                  ) : submission.items_to_add > 0 ? (
+                                    <Package className="w-3.5 h-3.5 text-emerald-600" />
+                                  ) : (
+                                    <User className="w-3.5 h-3.5 text-blue-600" />
                                   )}
                                 </div>
                                 
-                                {/* Status Badge */}
-                                <div className="flex-shrink-0">
-                                  {submission.approval_status === 'approved' ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                      <CheckCircle className="w-3 h-3" />
-                                      Approved
+                                {/* Info */}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-[#1A1A2E] truncate">
+                                      {submission.type_label}
                                     </span>
-                                  ) : submission.approval_status === 'rejected' ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                                      <XCircle className="w-3 h-3" />
-                                      Rejected
+                                    <span className="text-xs text-[#888] flex-shrink-0">
+                                      {submission.submitted_at ? new Date(submission.submitted_at).toLocaleDateString() : ''}
                                     </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                                      <Clock className="w-3 h-3" />
-                                      Pending
-                                    </span>
+                                  </div>
+                                  {submission.items_to_add > 0 && (
+                                    <p className="text-xs text-emerald-600">+{submission.items_to_add} items</p>
+                                  )}
+                                  {submission.items_accepted !== undefined && submission.items_accepted !== null && submission.approval_status === 'approved' && (
+                                    <p className="text-xs text-green-600">{submission.items_accepted} accepted</p>
                                   )}
                                 </div>
                               </div>
+                              
+                              {/* Status Badge */}
+                              {submission.approval_status === 'approved' ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Approved
+                                </span>
+                              ) : submission.approval_status === 'rejected' ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 flex-shrink-0">
+                                  <XCircle className="w-3 h-3" />
+                                  Rejected
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 flex-shrink-0">
+                                  <Clock className="w-3 h-3" />
+                                  Pending
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -920,25 +870,24 @@ export default function ConsignmentAgreementForm() {
                   )}
 
                   {/* UPDATE INFORMATION SECTION */}
-                  <div className="border-2 border-gray-200 rounded-xl overflow-hidden">
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
                     <button
                       type="button"
                       onClick={() => setWantsToUpdateContact(!wantsToUpdateContact)}
-                      className={`w-full flex items-center justify-between p-4 transition-colors ${
-                        wantsToUpdateContact ? 'bg-[#8B5CF6]/10' : 'bg-gray-50 hover:bg-gray-100'
+                      className={`w-full flex items-center justify-between p-3 transition-colors ${
+                        wantsToUpdateContact ? 'bg-[#8B5CF6]/5' : 'bg-gray-50 hover:bg-gray-100'
                       }`}
                       data-testid="toggle-contact-section"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                           wantsToUpdateContact ? 'bg-[#8B5CF6]' : 'bg-gray-200'
                         }`}>
-                          <User className={`w-5 h-5 ${wantsToUpdateContact ? 'text-white' : 'text-gray-500'}`} />
+                          <User className={`w-4 h-4 ${wantsToUpdateContact ? 'text-white' : 'text-gray-500'}`} />
                         </div>
-                        <div className="text-left">
-                          <p className="font-semibold text-[#1A1A2E]">Update My Information</p>
-                          <p className="text-xs text-gray-500">Change contact details, payment method, or profit split</p>
-                        </div>
+                        <span className={`font-medium ${wantsToUpdateContact ? 'text-[#8B5CF6]' : 'text-[#1A1A2E]'}`}>
+                          Update My Information
+                        </span>
                       </div>
                       {wantsToUpdateContact ? <ChevronUp className="w-5 h-5 text-[#8B5CF6]" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                     </button>
@@ -952,15 +901,15 @@ export default function ConsignmentAgreementForm() {
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="p-5 space-y-5 border-t border-gray-200">
+                          <div className="p-4 space-y-4 border-t border-gray-100 bg-gray-50/50">
                             <div>
-                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
+                              <Label className="text-sm font-medium text-[#1A1A2E] mb-1.5 block">Email Address</Label>
                               <Input
                                 type="email"
                                 value={updateEmail}
                                 onChange={(e) => setUpdateEmail(e.target.value)}
                                 placeholder="your@email.com"
-                                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                                className="border border-gray-200 focus:border-[#8B5CF6] rounded-lg"
                                 data-testid="update-email"
                               />
                               {updateEmail !== addItemsAgreement.email && updateEmail.trim() && (
@@ -1074,25 +1023,24 @@ export default function ConsignmentAgreementForm() {
                   </div>
 
                   {/* ADD MORE ITEMS SECTION */}
-                  <div className="border-2 border-gray-200 rounded-xl overflow-hidden">
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
                     <button
                       type="button"
                       onClick={() => setIsAddItemsExpanded(!isAddItemsExpanded)}
-                      className={`w-full flex items-center justify-between p-4 transition-colors ${
-                        isAddItemsExpanded ? 'bg-[#10B981]/10' : 'bg-gray-50 hover:bg-gray-100'
+                      className={`w-full flex items-center justify-between p-3 transition-colors ${
+                        isAddItemsExpanded ? 'bg-[#10B981]/5' : 'bg-gray-50 hover:bg-gray-100'
                       }`}
                       data-testid="toggle-add-items-section"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                           isAddItemsExpanded ? 'bg-[#10B981]' : 'bg-gray-200'
                         }`}>
-                          <Package className={`w-5 h-5 ${isAddItemsExpanded ? 'text-white' : 'text-gray-500'}`} />
+                          <Package className={`w-4 h-4 ${isAddItemsExpanded ? 'text-white' : 'text-gray-500'}`} />
                         </div>
-                        <div className="text-left">
-                          <p className="font-semibold text-[#1A1A2E]">Add More Items to Consignment</p>
-                          <p className="text-xs text-gray-500">Consign additional items (requires signature)</p>
-                        </div>
+                        <span className={`font-medium ${isAddItemsExpanded ? 'text-[#10B981]' : 'text-[#1A1A2E]'}`}>
+                          Add More Items
+                        </span>
                       </div>
                       {isAddItemsExpanded ? <ChevronUp className="w-5 h-5 text-[#10B981]" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                     </button>
@@ -1106,16 +1054,16 @@ export default function ConsignmentAgreementForm() {
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="p-5 space-y-5 border-t border-gray-200">
+                          <div className="p-4 space-y-4 border-t border-gray-100 bg-gray-50/50">
                             <div>
-                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Number of Items to Add *</Label>
+                              <Label className="text-sm font-medium text-[#1A1A2E] mb-1.5 block">Number of Items *</Label>
                               <Input
                                 type="number"
                                 min="1"
                                 value={itemsToAdd}
                                 onChange={(e) => setItemsToAdd(e.target.value)}
                                 placeholder="Enter number of items"
-                                className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                                className="border border-gray-200 focus:border-[#10B981] rounded-lg"
                                 data-testid="items-to-add"
                               />
                             </div>
