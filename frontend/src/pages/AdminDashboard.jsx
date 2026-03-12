@@ -2717,6 +2717,7 @@ export default function AdminDashboard() {
               onUpdateStatus={handleUpdateSubmissionStatus}
               updatingStatus={updatingStatus}
               formatSubmissionDate={formatSubmissionDate}
+              refreshData={fetchFormSubmissions}
             />
           )}
 

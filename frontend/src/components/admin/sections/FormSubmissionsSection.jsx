@@ -310,8 +310,8 @@ Thrifty Curator Team`;
     
     try {
       const endpoint = type === 'agreement'
-        ? `${API}/admin/forms/consignment-agreements/${submission.id}/approve`
-        : `${API}/admin/forms/item-additions/${submission.id}/approve`;
+        ? `${API}/api/admin/forms/consignment-agreements/${submission.id}/approve`
+        : `${API}/api/admin/forms/item-additions/${submission.id}/approve`;
       
       await axios.put(endpoint, approvalForm, getAuthHeader());
       
@@ -756,18 +756,6 @@ Thrifty Curator Team`;
                                   >
                                     <Eye className="w-4 h-4" />
                                   </Button>
-                                  {(!agreement.approval_status || agreement.approval_status === 'pending') && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => openApprovalModal(agreement, 'agreement')}
-                                      className="text-green-600 hover:text-green-800"
-                                      data-testid={`approve-agreement-${agreement.id}`}
-                                      title="Review & Approve"
-                                    >
-                                      <CheckCircle className="w-4 h-4" />
-                                    </Button>
-                                  )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -952,144 +940,6 @@ Thrifty Curator Team`;
                 </div>
               )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Approval Modal */}
-      <AnimatePresence>
-        {approvalModal.open && approvalModal.submission && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setApprovalModal({ open: false, submission: null, type: null })}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-              data-testid="approval-modal"
-            >
-              {/* Modal Header */}
-              <div className="sticky top-0 bg-gradient-to-r from-[#10B981] to-[#059669] p-4 rounded-t-2xl">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-white">Review Consignment</h3>
-                  <button
-                    onClick={() => setApprovalModal({ open: false, submission: null, type: null })}
-                    className="p-1 hover:bg-white/20 rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5 text-white" />
-                  </button>
-                </div>
-                <p className="text-white/80 text-sm mt-1">
-                  {approvalModal.submission?.full_name}
-                </p>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 space-y-5">
-                {/* Decision */}
-                <div className="space-y-2">
-                  <Label className="font-medium">Decision</Label>
-                  <Select
-                    value={approvalForm.approval_status}
-                    onValueChange={(value) => setApprovalForm({ ...approvalForm, approval_status: value })}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="approved">
-                        <span className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" /> Approve
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="rejected">
-                        <span className="flex items-center gap-2">
-                          <XCircle className="w-4 h-4 text-red-600" /> Reject
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Items Accepted */}
-                <div className="space-y-2">
-                  <Label className="font-medium">Items Accepted for Consignment</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={approvalForm.items_accepted}
-                    onChange={(e) => setApprovalForm({ ...approvalForm, items_accepted: parseInt(e.target.value) || 0 })}
-                    className="w-full"
-                    data-testid="items-accepted-input"
-                  />
-                  <p className="text-xs text-[#888]">Enter the number of items you're accepting</p>
-                </div>
-
-                {/* Rejected Items Action */}
-                <div className="space-y-2">
-                  <Label className="font-medium">What happens to items not consigned?</Label>
-                  <Select
-                    value={approvalForm.rejected_items_action}
-                    onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select action..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="return">
-                        <span className="flex items-center gap-2">
-                          <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="donate">
-                        <span className="flex items-center gap-2">
-                          <Gift className="w-4 h-4 text-purple-600" /> Donate
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Admin Notes */}
-                <div className="space-y-2">
-                  <Label className="font-medium">Notes (Optional)</Label>
-                  <Textarea
-                    value={approvalForm.admin_notes}
-                    onChange={(e) => setApprovalForm({ ...approvalForm, admin_notes: e.target.value })}
-                    placeholder="Any notes about this review..."
-                    rows={3}
-                    className="w-full"
-                    data-testid="admin-notes-input"
-                  />
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="border-t p-4 flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setApprovalModal({ open: false, submission: null, type: null })}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleApproval}
-                  className={approvalForm.approval_status === 'approved' 
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "bg-red-600 hover:bg-red-700 text-white"
-                  }
-                  data-testid="submit-approval-btn"
-                >
-                  {approvalForm.approval_status === 'approved' ? 'Approve' : 'Reject'}
-                </Button>
-              </div>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
