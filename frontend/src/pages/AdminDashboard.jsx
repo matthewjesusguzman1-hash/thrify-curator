@@ -792,11 +792,16 @@ export default function AdminDashboard() {
     try {
       toast.loading("Preparing PDF...", { id: "download-loading" });
       
-      const endpoint = submission.formType === "job_applications" 
-        ? "job-applications" 
-        : submission.formType === "consignment_inquiries" 
-          ? "consignment-inquiries" 
-          : "consignment-agreements";
+      let endpoint;
+      if (submission.formType === "job_applications") {
+        endpoint = "job-applications";
+      } else if (submission.formType === "consignment_inquiries") {
+        endpoint = "consignment-inquiries";
+      } else if (submission.formType === "item_additions") {
+        endpoint = "item-additions";
+      } else {
+        endpoint = "consignment-agreements";
+      }
       
       const response = await axios.get(
         `${API}/admin/forms/${endpoint}/${submission.id}/pdf`,
@@ -808,11 +813,16 @@ export default function AdminDashboard() {
       
       toast.dismiss("download-loading");
       
-      const formType = submission.formType === "job_applications" 
-        ? "Job_Application"
-        : submission.formType === "consignment_inquiries"
-          ? "Consignment_Inquiry"
-          : "Consignment_Agreement";
+      let formType;
+      if (submission.formType === "job_applications") {
+        formType = "Job_Application";
+      } else if (submission.formType === "consignment_inquiries") {
+        formType = "Consignment_Inquiry";
+      } else if (submission.formType === "item_additions") {
+        formType = "Item_Addition";
+      } else {
+        formType = "Consignment_Agreement";
+      }
       const filename = `${submission.full_name.replace(/\s+/g, "_")}_${formType}.pdf`;
       
       // Create download link - same method as ReportsSection
@@ -829,7 +839,11 @@ export default function AdminDashboard() {
     } catch (error) {
       toast.dismiss("download-loading");
       console.error("Download error:", error);
-      toast.error("Failed to download PDF");
+      if (error.response?.status === 404) {
+        toast.error("Record not found - it may have been deleted");
+      } else {
+        toast.error("Failed to download PDF");
+      }
     }
   };
 
