@@ -44,7 +44,7 @@ export default function FormSubmissionModal({
 
   // Get auth header for API calls
   const getAuthHeader = () => {
-    const token = localStorage.getItem("adminToken");
+    const token = localStorage.getItem("token");
     return { headers: { Authorization: `Bearer ${token}` } };
   };
 

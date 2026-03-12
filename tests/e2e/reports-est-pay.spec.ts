@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts, removeEmergentBadge } from '../fixtures/helpers';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://mobile-curator.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://approval-system-dev.preview.emergentagent.com';
 
 test.describe('Reports Section - Est. Pay Column Feature', () => {
   let authToken: string;

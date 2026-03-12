@@ -292,7 +292,7 @@ Thrifty Curator Team`;
     setSubmittingApproval(true);
     try {
       await axios.put(
-        `${API}/api/admin/forms/item-additions/${viewingUpdate.id}/approve`,
+        `${API}/admin/forms/item-additions/${viewingUpdate.id}/approve`,
         approvalForm,
         getAuthHeader()
       );

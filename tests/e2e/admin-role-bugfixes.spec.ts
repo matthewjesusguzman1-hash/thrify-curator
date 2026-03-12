@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts, removeEmergentBadge } from '../fixtures/helpers';
 
-const BASE_URL = 'https://mobile-curator.preview.emergentagent.com';
+const BASE_URL = 'https://approval-system-dev.preview.emergentagent.com';
 
 test.describe('Admin Role Bug Fixes - Edit Employee & Admin Codes', () => {
   

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const PAGE_URL = process.env.REACT_APP_BACKEND_URL || 'https://mobile-curator.preview.emergentagent.com';
+const PAGE_URL = process.env.REACT_APP_BACKEND_URL || 'https://approval-system-dev.preview.emergentagent.com';
 const ADMIN_CODE = '4399';
 
 test.describe('Admin Login and Reports Section', () => {
