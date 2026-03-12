@@ -2461,57 +2461,34 @@ Two bugs were identified:
 ## "View My Submissions" Feature (March 12, 2026)
 
 ### Feature Overview
-Added a new feature in the Consignment Portal allowing users to view their submission history and approval status. Users can authenticate with their email and see all their submissions (agreements and item additions) with real-time status updates.
+Added a unified login flow in the Consignment Portal allowing users to view their submission history, approval status, AND update info/add items - all with a single login.
 
 ### User Flow
 1. User navigates to Consignment Portal (/consignment-agreement)
-2. User clicks "View My Submissions" button (new third option)
+2. User clicks "Update Info / Add Items" button (now includes "View submissions" in description)
 3. User enters their email address (from their consignment agreement)
-4. System displays all submissions with:
-   - Submission type badge (Consignment Agreement, Item Addition, Info Update)
-   - Submission date
-   - Items description
-   - **Approval Status** (Pending, Approved, or Rejected)
-   - For approved/rejected: Items accepted count, what happens to other items, admin notes, reviewer name & date
+4. System displays:
+   - Account info header
+   - **My Submissions** expandable section with all submissions and status
+   - Update My Information section
+   - Add More Items section
 
-### Implementation Files
-- **Backend**: `/app/backend/app/routers/forms.py` - Added `GET /api/forms/my-submissions/{email}` endpoint
-- **Frontend**: `/app/frontend/src/pages/ConsignmentAgreementForm.jsx` - Added `showViewSubmissions` state and UI
+### Submission Status Display
+Each submission shows:
+- Type badge (Consignment Agreement, Item Addition, Info Update)
+- Submission date
+- Items description
+- **Approval Status** badge (Pending=yellow, Approved=green, Rejected=red)
+- For approved/rejected: Items accepted count, what happens to other items, admin notes
 
-### API Endpoint
-```
-GET /api/forms/my-submissions/{email}
+### Implementation
+- **Backend**: Added `GET /api/forms/my-submissions/{email}` endpoint
+- **Frontend**: Integrated submissions display into the "Update Info / Add Items" flow
+  - Added `showSubmissionsExpanded` state
+  - Added `fetchUserSubmissions()` function called after agreement lookup
+  - Added collapsible "My Submissions" section in the form
 
-Response:
-{
-  "user": {
-    "full_name": "...",
-    "email": "...",
-    "phone": "...",
-    "agreed_percentage": "...",
-    "payment_method": "..."
-  },
-  "submissions": [
-    {
-      "id": "...",
-      "type": "consignment_agreement" | "item_addition",
-      "type_label": "...",
-      "submitted_at": "...",
-      "approval_status": "pending" | "approved" | "rejected",
-      "items_accepted": number,
-      "rejected_items_action": "return" | "donate",
-      "admin_notes": "...",
-      "reviewed_at": "...",
-      "reviewed_by": "..."
-    }
-  ]
-}
-```
-
-### Features
-- Email-based authentication (uses email from consignment agreement)
-- Shows all submission types: agreements, item additions, info updates
-- Real-time status display with color-coded badges
-- Approval details including items accepted and admin notes
-- "Add Items" quick action button to submit new items
-- Refresh button to reload submissions
+### Changes Made
+1. Removed separate "View My Submissions" button from initial choice page
+2. Updated "Update Info / Add Items" description to "View submissions, update info, or add more items"
+3. Added "My Submissions" expandable section in the update form (after login)
