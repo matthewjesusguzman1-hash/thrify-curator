@@ -316,13 +316,19 @@ Thrifty Curator Team`;
 
   // Reset approval form when opening a new update
   const handleViewUpdate = (update) => {
-    setApprovalForm({
-      approval_status: update.approval_status || "approved",
-      items_accepted: update.items_accepted || update.items_to_add || 0,
-      rejected_items_action: update.rejected_items_action || "return",
-      admin_notes: update.admin_notes || ""
-    });
-    setViewingUpdate(update);
+    // Route item additions through the main FormSubmissionModal
+    if (update.items_to_add > 0 || update.source === 'item_addition') {
+      onViewSubmission({ ...update, formType: "item_additions" });
+    } else {
+      // For payment changes and other updates, use the inline modal
+      setApprovalForm({
+        approval_status: update.approval_status || "approved",
+        items_accepted: update.items_accepted || update.items_to_add || 0,
+        rejected_items_action: update.rejected_items_action || "return",
+        admin_notes: update.admin_notes || ""
+      });
+      setViewingUpdate(update);
+    }
   };
 
   const getFilteredFormSubmissions = (submissions) => {

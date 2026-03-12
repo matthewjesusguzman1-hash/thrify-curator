@@ -881,11 +881,20 @@ export default function AdminDashboard() {
     }
     
     try {
-      const endpoint = formType === "job_applications" 
-        ? "job-applications" 
-        : formType === "consignment_inquiries" 
-          ? "consignment-inquiries" 
-          : "consignment-agreements";
+      let endpoint;
+      switch (formType) {
+        case "job_applications":
+          endpoint = "job-applications";
+          break;
+        case "consignment_inquiries":
+          endpoint = "consignment-inquiries";
+          break;
+        case "item_additions":
+          endpoint = "item-additions";
+          break;
+        default:
+          endpoint = "consignment-agreements";
+      }
       
       await axios.delete(
         `${API}/admin/forms/${endpoint}/${submissionId}`,
@@ -896,6 +905,9 @@ export default function AdminDashboard() {
       setShowSubmissionDetails(false);
       setSelectedSubmission(null);
       fetchFormSubmissions();
+      if (formType === "item_additions" && fetchItemAdditions) {
+        fetchItemAdditions();
+      }
     } catch (error) {
       toast.error("Failed to delete submission");
     }
@@ -2719,7 +2731,10 @@ export default function AdminDashboard() {
               onUpdateStatus={handleUpdateSubmissionStatus}
               updatingStatus={updatingStatus}
               formatSubmissionDate={formatSubmissionDate}
-              refreshData={fetchFormSubmissions}
+              refreshData={() => {
+                fetchFormSubmissions();
+                fetchItemAdditions();
+              }}
             />
           )}
 
