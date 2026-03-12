@@ -92,7 +92,7 @@ const platforms = [
     useImage: true
   },
   { 
-    name: "Facebook Marketplace", 
+    name: "Marketplace", 
     logoUrl: process.env.REACT_APP_FB_MARKETPLACE_LOGO_URL,
     url: "https://www.facebook.com/marketplace/profile/517375094/", 
     color: "#3b5998",
