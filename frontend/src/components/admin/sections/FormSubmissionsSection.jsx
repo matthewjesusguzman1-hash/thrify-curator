@@ -225,11 +225,25 @@ export default function FormSubmissionsSection({
       toast.success("Payment change downloaded");
     } else {
       // For item additions/updates, download PDF from backend
+      if (!update.id) {
+        toast.error("Cannot download: Missing update ID");
+        console.error("Update missing ID:", update);
+        return;
+      }
+      
       try {
         const response = await axios.get(
           `${API}/admin/forms/item-additions/${update.id}/pdf`,
           { ...getAuthHeader(), responseType: 'blob' }
         );
+        
+        // Check if response is actually a PDF (not an error)
+        if (response.data.type === 'application/json') {
+          const text = await response.data.text();
+          const error = JSON.parse(text);
+          throw new Error(error.detail || 'Failed to generate PDF');
+        }
+        
         const url = URL.createObjectURL(response.data);
         const a = document.createElement('a');
         a.href = url;
@@ -240,8 +254,14 @@ export default function FormSubmissionsSection({
         URL.revokeObjectURL(url);
         toast.success("Update PDF downloaded");
       } catch (error) {
-        toast.error("Failed to download PDF");
         console.error("PDF download error:", error);
+        if (error.response?.status === 404) {
+          toast.error("Update record not found");
+        } else if (error.response?.status === 401) {
+          toast.error("Session expired. Please log in again.");
+        } else {
+          toast.error(error.message || "Failed to download PDF");
+        }
       }
     }
   };
