@@ -1,21 +1,10 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { 
   X, Trash2, Download, Mail, Phone, MapPin,
-  Briefcase, Package, FileSignature, Send,
-  CheckCircle, XCircle, Clock, RotateCcw, Gift
+  Briefcase, Package, FileSignature, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -26,78 +15,15 @@ export default function FormSubmissionModal({
   onClose,
   onDelete,
   onDownload,
-  onUpdateStatus,
-  updatingStatus,
   formatSubmissionDate,
   refreshData
 }) {
-  // Approval form state
-  const [approvalForm, setApprovalForm] = useState({
-    approval_status: submission?.approval_status || "approved",
-    items_accepted: submission?.items_accepted || 0,
-    rejected_items_action: submission?.rejected_items_action || "return",
-    admin_notes: submission?.admin_notes || ""
-  });
-  const [submittingApproval, setSubmittingApproval] = useState(false);
-
   if (!submission) return null;
 
   // Get auth header for API calls
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
     return { headers: { Authorization: `Bearer ${token}` } };
-  };
-
-  // Handle approval submission
-  const handleApproval = async () => {
-    setSubmittingApproval(true);
-    try {
-      const endpoint = submission.formType === 'consignment_agreements'
-        ? `${API}/api/admin/forms/consignment-agreements/${submission.id}/approve`
-        : `${API}/api/admin/forms/item-additions/${submission.id}/approve`;
-      
-      await axios.put(endpoint, approvalForm, getAuthHeader());
-      
-      toast.success(
-        approvalForm.approval_status === 'approved' 
-          ? `Approved! ${approvalForm.items_accepted} items accepted for consignment`
-          : `Submission marked as rejected`
-      );
-      
-      // Refresh the data
-      if (refreshData) refreshData();
-      onClose();
-    } catch (error) {
-      console.error("Approval error:", error);
-      toast.error("Failed to process approval. Please try again.");
-    } finally {
-      setSubmittingApproval(false);
-    }
-  };
-
-  // Get approval status badge
-  const getApprovalStatusBadge = (status) => {
-    switch (status) {
-      case 'approved':
-        return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full bg-green-100 text-green-700">
-            <CheckCircle className="w-4 h-4" /> Approved
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full bg-red-100 text-red-700">
-            <XCircle className="w-4 h-4" /> Rejected
-          </span>
-        );
-      case 'pending':
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full bg-yellow-100 text-yellow-700">
-            <Clock className="w-4 h-4" /> Pending Review
-          </span>
-        );
-    }
   };
 
   const getGradientClass = () => {
@@ -273,28 +199,6 @@ Thrifty Curator Team`
 
         {/* Modal Content */}
         <div className="p-6 max-h-[60vh] overflow-y-auto">
-          {/* Status Update */}
-          <div className="mb-6 p-4 bg-[#F9F6F7] rounded-xl">
-            <Label className="text-sm font-medium text-[#666] mb-2 block">Update Status</Label>
-            <div className="flex flex-wrap gap-2">
-              {["new", "reviewed", "contacted", "archived"].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => onUpdateStatus(submission.formType, submission.id, status)}
-                  disabled={updatingStatus}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    submission.status === status || (!submission.status && status === "new")
-                      ? "bg-[#333] text-white"
-                      : "bg-white text-[#666] hover:bg-[#eee] border border-[#ddd]"
-                  }`}
-                  data-testid={`status-btn-${status}`}
-                >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Contact Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
@@ -509,50 +413,6 @@ Thrifty Curator Team`
                 </p>
               </div>
 
-              {/* Approval Section */}
-              <div className="mt-6 p-4 bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl border border-[#8B5CF6]/20">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-[#333] flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-[#8B5CF6]" />
-                    Consignment Review
-                  </h3>
-                  {getApprovalStatusBadge(submission.approval_status || 'pending')}
-                </div>
-
-                {/* Show review details if already reviewed */}
-                {submission.approval_status && submission.approval_status !== 'pending' && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-white rounded-lg">
-                        <p className="text-xs text-[#888]">Items Accepted</p>
-                        <p className="font-bold text-green-600 text-lg">{submission.items_accepted || 0}</p>
-                      </div>
-                      <div className="p-3 bg-white rounded-lg">
-                        <p className="text-xs text-[#888]">Non-Consigned Items</p>
-                        <p className="font-medium text-[#333] flex items-center gap-1">
-                          {submission.rejected_items_action === 'donate' ? (
-                            <><Gift className="w-4 h-4 text-purple-500" /> Donated</>
-                          ) : (
-                            <><RotateCcw className="w-4 h-4 text-blue-500" /> Returned</>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    {submission.admin_notes && (
-                      <div className="p-3 bg-white rounded-lg">
-                        <p className="text-xs text-[#888]">Admin Notes</p>
-                        <p className="text-[#333] text-sm">{submission.admin_notes}</p>
-                      </div>
-                    )}
-                    {submission.reviewed_at && (
-                      <p className="text-xs text-[#888] text-right">
-                        Reviewed: {formatSubmissionDate(submission.reviewed_at)}
-                        {submission.reviewed_by && ` by ${submission.reviewed_by}`}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
           )}
 
@@ -652,51 +512,6 @@ Thrifty Curator Team`
                   )}
                 </div>
               )}
-
-              {/* Approval Section */}
-              <div className="mt-6 p-4 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10 rounded-xl border border-[#10B981]/20">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-[#333] flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-[#10B981]" />
-                    Consignment Review
-                  </h3>
-                  {getApprovalStatusBadge(submission.approval_status || 'pending')}
-                </div>
-
-                {/* Show review details if already reviewed */}
-                {submission.approval_status && submission.approval_status !== 'pending' && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-white rounded-lg">
-                        <p className="text-xs text-[#888]">Items Accepted</p>
-                        <p className="font-bold text-green-600 text-lg">{submission.items_accepted || 0}</p>
-                      </div>
-                      <div className="p-3 bg-white rounded-lg">
-                        <p className="text-xs text-[#888]">Non-Consigned Items</p>
-                        <p className="font-medium text-[#333] flex items-center gap-1">
-                          {submission.rejected_items_action === 'donate' ? (
-                            <><Gift className="w-4 h-4 text-purple-500" /> Will be Donated</>
-                          ) : (
-                            <><RotateCcw className="w-4 h-4 text-blue-500" /> Will be Returned</>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    {submission.admin_notes && (
-                      <div className="p-3 bg-white rounded-lg">
-                        <p className="text-xs text-[#888]">Admin Notes</p>
-                        <p className="text-[#333] text-sm">{submission.admin_notes}</p>
-                      </div>
-                    )}
-                    {submission.reviewed_at && (
-                      <p className="text-xs text-[#888] text-right">
-                        Reviewed: {formatSubmissionDate(submission.reviewed_at)}
-                        {submission.reviewed_by && ` by ${submission.reviewed_by}`}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
           )}
 

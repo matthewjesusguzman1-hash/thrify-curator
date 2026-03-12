@@ -1006,69 +1006,6 @@ Thrifty Curator Team`;
                         </div>
                       </div>
                     )}
-
-                    {/* Approval Section - Only for item additions */}
-                    {viewingUpdate.items_to_add > 0 && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl border border-[#8B5CF6]/20">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold text-[#333] flex items-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-[#8B5CF6]" />
-                            Consignment Review
-                          </h3>
-                          {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' ? (
-                            <span className={`inline-flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full ${
-                              viewingUpdate.approval_status === 'approved' 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-red-100 text-red-700'
-                            }`}>
-                              {viewingUpdate.approval_status === 'approved' ? (
-                                <><CheckCircle className="w-4 h-4" /> Approved</>
-                              ) : (
-                                <><XCircle className="w-4 h-4" /> Rejected</>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full bg-yellow-100 text-yellow-700">
-                              <Clock className="w-4 h-4" /> Pending Review
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Show review details if already reviewed */}
-                        {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' && (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="p-3 bg-white rounded-lg">
-                                <p className="text-xs text-[#888]">Items Accepted</p>
-                                <p className="font-bold text-green-600 text-lg">{viewingUpdate.items_accepted || 0}</p>
-                              </div>
-                              <div className="p-3 bg-white rounded-lg">
-                                <p className="text-xs text-[#888]">Non-Consigned Items</p>
-                                <p className="font-medium text-[#333] flex items-center gap-1">
-                                  {viewingUpdate.rejected_items_action === 'donate' ? (
-                                    <><Gift className="w-4 h-4 text-purple-500" /> Will be Donated</>
-                                  ) : (
-                                    <><RotateCcw className="w-4 h-4 text-blue-500" /> Will be Returned</>
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            {viewingUpdate.admin_notes && (
-                              <div className="p-3 bg-white rounded-lg">
-                                <p className="text-xs text-[#888]">Admin Notes</p>
-                                <p className="text-[#333] text-sm">{viewingUpdate.admin_notes}</p>
-                              </div>
-                            )}
-                            {viewingUpdate.reviewed_at && (
-                              <p className="text-xs text-[#888] text-right">
-                                Reviewed: {formatSubmissionDate(viewingUpdate.reviewed_at)}
-                                {viewingUpdate.reviewed_by && ` by ${viewingUpdate.reviewed_by}`}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </>
                 )}
               </div>
