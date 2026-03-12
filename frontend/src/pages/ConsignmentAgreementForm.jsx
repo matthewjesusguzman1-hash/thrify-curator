@@ -850,21 +850,36 @@ export default function ConsignmentAgreementForm() {
                                 </div>
                               </div>
                               
-                              {/* Status Badge */}
-                              {submission.approval_status === 'approved' ? (
+                              {/* Status Badge - Based on submission type */}
+                              {submission.type === 'consignment_agreement' ? (
+                                // Initial consignment agreement - show "Active"
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
                                   <CheckCircle className="w-3 h-3" />
-                                  Approved
+                                  Active
                                 </span>
-                              ) : submission.approval_status === 'rejected' ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 flex-shrink-0">
-                                  <XCircle className="w-3 h-3" />
-                                  Rejected
-                                </span>
+                              ) : submission.items_to_add > 0 ? (
+                                // Item additions need approval - show status
+                                submission.approval_status === 'approved' ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
+                                    <CheckCircle className="w-3 h-3" />
+                                    Approved
+                                  </span>
+                                ) : submission.approval_status === 'rejected' ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 flex-shrink-0">
+                                    <XCircle className="w-3 h-3" />
+                                    Rejected
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 flex-shrink-0">
+                                    <Clock className="w-3 h-3" />
+                                    Pending
+                                  </span>
+                                )
                               ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 flex-shrink-0">
-                                  <Clock className="w-3 h-3" />
-                                  Pending
+                                // Info-only updates are applied immediately
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 flex-shrink-0">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Updated
                                 </span>
                               )}
                             </div>
