@@ -2521,3 +2521,54 @@ The item additions API (`GET /api/admin/forms/consignment-item-additions`) was r
 - `/app/backend/app/routers/forms.py` - Enhanced API to include current contact info
 - `/app/frontend/src/components/admin/modals/FormSubmissionModal.jsx` - Updated email display and mailto links
 - `/app/frontend/src/components/admin/sections/FormSubmissionsSection.jsx` - Updated table display and modals
+
+
+## Email Notifications Feature (March 12, 2026)
+
+### Overview
+Added automated email notifications for consignment-related actions. Emails are currently in **MOCKED** mode (logged to console). To enable real email sending, add `RESEND_API_KEY` to `/app/backend/.env`.
+
+### Email Types
+1. **New Consignment Agreement**
+   - Subject: "Welcome to Thrifty Curator - Agreement Confirmed"
+   - Sent when: User signs a new consignment agreement
+   - Contents: Agreement details, profit split, next steps
+
+2. **Item Addition**
+   - Subject: "Thrifty Curator - X Items Added"
+   - Sent when: User adds new items for consignment
+   - Contents: Item count, description, pending review status
+
+3. **Information Update**
+   - Subject: "Thrifty Curator - Account Information Updated"
+   - Sent when: User updates their contact/payment info
+   - Contents: List of updated fields, email change warning if applicable
+   - Note: Sent to both old and new email if email was changed
+
+4. **Approval/Rejection Notification**
+   - Subject: "Thrifty Curator - Your Submission has been Approved/Not Approved"
+   - Sent when: Admin approves or rejects a submission
+   - Contents: Status, items accepted, rejected items handling, admin notes
+
+### Setup Instructions
+To enable real email sending:
+1. Sign up at https://resend.com
+2. Create an API key (Dashboard → API Keys → Create)
+3. Add to `/app/backend/.env`:
+   ```
+   RESEND_API_KEY=re_your_key_here
+   SENDER_EMAIL=noreply@yourdomain.com  # Optional, defaults to onboarding@resend.dev
+   ```
+4. Restart backend: `sudo supervisorctl restart backend`
+
+### Files Created
+- `/app/backend/app/services/email_service.py` - Email service with templates and sending logic
+
+### Files Modified
+- `/app/backend/app/routers/forms.py` - Added BackgroundTasks for async email sending on all consignment endpoints
+
+### Technical Notes
+- Emails sent via FastAPI BackgroundTasks (non-blocking)
+- Uses Resend API (resend package already installed)
+- Falls back to MOCK mode if RESEND_API_KEY not set
+- Professional HTML email templates with Thrifty Curator branding

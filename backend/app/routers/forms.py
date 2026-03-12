@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
 from typing import List
 from datetime import datetime, timezone
 import os
@@ -8,6 +8,12 @@ from app.database import db
 from app.dependencies import get_admin_user
 from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus, PaymentMethodUpdate, ConsignmentItemAddition, ConsignmentApproval
 from app.models.notifications import AdminNotification
+from app.services.email_service import (
+    send_consignment_agreement_confirmation,
+    send_item_addition_confirmation,
+    send_info_update_confirmation,
+    send_approval_notification
+)
 
 router = APIRouter(tags=["Forms"])
 
@@ -101,7 +107,7 @@ async def submit_consignment_inquiry(inquiry: ConsignmentInquiry):
 
 
 @router.post("/forms/consignment-agreement", response_model=ConsignmentAgreement)
-async def submit_consignment_agreement(agreement: ConsignmentAgreement):
+async def submit_consignment_agreement(agreement: ConsignmentAgreement, background_tasks: BackgroundTasks):
     doc = agreement.model_dump()
     await db.consignment_agreements.insert_one(doc)
     
@@ -114,6 +120,15 @@ async def submit_consignment_agreement(agreement: ConsignmentAgreement):
         details={"email": agreement.email}
     )
     await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send confirmation email to user (in background to not block response)
+    background_tasks.add_task(
+        send_consignment_agreement_confirmation,
+        to_email=agreement.email,
+        full_name=agreement.full_name,
+        agreed_percentage=agreement.agreed_percentage,
+        items_description=agreement.items_description
+    )
     
     return agreement
 
@@ -284,7 +299,7 @@ async def get_payment_method_changes(admin: dict = Depends(get_admin_user)):
 
 
 @router.post("/forms/add-consignment-items", response_model=ConsignmentItemAddition)
-async def add_consignment_items(addition: ConsignmentItemAddition):
+async def add_consignment_items(addition: ConsignmentItemAddition, background_tasks: BackgroundTasks):
     """Add more items to an existing consignment agreement or update contact/payment info"""
     from datetime import datetime, timezone
     
@@ -377,6 +392,42 @@ async def add_consignment_items(addition: ConsignmentItemAddition):
         }
     )
     await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send confirmation email to user (in background)
+    full_name = addition_dict["full_name"]
+    
+    if addition.items_to_add > 0:
+        # Items added - send item addition confirmation
+        background_tasks.add_task(
+            send_item_addition_confirmation,
+            to_email=addition.update_email or addition.email,
+            full_name=full_name,
+            items_to_add=addition.items_to_add,
+            items_description=addition.items_description
+        )
+    else:
+        # Info update only - send info update confirmation
+        updated_fields = []
+        if addition.update_email:
+            updated_fields.append("Email address")
+        if addition.update_phone:
+            updated_fields.append("Phone number")
+        if addition.update_address:
+            updated_fields.append("Mailing address")
+        if addition.update_payment_method:
+            updated_fields.append("Payment method")
+        if addition.update_profit_split:
+            updated_fields.append("Profit split percentage")
+        
+        if updated_fields:
+            # Send to original email
+            background_tasks.add_task(
+                send_info_update_confirmation,
+                to_email=addition.email,
+                full_name=full_name,
+                updated_fields=updated_fields,
+                new_email=addition.update_email if addition.update_email else None
+            )
     
     return ConsignmentItemAddition(**addition_dict)
 
@@ -598,7 +649,7 @@ async def delete_consignment_agreement(submission_id: str, admin: dict = Depends
 
 
 @router.put("/admin/forms/consignment-agreements/{submission_id}/approve")
-async def approve_consignment_agreement(submission_id: str, approval: ConsignmentApproval, admin: dict = Depends(get_admin_user)):
+async def approve_consignment_agreement(submission_id: str, approval: ConsignmentApproval, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
     """Approve or reject a consignment agreement with item acceptance details"""
     update_data = {
         "approval_status": approval.approval_status,
@@ -635,11 +686,24 @@ async def approve_consignment_agreement(submission_id: str, approval: Consignmen
     )
     await db.admin_notifications.insert_one(notification.model_dump())
     
+    # Send approval/rejection email to user
+    if agreement:
+        background_tasks.add_task(
+            send_approval_notification,
+            to_email=agreement.get("email"),
+            full_name=agreement.get("full_name", "Valued Customer"),
+            approval_status=approval.approval_status,
+            items_accepted=approval.items_accepted,
+            rejected_items_action=approval.rejected_items_action,
+            admin_notes=approval.admin_notes,
+            submission_type="agreement"
+        )
+    
     return {"message": f"Agreement {status_text}", "approval_status": approval.approval_status}
 
 
 @router.put("/admin/forms/item-additions/{submission_id}/approve")
-async def approve_item_addition(submission_id: str, approval: ConsignmentApproval, admin: dict = Depends(get_admin_user)):
+async def approve_item_addition(submission_id: str, approval: ConsignmentApproval, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
     """Approve or reject an item addition with item acceptance details"""
     update_data = {
         "approval_status": approval.approval_status,
@@ -657,8 +721,18 @@ async def approve_item_addition(submission_id: str, approval: ConsignmentApprova
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Item addition not found")
     
-    # Get addition details for notification
+    # Get addition details for notification and email
     addition = await db.consignment_item_additions.find_one({"id": submission_id}, {"_id": 0})
+    
+    # Get the current email from the master agreement (in case it was updated)
+    current_email = addition.get("email") if addition else None
+    if addition and addition.get("agreement_id"):
+        agreement = await db.consignment_agreements.find_one(
+            {"id": addition.get("agreement_id")},
+            {"_id": 0, "email": 1}
+        )
+        if agreement:
+            current_email = agreement.get("email", current_email)
     
     # Create notification
     status_text = "approved" if approval.approval_status == "approved" else "rejected"
@@ -675,6 +749,19 @@ async def approve_item_addition(submission_id: str, approval: ConsignmentApprova
         }
     )
     await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send approval/rejection email to user
+    if addition and current_email:
+        background_tasks.add_task(
+            send_approval_notification,
+            to_email=current_email,
+            full_name=addition.get("full_name", "Valued Customer"),
+            approval_status=approval.approval_status,
+            items_accepted=approval.items_accepted,
+            rejected_items_action=approval.rejected_items_action,
+            admin_notes=approval.admin_notes,
+            submission_type="item_addition"
+        )
     
     return {"message": f"Item addition {status_text}", "approval_status": approval.approval_status}
 
