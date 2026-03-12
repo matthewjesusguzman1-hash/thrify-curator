@@ -7,7 +7,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://consign-portal-1.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://mobile-curator.preview.emergentagent.com').rstrip('/')
 
 
 class TestUpdatesTabAPI:
