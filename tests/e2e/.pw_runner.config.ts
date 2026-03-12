@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260312_185822/results.json' }],
   ],
   use: {
-    baseURL: 'https://approval-system-dev.preview.emergentagent.com',
+    baseURL: 'https://mobile-reseller-2.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

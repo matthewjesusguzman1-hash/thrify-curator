@@ -4,7 +4,7 @@
   "webDir": "build",
   "server": {
     "androidScheme": "https",
-    "url": "https://approval-system-dev.preview.emergentagent.com",
+    "url": "https://mobile-reseller-2.preview.emergentagent.com",
     "cleartext": false
   },
   "plugins": {

@@ -385,6 +385,31 @@ async def add_consignment_items(addition: ConsignmentItemAddition):
 async def get_consignment_item_additions(admin: dict = Depends(get_admin_user)):
     """Get all consignment item addition logs for admin review"""
     additions = await db.consignment_item_additions.find({}, {"_id": 0}).sort("submitted_at", -1).to_list(500)
+    
+    # Enrich each addition with the most recent email from the master agreement
+    for addition in additions:
+        agreement_id = addition.get("agreement_id")
+        if agreement_id:
+            agreement = await db.consignment_agreements.find_one(
+                {"id": agreement_id},
+                {"_id": 0, "email": 1, "phone": 1, "full_name": 1}
+            )
+            if agreement:
+                # Add current contact info from the master agreement
+                addition["current_email"] = agreement.get("email", addition.get("email"))
+                addition["current_phone"] = agreement.get("phone", addition.get("phone"))
+                addition["current_full_name"] = agreement.get("full_name", addition.get("full_name"))
+            else:
+                # Fallback to stored values if agreement not found
+                addition["current_email"] = addition.get("email")
+                addition["current_phone"] = addition.get("phone")
+                addition["current_full_name"] = addition.get("full_name")
+        else:
+            # Fallback if no agreement_id
+            addition["current_email"] = addition.get("email")
+            addition["current_phone"] = addition.get("phone")
+            addition["current_full_name"] = addition.get("full_name")
+    
     return additions
 
 
@@ -689,7 +714,6 @@ async def get_forms_summary(admin: dict = Depends(get_admin_user)):
 # PDF Download endpoints
 from fastapi.responses import Response
 from fpdf import FPDF
-from datetime import datetime
 
 
 def format_date(iso_string):

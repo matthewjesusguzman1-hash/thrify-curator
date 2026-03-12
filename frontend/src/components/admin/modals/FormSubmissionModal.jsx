@@ -201,7 +201,9 @@ Thrifty Curator Team`
 
   const handleSendEmail = () => {
     const { subject, body } = getEmailContent();
-    const mailtoLink = `mailto:${submission.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    // Use current_email if available (from enriched backend data), otherwise fall back to submission email
+    const emailToUse = submission.current_email || submission.email;
+    const mailtoLink = `mailto:${emailToUse}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoLink, '_blank');
   };
 
@@ -277,17 +279,20 @@ Thrifty Curator Team`
               <Mail className="w-5 h-5 text-[#888]" />
               <div>
                 <p className="text-xs text-[#888]">Email</p>
-                <a href={`mailto:${submission.email}`} className="text-[#333] hover:text-[#8B5CF6]">
-                  {submission.email}
+                <a href={`mailto:${submission.current_email || submission.email}`} className="text-[#333] hover:text-[#8B5CF6]">
+                  {submission.current_email || submission.email}
                 </a>
+                {submission.current_email && submission.current_email !== submission.email && (
+                  <p className="text-xs text-blue-500 mt-0.5">Updated from: {submission.email}</p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
               <Phone className="w-5 h-5 text-[#888]" />
               <div>
                 <p className="text-xs text-[#888]">Phone</p>
-                <a href={`tel:${submission.phone}`} className="text-[#333] hover:text-[#8B5CF6]">
-                  {submission.phone}
+                <a href={`tel:${submission.current_phone || submission.phone}`} className="text-[#333] hover:text-[#8B5CF6]">
+                  {submission.current_phone || submission.phone}
                 </a>
               </div>
             </div>

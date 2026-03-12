@@ -1,12 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -89,6 +99,9 @@ export default function ConsignmentAgreementForm() {
   const [userSubmissions, setUserSubmissions] = useState(null);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [showSubmissionsExpanded, setShowSubmissionsExpanded] = useState(false);
+  
+  // Confirmation dialog state
+  const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -932,8 +945,11 @@ export default function ConsignmentAgreementForm() {
                                 className="border border-gray-200 focus:border-[#8B5CF6] rounded-lg"
                                 data-testid="update-email"
                               />
+                              <p className="text-xs text-[#888] mt-1 flex items-center gap-1">
+                                <span className="text-amber-500">⚠</span> Changing your email will update your login credentials
+                              </p>
                               {updateEmail !== addItemsAgreement.email && updateEmail.trim() && (
-                                <p className="text-xs text-amber-600 mt-1">Will update from: {addItemsAgreement.email}</p>
+                                <p className="text-xs text-amber-600 mt-1 font-medium">Will update from: {addItemsAgreement.email}</p>
                               )}
                             </div>
 
@@ -1020,13 +1036,43 @@ export default function ConsignmentAgreementForm() {
 
                             {/* Submit Button for Contact Updates */}
                             <Button
-                              onClick={handleAddItems}
+                              onClick={() => setShowUpdateConfirm(true)}
                               disabled={loading}
                               className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-medium py-2.5 rounded-lg"
                               data-testid="submit-contact-update-btn"
                             >
                               {loading ? "Saving..." : "Save Changes"}
                             </Button>
+                            
+                            {/* Confirmation Dialog */}
+                            <AlertDialog open={showUpdateConfirm} onOpenChange={setShowUpdateConfirm}>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="flex items-center gap-2">
+                                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                                    Confirm Information Update
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription className="text-left space-y-2">
+                                    <p>Are you sure you want to update your information?</p>
+                                    {updateEmail !== addItemsAgreement.email && updateEmail.trim() && (
+                                      <p className="text-amber-600 font-medium">
+                                        Your email will change from {addItemsAgreement.email} to {updateEmail}. This will also update your login credentials.
+                                      </p>
+                                    )}
+                                    <p className="text-sm text-[#666]">These changes will take effect immediately.</p>
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={handleAddItems}
+                                    className="bg-[#8B5CF6] hover:bg-[#7C3AED]"
+                                  >
+                                    Yes, Update My Information
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </motion.div>
                       )}

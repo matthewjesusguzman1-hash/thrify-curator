@@ -2492,3 +2492,32 @@ Each submission shows:
 1. Removed separate "View My Submissions" button from initial choice page
 2. Updated "Update Info / Add Items" description to "View submissions, update info, or add more items"
 3. Added "My Submissions" expandable section in the update form (after login)
+
+
+## Admin Email Button Fix (March 12, 2026)
+
+### Issue
+The admin "Email" button in the form submissions section was using outdated email addresses. When a user updated their email through the Consignment Portal, the admin would still see and contact them at their old email address.
+
+### Root Cause
+The item additions API (`GET /api/admin/forms/consignment-item-additions`) was returning the email stored at the time of submission, rather than the most current email from the master `consignment_agreements` document.
+
+### Solution
+1. **Backend Enhancement**: Modified the `/api/admin/forms/consignment-item-additions` endpoint to enrich each item addition with the latest contact information from the master agreement:
+   - Added `current_email`, `current_phone`, `current_full_name` fields to API response
+   - These fields are fetched from the `consignment_agreements` collection using the `agreement_id`
+
+2. **Frontend Updates**: Updated multiple components to use the new `current_email` field:
+   - `FormSubmissionModal.jsx`: Email button and contact display now use `current_email`
+   - `FormSubmissionsSection.jsx`: Updates tab table, view modal, and message modal use `current_email`
+   - Added visual indicator showing "Updated from: [old_email]" when email has changed
+
+### User Experience
+- Admins now see the **current** email address in all admin views
+- When an email has been updated, a note shows the original email for reference
+- The "Email" and "Send Email" buttons always open email to the **latest** address
+
+### Files Modified
+- `/app/backend/app/routers/forms.py` - Enhanced API to include current contact info
+- `/app/frontend/src/components/admin/modals/FormSubmissionModal.jsx` - Updated email display and mailto links
+- `/app/frontend/src/components/admin/sections/FormSubmissionsSection.jsx` - Updated table display and modals

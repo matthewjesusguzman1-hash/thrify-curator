@@ -297,9 +297,9 @@ Thrifty Curator Team`;
     
     const subject = encodeURIComponent(`Re: Your Consignment Update - Thrifty Curator`);
     const body = encodeURIComponent(messageContent);
-    window.location.href = `mailto:${messageModal.update.email}?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${messageModal.update.current_email || messageModal.update.email}?subject=${subject}&body=${body}`;
     
-    toast.success(`Opening email client for ${messageModal.update.email}`);
+    toast.success(`Opening email client for ${messageModal.update.current_email || messageModal.update.email}`);
     setMessageModal({ open: false, update: null });
     setMessageContent("");
   };
@@ -762,8 +762,8 @@ Thrifty Curator Team`;
                           {getSortedData(getFilteredUpdates(), 'updates').map((update) => (
                             <tr key={update.id} data-testid={`update-row-${update.id}`}>
                               <td>
-                                <div className="font-medium">{update.full_name}</div>
-                                <div className="text-xs text-[#888]">{update.email}</div>
+                                <div className="font-medium">{update.current_full_name || update.full_name}</div>
+                                <div className="text-xs text-[#888]">{update.current_email || update.email}</div>
                               </td>
                               <td>
                                 {update.source === 'payment_change' ? (
@@ -919,9 +919,12 @@ Thrifty Curator Team`;
                     Client Information
                   </h4>
                   <div className="bg-[#F9F6F7] rounded-xl p-3 space-y-1">
-                    <p className="font-medium text-[#333]">{viewingUpdate.full_name}</p>
+                    <p className="font-medium text-[#333]">{viewingUpdate.current_full_name || viewingUpdate.full_name}</p>
                     <p className="text-sm text-[#666] flex items-center gap-1">
-                      <Mail className="w-3 h-3" /> {viewingUpdate.email}
+                      <Mail className="w-3 h-3" /> {viewingUpdate.current_email || viewingUpdate.email}
+                      {viewingUpdate.current_email && viewingUpdate.current_email !== viewingUpdate.email && (
+                        <span className="text-xs text-blue-500 ml-1">(updated)</span>
+                      )}
                     </p>
                     <p className="text-sm text-[#888] flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> {formatSubmissionDate(viewingUpdate.submitted_at || viewingUpdate.changed_at)}
@@ -1285,7 +1288,7 @@ Thrifty Curator Team`;
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-bold text-white">Message Client</h3>
-                    <p className="text-sm text-white/80">{messageModal.update.email}</p>
+                    <p className="text-sm text-white/80">{messageModal.update.current_email || messageModal.update.email}</p>
                   </div>
                   <button
                     onClick={() => setMessageModal({ open: false, update: null })}
