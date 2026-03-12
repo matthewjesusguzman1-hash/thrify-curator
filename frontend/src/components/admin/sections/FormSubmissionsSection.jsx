@@ -791,19 +791,19 @@ Thrifty Curator Team`;
                                     </span>
                                   ) : (
                                     <>
-                                      {update.update_email && (
+                                      {update.update_email && update.update_email !== "None" && (
                                         <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs">Email</span>
                                       )}
-                                      {update.update_phone && (
+                                      {update.update_phone && update.update_phone !== "None" && (
                                         <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-xs">Phone</span>
                                       )}
-                                      {update.update_address && (
+                                      {update.update_address && update.update_address !== "None" && (
                                         <span className="px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-xs">Address</span>
                                       )}
-                                      {update.update_payment_method && (
+                                      {update.update_payment_method && update.update_payment_method !== "None" && (
                                         <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-xs">Payment</span>
                                       )}
-                                      {update.update_profit_split && (
+                                      {update.update_profit_split && update.update_profit_split !== "None" && (
                                         <span className="px-1.5 py-0.5 bg-green-50 text-green-600 rounded text-xs">Split</span>
                                       )}
                                       {update.photos && update.photos.length > 0 && (
@@ -966,28 +966,30 @@ Thrifty Curator Team`;
                     )}
 
                     {/* Contact Info Updates */}
-                    {(viewingUpdate.update_email || viewingUpdate.update_phone || viewingUpdate.update_address) && (
+                    {((viewingUpdate.update_email && viewingUpdate.update_email !== "None") || 
+                      (viewingUpdate.update_phone && viewingUpdate.update_phone !== "None") || 
+                      (viewingUpdate.update_address && viewingUpdate.update_address !== "None")) && (
                       <div className="space-y-2">
                         <h4 className="font-semibold text-[#333] flex items-center gap-2">
                           <User className="w-4 h-4" />
                           Contact Info Updates
                         </h4>
                         <div className="bg-[#F9F6F7] rounded-xl p-3 space-y-1">
-                          {viewingUpdate.update_email && (
+                          {viewingUpdate.update_email && viewingUpdate.update_email !== "None" && (
                             <p className="text-sm flex items-center gap-2">
                               <Mail className="w-3 h-3 text-blue-500" />
                               <span className="text-[#666]">New Email:</span>
                               <span className="font-medium">{viewingUpdate.update_email}</span>
                             </p>
                           )}
-                          {viewingUpdate.update_phone && (
+                          {viewingUpdate.update_phone && viewingUpdate.update_phone !== "None" && (
                             <p className="text-sm flex items-center gap-2">
                               <Phone className="w-3 h-3 text-purple-500" />
                               <span className="text-[#666]">New Phone:</span>
                               <span className="font-medium">{viewingUpdate.update_phone}</span>
                             </p>
                           )}
-                          {viewingUpdate.update_address && (
+                          {viewingUpdate.update_address && viewingUpdate.update_address !== "None" && (
                             <p className="text-sm flex items-center gap-2">
                               <MapPin className="w-3 h-3 text-orange-500" />
                               <span className="text-[#666]">New Address:</span>
@@ -999,7 +1001,7 @@ Thrifty Curator Team`;
                     )}
 
                     {/* Payment Method Update */}
-                    {viewingUpdate.update_payment_method && (
+                    {viewingUpdate.update_payment_method && viewingUpdate.update_payment_method !== "None" && (
                       <div className="space-y-2">
                         <h4 className="font-semibold text-[#333] flex items-center gap-2">
                           <CreditCard className="w-4 h-4" />

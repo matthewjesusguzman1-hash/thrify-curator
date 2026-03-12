@@ -308,15 +308,20 @@ export default function ConsignmentAgreementForm() {
     
     setLoading(true);
     try {
+      // Only include fields that have actually changed
+      const emailChanged = wantsToUpdateContact && updateEmail && updateEmail !== addItemsAgreement.email;
+      const phoneChanged = wantsToUpdateContact && updatePhone && updatePhone !== addItemsAgreement.phone;
+      const addressChanged = wantsToUpdateContact && updateAddress && updateAddress !== addItemsAgreement.address;
+      
       await axios.post(`${API}/forms/add-consignment-items`, {
         email: addItemsEmail,
         full_name: addItemsAgreement.full_name,
         items_to_add: hasItems ? parseInt(itemsToAdd) : 0,
         items_description: itemsDescription,
         acknowledged_terms: hasItems ? acknowledgedTerms : true,
-        update_email: wantsToUpdateContact && updateEmail !== addItemsAgreement.email ? updateEmail : null,
-        update_phone: wantsToUpdateContact ? updatePhone : null,
-        update_address: wantsToUpdateContact ? updateAddress : null,
+        update_email: emailChanged ? updateEmail : null,
+        update_phone: phoneChanged ? updatePhone : null,
+        update_address: addressChanged ? updateAddress : null,
         update_payment_method: hasPaymentUpdate ? updatePaymentMethod : null,
         update_payment_details: hasPaymentUpdate ? updatePaymentDetails : null,
         update_profit_split: hasProfitSplitUpdate ? updateCustomSplit : null,
