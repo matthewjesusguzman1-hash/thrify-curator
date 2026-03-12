@@ -8,6 +8,10 @@ class MessageCreate(BaseModel):
     sender_name: str
     sender_email: EmailStr
     message: str
+    # Honeypot field - should always be empty (bots will fill it)
+    website: Optional[str] = None
+    # reCAPTCHA token - optional for mobile apps, required for web
+    recaptcha_token: Optional[str] = None
     
 
 class MessageResponse(BaseModel):

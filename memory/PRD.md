@@ -2367,3 +2367,53 @@ Added Capacitor for mobile app wrapper and Firebase Cloud Messaging for push not
 ```
 FIREBASE_SERVER_KEY=your_firebase_server_key
 ```
+
+
+
+## Contact Form Spam Protection (March 2026)
+
+### Feature Overview
+Added multi-layer spam protection to the contact/message form on the landing page:
+
+1. **Honeypot Field** (Web + Mobile)
+   - Hidden form field that bots auto-fill but humans can't see
+   - If filled, request is silently rejected (returns fake success to fool bots)
+
+2. **Rate Limiting** (Web + Mobile)
+   - Maximum 3 messages per 5 minutes per IP address
+   - Returns 429 error with user-friendly message when exceeded
+
+3. **Google reCAPTCHA v3** (Web Only)
+   - Invisible verification running in background
+   - Scores each user (0.0 = bot, 1.0 = human)
+   - Threshold: 0.5 (configurable via RECAPTCHA_THRESHOLD)
+   - Skipped for mobile apps (Capacitor detection)
+
+### Implementation Files
+- `/app/backend/app/services/recaptcha.py` - reCAPTCHA verification service
+- `/app/backend/app/routers/messages.py` - Updated with honeypot, rate limiting, reCAPTCHA
+- `/app/backend/app/models/messages.py` - Added website (honeypot) and recaptcha_token fields
+- `/app/frontend/src/index.js` - GoogleReCaptchaProvider wrapper (web only)
+- `/app/frontend/src/pages/LandingPage.jsx` - Honeypot field + reCAPTCHA token submission
+
+### Environment Variables
+```
+# Frontend (.env)
+REACT_APP_RECAPTCHA_SITE_KEY=your_site_key_here
+
+# Backend (.env)
+RECAPTCHA_SECRET_KEY=your_secret_key_here
+RECAPTCHA_THRESHOLD=0.5
+```
+
+### Setup Instructions
+1. Go to [Google reCAPTCHA Admin](https://www.google.com/recaptcha/admin)
+2. Create a new site with reCAPTCHA v3
+3. Add your domain(s): `thriftycurator.com`, `localhost` (for testing)
+4. Copy Site Key to frontend `.env` (REACT_APP_RECAPTCHA_SITE_KEY)
+5. Copy Secret Key to backend `.env` (RECAPTCHA_SECRET_KEY)
+
+### Mobile App Behavior
+- Capacitor apps are detected via `window.Capacitor`
+- reCAPTCHA is NOT loaded for mobile apps
+- Honeypot + Rate Limiting still protect mobile

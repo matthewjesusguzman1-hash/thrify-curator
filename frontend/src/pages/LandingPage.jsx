@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -29,6 +29,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
+
+// Import reCAPTCHA hook (will be undefined if provider not available)
+let useGoogleReCaptcha;
+try {
+  useGoogleReCaptcha = require("react-google-recaptcha-v3").useGoogleReCaptcha;
+} catch (e) {
+  useGoogleReCaptcha = () => ({ executeRecaptcha: null });
+}
 
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
 const TIKTOK_URL = process.env.REACT_APP_TIKTOK_URL;
@@ -109,8 +117,14 @@ const connectLinks = [
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+// Check if running in Capacitor (mobile app)
+const isCapacitor = typeof window !== 'undefined' && window.Capacitor !== undefined;
+
 export default function LandingPage() {
   const [shareLoading, setShareLoading] = useState(false);
+  
+  // reCAPTCHA hook - only available on web when provider is present
+  const { executeRecaptcha } = useGoogleReCaptcha ? useGoogleReCaptcha() : { executeRecaptcha: null };
   
   // PWA Install state
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -170,7 +184,8 @@ export default function LandingPage() {
   const [messageForm, setMessageForm] = useState({
     name: "",
     email: "",
-    message: ""
+    message: "",
+    website: ""  // Honeypot field - should stay empty
   });
   const [sendingMessage, setSendingMessage] = useState(false);
 
@@ -197,17 +212,35 @@ export default function LandingPage() {
     
     setSendingMessage(true);
     try {
+      // Get reCAPTCHA token if available (web only, not mobile)
+      let recaptchaToken = null;
+      if (executeRecaptcha && !isCapacitor) {
+        try {
+          recaptchaToken = await executeRecaptcha('contact_form_submit');
+        } catch (recaptchaError) {
+          console.warn("reCAPTCHA failed, proceeding without token:", recaptchaError);
+        }
+      }
+      
       await axios.post(`${API}/api/messages`, {
         sender_name: messageForm.name.trim(),
         sender_email: messageForm.email.trim().toLowerCase(),
-        message: messageForm.message.trim()
+        message: messageForm.message.trim(),
+        website: messageForm.website,  // Honeypot field
+        recaptcha_token: recaptchaToken  // reCAPTCHA token (null for mobile)
       });
       
       setMessageSent(true);
       toast.success("Message sent successfully!");
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error("Failed to send message. Please try again.");
+      if (error.response?.status === 429) {
+        toast.error("Too many messages. Please wait a few minutes before trying again.");
+      } else if (error.response?.status === 400) {
+        toast.error("Security verification failed. Please refresh and try again.");
+      } else {
+        toast.error("Failed to send message. Please try again.");
+      }
     } finally {
       setSendingMessage(false);
     }
@@ -216,13 +249,13 @@ export default function LandingPage() {
   const handleOpenMessaging = () => {
     setShowMessageModal(true);
     setMessageSent(false);
-    setMessageForm({ name: "", email: "", message: "" });
+    setMessageForm({ name: "", email: "", message: "", website: "" });
   };
 
   const handleCloseMessaging = () => {
     setShowMessageModal(false);
     setMessageSent(false);
-    setMessageForm({ name: "", email: "", message: "" });
+    setMessageForm({ name: "", email: "", message: "", website: "" });
   };
 
   const handleShare = async () => {
@@ -626,6 +659,20 @@ export default function LandingPage() {
                         rows={4}
                         className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00D4FF] focus:ring-[#00D4FF]/20 resize-none"
                         data-testid="message-text-input"
+                      />
+                    </div>
+
+                    {/* Honeypot field - hidden from real users, bots will fill it */}
+                    <div className="absolute -left-[9999px] opacity-0 pointer-events-none" aria-hidden="true">
+                      <label htmlFor="website">Website</label>
+                      <input
+                        type="text"
+                        id="website"
+                        name="website"
+                        autoComplete="off"
+                        tabIndex={-1}
+                        value={messageForm.website}
+                        onChange={(e) => setMessageForm({ ...messageForm, website: e.target.value })}
                       />
                     </div>
 
