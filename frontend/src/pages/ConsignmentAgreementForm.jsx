@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -82,6 +82,12 @@ export default function ConsignmentAgreementForm() {
   // Payment history state
   const [paymentHistory, setPaymentHistory] = useState(null);
   const [loadingPaymentHistory, setLoadingPaymentHistory] = useState(false);
+  
+  // View submissions state
+  const [showViewSubmissions, setShowViewSubmissions] = useState(false);
+  const [viewSubmissionsEmail, setViewSubmissionsEmail] = useState("");
+  const [userSubmissions, setUserSubmissions] = useState(null);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -139,6 +145,29 @@ export default function ConsignmentAgreementForm() {
       setPaymentHistory({ payments: [], total_paid: 0, payment_count: 0 });
     } finally {
       setLoadingPaymentHistory(false);
+    }
+  };
+
+  // Fetch user submissions
+  const handleFetchSubmissions = async () => {
+    if (!viewSubmissionsEmail.trim()) {
+      toast.error("Please enter your email address");
+      return;
+    }
+    
+    setLoadingSubmissions(true);
+    try {
+      const response = await axios.get(`${API}/forms/my-submissions/${encodeURIComponent(viewSubmissionsEmail)}`);
+      setUserSubmissions(response.data);
+    } catch (error) {
+      if (error.response?.status === 404) {
+        toast.error("No consignment agreement found for this email");
+      } else {
+        toast.error("Failed to fetch submissions");
+      }
+      setUserSubmissions(null);
+    } finally {
+      setLoadingSubmissions(false);
     }
   };
 
@@ -498,6 +527,22 @@ export default function ConsignmentAgreementForm() {
                 </div>
               </div>
             </button>
+
+            <button
+              onClick={() => { setShowInitialChoice(false); setShowViewSubmissions(true); }}
+              className="w-full bg-white rounded-xl shadow-2xl p-6 hover:shadow-3xl transition-all duration-300 group"
+              data-testid="view-submissions-btn"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Eye className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">View My Submissions</h3>
+                  <p className="text-[#666] text-sm">Check the status of your submissions and approvals.</p>
+                </div>
+              </div>
+            </button>
           </motion.div>
 
           <Link 
@@ -508,6 +553,260 @@ export default function ConsignmentAgreementForm() {
             <ArrowLeft className="w-5 h-5" />
             Back to Home
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // View submissions flow
+  if (showViewSubmissions) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] py-8 px-4" data-testid="view-submissions-page">
+        <div className="max-w-2xl mx-auto">
+          {/* Back Link and Logo Row */}
+          <div className="relative mt-8 mb-6">
+            <button 
+              onClick={() => { setShowInitialChoice(true); setShowViewSubmissions(false); setUserSubmissions(null); setViewSubmissionsEmail(""); }}
+              className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#00D4FF] transition-colors"
+              data-testid="back-to-choice-btn"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back
+            </button>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-24 h-24 mx-auto rounded-xl overflow-hidden shadow-2xl ring-4 ring-white/20"
+            >
+              <img src={LOGO_URL} alt="Thrifty Curator Logo" className="w-full h-full object-cover" />
+            </motion.div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
+            <h1 className="font-poppins text-3xl font-bold text-white mb-2">My Submissions</h1>
+            <p className="text-white/60">View your submission history and approval status</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-xl shadow-2xl overflow-hidden"
+          >
+            <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC]" />
+            <div className="p-6 space-y-5">
+              {!userSubmissions ? (
+                // Step 1: Enter email to find submissions
+                <>
+                  <div>
+                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
+                    <p className="text-xs text-[#888] mb-2">Enter the email you used when signing your agreement</p>
+                    <Input
+                      type="email"
+                      value={viewSubmissionsEmail}
+                      onChange={(e) => setViewSubmissionsEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg"
+                      data-testid="view-submissions-email"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleFetchSubmissions}
+                    disabled={loadingSubmissions}
+                    className="w-full bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] hover:from-[#00A8CC] hover:to-[#0086A3] text-white font-semibold py-3 rounded-lg"
+                    data-testid="find-submissions-btn"
+                  >
+                    {loadingSubmissions ? "Loading..." : "View My Submissions"}
+                  </Button>
+                </>
+              ) : (
+                // Step 2: Show submissions
+                <div className="space-y-5">
+                  {/* User Info Header */}
+                  <div className="bg-[#00D4FF]/10 border border-[#00D4FF]/30 rounded-lg p-4">
+                    <p className="text-sm text-[#1A1A2E]">
+                      <strong>Welcome back,</strong> {userSubmissions.user.full_name}
+                    </p>
+                    <p className="text-sm text-[#666] mt-1">
+                      Email: {userSubmissions.user.email} • Split: {userSubmissions.user.agreed_percentage || "50/50"}
+                    </p>
+                  </div>
+
+                  {/* Submissions List */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-[#1A1A2E] text-sm">Your Submissions ({userSubmissions.submissions.length})</h3>
+                    
+                    {userSubmissions.submissions.length === 0 ? (
+                      <p className="text-[#666] text-sm py-4 text-center">No submissions found</p>
+                    ) : (
+                      userSubmissions.submissions.map((submission, index) => (
+                        <div 
+                          key={submission.id || index}
+                          className="border border-gray-200 rounded-lg p-4 hover:border-[#00D4FF]/50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              {/* Submission Type Badge */}
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                  submission.type === 'consignment_agreement' 
+                                    ? 'bg-purple-100 text-purple-700'
+                                    : submission.items_to_add > 0
+                                      ? 'bg-emerald-100 text-emerald-700'
+                                      : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {submission.type === 'consignment_agreement' ? (
+                                    <FileText className="w-3 h-3" />
+                                  ) : submission.items_to_add > 0 ? (
+                                    <Package className="w-3 h-3" />
+                                  ) : (
+                                    <User className="w-3 h-3" />
+                                  )}
+                                  {submission.type_label}
+                                </span>
+                                
+                                {/* Date */}
+                                <span className="text-xs text-[#888]">
+                                  {submission.submitted_at ? new Date(submission.submitted_at).toLocaleDateString() : 'N/A'}
+                                </span>
+                              </div>
+                              
+                              {/* Description */}
+                              {submission.items_description && (
+                                <p className="text-sm text-[#666] mb-2 line-clamp-2">
+                                  {submission.items_description}
+                                </p>
+                              )}
+                              
+                              {/* Items Added */}
+                              {submission.items_to_add > 0 && (
+                                <p className="text-sm text-emerald-600 font-medium mb-2">
+                                  +{submission.items_to_add} items submitted
+                                </p>
+                              )}
+                              
+                              {/* Info Updates */}
+                              {(submission.update_email || submission.update_phone || submission.update_address || submission.update_payment_method) && (
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {submission.update_email && (
+                                    <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs">Email updated</span>
+                                  )}
+                                  {submission.update_phone && (
+                                    <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-xs">Phone updated</span>
+                                  )}
+                                  {submission.update_address && (
+                                    <span className="px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-xs">Address updated</span>
+                                  )}
+                                  {submission.update_payment_method && (
+                                    <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-xs">Payment updated</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Status Badge */}
+                            <div className="flex-shrink-0">
+                              {submission.approval_status === 'approved' ? (
+                                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  Approved
+                                </span>
+                              ) : submission.approval_status === 'rejected' ? (
+                                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                  <XCircle className="w-3.5 h-3.5" />
+                                  Rejected
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  Pending
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Approval Details (if reviewed) */}
+                          {submission.approval_status && submission.approval_status !== 'pending' && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <div className="flex flex-wrap gap-3 text-xs">
+                                {submission.items_accepted !== undefined && submission.items_accepted !== null && (
+                                  <div className="flex items-center gap-1">
+                                    <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                                    <span className="text-[#666]">Items Accepted:</span>
+                                    <span className="font-semibold text-green-600">{submission.items_accepted}</span>
+                                  </div>
+                                )}
+                                {submission.rejected_items_action && (
+                                  <div className="flex items-center gap-1">
+                                    {submission.rejected_items_action === 'donate' ? (
+                                      <>
+                                        <Gift className="w-3.5 h-3.5 text-purple-500" />
+                                        <span className="text-[#666]">Other items:</span>
+                                        <span className="font-medium text-purple-600">Donated</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <RotateCcw className="w-3.5 h-3.5 text-blue-500" />
+                                        <span className="text-[#666]">Other items:</span>
+                                        <span className="font-medium text-blue-600">Returned</span>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {submission.admin_notes && (
+                                <p className="mt-2 text-xs text-[#888] bg-gray-50 rounded p-2">
+                                  <strong>Notes:</strong> {submission.admin_notes}
+                                </p>
+                              )}
+                              {submission.reviewed_at && (
+                                <p className="mt-1 text-xs text-[#aaa]">
+                                  Reviewed: {new Date(submission.reviewed_at).toLocaleDateString()}
+                                  {submission.reviewed_by && ` by ${submission.reviewed_by}`}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      onClick={() => handleFetchSubmissions()}
+                      variant="outline"
+                      className="flex-1 border-[#00D4FF] text-[#00D4FF] hover:bg-[#00D4FF]/10"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Refresh
+                    </Button>
+                    <Button
+                      onClick={() => { setShowViewSubmissions(false); setShowAddItems(true); setAddItemsEmail(viewSubmissionsEmail); }}
+                      className="flex-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Items
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          <button 
+            onClick={() => { setShowInitialChoice(true); setShowViewSubmissions(false); setUserSubmissions(null); setViewSubmissionsEmail(""); }}
+            className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
+            data-testid="back-link"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back to Options
+          </button>
         </div>
       </div>
     );

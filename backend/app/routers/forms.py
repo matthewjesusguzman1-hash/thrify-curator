@@ -130,6 +130,94 @@ async def check_existing_agreement(email: str):
     return {"has_agreement": False}
 
 
+@router.get("/forms/my-submissions/{email}")
+async def get_user_submissions(email: str):
+    """Get all submissions for a user by email - allows users to view their submission history and status"""
+    email_lower = email.lower()
+    
+    # First check if the user has an agreement
+    agreement = await db.consignment_agreements.find_one(
+        {"email": email_lower},
+        {"_id": 0}
+    )
+    
+    if not agreement:
+        raise HTTPException(status_code=404, detail="No consignment agreement found for this email")
+    
+    # Get the current email from the agreement (in case it was updated)
+    current_email = agreement.get("email", email_lower)
+    
+    # Also check for any agreements where email was updated to this email
+    # or item additions that reference this user
+    
+    # Get the original agreement submission
+    submissions = []
+    
+    # Add the original agreement as a submission
+    submissions.append({
+        "id": agreement.get("id"),
+        "type": "consignment_agreement",
+        "type_label": "Consignment Agreement",
+        "full_name": agreement.get("full_name"),
+        "email": agreement.get("email"),
+        "submitted_at": agreement.get("submitted_at"),
+        "items_description": agreement.get("items_description"),
+        "agreed_percentage": agreement.get("agreed_percentage"),
+        "approval_status": agreement.get("approval_status", "pending"),
+        "items_accepted": agreement.get("items_accepted"),
+        "rejected_items_action": agreement.get("rejected_items_action"),
+        "admin_notes": agreement.get("admin_notes"),
+        "reviewed_at": agreement.get("reviewed_at"),
+        "reviewed_by": agreement.get("reviewed_by")
+    })
+    
+    # Get all item additions for this user (by agreement_id or email)
+    agreement_id = agreement.get("id")
+    item_additions = await db.consignment_item_additions.find(
+        {"$or": [
+            {"agreement_id": agreement_id},
+            {"email": current_email}
+        ]},
+        {"_id": 0}
+    ).sort("submitted_at", -1).to_list(100)
+    
+    for addition in item_additions:
+        submissions.append({
+            "id": addition.get("id"),
+            "type": "item_addition",
+            "type_label": "Item Addition" if addition.get("items_to_add", 0) > 0 else "Info Update",
+            "full_name": addition.get("full_name"),
+            "email": addition.get("email"),
+            "submitted_at": addition.get("submitted_at"),
+            "items_to_add": addition.get("items_to_add", 0),
+            "items_description": addition.get("items_description"),
+            "approval_status": addition.get("approval_status", "pending"),
+            "items_accepted": addition.get("items_accepted"),
+            "rejected_items_action": addition.get("rejected_items_action"),
+            "admin_notes": addition.get("admin_notes"),
+            "reviewed_at": addition.get("reviewed_at"),
+            "reviewed_by": addition.get("reviewed_by"),
+            "update_email": addition.get("update_email"),
+            "update_phone": addition.get("update_phone"),
+            "update_address": addition.get("update_address"),
+            "update_payment_method": addition.get("update_payment_method")
+        })
+    
+    # Sort all submissions by date (newest first)
+    submissions.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
+    
+    return {
+        "user": {
+            "full_name": agreement.get("full_name"),
+            "email": current_email,
+            "phone": agreement.get("phone"),
+            "agreed_percentage": agreement.get("agreed_percentage"),
+            "payment_method": agreement.get("payment_method")
+        },
+        "submissions": submissions
+    }
+
+
 @router.post("/forms/update-payment-method")
 async def update_payment_method(update: PaymentMethodUpdate):
     """Update payment method for existing consignment agreement"""
