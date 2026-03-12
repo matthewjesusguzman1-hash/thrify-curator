@@ -40,7 +40,7 @@ try {
 
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
 const TIKTOK_URL = process.env.REACT_APP_TIKTOK_URL;
-const APP_URL = typeof window !== 'undefined' ? window.location.origin : '';
+const APP_URL = 'https://thrifty-curator.com';
 const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(APP_URL)}`;
 
 // Custom SVG Icons for platforms - stylized representations
@@ -263,7 +263,7 @@ export default function LandingPage() {
     const shareData = {
       title: "Thrifty Curator",
       text: "Check out Thrifty Curator - Curated resale finds!",
-      url: window.location.origin
+      url: APP_URL
     };
 
     try {
@@ -271,7 +271,7 @@ export default function LandingPage() {
         await navigator.share(shareData);
         toast.success("Thanks for sharing!");
       } else {
-        await navigator.clipboard.writeText(window.location.origin);
+        await navigator.clipboard.writeText(APP_URL);
         toast.success("Link copied to clipboard!");
       }
     } catch (err) {
