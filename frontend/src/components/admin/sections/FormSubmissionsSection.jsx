@@ -33,12 +33,7 @@ import {
   CreditCard,
   Calendar,
   User,
-  Edit3,
-  CheckCircle,
-  XCircle,
-  Clock,
-  RotateCcw,
-  Gift
+  Edit3
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -76,19 +71,6 @@ export default function FormSubmissionsSection({
   const [messageModal, setMessageModal] = useState({ open: false, update: null });
   const [messageContent, setMessageContent] = useState("");
   const [deletingUpdate, setDeletingUpdate] = useState(null);
-  
-  // Approval modal state
-  const [approvalModal, setApprovalModal] = useState({ 
-    open: false, 
-    submission: null, 
-    type: null // 'agreement' or 'addition'
-  });
-  const [approvalForm, setApprovalForm] = useState({
-    approval_status: "approved",
-    items_accepted: 0,
-    rejected_items_action: "return",
-    admin_notes: ""
-  });
 
   // Auto-refresh when section is expanded
   useEffect(() => {
@@ -286,73 +268,6 @@ Thrifty Curator Team`;
     toast.success(`Opening email client for ${messageModal.update.email}`);
     setMessageModal({ open: false, update: null });
     setMessageContent("");
-  };
-
-  // Open approval modal for consignment agreement or item addition
-  const openApprovalModal = (submission, type) => {
-    const totalItems = type === 'agreement' 
-      ? parseInt(submission.items_description) || 0
-      : submission.items_to_add || 0;
-    
-    setApprovalForm({
-      approval_status: "approved",
-      items_accepted: totalItems,
-      rejected_items_action: "return",
-      admin_notes: ""
-    });
-    setApprovalModal({ open: true, submission, type });
-  };
-
-  // Handle approval submission
-  const handleApproval = async () => {
-    const { submission, type } = approvalModal;
-    if (!submission) return;
-    
-    try {
-      const endpoint = type === 'agreement'
-        ? `${API}/api/admin/forms/consignment-agreements/${submission.id}/approve`
-        : `${API}/api/admin/forms/item-additions/${submission.id}/approve`;
-      
-      await axios.put(endpoint, approvalForm, getAuthHeader());
-      
-      toast.success(
-        approvalForm.approval_status === 'approved' 
-          ? `Approved! ${approvalForm.items_accepted} items accepted for consignment`
-          : `Submission marked as rejected`
-      );
-      
-      setApprovalModal({ open: false, submission: null, type: null });
-      fetchFormSubmissions();
-      if (fetchItemAdditions) fetchItemAdditions();
-    } catch (error) {
-      console.error("Approval error:", error);
-      toast.error("Failed to process approval");
-    }
-  };
-
-  // Get approval status badge
-  const getApprovalStatusBadge = (status) => {
-    switch (status) {
-      case 'approved':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">
-            <CheckCircle className="w-3 h-3" /> Approved
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">
-            <XCircle className="w-3 h-3" /> Rejected
-          </span>
-        );
-      case 'pending':
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">
-            <Clock className="w-3 h-3" /> Pending Review
-          </span>
-        );
-    }
   };
 
   const getFilteredFormSubmissions = (submissions) => {
@@ -726,7 +641,6 @@ Thrifty Curator Team`;
                             <SortableHeader table="consignmentAgreements" sortKey="email">Email</SortableHeader>
                             <SortableHeader table="consignmentAgreements" sortKey="agreed_percentage">Percentage</SortableHeader>
                             <SortableHeader table="consignmentAgreements" sortKey="submitted_at">Signed</SortableHeader>
-                            <th>Approval</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -737,14 +651,6 @@ Thrifty Curator Team`;
                               <td>{agreement.email}</td>
                               <td>{agreement.agreed_percentage}</td>
                               <td className="text-sm text-[#888]">{formatSubmissionDate(agreement.submitted_at)}</td>
-                              <td>
-                                <div className="flex flex-col gap-1">
-                                  {getApprovalStatusBadge(agreement.approval_status || 'pending')}
-                                  {agreement.approval_status === 'approved' && agreement.items_accepted > 0 && (
-                                    <span className="text-xs text-green-600">{agreement.items_accepted} items</span>
-                                  )}
-                                </div>
-                              </td>
                               <td>
                                 <div className="flex items-center gap-1">
                                   <Button
@@ -797,7 +703,6 @@ Thrifty Curator Team`;
                             <th>Type</th>
                             <th>Changes</th>
                             <SortableHeader table="updates" sortKey="submitted_at">Date</SortableHeader>
-                            <th>Approval</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -860,18 +765,6 @@ Thrifty Curator Team`;
                                 {formatSubmissionDate(update.submitted_at || update.changed_at)}
                               </td>
                               <td>
-                                {update.source === 'item_addition' && update.items_to_add > 0 ? (
-                                  <div className="flex flex-col gap-1">
-                                    {getApprovalStatusBadge(update.approval_status || 'pending')}
-                                    {update.approval_status === 'approved' && update.items_accepted > 0 && (
-                                      <span className="text-xs text-green-600">{update.items_accepted} items</span>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-[#888]">N/A</span>
-                                )}
-                              </td>
-                              <td>
                                 <div className="flex items-center gap-1">
                                   <Button
                                     variant="ghost"
@@ -906,18 +799,6 @@ Thrifty Curator Team`;
                                   >
                                     <MessageSquare className="w-4 h-4" />
                                   </Button>
-                                  {update.source === 'item_addition' && update.items_to_add > 0 && (!update.approval_status || update.approval_status === 'pending') && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => openApprovalModal(update, 'addition')}
-                                      className="text-green-600 hover:text-green-800 hover:bg-green-50"
-                                      title="Review & Approve"
-                                      data-testid={`approve-update-${update.id}`}
-                                    >
-                                      <CheckCircle className="w-4 h-4" />
-                                    </Button>
-                                  )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
