@@ -33,7 +33,12 @@ import {
   CreditCard,
   Calendar,
   User,
-  Edit3
+  Edit3,
+  CheckCircle,
+  XCircle,
+  Clock,
+  RotateCcw,
+  Gift
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -71,6 +76,15 @@ export default function FormSubmissionsSection({
   const [messageModal, setMessageModal] = useState({ open: false, update: null });
   const [messageContent, setMessageContent] = useState("");
   const [deletingUpdate, setDeletingUpdate] = useState(null);
+  
+  // Approval form state for item additions
+  const [approvalForm, setApprovalForm] = useState({
+    approval_status: "approved",
+    items_accepted: 0,
+    rejected_items_action: "return",
+    admin_notes: ""
+  });
+  const [submittingApproval, setSubmittingApproval] = useState(false);
 
   // Auto-refresh when section is expanded
   useEffect(() => {
@@ -268,6 +282,46 @@ Thrifty Curator Team`;
     toast.success(`Opening email client for ${messageModal.update.email}`);
     setMessageModal({ open: false, update: null });
     setMessageContent("");
+  };
+
+  // Handle approval for item additions
+  const handleItemAdditionApproval = async () => {
+    if (!viewingUpdate) return;
+    
+    setSubmittingApproval(true);
+    try {
+      await axios.put(
+        `${API}/api/admin/forms/item-additions/${viewingUpdate.id}/approve`,
+        approvalForm,
+        getAuthHeader()
+      );
+      
+      toast.success(
+        approvalForm.approval_status === 'approved' 
+          ? `Approved! ${approvalForm.items_accepted} items accepted for consignment`
+          : `Submission marked as rejected`
+      );
+      
+      setViewingUpdate(null);
+      fetchFormSubmissions();
+      if (fetchItemAdditions) fetchItemAdditions();
+    } catch (error) {
+      console.error("Approval error:", error);
+      toast.error("Failed to process approval. Please try again.");
+    } finally {
+      setSubmittingApproval(false);
+    }
+  };
+
+  // Reset approval form when opening a new update
+  const handleViewUpdate = (update) => {
+    setApprovalForm({
+      approval_status: update.approval_status || "approved",
+      items_accepted: update.items_accepted || update.items_to_add || 0,
+      rejected_items_action: update.rejected_items_action || "return",
+      admin_notes: update.admin_notes || ""
+    });
+    setViewingUpdate(update);
   };
 
   const getFilteredFormSubmissions = (submissions) => {
@@ -769,7 +823,7 @@ Thrifty Curator Team`;
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => setViewingUpdate(update)}
+                                    onClick={() => handleViewUpdate(update)}
                                     className="text-[#8B5CF6] hover:text-[#6D28D9] hover:bg-[#8B5CF6]/10"
                                     title="View Details"
                                     data-testid={`view-update-${update.id}`}
@@ -1014,6 +1068,168 @@ Thrifty Curator Team`;
                             <p className="text-xs text-[#888] mt-1">Signed on: {viewingUpdate.signature_date}</p>
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Approval Section - Only for item additions */}
+                    {viewingUpdate.items_to_add > 0 && (
+                      <div className="mt-4 p-4 bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl border border-[#8B5CF6]/20">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-semibold text-[#333] flex items-center gap-2">
+                            <CheckCircle className="w-5 h-5 text-[#8B5CF6]" />
+                            Consignment Review
+                          </h3>
+                          {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' ? (
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full ${
+                              viewingUpdate.approval_status === 'approved' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {viewingUpdate.approval_status === 'approved' ? (
+                                <><CheckCircle className="w-4 h-4" /> Approved</>
+                              ) : (
+                                <><XCircle className="w-4 h-4" /> Rejected</>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full bg-yellow-100 text-yellow-700">
+                              <Clock className="w-4 h-4" /> Pending Review
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Show review details if already reviewed */}
+                        {viewingUpdate.approval_status && viewingUpdate.approval_status !== 'pending' ? (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="p-3 bg-white rounded-lg">
+                                <p className="text-xs text-[#888]">Items Accepted</p>
+                                <p className="font-bold text-green-600 text-lg">{viewingUpdate.items_accepted || 0}</p>
+                              </div>
+                              <div className="p-3 bg-white rounded-lg">
+                                <p className="text-xs text-[#888]">Non-Consigned Items</p>
+                                <p className="font-medium text-[#333] flex items-center gap-1">
+                                  {viewingUpdate.rejected_items_action === 'donate' ? (
+                                    <><Gift className="w-4 h-4 text-purple-500" /> Will be Donated</>
+                                  ) : (
+                                    <><RotateCcw className="w-4 h-4 text-blue-500" /> Will be Returned</>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            {viewingUpdate.admin_notes && (
+                              <div className="p-3 bg-white rounded-lg">
+                                <p className="text-xs text-[#888]">Admin Notes</p>
+                                <p className="text-[#333] text-sm">{viewingUpdate.admin_notes}</p>
+                              </div>
+                            )}
+                            {viewingUpdate.reviewed_at && (
+                              <p className="text-xs text-[#888] text-right">
+                                Reviewed: {formatSubmissionDate(viewingUpdate.reviewed_at)}
+                                {viewingUpdate.reviewed_by && ` by ${viewingUpdate.reviewed_by}`}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          /* Show approval form if pending */
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              {/* Decision */}
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Decision</Label>
+                                <Select
+                                  value={approvalForm.approval_status}
+                                  onValueChange={(value) => setApprovalForm({ ...approvalForm, approval_status: value })}
+                                >
+                                  <SelectTrigger className="w-full bg-white">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="approved">
+                                      <span className="flex items-center gap-2">
+                                        <CheckCircle className="w-4 h-4 text-green-600" /> Approve
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="rejected">
+                                      <span className="flex items-center gap-2">
+                                        <XCircle className="w-4 h-4 text-red-600" /> Reject
+                                      </span>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {/* Items Accepted */}
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Items Accepted</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max={viewingUpdate.items_to_add}
+                                  value={approvalForm.items_accepted}
+                                  onChange={(e) => setApprovalForm({ ...approvalForm, items_accepted: parseInt(e.target.value) || 0 })}
+                                  className="bg-white"
+                                  data-testid="items-accepted-input"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Rejected Items Action */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">What happens to items not consigned?</Label>
+                              <Select
+                                value={approvalForm.rejected_items_action}
+                                onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
+                              >
+                                <SelectTrigger className="w-full bg-white">
+                                  <SelectValue placeholder="Select action..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="return">
+                                    <span className="flex items-center gap-2">
+                                      <RotateCcw className="w-4 h-4 text-blue-600" /> Return to Owner
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="donate">
+                                    <span className="flex items-center gap-2">
+                                      <Gift className="w-4 h-4 text-purple-600" /> Donate
+                                    </span>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Admin Notes */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Notes (Optional)</Label>
+                              <Textarea
+                                value={approvalForm.admin_notes}
+                                onChange={(e) => setApprovalForm({ ...approvalForm, admin_notes: e.target.value })}
+                                placeholder="Any notes about this review..."
+                                rows={2}
+                                className="bg-white"
+                                data-testid="admin-notes-input"
+                              />
+                            </div>
+
+                            {/* Submit Button */}
+                            <Button
+                              onClick={handleItemAdditionApproval}
+                              disabled={submittingApproval}
+                              className={`w-full ${approvalForm.approval_status === 'approved' 
+                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                : "bg-red-600 hover:bg-red-700 text-white"
+                              }`}
+                              data-testid="submit-approval-btn"
+                            >
+                              {submittingApproval ? "Processing..." : (
+                                approvalForm.approval_status === 'approved' 
+                                  ? `Approve (${approvalForm.items_accepted} of ${viewingUpdate.items_to_add} items)`
+                                  : 'Reject Submission'
+                              )}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </>
