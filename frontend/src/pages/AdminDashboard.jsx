@@ -2672,12 +2672,14 @@ export default function AdminDashboard() {
                     setShowSubmissionDetails(true);
                   }}
                   onDeleteSubmission={handleDeleteSubmission}
+                  onDownloadSubmission={handleDownloadSubmission}
                   formatSubmissionDate={formatSubmissionDate}
                   getStatusBadge={getStatusBadge}
                   paymentMethodChanges={paymentMethodChanges}
                   fetchPaymentMethodChanges={fetchPaymentMethodChanges}
                   itemAdditions={itemAdditions}
                   fetchItemAdditions={fetchItemAdditions}
+                  getAuthHeader={getAuthHeader}
                 />
               </div>
             </DashboardGroup>

@@ -52,6 +52,7 @@ export default function FormSubmissionsSection({
   fetchFormSubmissions,
   onViewSubmission,
   onDeleteSubmission,
+  onDownloadSubmission,
   formatSubmissionDate,
   getStatusBadge,
   paymentMethodChanges,
@@ -711,7 +712,8 @@ Thrifty Curator Team`;
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => onViewSubmission({ ...agreement, formType: "consignment_agreements" })}
-                                    className="text-[#8B5CF6] hover:text-[#6D28D9]"
+                                    className="text-[#8B5CF6] hover:text-[#6D28D9] hover:bg-[#8B5CF6]/10"
+                                    title="View & Review"
                                     data-testid={`view-agreement-${agreement.id}`}
                                   >
                                     <Eye className="w-4 h-4" />
@@ -719,8 +721,32 @@ Thrifty Curator Team`;
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    onClick={() => onDownloadSubmission && onDownloadSubmission(agreement)}
+                                    className="text-[#10B981] hover:text-[#059669] hover:bg-[#10B981]/10"
+                                    title="Download PDF"
+                                    data-testid={`download-agreement-${agreement.id}`}
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const mailtoLink = `mailto:${agreement.email}?subject=Your Consignment Agreement - Thrifty Curator&body=Hi ${agreement.full_name},%0D%0A%0D%0AThank you for submitting your consignment agreement.%0D%0A%0D%0ABest regards,%0D%0AThrifty Curator Team`;
+                                      window.location.href = mailtoLink;
+                                    }}
+                                    className="text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10"
+                                    title="Email Client"
+                                    data-testid={`email-agreement-${agreement.id}`}
+                                  >
+                                    <Mail className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => onDeleteSubmission("consignment_agreements", agreement.id)}
-                                    className="text-red-500 hover:text-red-700"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    title="Delete"
                                     data-testid={`delete-agreement-${agreement.id}`}
                                   >
                                     <Trash2 className="w-4 h-4" />
