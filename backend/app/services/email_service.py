@@ -53,7 +53,7 @@ def get_email_footer():
     <div style="background: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #eee;">
         <p style="color: #666; font-size: 12px; margin: 0;">
             Thank you for choosing Thrifty Curator!<br>
-            <a href="https://thriftycurator.com" style="color: #8B5CF6;">Visit our website</a>
+            <a href="https://thrifty-curator.com" style="color: #8B5CF6;">Visit our website</a>
         </p>
     </div>
     """
@@ -168,7 +168,7 @@ async def send_consignment_agreement_confirmation(
     
     <p style="color: #333; line-height: 1.6;">
         You can check your submission status anytime by visiting our 
-        <a href="https://thriftycurator.com/consignment-agreement" style="color: #8B5CF6;">Consignment Portal</a>.
+        <a href="https://thrifty-curator.com/consignment-agreement" style="color: #8B5CF6;">Consignment Portal</a>.
     </p>
     
     <p style="color: #666; font-size: 13px; margin-top: 30px;">
@@ -208,7 +208,7 @@ async def send_item_addition_confirmation(
     
     <p style="color: #333; line-height: 1.6;">
         Our team will review your items and update you once they've been processed. 
-        You can track the status in your <a href="https://thriftycurator.com/consignment-agreement" style="color: #8B5CF6;">Consignment Portal</a>.
+        You can track the status in your <a href="https://thrifty-curator.com/consignment-agreement" style="color: #8B5CF6;">Consignment Portal</a>.
     </p>
     
     <p style="color: #666; font-size: 13px; margin-top: 30px;">
@@ -332,7 +332,7 @@ async def send_approval_notification(
     </p>
     
     <p style="color: #666; font-size: 13px; margin-top: 30px;">
-        View your account anytime at our <a href="https://thriftycurator.com/consignment-agreement" style="color: #8B5CF6;">Consignment Portal</a>.
+        View your account anytime at our <a href="https://thrifty-curator.com/consignment-agreement" style="color: #8B5CF6;">Consignment Portal</a>.
     </p>
     """
     
