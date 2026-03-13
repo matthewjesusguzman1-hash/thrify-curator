@@ -12,7 +12,9 @@ from app.services.email_service import (
     send_consignment_agreement_confirmation,
     send_item_addition_confirmation,
     send_info_update_confirmation,
-    send_approval_notification
+    send_approval_notification,
+    send_test_email,
+    get_email_status
 )
 
 router = APIRouter(tags=["Forms"])
@@ -796,6 +798,25 @@ async def get_forms_summary(admin: dict = Depends(get_admin_user)):
         "consignment_inquiries": {"total": inquiries, "new": inquiries_new},
         "consignment_agreements": {"total": agreements, "new": agreements_new}
     }
+
+
+# Email Configuration Endpoints
+from pydantic import BaseModel, EmailStr
+
+class TestEmailRequest(BaseModel):
+    email: EmailStr
+
+@router.get("/admin/email/status")
+async def get_admin_email_status(admin: dict = Depends(get_admin_user)):
+    """Get current email configuration status"""
+    return get_email_status()
+
+
+@router.post("/admin/email/test")
+async def send_admin_test_email(request: TestEmailRequest, admin: dict = Depends(get_admin_user)):
+    """Send a test email to verify email configuration"""
+    result = await send_test_email(request.email)
+    return result
 
 
 # PDF Download endpoints

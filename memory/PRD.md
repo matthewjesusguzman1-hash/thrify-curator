@@ -2565,10 +2565,12 @@ To enable real email sending:
 - `/app/backend/app/services/email_service.py` - Email service with templates and sending logic
 
 ### Files Modified
-- `/app/backend/app/routers/forms.py` - Added BackgroundTasks for async email sending on all consignment endpoints
+- `/app/backend/app/routers/forms.py` - Added BackgroundTasks for async email sending on all consignment endpoints, added email status and test endpoints
+- `/app/frontend/src/pages/AdminDashboard.jsx` - Added Email button and Email Settings modal with test email functionality
 
 ### Technical Notes
 - Emails sent via FastAPI BackgroundTasks (non-blocking)
 - Uses Resend API (resend package already installed)
 - Falls back to MOCK mode if RESEND_API_KEY not set
 - Professional HTML email templates with Thrifty Curator branding
+- Test email button in admin dashboard to verify configuration

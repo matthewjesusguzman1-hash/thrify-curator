@@ -339,3 +339,46 @@ async def send_approval_notification(
     subject = f"Thrifty Curator - Your Submission has been {status_text}"
     html = build_email_template(f"Submission {status_text}", content)
     return await send_email(to_email, subject, html)
+
+
+async def send_test_email(to_email: str) -> dict:
+    """Send a test email to verify email configuration"""
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        This is a test email from <strong>Thrifty Curator</strong>.
+    </p>
+    
+    <div style="background: #e8f5e9; border-left: 4px solid #10B981; padding: 15px; margin: 20px 0;">
+        <h3 style="color: #10B981; margin: 0 0 10px 0; font-size: 14px;">✅ EMAIL CONFIGURATION WORKING</h3>
+        <p style="margin: 5px 0; color: #333;">
+            If you're seeing this email, your Resend configuration is set up correctly!
+        </p>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        <strong>What this means:</strong>
+    </p>
+    <ul style="color: #333; line-height: 1.8;">
+        <li>Your RESEND_API_KEY is valid</li>
+        <li>Emails can be sent from your application</li>
+        <li>Users will receive notifications for consignment submissions</li>
+    </ul>
+    
+    <p style="color: #666; font-size: 13px; margin-top: 30px;">
+        This test was initiated from the Thrifty Curator Admin Dashboard.
+    </p>
+    """
+    
+    html = build_email_template("Test Email - Configuration Verified", content)
+    return await send_email(to_email, "Thrifty Curator - Test Email", html)
+
+
+def get_email_status() -> dict:
+    """Get current email configuration status"""
+    return {
+        "enabled": EMAIL_ENABLED,
+        "mode": "live" if EMAIL_ENABLED else "mocked",
+        "sender_email": SENDER_EMAIL if EMAIL_ENABLED else None,
+        "message": "Email sending is active" if EMAIL_ENABLED else "Emails are being logged to console (MOCKED). Add RESEND_API_KEY to enable real sending."
+    }

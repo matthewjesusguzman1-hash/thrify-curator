@@ -208,6 +208,12 @@ export default function AdminDashboard() {
   const [itemAdditions, setItemAdditions] = useState([]);
   const [activeFormTab, setActiveFormTab] = useState("job_applications");
   const [loadingForms, setLoadingForms] = useState(false);
+  
+  // Email settings state
+  const [emailStatus, setEmailStatus] = useState({ enabled: false, mode: 'mocked', message: '' });
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -744,6 +750,42 @@ export default function AdminDashboard() {
     }
   };
 
+  // Email configuration functions
+  const fetchEmailStatus = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/email/status`, getAuthHeader());
+      setEmailStatus(response.data);
+    } catch (error) {
+      console.error("Failed to fetch email status:", error);
+    }
+  }, []);
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress) {
+      toast.error("Please enter an email address");
+      return;
+    }
+    setSendingTestEmail(true);
+    try {
+      const response = await axios.post(
+        `${API}/admin/email/test`,
+        { email: testEmailAddress },
+        getAuthHeader()
+      );
+      if (response.data.status === "success") {
+        toast.success("Test email sent! Check your inbox.");
+      } else if (response.data.status === "mocked") {
+        toast.info("Test email logged to console (MOCKED mode). Add RESEND_API_KEY to send real emails.");
+      } else {
+        toast.error(`Failed: ${response.data.message}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to send test email");
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+
   // Fetch form submissions when section is opened
   useEffect(() => {
     if (showFormsSection) {
@@ -757,6 +799,13 @@ export default function AdminDashboard() {
       fetchPayrollSummary();
     }
   }, [showStatsSection, fetchPayrollSummary]);
+
+  // Fetch email status when email settings is opened
+  useEffect(() => {
+    if (showEmailSettings) {
+      fetchEmailStatus();
+    }
+  }, [showEmailSettings, fetchEmailStatus]);
 
   const handleUpdateSubmissionStatus = async (formType, submissionId, newStatus) => {
     setUpdatingStatus(true);
@@ -2310,6 +2359,16 @@ export default function AdminDashboard() {
                     <UserMinus className="w-4 h-4" />
                     <span className="hidden sm:inline">Remove</span>
                   </Button>
+                  <Button 
+                    onClick={() => setShowEmailSettings(true)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1 border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/10 transition-all text-xs sm:text-sm h-9"
+                    data-testid="email-settings-btn"
+                  >
+                    <Mail className="w-4 h-4" />
+                    <span className="hidden sm:inline">Email</span>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -3119,6 +3178,125 @@ export default function AdminDashboard() {
                     </Button>
                   </div>
                 </form>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Email Settings Modal */}
+          {showEmailSettings && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+              onClick={() => setShowEmailSettings(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="email-settings-modal"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-playfair text-xl font-bold text-[#333]">Email Notifications</h2>
+                  <button
+                    onClick={() => setShowEmailSettings(false)}
+                    className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+
+                {/* Status Badge */}
+                <div className={`p-4 rounded-xl mb-6 ${emailStatus.enabled ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${emailStatus.enabled ? 'bg-green-500' : 'bg-amber-500'}`}></div>
+                    <div>
+                      <p className={`font-semibold ${emailStatus.enabled ? 'text-green-700' : 'text-amber-700'}`}>
+                        {emailStatus.enabled ? 'Email Sending Active' : 'Running in Test Mode (MOCKED)'}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">{emailStatus.message}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Test Email Section */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="form-label">Send Test Email</Label>
+                    <p className="text-xs text-[#888] mb-2">
+                      {emailStatus.enabled 
+                        ? "Enter an email address to receive a test notification." 
+                        : "In test mode, emails are logged to the server console instead of being sent."}
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="email"
+                        placeholder="Enter email address"
+                        value={testEmailAddress}
+                        onChange={(e) => setTestEmailAddress(e.target.value)}
+                        className="form-input flex-1"
+                        data-testid="test-email-input"
+                      />
+                      <Button
+                        onClick={handleSendTestEmail}
+                        disabled={sendingTestEmail || !testEmailAddress}
+                        className="btn-primary"
+                        data-testid="send-test-email-btn"
+                      >
+                        {sendingTestEmail ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Mail className="w-4 h-4" />
+                        )}
+                        <span className="ml-2">{sendingTestEmail ? "Sending..." : "Send Test"}</span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Setup Instructions */}
+                  {!emailStatus.enabled && (
+                    <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                      <h3 className="font-semibold text-[#333] mb-2 flex items-center gap-2">
+                        <Settings className="w-4 h-4" />
+                        Setup Instructions
+                      </h3>
+                      <p className="text-sm text-[#666] mb-3">
+                        To enable real email sending, add a Resend API key:
+                      </p>
+                      <ol className="text-sm text-[#666] space-y-2 list-decimal list-inside">
+                        <li>Go to <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="text-[#8B5CF6] hover:underline">resend.com</a> and sign up</li>
+                        <li>Navigate to <strong>API Keys</strong> in the dashboard</li>
+                        <li>Click <strong>Create API Key</strong></li>
+                        <li>Copy the key (starts with <code className="bg-gray-200 px-1 rounded">re_</code>)</li>
+                        <li>Add to your server environment variables</li>
+                      </ol>
+                      <div className="mt-3 p-2 bg-gray-100 rounded font-mono text-xs">
+                        RESEND_API_KEY=re_your_key_here
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Email Types Info */}
+                  <div className="mt-4 p-4 bg-blue-50 rounded-xl">
+                    <h3 className="font-semibold text-blue-800 mb-2">Automated Notifications</h3>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• New consignment agreement confirmations</li>
+                      <li>• Item addition confirmations</li>
+                      <li>• Account information update confirmations</li>
+                      <li>• Approval/rejection notifications from admin</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="flex justify-end mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowEmailSettings(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
               </motion.div>
             </motion.div>
           )}
