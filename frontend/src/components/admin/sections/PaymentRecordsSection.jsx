@@ -105,21 +105,23 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
   const fetchConsignmentClients = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/payroll/consignment-clients`, getAuthHeader());
-      console.log("Fetched approved consignment clients:", response.data.length);
-      setConsignmentClients(response.data);
+      console.log("Fetched consignment clients:", response.data.length, response.data);
+      setConsignmentClients(response.data || []);
     } catch (error) {
       console.error("Failed to fetch consignment clients:", error);
+      setConsignmentClients([]);
     }
   }, [getAuthHeader]);
 
-  // Fetch employees for payment dropdown
+  // Fetch employees for payment dropdown (all employees except owners)
   const fetchEmployees = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/admin/payroll/employees-for-payment`, getAuthHeader());
-      console.log("Fetched employees:", response.data.length);
-      setEmployees(response.data);
+      const response = await axios.get(`${API}/admin/payroll/all-employees-for-payment`, getAuthHeader());
+      console.log("Fetched employees for payment:", response.data.length, response.data);
+      setEmployees(response.data || []);
     } catch (error) {
       console.error("Failed to fetch employees:", error);
+      setEmployees([]);
     }
   }, [getAuthHeader]);
 
@@ -470,27 +472,32 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         Select Consignment Client * 
                         {consignmentClients.length > 0 && <span className="text-emerald-600 ml-1">({consignmentClients.length} available)</span>}
                       </Label>
-                      <select
-                        value={checkUploadData.consignment_client_email}
-                        onChange={(e) => {
-                          const client = consignmentClients.find(c => c.email === e.target.value);
-                          setCheckUploadData({ 
-                            ...checkUploadData, 
-                            consignment_client_email: e.target.value,
-                            employee_name: client?.full_name || ""
-                          });
-                        }}
-                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                        style={{ WebkitAppearance: 'menulist', MozAppearance: 'menulist' }}
-                        data-testid="select-consignment-client"
-                      >
-                        <option value="">{consignmentClients.length === 0 ? "Loading clients..." : "-- Select a client --"}</option>
-                        {consignmentClients.map((client) => (
-                          <option key={client.email} value={client.email}>
-                            {client.full_name} ({client.email}) - {client.payment_method || "No payment method"}
-                          </option>
-                        ))}
-                      </select>
+                      {consignmentClients.length > 0 ? (
+                        <select
+                          value={checkUploadData.consignment_client_email}
+                          onChange={(e) => {
+                            const client = consignmentClients.find(c => c.email === e.target.value);
+                            setCheckUploadData({ 
+                              ...checkUploadData, 
+                              consignment_client_email: e.target.value,
+                              employee_name: client?.full_name || ""
+                            });
+                          }}
+                          className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                          data-testid="select-consignment-client"
+                        >
+                          <option value="">-- Select a client --</option>
+                          {consignmentClients.map((client, index) => (
+                            <option key={`client-${index}`} value={client.email}>
+                              {client.full_name} - {client.payment_method || "No payment method"}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-gray-50 flex items-center text-gray-500">
+                          Loading clients...
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -501,27 +508,32 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         Select Employee *
                         {employees.length > 0 && <span className="text-purple-600 ml-1">({employees.length} available)</span>}
                       </Label>
-                      <select
-                        value={checkUploadData.employee_name}
-                        onChange={(e) => {
-                          const employee = employees.find(emp => emp.name === e.target.value);
-                          setCheckUploadData({ 
-                            ...checkUploadData, 
-                            employee_name: e.target.value,
-                            employee_email: employee?.email || ""
-                          });
-                        }}
-                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-                        style={{ WebkitAppearance: 'menulist', MozAppearance: 'menulist' }}
-                        data-testid="select-employee"
-                      >
-                        <option value="">{employees.length === 0 ? "Loading employees..." : "-- Select an employee --"}</option>
-                        {employees.map((employee) => (
-                          <option key={employee.email} value={employee.name}>
-                            {employee.name} ({employee.email}){employee.hourly_rate ? ` - $${employee.hourly_rate}/hr` : ""}
-                          </option>
-                        ))}
-                      </select>
+                      {employees.length > 0 ? (
+                        <select
+                          value={checkUploadData.employee_name}
+                          onChange={(e) => {
+                            const employee = employees.find(emp => emp.name === e.target.value);
+                            setCheckUploadData({ 
+                              ...checkUploadData, 
+                              employee_name: e.target.value,
+                              employee_email: employee?.email || ""
+                            });
+                          }}
+                          className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                          data-testid="select-employee"
+                        >
+                          <option value="">-- Select an employee --</option>
+                          {employees.map((employee, index) => (
+                            <option key={`employee-${index}`} value={employee.name}>
+                              {employee.name}{employee.role === 'admin' ? ' (Admin)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-gray-50 flex items-center text-gray-500">
+                          Loading employees...
+                        </div>
+                      )}
                     </div>
                   )}
                   

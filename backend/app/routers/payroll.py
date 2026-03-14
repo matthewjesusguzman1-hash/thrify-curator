@@ -657,25 +657,43 @@ async def get_check_image(record_id: str, admin: dict = Depends(get_admin_user))
 
 @router.get("/consignment-clients")
 async def get_consignment_clients(admin: dict = Depends(get_admin_user)):
-    """Get approved consignment clients for payment selection.
-    Returns clients whose consignment agreements are approved or legacy agreements without status."""
-    # Query for approved agreements OR legacy agreements without status field (assumed approved)
+    """Get all consignment agreement submitters for payment selection."""
+    # Get all consignment agreements (any status)
     clients = await db.consignment_agreements.find(
-        {"$or": [
-            {"status": "approved"},
-            {"status": {"$exists": False}}  # Legacy agreements without status
-        ]}, 
-        {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "payment_method": 1, "payment_details": 1}
+        {}, 
+        {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "payment_method": 1, "payment_details": 1, "status": 1}
     ).sort("full_name", 1).to_list(500)
     return clients
 
 
 @router.get("/employees-for-payment")
 async def get_employees_for_payment(admin: dict = Depends(get_admin_user)):
-    """Get all employees for payment selection dropdown"""
+    """Get all employees (non-admin users) for payment selection dropdown.
+    Excludes business owners."""
+    # Owner emails to exclude from the list
+    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
+    
+    # Get all non-admin users, excluding owners
     employees = await db.users.find(
-        {"role": "employee"},
+        {
+            "role": {"$ne": "admin"},
+            "email": {"$nin": [e.lower() for e in OWNER_EMAILS]}
+        },
         {"_id": 0, "name": 1, "email": 1, "phone": 1, "hourly_rate": 1}
+    ).sort("name", 1).to_list(500)
+    return employees
+
+
+@router.get("/all-employees-for-payment")
+async def get_all_employees_for_payment(admin: dict = Depends(get_admin_user)):
+    """Get ALL users (employees and admins except owners) for payment selection dropdown."""
+    # Owner emails to exclude from the list
+    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
+    
+    # Get all users except owners
+    employees = await db.users.find(
+        {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
+        {"_id": 0, "name": 1, "email": 1, "phone": 1, "hourly_rate": 1, "role": 1}
     ).sort("name", 1).to_list(500)
     return employees
 
