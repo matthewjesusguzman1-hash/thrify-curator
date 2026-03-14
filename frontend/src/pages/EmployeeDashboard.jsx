@@ -594,34 +594,35 @@ export default function EmployeeDashboard() {
                     {(window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) ? (
                       <div className="text-xs text-gray-500 space-y-1">
                         <p><strong>For this app:</strong></p>
-                        <p>Settings → Privacy & Security → Location Services → Find this app → Allow</p>
+                        <p>1. Go to Settings → Privacy & Security → Location Services → Find this app → Allow</p>
+                        <p>2. Return here and tap <strong>"Reload Page"</strong> below</p>
                       </div>
                     ) : (
                       <div className="text-xs text-gray-500 space-y-1">
                         <p><strong>On iPhone/iPad:</strong> Settings → Safari → Location → Allow for this site</p>
                         <p><strong>On Android:</strong> Tap ⋮ menu → Settings → Site settings → Location → Allow</p>
                         <p><strong>On Desktop:</strong> Click the lock icon in address bar → Reset permission</p>
+                        <p className="mt-2 font-medium text-[#8B5CF6]">After enabling, tap "Reload Page" below</p>
                       </div>
                     )}
                   </div>
-                  <div className="flex justify-center gap-2">
-                    <Button
-                      onClick={() => {
-                        setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
-                        handleClock("in");
-                      }}
-                      variant="outline"
-                      className="border-[#8B5CF6] text-[#8B5CF6]"
-                    >
-                      Try Again
-                    </Button>
+                  <div className="flex flex-col items-center gap-2">
                     <Button
                       onClick={() => window.location.reload()}
-                      className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] hover:from-[#7C3AED] hover:to-[#00A8CC] text-white"
+                      className="w-full max-w-xs bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] hover:from-[#7C3AED] hover:to-[#00A8CC] text-white"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
                       Reload Page
                     </Button>
+                    <button
+                      onClick={() => {
+                        setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
+                        handleClock("in");
+                      }}
+                      className="text-xs text-gray-500 underline hover:text-gray-700"
+                    >
+                      Try again without reloading
+                    </button>
                   </div>
                 </div>
               ) : locationStatus.checking ? (
