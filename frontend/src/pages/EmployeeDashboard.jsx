@@ -340,9 +340,17 @@ export default function EmployeeDashboard() {
 
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
 
+      // Safety timeout - if location check takes more than 15 seconds, reset state
+      const safetyTimeout = setTimeout(() => {
+        console.log("checkLocation safety timeout triggered");
+        setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
+        resolve({ withinRange: false, error: "timeout" });
+      }, 15000);
+
       // Request location directly - this will prompt the user if not already granted
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          clearTimeout(safetyTimeout);
           const distance = calculateDistance(
             position.coords.latitude,
             position.coords.longitude,
@@ -354,6 +362,7 @@ export default function EmployeeDashboard() {
           resolve({ withinRange, distance: distance.toFixed(2) });
         },
         (error) => {
+          clearTimeout(safetyTimeout);
           if (error.code === 1) {
             // PERMISSION_DENIED
             setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
@@ -394,8 +403,17 @@ export default function EmployeeDashboard() {
       
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
       
+      // Safety timeout - if location check takes more than 15 seconds, reset state
+      const safetyTimeout = setTimeout(() => {
+        console.log("Location check safety timeout triggered");
+        setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
+        setLoading(false);
+        toast.error("Location check timed out. Please try again or check your location settings.");
+      }, 15000);
+      
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          clearTimeout(safetyTimeout);
           const distance = calculateDistance(
             position.coords.latitude,
             position.coords.longitude,
@@ -424,6 +442,7 @@ export default function EmployeeDashboard() {
           }
         },
         (error) => {
+          clearTimeout(safetyTimeout);
           setLoading(false);
           if (error.code === 1) {
             // Check if running as standalone PWA
@@ -606,9 +625,20 @@ export default function EmployeeDashboard() {
                   </div>
                 </div>
               ) : locationStatus.checking ? (
-                <div className="flex items-center justify-center gap-2 mb-4 text-sm">
-                  <MapPin className="w-4 h-4 text-yellow-500 animate-pulse" />
-                  <span className="text-yellow-600">Checking location...</span>
+                <div className="flex flex-col items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="w-4 h-4 text-yellow-500 animate-pulse" />
+                    <span className="text-yellow-600">Checking location...</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
+                      setLoading(false);
+                    }}
+                    className="text-xs text-gray-500 underline hover:text-gray-700"
+                  >
+                    Cancel
+                  </button>
                 </div>
               ) : locationStatus.withinRange === true ? (
                 <div className="flex items-center justify-center gap-2 mb-4 text-sm">
