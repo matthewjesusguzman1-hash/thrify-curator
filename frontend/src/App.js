@@ -1,5 +1,5 @@
 import "@/App.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Toaster } from "@/components/ui/sonner";
@@ -14,6 +14,7 @@ import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ContactPage from "@/pages/ContactPage";
 import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
@@ -101,6 +102,23 @@ function App() {
   const [showSplash, setShowSplash] = useState(() => {
     return !sessionStorage.getItem('hasSeenSplash');
   });
+
+  // Initialize push notifications for native mobile apps
+  const { initialize: initPush, isSupported: pushSupported } = usePushNotifications();
+  
+  useEffect(() => {
+    if (pushSupported) {
+      // Wait a moment for the app to fully load, then request push permissions
+      const timer = setTimeout(() => {
+        initPush().then(success => {
+          if (success) {
+            console.log('Push notifications initialized successfully');
+          }
+        });
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [pushSupported, initPush]);
 
   return (
     <div 

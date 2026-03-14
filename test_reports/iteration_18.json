@@ -77,8 +77,8 @@
     "additional_fix_applied": "Changed line 47 from localStorage.getItem('adminToken') to localStorage.getItem('token')",
     "verification_method": "E2E Playwright tests that capture network requests and verify: 1) No '/api/api/' in URLs, 2) API returns 200 status",
     "verified_urls": [
-      "https://mobile-reseller-2.preview.emergentagent.com/api/admin/forms/item-additions/{id}/approve",
-      "https://mobile-reseller-2.preview.emergentagent.com/api/admin/forms/consignment-agreements/{id}/approve"
+      "https://resale-hub-62.preview.emergentagent.com/api/admin/forms/item-additions/{id}/approve",
+      "https://resale-hub-62.preview.emergentagent.com/api/admin/forms/consignment-agreements/{id}/approve"
     ]
   }
 }

@@ -15,7 +15,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://mobile-reseller-2.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://resale-hub-62.preview.emergentagent.com')
 
 
 def round_hours_to_minute(decimal_hours: float) -> float:
