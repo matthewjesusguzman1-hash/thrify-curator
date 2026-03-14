@@ -103,32 +103,36 @@ function App() {
     return !sessionStorage.getItem('hasSeenSplash');
   });
 
-  // Initialize push notifications for native mobile apps
-  const { initialize: initPush, isSupported: pushSupported, error: pushError } = usePushNotifications();
-  
+  // Force push notification request - bypass platform detection
   useEffect(() => {
-    // Log platform info for debugging
-    console.log('Push supported:', pushSupported, 'Platform:', typeof window !== 'undefined' && window.Capacitor?.getPlatform?.());
-    
-    if (pushSupported) {
-      // Wait a moment for the app to fully load, then request push permissions
-      const timer = setTimeout(async () => {
-        console.log('Attempting to initialize push notifications...');
-        try {
-          const success = await initPush();
-          console.log('Push init result:', success);
-          if (success) {
-            console.log('Push notifications initialized successfully');
-          } else {
-            console.log('Push notifications failed to initialize');
-          }
-        } catch (err) {
-          console.error('Push init error:', err);
+    const requestPushNotifications = async () => {
+      try {
+        // Dynamic import to avoid issues on web
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        
+        console.log('Directly requesting push notification permissions...');
+        
+        // Request permissions
+        const permResult = await PushNotifications.requestPermissions();
+        console.log('Permission result:', permResult);
+        
+        if (permResult.receive === 'granted') {
+          // Register for push notifications
+          await PushNotifications.register();
+          console.log('Successfully registered for push notifications!');
+        } else {
+          console.log('Push notification permission denied');
         }
-      }, 2000); // Increased delay to ensure app is ready
-      return () => clearTimeout(timer);
-    }
-  }, [pushSupported]); // Removed initPush from dependencies to prevent re-runs
+      } catch (error) {
+        // Expected to fail on web - that's okay
+        console.log('Push notification setup skipped (web or error):', error.message);
+      }
+    };
+
+    // Wait for app to fully load, then request permissions
+    const timer = setTimeout(requestPushNotifications, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div 
