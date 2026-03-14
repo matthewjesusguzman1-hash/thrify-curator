@@ -54,6 +54,11 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
   
   // Employees for dropdown
   const [employees, setEmployees] = useState([]);
+  
+  // Custom picker modal state (for iOS compatibility)
+  const [showEmployeePicker, setShowEmployeePicker] = useState(false);
+  const [showClientPicker, setShowClientPicker] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
 
   // Helper: Filter check records by type and search
   const getFilteredCheckRecords = () => {
@@ -472,32 +477,19 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         Select Consignment Client * 
                         {consignmentClients.length > 0 && <span className="text-emerald-600 ml-1">({consignmentClients.length} available)</span>}
                       </Label>
-                      {consignmentClients.length > 0 ? (
-                        <select
-                          value={checkUploadData.consignment_client_email}
-                          onChange={(e) => {
-                            const client = consignmentClients.find(c => c.email === e.target.value);
-                            setCheckUploadData({ 
-                              ...checkUploadData, 
-                              consignment_client_email: e.target.value,
-                              employee_name: client?.full_name || ""
-                            });
-                          }}
-                          className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                          data-testid="select-consignment-client"
-                        >
-                          <option value="">-- Select a client --</option>
-                          {consignmentClients.map((client, index) => (
-                            <option key={`client-${index}`} value={client.email}>
-                              {client.full_name} - {client.payment_method || "No payment method"}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-gray-50 flex items-center text-gray-500">
-                          Loading clients...
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => { setPickerSearch(""); setShowClientPicker(true); }}
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-emerald-500 transition-colors"
+                        data-testid="select-consignment-client"
+                      >
+                        <span className={checkUploadData.consignment_client_email ? "text-gray-900" : "text-gray-500"}>
+                          {checkUploadData.consignment_client_email 
+                            ? consignmentClients.find(c => c.email === checkUploadData.consignment_client_email)?.full_name || checkUploadData.consignment_client_email
+                            : "-- Tap to select a client --"}
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </button>
                     </div>
                   )}
                   
@@ -508,32 +500,17 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         Select Employee *
                         {employees.length > 0 && <span className="text-purple-600 ml-1">({employees.length} available)</span>}
                       </Label>
-                      {employees.length > 0 ? (
-                        <select
-                          value={checkUploadData.employee_name}
-                          onChange={(e) => {
-                            const employee = employees.find(emp => emp.name === e.target.value);
-                            setCheckUploadData({ 
-                              ...checkUploadData, 
-                              employee_name: e.target.value,
-                              employee_email: employee?.email || ""
-                            });
-                          }}
-                          className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-                          data-testid="select-employee"
-                        >
-                          <option value="">-- Select an employee --</option>
-                          {employees.map((employee, index) => (
-                            <option key={`employee-${index}`} value={employee.name}>
-                              {employee.name}{employee.role === 'admin' ? ' (Admin)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-gray-50 flex items-center text-gray-500">
-                          Loading employees...
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => { setPickerSearch(""); setShowEmployeePicker(true); }}
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-purple-500 transition-colors"
+                        data-testid="select-employee"
+                      >
+                        <span className={checkUploadData.employee_name ? "text-gray-900" : "text-gray-500"}>
+                          {checkUploadData.employee_name || "-- Tap to select an employee --"}
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </button>
                     </div>
                   )}
                   
@@ -904,6 +881,160 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
           </motion.div>
         </motion.div>
       )}
+
+      {/* Employee Picker Modal */}
+      <AnimatePresence>
+        {showEmployeePicker && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[70]"
+            onClick={() => setShowEmployeePicker(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white w-full sm:w-96 sm:rounded-xl rounded-t-xl max-h-[70vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-purple-50">
+                <h3 className="font-semibold text-purple-900">Select Employee</h3>
+                <button onClick={() => setShowEmployeePicker(false)} className="p-1 hover:bg-purple-100 rounded">
+                  <X className="w-5 h-5 text-purple-600" />
+                </button>
+              </div>
+              <div className="p-3 border-b border-gray-100">
+                <Input
+                  type="text"
+                  placeholder="Search employees..."
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                  className="h-9"
+                  autoFocus
+                />
+              </div>
+              <div className="overflow-y-auto max-h-[50vh]">
+                {employees.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">Loading employees...</div>
+                ) : (
+                  employees
+                    .filter(emp => 
+                      emp.name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                      emp.email?.toLowerCase().includes(pickerSearch.toLowerCase())
+                    )
+                    .map((employee, index) => (
+                      <button
+                        key={`picker-emp-${index}`}
+                        onClick={() => {
+                          setCheckUploadData({
+                            ...checkUploadData,
+                            employee_name: employee.name,
+                            employee_email: employee.email
+                          });
+                          setShowEmployeePicker(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-purple-50 border-b border-gray-100 last:border-b-0 flex justify-between items-center"
+                      >
+                        <div>
+                          <div className="font-medium text-gray-900">{employee.name}</div>
+                          <div className="text-xs text-gray-500">{employee.email}</div>
+                        </div>
+                        {employee.role === 'admin' && (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Admin</span>
+                        )}
+                      </button>
+                    ))
+                )}
+                {employees.length > 0 && employees.filter(emp => 
+                  emp.name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                  emp.email?.toLowerCase().includes(pickerSearch.toLowerCase())
+                ).length === 0 && (
+                  <div className="p-4 text-center text-gray-500">No employees match your search</div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Consignment Client Picker Modal */}
+      <AnimatePresence>
+        {showClientPicker && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[70]"
+            onClick={() => setShowClientPicker(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white w-full sm:w-96 sm:rounded-xl rounded-t-xl max-h-[70vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-emerald-50">
+                <h3 className="font-semibold text-emerald-900">Select Consignment Client</h3>
+                <button onClick={() => setShowClientPicker(false)} className="p-1 hover:bg-emerald-100 rounded">
+                  <X className="w-5 h-5 text-emerald-600" />
+                </button>
+              </div>
+              <div className="p-3 border-b border-gray-100">
+                <Input
+                  type="text"
+                  placeholder="Search clients..."
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                  className="h-9"
+                  autoFocus
+                />
+              </div>
+              <div className="overflow-y-auto max-h-[50vh]">
+                {consignmentClients.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">Loading clients...</div>
+                ) : (
+                  consignmentClients
+                    .filter(client => 
+                      client.full_name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                      client.email?.toLowerCase().includes(pickerSearch.toLowerCase())
+                    )
+                    .map((client, index) => (
+                      <button
+                        key={`picker-client-${index}`}
+                        onClick={() => {
+                          setCheckUploadData({
+                            ...checkUploadData,
+                            consignment_client_email: client.email,
+                            employee_name: client.full_name
+                          });
+                          setShowClientPicker(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-emerald-50 border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="font-medium text-gray-900">{client.full_name}</div>
+                        <div className="text-xs text-gray-500 flex justify-between">
+                          <span>{client.email}</span>
+                          <span className="text-emerald-600">{client.payment_method || "No payment method"}</span>
+                        </div>
+                      </button>
+                    ))
+                )}
+                {consignmentClients.length > 0 && consignmentClients.filter(client => 
+                  client.full_name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                  client.email?.toLowerCase().includes(pickerSearch.toLowerCase())
+                ).length === 0 && (
+                  <div className="p-4 text-center text-gray-500">No clients match your search</div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
