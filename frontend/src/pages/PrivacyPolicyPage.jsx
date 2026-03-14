@@ -123,7 +123,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <div className="bg-white/5 rounded-lg p-4">
               <p><strong>Thrifty Curator</strong></p>
-              <p>Email: <a href="mailto:contact@thrifty-curator.com" className="text-pink-400 hover:text-pink-300">contact@thrifty-curator.com</a></p>
+              <p>Email: <a href="mailto:thriftycurator1@gmail.com" className="text-pink-400 hover:text-pink-300">thriftycurator1@gmail.com</a></p>
               <p>Website: <a href="https://thrifty-curator.com" className="text-pink-400 hover:text-pink-300">thrifty-curator.com</a></p>
             </div>
           </section>

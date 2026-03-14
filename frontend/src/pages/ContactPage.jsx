@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Mail, Send, ArrowLeft, CheckCircle } from 'lucide-react';
+import { MessageCircle, Send, ArrowLeft, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -12,8 +12,8 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
+    sender_name: '',
+    sender_email: '',
     message: ''
   });
   const [sending, setSending] = useState(false);
@@ -23,11 +23,15 @@ export default function ContactPage() {
     e.preventDefault();
     setSending(true);
     try {
-      await axios.post(`${API}/api/messages/contact`, formData);
+      await axios.post(`${API}/api/messages`, formData);
       setSent(true);
-      toast.success('Message sent successfully!');
+      toast.success('Message sent successfully! We will review and respond soon.');
     } catch (error) {
-      toast.error('Failed to send message. Please try again.');
+      if (error.response?.status === 429) {
+        toast.error('Too many messages. Please wait a few minutes.');
+      } else {
+        toast.error('Failed to send message. Please try again.');
+      }
     } finally {
       setSending(false);
     }
@@ -85,8 +89,8 @@ export default function ContactPage() {
               <Input
                 type="text"
                 required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={formData.sender_name}
+                onChange={(e) => setFormData({ ...formData, sender_name: e.target.value })}
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                 placeholder="Enter your name"
               />
@@ -97,8 +101,8 @@ export default function ContactPage() {
               <Input
                 type="email"
                 required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                value={formData.sender_email}
+                onChange={(e) => setFormData({ ...formData, sender_email: e.target.value })}
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                 placeholder="Enter your email"
               />
@@ -149,8 +153,8 @@ export default function ContactPage() {
           <p className="text-white/40 text-sm">
             You can also reach us at
           </p>
-          <a href="mailto:contact@thrifty-curator.com" className="text-pink-400 hover:text-pink-300 transition-colors">
-            contact@thrifty-curator.com
+          <a href="mailto:thriftycurator1@gmail.com" className="text-pink-400 hover:text-pink-300 transition-colors">
+            thriftycurator1@gmail.com
           </a>
         </motion.div>
       </div>
