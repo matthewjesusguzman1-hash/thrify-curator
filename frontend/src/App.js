@@ -12,6 +12,8 @@ import ConsignmentAgreementForm from "@/pages/ConsignmentAgreementForm";
 import AuthPage from "@/pages/AuthPage";
 import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
+import ContactPage from "@/pages/ContactPage";
+import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
@@ -77,6 +79,16 @@ function AnimatedRoutes() {
         <Route path="/admin" element={
           <PageTransition>
             <AdminDashboard />
+          </PageTransition>
+        } />
+        <Route path="/contact" element={
+          <PageTransition>
+            <ContactPage />
+          </PageTransition>
+        } />
+        <Route path="/privacy-policy" element={
+          <PageTransition>
+            <PrivacyPolicyPage />
           </PageTransition>
         } />
       </Routes>
