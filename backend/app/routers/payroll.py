@@ -657,12 +657,27 @@ async def get_check_image(record_id: str, admin: dict = Depends(get_admin_user))
 
 @router.get("/consignment-clients")
 async def get_consignment_clients(admin: dict = Depends(get_admin_user)):
-    """Get all consignment clients for payment selection"""
+    """Get approved consignment clients for payment selection.
+    Returns clients whose consignment agreements are approved or legacy agreements without status."""
+    # Query for approved agreements OR legacy agreements without status field (assumed approved)
     clients = await db.consignment_agreements.find(
-        {}, 
+        {"$or": [
+            {"status": "approved"},
+            {"status": {"$exists": False}}  # Legacy agreements without status
+        ]}, 
         {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "payment_method": 1, "payment_details": 1}
     ).sort("full_name", 1).to_list(500)
     return clients
+
+
+@router.get("/employees-for-payment")
+async def get_employees_for_payment(admin: dict = Depends(get_admin_user)):
+    """Get all employees for payment selection dropdown"""
+    employees = await db.users.find(
+        {"role": "employee"},
+        {"_id": 0, "name": 1, "email": 1, "phone": 1, "hourly_rate": 1}
+    ).sort("name", 1).to_list(500)
+    return employees
 
 
 @router.get("/client-payment-history/{email}")

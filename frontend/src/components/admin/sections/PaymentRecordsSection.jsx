@@ -51,6 +51,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
   
   // Consignment clients for dropdown
   const [consignmentClients, setConsignmentClients] = useState([]);
+  
+  // Employees for dropdown
+  const [employees, setEmployees] = useState([]);
 
   // Helper: Filter check records by type and search
   const getFilteredCheckRecords = () => {
@@ -103,14 +106,25 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     fetchCheckRecords();
   }, [fetchCheckRecords]);
 
-  // Fetch consignment clients
+  // Fetch consignment clients (only approved agreements)
   const fetchConsignmentClients = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/payroll/consignment-clients`, getAuthHeader());
-      console.log("Fetched consignment clients:", response.data.length);
+      console.log("Fetched approved consignment clients:", response.data.length);
       setConsignmentClients(response.data);
     } catch (error) {
       console.error("Failed to fetch consignment clients:", error);
+    }
+  }, [getAuthHeader]);
+
+  // Fetch employees for payment dropdown
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/payroll/employees-for-payment`, getAuthHeader());
+      console.log("Fetched employees:", response.data.length);
+      setEmployees(response.data);
+    } catch (error) {
+      console.error("Failed to fetch employees:", error);
     }
   }, [getAuthHeader]);
 
@@ -119,15 +133,18 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     if (isExpanded) {
       fetchCheckRecords();
       fetchConsignmentClients();
+      fetchEmployees();
     }
-  }, [isExpanded, fetchCheckRecords, fetchConsignmentClients]);
+  }, [isExpanded, fetchCheckRecords, fetchConsignmentClients, fetchEmployees]);
   
   // Fetch consignment clients when tab changes to consignment
   useEffect(() => {
     if (activeTab === "consignment") {
       fetchConsignmentClients();
+    } else if (activeTab === "employee") {
+      fetchEmployees();
     }
-  }, [activeTab, fetchConsignmentClients]);
+  }, [activeTab, fetchConsignmentClients, fetchEmployees]);
 
   // Handle image file selection
   const handleCheckImageUpload = async (file) => {
@@ -472,6 +489,34 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                     </div>
                   )}
                   
+                  {/* Employee Selection (only for employee tab) */}
+                  {activeTab === "employee" && !editingCheckRecord && (
+                    <div className="mb-3 relative z-10">
+                      <Label className="text-xs text-[#666]">Select Employee *</Label>
+                      <select
+                        value={checkUploadData.employee_name}
+                        onChange={(e) => {
+                          const employee = employees.find(emp => emp.name === e.target.value);
+                          setCheckUploadData({ 
+                            ...checkUploadData, 
+                            employee_name: e.target.value,
+                            employee_email: employee?.email || ""
+                          });
+                        }}
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer appearance-none"
+                        style={{ WebkitAppearance: 'menulist', MozAppearance: 'menulist' }}
+                        data-testid="select-employee"
+                      >
+                        <option value="">-- Select an employee --</option>
+                        {employees.map((employee) => (
+                          <option key={employee.email} value={employee.name}>
+                            {employee.name} ({employee.email}){employee.hourly_rate ? ` - $${employee.hourly_rate}/hr` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                     <div>
                       <Label className="text-xs text-[#666]">{activeTab === "employee" ? "Employee Name" : "Client Name"}</Label>
@@ -481,7 +526,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         value={checkUploadData.employee_name}
                         onChange={(e) => setCheckUploadData({ ...checkUploadData, employee_name: e.target.value })}
                         className="h-9 text-sm"
-                        disabled={activeTab === "consignment" && !editingCheckRecord}
+                        disabled={!editingCheckRecord}
+                        data-testid="payment-name-input"
                       />
                     </div>
                     <div>
