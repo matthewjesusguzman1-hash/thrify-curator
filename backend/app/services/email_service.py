@@ -14,6 +14,11 @@ import os
 import asyncio
 import logging
 from datetime import datetime
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Ensure .env is loaded before reading environment variables
+load_dotenv(Path(__file__).parent.parent.parent / '.env')
 
 logger = logging.getLogger(__name__)
 
