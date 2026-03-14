@@ -101,11 +101,6 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     }
   }, [getAuthHeader]);
 
-  // Auto-fetch on mount and when expanded
-  useEffect(() => {
-    fetchCheckRecords();
-  }, [fetchCheckRecords]);
-
   // Fetch consignment clients (only approved agreements)
   const fetchConsignmentClients = useCallback(async () => {
     try {
@@ -128,6 +123,13 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     }
   }, [getAuthHeader]);
 
+  // Auto-fetch on mount
+  useEffect(() => {
+    fetchCheckRecords();
+    fetchConsignmentClients();
+    fetchEmployees();
+  }, [fetchCheckRecords, fetchConsignmentClients, fetchEmployees]);
+
   // Auto-refresh when section is expanded
   useEffect(() => {
     if (isExpanded) {
@@ -137,7 +139,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     }
   }, [isExpanded, fetchCheckRecords, fetchConsignmentClients, fetchEmployees]);
   
-  // Fetch consignment clients when tab changes to consignment
+  // Fetch data when tab changes
   useEffect(() => {
     if (activeTab === "consignment") {
       fetchConsignmentClients();
@@ -417,10 +419,10 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
             >
               <div className="mt-4 pt-4 border-t border-[#eee]">
                 {/* Tab Navigation */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-4">
                   <button
                     onClick={() => { setActiveTab("employee"); handleCancelCheckEdit(); }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium transition-all text-sm ${
                       activeTab === "employee"
                         ? "bg-purple-600 text-white shadow-md"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -428,14 +430,14 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                     data-testid="tab-employee-payments"
                   >
                     <Users className="w-4 h-4" />
-                    Employee Payments
+                    <span className="whitespace-nowrap">Employee</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                       activeTab === "employee" ? "bg-white/20" : "bg-gray-200"
                     }`}>{employeeRecordsCount}</span>
                   </button>
                   <button
                     onClick={() => { setActiveTab("consignment"); handleCancelCheckEdit(); }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium transition-all text-sm ${
                       activeTab === "consignment"
                         ? "bg-emerald-600 text-white shadow-md"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -443,7 +445,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                     data-testid="tab-consignment-payments"
                   >
                     <Package className="w-4 h-4" />
-                    Consignment Payments
+                    <span className="whitespace-nowrap">Consignment</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                       activeTab === "consignment" ? "bg-white/20" : "bg-gray-200"
                     }`}>{consignmentRecordsCount}</span>
@@ -464,7 +466,10 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                   {/* Consignment Client Selection (only for consignment tab) */}
                   {activeTab === "consignment" && !editingCheckRecord && (
                     <div className="mb-3 relative z-10">
-                      <Label className="text-xs text-[#666]">Select Consignment Client *</Label>
+                      <Label className="text-xs text-[#666]">
+                        Select Consignment Client * 
+                        {consignmentClients.length > 0 && <span className="text-emerald-600 ml-1">({consignmentClients.length} available)</span>}
+                      </Label>
                       <select
                         value={checkUploadData.consignment_client_email}
                         onChange={(e) => {
@@ -475,11 +480,11 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                             employee_name: client?.full_name || ""
                           });
                         }}
-                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer appearance-none"
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                         style={{ WebkitAppearance: 'menulist', MozAppearance: 'menulist' }}
                         data-testid="select-consignment-client"
                       >
-                        <option value="">-- Select a client --</option>
+                        <option value="">{consignmentClients.length === 0 ? "Loading clients..." : "-- Select a client --"}</option>
                         {consignmentClients.map((client) => (
                           <option key={client.email} value={client.email}>
                             {client.full_name} ({client.email}) - {client.payment_method || "No payment method"}
@@ -492,7 +497,10 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                   {/* Employee Selection (only for employee tab) */}
                   {activeTab === "employee" && !editingCheckRecord && (
                     <div className="mb-3 relative z-10">
-                      <Label className="text-xs text-[#666]">Select Employee *</Label>
+                      <Label className="text-xs text-[#666]">
+                        Select Employee *
+                        {employees.length > 0 && <span className="text-purple-600 ml-1">({employees.length} available)</span>}
+                      </Label>
                       <select
                         value={checkUploadData.employee_name}
                         onChange={(e) => {
@@ -503,11 +511,11 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                             employee_email: employee?.email || ""
                           });
                         }}
-                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer appearance-none"
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
                         style={{ WebkitAppearance: 'menulist', MozAppearance: 'menulist' }}
                         data-testid="select-employee"
                       >
-                        <option value="">-- Select an employee --</option>
+                        <option value="">{employees.length === 0 ? "Loading employees..." : "-- Select an employee --"}</option>
                         {employees.map((employee) => (
                           <option key={employee.email} value={employee.name}>
                             {employee.name} ({employee.email}){employee.hourly_rate ? ` - $${employee.hourly_rate}/hr` : ""}
