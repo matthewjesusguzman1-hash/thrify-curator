@@ -203,7 +203,10 @@ Thrifty Curator Team`
     const { subject, body } = getEmailContent();
     // Use current_email if available (from enriched backend data), otherwise fall back to submission email
     const emailToUse = submission.current_email || submission.email;
-    const mailtoLink = `mailto:${emailToUse}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    // Replace newlines with %0D%0A for better Gmail compatibility
+    const formattedBody = body.replace(/\n/g, '\r\n');
+    const mailtoLink = `mailto:${emailToUse}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(formattedBody)}`;
     
     // Show reminder to select correct From account
     toast.info(

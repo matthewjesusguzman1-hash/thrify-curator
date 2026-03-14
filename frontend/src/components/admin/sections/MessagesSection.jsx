@@ -248,15 +248,16 @@ export default function MessagesSection() {
 
   const handleReply = (message) => {
     const subject = encodeURIComponent(`Re: Your Message to Thrifty Curator`);
-    const body = encodeURIComponent(
-      `Hi ${message.sender_name},\n\n` +
-      `Thank you for reaching out to Thrifty Curator! We appreciate you taking the time to contact us.\n\n` +
-      `Regarding your message:\n` +
-      `"${message.message}"\n\n` +
-      `[Your response here]\n\n` +
-      `Best regards,\n` +
-      `Thrifty Curator Team`
-    );
+    // Use %0D%0A for line breaks (works better in Gmail and other email clients)
+    const lineBreak = '%0D%0A';
+    const body = 
+      `Hi ${encodeURIComponent(message.sender_name)},${lineBreak}${lineBreak}` +
+      `Thank you for reaching out to Thrifty Curator! We appreciate you taking the time to contact us.${lineBreak}${lineBreak}` +
+      `Regarding your message:${lineBreak}` +
+      `"${encodeURIComponent(message.message)}"${lineBreak}${lineBreak}` +
+      `[Your response here]${lineBreak}${lineBreak}` +
+      `Best regards,${lineBreak}` +
+      `Thrifty Curator Team`;
     
     // Show reminder to select correct From account
     toast.info(

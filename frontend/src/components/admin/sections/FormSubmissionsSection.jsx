@@ -296,7 +296,9 @@ Thrifty Curator Team`;
     if (!messageModal.update) return;
     
     const subject = encodeURIComponent(`Re: Your Consignment Update - Thrifty Curator`);
-    const body = encodeURIComponent(messageContent);
+    // Replace newlines with CRLF for better Gmail compatibility
+    const formattedContent = messageContent.replace(/\n/g, '\r\n');
+    const body = encodeURIComponent(formattedContent);
     
     // Show reminder to select correct From account
     toast.info(
