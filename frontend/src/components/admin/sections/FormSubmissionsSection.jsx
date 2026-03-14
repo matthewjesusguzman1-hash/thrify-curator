@@ -297,9 +297,17 @@ Thrifty Curator Team`;
     
     const subject = encodeURIComponent(`Re: Your Consignment Update - Thrifty Curator`);
     const body = encodeURIComponent(messageContent);
-    window.location.href = `mailto:${messageModal.update.current_email || messageModal.update.email}?subject=${subject}&body=${body}`;
     
-    toast.success(`Opening email client for ${messageModal.update.current_email || messageModal.update.email}`);
+    // Show reminder to select correct From account
+    toast.info(
+      "Remember to send from thriftycurator1@gmail.com", 
+      { 
+        description: "Tap the 'From' field in your email app to change the sender.",
+        duration: 5000 
+      }
+    );
+    
+    window.location.href = `mailto:${messageModal.update.current_email || messageModal.update.email}?subject=${subject}&body=${body}`;
     setMessageModal({ open: false, update: null });
     setMessageContent("");
   };

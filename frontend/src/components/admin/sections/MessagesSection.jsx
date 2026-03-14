@@ -258,6 +258,15 @@ export default function MessagesSection() {
       `Thrifty Curator Team`
     );
     
+    // Show reminder to select correct From account
+    toast.info(
+      "Remember to send from thriftycurator1@gmail.com", 
+      { 
+        description: "Tap the 'From' field in your email app to change the sender.",
+        duration: 5000 
+      }
+    );
+    
     window.location.href = `mailto:${message.sender_email}?subject=${subject}&body=${body}`;
     
     if (message.status === "unread") {
