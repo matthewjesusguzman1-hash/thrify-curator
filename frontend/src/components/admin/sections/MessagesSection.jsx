@@ -394,20 +394,6 @@ export default function MessagesSection() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              fetchMessages();
-            }}
-            disabled={loading}
-            className="text-[#888] hover:text-[#333] hover:border-[#333]"
-            data-testid="refresh-messages-btn"
-          >
-            <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
           {showSection ? (
             <ChevronUp className="w-5 h-5 text-[#888]" />
           ) : (

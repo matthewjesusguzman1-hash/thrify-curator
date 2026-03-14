@@ -289,6 +289,10 @@ export default function AdminDashboard() {
   // Back to top button state
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  
+  // Hidden email settings trigger - triple click on title
+  const titleClickCount = useRef(0);
+  const titleClickTimer = useRef(null);
 
   // Business owner emails - only these users can assign admin roles
   const OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"];
@@ -2314,7 +2318,22 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <h1 className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white w-full sm:w-auto text-left">Admin Dashboard</h1>
+              <h1 
+                className="font-poppins text-xl sm:text-2xl md:text-3xl font-bold text-white w-full sm:w-auto text-left cursor-default select-none"
+                onClick={() => {
+                  titleClickCount.current += 1;
+                  if (titleClickTimer.current) clearTimeout(titleClickTimer.current);
+                  titleClickTimer.current = setTimeout(() => {
+                    titleClickCount.current = 0;
+                  }, 500);
+                  if (titleClickCount.current >= 3) {
+                    titleClickCount.current = 0;
+                    setShowEmailSettings(true);
+                  }
+                }}
+              >
+                Admin Dashboard
+              </h1>
               <Button
                 variant="outline"
                 size="sm"
@@ -2358,16 +2377,6 @@ export default function AdminDashboard() {
                   >
                     <UserMinus className="w-4 h-4" />
                     <span className="hidden sm:inline">Remove</span>
-                  </Button>
-                  <Button 
-                    onClick={() => setShowEmailSettings(true)}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1 border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/10 transition-all text-xs sm:text-sm h-9"
-                    data-testid="email-settings-btn"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span className="hidden sm:inline">Email</span>
                   </Button>
                 </div>
               </div>

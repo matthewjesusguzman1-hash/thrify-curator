@@ -373,17 +373,6 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); fetchCheckRecords(); }}
-              disabled={loadingCheckRecords}
-              className="text-[#888] hover:text-[#333] hover:border-[#333]"
-              data-testid="refresh-payment-records-btn"
-            >
-              <RefreshCw className={`w-4 h-4 mr-1.5 ${loadingCheckRecords ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
             {isExpanded ? (
               <ChevronUp className="w-5 h-5 text-[#888]" />
             ) : (
@@ -449,7 +438,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                   
                   {/* Consignment Client Selection (only for consignment tab) */}
                   {activeTab === "consignment" && !editingCheckRecord && (
-                    <div className="mb-3">
+                    <div className="mb-3 relative z-10">
                       <Label className="text-xs text-[#666]">Select Consignment Client *</Label>
                       <select
                         value={checkUploadData.consignment_client_email}
@@ -461,7 +450,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                             employee_name: client?.full_name || ""
                           });
                         }}
-                        className="w-full h-9 text-sm border border-gray-300 rounded-md px-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer appearance-none"
+                        style={{ WebkitAppearance: 'menulist', MozAppearance: 'menulist' }}
                         data-testid="select-consignment-client"
                       >
                         <option value="">-- Select a client --</option>
