@@ -556,7 +556,6 @@ Thrifty Curator Team`;
                             <SortableHeader table="jobApplications" sortKey="email">Email</SortableHeader>
                             <SortableHeader table="jobApplications" sortKey="phone">Phone</SortableHeader>
                             <SortableHeader table="jobApplications" sortKey="submitted_at">Submitted</SortableHeader>
-                            <SortableHeader table="jobApplications" sortKey="status">Status</SortableHeader>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -567,7 +566,6 @@ Thrifty Curator Team`;
                               <td>{app.email}</td>
                               <td>{app.phone}</td>
                               <td className="text-sm text-[#888]">{formatSubmissionDate(app.submitted_at)}</td>
-                              <td>{getStatusBadge(app.status)}</td>
                               <td>
                                 <div className="flex items-center gap-1">
                                   <Button
@@ -620,7 +618,6 @@ Thrifty Curator Team`;
                             <SortableHeader table="consignmentInquiries" sortKey="email">Email</SortableHeader>
                             <th>Item Types</th>
                             <SortableHeader table="consignmentInquiries" sortKey="submitted_at">Submitted</SortableHeader>
-                            <SortableHeader table="consignmentInquiries" sortKey="status">Status</SortableHeader>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -634,7 +631,6 @@ Thrifty Curator Team`;
                                 {inquiry.item_types?.length > 2 && "..."}
                               </td>
                               <td className="text-sm text-[#888]">{formatSubmissionDate(inquiry.submitted_at)}</td>
-                              <td>{getStatusBadge(inquiry.status)}</td>
                               <td>
                                 <div className="flex items-center gap-1">
                                   <Button
