@@ -103,23 +103,31 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     fetchCheckRecords();
   }, [fetchCheckRecords]);
 
+  // Fetch consignment clients
+  const fetchConsignmentClients = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/payroll/consignment-clients`, getAuthHeader());
+      console.log("Fetched consignment clients:", response.data.length);
+      setConsignmentClients(response.data);
+    } catch (error) {
+      console.error("Failed to fetch consignment clients:", error);
+    }
+  }, [getAuthHeader]);
+
   // Auto-refresh when section is expanded
   useEffect(() => {
     if (isExpanded) {
       fetchCheckRecords();
       fetchConsignmentClients();
     }
-  }, [isExpanded, fetchCheckRecords]);
-
-  // Fetch consignment clients
-  const fetchConsignmentClients = async () => {
-    try {
-      const response = await axios.get(`${API}/admin/payroll/consignment-clients`, getAuthHeader());
-      setConsignmentClients(response.data);
-    } catch (error) {
-      console.error("Failed to fetch consignment clients:", error);
+  }, [isExpanded, fetchCheckRecords, fetchConsignmentClients]);
+  
+  // Fetch consignment clients when tab changes to consignment
+  useEffect(() => {
+    if (activeTab === "consignment") {
+      fetchConsignmentClients();
     }
-  };
+  }, [activeTab, fetchConsignmentClients]);
 
   // Handle image file selection
   const handleCheckImageUpload = async (file) => {
