@@ -203,9 +203,17 @@ Thrifty Curator Team`
     const { subject, body } = getEmailContent();
     // Use current_email if available (from enriched backend data), otherwise fall back to submission email
     const emailToUse = submission.current_email || submission.email;
-    // Set default from email for Thrifty Curator
-    const fromEmail = 'thriftycurator1@gmail.com';
-    const mailtoLink = `mailto:${emailToUse}?from=${encodeURIComponent(fromEmail)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const mailtoLink = `mailto:${emailToUse}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    // Show reminder to select correct From account
+    toast.info(
+      "Remember to send from thriftycurator1@gmail.com", 
+      { 
+        description: "Tap the 'From' field in your email app to change the sender account.",
+        duration: 5000 
+      }
+    );
+    
     window.open(mailtoLink, '_blank');
   };
 
