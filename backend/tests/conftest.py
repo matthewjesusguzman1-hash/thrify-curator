@@ -6,7 +6,7 @@ import requests
 import os
 
 # Set BASE_URL from REACT_APP_BACKEND_URL or default to preview URL
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://resale-hub-62.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://thrifty-curator-7.preview.emergentagent.com').rstrip('/')
 
 # Admin credentials for testing
 ADMIN_EMAIL = "matthewjesusguzman1@gmail.com"

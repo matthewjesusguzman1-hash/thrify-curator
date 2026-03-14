@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { removeEmergentBadge, dismissToasts } from '../fixtures/helpers';
 
-const BASE_URL = 'https://resale-hub-62.preview.emergentagent.com';
+const BASE_URL = 'https://thrifty-curator-7.preview.emergentagent.com';
 
 test.describe('Updates Tab in Form Submissions Section', () => {
   

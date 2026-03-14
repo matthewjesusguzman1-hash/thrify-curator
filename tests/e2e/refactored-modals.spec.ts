@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts, removeEmergentBadge } from '../fixtures/helpers';
 
-const BASE_URL = 'https://resale-hub-62.preview.emergentagent.com';
+const BASE_URL = 'https://thrifty-curator-7.preview.emergentagent.com';
 
 test.describe('Refactored Modal Components - Edit Employee Modal', () => {
   test.beforeEach(async ({ page }) => {
