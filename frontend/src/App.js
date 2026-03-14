@@ -104,21 +104,31 @@ function App() {
   });
 
   // Initialize push notifications for native mobile apps
-  const { initialize: initPush, isSupported: pushSupported } = usePushNotifications();
+  const { initialize: initPush, isSupported: pushSupported, error: pushError } = usePushNotifications();
   
   useEffect(() => {
+    // Log platform info for debugging
+    console.log('Push supported:', pushSupported, 'Platform:', typeof window !== 'undefined' && window.Capacitor?.getPlatform?.());
+    
     if (pushSupported) {
       // Wait a moment for the app to fully load, then request push permissions
-      const timer = setTimeout(() => {
-        initPush().then(success => {
+      const timer = setTimeout(async () => {
+        console.log('Attempting to initialize push notifications...');
+        try {
+          const success = await initPush();
+          console.log('Push init result:', success);
           if (success) {
             console.log('Push notifications initialized successfully');
+          } else {
+            console.log('Push notifications failed to initialize');
           }
-        });
-      }, 1000);
+        } catch (err) {
+          console.error('Push init error:', err);
+        }
+      }, 2000); // Increased delay to ensure app is ready
       return () => clearTimeout(timer);
     }
-  }, [pushSupported, initPush]);
+  }, [pushSupported]); // Removed initPush from dependencies to prevent re-runs
 
   return (
     <div 
