@@ -589,24 +589,11 @@ export default function EmployeeDashboard() {
                     <MapPin className="w-5 h-5" />
                     <span className="font-medium">Location Access Required</span>
                   </div>
-                  <div className="text-sm text-gray-600 text-center mb-4 space-y-2">
+                  <div className="text-sm text-gray-600 text-center mb-4 space-y-3">
                     <p>Location permission was blocked.</p>
-                    {(window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) ? (
-                      <div className="text-xs text-gray-500 space-y-1">
-                        <p><strong>For this app:</strong></p>
-                        <p>1. Go to Settings → Privacy & Security → Location Services → Find this app → Allow</p>
-                        <p>2. Return here and tap <strong>"Reload Page"</strong> below</p>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-gray-500 space-y-1">
-                        <p><strong>On iPhone/iPad:</strong> Settings → Safari → Location → Allow for this site</p>
-                        <p><strong>On Android:</strong> Tap ⋮ menu → Settings → Site settings → Location → Allow</p>
-                        <p><strong>On Desktop:</strong> Click the lock icon in address bar → Reset permission</p>
-                        <p className="mt-2 font-medium text-[#8B5CF6]">After enabling, tap "Reload Page" below</p>
-                      </div>
-                    )}
+                    <p className="font-medium text-[#1A1A2E]">Tap "Reload Page" below, then allow location access when prompted.</p>
                   </div>
-                  <div className="flex flex-col items-center gap-2">
+                  <div className="flex flex-col items-center gap-3">
                     <Button
                       onClick={() => window.location.reload()}
                       className="w-full max-w-xs bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] hover:from-[#7C3AED] hover:to-[#00A8CC] text-white"
@@ -614,15 +601,25 @@ export default function EmployeeDashboard() {
                       <RefreshCw className="w-4 h-4 mr-2" />
                       Reload Page
                     </Button>
-                    <button
-                      onClick={() => {
-                        setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
-                        handleClock("in");
-                      }}
-                      className="text-xs text-gray-500 underline hover:text-gray-700"
-                    >
-                      Try again without reloading
-                    </button>
+                    <details className="w-full max-w-xs text-left">
+                      <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                        Still not working? Check your settings
+                      </summary>
+                      <div className="mt-2 text-xs text-gray-500 space-y-1 pl-2 border-l-2 border-gray-200">
+                        {(window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) ? (
+                          <>
+                            <p><strong>For this app:</strong></p>
+                            <p>Settings → Privacy & Security → Location Services → Find this app → Allow</p>
+                          </>
+                        ) : (
+                          <>
+                            <p><strong>iPhone/iPad:</strong> Settings → Safari → Location → Allow</p>
+                            <p><strong>Android:</strong> ⋮ menu → Settings → Site settings → Location</p>
+                            <p><strong>Desktop:</strong> Click lock icon in address bar</p>
+                          </>
+                        )}
+                      </div>
+                    </details>
                   </div>
                 </div>
               ) : locationStatus.checking ? (
