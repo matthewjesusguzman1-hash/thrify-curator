@@ -24,19 +24,26 @@ The web application is fully functional. iOS app has been built and uploaded to 
 - Capacitor integration for iOS and Android
 - iOS app built, archived, and uploaded to App Store Connect
 - Android `.aab` file generated for Play Store submission
-- Push notifications setup (INCOMPLETE - needs iOS capabilities enabled)
+- Push notifications setup needs iOS capabilities enabled in Xcode
 
 **Email Integration (Complete)**
 - Resend email service integrated
 - Transactional emails for user and admin actions
 - Test email functionality (hidden behind triple-click on Admin Dashboard)
+- Default sender email: thriftycurator1@gmail.com
 
 **Recent Changes (March 14, 2026)**
-1. Removed "Add to Home Screen" button from landing page (no longer needed with App Store distribution)
+1. Removed "Add to Home Screen" button from landing page
 2. Set default sender email to thriftycurator1@gmail.com
-3. Fixed consignment client dropdown in Payment Records section
-4. Removed all individual refresh buttons (kept only master refresh)
-5. Hidden email settings button (accessible via triple-click on "Admin Dashboard")
+3. Removed all individual refresh buttons (kept only master refresh)
+4. Hidden email settings button (accessible via triple-click on "Admin Dashboard")
+5. Removed Status column from Job Applications and Consignment Inquiries tables
+6. Fixed clock-in location check with 15-second safety timeout and cancel button
+7. Updated location permission denied instructions to prompt reload first
+8. Fixed Payment Records tabs to be responsive on mobile
+9. **Created custom picker modals for Employee and Consignment Client selection** (fixes iOS native select issue)
+10. Updated employee dropdown to show ALL employees except owners (6 total)
+11. Updated consignment dropdown to show ALL agreement submitters (18 total)
 
 ## Architecture
 
@@ -53,7 +60,10 @@ The web application is fully functional. iOS app has been built and uploaded to 
 ### Key Files
 - `/app/frontend/src/App.js` - Main app with routing and push notification initialization
 - `/app/frontend/src/pages/AdminDashboard.jsx` - Admin interface
+- `/app/frontend/src/components/admin/sections/PaymentRecordsSection.jsx` - Payment records with custom picker modals
+- `/app/frontend/src/pages/EmployeeDashboard.jsx` - Employee dashboard with location checking
 - `/app/backend/app/services/email_service.py` - Email handling
+- `/app/backend/app/routers/payroll.py` - Payment and employee endpoints
 - `/app/frontend/ios/App/` - iOS native project
 
 ## Priority Backlog
@@ -72,6 +82,12 @@ The web application is fully functional. iOS app has been built and uploaded to 
 ### P2 (Medium Priority)
 1. Refactor `ConsignmentAgreementForm.jsx` (large monolith)
 2. Add more comprehensive test coverage
+
+## Key API Endpoints
+- `GET /api/admin/payroll/all-employees-for-payment` - All employees except owners
+- `GET /api/admin/payroll/consignment-clients` - All consignment agreement submitters
+- `POST /api/admin/test-email` - Send test email
+- `GET /api/admin/email-status` - Check email service status
 
 ## Key Credentials
 - Admin login: matthewjesusguzman1@gmail.com with code 4399
