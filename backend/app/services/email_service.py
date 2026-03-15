@@ -27,6 +27,9 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
 BUSINESS_NAME = "Thrifty Curator"
 
+# Debug: Print at startup what sender email is configured
+print(f"🔧 EMAIL SERVICE STARTUP: SENDER_EMAIL = {SENDER_EMAIL}")
+
 # Only import resend if API key is available
 if RESEND_API_KEY:
     try:
@@ -106,6 +109,8 @@ async def send_email(to_email: str, subject: str, html_content: str) -> dict:
     """
     if EMAIL_ENABLED:
         try:
+            # Debug: Log the sender email being used
+            logger.info(f"📧 Attempting to send email FROM: {SENDER_EMAIL} TO: {to_email}")
             params = {
                 "from": f"{BUSINESS_NAME} <{SENDER_EMAIL}>",
                 "to": [to_email],
@@ -117,7 +122,7 @@ async def send_email(to_email: str, subject: str, html_content: str) -> dict:
             logger.info(f"✅ Email sent to {to_email}: {subject}")
             return {"status": "success", "message": f"Email sent to {to_email}", "email_id": email.get("id")}
         except Exception as e:
-            logger.error(f"❌ Failed to send email to {to_email}: {str(e)}")
+            logger.error(f"❌ Failed to send email to {to_email} (FROM: {SENDER_EMAIL}): {str(e)}")
             return {"status": "error", "message": str(e)}
     else:
         # MOCK MODE - Log to console
