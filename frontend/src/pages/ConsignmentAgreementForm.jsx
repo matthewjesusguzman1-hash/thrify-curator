@@ -99,6 +99,8 @@ export default function ConsignmentAgreementForm() {
   const [userSubmissions, setUserSubmissions] = useState(null);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [showSubmissionsExpanded, setShowSubmissionsExpanded] = useState(true);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
   
   // Confirmation dialog state
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
@@ -822,9 +824,10 @@ export default function ConsignmentAgreementForm() {
                       {showSubmissionsExpanded && (
                         <div className="p-3 border-t border-gray-100 space-y-2 max-h-64 overflow-y-auto bg-gray-50/50">
                           {userSubmissions.submissions.map((submission, index) => (
-                            <div 
+                            <button 
                               key={submission.id || index}
-                              className="flex items-center justify-between gap-3 p-2.5 bg-white rounded-lg border border-gray-100"
+                              onClick={() => { setSelectedSubmission(submission); setShowSubmissionDetails(true); }}
+                              className="w-full flex items-center justify-between gap-3 p-2.5 bg-white rounded-lg border border-gray-100 hover:border-[#00D4FF] hover:bg-[#00D4FF]/5 transition-colors cursor-pointer"
                             >
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 {/* Type Icon */}
@@ -845,7 +848,7 @@ export default function ConsignmentAgreementForm() {
                                 </div>
                                 
                                 {/* Info */}
-                                <div className="min-w-0 flex-1">
+                                <div className="min-w-0 flex-1 text-left">
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm font-medium text-[#1A1A2E] truncate">
                                       {submission.type_label}
@@ -863,39 +866,40 @@ export default function ConsignmentAgreementForm() {
                                 </div>
                               </div>
                               
-                              {/* Status Badge - Based on submission type */}
-                              {submission.type === 'consignment_agreement' ? (
-                                // Initial consignment agreement - show "Active"
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
-                                  <CheckCircle className="w-3 h-3" />
-                                  Active
-                                </span>
-                              ) : submission.items_to_add > 0 ? (
-                                // Item additions need approval - show status
-                                submission.approval_status === 'approved' ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
+                              {/* View Icon + Status Badge */}
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {/* Status Badge - Based on submission type */}
+                                {submission.type === 'consignment_agreement' ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                                     <CheckCircle className="w-3 h-3" />
-                                    Approved
+                                    Active
                                   </span>
-                                ) : submission.approval_status === 'rejected' ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 flex-shrink-0">
-                                    <XCircle className="w-3 h-3" />
-                                    Rejected
-                                  </span>
+                                ) : submission.items_to_add > 0 ? (
+                                  submission.approval_status === 'approved' ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                      <CheckCircle className="w-3 h-3" />
+                                      Approved
+                                    </span>
+                                  ) : submission.approval_status === 'rejected' ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                      <XCircle className="w-3 h-3" />
+                                      Rejected
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                      <Clock className="w-3 h-3" />
+                                      Pending
+                                    </span>
+                                  )
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 flex-shrink-0">
-                                    <Clock className="w-3 h-3" />
-                                    Pending
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                    <CheckCircle className="w-3 h-3" />
+                                    Updated
                                   </span>
-                                )
-                              ) : (
-                                // Info-only updates are applied immediately
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 flex-shrink-0">
-                                  <CheckCircle className="w-3 h-3" />
-                                  Updated
-                                </span>
-                              )}
-                            </div>
+                                )}
+                                <Eye className="w-4 h-4 text-gray-400" />
+                              </div>
+                            </button>
                           ))}
                         </div>
                       )}
@@ -1692,6 +1696,305 @@ export default function ConsignmentAgreementForm() {
           Back to Home
         </Link>
       </div>
+
+      {/* Submission Details Modal */}
+      <AnimatePresence>
+        {showSubmissionDetails && selectedSubmission && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 flex items-start sm:items-center justify-center z-50 p-4 overflow-y-auto"
+            onClick={() => setShowSubmissionDetails(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden my-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className={`p-4 flex justify-between items-center ${
+                selectedSubmission.type === 'consignment_agreement' 
+                  ? 'bg-purple-50 border-b border-purple-100'
+                  : selectedSubmission.items_to_add > 0
+                    ? 'bg-emerald-50 border-b border-emerald-100'
+                    : 'bg-blue-50 border-b border-blue-100'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    selectedSubmission.type === 'consignment_agreement' 
+                      ? 'bg-purple-100'
+                      : selectedSubmission.items_to_add > 0
+                        ? 'bg-emerald-100'
+                        : 'bg-blue-100'
+                  }`}>
+                    {selectedSubmission.type === 'consignment_agreement' ? (
+                      <FileText className={`w-5 h-5 text-purple-600`} />
+                    ) : selectedSubmission.items_to_add > 0 ? (
+                      <Package className={`w-5 h-5 text-emerald-600`} />
+                    ) : (
+                      <User className={`w-5 h-5 text-blue-600`} />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#1A1A2E]">{selectedSubmission.type_label}</h3>
+                    <p className="text-xs text-gray-500">
+                      {selectedSubmission.submitted_at ? new Date(selectedSubmission.submitted_at).toLocaleString() : 'Unknown date'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowSubmissionDetails(false)}
+                  className="p-2 hover:bg-white/50 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                {/* Status */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-600">Status</span>
+                  {selectedSubmission.type === 'consignment_agreement' ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+                      <CheckCircle className="w-4 h-4" />
+                      Active
+                    </span>
+                  ) : selectedSubmission.items_to_add > 0 ? (
+                    selectedSubmission.approval_status === 'approved' ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+                        <CheckCircle className="w-4 h-4" />
+                        Approved
+                      </span>
+                    ) : selectedSubmission.approval_status === 'rejected' ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">
+                        <XCircle className="w-4 h-4" />
+                        Rejected
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">
+                        <Clock className="w-4 h-4" />
+                        Pending Review
+                      </span>
+                    )
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
+                      <CheckCircle className="w-4 h-4" />
+                      Applied
+                    </span>
+                  )}
+                </div>
+
+                {/* Form Details */}
+                {selectedSubmission.type === 'consignment_agreement' ? (
+                  // Original Agreement Details
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-[#1A1A2E] border-b pb-2">Agreement Details</h4>
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Full Name</p>
+                        <p className="font-medium text-[#1A1A2E]">{selectedSubmission.full_name || 'N/A'}</p>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Email</p>
+                        <p className="font-medium text-[#1A1A2E]">{selectedSubmission.email || 'N/A'}</p>
+                      </div>
+                      
+                      {selectedSubmission.phone && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Phone</p>
+                          <p className="font-medium text-[#1A1A2E]">{selectedSubmission.phone}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.address && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Address</p>
+                          <p className="font-medium text-[#1A1A2E]">{selectedSubmission.address}</p>
+                        </div>
+                      )}
+                      
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Profit Split</p>
+                        <p className="font-medium text-[#1A1A2E]">{selectedSubmission.agreed_percentage || '50/50'}</p>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Payment Method</p>
+                        <p className="font-medium text-[#1A1A2E]">
+                          {PAYMENT_METHODS.find(m => m.id === selectedSubmission.payment_method)?.label || selectedSubmission.payment_method || 'N/A'}
+                          {selectedSubmission.payment_details && ` (${selectedSubmission.payment_details})`}
+                        </p>
+                      </div>
+                      
+                      {selectedSubmission.items_description && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Items Description</p>
+                          <p className="font-medium text-[#1A1A2E] whitespace-pre-wrap">{selectedSubmission.items_description}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.additional_info && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Additional Information</p>
+                          <p className="font-medium text-[#1A1A2E] whitespace-pre-wrap">{selectedSubmission.additional_info}</p>
+                        </div>
+                      )}
+                      
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Signature</p>
+                        <p className="font-medium text-[#1A1A2E]">{selectedSubmission.signature || 'N/A'}</p>
+                        {selectedSubmission.signature_date && (
+                          <p className="text-xs text-gray-400 mt-1">Signed on: {new Date(selectedSubmission.signature_date).toLocaleDateString()}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : selectedSubmission.items_to_add > 0 ? (
+                  // Item Addition Details
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-[#1A1A2E] border-b pb-2">Item Addition Details</h4>
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="bg-emerald-50 p-3 rounded-lg">
+                        <p className="text-xs text-emerald-600 mb-1">Items to Add</p>
+                        <p className="font-bold text-emerald-700 text-xl">{selectedSubmission.items_to_add} items</p>
+                      </div>
+                      
+                      {selectedSubmission.items_accepted !== undefined && selectedSubmission.items_accepted !== null && (
+                        <div className="bg-green-50 p-3 rounded-lg">
+                          <p className="text-xs text-green-600 mb-1">Items Accepted</p>
+                          <p className="font-bold text-green-700 text-xl">{selectedSubmission.items_accepted} items</p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.items_description && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Items Description</p>
+                          <p className="font-medium text-[#1A1A2E] whitespace-pre-wrap">{selectedSubmission.items_description}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.additional_info && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Additional Notes</p>
+                          <p className="font-medium text-[#1A1A2E] whitespace-pre-wrap">{selectedSubmission.additional_info}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.admin_notes && (
+                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                          <p className="text-xs text-amber-600 mb-1">Admin Notes</p>
+                          <p className="font-medium text-amber-800 whitespace-pre-wrap">{selectedSubmission.admin_notes}</p>
+                        </div>
+                      )}
+                      
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Signature</p>
+                        <p className="font-medium text-[#1A1A2E]">{selectedSubmission.signature || 'N/A'}</p>
+                        {selectedSubmission.signature_date && (
+                          <p className="text-xs text-gray-400 mt-1">Signed on: {new Date(selectedSubmission.signature_date).toLocaleDateString()}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Info Update Details
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-[#1A1A2E] border-b pb-2">Update Details</h4>
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      {selectedSubmission.update_type && (
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <p className="text-xs text-blue-600 mb-1">Update Type</p>
+                          <p className="font-medium text-blue-700">{selectedSubmission.update_type}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.new_email && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">New Email</p>
+                          <p className="font-medium text-[#1A1A2E]">{selectedSubmission.new_email}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.new_phone && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">New Phone</p>
+                          <p className="font-medium text-[#1A1A2E]">{selectedSubmission.new_phone}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.new_address && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">New Address</p>
+                          <p className="font-medium text-[#1A1A2E]">{selectedSubmission.new_address}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.new_payment_method && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">New Payment Method</p>
+                          <p className="font-medium text-[#1A1A2E]">
+                            {PAYMENT_METHODS.find(m => m.id === selectedSubmission.new_payment_method)?.label || selectedSubmission.new_payment_method}
+                            {selectedSubmission.new_payment_details && ` (${selectedSubmission.new_payment_details})`}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {selectedSubmission.additional_info && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Notes</p>
+                          <p className="font-medium text-[#1A1A2E] whitespace-pre-wrap">{selectedSubmission.additional_info}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Photos if any */}
+                {selectedSubmission.photos && selectedSubmission.photos.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-[#1A1A2E] border-b pb-2">Photos ({selectedSubmission.photos.length})</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {selectedSubmission.photos.map((photo, idx) => (
+                        <a 
+                          key={idx}
+                          href={photo.startsWith('http') ? photo : `${process.env.REACT_APP_BACKEND_URL}${photo}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-[#00D4FF] transition-colors"
+                        >
+                          <img 
+                            src={photo.startsWith('http') ? photo : `${process.env.REACT_APP_BACKEND_URL}${photo}`}
+                            alt={`Photo ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t bg-gray-50">
+                <Button
+                  onClick={() => setShowSubmissionDetails(false)}
+                  className="w-full bg-[#1A1A2E] hover:bg-[#2A2A3E] text-white"
+                >
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
