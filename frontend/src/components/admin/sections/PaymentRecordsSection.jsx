@@ -889,13 +889,13 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[70] pb-4 sm:pb-0"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]"
             onClick={() => setShowEmployeePicker(false)}
           >
             <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[50vh] overflow-hidden shadow-xl"
               onClick={(e) => e.stopPropagation()}
@@ -967,13 +967,13 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[70] pb-4 sm:pb-0"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]"
             onClick={() => setShowClientPicker(false)}
           >
             <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[50vh] overflow-hidden shadow-xl"
               onClick={(e) => e.stopPropagation()}
