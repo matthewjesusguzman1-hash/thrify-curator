@@ -889,15 +889,15 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[70]"
+            className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-[70] pt-20 sm:pt-0"
             onClick={() => setShowEmployeePicker(false)}
           >
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-full sm:w-96 sm:rounded-xl rounded-t-xl max-h-[70vh] overflow-hidden"
+              className="bg-white w-[90%] sm:w-96 rounded-xl max-h-[60vh] overflow-hidden shadow-xl mx-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-purple-50">
@@ -967,15 +967,15 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[70]"
+            className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-[70] pt-20 sm:pt-0"
             onClick={() => setShowClientPicker(false)}
           >
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-full sm:w-96 sm:rounded-xl rounded-t-xl max-h-[70vh] overflow-hidden"
+              className="bg-white w-[90%] sm:w-96 rounded-xl max-h-[60vh] overflow-hidden shadow-xl mx-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-emerald-50">
