@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle } from "lucide-react";
@@ -825,15 +824,21 @@ export default function ConsignmentAgreementForm() {
                       {showSubmissionsExpanded && (
                         <div className="p-3 border-t border-gray-100 space-y-2 max-h-64 overflow-y-auto bg-gray-50/50">
                           {userSubmissions.submissions.map((submission, index) => (
-                            <button 
+                            <div 
                               key={submission.id || index}
-                              onClick={(e) => { 
-                                e.stopPropagation();
-                                console.log('Clicked submission:', submission);
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => { 
                                 setSelectedSubmission(submission); 
                                 setShowSubmissionDetails(true); 
                               }}
-                              className="w-full flex items-center justify-between gap-3 p-2.5 bg-white rounded-lg border border-gray-100 hover:border-[#00D4FF] hover:bg-[#00D4FF]/5 transition-colors cursor-pointer"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  setSelectedSubmission(submission); 
+                                  setShowSubmissionDetails(true); 
+                                }
+                              }}
+                              className="w-full flex items-center justify-between gap-3 p-2.5 bg-white rounded-lg border border-gray-100 hover:border-[#00D4FF] hover:bg-[#00D4FF]/5 transition-colors cursor-pointer active:bg-[#00D4FF]/10"
                             >
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 {/* Type Icon */}
@@ -905,7 +910,7 @@ export default function ConsignmentAgreementForm() {
                                 )}
                                 <Eye className="w-4 h-4 text-gray-400" />
                               </div>
-                            </button>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -1703,17 +1708,16 @@ export default function ConsignmentAgreementForm() {
         </Link>
       </div>
 
-      {/* Submission Details Modal - Using Portal to render at document root */}
-      {createPortal(
-        <AnimatePresence>
-          {showSubmissionDetails && selectedSubmission && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 flex items-start sm:items-center justify-center z-[9999] p-4 overflow-y-auto"
-              onClick={() => setShowSubmissionDetails(false)}
-            >
+      {/* Submission Details Modal */}
+      <AnimatePresence>
+        {showSubmissionDetails && selectedSubmission && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 flex items-start sm:items-center justify-center z-[9999] p-4 overflow-y-auto"
+            onClick={() => setShowSubmissionDetails(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2001,9 +2005,7 @@ export default function ConsignmentAgreementForm() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>,
-      document.body
-    )}
+      </AnimatePresence>
     </div>
   );
 }
