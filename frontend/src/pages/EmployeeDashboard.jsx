@@ -589,10 +589,27 @@ export default function EmployeeDashboard() {
                     <MapPin className="w-5 h-5" />
                     <span className="font-medium">Location Access Required</span>
                   </div>
-                  <div className="text-sm text-gray-600 text-center mb-4 space-y-3">
-                    <p>Location permission was blocked.</p>
-                    <p className="font-medium text-[#1A1A2E]">Tap "Reload Page" below, then allow location access when prompted.</p>
-                  </div>
+                  {/* Check if running in Capacitor native app */}
+                  {(window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative) ? (
+                    // Native iOS/Android app instructions
+                    <div className="text-sm text-gray-600 text-center mb-4 space-y-3">
+                      <p>Location permission was blocked.</p>
+                      <p className="font-medium text-[#1A1A2E]">To enable location access:</p>
+                      <div className="bg-white/80 rounded-lg p-3 text-left space-y-2">
+                        <p><strong>1.</strong> Open your iPhone <strong>Settings</strong> app</p>
+                        <p><strong>2.</strong> Scroll down and tap <strong>Thrifty Curator</strong></p>
+                        <p><strong>3.</strong> Tap <strong>Location</strong></p>
+                        <p><strong>4.</strong> Select <strong>"While Using the App"</strong></p>
+                        <p><strong>5.</strong> Return here and tap "Reload Page"</p>
+                      </div>
+                    </div>
+                  ) : (
+                    // Web browser instructions
+                    <div className="text-sm text-gray-600 text-center mb-4 space-y-3">
+                      <p>Location permission was blocked.</p>
+                      <p className="font-medium text-[#1A1A2E]">Tap "Reload Page" below, then allow location access when prompted.</p>
+                    </div>
+                  )}
                   <div className="flex flex-col items-center gap-3">
                     <Button
                       onClick={() => window.location.reload()}
@@ -601,25 +618,28 @@ export default function EmployeeDashboard() {
                       <RefreshCw className="w-4 h-4 mr-2" />
                       Reload Page
                     </Button>
-                    <details className="w-full max-w-xs text-left">
-                      <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
-                        Still not working? Check your settings
-                      </summary>
-                      <div className="mt-2 text-xs text-gray-500 space-y-1 pl-2 border-l-2 border-gray-200">
-                        {(window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) ? (
-                          <>
-                            <p><strong>For this app:</strong></p>
-                            <p>Settings → Privacy & Security → Location Services → Find this app → Allow</p>
-                          </>
-                        ) : (
-                          <>
-                            <p><strong>iPhone/iPad:</strong> Settings → Safari → Location → Allow</p>
-                            <p><strong>Android:</strong> ⋮ menu → Settings → Site settings → Location</p>
-                            <p><strong>Desktop:</strong> Click lock icon in address bar</p>
-                          </>
-                        )}
-                      </div>
-                    </details>
+                    {/* Only show the expandable settings help for web browsers */}
+                    {!(window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative) && (
+                      <details className="w-full max-w-xs text-left">
+                        <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                          Still not working? Check your settings
+                        </summary>
+                        <div className="mt-2 text-xs text-gray-500 space-y-1 pl-2 border-l-2 border-gray-200">
+                          {(window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) ? (
+                            <>
+                              <p><strong>For this app:</strong></p>
+                              <p>Settings → Privacy & Security → Location Services → Find this app → Allow</p>
+                            </>
+                          ) : (
+                            <>
+                              <p><strong>iPhone/iPad:</strong> Settings → Safari → Location → Allow</p>
+                              <p><strong>Android:</strong> ⋮ menu → Settings → Site settings → Location</p>
+                              <p><strong>Desktop:</strong> Click lock icon in address bar</p>
+                            </>
+                          )}
+                        </div>
+                      </details>
+                    )}
                   </div>
                 </div>
               ) : locationStatus.checking ? (
