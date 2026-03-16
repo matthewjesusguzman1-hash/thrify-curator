@@ -616,7 +616,9 @@ export default function EmployeeDashboard() {
                       className="w-full max-w-xs bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] hover:from-[#7C3AED] hover:to-[#00A8CC] text-white"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Reload Page
+                      {(window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative) 
+                        ? "Reload After Enabling" 
+                        : "Reload Page"}
                     </Button>
                     {/* Only show the expandable settings help for web browsers */}
                     {!(window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative) && (
