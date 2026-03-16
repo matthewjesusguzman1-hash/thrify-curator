@@ -98,7 +98,7 @@ export default function ConsignmentAgreementForm() {
   const [viewSubmissionsEmail, setViewSubmissionsEmail] = useState("");
   const [userSubmissions, setUserSubmissions] = useState(null);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
-  const [showSubmissionsExpanded, setShowSubmissionsExpanded] = useState(false);
+  const [showSubmissionsExpanded, setShowSubmissionsExpanded] = useState(true);
   
   // Confirmation dialog state
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
@@ -528,11 +528,11 @@ export default function ConsignmentAgreementForm() {
             >
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Plus className="w-6 h-6 text-white" />
+                  <FileText className="w-6 h-6 text-white" />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Update Info / Add Items</h3>
-                  <p className="text-[#666] text-sm">View submissions, update info, or add more items.</p>
+                  <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Manage My Account</h3>
+                  <p className="text-[#666] text-sm">View submissions, payment history, update info, or add items.</p>
                 </div>
               </div>
             </button>
@@ -735,8 +735,8 @@ export default function ConsignmentAgreementForm() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-8"
           >
-            <h1 className="font-poppins text-3xl font-bold text-white mb-2">Update Info / Add Items</h1>
-            <p className="text-white/60">Update your contact info or add more items to consign</p>
+            <h1 className="font-poppins text-3xl font-bold text-white mb-2">My Consignment Portal</h1>
+            <p className="text-white/60">View your submissions, payment history, and manage your account</p>
           </motion.div>
 
           <motion.div
