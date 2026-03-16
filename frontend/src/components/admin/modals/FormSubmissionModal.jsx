@@ -576,21 +576,37 @@ Thrifty Curator Team`
 
                       {/* Items Accepted */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Items Accepted</Label>
+                        <Label className="text-sm font-medium">Items Accepted (of {submission.items_to_add})</Label>
                         <Input
                           type="number"
                           min="0"
-                          value={approvalForm.items_accepted}
-                          onChange={(e) => setApprovalForm({ ...approvalForm, items_accepted: parseInt(e.target.value) || 0 })}
+                          max={submission.items_to_add}
+                          value={approvalForm.items_accepted === 0 ? '' : approvalForm.items_accepted}
+                          placeholder="Enter number"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '') {
+                              setApprovalForm({ ...approvalForm, items_accepted: 0 });
+                            } else {
+                              const num = parseInt(val);
+                              if (!isNaN(num) && num >= 0 && num <= submission.items_to_add) {
+                                setApprovalForm({ ...approvalForm, items_accepted: num });
+                              }
+                            }
+                          }}
+                          onFocus={(e) => e.target.select()}
                           className="bg-white"
                           data-testid="items-accepted-input"
                         />
                       </div>
                     </div>
 
-                    {/* Rejected Items Action */}
+                    {/* Rejected Items Action - Only show if some items are not accepted */}
+                    {approvalForm.items_accepted < submission.items_to_add && (
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">What happens to items not consigned?</Label>
+                      <Label className="text-sm font-medium">
+                        What happens to {submission.items_to_add - approvalForm.items_accepted} item(s) not consigned?
+                      </Label>
                       <Select
                         value={approvalForm.rejected_items_action}
                         onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
@@ -612,6 +628,7 @@ Thrifty Curator Team`
                         </SelectContent>
                       </Select>
                     </div>
+                    )}
 
                     {/* Admin Notes */}
                     <div className="space-y-2">
@@ -829,22 +846,38 @@ Thrifty Curator Team`
 
                         {/* Items Accepted */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium">Items Accepted</Label>
+                          <Label className="text-sm font-medium">Items Accepted (of {submission.items_to_add || 0})</Label>
                           <Input
                             type="number"
                             min="0"
                             max={submission.items_to_add || 999}
-                            value={approvalForm.items_accepted}
-                            onChange={(e) => setApprovalForm({ ...approvalForm, items_accepted: parseInt(e.target.value) || 0 })}
+                            value={approvalForm.items_accepted === 0 ? '' : approvalForm.items_accepted}
+                            placeholder="Enter number"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '') {
+                                setApprovalForm({ ...approvalForm, items_accepted: 0 });
+                              } else {
+                                const num = parseInt(val);
+                                const maxItems = submission.items_to_add || 999;
+                                if (!isNaN(num) && num >= 0 && num <= maxItems) {
+                                  setApprovalForm({ ...approvalForm, items_accepted: num });
+                                }
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
                             className="bg-white"
                             data-testid="items-accepted-input"
                           />
                         </div>
                       </div>
 
-                      {/* Rejected Items Action */}
+                      {/* Rejected Items Action - Only show if some items are not accepted */}
+                      {approvalForm.items_accepted < (submission.items_to_add || 0) && (
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">What happens to items not consigned?</Label>
+                        <Label className="text-sm font-medium">
+                          What happens to {(submission.items_to_add || 0) - approvalForm.items_accepted} item(s) not consigned?
+                        </Label>
                         <Select
                           value={approvalForm.rejected_items_action}
                           onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
@@ -876,6 +909,7 @@ Thrifty Curator Team`
                           </SelectContent>
                         </Select>
                       </div>
+                      )}
 
                       {/* Admin Notes */}
                       <div className="space-y-2">

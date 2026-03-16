@@ -1389,11 +1389,36 @@ export default function ConsignmentAgreementForm() {
                   </div>
                 )}
 
-                {/* Items to Add */}
+                {/* Items Submitted */}
                 {selectedSubmission.items_to_add > 0 && (
                   <div className="p-3 bg-emerald-50 rounded-lg">
-                    <p className="text-xs text-emerald-600 mb-1">Items to Add</p>
+                    <p className="text-xs text-emerald-600 mb-1">Items Submitted</p>
                     <p className="font-bold text-emerald-700 text-xl">{selectedSubmission.items_to_add} items</p>
+                  </div>
+                )}
+
+                {/* Items Accepted - Show if approved */}
+                {selectedSubmission.approval_status === 'approved' && selectedSubmission.items_accepted !== undefined && (
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-xs text-green-600 mb-1">Items Accepted for Consignment</p>
+                    <p className="font-bold text-green-700 text-xl">{selectedSubmission.items_accepted} items</p>
+                  </div>
+                )}
+
+                {/* Items Not Accepted + What was done with them */}
+                {selectedSubmission.approval_status === 'approved' && 
+                 selectedSubmission.items_accepted !== undefined && 
+                 selectedSubmission.items_to_add > selectedSubmission.items_accepted && (
+                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-xs text-amber-600 mb-1">Items Not Accepted</p>
+                    <p className="font-bold text-amber-700">{selectedSubmission.items_to_add - selectedSubmission.items_accepted} items</p>
+                    {selectedSubmission.rejected_items_action && (
+                      <p className="text-sm text-amber-600 mt-2">
+                        {selectedSubmission.rejected_items_action === 'donate' 
+                          ? '→ Donated to charity' 
+                          : '→ Returned to owner'}
+                      </p>
+                    )}
                   </div>
                 )}
 
