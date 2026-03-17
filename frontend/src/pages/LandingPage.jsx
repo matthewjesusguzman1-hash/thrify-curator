@@ -31,8 +31,8 @@ import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
 const TIKTOK_URL = process.env.REACT_APP_TIKTOK_URL;
-const APP_URL = 'https://thrifty-curator.com';
-const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(APP_URL)}`;
+const APP_LINK_URL = 'https://onelink.to/tvauwf';
+const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(APP_LINK_URL)}`;
 
 // Custom SVG Icons for platforms - stylized representations
 const PoshmarkIcon = () => (
