@@ -408,26 +408,21 @@ export default function PasswordManagementSection({ token }) {
 
       {/* Password Setting Modal */}
       {selectedUser && (
-        <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-          style={{ zIndex: 99999 }}
-          onClick={() => setSelectedUser(null)}
-          onTouchEnd={(e) => {
-            // Only close if clicking directly on backdrop, not bubbled from children
-            if (e.target === e.currentTarget) {
-              setSelectedUser(null);
-            }
-          }}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
+        <>
+          {/* Backdrop - separate element */}
+          <div 
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            style={{ zIndex: 99998 }}
+            onClick={() => setSelectedUser(null)}
+          />
+          {/* Modal */}
+          <div 
+            className="fixed inset-0 flex items-center justify-center p-4"
+            style={{ zIndex: 99999, pointerEvents: 'none' }}
           >
             <div
-              className="bg-[#1A1A2E] border border-white/10 rounded-xl p-6 shadow-2xl"
+              className="bg-[#1A1A2E] border border-white/10 rounded-xl p-6 shadow-2xl w-full max-w-md"
+              style={{ pointerEvents: 'auto' }}
               data-testid="set-password-modal"
             >
               <h3 className="text-lg font-semibold text-white mb-1">
@@ -437,15 +432,7 @@ export default function PasswordManagementSection({ token }) {
                 for {selectedUser.name || selectedUser.email}
               </p>
 
-              <form 
-                className="space-y-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (newPassword.length >= 4) {
-                    selectedUser.type === 'employee' ? handleSetEmployeePassword() : handleSetConsignorPassword();
-                  }
-                }}
-              >
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-white/80 text-sm">New Password</Label>
                   <div className="relative">
@@ -454,23 +441,23 @@ export default function PasswordManagementSection({ token }) {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
-                      autoComplete="new-password"
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder:text-white/40 focus:outline-none focus:border-[#00D4FF] pr-10 text-base"
+                      autoComplete="off"
+                      className="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-md text-white placeholder:text-white/40 focus:outline-none focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF] pr-10"
                       style={{ fontSize: '16px' }}
                       data-testid="new-password-input"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-1"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                   <p className="text-xs text-white/40">Minimum 4 characters</p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-2">
                   <Button
                     type="button"
                     variant="ghost"
@@ -485,7 +472,8 @@ export default function PasswordManagementSection({ token }) {
                     Cancel
                   </Button>
                   <Button
-                    type="submit"
+                    type="button"
+                    onClick={() => selectedUser.type === 'employee' ? handleSetEmployeePassword() : handleSetConsignorPassword()}
                     disabled={newPassword.length < 4 || settingPassword}
                     className={`flex-1 ${
                       selectedUser.type === 'employee'
@@ -502,10 +490,10 @@ export default function PasswordManagementSection({ token }) {
                     Set Password
                   </Button>
                 </div>
-              </form>
+              </div>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </>
       )}
 
       {/* Password Change Process Info */}
