@@ -70,6 +70,11 @@ class SetEmployeePassword(BaseModel):
     password: str
 
 
+class ChangeEmployeePassword(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class AdminResetEmployeePassword(BaseModel):
     employee_id: str
     new_password: str

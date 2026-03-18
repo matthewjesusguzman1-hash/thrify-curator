@@ -281,3 +281,94 @@ class TestRemoveEmployeePassword:
         # Verify password was removed
         check_response = requests.get(f"{BASE_URL}/api/auth/employee/has-password/{target['email']}")
         assert check_response.json()["has_password"] is False
+
+
+class TestEmployeeSelfServicePasswordChange:
+    """Test employee self-service password change via /api/auth/employee/change-password"""
+
+    def test_change_password_wrong_current_password(self):
+        """Change password with wrong current password should fail"""
+        # First login to get token
+        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
+            "email": TEST_EMPLOYEE_EMAIL,
+            "password": TEST_EMPLOYEE_PASSWORD
+        })
+        assert login_response.status_code == 200
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # Try to change password with wrong current password
+        response = requests.post(f"{BASE_URL}/api/auth/employee/change-password", json={
+            "current_password": "wrongpassword",
+            "new_password": "newtest5678"
+        }, headers=headers)
+        
+        assert response.status_code == 401
+        assert "incorrect" in response.json()["detail"].lower()
+
+    def test_change_password_short_new_password(self):
+        """Change password with too short new password should fail"""
+        # Login to get token
+        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
+            "email": TEST_EMPLOYEE_EMAIL,
+            "password": TEST_EMPLOYEE_PASSWORD
+        })
+        assert login_response.status_code == 200
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # Try to change password with too short new password
+        response = requests.post(f"{BASE_URL}/api/auth/employee/change-password", json={
+            "current_password": TEST_EMPLOYEE_PASSWORD,
+            "new_password": "abc"
+        }, headers=headers)
+        
+        assert response.status_code == 400
+        assert "at least 4" in response.json()["detail"].lower()
+
+    def test_change_password_success(self):
+        """Employee can successfully change their password"""
+        # Login to get token
+        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
+            "email": TEST_EMPLOYEE_EMAIL,
+            "password": TEST_EMPLOYEE_PASSWORD
+        })
+        assert login_response.status_code == 200
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # Change password
+        new_password = "changedpass123"
+        response = requests.post(f"{BASE_URL}/api/auth/employee/change-password", json={
+            "current_password": TEST_EMPLOYEE_PASSWORD,
+            "new_password": new_password
+        }, headers=headers)
+        
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        
+        # Verify can login with new password
+        new_login = requests.post(f"{BASE_URL}/api/auth/login", json={
+            "email": TEST_EMPLOYEE_EMAIL,
+            "password": new_password
+        })
+        assert new_login.status_code == 200
+        assert new_login.json()["user"]["has_password"] is True
+        
+        # Restore original password
+        new_token = new_login.json()["access_token"]
+        restore_response = requests.post(f"{BASE_URL}/api/auth/employee/change-password", json={
+            "current_password": new_password,
+            "new_password": TEST_EMPLOYEE_PASSWORD
+        }, headers={"Authorization": f"Bearer {new_token}"})
+        assert restore_response.status_code == 200
+
+    def test_change_password_admin_blocked(self, admin_headers):
+        """Admin users should not be able to use change-password endpoint"""
+        response = requests.post(f"{BASE_URL}/api/auth/employee/change-password", json={
+            "current_password": "anypassword",
+            "new_password": "newpassword"
+        }, headers=admin_headers)
+        
+        assert response.status_code == 400
+        assert "access codes" in response.json()["detail"].lower()

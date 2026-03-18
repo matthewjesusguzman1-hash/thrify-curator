@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 
 /**
  * Password Management Feature Tests
- * Tests employee password login, admin password management section, and related flows
+ * Tests employee password login, admin password management section, 
+ * and self-service password change flows
  */
 
 test.describe('Password Management Features', () => {
@@ -272,6 +273,125 @@ test.describe('Password Management Features', () => {
         const passwordInput = page.getByTestId('edit-employee-password');
         await expect(passwordInput).toBeVisible();
       }
+    });
+  });
+
+  test.describe('Employee Self-Service Password Change', () => {
+    
+    test.beforeEach(async ({ page }) => {
+      // Login as test employee
+      await page.goto('/login', { waitUntil: 'domcontentloaded' });
+      await page.getByTestId('login-email').fill('testemployee@thriftycurator.com');
+      await page.getByTestId('login-submit-btn').click();
+      await expect(page.getByTestId('login-password')).toBeVisible();
+      await page.getByTestId('login-password').fill('test1234');
+      await page.getByTestId('login-submit-btn').click();
+      await expect(page.getByTestId('employee-dashboard')).toBeVisible();
+    });
+
+    test('Security button is visible in Employee Dashboard header', async ({ page }) => {
+      // Security button should be visible in header
+      await expect(page.getByTestId('security-btn')).toBeVisible();
+    });
+
+    test('Clicking Security button opens Security Settings modal', async ({ page }) => {
+      // Click Security button
+      await page.getByTestId('security-btn').click();
+      
+      // Modal should appear
+      await expect(page.getByTestId('password-modal')).toBeVisible();
+    });
+
+    test('Employee with password sees Password Protected status', async ({ page }) => {
+      // Click Security button
+      await page.getByTestId('security-btn').click();
+      await expect(page.getByTestId('password-modal')).toBeVisible();
+      
+      // Should show "Password Protected" status
+      await expect(page.getByText('Password Protected')).toBeVisible();
+      await expect(page.getByText('Your account requires a password to login')).toBeVisible();
+    });
+
+    test('Change password form shows current password, new password, and confirm fields', async ({ page }) => {
+      // Click Security button
+      await page.getByTestId('security-btn').click();
+      await expect(page.getByTestId('password-modal')).toBeVisible();
+      
+      // All password fields should be visible
+      await expect(page.getByTestId('current-password-input')).toBeVisible();
+      await expect(page.getByTestId('new-password-input')).toBeVisible();
+      await expect(page.getByTestId('confirm-password-input')).toBeVisible();
+      
+      // Change Password button should be visible (but disabled initially)
+      await expect(page.getByTestId('save-password-btn')).toBeVisible();
+    });
+
+    test('Save button is disabled when fields are empty or invalid', async ({ page }) => {
+      // Click Security button
+      await page.getByTestId('security-btn').click();
+      await expect(page.getByTestId('password-modal')).toBeVisible();
+      
+      // Button should be disabled initially
+      await expect(page.getByTestId('save-password-btn')).toBeDisabled();
+      
+      // Enter only current password
+      await page.getByTestId('current-password-input').fill('test1234');
+      await expect(page.getByTestId('save-password-btn')).toBeDisabled();
+      
+      // Enter short new password (less than 4 chars)
+      await page.getByTestId('new-password-input').fill('abc');
+      await page.getByTestId('confirm-password-input').fill('abc');
+      await expect(page.getByTestId('save-password-btn')).toBeDisabled();
+      
+      // Enter valid new password but mismatched confirm
+      await page.getByTestId('new-password-input').fill('newpassword');
+      await page.getByTestId('confirm-password-input').fill('differentpassword');
+      await expect(page.getByTestId('save-password-btn')).toBeDisabled();
+      
+      // Passwords match and valid - button should be enabled
+      await page.getByTestId('confirm-password-input').fill('newpassword');
+      await expect(page.getByTestId('save-password-btn')).toBeEnabled();
+    });
+
+    test('Can close modal with Cancel button', async ({ page }) => {
+      // Click Security button
+      await page.getByTestId('security-btn').click();
+      await expect(page.getByTestId('password-modal')).toBeVisible();
+      
+      // Click Cancel
+      await page.getByRole('button', { name: 'Cancel' }).click();
+      
+      // Modal should close
+      await expect(page.getByTestId('password-modal')).not.toBeVisible();
+    });
+
+    test('Can close modal by clicking X button', async ({ page }) => {
+      // Click Security button
+      await page.getByTestId('security-btn').click();
+      await expect(page.getByTestId('password-modal')).toBeVisible();
+      
+      // Click X button - it's a button with w-10 h-10 rounded-full in the modal header
+      // Use page.click on the button that contains a close icon
+      await page.locator('[data-testid="password-modal"]').locator('button.rounded-full').first().click();
+      
+      // Wait a moment for animation
+      await page.waitForTimeout(500);
+      
+      // Modal should close
+      await expect(page.getByTestId('password-modal')).not.toBeVisible();
+    });
+
+    test('Shows password mismatch validation message', async ({ page }) => {
+      // Click Security button  
+      await page.getByTestId('security-btn').click();
+      await expect(page.getByTestId('password-modal')).toBeVisible();
+      
+      // Enter mismatched passwords
+      await page.getByTestId('new-password-input').fill('newpassword1');
+      await page.getByTestId('confirm-password-input').fill('newpassword2');
+      
+      // Should show mismatch message
+      await expect(page.getByText("Passwords don't match")).toBeVisible();
     });
   });
 });

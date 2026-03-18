@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Clock, 
   LogOut, 
@@ -18,14 +18,20 @@ import {
   AlertCircle,
   Trash2,
   Eye,
+  EyeOff,
   Send,
   MessageSquare,
   X,
   Clock3,
   MapPin,
-  RefreshCw
+  RefreshCw,
+  Lock,
+  Key,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import axios from "axios";
 import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
@@ -81,6 +87,16 @@ export default function EmployeeDashboard() {
   const [w9FormData, setW9FormData] = useState({ file: null, notes: '' });
   const w9InputRef = useRef(null);
 
+  // Password management state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [hasPassword, setHasPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -90,8 +106,10 @@ export default function EmployeeDashboard() {
       return;
     }
 
-    setUser(JSON.parse(userData));
+    const parsedUser = JSON.parse(userData);
+    setUser(parsedUser);
     fetchData();
+    checkPasswordStatus(parsedUser.email);
     
     // Refresh data periodically to keep pay summary up to date (every 60 seconds)
     const refreshInterval = setInterval(() => {
@@ -100,6 +118,16 @@ export default function EmployeeDashboard() {
     
     return () => clearInterval(refreshInterval);
   }, [navigate]);
+
+  // Check if employee has a password set
+  const checkPasswordStatus = async (email) => {
+    try {
+      const res = await axios.get(`${API}/auth/employee/has-password/${encodeURIComponent(email)}`);
+      setHasPassword(res.data.has_password || false);
+    } catch (error) {
+      console.error("Error checking password status:", error);
+    }
+  };
 
   // Timer effect
   useEffect(() => {
@@ -484,6 +512,74 @@ export default function EmployeeDashboard() {
     navigate("/login");
   };
 
+  // Password management handlers
+  const handleSetPassword = async () => {
+    if (newPassword.length < 4) {
+      toast.error("Password must be at least 4 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${API}/auth/employee/set-password`, 
+        { password: newPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Password set successfully! You'll need to enter it next time you log in.");
+      setHasPassword(true);
+      resetPasswordForm();
+      setShowPasswordModal(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to set password");
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword) {
+      toast.error("Please enter your current password");
+      return;
+    }
+    if (newPassword.length < 4) {
+      toast.error("New password must be at least 4 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords don't match");
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${API}/auth/employee/change-password`,
+        { current_password: currentPassword, new_password: newPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Password changed successfully!");
+      resetPasswordForm();
+      setShowPasswordModal(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to change password");
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
+  const resetPasswordForm = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+  };
+
   const formatTime = (seconds) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -549,6 +645,16 @@ export default function EmployeeDashboard() {
                 </Button>
               </Link>
             )}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowPasswordModal(true)}
+              className="text-white/70 hover:text-white hover:bg-white/10"
+              data-testid="security-btn"
+            >
+              <Lock className="w-4 h-4 mr-1" />
+              Security
+            </Button>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -1158,6 +1264,188 @@ export default function EmployeeDashboard() {
           </motion.div>
         </motion.div>
       )}
+
+      {/* Password Management Modal */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => { setShowPasswordModal(false); resetPasswordForm(); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
+              data-testid="password-modal"
+            >
+              {/* Header */}
+              <div className="h-1.5 bg-gradient-to-r from-purple-500 to-pink-500" />
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-[#1A1A2E]">Security Settings</h2>
+                      <p className="text-sm text-gray-500">
+                        {hasPassword ? "Manage your login password" : "Set up password protection"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setShowPasswordModal(false); resetPasswordForm(); }}
+                    className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+
+                {/* Password Status */}
+                <div className={`p-4 rounded-xl mb-6 ${
+                  hasPassword 
+                    ? 'bg-green-50 border border-green-200' 
+                    : 'bg-amber-50 border border-amber-200'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    {hasPassword ? (
+                      <>
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-green-800">Password Protected</p>
+                          <p className="text-sm text-green-600">Your account requires a password to login</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-5 h-5 text-amber-600" />
+                        <div>
+                          <p className="font-medium text-amber-800">No Password Set</p>
+                          <p className="text-sm text-amber-600">Set a password to secure your account</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Password Form */}
+                <div className="space-y-4">
+                  {/* Current Password - only shown if user already has password */}
+                  {hasPassword && (
+                    <div className="space-y-2">
+                      <Label className="text-gray-700 font-medium">Current Password</Label>
+                      <div className="relative">
+                        <Input
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="Enter current password"
+                          className="pr-10"
+                          data-testid="current-password-input"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Password */}
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 font-medium">
+                      {hasPassword ? "New Password" : "Password"}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder={hasPassword ? "Enter new password" : "Create a password"}
+                        className="pr-10"
+                        data-testid="new-password-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">Minimum 4 characters</p>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 font-medium">Confirm Password</Label>
+                    <Input
+                      type={showNewPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm your password"
+                      data-testid="confirm-password-input"
+                    />
+                    {confirmPassword && newPassword !== confirmPassword && (
+                      <p className="text-xs text-red-500">Passwords don't match</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => { setShowPasswordModal(false); resetPasswordForm(); }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={hasPassword ? handleChangePassword : handleSetPassword}
+                    disabled={
+                      savingPassword || 
+                      newPassword.length < 4 || 
+                      newPassword !== confirmPassword ||
+                      (hasPassword && !currentPassword)
+                    }
+                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                    data-testid="save-password-btn"
+                  >
+                    {savingPassword ? (
+                      <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Lock className="w-4 h-4 mr-2" />
+                    )}
+                    {savingPassword ? "Saving..." : (hasPassword ? "Change Password" : "Set Password")}
+                  </Button>
+                </div>
+
+                {/* Info */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                    <Key className="w-4 h-4 text-purple-500" />
+                    About Password Protection
+                  </h4>
+                  <ul className="text-xs text-gray-500 space-y-1 list-disc list-inside">
+                    <li>Once set, you'll need to enter your password every time you log in</li>
+                    <li>If you forget your password, contact your admin to reset it</li>
+                    <li>Use a password that's easy for you to remember but hard for others to guess</li>
+                  </ul>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import secrets
 
 from app.database import db
 from app.dependencies import create_token, get_current_user
-from app.models.user import UserCreate, UserLogin, UserResponse, TokenResponse, SetEmployeePassword
+from app.models.user import UserCreate, UserLogin, UserResponse, TokenResponse, SetEmployeePassword, ChangeEmployeePassword
 from app.dependencies import hash_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -203,8 +203,7 @@ async def set_employee_password(request: SetEmployeePassword, user: dict = Depen
 
 @router.post("/employee/change-password")
 async def change_employee_password(
-    current_password: str,
-    new_password: str,
+    request: ChangeEmployeePassword,
     user: dict = Depends(get_current_user)
 ):
     """Allow employee to change their password (requires current password)"""
@@ -217,13 +216,13 @@ async def change_employee_password(
         raise HTTPException(status_code=404, detail="User not found")
     
     # Verify current password
-    if not verify_employee_password(current_password, db_user.get("password_hash", "")):
+    if not verify_employee_password(request.current_password, db_user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Current password is incorrect")
     
-    if len(new_password) < 4:
+    if len(request.new_password) < 4:
         raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
     
-    password_hash = hash_employee_password(new_password)
+    password_hash = hash_employee_password(request.new_password)
     
     await db.users.update_one(
         {"id": user["id"]},
