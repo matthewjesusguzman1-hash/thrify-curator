@@ -41,7 +41,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     amount: "",
     employee_name: "",
     payment_type: "employee",
-    consignment_client_email: ""
+    consignment_client_email: "",
+    commission_split: ""
   });
   const [pendingCheckImage, setPendingCheckImage] = useState(null);
   const [editingCheckRecord, setEditingCheckRecord] = useState(null);
@@ -223,7 +224,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
           amount: parseAmount(checkUploadData.amount),
           employee_name: checkUploadData.employee_name || null,
           payment_type: checkUploadData.payment_type || activeTab,
-          consignment_client_email: checkUploadData.consignment_client_email || null
+          consignment_client_email: checkUploadData.consignment_client_email || null,
+          commission_split: activeTab === "consignment" ? (checkUploadData.commission_split || null) : null
         };
         
         // If new image was selected, include it
@@ -247,7 +249,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
           amount: parseAmount(checkUploadData.amount),
           employee_name: checkUploadData.employee_name || null,
           payment_type: activeTab,
-          consignment_client_email: activeTab === "consignment" ? checkUploadData.consignment_client_email : null
+          consignment_client_email: activeTab === "consignment" ? checkUploadData.consignment_client_email : null,
+          commission_split: activeTab === "consignment" ? (checkUploadData.commission_split || null) : null
         };
         
         await axios.post(`${API}/admin/payroll/check-records`, payload, getAuthHeader());
@@ -261,7 +264,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
         amount: "", 
         employee_name: "",
         payment_type: activeTab,
-        consignment_client_email: ""
+        consignment_client_email: "",
+        commission_split: ""
       });
       
       // Cleanup preview URL
@@ -292,7 +296,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       amount: formattedAmount,
       employee_name: record.employee_name || "",
       payment_type: record.payment_type || "employee",
-      consignment_client_email: record.consignment_client_email || ""
+      consignment_client_email: record.consignment_client_email || "",
+      commission_split: record.commission_split || ""
     });
     // Clear any pending image
     if (pendingCheckImage?.previewUrl) {
@@ -311,7 +316,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       amount: "",
       employee_name: "",
       payment_type: activeTab,
-      consignment_client_email: ""
+      consignment_client_email: "",
+      commission_split: ""
     });
     if (pendingCheckImage?.previewUrl) {
       URL.revokeObjectURL(pendingCheckImage.previewUrl);
@@ -490,6 +496,24 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         </span>
                         <ChevronDown className="w-4 h-4 text-gray-400" />
                       </button>
+                    </div>
+                  )}
+                  
+                  {/* Commission Split (only for consignment tab) */}
+                  {activeTab === "consignment" && (
+                    <div className="mb-3">
+                      <Label className="text-xs text-[#666]">
+                        Commission Split
+                        <span className="text-gray-400 ml-1">(e.g., 50/50, 60/40)</span>
+                      </Label>
+                      <Input
+                        type="text"
+                        placeholder="50/50"
+                        value={checkUploadData.commission_split}
+                        onChange={(e) => setCheckUploadData({ ...checkUploadData, commission_split: e.target.value })}
+                        className="h-9 text-sm"
+                        data-testid="commission-split-input"
+                      />
                     </div>
                   )}
                   
@@ -751,6 +775,11 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                               {record.consignment_client_email && (
                                 <span className="text-emerald-600 truncate max-w-[150px]" title={record.consignment_client_email}>
                                   {record.consignment_client_email}
+                                </span>
+                              )}
+                              {record.commission_split && (
+                                <span className="text-purple-600 text-xs bg-purple-50 px-2 py-0.5 rounded">
+                                  {record.commission_split}
                                 </span>
                               )}
                             </div>

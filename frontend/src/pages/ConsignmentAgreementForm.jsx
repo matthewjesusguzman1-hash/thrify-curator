@@ -1883,6 +1883,11 @@ export default function ConsignmentAgreementForm() {
                                   <div>
                                     <p className="text-sm font-medium text-[#1A1A2E]">
                                       ${(payment.amount || 0).toFixed(2)}
+                                      {payment.commission_split && (
+                                        <span className="ml-2 text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
+                                          {payment.commission_split}
+                                        </span>
+                                      )}
                                     </p>
                                     <p className="text-xs text-gray-500">
                                       {payment.check_date ? new Date(payment.check_date).toLocaleDateString('en-US', {

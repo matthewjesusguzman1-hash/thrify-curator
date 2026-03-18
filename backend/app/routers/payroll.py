@@ -548,6 +548,7 @@ class CheckRecordUpload(BaseModel):
     employee_name: Optional[str] = None
     payment_type: Optional[str] = "employee"  # "employee" or "consignment"
     consignment_client_email: Optional[str] = None  # For linking to consignment agreement
+    commission_split: Optional[str] = None  # e.g., "50/50", "60/40" - for consignment payments
 
 class CheckRecordUpdate(BaseModel):
     description: Optional[str] = None
@@ -559,6 +560,7 @@ class CheckRecordUpdate(BaseModel):
     content_type: Optional[str] = None
     payment_type: Optional[str] = None
     consignment_client_email: Optional[str] = None
+    commission_split: Optional[str] = None  # e.g., "50/50", "60/40" - for consignment payments
 
 @router.get("/check-records")
 async def get_check_records(admin: dict = Depends(get_admin_user)):
@@ -580,6 +582,7 @@ async def upload_check_record(data: CheckRecordUpload, admin: dict = Depends(get
         "employee_name": data.employee_name,
         "payment_type": data.payment_type or "employee",
         "consignment_client_email": data.consignment_client_email,
+        "commission_split": data.commission_split,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": admin.get("name", "Admin")
     }
@@ -623,6 +626,8 @@ async def update_check_record(record_id: str, data: CheckRecordUpdate, admin: di
         update_data["payment_type"] = data.payment_type
     if data.consignment_client_email is not None:
         update_data["consignment_client_email"] = data.consignment_client_email
+    if data.commission_split is not None:
+        update_data["commission_split"] = data.commission_split
     if data.image_data is not None:
         update_data["image_data"] = data.image_data
         update_data["filename"] = data.filename
