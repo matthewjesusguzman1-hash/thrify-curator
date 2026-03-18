@@ -260,65 +260,82 @@ export default function PasswordManagementSection({ token }) {
                 No employees found
               </div>
             ) : (
-              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-                {filteredEmployees.map((employee) => (
-                  <div
-                    key={employee.id}
-                    className="bg-white/5 hover:bg-white/10 rounded-lg p-4 flex items-center justify-between transition-colors"
-                    data-testid={`employee-password-row-${employee.id}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        employee.has_password ? 'bg-green-500/20' : 'bg-red-500/20'
-                      }`}>
-                        {employee.has_password 
-                          ? <CheckCircle className="w-5 h-5 text-green-500" />
-                          : <XCircle className="w-5 h-5 text-red-500" />
-                        }
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">{employee.name}</p>
-                        <p className="text-sm text-white/50">{employee.email}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        employee.has_password 
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {employee.has_password ? "Password Set" : "No Password"}
-                      </span>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedUser({ ...employee, type: 'employee' });
-                          setNewPassword("");
-                        }}
-                        className="text-[#00D4FF] hover:text-[#00D4FF] hover:bg-[#00D4FF]/20"
-                        data-testid={`set-password-btn-${employee.id}`}
+              <div className="overflow-x-auto">
+                <table className="w-full" data-testid="employees-password-table">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Status</th>
+                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Name</th>
+                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Email</th>
+                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Password</th>
+                      <th className="text-right py-3 px-4 text-white/70 font-medium text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredEmployees.map((employee) => (
+                      <tr 
+                        key={employee.id}
+                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                        data-testid={`employee-password-row-${employee.id}`}
                       >
-                        <Lock className="w-4 h-4 mr-1" />
-                        {employee.has_password ? "Reset" : "Set"} Password
-                      </Button>
-                      
-                      {employee.has_password && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveEmployeePassword(employee)}
-                          className="text-red-400 hover:text-red-400 hover:bg-red-500/20"
-                          data-testid={`remove-password-btn-${employee.id}`}
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                        <td className="py-3 px-4">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            employee.has_password ? 'bg-green-500/20' : 'bg-red-500/20'
+                          }`}>
+                            {employee.has_password 
+                              ? <CheckCircle className="w-4 h-4 text-green-500" />
+                              : <XCircle className="w-4 h-4 text-red-500" />
+                            }
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-white font-medium">{employee.name}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-white/70 text-sm">{employee.email}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            employee.has_password 
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {employee.has_password ? "Password Set" : "No Password"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedUser({ ...employee, type: 'employee' });
+                                setNewPassword("");
+                              }}
+                              className="text-[#00D4FF] hover:text-[#00D4FF] hover:bg-[#00D4FF]/20"
+                              data-testid={`set-password-btn-${employee.id}`}
+                            >
+                              <Lock className="w-4 h-4 mr-1" />
+                              {employee.has_password ? "Reset" : "Set"}
+                            </Button>
+                            
+                            {employee.has_password && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveEmployeePassword(employee)}
+                                className="text-red-400 hover:text-red-400 hover:bg-red-500/20"
+                                data-testid={`remove-password-btn-${employee.id}`}
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </motion.div>
@@ -342,53 +359,68 @@ export default function PasswordManagementSection({ token }) {
                 No consignors found
               </div>
             ) : (
-              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-                {filteredConsignors.map((consignor, idx) => (
-                  <div
-                    key={consignor.email || idx}
-                    className="bg-white/5 hover:bg-white/10 rounded-lg p-4 flex items-center justify-between transition-colors"
-                    data-testid={`consignor-password-row-${idx}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        consignor.has_password ? 'bg-green-500/20' : 'bg-red-500/20'
-                      }`}>
-                        {consignor.has_password 
-                          ? <CheckCircle className="w-5 h-5 text-green-500" />
-                          : <XCircle className="w-5 h-5 text-red-500" />
-                        }
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">{consignor.name || "Unknown"}</p>
-                        <p className="text-sm text-white/50">{consignor.email}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        consignor.has_password 
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {consignor.has_password ? "Password Set" : "No Password"}
-                      </span>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedUser({ ...consignor, type: 'consignor' });
-                          setNewPassword("");
-                        }}
-                        className="text-[#FF1493] hover:text-[#FF1493] hover:bg-[#FF1493]/20"
-                        data-testid={`set-consignor-password-btn-${idx}`}
+              <div className="overflow-x-auto">
+                <table className="w-full" data-testid="consignors-password-table">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Status</th>
+                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Name</th>
+                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Email</th>
+                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Password</th>
+                      <th className="text-right py-3 px-4 text-white/70 font-medium text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredConsignors.map((consignor, idx) => (
+                      <tr 
+                        key={consignor.email || idx}
+                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                        data-testid={`consignor-password-row-${idx}`}
                       >
-                        <Lock className="w-4 h-4 mr-1" />
-                        {consignor.has_password ? "Reset" : "Set"} Password
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                        <td className="py-3 px-4">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            consignor.has_password ? 'bg-green-500/20' : 'bg-red-500/20'
+                          }`}>
+                            {consignor.has_password 
+                              ? <CheckCircle className="w-4 h-4 text-green-500" />
+                              : <XCircle className="w-4 h-4 text-red-500" />
+                            }
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-white font-medium">{consignor.name || "Unknown"}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-white/70 text-sm">{consignor.email}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            consignor.has_password 
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {consignor.has_password ? "Password Set" : "No Password"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUser({ ...consignor, type: 'consignor' });
+                              setNewPassword("");
+                            }}
+                            className="text-[#FF1493] hover:text-[#FF1493] hover:bg-[#FF1493]/20"
+                            data-testid={`set-consignor-password-btn-${idx}`}
+                          >
+                            <Lock className="w-4 h-4 mr-1" />
+                            {consignor.has_password ? "Reset" : "Set"}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </motion.div>
