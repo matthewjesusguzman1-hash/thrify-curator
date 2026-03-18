@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle, Lock, Fingerprint, EyeOff } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle, Lock, Fingerprint, EyeOff, HelpCircle, MessageSquare, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -969,6 +969,33 @@ export default function ConsignmentAgreementForm() {
                       >
                         {checkingEmail ? "Logging in..." : "Login"}
                       </Button>
+                      
+                      {/* Forgot Password Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          // Direct mailto approach since modal has rendering issues
+                          const userEmail = addItemsEmail || "";
+                          const confirmReset = window.confirm(
+                            `Can't access your account?\n\nTo reset your password, you'll need to contact Thrifty Curator.\n\nClick OK to send an email request, or Cancel to go back.\n\nYour email: ${userEmail}`
+                          );
+                          if (confirmReset) {
+                            const subject = encodeURIComponent("Password Reset Request - Consignment Portal");
+                            const body = encodeURIComponent(
+                              `Hello Thrifty Curator Team,\n\nI need help resetting my password for the consignment portal.\n\nMy email: ${userEmail}\n\nThank you!`
+                            );
+                            window.open(`mailto:thriftycurator1@gmail.com?subject=${subject}&body=${body}`, '_blank');
+                            toast.success("Opening email app...");
+                          }
+                        }}
+                        className="w-full text-sm text-amber-600 hover:text-amber-700 flex items-center justify-center gap-2"
+                        data-testid="forgot-password-link"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                        Forgot your password?
+                      </button>
                       
                       {/* Try Face ID again button */}
                       {biometricAvailable && isNative && (
