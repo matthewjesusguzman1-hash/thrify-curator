@@ -82,6 +82,8 @@ export default function ConsignmentAgreementForm() {
   const [updatePaymentDetails, setUpdatePaymentDetails] = useState("");
   const [wantsToAddItems, setWantsToAddItems] = useState(false);
   const [updateCustomSplit, setUpdateCustomSplit] = useState("");
+  const [itemAdditionSplit, setItemAdditionSplit] = useState(""); // Split for new items being added
+  const [useAccountDefaultSplit, setUseAccountDefaultSplit] = useState(true);
   const [updateAdditionalInfo, setUpdateAdditionalInfo] = useState("");
   const [updatePhotos, setUpdatePhotos] = useState([]);
   const [updateSignature, setUpdateSignature] = useState("");

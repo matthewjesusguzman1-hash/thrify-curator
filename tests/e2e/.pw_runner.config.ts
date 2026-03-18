@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260318_034319/results.json' }],
   ],
   use: {
-    baseURL: 'https://resale-magic-link.preview.emergentagent.com',
+    baseURL: 'https://curator-app-3.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

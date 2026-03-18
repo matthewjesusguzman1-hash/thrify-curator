@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { removeEmergentBadge, dismissToasts } from '../fixtures/helpers';
 
-const BASE_URL = 'https://resale-magic-link.preview.emergentagent.com';
+const BASE_URL = 'https://curator-app-3.preview.emergentagent.com';
 
 test.describe('Approval Workflows - Bug Fix Verification', () => {
   
