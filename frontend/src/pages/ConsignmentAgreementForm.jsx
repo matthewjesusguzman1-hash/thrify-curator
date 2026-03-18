@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle, Lock, Fingerprint, EyeOff, HelpCircle, MessageSquare, AlertCircle } from "lucide-react";
@@ -1073,97 +1074,166 @@ export default function ConsignmentAgreementForm() {
                     </button>
                   </div>
 
-                  {/* Password Bottom Sheet Modal */}
-                  {showSetPassword && (
-                    <div className="fixed inset-0 z-[99999]" style={{ touchAction: 'manipulation' }}>
+                  {/* Password Modal - Using Portal for proper rendering */}
+                  {showSetPassword && createPortal(
+                    <div 
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 999999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '16px'
+                      }}
+                    >
                       {/* Backdrop */}
                       <div 
-                        className="absolute inset-0 bg-black/50"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0,0,0,0.5)'
+                        }}
                         onClick={() => { setShowSetPassword(false); setNewPassword(""); setConfirmPassword(""); }}
                       />
-                      {/* Bottom Sheet */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] overflow-auto">
-                        {/* Handle bar */}
-                        <div className="flex justify-center pt-3 pb-2">
-                          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-                        </div>
-                        
+                      {/* Modal Content */}
+                      <div
+                        style={{
+                          position: 'relative',
+                          backgroundColor: 'white',
+                          borderRadius: '16px',
+                          padding: '24px',
+                          width: '90%',
+                          maxWidth: '380px',
+                          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                        }}
+                      >
                         {/* Header */}
-                        <div className="px-4 pb-3 flex justify-between items-center border-b">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                              <Lock className="w-4 h-4 text-emerald-600" />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ 
+                              width: '40px', 
+                              height: '40px', 
+                              backgroundColor: '#d1fae5', 
+                              borderRadius: '50%', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center' 
+                            }}>
+                              <Lock size={20} color="#059669" />
                             </div>
-                            <span className="font-semibold text-[#1A1A2E]">{hasPassword ? "Change Password" : "Set Password"}</span>
+                            <span style={{ fontWeight: '600', color: '#1A1A2E', fontSize: '18px' }}>
+                              {hasPassword ? "Change Password" : "Set Password"}
+                            </span>
                           </div>
                           <button 
                             type="button"
                             onClick={() => { setShowSetPassword(false); setNewPassword(""); setConfirmPassword(""); }}
-                            className="p-2 hover:bg-gray-100 rounded-full"
+                            style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer' }}
                           >
-                            <X className="w-5 h-5 text-gray-500" />
+                            <X size={24} color="#9ca3af" />
                           </button>
                         </div>
 
-                        {/* Content */}
-                        <div className="p-4 space-y-4">
-                          {biometricAvailable && isNative && (
-                            <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700 flex items-start gap-2">
-                              <Fingerprint className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                              <span>Setting a password enables Face ID/Touch ID for quick login!</span>
-                            </div>
-                          )}
-                          
+                        {biometricAvailable && isNative && (
+                          <div style={{ 
+                            backgroundColor: '#eff6ff', 
+                            padding: '12px', 
+                            borderRadius: '8px', 
+                            marginBottom: '16px',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '8px'
+                          }}>
+                            <Fingerprint size={20} color="#2563eb" style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: '14px', color: '#1e40af' }}>
+                              Setting a password enables Face ID/Touch ID for quick login!
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                           <div>
-                            <label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">New Password</label>
-                            <div className="relative">
+                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1A1A2E', marginBottom: '8px' }}>
+                              New Password
+                            </label>
+                            <div style={{ position: 'relative' }}>
                               <input
                                 type={showPassword ? "text" : "password"}
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                onFocus={(e) => e.target.select()}
                                 placeholder="Enter password"
-                                autoComplete="off"
-                                autoCapitalize="none"
-                                autoCorrect="off"
-                                spellCheck="false"
-                                inputMode="text"
-                                className="w-full px-4 py-3 border-2 border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-base"
-                                style={{ fontSize: '16px', WebkitAppearance: 'none' }}
+                                style={{
+                                  width: '100%',
+                                  padding: '14px 48px 14px 16px',
+                                  border: '2px solid #e5e7eb',
+                                  borderRadius: '12px',
+                                  fontSize: '16px',
+                                  outline: 'none',
+                                  boxSizing: 'border-box'
+                                }}
                               />
                               <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-2"
+                                style={{
+                                  position: 'absolute',
+                                  right: '12px',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px'
+                                }}
                               >
-                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                {showPassword ? <EyeOff size={20} color="#9ca3af" /> : <Eye size={20} color="#9ca3af" />}
                               </button>
                             </div>
                           </div>
                           
                           <div>
-                            <label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Confirm Password</label>
+                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1A1A2E', marginBottom: '8px' }}>
+                              Confirm Password
+                            </label>
                             <input
                               type={showPassword ? "text" : "password"}
                               value={confirmPassword}
                               onChange={(e) => setConfirmPassword(e.target.value)}
-                              onFocus={(e) => e.target.select()}
                               placeholder="Confirm password"
-                              autoComplete="off"
-                              autoCapitalize="none"
-                              autoCorrect="off"
-                              spellCheck="false"
-                              inputMode="text"
-                              className="w-full px-4 py-3 border-2 border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-base"
-                              style={{ fontSize: '16px', WebkitAppearance: 'none' }}
+                              style={{
+                                width: '100%',
+                                padding: '14px 16px',
+                                border: '2px solid #e5e7eb',
+                                borderRadius: '12px',
+                                fontSize: '16px',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                              }}
                             />
                           </div>
 
-                          <div className="flex gap-3 pt-2 pb-4">
+                          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                             <button
                               type="button"
                               onClick={() => { setShowSetPassword(false); setNewPassword(""); setConfirmPassword(""); }}
-                              className="flex-1 py-3 text-gray-600 hover:text-gray-800 border border-gray-200 rounded-xl font-medium"
+                              style={{
+                                flex: 1,
+                                padding: '14px',
+                                backgroundColor: 'white',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '12px',
+                                color: '#4b5563',
+                                fontSize: '15px',
+                                fontWeight: '500',
+                                cursor: 'pointer'
+                              }}
                             >
                               Cancel
                             </button>
@@ -1171,14 +1241,26 @@ export default function ConsignmentAgreementForm() {
                               type="button"
                               onClick={handleSetPassword}
                               disabled={settingPassword || !newPassword || !confirmPassword}
-                              className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium disabled:opacity-50"
+                              style={{
+                                flex: 1,
+                                padding: '14px',
+                                backgroundColor: '#10b981',
+                                border: 'none',
+                                borderRadius: '12px',
+                                color: 'white',
+                                fontSize: '15px',
+                                fontWeight: '500',
+                                cursor: settingPassword || !newPassword || !confirmPassword ? 'not-allowed' : 'pointer',
+                                opacity: settingPassword || !newPassword || !confirmPassword ? 0.5 : 1
+                              }}
                             >
                               {settingPassword ? "Saving..." : "Save Password"}
                             </button>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </div>,
+                    document.body
                   )}
 
                   {/* Payment History - Compact */}
