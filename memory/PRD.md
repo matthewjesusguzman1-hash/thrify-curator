@@ -48,6 +48,10 @@ The web application is fully functional. iOS app has been built and uploaded to 
    - View password status (set/not set)
    - Set new password or reset existing
    - Remove password option
+5. **Self-Service Password Change**: Employees can change their own password
+   - Security button added to Employee Dashboard header
+   - Security Settings modal with password status and change form
+   - Requires current password verification before changing
 
 **Recent Changes (March 14, 2026)**
 1. Removed "Add to Home Screen" button from landing page
@@ -109,6 +113,7 @@ The web application is fully functional. iOS app has been built and uploaded to 
 **Password Management Endpoints (NEW)**
 - `GET /api/auth/employee/has-password/{email}` - Check if employee has password set
 - `POST /api/auth/employee/set-password` - Employee sets their own password
+- `POST /api/auth/employee/change-password` - Employee changes their password (requires current password)
 - `GET /api/admin/employees/passwords` - Get all employee password statuses
 - `POST /api/admin/employees/{id}/set-password` - Admin sets employee password
 - `DELETE /api/admin/employees/{id}/password` - Admin removes employee password
