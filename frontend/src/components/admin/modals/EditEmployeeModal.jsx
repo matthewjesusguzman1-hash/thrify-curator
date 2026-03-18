@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import {
   User, X, Shield, Briefcase, Calendar, FileText, Eye, Download,
-  Upload, Trash2, CheckCheck
+  Upload, Trash2, CheckCheck, Lock, EyeOff, Key
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -36,13 +36,32 @@ export default function EditEmployeeModal({
   const [loadingEditW9s, setLoadingEditW9s] = useState(false);
   const [showEditW9Modal, setShowEditW9Modal] = useState(false);
   const [editW9Viewer, setEditW9Viewer] = useState(null);
+  
+  // Password management state
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [hasPassword, setHasPassword] = useState(false);
 
   // Load W-9s when editing employee changes
   useEffect(() => {
     if (editingEmployee?.id) {
       loadW9Documents();
+      checkPasswordStatus();
     }
   }, [editingEmployee?.id]);
+
+  const checkPasswordStatus = async () => {
+    if (!editingEmployee?.email) return;
+    try {
+      const res = await axios.get(`${API}/auth/employee/has-password/${encodeURIComponent(editingEmployee.email)}`);
+      setHasPassword(res.data.has_password || false);
+    } catch (error) {
+      console.error("Error checking password status:", error);
+      setHasPassword(false);
+    }
+  };
 
   const loadW9Documents = async () => {
     if (!editingEmployee?.id) return;
@@ -407,6 +426,139 @@ export default function EditEmployeeModal({
                   </div>
                 </div>
               </div>
+
+              {/* Password Management Section - Only for employees (not admins) */}
+              {editEmployeeData.role !== 'admin' && (
+                <div className="form-group">
+                  <div className="bg-gradient-to-br from-purple-900/30 via-pink-900/30 to-purple-900/30 rounded-xl overflow-hidden border border-purple-500/20">
+                    <div className="h-1.5 bg-gradient-to-r from-purple-500 to-pink-500" />
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                            <Key className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <span className="text-[#333] font-medium">Login Password</span>
+                            <p className="text-xs text-[#888]">
+                              {hasPassword ? 'Password is set' : 'No password set'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          hasPassword 
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {hasPassword ? 'Active' : 'Not Set'}
+                        </span>
+                      </div>
+                      
+                      {/* Password Input */}
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <Input
+                            type={showNewPassword ? "text" : "password"}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder={hasPassword ? "Enter new password to reset" : "Set a password"}
+                            className="form-input pr-10"
+                            data-testid="edit-employee-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            disabled={!newPassword || newPassword.length < 4 || settingPassword}
+                            onClick={async () => {
+                              if (newPassword.length < 4) {
+                                toast.error("Password must be at least 4 characters");
+                                return;
+                              }
+                              setSettingPassword(true);
+                              try {
+                                await axios.post(
+                                  `${API}/admin/employees/${editingEmployee.id}/set-password?new_password=${encodeURIComponent(newPassword)}`,
+                                  {},
+                                  getAuthHeader()
+                                );
+                                toast.success(`Password ${hasPassword ? 'reset' : 'set'} for ${editingEmployee.name}`);
+                                setNewPassword("");
+                                setHasPassword(true);
+                              } catch (error) {
+                                toast.error(error.response?.data?.detail || "Failed to set password");
+                              } finally {
+                                setSettingPassword(false);
+                              }
+                            }}
+                            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                            data-testid="set-employee-password-btn"
+                          >
+                            <Lock className="w-4 h-4 mr-2" />
+                            {settingPassword ? "Setting..." : (hasPassword ? "Reset Password" : "Set Password")}
+                          </Button>
+                          
+                          {hasPassword && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={async () => {
+                                if (!window.confirm(`Remove password for ${editingEmployee.name}? They will need to set a new one.`)) return;
+                                try {
+                                  await axios.delete(
+                                    `${API}/admin/employees/${editingEmployee.id}/password`,
+                                    getAuthHeader()
+                                  );
+                                  toast.success(`Password removed for ${editingEmployee.name}`);
+                                  setHasPassword(false);
+                                  setNewPassword("");
+                                } catch (error) {
+                                  toast.error(error.response?.data?.detail || "Failed to remove password");
+                                }
+                              }}
+                              className="text-red-500 border-red-300 hover:bg-red-50"
+                              data-testid="remove-employee-password-btn"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-[#888]">
+                          {hasPassword 
+                            ? "Employee must enter this password when logging in. Leave blank to keep current password."
+                            : "Setting a password will require the employee to enter it when logging in."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Admin Code info banner - Only shown for admin role */}
+              {editEmployeeData.role === 'admin' && (
+                <div className="form-group">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <Shield className="w-5 h-5 text-amber-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-amber-800 font-medium">Admins use access codes</p>
+                        <p className="text-xs text-amber-600 mt-1">
+                          Admin users log in using their 4-digit access code instead of a password for enhanced security.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-3 mt-6">
                 <Button

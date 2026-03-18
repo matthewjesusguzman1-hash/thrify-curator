@@ -32,6 +32,23 @@ The web application is fully functional. iOS app has been built and uploaded to 
 - Test email functionality (hidden behind triple-click on Admin Dashboard)
 - Default sender email: thriftycurator1@gmail.com
 
+**Password & Session Management (March 18, 2026) - IMPLEMENTED**
+1. **Employee Password System**: Employees can now have passwords set for secure login
+   - Password field appears when employee has a password set
+   - Admin can set/reset/remove employee passwords
+   - Login flow: Enter email → shows password field if password is set → authenticate
+2. **Password Management Section**: New admin dashboard section for managing all passwords
+   - Employees tab: View/set/reset passwords for all employees (non-admins)
+   - Consignors tab: View/set/reset passwords for consignment clients
+   - Info banner explaining that admins use access codes (not passwords)
+3. **Session Management**: Session timeout logic added to App.js
+   - 15-minute inactivity timer with automatic logout
+   - Activity listeners for clicks, keydowns, touch, and scroll events
+4. **Edit Employee Modal**: Password section added for employees (not admins)
+   - View password status (set/not set)
+   - Set new password or reset existing
+   - Remove password option
+
 **Recent Changes (March 14, 2026)**
 1. Removed "Add to Home Screen" button from landing page
 2. Set default sender email to thriftycurator1@gmail.com
@@ -88,6 +105,15 @@ The web application is fully functional. iOS app has been built and uploaded to 
 - `GET /api/admin/payroll/consignment-clients` - All consignment agreement submitters
 - `POST /api/admin/test-email` - Send test email
 - `GET /api/admin/email-status` - Check email service status
+
+**Password Management Endpoints (NEW)**
+- `GET /api/auth/employee/has-password/{email}` - Check if employee has password set
+- `POST /api/auth/employee/set-password` - Employee sets their own password
+- `GET /api/admin/employees/passwords` - Get all employee password statuses
+- `POST /api/admin/employees/{id}/set-password` - Admin sets employee password
+- `DELETE /api/admin/employees/{id}/password` - Admin removes employee password
+- `GET /api/forms/admin/consignment-passwords` - Get all consignor password statuses
+- `POST /api/forms/admin/consignment-password/reset` - Admin resets consignor password
 
 ## Key Credentials
 - Admin login: matthewjesusguzman1@gmail.com with code 4399

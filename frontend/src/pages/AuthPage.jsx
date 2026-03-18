@@ -25,6 +25,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [showAdminCode, setShowAdminCode] = useState(false);
+  const [showPasswordField, setShowPasswordField] = useState(false);  // For employee password
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [loginMode, setLoginMode] = useState("normal"); // "normal", "password"
@@ -122,8 +123,39 @@ export default function AuthPage() {
           email: trimmedInput,
           admin_code: adminCode 
         };
+      } else if (showPasswordField && password) {
+        // Employee login with password
+        payload = { 
+          email: trimmedInput,
+          password: password 
+        };
       } else {
-        // Regular employee login (email only)
+        // Check if employee has a password set first
+        try {
+          const checkRes = await axios.get(`${API}/auth/employee/has-password/${encodeURIComponent(trimmedInput)}`);
+          
+          if (checkRes.data.is_admin) {
+            // Admin user - need admin code
+            setShowAdminCode(true);
+            setShowPasswordField(false);
+            toast.info("Admin login requires access code");
+            setLoading(false);
+            return;
+          }
+          
+          if (checkRes.data.has_password) {
+            // Employee has password - show password field
+            setShowPasswordField(true);
+            setShowAdminCode(false);
+            toast.info("Enter your password to continue");
+            setLoading(false);
+            return;
+          }
+        } catch (checkError) {
+          // Continue with email-only login if check fails
+        }
+        
+        // Employee login without password (no password set)
         payload = { email: trimmedInput };
       }
       
@@ -132,6 +164,7 @@ export default function AuthPage() {
       
       localStorage.setItem("token", access_token);
       localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("sessionStart", Date.now().toString());
       
       // Save credentials for biometric login if available
       if (biometricAvailable && isNative && password) {
@@ -156,7 +189,14 @@ export default function AuthPage() {
           // If admin code required, show the admin code field
           if (detail.includes("access code")) {
             setShowAdminCode(true);
+            setShowPasswordField(false);
             errorMessage = "Please enter your admin access code";
+          }
+          // If password required, show password field
+          if (detail.includes("Password required")) {
+            setShowPasswordField(true);
+            setShowAdminCode(false);
+            errorMessage = "Please enter your password";
           }
         } else if (Array.isArray(detail)) {
           // Pydantic validation errors come as array
@@ -230,10 +270,14 @@ export default function AuthPage() {
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
-                  // Reset admin code field if email changes
+                  // Reset fields if email changes
                   if (showAdminCode) {
                     setShowAdminCode(false);
                     setAdminCode("");
+                  }
+                  if (showPasswordField) {
+                    setShowPasswordField(false);
+                    setPassword("");
                   }
                 }}
                 required
@@ -242,6 +286,31 @@ export default function AuthPage() {
                 data-testid="login-email"
               />
             </div>
+
+            {/* Employee Password field - shown when employee has password set */}
+            {showPasswordField && (
+              <div className="space-y-2 mt-4">
+                <Label className="text-white/80 text-sm">Password</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="Enter your password"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00D4FF] focus:ring-[#00D4FF]/20 pr-10"
+                    data-testid="login-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Admin Access Code field - shown when admin tries to login with email */}
             {showAdminCode && (
@@ -265,7 +334,7 @@ export default function AuthPage() {
 
             <Button
               type="submit"
-              disabled={loading || (showAdminCode && adminCode.length !== 4)}
+              disabled={loading || (showAdminCode && adminCode.length !== 4) || (showPasswordField && !password)}
               className="w-full mt-6 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] hover:from-[#00A8CC] hover:to-[#0088AA] text-white font-semibold shadow-lg shadow-[#00D4FF]/30 transition-all flex items-center justify-center gap-2"
               data-testid="login-submit-btn"
             >
@@ -281,7 +350,7 @@ export default function AuthPage() {
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  Sign In
+                  {showPasswordField || showAdminCode ? "Sign In" : "Continue"}
                 </>
               )}
             </Button>

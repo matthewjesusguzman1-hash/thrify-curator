@@ -50,7 +50,8 @@ import {
   RefreshCw,
   MessageSquare,
   Mail,
-  CreditCard
+  CreditCard,
+  Key
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,7 @@ import MessagesSection from "@/components/admin/sections/MessagesSection";
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
 import ReportsSection from "@/components/admin/sections/ReportsSection";
+import PasswordManagementSection from "@/components/admin/sections/PasswordManagementSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
@@ -2798,6 +2800,17 @@ export default function AdminDashboard() {
                 payrollSettings={payrollSettings}
                 lastDataUpdate={lastDataUpdate}
               />
+            </DashboardGroup>
+
+            {/* GROUP 5: Password Management */}
+            <DashboardGroup
+              title="Password Management"
+              icon={Key}
+              gradient="from-purple-500 to-pink-500"
+              testId="password-management-group"
+              badge="Employees & Consignors"
+            >
+              <PasswordManagementSection token={localStorage.getItem("token")} />
             </DashboardGroup>
 
           </div>

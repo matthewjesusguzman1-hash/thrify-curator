@@ -338,3 +338,99 @@ async def get_admin_summary(admin: dict = Depends(get_admin_user)):
         "total_shifts": len(entries),
         "by_employee": [{"user_id": k, **v} for k, v in user_hours.items()]
     }
+
+
+
+# =====================================================
+# EMPLOYEE PASSWORD MANAGEMENT (Admin Functions)
+# =====================================================
+
+import hashlib
+import secrets
+
+def hash_employee_password(password: str) -> str:
+    """Hash password using SHA256 with salt"""
+    salt = secrets.token_hex(16)
+    hashed = hashlib.sha256((password + salt).encode()).hexdigest()
+    return f"{salt}:{hashed}"
+
+
+@router.get("/employees/passwords")
+async def get_all_employee_passwords(admin: dict = Depends(get_admin_user)):
+    """Get all employees with their password status (for admin management)"""
+    # Exclude business owners
+    users = await db.users.find(
+        {"email": {"$nin": OWNER_EMAILS}},
+        {"_id": 0, "id": 1, "email": 1, "name": 1, "role": 1, "password_hash": 1, "password_set_at": 1}
+    ).to_list(500)
+    
+    result = []
+    for u in users:
+        # Admins use codes, not passwords
+        if u.get("role") == "admin":
+            result.append({
+                "id": u.get("id"),
+                "email": u.get("email"),
+                "name": u.get("name"),
+                "role": u.get("role"),
+                "has_password": False,
+                "uses_admin_code": True,
+                "password_set_at": None
+            })
+        else:
+            result.append({
+                "id": u.get("id"),
+                "email": u.get("email"),
+                "name": u.get("name"),
+                "role": u.get("role"),
+                "has_password": bool(u.get("password_hash")),
+                "uses_admin_code": False,
+                "password_set_at": u.get("password_set_at")
+            })
+    
+    return result
+
+
+@router.post("/employees/{employee_id}/set-password")
+async def admin_set_employee_password(employee_id: str, new_password: str, admin: dict = Depends(get_admin_user)):
+    """Admin sets a password for an employee"""
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if employee.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Admins use access codes, not passwords")
+    
+    if len(new_password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    
+    password_hash = hash_employee_password(new_password)
+    
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": {
+            "password_hash": password_hash,
+            "password_set_at": datetime.now(timezone.utc).isoformat(),
+            "password_set_by_admin": True
+        }}
+    )
+    
+    return {"success": True, "message": f"Password set for {employee.get('name', employee_id)}"}
+
+
+@router.delete("/employees/{employee_id}/password")
+async def admin_remove_employee_password(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin removes an employee's password (they'll need to set a new one)"""
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if employee.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Admins use access codes, not passwords")
+    
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$unset": {"password_hash": "", "password_set_at": "", "password_set_by_admin": ""}}
+    )
+    
+    return {"success": True, "message": f"Password removed for {employee.get('name', employee_id)}"}

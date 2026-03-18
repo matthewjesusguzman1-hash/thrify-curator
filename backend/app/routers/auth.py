@@ -1,13 +1,31 @@
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone
 import uuid
+import hashlib
+import secrets
 
 from app.database import db
 from app.dependencies import create_token, get_current_user
-from app.models.user import UserCreate, UserLogin, UserResponse, TokenResponse
+from app.models.user import UserCreate, UserLogin, UserResponse, TokenResponse, SetEmployeePassword
 from app.dependencies import hash_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+def hash_employee_password(password: str) -> str:
+    """Hash password using SHA256 with salt"""
+    salt = secrets.token_hex(16)
+    hashed = hashlib.sha256((password + salt).encode()).hexdigest()
+    return f"{salt}:{hashed}"
+
+
+def verify_employee_password(password: str, stored_hash: str) -> bool:
+    """Verify password against stored hash"""
+    if not stored_hash or ':' not in stored_hash:
+        return False
+    salt, hashed = stored_hash.split(':', 1)
+    check_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+    return check_hash == hashed
 
 
 @router.post("/register", response_model=TokenResponse)
@@ -78,7 +96,8 @@ async def login(credentials: UserLogin):
                     email=user["email"],
                     name=owner_info["name"],
                     role=user["role"],
-                    created_at=user["created_at"]
+                    created_at=user["created_at"],
+                    has_password=False  # Admins use codes, not passwords
                 )
             )
         
@@ -94,11 +113,24 @@ async def login(credentials: UserLogin):
                     email=user["email"],
                     name=user["name"],
                     role=user["role"],
-                    created_at=user["created_at"]
+                    created_at=user["created_at"],
+                    has_password=False  # Admins use codes, not passwords
                 )
             )
         
         raise HTTPException(status_code=401, detail="Invalid access code")
+    
+    # Employee login - check if they have a password set
+    employee_password_hash = user.get("password_hash")
+    has_password = bool(employee_password_hash)
+    
+    # If employee has a password set, they MUST provide it
+    if has_password:
+        if not credentials.password:
+            raise HTTPException(status_code=401, detail="Password required. Please enter your password.")
+        
+        if not verify_employee_password(credentials.password, employee_password_hash):
+            raise HTTPException(status_code=401, detail="Invalid password")
     
     token = create_token(user["id"], user["email"], user["role"])
     
@@ -109,7 +141,8 @@ async def login(credentials: UserLogin):
             email=user["email"],
             name=user["name"],
             role=user["role"],
-            created_at=user["created_at"]
+            created_at=user["created_at"],
+            has_password=has_password
         )
     )
 
@@ -121,5 +154,83 @@ async def get_me(user: dict = Depends(get_current_user)):
         email=user["email"],
         name=user["name"],
         role=user["role"],
-        created_at=user["created_at"]
+        created_at=user["created_at"],
+        has_password=bool(user.get("password_hash"))
     )
+
+
+# Employee password management endpoints
+@router.get("/employee/has-password/{email}")
+async def check_employee_password(email: str):
+    """Check if an employee has set a password"""
+    email_lower = email.lower().strip()
+    user = await db.users.find_one(
+        {"email": {"$regex": f"^{email_lower}$", "$options": "i"}},
+        {"_id": 0, "password_hash": 1, "role": 1}
+    )
+    if not user:
+        return {"has_password": False, "exists": False}
+    
+    # Admins don't use passwords
+    if user.get("role") == "admin":
+        return {"has_password": False, "exists": True, "is_admin": True}
+    
+    has_password = bool(user.get("password_hash"))
+    return {"has_password": has_password, "exists": True, "is_admin": False}
+
+
+@router.post("/employee/set-password")
+async def set_employee_password(request: SetEmployeePassword, user: dict = Depends(get_current_user)):
+    """Allow logged-in employee to set/change their password"""
+    if user["role"] == "admin":
+        raise HTTPException(status_code=400, detail="Admins use access codes, not passwords")
+    
+    if len(request.password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    
+    password_hash = hash_employee_password(request.password)
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "password_hash": password_hash,
+            "password_set_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"success": True, "message": "Password set successfully"}
+
+
+@router.post("/employee/change-password")
+async def change_employee_password(
+    current_password: str,
+    new_password: str,
+    user: dict = Depends(get_current_user)
+):
+    """Allow employee to change their password (requires current password)"""
+    if user["role"] == "admin":
+        raise HTTPException(status_code=400, detail="Admins use access codes, not passwords")
+    
+    # Get user with password hash
+    db_user = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify current password
+    if not verify_employee_password(current_password, db_user.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    
+    if len(new_password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    
+    password_hash = hash_employee_password(new_password)
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "password_hash": password_hash,
+            "password_set_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"success": True, "message": "Password changed successfully"}

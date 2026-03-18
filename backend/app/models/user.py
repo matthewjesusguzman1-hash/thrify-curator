@@ -17,6 +17,7 @@ class UserCreate(UserBase):
 class UserLogin(BaseModel):
     email: EmailStr
     admin_code: Optional[str] = None  # Required for admin login
+    password: Optional[str] = None  # Password for employee login
 
 
 class UserResponse(BaseModel):
@@ -33,6 +34,7 @@ class UserResponse(BaseModel):
     w9_uploaded_at: Optional[str] = None
     w9_status: Optional[str] = None
     admin_code: Optional[str] = None  # Admin access code (only for admin users)
+    has_password: Optional[bool] = None  # Indicates if employee has set a password
 
 
 class TokenResponse(BaseModel):
@@ -61,6 +63,16 @@ class UpdateEmployeeDetails(BaseModel):
     phone: Optional[str] = None
     start_date: Optional[str] = None  # Employee's start/hire date
     admin_code: Optional[str] = None  # Admin access code (required when role is admin)
+    password: Optional[str] = None  # Update employee password
+
+
+class SetEmployeePassword(BaseModel):
+    password: str
+
+
+class AdminResetEmployeePassword(BaseModel):
+    employee_id: str
+    new_password: str
 
 
 class W9RejectRequest(BaseModel):
