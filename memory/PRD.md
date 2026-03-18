@@ -53,6 +53,23 @@ The web application is fully functional. iOS app has been built and uploaded to 
    - Security Settings modal with password status and change form
    - Requires current password verification before changing
 
+**Email-Based Password Reset (March 18, 2026) - IMPLEMENTED**
+1. **Magic Link System**: Users can reset their password via email
+   - Click "Forgot Password" on login page
+   - Enter email address → receive reset link via email
+   - Click link → taken to `/reset-password/:token` page
+   - Enter new password → password updated
+2. **Security Features**:
+   - Tokens expire after 1 hour
+   - Tokens are hashed before storage
+   - Generic success messages (doesn't reveal if email exists)
+   - One-time use tokens
+3. **Works for Both Portals**:
+   - Employee Portal (AuthPage.jsx)
+   - Consignment Portal (ConsignmentAgreementForm.jsx)
+4. **Backend**: New router at `/app/backend/app/routers/password_reset.py`
+5. **Frontend**: New page at `/app/frontend/src/pages/ResetPasswordPage.jsx`
+
 **Recent Changes (March 14, 2026)**
 1. Removed "Add to Home Screen" button from landing page
 2. Set default sender email to thriftycurator1@gmail.com
@@ -110,7 +127,7 @@ The web application is fully functional. iOS app has been built and uploaded to 
 - `POST /api/admin/test-email` - Send test email
 - `GET /api/admin/email-status` - Check email service status
 
-**Password Management Endpoints (NEW)**
+**Password Management Endpoints**
 - `GET /api/auth/employee/has-password/{email}` - Check if employee has password set
 - `POST /api/auth/employee/set-password` - Employee sets their own password
 - `POST /api/auth/employee/change-password` - Employee changes their password (requires current password)
@@ -119,6 +136,12 @@ The web application is fully functional. iOS app has been built and uploaded to 
 - `DELETE /api/admin/employees/{id}/password` - Admin removes employee password
 - `GET /api/forms/admin/consignment-passwords` - Get all consignor password statuses
 - `POST /api/forms/admin/consignment-password/reset` - Admin resets consignor password
+
+**Email-Based Password Reset Endpoints (NEW - March 18, 2026)**
+- `POST /api/password-reset/request` - Request password reset email (user_type: employee/consignor)
+- `GET /api/password-reset/validate/{token}` - Validate reset token
+- `POST /api/password-reset/reset` - Reset password with valid token
+- Frontend route: `/reset-password/:token` - Password reset form page
 
 ## Key Credentials
 - Admin login: matthewjesusguzman1@gmail.com with code 4399
