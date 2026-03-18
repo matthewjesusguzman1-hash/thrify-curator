@@ -384,6 +384,127 @@ async def send_test_email(to_email: str) -> dict:
     return await send_email(to_email, "Thrifty Curator - Test Email", html)
 
 
+
+async def send_password_reset_notification(
+    to_email: str,
+    full_name: str,
+    temp_password: str,
+    portal_type: str = "consignment"  # "consignment" or "employee"
+) -> dict:
+    """Send password reset notification with temporary password"""
+    
+    first_name = full_name.split()[0] if full_name else "there"
+    
+    portal_url = "https://thrifty-curator.com/consignment-agreement" if portal_type == "consignment" else "https://thrifty-curator.com/login"
+    portal_name = "Consignment Portal" if portal_type == "consignment" else "Employee Portal"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi {first_name},
+    </p>
+    <p style="color: #333; line-height: 1.6;">
+        Your password has been reset by a Thrifty Curator administrator.
+    </p>
+    
+    <div style="background: #fff3e0; border-left: 4px solid #FF9800; padding: 15px; margin: 20px 0;">
+        <h3 style="color: #FF9800; margin: 0 0 10px 0; font-size: 14px;">🔐 YOUR NEW TEMPORARY PASSWORD</h3>
+        <p style="margin: 5px 0; color: #333; font-family: monospace; font-size: 18px; background: #fff; padding: 10px; border-radius: 4px;">
+            <strong>{temp_password}</strong>
+        </p>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        <strong>Important:</strong> For security, we recommend changing this password after logging in.
+    </p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{portal_url}" 
+           style="background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%); 
+                  color: white; 
+                  text-decoration: none; 
+                  padding: 12px 30px; 
+                  border-radius: 8px; 
+                  font-weight: bold;
+                  display: inline-block;">
+            Login to {portal_name}
+        </a>
+    </div>
+    
+    <p style="color: #666; font-size: 13px; margin-top: 30px;">
+        If you didn't request a password reset, please contact us immediately.
+    </p>
+    """
+    
+    html = build_email_template("Your Password Has Been Reset", content)
+    return await send_email(to_email, f"Thrifty Curator - Password Reset for {portal_name}", html)
+
+
+
+async def send_password_reset_email(
+    to_email: str,
+    full_name: str,
+    reset_token: str,
+    user_type: str = "employee"  # "employee" or "consignor"
+) -> dict:
+    """Send password reset email with a magic link"""
+    
+    first_name = full_name.split()[0] if full_name else "there"
+    
+    # Build the reset URL
+    # Use the frontend URL from environment or default
+    import os
+    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    reset_url = f"{frontend_url}/reset-password/{reset_token}"
+    
+    portal_name = "Employee Portal" if user_type == "employee" else "Consignment Portal"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi {first_name},
+    </p>
+    <p style="color: #333; line-height: 1.6;">
+        We received a request to reset your password for your <strong>Thrifty Curator {portal_name}</strong> account.
+    </p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{reset_url}" 
+           style="background: linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%); 
+                  color: white; 
+                  text-decoration: none; 
+                  padding: 14px 35px; 
+                  border-radius: 8px; 
+                  font-weight: bold;
+                  display: inline-block;
+                  font-size: 16px;">
+            Reset Your Password
+        </a>
+    </div>
+    
+    <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <p style="color: #666; margin: 0; font-size: 13px;">
+            <strong>Can't click the button?</strong> Copy and paste this link into your browser:
+        </p>
+        <p style="color: #00A8CC; margin: 10px 0 0 0; font-size: 12px; word-break: break-all;">
+            {reset_url}
+        </p>
+    </div>
+    
+    <div style="background: #fff3e0; border-left: 4px solid #FF9800; padding: 15px; margin: 20px 0;">
+        <p style="color: #333; margin: 0; font-size: 13px;">
+            <strong>⏰ This link expires in 1 hour</strong> for your security.
+        </p>
+    </div>
+    
+    <p style="color: #666; font-size: 13px; margin-top: 30px;">
+        If you didn't request a password reset, you can safely ignore this email. 
+        Your password will remain unchanged.
+    </p>
+    """
+    
+    html = build_email_template("Reset Your Password", content)
+    return await send_email(to_email, f"Thrifty Curator - Password Reset Request", html)
+
+
 def get_email_status() -> dict:
     """Get current email configuration status"""
     return {

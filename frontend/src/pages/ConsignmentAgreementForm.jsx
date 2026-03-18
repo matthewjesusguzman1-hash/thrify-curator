@@ -113,6 +113,10 @@ export default function ConsignmentAgreementForm() {
   const [settingPassword, setSettingPassword] = useState(false);
   const [loginMode, setLoginMode] = useState("email"); // "email", "password", "biometric"
   
+  // Password reset state (minimal for stability)
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
+  const [passwordResetSent, setPasswordResetSent] = useState(false);
+  
   // Biometric auth hook
   const { isNative, isAvailable: biometricAvailable, biometryType, biometricLogin, setCredentials } = useBiometricAuth();
   
@@ -973,28 +977,54 @@ export default function ConsignmentAgreementForm() {
                       {/* Forgot Password Button */}
                       <button
                         type="button"
-                        onClick={(e) => {
+                        disabled={sendingPasswordReset}
+                        onClick={async (e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          // Direct mailto approach since modal has rendering issues
                           const userEmail = addItemsEmail || "";
-                          const confirmReset = window.confirm(
-                            `Can't access your account?\n\nTo reset your password, you'll need to contact Thrifty Curator.\n\nClick OK to send an email request, or Cancel to go back.\n\nYour email: ${userEmail}`
-                          );
-                          if (confirmReset) {
-                            const subject = encodeURIComponent("Password Reset Request - Consignment Portal");
-                            const body = encodeURIComponent(
-                              `Hello Thrifty Curator Team,\n\nI need help resetting my password for the consignment portal.\n\nMy email: ${userEmail}\n\nThank you!`
-                            );
-                            window.open(`mailto:thriftycurator1@gmail.com?subject=${subject}&body=${body}`, '_blank');
-                            toast.success("Opening email app...");
+                          if (!userEmail) {
+                            toast.error("Please enter your email first");
+                            return;
+                          }
+                          setSendingPasswordReset(true);
+                          try {
+                            await axios.post(`${API}/password-reset/request`, {
+                              email: userEmail,
+                              user_type: "consignor"
+                            });
+                            setPasswordResetSent(true);
+                            toast.success("Check your email for reset link!", {
+                              description: "If account exists, you'll receive a password reset email shortly."
+                            });
+                          } catch (error) {
+                            // Still show success for security
+                            setPasswordResetSent(true);
+                            toast.success("Check your email for reset link!", {
+                              description: "If account exists, you'll receive a password reset email shortly."
+                            });
+                          } finally {
+                            setSendingPasswordReset(false);
                           }
                         }}
-                        className="w-full text-sm text-amber-600 hover:text-amber-700 flex items-center justify-center gap-2"
+                        className="w-full text-sm text-amber-600 hover:text-amber-700 flex items-center justify-center gap-2 py-2 disabled:opacity-50"
                         data-testid="forgot-password-link"
                       >
-                        <HelpCircle className="w-4 h-4" />
-                        Forgot your password?
+                        {sendingPasswordReset ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Sending reset link...
+                          </>
+                        ) : passwordResetSent ? (
+                          <>
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            Reset link sent! Check your email
+                          </>
+                        ) : (
+                          <>
+                            <HelpCircle className="w-4 h-4" />
+                            Forgot your password?
+                          </>
+                        )}
                       </button>
                       
                       {/* Try Face ID again button */}

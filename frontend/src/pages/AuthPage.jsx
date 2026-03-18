@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, LogIn, Fingerprint, Eye, EyeOff, Lock, HelpCircle, Mail, X, AlertCircle } from "lucide-react";
+import { ArrowLeft, LogIn, Fingerprint, Eye, EyeOff, Lock, HelpCircle, Mail, X, AlertCircle, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +33,8 @@ export default function AuthPage() {
   // Forgot password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
-  const [resetMessage, setResetMessage] = useState("");
+  const [sendingReset, setSendingReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   
   // Biometric auth hook
   const { isNative, isAvailable: biometricAvailable, biometricLogin, setCredentials } = useBiometricAuth();
@@ -440,7 +441,7 @@ export default function AuthPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => { setShowForgotPassword(false); setResetMessage(""); }}
+            onClick={() => { setShowForgotPassword(false); setResetSent(false); }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -450,104 +451,119 @@ export default function AuthPage() {
               className="bg-[#1A1A2E] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden"
               data-testid="forgot-password-modal"
             >
-              <div className="h-1.5 bg-gradient-to-r from-amber-500 to-orange-500" />
+              <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC]" />
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl flex items-center justify-center">
-                      <HelpCircle className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center">
+                      <Lock className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-white">Can't Access Your Account?</h2>
-                      <p className="text-sm text-white/50">Here's how to get help</p>
+                      <h2 className="text-xl font-bold text-white">Reset Password</h2>
+                      <p className="text-sm text-white/50">We'll send you a reset link</p>
                     </div>
                   </div>
                   <button
-                    onClick={() => { setShowForgotPassword(false); setResetMessage(""); }}
+                    onClick={() => { setShowForgotPassword(false); setResetSent(false); }}
                     className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
                   >
                     <X className="w-5 h-5 text-white" />
                   </button>
                 </div>
 
-                {/* Instructions */}
-                <div className="space-y-4">
-                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-amber-200 font-medium">
-                          Password Reset Requires Admin Help
-                        </p>
-                        <p className="text-xs text-amber-200/70 mt-1">
-                          For security, passwords can only be reset by an administrator.
+                {resetSent ? (
+                  // Success state
+                  <div className="text-center py-4">
+                    <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle className="w-8 h-8 text-emerald-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-white mb-2">Check Your Email</h3>
+                    <p className="text-white/60 text-sm mb-4">
+                      If an account exists for <span className="text-[#00D4FF]">{forgotEmail}</span>, you'll receive a password reset link shortly.
+                    </p>
+                    <p className="text-white/40 text-xs">
+                      Don't see it? Check your spam folder.
+                    </p>
+                    <Button
+                      onClick={() => { setShowForgotPassword(false); setResetSent(false); }}
+                      className="mt-6 bg-white/10 hover:bg-white/20 text-white"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                ) : (
+                  // Form state
+                  <>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-white/70">Email Address</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+                          <Input
+                            type="email"
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                            placeholder="Enter your email"
+                            className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00D4FF] pl-10"
+                            data-testid="forgot-email-input"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-white/5 rounded-xl p-4">
+                        <p className="text-sm text-white/60">
+                          Enter the email address associated with your employee account and we'll send you a link to reset your password.
                         </p>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-3">
-                    <h3 className="text-white font-medium flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-[#00D4FF]" />
-                      How to Reset Your Password
-                    </h3>
-                    <ol className="text-sm text-white/70 space-y-2 list-decimal list-inside">
-                      <li>Send a message using the button below</li>
-                      <li>Include your email: <span className="text-[#00D4FF]">{forgotEmail || "your email"}</span></li>
-                      <li>Your manager will reset your password</li>
-                      <li>You'll receive a new temporary password</li>
-                      <li>After logging in, change it from Security settings</li>
-                    </ol>
-                  </div>
-
-                  {/* Message Input */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-white/70">Your Message (Optional)</Label>
-                    <textarea
-                      value={resetMessage}
-                      onChange={(e) => setResetMessage(e.target.value)}
-                      placeholder="Add any additional information..."
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 resize-none focus:outline-none focus:border-[#00D4FF]"
-                      rows={3}
-                      data-testid="reset-message-input"
-                    />
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 mt-6">
-                  <Button
-                    variant="ghost"
-                    onClick={() => { setShowForgotPassword(false); setResetMessage(""); }}
-                    className="flex-1 text-white/70 hover:text-white hover:bg-white/10"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      const subject = encodeURIComponent("Password Reset Request - Employee Portal");
-                      const body = encodeURIComponent(
-                        `Hello,\n\nI need help resetting my password for the Employee Portal.\n\nMy email: ${forgotEmail || "[Please enter your email]"}\n\n${resetMessage ? `Additional info: ${resetMessage}\n\n` : ""}Thank you!`
-                      );
-                      window.open(`mailto:thriftycurator1@gmail.com?subject=${subject}&body=${body}`, '_blank');
-                      toast.success("Opening email app...");
-                      setShowForgotPassword(false);
-                      setResetMessage("");
-                    }}
-                    className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
-                    data-testid="send-reset-request-btn"
-                  >
-                    <Mail className="w-4 h-4 mr-2" />
-                    Send Message
-                  </Button>
-                </div>
-
-                {/* Direct Contact Info */}
-                <div className="mt-4 p-3 bg-white/5 rounded-xl">
-                  <p className="text-xs text-white/50 text-center">
-                    Or contact us at <a href="mailto:thriftycurator1@gmail.com" className="text-[#00D4FF] hover:underline">thriftycurator1@gmail.com</a>
-                  </p>
-                </div>
+                    <div className="flex gap-3 mt-6">
+                      <Button
+                        variant="ghost"
+                        onClick={() => { setShowForgotPassword(false); setResetSent(false); }}
+                        className="flex-1 text-white/70 hover:text-white hover:bg-white/10"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          if (!forgotEmail) {
+                            toast.error("Please enter your email address");
+                            return;
+                          }
+                          setSendingReset(true);
+                          try {
+                            await axios.post(`${API}/password-reset/request`, {
+                              email: forgotEmail,
+                              user_type: "employee"
+                            });
+                            setResetSent(true);
+                          } catch (error) {
+                            // Still show success for security (don't reveal if email exists)
+                            setResetSent(true);
+                          } finally {
+                            setSendingReset(false);
+                          }
+                        }}
+                        disabled={sendingReset || !forgotEmail}
+                        className="flex-1 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] hover:from-[#00A8CC] hover:to-[#0088AA] text-white"
+                        data-testid="send-reset-btn"
+                      >
+                        {sendingReset ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="w-4 h-4 mr-2" />
+                            Send Reset Link
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>

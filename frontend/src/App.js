@@ -14,6 +14,7 @@ import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ContactPage from "@/pages/ContactPage";
 import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 // Session timeout in milliseconds (15 minutes)
@@ -183,6 +184,11 @@ function AnimatedRoutes() {
         <Route path="/privacy-policy" element={
           <PageTransition>
             <PrivacyPolicyPage />
+          </PageTransition>
+        } />
+        <Route path="/reset-password/:token" element={
+          <PageTransition>
+            <ResetPasswordPage />
           </PageTransition>
         } />
       </Routes>

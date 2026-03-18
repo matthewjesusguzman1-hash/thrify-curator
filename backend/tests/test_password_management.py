@@ -7,7 +7,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://resale-portal-app.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://resale-magic-link.preview.emergentagent.com').rstrip('/')
 ADMIN_EMAIL = "matthewjesusguzman1@gmail.com"
 ADMIN_CODE = "4399"
 TEST_EMPLOYEE_EMAIL = "testemployee@thriftycurator.com"
