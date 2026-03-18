@@ -9,7 +9,6 @@ import {
   Users, 
   Eye, 
   EyeOff, 
-  Shield, 
   CheckCircle, 
   XCircle,
   RefreshCw,
@@ -151,7 +150,7 @@ export default function PasswordManagementSection({ token }) {
     }
   };
 
-  // Filter users based on search
+  // Filter users based on search - exclude business owners who use access codes
   const filteredEmployees = employees.filter(e => 
     !e.uses_admin_code && (
       e.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -163,9 +162,6 @@ export default function PasswordManagementSection({ token }) {
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Admins (shown separately)
-  const adminUsers = employees.filter(e => e.uses_admin_code);
 
   return (
     <div className="space-y-6" data-testid="password-management-section">
@@ -233,23 +229,6 @@ export default function PasswordManagementSection({ token }) {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            {/* Info Banner for Admins */}
-            {adminUsers.length > 0 && (
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-amber-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-amber-200 font-medium">
-                      Admin users use access codes, not passwords
-                    </p>
-                    <p className="text-xs text-amber-200/70 mt-1">
-                      {adminUsers.map(a => a.name).join(", ")} {adminUsers.length === 1 ? "has" : "have"} admin codes for secure login.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Employee List */}
             {loadingEmployees ? (
               <div className="flex justify-center py-8">
@@ -429,94 +408,103 @@ export default function PasswordManagementSection({ token }) {
 
       {/* Password Setting Modal */}
       {selectedUser && (
-        <div className="fixed inset-0" style={{ zIndex: 99999 }}>
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setSelectedUser(null)}
-          />
-          
-          {/* Modal Container - centered */}
-          <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md pointer-events-auto"
-              onClick={(e) => e.stopPropagation()}
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          style={{ zIndex: 99999 }}
+          onClick={() => setSelectedUser(null)}
+          onTouchEnd={(e) => {
+            // Only close if clicking directly on backdrop, not bubbled from children
+            if (e.target === e.currentTarget) {
+              setSelectedUser(null);
+            }
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
+            <div
+              className="bg-[#1A1A2E] border border-white/10 rounded-xl p-6 shadow-2xl"
+              data-testid="set-password-modal"
             >
-              <div
-                className="bg-[#1A1A2E] border border-white/10 rounded-xl p-6 shadow-2xl"
-                data-testid="set-password-modal"
+              <h3 className="text-lg font-semibold text-white mb-1">
+                {selectedUser.has_password ? "Reset" : "Set"} Password
+              </h3>
+              <p className="text-sm text-white/50 mb-4">
+                for {selectedUser.name || selectedUser.email}
+              </p>
+
+              <form 
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (newPassword.length >= 4) {
+                    selectedUser.type === 'employee' ? handleSetEmployeePassword() : handleSetConsignorPassword();
+                  }
+                }}
               >
-                <h3 className="text-lg font-semibold text-white mb-1">
-                  {selectedUser.has_password ? "Reset" : "Set"} Password
-                </h3>
-                <p className="text-sm text-white/50 mb-4">
-                  for {selectedUser.name || selectedUser.email}
-                </p>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">New Password</Label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Enter new password"
-                        autoFocus
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder:text-white/40 focus:outline-none focus:border-[#00D4FF] pr-10"
-                        data-testid="new-password-input"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <p className="text-xs text-white/40">Minimum 4 characters</p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button
+                <div className="space-y-2">
+                  <Label className="text-white/80 text-sm">New Password</Label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      autoComplete="new-password"
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder:text-white/40 focus:outline-none focus:border-[#00D4FF] pr-10 text-base"
+                      style={{ fontSize: '16px' }}
+                      data-testid="new-password-input"
+                    />
+                    <button
                       type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        setSelectedUser(null);
-                        setNewPassword("");
-                        setShowPassword(false);
-                      }}
-                      className="flex-1 text-white/70 hover:text-white hover:bg-white/10"
-                      data-testid="cancel-password-btn"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
                     >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={selectedUser.type === 'employee' ? handleSetEmployeePassword : handleSetConsignorPassword}
-                      disabled={newPassword.length < 4 || settingPassword}
-                      className={`flex-1 ${
-                        selectedUser.type === 'employee'
-                          ? 'bg-[#00D4FF] hover:bg-[#00A8CC] text-black'
-                          : 'bg-[#FF1493] hover:bg-[#FF1493]/80 text-white'
-                      }`}
-                      data-testid="confirm-password-btn"
-                    >
-                      {settingPassword ? (
-                        <RefreshCw className="w-4 h-4 animate-spin mr-1" />
-                      ) : (
-                        <Lock className="w-4 h-4 mr-1" />
-                      )}
-                      Set Password
-                    </Button>
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
+                  <p className="text-xs text-white/40">Minimum 4 characters</p>
                 </div>
-              </div>
-            </motion.div>
-          </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedUser(null);
+                      setNewPassword("");
+                      setShowPassword(false);
+                    }}
+                    className="flex-1 text-white/70 hover:text-white hover:bg-white/10"
+                    data-testid="cancel-password-btn"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={newPassword.length < 4 || settingPassword}
+                    className={`flex-1 ${
+                      selectedUser.type === 'employee'
+                        ? 'bg-[#00D4FF] hover:bg-[#00A8CC] text-black'
+                        : 'bg-[#FF1493] hover:bg-[#FF1493]/80 text-white'
+                    }`}
+                    data-testid="confirm-password-btn"
+                  >
+                    {settingPassword ? (
+                      <RefreshCw className="w-4 h-4 animate-spin mr-1" />
+                    ) : (
+                      <Lock className="w-4 h-4 mr-1" />
+                    )}
+                    Set Password
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
         </div>
       )}
 
@@ -529,7 +517,6 @@ export default function PasswordManagementSection({ token }) {
         <ul className="text-xs text-white/60 space-y-1 list-disc list-inside">
           <li><strong>For Employees:</strong> Once a password is set, the employee must enter it on login. You can reset it here if they forget.</li>
           <li><strong>For Consignors:</strong> Passwords protect their consignment portal access. They can change their own password from the portal after logging in.</li>
-          <li><strong>For Admins:</strong> Admins use secure 4-digit access codes instead of passwords for enhanced security.</li>
         </ul>
       </div>
     </div>

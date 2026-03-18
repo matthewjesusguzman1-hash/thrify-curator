@@ -1768,18 +1768,19 @@ export default function ConsignmentAgreementForm() {
         {/* Set Password Modal */}
         {showSetPassword && (
           <div 
-            className="fixed inset-0 bg-black/50 z-[9998]"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+            style={{ zIndex: 9999 }}
             onClick={() => setShowSetPassword(false)}
-          />
-        )}
-        {showSetPassword && (
-          <div 
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] w-full max-w-sm mx-4"
-            style={{ pointerEvents: 'auto' }}
+            onTouchEnd={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowSetPassword(false);
+              }
+            }}
           >
             <div 
-              className="bg-white rounded-xl shadow-2xl overflow-hidden"
+              className="bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-sm"
               onClick={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="p-4 bg-emerald-50 border-b flex justify-between items-center">
@@ -1797,7 +1798,13 @@ export default function ConsignmentAgreementForm() {
               </div>
 
               {/* Content */}
-              <div className="p-4 space-y-4">
+              <form 
+                className="p-4 space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSetPassword();
+                }}
+              >
                 {biometricAvailable && isNative && (
                   <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700 flex items-start gap-2">
                     <Fingerprint className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -1813,8 +1820,9 @@ export default function ConsignmentAgreementForm() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter password"
-                      autoFocus
-                      className="w-full px-3 py-2 border-2 border-gray-200 focus:border-emerald-500 focus:outline-none rounded-lg pr-10"
+                      autoComplete="new-password"
+                      className="w-full px-3 py-2 border-2 border-gray-200 focus:border-emerald-500 focus:outline-none rounded-lg pr-10 text-base"
+                      style={{ fontSize: '16px' }}
                     />
                     <button
                       type="button"
@@ -1833,30 +1841,30 @@ export default function ConsignmentAgreementForm() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm password"
-                    className="w-full px-3 py-2 border-2 border-gray-200 focus:border-emerald-500 focus:outline-none rounded-lg"
-                    onKeyDown={(e) => e.key === 'Enter' && handleSetPassword()}
+                    autoComplete="new-password"
+                    className="w-full px-3 py-2 border-2 border-gray-200 focus:border-emerald-500 focus:outline-none rounded-lg text-base"
+                    style={{ fontSize: '16px' }}
                   />
                 </div>
-              </div>
 
-              {/* Footer */}
-              <div className="p-4 border-t bg-gray-50 space-y-2">
-                <Button
-                  type="button"
-                  onClick={handleSetPassword}
-                  disabled={settingPassword}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
-                >
-                  {settingPassword ? "Saving..." : "Save Password"}
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => { setShowSetPassword(false); setNewPassword(""); setConfirmPassword(""); }}
-                  className="w-full text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Cancel
-                </button>
-              </div>
+                {/* Footer */}
+                <div className="pt-2 space-y-2">
+                  <Button
+                    type="submit"
+                    disabled={settingPassword}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
+                  >
+                    {settingPassword ? "Saving..." : "Save Password"}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowSetPassword(false); setNewPassword(""); setConfirmPassword(""); }}
+                    className="w-full text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
