@@ -76,6 +76,7 @@ import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
 import FormSubmissionModal from "@/components/admin/modals/FormSubmissionModal";
 import { AddEmployeeModal, RemoveEmployeeModal } from "@/components/admin/modals/EmployeeModals";
 import EmployeePortalViewModal from "@/components/admin/modals/EmployeePortalViewModal";
+import ConsignorPortalViewModal from "@/components/admin/modals/ConsignorPortalViewModal";
 import W9ViewerModal from "@/components/admin/modals/W9ViewerModal";
 import PortalW9Modal from "@/components/admin/modals/PortalW9Modal";
 import EmployeeShiftsModal from "@/components/admin/modals/EmployeeShiftsModal";
@@ -265,6 +266,12 @@ export default function AdminDashboard() {
   const [showClockConfirm, setShowClockConfirm] = useState(null); // 'in' or 'out'
   const [clockingEmployee, setClockingEmployee] = useState(false);
   const [portalElapsedTime, setPortalElapsedTime] = useState(0); // Timer for admin portal view
+
+  // Consignor portal view state
+  const [showConsignorPortal, setShowConsignorPortal] = useState(false);
+  const [viewingConsignor, setViewingConsignor] = useState(null);
+  const [consignorPortalData, setConsignorPortalData] = useState(null);
+  const [loadingConsignorPortal, setLoadingConsignorPortal] = useState(false);
 
   // W-9 Viewer Modal state
   const [showW9ViewerModal, setShowW9ViewerModal] = useState(false);
@@ -1139,6 +1146,27 @@ export default function AdminDashboard() {
       setEmployeeClockStatus({ is_clocked_in: false });
     } finally {
       setLoadingPortal(false);
+    }
+  };
+
+  // View consignor portal (from admin perspective)
+  const handleViewConsignorPortal = async (consignor) => {
+    setViewingConsignor(consignor);
+    setShowConsignorPortal(true);
+    setLoadingConsignorPortal(true);
+    setConsignorPortalData(null);
+    
+    try {
+      const response = await axios.get(
+        `${API}/admin/consignor/${encodeURIComponent(consignor.email)}/portal-data`,
+        getAuthHeader()
+      );
+      setConsignorPortalData(response.data);
+    } catch (error) {
+      console.error("Failed to fetch consignor portal data:", error);
+      toast.error("Failed to load consignor data");
+    } finally {
+      setLoadingConsignorPortal(false);
     }
   };
 
@@ -2776,6 +2804,7 @@ export default function AdminDashboard() {
                   itemAdditions={itemAdditions}
                   fetchItemAdditions={fetchItemAdditions}
                   getAuthHeader={getAuthHeader}
+                  onViewConsignorPortal={handleViewConsignorPortal}
                 />
               </div>
             </DashboardGroup>
@@ -2851,6 +2880,15 @@ export default function AdminDashboard() {
             calculateBiweeklyPeriod={calculateBiweeklyPeriod}
             formatPortalTime={formatPortalTime}
             portalElapsedTime={portalElapsedTime}
+          />
+
+          {/* Consignor Portal View Modal */}
+          <ConsignorPortalViewModal
+            isOpen={showConsignorPortal}
+            onClose={() => setShowConsignorPortal(false)}
+            consignor={viewingConsignor}
+            portalData={consignorPortalData}
+            loading={loadingConsignorPortal}
           />
 
           {/* Employee Shifts Modal - Extracted Component */}

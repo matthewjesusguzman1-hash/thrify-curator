@@ -40,7 +40,8 @@ import {
   RotateCcw,
   Lock,
   Key,
-  Gift
+  Gift,
+  Monitor
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -61,7 +62,8 @@ export default function FormSubmissionsSection({
   fetchPaymentMethodChanges,
   itemAdditions,
   fetchItemAdditions,
-  getAuthHeader
+  getAuthHeader,
+  onViewConsignorPortal
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState("job_applications");
@@ -783,6 +785,17 @@ Thrifty Curator Team`;
                               <td className="text-sm text-[#888]">{formatSubmissionDate(agreement.submitted_at)}</td>
                               <td>
                                 <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => onViewConsignorPortal(agreement)}
+                                    className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-500/10"
+                                    title="View Portal"
+                                    data-testid={`view-consignor-portal-${agreement.id}`}
+                                  >
+                                    <Monitor className="w-4 h-4 mr-1" />
+                                    Portal
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"

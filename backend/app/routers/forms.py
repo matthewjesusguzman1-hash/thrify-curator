@@ -587,6 +587,52 @@ async def get_consignment_agreements(admin: dict = Depends(get_admin_user)):
     return submissions
 
 
+@router.get("/admin/consignor/{email}/portal-data")
+async def get_consignor_portal_data(email: str, admin: dict = Depends(get_admin_user)):
+    """Get consignor portal data - shows all info from the consignor's perspective"""
+    email_lower = email.lower()
+    
+    # Get the main agreement
+    agreement = await db.consignment_agreements.find_one(
+        {"email": {"$regex": f"^{email_lower}$", "$options": "i"}},
+        {"_id": 0}
+    )
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Consignor not found")
+    
+    # Get all item additions for this consignor
+    item_additions = await db.consignment_item_additions.find(
+        {"email": {"$regex": f"^{email_lower}$", "$options": "i"}},
+        {"_id": 0}
+    ).sort("submitted_at", -1).to_list(100)
+    
+    # Get payment history
+    payments = await db.payroll_check_records.find(
+        {"consignment_client_email": email_lower, "payment_type": "consignment"},
+        {"_id": 0, "image_data": 0}
+    ).sort("check_date", -1).to_list(100)
+    
+    # Calculate totals
+    total_paid = sum(p.get("amount", 0) or 0 for p in payments)
+    total_items_added = sum(a.get("items_to_add", 0) or 0 for a in item_additions)
+    approved_additions = [a for a in item_additions if a.get("approval_status") == "approved"]
+    pending_additions = [a for a in item_additions if a.get("approval_status") == "pending"]
+    
+    return {
+        "agreement": agreement,
+        "item_additions": item_additions,
+        "payments": payments,
+        "summary": {
+            "total_paid": round(total_paid, 2),
+            "payment_count": len(payments),
+            "total_items_added": total_items_added,
+            "approved_additions": len(approved_additions),
+            "pending_additions": len(pending_additions),
+            "has_password": agreement.get("password_hash") is not None
+        }
+    }
+
+
 @router.put("/admin/forms/job-applications/{submission_id}/status")
 async def update_job_application_status(submission_id: str, status_update: UpdateSubmissionStatus, admin: dict = Depends(get_admin_user)):
     """Update job application status"""
