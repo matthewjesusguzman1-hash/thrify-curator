@@ -109,6 +109,7 @@ export default function ConsignmentAgreementForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [hasPassword, setHasPassword] = useState(false);
   const [showSetPassword, setShowSetPassword] = useState(false);
+  const [showFirstTimePasswordPrompt, setShowFirstTimePasswordPrompt] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [settingPassword, setSettingPassword] = useState(false);
@@ -314,6 +315,8 @@ export default function ConsignmentAgreementForm() {
       
       // No password set, use email-only login (existing behavior)
       await loadAgreementData(addItemsEmail);
+      // Show first-time password setup prompt
+      setShowFirstTimePasswordPrompt(true);
     } catch (error) {
       toast.error("Failed to check for existing agreement");
     } finally {
@@ -1258,6 +1261,146 @@ export default function ConsignmentAgreementForm() {
                             </button>
                           </div>
                         </div>
+                      </div>
+                    </div>,
+                    document.body
+                  )}
+
+                  {/* First-Time Password Setup Prompt */}
+                  {showFirstTimePasswordPrompt && !hasPassword && createPortal(
+                    <div 
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 999999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '16px'
+                      }}
+                    >
+                      {/* Backdrop */}
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0,0,0,0.6)'
+                        }}
+                        onClick={() => setShowFirstTimePasswordPrompt(false)}
+                      />
+                      {/* Modal Content */}
+                      <div
+                        style={{
+                          position: 'relative',
+                          backgroundColor: 'white',
+                          borderRadius: '20px',
+                          padding: '28px 24px',
+                          width: '90%',
+                          maxWidth: '360px',
+                          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {/* Icon */}
+                        <div style={{ 
+                          width: '70px', 
+                          height: '70px', 
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          borderRadius: '50%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          margin: '0 auto 20px auto',
+                          boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)'
+                        }}>
+                          <Lock size={32} color="white" />
+                        </div>
+                        
+                        <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#1A1A2E', marginBottom: '12px' }}>
+                          Secure Your Account
+                        </h2>
+                        
+                        <p style={{ fontSize: '15px', color: '#6b7280', marginBottom: '24px', lineHeight: '1.5' }}>
+                          Set up a password for faster, more secure access to your consignment portal.
+                          {biometricAvailable && isNative && (
+                            <span style={{ display: 'block', marginTop: '8px', color: '#2563eb', fontWeight: '500' }}>
+                              This also enables Face ID / Touch ID!
+                            </span>
+                          )}
+                        </p>
+
+                        {/* Benefits */}
+                        <div style={{ 
+                          backgroundColor: '#f0fdf4', 
+                          borderRadius: '12px', 
+                          padding: '16px',
+                          marginBottom: '24px',
+                          textAlign: 'left'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                            <CheckCircle size={18} color="#10b981" />
+                            <span style={{ fontSize: '14px', color: '#166534' }}>Quick login with password</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                            <CheckCircle size={18} color="#10b981" />
+                            <span style={{ fontSize: '14px', color: '#166534' }}>Protect your account</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <CheckCircle size={18} color="#10b981" />
+                            <span style={{ fontSize: '14px', color: '#166534' }}>Access from any device</span>
+                          </div>
+                        </div>
+
+                        {/* Buttons */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowFirstTimePasswordPrompt(false);
+                            setShowSetPassword(true);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '16px',
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            border: 'none',
+                            borderRadius: '12px',
+                            color: 'white',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            marginBottom: '12px',
+                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
+                          }}
+                        >
+                          Set Up Password Now
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setShowFirstTimePasswordPrompt(false)}
+                          style={{
+                            width: '100%',
+                            padding: '14px',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '12px',
+                            color: '#9ca3af',
+                            fontSize: '14px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Maybe Later
+                        </button>
+                        
+                        <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '16px' }}>
+                          You can always set this up later from your account
+                        </p>
                       </div>
                     </div>,
                     document.body
