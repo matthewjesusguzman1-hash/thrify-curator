@@ -428,90 +428,97 @@ export default function PasswordManagementSection({ token }) {
       </AnimatePresence>
 
       {/* Password Setting Modal */}
-      <AnimatePresence>
-        {selectedUser && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-            style={{ zIndex: 9999 }}
+      {selectedUser && (
+        <div className="fixed inset-0" style={{ zIndex: 99999 }}>
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setSelectedUser(null)}
-          >
+          />
+          
+          {/* Modal Container - centered */}
+          <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#1A1A2E] border border-white/10 rounded-xl p-6 w-full max-w-md"
-              data-testid="set-password-modal"
             >
-              <h3 className="text-lg font-semibold text-white mb-1">
-                {selectedUser.has_password ? "Reset" : "Set"} Password
-              </h3>
-              <p className="text-sm text-white/50 mb-4">
-                for {selectedUser.name || selectedUser.email}
-              </p>
+              <div
+                className="bg-[#1A1A2E] border border-white/10 rounded-xl p-6 shadow-2xl"
+                data-testid="set-password-modal"
+              >
+                <h3 className="text-lg font-semibold text-white mb-1">
+                  {selectedUser.has_password ? "Reset" : "Set"} Password
+                </h3>
+                <p className="text-sm text-white/50 mb-4">
+                  for {selectedUser.name || selectedUser.email}
+                </p>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-white/80 text-sm">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/40 pr-10"
-                      data-testid="new-password-input"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">New Password</Label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        autoFocus
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder:text-white/40 focus:outline-none focus:border-[#00D4FF] pr-10"
+                        data-testid="new-password-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-white/40">Minimum 4 characters</p>
                   </div>
-                  <p className="text-xs text-white/40">Minimum 4 characters</p>
-                </div>
 
-                <div className="flex gap-3">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setSelectedUser(null);
-                      setNewPassword("");
-                      setShowPassword(false);
-                    }}
-                    className="flex-1 text-white/70 hover:text-white hover:bg-white/10"
-                    data-testid="cancel-password-btn"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={selectedUser.type === 'employee' ? handleSetEmployeePassword : handleSetConsignorPassword}
-                    disabled={newPassword.length < 4 || settingPassword}
-                    className={`flex-1 ${
-                      selectedUser.type === 'employee'
-                        ? 'bg-[#00D4FF] hover:bg-[#00A8CC] text-black'
-                        : 'bg-[#FF1493] hover:bg-[#FF1493]/80 text-white'
-                    }`}
-                    data-testid="confirm-password-btn"
-                  >
-                    {settingPassword ? (
-                      <RefreshCw className="w-4 h-4 animate-spin mr-1" />
-                    ) : (
-                      <Lock className="w-4 h-4 mr-1" />
-                    )}
-                    Set Password
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedUser(null);
+                        setNewPassword("");
+                        setShowPassword(false);
+                      }}
+                      className="flex-1 text-white/70 hover:text-white hover:bg-white/10"
+                      data-testid="cancel-password-btn"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={selectedUser.type === 'employee' ? handleSetEmployeePassword : handleSetConsignorPassword}
+                      disabled={newPassword.length < 4 || settingPassword}
+                      className={`flex-1 ${
+                        selectedUser.type === 'employee'
+                          ? 'bg-[#00D4FF] hover:bg-[#00A8CC] text-black'
+                          : 'bg-[#FF1493] hover:bg-[#FF1493]/80 text-white'
+                      }`}
+                      data-testid="confirm-password-btn"
+                    >
+                      {settingPassword ? (
+                        <RefreshCw className="w-4 h-4 animate-spin mr-1" />
+                      ) : (
+                        <Lock className="w-4 h-4 mr-1" />
+                      )}
+                      Set Password
+                    </Button>
+                  </div>
                 </div>
               </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      )}
 
       {/* Password Change Process Info */}
       <div className="bg-white/5 border border-white/10 rounded-lg p-4">

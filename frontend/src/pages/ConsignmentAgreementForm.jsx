@@ -1768,11 +1768,17 @@ export default function ConsignmentAgreementForm() {
         {/* Set Password Modal */}
         {showSetPassword && (
           <div 
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4"
+            className="fixed inset-0 bg-black/50 z-[9998]"
             onClick={() => setShowSetPassword(false)}
+          />
+        )}
+        {showSetPassword && (
+          <div 
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] w-full max-w-sm mx-4"
+            style={{ pointerEvents: 'auto' }}
           >
             <div 
-              className="bg-white w-full max-w-sm rounded-xl shadow-2xl overflow-hidden"
+              className="bg-white rounded-xl shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -1782,6 +1788,7 @@ export default function ConsignmentAgreementForm() {
                   <h3 className="font-semibold text-[#1A1A2E]">{hasPassword ? "Change Password" : "Set Password"}</h3>
                 </div>
                 <button 
+                  type="button"
                   onClick={() => setShowSetPassword(false)}
                   className="p-2 hover:bg-white/50 rounded-full"
                 >
@@ -1801,12 +1808,13 @@ export default function ConsignmentAgreementForm() {
                 <div>
                   <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">New Password</Label>
                   <div className="relative">
-                    <Input
+                    <input
                       type={showPassword ? "text" : "password"}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter password"
-                      className="border-2 border-gray-200 focus:border-emerald-500 rounded-lg pr-10"
+                      autoFocus
+                      className="w-full px-3 py-2 border-2 border-gray-200 focus:border-emerald-500 focus:outline-none rounded-lg pr-10"
                     />
                     <button
                       type="button"
@@ -1820,12 +1828,12 @@ export default function ConsignmentAgreementForm() {
                 
                 <div>
                   <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Confirm Password</Label>
-                  <Input
+                  <input
                     type={showPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm password"
-                    className="border-2 border-gray-200 focus:border-emerald-500 rounded-lg"
+                    className="w-full px-3 py-2 border-2 border-gray-200 focus:border-emerald-500 focus:outline-none rounded-lg"
                     onKeyDown={(e) => e.key === 'Enter' && handleSetPassword()}
                   />
                 </div>
@@ -1834,6 +1842,7 @@ export default function ConsignmentAgreementForm() {
               {/* Footer */}
               <div className="p-4 border-t bg-gray-50 space-y-2">
                 <Button
+                  type="button"
                   onClick={handleSetPassword}
                   disabled={settingPassword}
                   className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
@@ -1841,6 +1850,7 @@ export default function ConsignmentAgreementForm() {
                   {settingPassword ? "Saving..." : "Save Password"}
                 </Button>
                 <button
+                  type="button"
                   onClick={() => { setShowSetPassword(false); setNewPassword(""); setConfirmPassword(""); }}
                   className="w-full text-sm text-gray-500 hover:text-gray-700"
                 >
