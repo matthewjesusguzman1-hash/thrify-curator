@@ -121,7 +121,7 @@ export default function PasswordManagementSection({ token }) {
       await axios.post(
         `${API}/forms/admin/consignment-password/reset`,
         { email: selectedUser.email, new_password: newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
       );
       toast.success(`Password set for ${selectedUser.name || selectedUser.email}`);
       setSelectedUser(null);
@@ -129,6 +129,7 @@ export default function PasswordManagementSection({ token }) {
       setShowPassword(false);
       fetchConsignorPasswords();
     } catch (error) {
+      console.error("Error setting consignor password:", error);
       toast.error(error.response?.data?.detail || "Failed to set password");
     } finally {
       setSettingPassword(false);
@@ -259,7 +260,7 @@ export default function PasswordManagementSection({ token }) {
                 No employees found
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
                 {filteredEmployees.map((employee) => (
                   <div
                     key={employee.id}
@@ -341,7 +342,7 @@ export default function PasswordManagementSection({ token }) {
                 No consignors found
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
                 {filteredConsignors.map((consignor, idx) => (
                   <div
                     key={consignor.email || idx}

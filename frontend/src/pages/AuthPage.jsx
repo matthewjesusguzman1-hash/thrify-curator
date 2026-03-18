@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, LogIn, Fingerprint, Eye, EyeOff, Lock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, LogIn, Fingerprint, Eye, EyeOff, Lock, HelpCircle, Mail, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,10 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [loginMode, setLoginMode] = useState("normal"); // "normal", "password"
+  
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
   
   // Biometric auth hook
   const { isNative, isAvailable: biometricAvailable, biometricLogin, setCredentials } = useBiometricAuth();
@@ -400,6 +404,22 @@ export default function AuthPage() {
             )}
           </form>
 
+          {/* Forgot Password Link */}
+          {showPasswordField && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowForgotPassword(true);
+                setForgotEmail(email);
+              }}
+              className="w-full mt-3 text-center text-sm text-[#00D4FF] hover:text-[#00D4FF]/80 transition-colors flex items-center justify-center gap-2"
+              data-testid="forgot-password-link"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Forgot your password?
+            </button>
+          )}
+
           <p className="text-center text-sm text-white/40 mt-6">
             Contact your administrator if you need access
           </p>
@@ -410,6 +430,95 @@ export default function AuthPage() {
           Thrifty Curator • Curated Resale Finds
         </p>
       </motion.div>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotPassword && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowForgotPassword(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1A1A2E] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden"
+              data-testid="forgot-password-modal"
+            >
+              <div className="h-1.5 bg-gradient-to-r from-amber-500 to-orange-500" />
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl flex items-center justify-center">
+                      <HelpCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Can't Access Your Account?</h2>
+                      <p className="text-sm text-white/50">Here's how to get help</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowForgotPassword(false)}
+                    className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+
+                {/* Instructions */}
+                <div className="space-y-4">
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-amber-200 font-medium">
+                          Password Reset Requires Admin Help
+                        </p>
+                        <p className="text-xs text-amber-200/70 mt-1">
+                          For security, passwords can only be reset by an administrator.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="text-white font-medium flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-[#00D4FF]" />
+                      How to Reset Your Password
+                    </h3>
+                    <ol className="text-sm text-white/70 space-y-2 list-decimal list-inside">
+                      <li>Contact your manager or administrator</li>
+                      <li>Let them know your email address: <span className="text-[#00D4FF]">{forgotEmail || "your email"}</span></li>
+                      <li>They will reset your password from the admin dashboard</li>
+                      <li>You'll receive a new temporary password to log in</li>
+                      <li>After logging in, change your password from the Security settings</li>
+                    </ol>
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <h4 className="text-sm font-medium text-white mb-2">Need to contact an administrator?</h4>
+                    <p className="text-xs text-white/50">
+                      Reach out to your store manager or supervisor. They have access to reset passwords in the Password Management section of the admin dashboard.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => setShowForgotPassword(false)}
+                  className="w-full mt-6 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
+                  data-testid="close-forgot-password-btn"
+                >
+                  Got it, I'll contact my admin
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
