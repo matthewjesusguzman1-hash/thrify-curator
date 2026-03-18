@@ -94,6 +94,12 @@ export default function ConsignmentAgreementForm() {
   // Payment history state
   const [paymentHistory, setPaymentHistory] = useState(null);
   const [loadingPaymentHistory, setLoadingPaymentHistory] = useState(false);
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [paymentFilterType, setPaymentFilterType] = useState("all"); // "all", "month", "year", "custom"
+  const [paymentFilterMonth, setPaymentFilterMonth] = useState(new Date().getMonth());
+  const [paymentFilterYear, setPaymentFilterYear] = useState(new Date().getFullYear());
+  const [paymentCustomStartDate, setPaymentCustomStartDate] = useState("");
+  const [paymentCustomEndDate, setPaymentCustomEndDate] = useState("");
   
   // View submissions state
   const [showViewSubmissions, setShowViewSubmissions] = useState(false);
@@ -183,6 +189,48 @@ export default function ConsignmentAgreementForm() {
       setLoadingPaymentHistory(false);
     }
   };
+
+  // Filter payments based on selected filter type
+  const getFilteredPayments = () => {
+    if (!paymentHistory || !paymentHistory.payments) return [];
+    
+    const payments = paymentHistory.payments;
+    
+    if (paymentFilterType === "all") {
+      return payments;
+    }
+    
+    return payments.filter(payment => {
+      const paymentDate = new Date(payment.check_date || payment.created_at);
+      
+      if (paymentFilterType === "month") {
+        return paymentDate.getMonth() === paymentFilterMonth && 
+               paymentDate.getFullYear() === paymentFilterYear;
+      }
+      
+      if (paymentFilterType === "year") {
+        return paymentDate.getFullYear() === paymentFilterYear;
+      }
+      
+      if (paymentFilterType === "custom") {
+        const start = paymentCustomStartDate ? new Date(paymentCustomStartDate) : null;
+        const end = paymentCustomEndDate ? new Date(paymentCustomEndDate + "T23:59:59") : null;
+        
+        if (start && end) {
+          return paymentDate >= start && paymentDate <= end;
+        } else if (start) {
+          return paymentDate >= start;
+        } else if (end) {
+          return paymentDate <= end;
+        }
+      }
+      
+      return true;
+    });
+  };
+
+  const filteredPayments = getFilteredPayments();
+  const filteredTotal = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -1542,6 +1590,177 @@ export default function ConsignmentAgreementForm() {
                       )}
                     </div>
                   )}
+
+                  {/* PAYMENT HISTORY SECTION */}
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setShowPaymentHistory(!showPaymentHistory)}
+                      className={`w-full flex items-center justify-between p-3 transition-colors ${
+                        showPaymentHistory ? 'bg-amber-500/10' : 'bg-gray-50 hover:bg-gray-100'
+                      }`}
+                      data-testid="toggle-payment-history"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          showPaymentHistory ? 'bg-amber-500' : 'bg-gray-200'
+                        }`}>
+                          <DollarSign className={`w-4 h-4 ${showPaymentHistory ? 'text-white' : 'text-gray-600'}`} />
+                        </div>
+                        <div className="text-left">
+                          <span className={`font-medium ${showPaymentHistory ? 'text-amber-700' : 'text-[#1A1A2E]'}`}>
+                            Payment History
+                          </span>
+                          {paymentHistory && paymentHistory.payments.length > 0 && (
+                            <span className="ml-2 text-sm text-green-600 font-semibold">
+                              ${paymentHistory.total_paid.toFixed(2)} total
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {showPaymentHistory ? <ChevronUp className="w-5 h-5 text-amber-500" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                    </button>
+                    
+                    {showPaymentHistory && (
+                      <div className="p-4 border-t border-gray-100 bg-amber-50/30">
+                        {/* Filter Controls */}
+                        <div className="mb-4 space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {["all", "month", "year", "custom"].map((type) => (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => setPaymentFilterType(type)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                  paymentFilterType === type
+                                    ? 'bg-amber-500 text-white'
+                                    : 'bg-white border border-gray-200 text-gray-600 hover:border-amber-300'
+                                }`}
+                              >
+                                {type === "all" ? "All Time" : type === "month" ? "Month" : type === "year" ? "Year" : "Custom"}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          {/* Month/Year Selectors */}
+                          {paymentFilterType === "month" && (
+                            <div className="flex gap-2">
+                              <select
+                                value={paymentFilterMonth}
+                                onChange={(e) => setPaymentFilterMonth(parseInt(e.target.value))}
+                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                              >
+                                {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
+                                  <option key={i} value={i}>{m}</option>
+                                ))}
+                              </select>
+                              <select
+                                value={paymentFilterYear}
+                                onChange={(e) => setPaymentFilterYear(parseInt(e.target.value))}
+                                className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                              >
+                                {[2024, 2025, 2026, 2027].map((y) => (
+                                  <option key={y} value={y}>{y}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          
+                          {paymentFilterType === "year" && (
+                            <select
+                              value={paymentFilterYear}
+                              onChange={(e) => setPaymentFilterYear(parseInt(e.target.value))}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                            >
+                              {[2024, 2025, 2026, 2027].map((y) => (
+                                <option key={y} value={y}>{y}</option>
+                              ))}
+                            </select>
+                          )}
+                          
+                          {paymentFilterType === "custom" && (
+                            <div className="flex gap-2 items-center">
+                              <input
+                                type="date"
+                                value={paymentCustomStartDate}
+                                onChange={(e) => setPaymentCustomStartDate(e.target.value)}
+                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                              />
+                              <span className="text-gray-400">to</span>
+                              <input
+                                type="date"
+                                value={paymentCustomEndDate}
+                                onChange={(e) => setPaymentCustomEndDate(e.target.value)}
+                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Filtered Total */}
+                        {paymentFilterType !== "all" && filteredPayments.length > 0 && (
+                          <div className="mb-3 p-3 bg-white rounded-lg border border-amber-200">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">
+                                {paymentFilterType === "month" && `${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][paymentFilterMonth]} ${paymentFilterYear}`}
+                                {paymentFilterType === "year" && paymentFilterYear}
+                                {paymentFilterType === "custom" && "Selected Period"}
+                              </span>
+                              <span className="text-lg font-bold text-green-600">${filteredTotal.toFixed(2)}</span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">{filteredPayments.length} payment{filteredPayments.length !== 1 ? 's' : ''}</div>
+                          </div>
+                        )}
+                        
+                        {/* Payment List */}
+                        {loadingPaymentHistory ? (
+                          <div className="flex justify-center py-6">
+                            <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
+                          </div>
+                        ) : filteredPayments.length === 0 ? (
+                          <div className="text-center py-6 text-gray-500">
+                            <DollarSign className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                            <p className="text-sm">No payments found{paymentFilterType !== "all" ? " for this period" : ""}</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {filteredPayments.map((payment, index) => (
+                              <div 
+                                key={payment.id || index}
+                                className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                    <DollarSign className="w-5 h-5 text-green-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-[#1A1A2E]">
+                                      ${(payment.amount || 0).toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {payment.check_date ? new Date(payment.check_date).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      }) : 'Date not set'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  {payment.payment_method && (
+                                    <span className="text-xs text-gray-500 capitalize">{payment.payment_method}</span>
+                                  )}
+                                  {payment.check_number && (
+                                    <p className="text-xs text-gray-400">#{payment.check_number}</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {/* UPDATE INFORMATION SECTION */}
                   <div className="border border-gray-200 rounded-xl overflow-hidden">

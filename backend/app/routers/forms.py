@@ -1262,3 +1262,150 @@ async def download_consignment_agreement_pdf(submission_id: str, admin: dict = D
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+
+# ============== CONSIGNOR PAYMENTS ==============
+
+from pydantic import BaseModel
+from typing import Optional
+
+class ConsignorPaymentCreate(BaseModel):
+    consignor_email: str
+    amount: float
+    payment_date: str
+    payment_method: str  # venmo, cashapp, check, etc.
+    notes: Optional[str] = None
+
+class ConsignorPaymentUpdate(BaseModel):
+    amount: Optional[float] = None
+    payment_date: Optional[str] = None
+    payment_method: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post("/forms/admin/consignor-payments")
+async def create_consignor_payment(
+    payment: ConsignorPaymentCreate,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Admin creates a payment record for a consignor"""
+    # Verify consignor exists
+    consignor = await db.consignment_agreements.find_one(
+        {"email": {"$regex": f"^{payment.consignor_email}$", "$options": "i"}}
+    )
+    if not consignor:
+        raise HTTPException(status_code=404, detail="Consignor not found")
+    
+    payment_doc = {
+        "id": str(uuid_module.uuid4()),
+        "consignor_email": payment.consignor_email.lower(),
+        "consignor_name": consignor.get("full_name", "Unknown"),
+        "amount": payment.amount,
+        "payment_date": payment.payment_date,
+        "payment_method": payment.payment_method,
+        "notes": payment.notes,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": admin_user.get("name", admin_user.get("email")),
+        "updated_at": None
+    }
+    
+    await db.consignor_payments.insert_one(payment_doc)
+    payment_doc.pop("_id", None)
+    
+    return {"success": True, "payment": payment_doc}
+
+
+@router.get("/forms/admin/consignor-payments")
+async def get_all_consignor_payments(
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Admin gets all payment records"""
+    payments = await db.consignor_payments.find(
+        {}, {"_id": 0}
+    ).sort("payment_date", -1).to_list(1000)
+    return payments
+
+
+@router.get("/forms/admin/consignor-payments/{email}")
+async def get_consignor_payments_by_email(
+    email: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Admin gets payment records for a specific consignor"""
+    payments = await db.consignor_payments.find(
+        {"consignor_email": {"$regex": f"^{email}$", "$options": "i"}},
+        {"_id": 0}
+    ).sort("payment_date", -1).to_list(1000)
+    return payments
+
+
+@router.put("/forms/admin/consignor-payments/{payment_id}")
+async def update_consignor_payment(
+    payment_id: str,
+    update: ConsignorPaymentUpdate,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Admin updates a payment record"""
+    update_data = {k: v for k, v in update.dict().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.consignor_payments.update_one(
+        {"id": payment_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    return {"success": True}
+
+
+@router.delete("/forms/admin/consignor-payments/{payment_id}")
+async def delete_consignor_payment(
+    payment_id: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Admin deletes a payment record"""
+    result = await db.consignor_payments.delete_one({"id": payment_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    return {"success": True}
+
+
+@router.get("/forms/consignor/my-payments")
+async def get_my_payments(
+    email: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Consignor gets their own payment history with optional date filtering"""
+    query = {"consignor_email": {"$regex": f"^{email}$", "$options": "i"}}
+    
+    # Add date filtering if provided
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date
+        if end_date:
+            date_filter["$lte"] = end_date
+        if date_filter:
+            query["payment_date"] = date_filter
+    
+    payments = await db.consignor_payments.find(
+        query, {"_id": 0}
+    ).sort("payment_date", -1).to_list(1000)
+    
+    # Calculate total
+    total = sum(p.get("amount", 0) for p in payments)
+    
+    return {
+        "payments": payments,
+        "total": total,
+        "count": len(payments)
+    }
