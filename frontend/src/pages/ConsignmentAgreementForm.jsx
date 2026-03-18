@@ -997,11 +997,18 @@ export default function ConsignmentAgreementForm() {
                               description: "If account exists, you'll receive a password reset email shortly."
                             });
                           } catch (error) {
-                            // Still show success for security
-                            setPasswordResetSent(true);
-                            toast.success("Check your email for reset link!", {
-                              description: "If account exists, you'll receive a password reset email shortly."
-                            });
+                            // Handle rate limiting
+                            if (error.response?.status === 429) {
+                              toast.error("Too many requests", {
+                                description: "Please wait a while before requesting another reset link."
+                              });
+                            } else {
+                              // Still show success for security
+                              setPasswordResetSent(true);
+                              toast.success("Check your email for reset link!", {
+                                description: "If account exists, you'll receive a password reset email shortly."
+                              });
+                            }
                           } finally {
                             setSendingPasswordReset(false);
                           }

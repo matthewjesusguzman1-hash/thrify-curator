@@ -539,8 +539,15 @@ export default function AuthPage() {
                             });
                             setResetSent(true);
                           } catch (error) {
-                            // Still show success for security (don't reveal if email exists)
-                            setResetSent(true);
+                            // Handle rate limiting
+                            if (error.response?.status === 429) {
+                              toast.error("Too many requests", {
+                                description: "Please wait a while before requesting another reset link."
+                              });
+                            } else {
+                              // Still show success for security (don't reveal if email exists)
+                              setResetSent(true);
+                            }
                           } finally {
                             setSendingReset(false);
                           }

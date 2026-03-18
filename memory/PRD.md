@@ -64,6 +64,7 @@ The web application is fully functional. iOS app has been built and uploaded to 
    - Tokens are hashed before storage
    - Generic success messages (doesn't reveal if email exists)
    - One-time use tokens
+   - **Rate limiting**: Max 3 requests per email per hour, 10 per IP per hour
 3. **Works for Both Portals**:
    - Employee Portal (AuthPage.jsx)
    - Consignment Portal (ConsignmentAgreementForm.jsx)
@@ -141,6 +142,7 @@ The web application is fully functional. iOS app has been built and uploaded to 
 - `POST /api/password-reset/request` - Request password reset email (user_type: employee/consignor)
 - `GET /api/password-reset/validate/{token}` - Validate reset token
 - `POST /api/password-reset/reset` - Reset password with valid token
+- `GET /api/password-reset/rate-limit-status?email=` - Check rate limit status (remaining requests)
 - Frontend route: `/reset-password/:token` - Password reset form page
 
 ## Key Credentials
