@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, LogIn } from "lucide-react";
+import { ArrowLeft, LogIn, Fingerprint, Eye, EyeOff, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import axios from "axios";
+import useBiometricAuth from "@/hooks/useBiometricAuth";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
@@ -20,10 +21,16 @@ const OWNER_CODES = {
 export default function AuthPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [showAdminCode, setShowAdminCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [loginMode, setLoginMode] = useState("normal"); // "normal", "password"
+  
+  // Biometric auth hook
+  const { isNative, isAvailable: biometricAvailable, biometricLogin, setCredentials } = useBiometricAuth();
 
   // Check for existing session on mount
   useEffect(() => {
@@ -51,11 +58,45 @@ export default function AuthPage() {
           localStorage.removeItem("user");
         }
       }
+      
+      // Try biometric login if available and no session
+      if (biometricAvailable && isNative) {
+        const bioResult = await biometricLogin('employee_portal', {
+          reason: 'Login to Employee Portal',
+          title: 'Employee Login',
+        });
+        
+        if (bioResult.success && bioResult.credentials) {
+          try {
+            const response = await axios.post(`${API}/auth/login`, {
+              email: bioResult.credentials.username,
+              password: bioResult.credentials.password
+            });
+            
+            const { access_token, user } = response.data;
+            localStorage.setItem("token", access_token);
+            localStorage.setItem("user", JSON.stringify(user));
+            
+            toast.success(`Welcome back, ${user.name}!`);
+            
+            if (user.role === "admin") {
+              navigate("/admin");
+            } else {
+              navigate("/dashboard");
+            }
+            return;
+          } catch (loginError) {
+            // Biometric credentials invalid, continue to normal login
+            console.log('Stored credentials invalid');
+          }
+        }
+      }
+      
       setCheckingSession(false);
     };
 
     checkExistingSession();
-  }, [navigate]);
+  }, [navigate, biometricAvailable, isNative, biometricLogin]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -91,6 +132,11 @@ export default function AuthPage() {
       
       localStorage.setItem("token", access_token);
       localStorage.setItem("user", JSON.stringify(user));
+      
+      // Save credentials for biometric login if available
+      if (biometricAvailable && isNative && password) {
+        await setCredentials('employee_portal', trimmedInput, password);
+      }
       
       toast.success(`Welcome back, ${user.name}!`);
       
@@ -239,6 +285,50 @@ export default function AuthPage() {
                 </>
               )}
             </Button>
+            
+            {/* Face ID / Touch ID login button */}
+            {biometricAvailable && isNative && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setLoading(true);
+                  const bioResult = await biometricLogin('employee_portal', {
+                    reason: 'Login to Employee Portal',
+                    title: 'Employee Login',
+                  });
+                  
+                  if (bioResult.success && bioResult.credentials) {
+                    try {
+                      const response = await axios.post(`${API}/auth/login`, {
+                        email: bioResult.credentials.username,
+                        password: bioResult.credentials.password
+                      });
+                      
+                      const { access_token, user } = response.data;
+                      localStorage.setItem("token", access_token);
+                      localStorage.setItem("user", JSON.stringify(user));
+                      
+                      toast.success(`Welcome back, ${user.name}!`);
+                      
+                      if (user.role === "admin") {
+                        navigate("/admin");
+                      } else {
+                        navigate("/dashboard");
+                      }
+                    } catch (error) {
+                      toast.error("Saved login is outdated. Please login with email.");
+                    }
+                  } else if (bioResult.needsPassword) {
+                    toast.info("No saved login found. Please login with email first.");
+                  }
+                  setLoading(false);
+                }}
+                className="w-full mt-3 py-2 text-white/70 hover:text-white flex items-center justify-center gap-2 text-sm transition-colors"
+              >
+                <Fingerprint className="w-5 h-5" />
+                Use Face ID / Touch ID
+              </button>
+            )}
           </form>
 
           <p className="text-center text-sm text-white/40 mt-6">

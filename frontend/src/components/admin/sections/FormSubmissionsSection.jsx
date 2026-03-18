@@ -38,6 +38,8 @@ import {
   XCircle,
   Clock,
   RotateCcw,
+  Lock,
+  Key,
   Gift
 } from "lucide-react";
 import { toast } from "sonner";
@@ -85,6 +87,73 @@ export default function FormSubmissionsSection({
     admin_notes: ""
   });
   const [submittingApproval, setSubmittingApproval] = useState(false);
+  
+  // Password management state
+  const [showPasswordManager, setShowPasswordManager] = useState(false);
+  const [consignmentPasswords, setConsignmentPasswords] = useState([]);
+  const [loadingPasswords, setLoadingPasswords] = useState(false);
+  const [resetPasswordModal, setResetPasswordModal] = useState({ open: false, email: "", name: "" });
+  const [newResetPassword, setNewResetPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+
+  // Fetch consignment passwords
+  const fetchConsignmentPasswords = async () => {
+    setLoadingPasswords(true);
+    try {
+      const response = await axios.get(`${API}/forms/admin/consignment-passwords`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      setConsignmentPasswords(response.data);
+    } catch (error) {
+      console.error("Failed to fetch passwords:", error);
+    } finally {
+      setLoadingPasswords(false);
+    }
+  };
+  
+  // Reset password for a consignment client
+  const handleResetPassword = async () => {
+    if (!newResetPassword.trim()) {
+      toast.error("Please enter a new password");
+      return;
+    }
+    
+    setResettingPassword(true);
+    try {
+      await axios.post(`${API}/forms/admin/consignment-password/reset`, {
+        email: resetPasswordModal.email,
+        new_password: newResetPassword
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      
+      toast.success(`Password reset for ${resetPasswordModal.name || resetPasswordModal.email}`);
+      setResetPasswordModal({ open: false, email: "", name: "" });
+      setNewResetPassword("");
+      fetchConsignmentPasswords();
+    } catch (error) {
+      toast.error("Failed to reset password");
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+  
+  // Remove password for a consignment client
+  const handleRemovePassword = async (email, name) => {
+    if (!window.confirm(`Remove password for ${name || email}? They will need to set a new password on their next login.`)) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/forms/admin/consignment-password/${encodeURIComponent(email)}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      toast.success("Password removed");
+      fetchConsignmentPasswords();
+    } catch (error) {
+      toast.error("Failed to remove password");
+    }
+  };
 
   // Auto-refresh when section is expanded
   useEffect(() => {
@@ -427,6 +496,15 @@ Thrifty Curator Team`;
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isExpanded && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowPasswordManager(true); fetchConsignmentPasswords(); }}
+              className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+              title="Manage Client Passwords"
+            >
+              <Key className="w-5 h-5" />
+            </button>
+          )}
           {isExpanded ? (
             <ChevronUp className="w-5 h-5 text-[#888]" />
           ) : (
@@ -1344,6 +1422,171 @@ Thrifty Curator Team`;
                 >
                   <Mail className="w-4 h-4 mr-1" />
                   Open Email Client
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Password Manager Modal */}
+      <AnimatePresence>
+        {showPasswordManager && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowPasswordManager(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-4 bg-emerald-50 border-b flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <Key className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#1A1A2E]">Consignment Client Passwords</h3>
+                    <p className="text-xs text-gray-500">{consignmentPasswords.length} clients</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowPasswordManager(false)}
+                  className="p-2 hover:bg-white/50 rounded-full"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 overflow-y-auto max-h-[50vh]">
+                {loadingPasswords ? (
+                  <div className="text-center py-8 text-gray-500">Loading...</div>
+                ) : consignmentPasswords.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No consignment clients found</div>
+                ) : (
+                  <div className="space-y-2">
+                    {consignmentPasswords.map((client) => (
+                      <div 
+                        key={client.email}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-[#1A1A2E] truncate">{client.full_name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500 truncate">{client.email}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {client.has_password ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                <Lock className="w-3 h-3" />
+                                Password Set
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                No Password
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          <button
+                            onClick={() => setResetPasswordModal({ open: true, email: client.email, name: client.full_name })}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title={client.has_password ? "Reset Password" : "Set Password"}
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          {client.has_password && (
+                            <button
+                              onClick={() => handleRemovePassword(client.email, client.full_name)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Remove Password"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Footer */}
+              <div className="p-4 border-t bg-gray-50">
+                <Button
+                  onClick={() => setShowPasswordManager(false)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Reset Password Modal */}
+      <AnimatePresence>
+        {resetPasswordModal.open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+            onClick={() => setResetPasswordModal({ open: false, email: "", name: "" })}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 bg-blue-50 border-b">
+                <h3 className="font-semibold text-[#1A1A2E]">
+                  {consignmentPasswords.find(c => c.email === resetPasswordModal.email)?.has_password 
+                    ? "Reset Password" 
+                    : "Set Password"}
+                </h3>
+                <p className="text-sm text-gray-500">{resetPasswordModal.name || resetPasswordModal.email}</p>
+              </div>
+              
+              <div className="p-4 space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">New Password</Label>
+                  <Input
+                    type="text"
+                    value={newResetPassword}
+                    onChange={(e) => setNewResetPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">The client will use this password to login.</p>
+                </div>
+              </div>
+              
+              <div className="p-4 border-t bg-gray-50 flex gap-2">
+                <Button
+                  onClick={() => { setResetPasswordModal({ open: false, email: "", name: "" }); setNewResetPassword(""); }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleResetPassword}
+                  disabled={resettingPassword}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {resettingPassword ? "Saving..." : "Save Password"}
                 </Button>
               </div>
             </motion.div>

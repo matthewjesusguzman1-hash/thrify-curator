@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle, Lock, Fingerprint, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import useBiometricAuth from "@/hooks/useBiometricAuth";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,6 +102,19 @@ export default function ConsignmentAgreementForm() {
   const [showSubmissionsExpanded, setShowSubmissionsExpanded] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
+  
+  // Password and biometric auth state
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [hasPassword, setHasPassword] = useState(false);
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [loginMode, setLoginMode] = useState("email"); // "email", "password", "biometric"
+  
+  // Biometric auth hook
+  const { isNative, isAvailable: biometricAvailable, biometryType, biometricLogin, setCredentials } = useBiometricAuth();
   
   // Confirmation dialog state
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
@@ -242,10 +256,73 @@ export default function ConsignmentAgreementForm() {
     
     setCheckingEmail(true);
     try {
-      const response = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(addItemsEmail)}`);
+      // First check if user has a password set
+      const passwordCheck = await axios.get(`${API}/forms/consignment/has-password/${encodeURIComponent(addItemsEmail)}`);
+      setHasPassword(passwordCheck.data.has_password);
+      
+      if (!passwordCheck.data.exists) {
+        toast.error("No existing agreement found for this email. Please sign a new agreement first.");
+        setShowAddItems(false);
+        setShowInitialChoice(false);
+        setCheckingEmail(false);
+        return;
+      }
+      
+      // If has password and biometric available, try biometric first
+      if (passwordCheck.data.has_password && biometricAvailable && isNative) {
+        const bioResult = await biometricLogin('consignment_portal', {
+          reason: 'Login to your consignment account',
+          title: 'Consignment Login',
+        });
+        
+        if (bioResult.success && bioResult.credentials) {
+          // Use stored credentials to login
+          try {
+            const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
+              email: bioResult.credentials.username,
+              password: bioResult.credentials.password
+            });
+            
+            if (loginResponse.data.success) {
+              // Biometric login successful, proceed to load agreement
+              await loadAgreementData(addItemsEmail);
+              setCheckingEmail(false);
+              return;
+            }
+          } catch (loginError) {
+            // Credentials might be outdated, continue to password login
+            console.log('Stored credentials invalid, falling back to password');
+          }
+        }
+        // Biometric failed or cancelled, show password input
+        setLoginMode("password");
+        setCheckingEmail(false);
+        return;
+      }
+      
+      // If has password but no biometric, show password input
+      if (passwordCheck.data.has_password) {
+        setLoginMode("password");
+        setCheckingEmail(false);
+        return;
+      }
+      
+      // No password set, use email-only login (existing behavior)
+      await loadAgreementData(addItemsEmail);
+    } catch (error) {
+      toast.error("Failed to check for existing agreement");
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+  
+  // Load agreement data after authentication
+  const loadAgreementData = async (email) => {
+    try {
+      const response = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(email)}`);
       if (response.data.has_agreement) {
         setAddItemsAgreement(response.data.agreement);
-        setUpdateEmail(response.data.agreement.email || addItemsEmail);
+        setUpdateEmail(response.data.agreement.email || email);
         setUpdatePhone(response.data.agreement.phone || "");
         setUpdateAddress(response.data.agreement.address || "");
         setUpdatePaymentMethod(response.data.agreement.payment_method || "");
@@ -255,18 +332,90 @@ export default function ConsignmentAgreementForm() {
         const today = new Date().toISOString().split('T')[0];
         setUpdateSignatureDate(today);
         // Fetch payment history
-        fetchPaymentHistory(addItemsEmail);
+        fetchPaymentHistory(email);
         // Fetch user submissions
-        fetchUserSubmissions(addItemsEmail);
+        fetchUserSubmissions(email);
+        setLoginMode("email"); // Reset login mode
       } else {
         toast.error("No existing agreement found for this email. Please sign a new agreement first.");
         setShowAddItems(false);
         setShowInitialChoice(false);
       }
     } catch (error) {
-      toast.error("Failed to check for existing agreement");
+      throw error;
+    }
+  };
+  
+  // Handle password login
+  const handlePasswordLogin = async () => {
+    if (!loginPassword.trim()) {
+      toast.error("Please enter your password");
+      return;
+    }
+    
+    setCheckingEmail(true);
+    try {
+      const response = await axios.post(`${API}/forms/consignment/login`, {
+        email: addItemsEmail,
+        password: loginPassword
+      });
+      
+      if (response.data.success) {
+        // Save credentials for biometric if available
+        if (biometricAvailable && isNative) {
+          await setCredentials('consignment_portal', addItemsEmail, loginPassword);
+        }
+        
+        // Load agreement data
+        await loadAgreementData(addItemsEmail);
+        setLoginPassword("");
+        toast.success("Login successful!");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Invalid password");
     } finally {
       setCheckingEmail(false);
+    }
+  };
+  
+  // Handle setting a new password
+  const handleSetPassword = async () => {
+    if (!newPassword.trim()) {
+      toast.error("Please enter a password");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (newPassword.length < 4) {
+      toast.error("Password must be at least 4 characters");
+      return;
+    }
+    
+    setSettingPassword(true);
+    try {
+      await axios.post(`${API}/forms/consignment/set-password`, {
+        email: addItemsAgreement.email,
+        password: newPassword
+      });
+      
+      // Save credentials for biometric if available
+      if (biometricAvailable && isNative) {
+        await setCredentials('consignment_portal', addItemsAgreement.email, newPassword);
+        toast.success("Password set! Face ID/Touch ID is now enabled for future logins.");
+      } else {
+        toast.success("Password set successfully!");
+      }
+      
+      setShowSetPassword(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      setHasPassword(true);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to set password");
+    } finally {
+      setSettingPassword(false);
     }
   };
 
@@ -752,26 +901,94 @@ export default function ConsignmentAgreementForm() {
               {!addItemsAgreement ? (
                 // Step 1: Enter email to find existing agreement
                 <>
-                  <div>
-                    <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
-                    <p className="text-xs text-[#888] mb-2">Enter the email you used when signing your agreement</p>
-                    <Input
-                      type="email"
-                      value={addItemsEmail}
-                      onChange={(e) => setAddItemsEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
-                      data-testid="add-items-email"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleCheckAddItemsAgreement}
-                    disabled={checkingEmail}
-                    className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
-                    data-testid="find-agreement-btn"
-                  >
-                    {checkingEmail ? "Checking..." : "Find My Agreement"}
-                  </Button>
+                  {loginMode === "email" && (
+                    <>
+                      <div>
+                        <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
+                        <p className="text-xs text-[#888] mb-2">Enter the email you used when signing your agreement</p>
+                        <Input
+                          type="email"
+                          value={addItemsEmail}
+                          onChange={(e) => setAddItemsEmail(e.target.value)}
+                          placeholder="your@email.com"
+                          className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg"
+                          data-testid="add-items-email"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleCheckAddItemsAgreement}
+                        disabled={checkingEmail}
+                        className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
+                        data-testid="find-agreement-btn"
+                      >
+                        {checkingEmail ? "Checking..." : biometricAvailable && isNative ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <Fingerprint className="w-5 h-5" />
+                            Continue with Face ID
+                          </span>
+                        ) : "Find My Agreement"}
+                      </Button>
+                    </>
+                  )}
+                  
+                  {loginMode === "password" && (
+                    <>
+                      <div className="text-center mb-4">
+                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Lock className="w-6 h-6 text-emerald-600" />
+                        </div>
+                        <p className="text-sm text-[#666]">Enter your password for</p>
+                        <p className="font-semibold text-[#1A1A2E]">{addItemsEmail}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Password</Label>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            value={loginPassword}
+                            onChange={(e) => setLoginPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            className="border-2 border-gray-200 focus:border-[#10B981] rounded-lg pr-10"
+                            data-testid="login-password"
+                            onKeyDown={(e) => e.key === 'Enter' && handlePasswordLogin()}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handlePasswordLogin}
+                        disabled={checkingEmail}
+                        className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
+                        data-testid="password-login-btn"
+                      >
+                        {checkingEmail ? "Logging in..." : "Login"}
+                      </Button>
+                      
+                      {/* Try Face ID again button */}
+                      {biometricAvailable && isNative && (
+                        <button
+                          onClick={handleCheckAddItemsAgreement}
+                          className="w-full text-sm text-emerald-600 hover:text-emerald-700 flex items-center justify-center gap-2"
+                        >
+                          <Fingerprint className="w-4 h-4" />
+                          Try Face ID Again
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => { setLoginMode("email"); setLoginPassword(""); setAddItemsEmail(""); }}
+                        className="w-full text-sm text-gray-500 hover:text-gray-700"
+                      >
+                        Use a different email
+                      </button>
+                    </>
+                  )}
                 </>
               ) : (
                 // Step 2: Update form matching original consignment form style
@@ -782,6 +999,14 @@ export default function ConsignmentAgreementForm() {
                     <p className="text-sm text-[#666] mt-1">
                       {addItemsAgreement.email} • {addItemsAgreement.agreed_percentage || "50/50"} split
                     </p>
+                    {/* Set/Change Password Button */}
+                    <button
+                      onClick={() => setShowSetPassword(true)}
+                      className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 flex items-center justify-center gap-1 mx-auto"
+                    >
+                      <Lock className="w-3 h-3" />
+                      {hasPassword ? "Change Password" : "Set Password for Quick Login"}
+                    </button>
                   </div>
 
                   {/* Payment History - Compact */}
@@ -1471,6 +1696,92 @@ export default function ConsignmentAgreementForm() {
                 >
                   Close
                 </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Set Password Modal */}
+        {showSetPassword && (
+          <div 
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4"
+            onClick={() => setShowSetPassword(false)}
+          >
+            <div 
+              className="bg-white w-full max-w-sm rounded-xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-4 bg-emerald-50 border-b flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-semibold text-[#1A1A2E]">{hasPassword ? "Change Password" : "Set Password"}</h3>
+                </div>
+                <button 
+                  onClick={() => setShowSetPassword(false)}
+                  className="p-2 hover:bg-white/50 rounded-full"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 space-y-4">
+                {biometricAvailable && isNative && (
+                  <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700 flex items-start gap-2">
+                    <Fingerprint className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <span>Setting a password will enable Face ID/Touch ID for quick login!</span>
+                  </div>
+                )}
+                
+                <div>
+                  <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">New Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter password"
+                      className="border-2 border-gray-200 focus:border-emerald-500 rounded-lg pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Confirm Password</Label>
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm password"
+                    className="border-2 border-gray-200 focus:border-emerald-500 rounded-lg"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSetPassword()}
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t bg-gray-50 space-y-2">
+                <Button
+                  onClick={handleSetPassword}
+                  disabled={settingPassword}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
+                >
+                  {settingPassword ? "Saving..." : "Save Password"}
+                </Button>
+                <button
+                  onClick={() => { setShowSetPassword(false); setNewPassword(""); setConfirmPassword(""); }}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

@@ -819,6 +819,162 @@ async def send_admin_test_email(request: TestEmailRequest, admin: dict = Depends
     return result
 
 
+# =====================================================
+# CONSIGNMENT CLIENT PASSWORD MANAGEMENT
+# =====================================================
+
+import hashlib
+import secrets
+
+def hash_password(password: str) -> str:
+    """Hash password using SHA256 with salt"""
+    salt = secrets.token_hex(16)
+    hashed = hashlib.sha256((password + salt).encode()).hexdigest()
+    return f"{salt}:{hashed}"
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    """Verify password against stored hash"""
+    if not stored_hash or ':' not in stored_hash:
+        return False
+    salt, hashed = stored_hash.split(':', 1)
+    check_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+    return check_hash == hashed
+
+class SetPasswordRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class PasswordLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class AdminResetPasswordRequest(BaseModel):
+    email: EmailStr
+    new_password: str
+
+@router.post("/forms/consignment/set-password")
+async def set_consignment_password(request: SetPasswordRequest):
+    """Allow consignment client to set a password for their account"""
+    email = request.email.lower()
+    
+    # Check if agreement exists
+    agreement = await db.consignment_agreements.find_one({"email": email})
+    if not agreement:
+        raise HTTPException(status_code=404, detail="No consignment agreement found with this email")
+    
+    # Hash and store password
+    password_hash = hash_password(request.password)
+    await db.consignment_agreements.update_one(
+        {"email": email},
+        {"$set": {"password_hash": password_hash, "password_set_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "message": "Password set successfully"}
+
+@router.post("/forms/consignment/login")
+async def consignment_password_login(request: PasswordLoginRequest):
+    """Login with email and password for consignment clients"""
+    email = request.email.lower()
+    
+    # Find agreement
+    agreement = await db.consignment_agreements.find_one({"email": email})
+    if not agreement:
+        raise HTTPException(status_code=404, detail="No consignment agreement found with this email")
+    
+    # Check if password is set
+    stored_hash = agreement.get("password_hash")
+    if not stored_hash:
+        raise HTTPException(status_code=400, detail="No password set for this account. Please set a password first.")
+    
+    # Verify password
+    if not verify_password(request.password, stored_hash):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    
+    # Return user info (without password hash)
+    return {
+        "success": True,
+        "user": {
+            "email": agreement.get("email"),
+            "full_name": agreement.get("full_name"),
+            "has_password": True
+        }
+    }
+
+@router.get("/forms/consignment/has-password/{email}")
+async def check_consignment_password(email: str):
+    """Check if a consignment client has set a password"""
+    email = email.lower()
+    agreement = await db.consignment_agreements.find_one({"email": email})
+    if not agreement:
+        return {"has_password": False, "exists": False}
+    
+    has_password = bool(agreement.get("password_hash"))
+    return {"has_password": has_password, "exists": True}
+
+# Admin password management
+@router.get("/forms/admin/consignment-passwords")
+async def get_consignment_passwords(admin: dict = Depends(get_admin_user)):
+    """Get all consignment clients with their password status"""
+    agreements = await db.consignment_agreements.find(
+        {},
+        {"_id": 0, "email": 1, "full_name": 1, "password_hash": 1, "password_set_at": 1}
+    ).to_list(1000)
+    
+    result = []
+    for a in agreements:
+        result.append({
+            "email": a.get("email"),
+            "full_name": a.get("full_name"),
+            "has_password": bool(a.get("password_hash")),
+            "password_set_at": a.get("password_set_at"),
+            # For admin viewing - show if password exists (not the actual password)
+            "password_status": "Set" if a.get("password_hash") else "Not set"
+        })
+    
+    return result
+
+@router.post("/forms/admin/consignment-password/reset")
+async def admin_reset_consignment_password(request: AdminResetPasswordRequest, admin: dict = Depends(get_admin_user)):
+    """Admin can reset a consignment client's password"""
+    email = request.email.lower()
+    
+    agreement = await db.consignment_agreements.find_one({"email": email})
+    if not agreement:
+        raise HTTPException(status_code=404, detail="No consignment agreement found with this email")
+    
+    # Hash and store new password
+    password_hash = hash_password(request.new_password)
+    await db.consignment_agreements.update_one(
+        {"email": email},
+        {"$set": {
+            "password_hash": password_hash, 
+            "password_set_at": datetime.now(timezone.utc).isoformat(),
+            "password_reset_by_admin": True,
+            "password_reset_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"success": True, "message": f"Password reset for {email}"}
+
+@router.delete("/forms/admin/consignment-password/{email}")
+async def admin_remove_consignment_password(email: str, admin: dict = Depends(get_admin_user)):
+    """Admin can remove a consignment client's password"""
+    email = email.lower()
+    
+    agreement = await db.consignment_agreements.find_one({"email": email})
+    if not agreement:
+        raise HTTPException(status_code=404, detail="No consignment agreement found with this email")
+    
+    await db.consignment_agreements.update_one(
+        {"email": email},
+        {"$unset": {"password_hash": "", "password_set_at": ""}}
+    )
+    
+    return {"success": True, "message": f"Password removed for {email}"}
+
+
+
+
 # PDF Download endpoints
 from fastapi.responses import Response
 from fpdf import FPDF
