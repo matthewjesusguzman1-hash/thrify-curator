@@ -151,6 +151,21 @@ export default function PasswordManagementSection({ token }) {
     }
   };
 
+  // Remove consignor password
+  const handleRemoveConsignorPassword = async (consignor) => {
+    if (!window.confirm(`Remove password for ${consignor.name || consignor.email}? They will need to set a new password.`)) return;
+
+    try {
+      await axios.delete(`${API}/forms/admin/consignment-password/${encodeURIComponent(consignor.email)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`Password removed for ${consignor.name || consignor.email}`);
+      fetchConsignorPasswords();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to remove password");
+    }
+  };
+
   // Filter users based on search - exclude business owners who use access codes
   const filteredEmployees = employees.filter(e => 
     !e.uses_admin_code && (
@@ -383,19 +398,33 @@ export default function PasswordManagementSection({ token }) {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedUser({ ...consignor, type: 'consignor' });
-                              setNewPassword("");
-                            }}
-                            className="text-[#FF1493] hover:text-[#FF1493] hover:bg-[#FF1493]/20"
-                            data-testid={`set-consignor-password-btn-${idx}`}
-                          >
-                            <Lock className="w-4 h-4 mr-1" />
-                            {consignor.has_password ? "Reset" : "Set"}
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedUser({ ...consignor, type: 'consignor' });
+                                setNewPassword("");
+                              }}
+                              className="text-[#FF1493] hover:text-[#FF1493] hover:bg-[#FF1493]/20"
+                              data-testid={`set-consignor-password-btn-${idx}`}
+                            >
+                              <Lock className="w-4 h-4 mr-1" />
+                              {consignor.has_password ? "Reset" : "Set"}
+                            </Button>
+                            
+                            {consignor.has_password && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveConsignorPassword(consignor)}
+                                className="text-red-400 hover:text-red-400 hover:bg-red-500/20"
+                                data-testid={`remove-consignor-password-btn-${idx}`}
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
