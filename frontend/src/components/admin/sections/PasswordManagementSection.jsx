@@ -14,7 +14,7 @@ import {
   XCircle,
   RefreshCw,
   ChevronDown,
-  ChevronRight,
+  ChevronUp,
   Search
 } from "lucide-react";
 import { Button } from "../../ui/button";
@@ -24,6 +24,7 @@ import { Label } from "../../ui/label";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function PasswordManagementSection({ token }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("employees");
   const [employees, setEmployees] = useState([]);
   const [consignors, setConsignors] = useState([]);
@@ -180,120 +181,144 @@ export default function PasswordManagementSection({ token }) {
   );
 
   return (
-    <div className="space-y-6" data-testid="password-management-section">
-      {/* Header with Tabs */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-            <Key className="w-5 h-5 text-[#00D4FF]" />
-            Password Management
-          </h2>
-          <p className="text-sm text-white/50 mt-1">
-            Manage passwords for employees and consignment clients
-          </p>
+    <div className="dashboard-card" data-testid="password-management-section">
+      {/* Collapsible Header */}
+      <div 
+        className="flex items-center justify-between cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+        data-testid="password-management-toggle"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+            <Key className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="font-playfair text-xl font-semibold text-[#333]">Password Management</h2>
+            <p className="text-sm text-[#888]">Manage passwords for employees and consignment clients</p>
+          </div>
         </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant={activeTab === "employees" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("employees")}
-            className={activeTab === "employees" 
-              ? "bg-[#00D4FF] text-black" 
-              : "text-white/70 hover:text-white hover:bg-white/10"
-            }
-            data-testid="tab-employees"
-          >
-            <Users className="w-4 h-4 mr-1" />
-            Employees
-          </Button>
-          <Button
-            variant={activeTab === "consignors" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("consignors")}
-            className={activeTab === "consignors" 
-              ? "bg-[#FF1493] text-white" 
-              : "text-white/70 hover:text-white hover:bg-white/10"
-            }
-            data-testid="tab-consignors"
-          >
-            <User className="w-4 h-4 mr-1" />
-            Consignors
-          </Button>
+        <div className="flex items-center gap-2">
+          {isExpanded ? (
+            <ChevronUp className="w-5 h-5 text-[#888]" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-[#888]" />
+          )}
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-        <Input
-          placeholder={`Search ${activeTab}...`}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40"
-          data-testid="password-search"
-        />
-      </div>
-
-      {/* Employee Tab */}
-      <AnimatePresence mode="wait">
-        {activeTab === "employees" && (
+      {/* Collapsible Content */}
+      <AnimatePresence>
+        {isExpanded && (
           <motion.div
-            key="employees"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
           >
-            {/* Employee List */}
-            {loadingEmployees ? (
-              <div className="flex justify-center py-8">
-                <RefreshCw className="w-6 h-6 text-[#00D4FF] animate-spin" />
+            <div className="pt-6 space-y-6">
+              {/* Tabs */}
+              <div className="flex gap-2">
+                <Button
+                  variant={activeTab === "employees" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); setActiveTab("employees"); }}
+                  className={activeTab === "employees" 
+                    ? "bg-[#00D4FF] text-black" 
+                    : "text-[#666] hover:text-[#333] hover:bg-gray-100"
+                  }
+                  data-testid="tab-employees"
+                >
+                  <Users className="w-4 h-4 mr-1" />
+                  Employees
+                </Button>
+                <Button
+                  variant={activeTab === "consignors" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); setActiveTab("consignors"); }}
+                  className={activeTab === "consignors" 
+                    ? "bg-[#FF1493] text-white" 
+                    : "text-[#666] hover:text-[#333] hover:bg-gray-100"
+                  }
+                  data-testid="tab-consignors"
+                >
+                  <User className="w-4 h-4 mr-1" />
+                  Consignors
+                </Button>
               </div>
-            ) : filteredEmployees.length === 0 ? (
-              <div className="text-center py-8 text-white/50">
-                No employees found
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder={`Search ${activeTab}...`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="pl-10"
+                  data-testid="password-search"
+                />
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full" data-testid="employees-password-table">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Status</th>
-                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Name</th>
-                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Email</th>
-                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Password</th>
-                      <th className="text-right py-3 px-4 text-white/70 font-medium text-sm">Actions</th>
+
+              {/* Employee Tab */}
+              <AnimatePresence mode="wait">
+                {activeTab === "employees" && (
+                  <motion.div
+                    key="employees"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
+                    {/* Employee List */}
+                    {loadingEmployees ? (
+                      <div className="flex justify-center py-8">
+                        <RefreshCw className="w-6 h-6 text-[#00D4FF] animate-spin" />
+                      </div>
+                    ) : filteredEmployees.length === 0 ? (
+                      <div className="text-center py-8 text-[#888]">
+                        No employees found
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full" data-testid="employees-password-table">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="text-left py-3 px-4 text-[#666] font-medium text-sm">Status</th>
+                              <th className="text-left py-3 px-4 text-[#666] font-medium text-sm">Name</th>
+                              <th className="text-left py-3 px-4 text-[#666] font-medium text-sm">Email</th>
+                      <th className="text-left py-3 px-4 text-[#666] font-medium text-sm">Password</th>
+                      <th className="text-right py-3 px-4 text-[#666] font-medium text-sm">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredEmployees.map((employee) => (
                       <tr 
                         key={employee.id}
-                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                         data-testid={`employee-password-row-${employee.id}`}
                       >
                         <td className="py-3 px-4">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            employee.has_password ? 'bg-green-500/20' : 'bg-red-500/20'
+                            employee.has_password ? 'bg-green-100' : 'bg-red-100'
                           }`}>
                             {employee.has_password 
-                              ? <CheckCircle className="w-4 h-4 text-green-500" />
+                              ? <CheckCircle className="w-4 h-4 text-green-600" />
                               : <XCircle className="w-4 h-4 text-red-500" />
                             }
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-white font-medium">{employee.name}</span>
+                          <span className="text-[#333] font-medium">{employee.name}</span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-white/70 text-sm">{employee.email}</span>
+                          <span className="text-[#666] text-sm">{employee.email}</span>
                         </td>
                         <td className="py-3 px-4">
                           <span className={`text-xs px-2 py-1 rounded ${
                             employee.has_password 
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-600'
                           }`}>
                             {employee.has_password ? "Password Set" : "No Password"}
                           </span>
@@ -307,7 +332,7 @@ export default function PasswordManagementSection({ token }) {
                                 setSelectedUser({ ...employee, type: 'employee' });
                                 setNewPassword("");
                               }}
-                              className="text-[#00D4FF] hover:text-[#00D4FF] hover:bg-[#00D4FF]/20"
+                              className="text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10"
                               data-testid={`set-password-btn-${employee.id}`}
                             >
                               <Lock className="w-4 h-4 mr-1" />
@@ -319,7 +344,7 @@ export default function PasswordManagementSection({ token }) {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveEmployeePassword(employee)}
-                                className="text-red-400 hover:text-red-400 hover:bg-red-500/20"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
                                 data-testid={`remove-password-btn-${employee.id}`}
                               >
                                 <XCircle className="w-4 h-4" />
@@ -350,49 +375,49 @@ export default function PasswordManagementSection({ token }) {
                 <RefreshCw className="w-6 h-6 text-[#FF1493] animate-spin" />
               </div>
             ) : filteredConsignors.length === 0 ? (
-              <div className="text-center py-8 text-white/50">
+              <div className="text-center py-8 text-[#888]">
                 No consignors found
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full" data-testid="consignors-password-table">
                   <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Status</th>
-                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Name</th>
-                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Email</th>
-                      <th className="text-left py-3 px-4 text-white/70 font-medium text-sm">Password</th>
-                      <th className="text-right py-3 px-4 text-white/70 font-medium text-sm">Actions</th>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 text-[#666] font-medium text-sm">Status</th>
+                      <th className="text-left py-3 px-4 text-[#666] font-medium text-sm">Name</th>
+                      <th className="text-left py-3 px-4 text-[#666] font-medium text-sm">Email</th>
+                      <th className="text-left py-3 px-4 text-[#666] font-medium text-sm">Password</th>
+                      <th className="text-right py-3 px-4 text-[#666] font-medium text-sm">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredConsignors.map((consignor, idx) => (
                       <tr 
                         key={consignor.email || idx}
-                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                         data-testid={`consignor-password-row-${idx}`}
                       >
                         <td className="py-3 px-4">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            consignor.has_password ? 'bg-green-500/20' : 'bg-red-500/20'
+                            consignor.has_password ? 'bg-green-100' : 'bg-red-100'
                           }`}>
                             {consignor.has_password 
-                              ? <CheckCircle className="w-4 h-4 text-green-500" />
+                              ? <CheckCircle className="w-4 h-4 text-green-600" />
                               : <XCircle className="w-4 h-4 text-red-500" />
                             }
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-white font-medium">{consignor.name || "Unknown"}</span>
+                          <span className="text-[#333] font-medium">{consignor.name || "Unknown"}</span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-white/70 text-sm">{consignor.email}</span>
+                          <span className="text-[#666] text-sm">{consignor.email}</span>
                         </td>
                         <td className="py-3 px-4">
                           <span className={`text-xs px-2 py-1 rounded ${
                             consignor.has_password 
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-600'
                           }`}>
                             {consignor.has_password ? "Password Set" : "No Password"}
                           </span>
@@ -406,7 +431,7 @@ export default function PasswordManagementSection({ token }) {
                                 setSelectedUser({ ...consignor, type: 'consignor' });
                                 setNewPassword("");
                               }}
-                              className="text-[#FF1493] hover:text-[#FF1493] hover:bg-[#FF1493]/20"
+                              className="text-[#FF1493] hover:text-[#E91E8C] hover:bg-[#FF1493]/10"
                               data-testid={`set-consignor-password-btn-${idx}`}
                             >
                               <Lock className="w-4 h-4 mr-1" />
@@ -418,7 +443,7 @@ export default function PasswordManagementSection({ token }) {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveConsignorPassword(consignor)}
-                                className="text-red-400 hover:text-red-400 hover:bg-red-500/20"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
                                 data-testid={`remove-consignor-password-btn-${idx}`}
                               >
                                 <XCircle className="w-4 h-4" />
@@ -432,6 +457,22 @@ export default function PasswordManagementSection({ token }) {
                 </table>
               </div>
             )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Password Change Process Info */}
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mt-4">
+                <h4 className="text-sm font-medium text-[#333] flex items-center gap-2 mb-2">
+                  <Key className="w-4 h-4 text-[#00D4FF]" />
+                  How Password Changes Work
+                </h4>
+                <ul className="text-xs text-[#666] space-y-1 list-disc list-inside">
+                  <li><strong>For Employees:</strong> Once a password is set, the employee must enter it on login. You can reset it here if they forget.</li>
+                  <li><strong>For Consignors:</strong> Passwords protect their consignment portal access. They can change their own password from the portal after logging in.</li>
+                </ul>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -592,18 +633,6 @@ export default function PasswordManagementSection({ token }) {
         </div>,
         document.body
       )}
-
-      {/* Password Change Process Info */}
-      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-white flex items-center gap-2 mb-2">
-          <Key className="w-4 h-4 text-[#00D4FF]" />
-          How Password Changes Work
-        </h4>
-        <ul className="text-xs text-white/60 space-y-1 list-disc list-inside">
-          <li><strong>For Employees:</strong> Once a password is set, the employee must enter it on login. You can reset it here if they forget.</li>
-          <li><strong>For Consignors:</strong> Passwords protect their consignment portal access. They can change their own password from the portal after logging in.</li>
-        </ul>
-      </div>
     </div>
   );
 }
