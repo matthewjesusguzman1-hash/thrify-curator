@@ -1,0 +1,84 @@
+{
+  "summary": "All new features tested successfully: Commission split field on payment records, Consignor Portal View modal from admin dashboard, and Admin dashboard navigation with Password Management moved under Team Management. 31 total tests passed (22 frontend E2E + 9 backend API).",
+  "mode": "generate",
+  "baseline_commit": "ba4fb8edec1ae5dde3758febcdfb8c8b7a7894d0",
+  "head_commit": "f3639c191ea57f48ed1fc99110dc7b8ce54f250e",
+  "specs_created": [
+    "/app/tests/e2e/admin-dashboard-navigation.spec.ts",
+    "/app/tests/e2e/payment-records-commission.spec.ts",
+    "/app/tests/e2e/consignor-portal-view.spec.ts",
+    "/app/backend/tests/test_commission_split.py"
+  ],
+  "specs_updated": [
+    "/app/tests/fixtures/helpers.ts"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/admin-dashboard-navigation.spec.ts",
+    "/app/tests/e2e/payment-records-commission.spec.ts",
+    "/app/tests/e2e/consignor-portal-view.spec.ts",
+    "/app/backend/tests/test_commission_split.py",
+    "/app/test_reports/pytest/commission_split_results.xml"
+  ],
+  "regression_results": {
+    "total_specs": 4,
+    "passed": 31,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/admin-dashboard-navigation.spec.ts",
+    "/app/tests/e2e/payment-records-commission.spec.ts",
+    "/app/tests/e2e/consignor-portal-view.spec.ts",
+    "/app/backend/tests/test_commission_split.py",
+    "/app/tests/fixtures/helpers.ts"
+  ],
+  "test_results": {
+    "backend": "100% (9/9 passed)",
+    "frontend": "100% (22/22 passed)"
+  },
+  "seed_data_creation": "Created test payment records with commission split - all cleaned up after tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All features working correctly: 1) Commission split field appears in consignment payments tab with 50/50 placeholder, can be modified to any value like 60/40, and persists to database. 2) Consignor Portal View modal opens from Portal button in Agreements table, shows admin preview indicator, My Account section with personal info/consignment details/account summary, and password protection status. 3) Admin dashboard has 4 groups: Team Management (includes Password Management), Payroll & Payments, Forms & Communications, Operations & Reports.",
+  "features_tested": {
+    "commission_split_field": {
+      "location": "Payroll & Payments > Payment Records > Consignment tab",
+      "status": "PASSED",
+      "tests": [
+        "Commission split input field visible with placeholder 50/50",
+        "Field is editable - can change to 60/40, 70/30 etc",
+        "Backend creates payment with commission_split",
+        "Backend updates commission_split on existing record",
+        "Backend retrieves commission_split from stored records"
+      ]
+    },
+    "consignor_portal_view_modal": {
+      "location": "Forms & Communications > Form Submissions > Agreements tab > Portal button",
+      "status": "PASSED",
+      "tests": [
+        "Portal button visible in each agreement row",
+        "Clicking Portal opens ConsignorPortalViewModal",
+        "Modal shows 'Admin View - Consignor Portal Preview' indicator",
+        "My Account section shows Personal Information",
+        "Consignment Details shows split percentage, payment method, agreement date",
+        "Account Summary shows total submissions, total paid, payments received, pending items",
+        "Password Protection status shown",
+        "Modal closes with X button",
+        "Welcome message shows consignor name"
+      ]
+    },
+    "admin_dashboard_navigation": {
+      "status": "PASSED",
+      "tests": [
+        "Four main groups visible: Team Management, Payroll & Payments, Forms & Communications, Operations & Reports",
+        "Team Management expands to show All Employees, Hours by Employee, Password Management",
+        "Password Management has Employees and Consignors tabs",
+        "Payroll & Payments shows Payroll Summary and Payment Records",
+        "Forms & Communications shows Messages and Form Submissions"
+      ]
+    }
+  }
+}

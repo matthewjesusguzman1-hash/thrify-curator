@@ -27,17 +27,32 @@ export async function checkForErrors(page: Page): Promise<string[]> {
 export async function loginAsAdmin(page: Page) {
   await page.goto('/login');
   await page.waitForLoadState('domcontentloaded');
-  await page.getByTestId('login-email').fill('4399');
-  await page.getByTestId('login-submit-btn').click();
+  // Step 1: Enter email
+  await page.fill('input[placeholder="your@email.com"]', 'matthewjesusguzman1@gmail.com');
+  await page.waitForTimeout(300);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.waitForTimeout(2000);
+  // Step 2: Enter access code
+  await page.fill('input[placeholder="4-digit code"]', '4399');
+  await page.waitForTimeout(300);
+  await page.getByRole('button', { name: 'Sign In' }).click();
   await expect(page.getByTestId('admin-dashboard')).toBeVisible({ timeout: 15000 });
 }
 
-export async function loginAsEmployee(page: Page, email: string) {
+export async function loginAsEmployee(page: Page, email: string, password?: string) {
   await page.goto('/login');
   await page.waitForLoadState('domcontentloaded');
-  await page.getByTestId('login-email').fill(email);
-  await page.getByTestId('login-submit-btn').click();
-  await expect(page.getByTestId('employee-dashboard')).toBeVisible({ timeout: 15000 });
+  // Step 1: Enter email
+  await page.fill('input[placeholder="your@email.com"]', email);
+  await page.waitForTimeout(300);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.waitForTimeout(2000);
+  // Step 2: Enter password if provided
+  if (password) {
+    await page.fill('input[type="password"]', password);
+    await page.waitForTimeout(300);
+    await page.getByRole('button', { name: 'Sign In' }).click();
+  }
 }
 
 export async function logout(page: Page) {

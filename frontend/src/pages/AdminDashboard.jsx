@@ -2387,7 +2387,8 @@ export default function AdminDashboard() {
                     data-testid="add-employee-btn"
                   >
                     <UserPlus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Add</span>
+                    <span className="hidden sm:inline">Add Employee</span>
+                    <span className="sm:hidden">Add</span>
                   </Button>
                   <Button 
                     onClick={() => setShowEditEmployee(true)}
@@ -2396,7 +2397,8 @@ export default function AdminDashboard() {
                     data-testid="edit-employee-btn"
                   >
                     <UserCog className="w-4 h-4" />
-                    <span className="hidden sm:inline">Edit</span>
+                    <span className="hidden sm:inline">Edit Employee</span>
+                    <span className="sm:hidden">Edit</span>
                   </Button>
                   <Button 
                     onClick={() => setShowRemoveEmployee(true)}
@@ -2658,7 +2660,7 @@ export default function AdminDashboard() {
               icon={Users}
               gradient="from-[#00D4FF] to-[#00A8CC]"
               defaultOpen={false}
-              badge={`${employees.length} employees`}
+              badge={`${employees.length} team members`}
               testId="group-team"
             >
               {/* All Employees Section */}
@@ -2688,6 +2690,9 @@ export default function AdminDashboard() {
                   payPeriodStart={payrollSettings.pay_period_start_date}
                 />
               </div>
+
+              {/* Password Management for Employees */}
+              <PasswordManagementSection token={localStorage.getItem("token")} />
             </DashboardGroup>
 
             {/* GROUP 2: Payroll & Payments */}
@@ -2696,7 +2701,7 @@ export default function AdminDashboard() {
               icon={DollarSign}
               gradient="from-[#8B5CF6] to-[#6D28D9]"
               defaultOpen={false}
-              badge="Financial overview"
+              badge="Track earnings & payments"
               testId="group-payroll"
             >
               {/* Payroll Summary Stats */}
@@ -2815,7 +2820,7 @@ export default function AdminDashboard() {
               icon={TrendingUp}
               gradient="from-[#FFB800] to-[#F59E0B]"
               defaultOpen={false}
-              badge="Mileage & analytics"
+              badge="Mileage, W-9s & analytics"
               testId="group-operations"
             >
               {/* Monthly Mileage Section */}
@@ -2829,17 +2834,6 @@ export default function AdminDashboard() {
                 payrollSettings={payrollSettings}
                 lastDataUpdate={lastDataUpdate}
               />
-            </DashboardGroup>
-
-            {/* GROUP 5: Password Management */}
-            <DashboardGroup
-              title="Password Management"
-              icon={Key}
-              gradient="from-purple-500 to-pink-500"
-              testId="password-management-group"
-              badge="Employees & Consignors"
-            >
-              <PasswordManagementSection token={localStorage.getItem("token")} />
             </DashboardGroup>
 
           </div>
