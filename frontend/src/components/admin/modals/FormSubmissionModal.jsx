@@ -21,6 +21,25 @@ import axios from "axios";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+// Helper to construct full photo URL
+const getPhotoUrl = (photoPath) => {
+  if (!photoPath) return '';
+  // If already a full URL, return as-is
+  if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+    return photoPath;
+  }
+  // If path already has /api prefix, use API URL directly
+  if (photoPath.startsWith('/api/')) {
+    return `${API}${photoPath}`;
+  }
+  // For old paths without /api prefix, add it
+  if (photoPath.startsWith('/uploads/')) {
+    return `${API}/api${photoPath}`;
+  }
+  // Default: prepend API URL
+  return `${API}${photoPath}`;
+};
+
 export default function FormSubmissionModal({
   submission,
   onClose,
@@ -434,15 +453,19 @@ Thrifty Curator Team`
                     {submission.photos.map((photo, idx) => (
                       <a 
                         key={idx} 
-                        href={photo} 
+                        href={getPhotoUrl(photo)} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="block aspect-square rounded-lg overflow-hidden border border-[#eee] hover:border-[#8B5CF6] transition-colors"
                       >
                         <img 
-                          src={photo} 
+                          src={getPhotoUrl(photo)} 
                           alt={`Item ${idx + 1}`}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">Image not available</div>';
+                          }}
                         />
                       </a>
                     ))}
@@ -678,15 +701,19 @@ Thrifty Curator Team`
                     {submission.photos.map((photo, idx) => (
                       <a 
                         key={idx} 
-                        href={photo} 
+                        href={getPhotoUrl(photo)} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="block aspect-square rounded-lg overflow-hidden border border-[#eee] hover:border-[#10B981] transition-colors"
                       >
                         <img 
-                          src={photo} 
+                          src={getPhotoUrl(photo)} 
                           alt={`Item ${idx + 1}`}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">Image not available</div>';
+                          }}
                         />
                       </a>
                     ))}

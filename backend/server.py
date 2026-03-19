@@ -37,8 +37,8 @@ os.makedirs(f"{UPLOAD_DIR}/consignment_photos", exist_ok=True)
 # Create the main app
 app = FastAPI(title="Thrifty Curator API", version="2.0.0")
 
-# Mount static files for uploads
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+# Mount static files for uploads (under /api prefix for ingress routing)
+app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # Health check endpoint for Kubernetes
 @app.get("/health")

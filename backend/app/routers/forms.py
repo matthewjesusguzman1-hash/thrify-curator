@@ -44,7 +44,7 @@ async def upload_consignment_photos(files: List[UploadFile] = File(...)):
             contents = await file.read()
             with open(file_path, "wb") as f:
                 f.write(contents)
-            uploaded_paths.append(f"/uploads/consignment_photos/{unique_filename}")
+            uploaded_paths.append(f"/api/uploads/consignment_photos/{unique_filename}")
         except Exception as e:
             print(f"Error saving file {file.filename}: {e}")
             continue

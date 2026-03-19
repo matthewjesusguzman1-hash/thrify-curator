@@ -1127,21 +1127,40 @@ Thrifty Curator Team`;
                       <div className="space-y-2">
                         <h4 className="font-semibold text-[#333]">Uploaded Photos ({viewingUpdate.photos.length})</h4>
                         <div className="grid grid-cols-2 gap-2">
-                          {viewingUpdate.photos.map((photo, index) => (
-                            <a 
-                              key={index} 
-                              href={photo.startsWith('http') ? photo : `${process.env.REACT_APP_BACKEND_URL}${photo}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block rounded-lg overflow-hidden border border-[#eee] hover:border-[#8B5CF6] transition-colors"
-                            >
-                              <img 
-                                src={photo.startsWith('http') ? photo : `${process.env.REACT_APP_BACKEND_URL}${photo}`}
-                                alt={`Photo ${index + 1}`}
-                                className="w-full h-24 object-cover"
-                              />
-                            </a>
-                          ))}
+                          {viewingUpdate.photos.map((photo, index) => {
+                            // Construct photo URL
+                            let photoUrl = photo;
+                            if (!photo.startsWith('http')) {
+                              const apiUrl = process.env.REACT_APP_BACKEND_URL;
+                              // Handle both old (/uploads/) and new (/api/uploads/) paths
+                              if (photo.startsWith('/api/')) {
+                                photoUrl = `${apiUrl}${photo}`;
+                              } else if (photo.startsWith('/uploads/')) {
+                                photoUrl = `${apiUrl}/api${photo}`;
+                              } else {
+                                photoUrl = `${apiUrl}${photo}`;
+                              }
+                            }
+                            return (
+                              <a 
+                                key={index} 
+                                href={photoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block rounded-lg overflow-hidden border border-[#eee] hover:border-[#8B5CF6] transition-colors"
+                              >
+                                <img 
+                                  src={photoUrl}
+                                  alt={`Photo ${index + 1}`}
+                                  className="w-full h-24 object-cover"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs p-2">Image not available</div>';
+                                  }}
+                                />
+                              </a>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
