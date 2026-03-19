@@ -8,7 +8,8 @@ import os
 import base64
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+# Use conftest.py's BASE_URL fallback pattern
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://curator-app-3.preview.emergentagent.com').rstrip('/')
 
 @pytest.fixture
 def admin_token():

@@ -26,19 +26,48 @@ test.describe('Admin Dashboard Navigation & New Features', () => {
     await expect(page.getByText('All Employees')).toBeVisible();
     await expect(page.getByText('Hours by Employee')).toBeVisible();
     
-    // Verify Password Management is under Team Management
+    // Verify Password Management is under Team Management (now collapsible)
     await expect(page.getByText('Password Management')).toBeVisible();
     await expect(page.getByText('Manage passwords for employees and consignment clients')).toBeVisible();
   });
 
-  test('Password Management section has Employees and Consignors tabs', async ({ page }) => {
+  test('Password Management section is collapsible', async ({ page }) => {
     // Expand Team Management
     await page.getByText('Team Management').first().click();
     await page.waitForTimeout(1000);
 
+    // Password Management should be visible but content hidden initially (collapsed)
+    await expect(page.getByText('Password Management')).toBeVisible();
+    await expect(page.getByTestId('password-management-section')).toBeVisible();
+    
+    // Click to expand Password Management
+    await page.getByTestId('password-management-toggle').click();
+    await page.waitForTimeout(1000);
+    
+    // Now tabs should be visible after expansion
+    await expect(page.getByTestId('tab-employees')).toBeVisible();
+    await expect(page.getByTestId('tab-consignors')).toBeVisible();
+    
+    // Click again to collapse
+    await page.getByTestId('password-management-toggle').click();
+    await page.waitForTimeout(500);
+    
+    // Tabs should be hidden after collapse
+    await expect(page.getByTestId('tab-employees')).not.toBeVisible();
+  });
+
+  test('Password Management section has Employees and Consignors tabs when expanded', async ({ page }) => {
+    // Expand Team Management
+    await page.getByText('Team Management').first().click();
+    await page.waitForTimeout(1000);
+
+    // Expand Password Management section
+    await page.getByTestId('password-management-toggle').click();
+    await page.waitForTimeout(1000);
+    
     // Password Management should show tabs
-    const employeesTab = page.locator('button', { hasText: 'Employees' });
-    const consignorsTab = page.locator('button', { hasText: 'Consignors' });
+    const employeesTab = page.getByTestId('tab-employees');
+    const consignorsTab = page.getByTestId('tab-consignors');
     
     await expect(employeesTab).toBeVisible();
     await expect(consignorsTab).toBeVisible();

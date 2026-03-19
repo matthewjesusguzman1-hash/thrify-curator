@@ -869,42 +869,97 @@ export default function EmployeeDashboard() {
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
             <div className="p-6">
-              <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E] mb-4">Recent Shifts</h2>
-              {entries.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No shifts recorded yet</p>
-              ) : (
-                <div className="space-y-3" data-testid="shifts-list">
-                  {entries.slice(0, 5).map((entry) => (
-                    <div 
-                      key={entry.id} 
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                      data-testid={`shift-entry-${entry.id}`}
-                    >
-                      <div>
-                        <p className="font-medium text-[#1A1A2E]">
-                          {formatDateTime(entry.clock_in)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {entry.clock_out ? `Out: ${formatDateTime(entry.clock_out)}` : 'In progress...'}
-                        </p>
+              <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E] mb-4">
+                {(() => {
+                  if (!summary?.period_start || !summary?.period_end) return "Recent Shifts";
+                  const periodStart = new Date(summary.period_start);
+                  const periodEnd = new Date(summary.period_end);
+                  // Check if any entries in current period
+                  const currentPeriodEntries = entries.filter(entry => {
+                    const clockIn = new Date(entry.clock_in);
+                    return clockIn >= periodStart && clockIn <= periodEnd;
+                  });
+                  if (currentPeriodEntries.length > 0) {
+                    return `Current Pay Period Shifts (${periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+                  }
+                  // Show previous period label
+                  const prevStart = new Date(periodStart);
+                  prevStart.setDate(prevStart.getDate() - 14);
+                  const prevEnd = new Date(periodEnd);
+                  prevEnd.setDate(prevEnd.getDate() - 14);
+                  return `Previous Pay Period Shifts (${prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+                })()}
+              </h2>
+              {(() => {
+                // Get shifts for display based on pay period
+                let shiftsToShow = [];
+                if (summary?.period_start && summary?.period_end) {
+                  const periodStart = new Date(summary.period_start);
+                  const periodEnd = new Date(summary.period_end);
+                  
+                  // Get current period entries
+                  const currentPeriodEntries = entries.filter(entry => {
+                    const clockIn = new Date(entry.clock_in);
+                    return clockIn >= periodStart && clockIn <= periodEnd;
+                  });
+                  
+                  if (currentPeriodEntries.length > 0) {
+                    shiftsToShow = currentPeriodEntries;
+                  } else {
+                    // Get previous period entries
+                    const prevStart = new Date(periodStart);
+                    prevStart.setDate(prevStart.getDate() - 14);
+                    const prevEnd = new Date(periodEnd);
+                    prevEnd.setDate(prevEnd.getDate() - 14);
+                    
+                    shiftsToShow = entries.filter(entry => {
+                      const clockIn = new Date(entry.clock_in);
+                      return clockIn >= prevStart && clockIn <= prevEnd;
+                    });
+                  }
+                } else {
+                  shiftsToShow = entries.slice(0, 5);
+                }
+                
+                // Sort by clock_in descending
+                shiftsToShow.sort((a, b) => new Date(b.clock_in) - new Date(a.clock_in));
+                
+                return shiftsToShow.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">No shifts recorded for this pay period</p>
+                ) : (
+                  <div className="space-y-3" data-testid="shifts-list">
+                    {shiftsToShow.map((entry) => (
+                      <div 
+                        key={entry.id} 
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                        data-testid={`shift-entry-${entry.id}`}
+                      >
+                        <div>
+                          <p className="font-medium text-[#1A1A2E]">
+                            {formatDateTime(entry.clock_in)}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {entry.clock_out ? `Out: ${formatDateTime(entry.clock_out)}` : 'In progress...'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          {entry.clock_out ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#00D4FF]/10 rounded-full text-sm font-medium text-[#0891B2]">
+                              <Clock className="w-3 h-3" />
+                              {formatHoursToHMS(entry.total_hours)}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 rounded-full text-sm font-medium text-green-700">
+                              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                              Active
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        {entry.clock_out ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#00D4FF]/10 rounded-full text-sm font-medium text-[#0891B2]">
-                            <Clock className="w-3 h-3" />
-                            {formatHoursToHMS(entry.total_hours)}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 rounded-full text-sm font-medium text-green-700">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            Active
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

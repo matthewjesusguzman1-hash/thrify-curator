@@ -251,35 +251,91 @@ export default function EmployeePortalViewModal({
               <div className="bg-white rounded-2xl overflow-hidden">
                 <div className="h-1 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
                 <div className="p-6">
-                  <h3 className="font-playfair text-lg font-semibold text-[#333] mb-4">Recent Shifts</h3>
-                  {portalData.entries && portalData.entries.length > 0 ? (
-                    <div className="space-y-3">
-                      {portalData.entries.slice(0, 5).map((entry, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-[#F9F6F7] rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-[#8B5CF6]/20 rounded-lg flex items-center justify-center">
-                              <Clock className="w-5 h-5 text-[#8B5CF6]" />
+                  <h3 className="font-playfair text-lg font-semibold text-[#333] mb-4">
+                    {(() => {
+                      const entries = portalData.entries || [];
+                      const period = calculateBiweeklyPeriod();
+                      if (!period) return "Recent Shifts";
+                      
+                      const currentPeriodEntries = entries.filter(entry => {
+                        const clockIn = new Date(entry.clock_in);
+                        return clockIn >= period.start && clockIn <= period.end;
+                      });
+                      
+                      if (currentPeriodEntries.length > 0) {
+                        return `Current Pay Period Shifts (${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+                      }
+                      
+                      // Show previous period label
+                      const prevStart = new Date(period.start);
+                      prevStart.setDate(prevStart.getDate() - 14);
+                      const prevEnd = new Date(period.end);
+                      prevEnd.setDate(prevEnd.getDate() - 14);
+                      return `Previous Pay Period Shifts (${prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+                    })()}
+                  </h3>
+                  {(() => {
+                    const entries = portalData.entries || [];
+                    const period = calculateBiweeklyPeriod();
+                    let shiftsToShow = [];
+                    
+                    if (period) {
+                      // Get current period entries
+                      const currentPeriodEntries = entries.filter(entry => {
+                        const clockIn = new Date(entry.clock_in);
+                        return clockIn >= period.start && clockIn <= period.end;
+                      });
+                      
+                      if (currentPeriodEntries.length > 0) {
+                        shiftsToShow = currentPeriodEntries;
+                      } else {
+                        // Get previous period entries
+                        const prevStart = new Date(period.start);
+                        prevStart.setDate(prevStart.getDate() - 14);
+                        const prevEnd = new Date(period.end);
+                        prevEnd.setDate(prevEnd.getDate() - 14);
+                        
+                        shiftsToShow = entries.filter(entry => {
+                          const clockIn = new Date(entry.clock_in);
+                          return clockIn >= prevStart && clockIn <= prevEnd;
+                        });
+                      }
+                    } else {
+                      shiftsToShow = entries.slice(0, 5);
+                    }
+                    
+                    // Sort by clock_in descending
+                    shiftsToShow.sort((a, b) => new Date(b.clock_in) - new Date(a.clock_in));
+                    
+                    return shiftsToShow.length > 0 ? (
+                      <div className="space-y-3">
+                        {shiftsToShow.map((entry, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 bg-[#F9F6F7] rounded-xl">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-[#8B5CF6]/20 rounded-lg flex items-center justify-center">
+                                <Clock className="w-5 h-5 text-[#8B5CF6]" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-[#333]">{formatDateTime(entry.clock_in)}</p>
+                                <p className="text-sm text-[#888]">
+                                  {entry.clock_out ? `→ ${formatDateTime(entry.clock_out)}` : 'Still active'}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium text-[#333]">{formatDateTime(entry.clock_in)}</p>
-                              <p className="text-sm text-[#888]">
-                                {entry.clock_out ? `→ ${formatDateTime(entry.clock_out)}` : 'Still active'}
-                              </p>
-                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              entry.clock_out 
+                                ? 'bg-[#8B5CF6]/20 text-[#6D28D9]' 
+                                : 'bg-green-100 text-green-700'
+                            }`}>
+                              {entry.clock_out ? formatHoursToHMS(entry.total_hours) : 'Active'}
+                            </span>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            entry.clock_out 
-                              ? 'bg-[#8B5CF6]/20 text-[#6D28D9]' 
-                              : 'bg-green-100 text-green-700'
-                          }`}>
-                            {entry.clock_out ? formatHoursToHMS(entry.total_hours) : 'Active'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-[#888] py-4">No shifts recorded yet</p>
-                  )}
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-[#888] py-4">No shifts recorded for this pay period</p>
+                    );
+                  })()}
                 </div>
               </div>
 
