@@ -3,9 +3,7 @@
   "appName": "Thrifty Curator",
   "webDir": "build",
   "server": {
-    "androidScheme": "https",
-    "url": "https://resale-portal-2.preview.emergentagent.com",
-    "cleartext": false
+    "androidScheme": "https"
   },
   "plugins": {
     "PushNotifications": {
