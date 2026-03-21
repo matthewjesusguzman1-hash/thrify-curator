@@ -10,6 +10,7 @@
     "@capacitor/haptics": "^8.0.1",
     "@capacitor/local-notifications": "5",
     "@capacitor/push-notifications": "5",
+    "@capawesome/capacitor-badge": "^8.0.1",
     "@capgo/capacitor-native-biometric": "^8.4.2",
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.8",

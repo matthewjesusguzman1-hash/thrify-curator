@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import haptics from "@/lib/haptics";
+import cache, { CACHE_KEYS } from "@/lib/offlineCache";
+import { useOnlineStatus } from "@/hooks/useOffline";
+import { OfflineBanner, CacheStatusBadge } from "@/components/OfflineIndicator";
 import { 
   Clock, 
   LogOut, 
@@ -61,6 +64,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
+  const { isOnline, isOffline } = useOnlineStatus();
   const [user, setUser] = useState(null);
   const [clockedIn, setClockedIn] = useState(false);
   const [currentEntry, setCurrentEntry] = useState(null);
@@ -79,6 +83,8 @@ export default function EmployeeDashboard() {
   const [loading, setLoading] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [locationStatus, setLocationStatus] = useState({ checking: false, withinRange: null, distance: null, denied: false });
+  const [isFromCache, setIsFromCache] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   
   // W-9 state
   const [w9Status, setW9Status] = useState(null);
@@ -260,7 +266,22 @@ export default function EmployeeDashboard() {
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   });
 
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
+    // If offline and not forcing refresh, try to use cached data
+    if (isOffline && !forceRefresh) {
+      const cachedShifts = cache.get(CACHE_KEYS.EMPLOYEE_SHIFTS);
+      const cachedSummary = cache.get(CACHE_KEYS.EMPLOYEE_SUMMARY);
+      
+      if (cachedShifts || cachedSummary) {
+        if (cachedShifts) setEntries(cachedShifts);
+        if (cachedSummary) setSummary(cachedSummary);
+        setIsFromCache(true);
+        const meta = cache.getWithMeta(CACHE_KEYS.EMPLOYEE_SHIFTS);
+        if (meta) setLastUpdated(new Date(meta.timestamp));
+        return;
+      }
+    }
+    
     try {
       const [statusRes, entriesRes, summaryRes, w9Res] = await Promise.all([
         axios.get(`${API}/time/status`, getAuthHeader()),
@@ -274,11 +295,35 @@ export default function EmployeeDashboard() {
       setEntries(entriesRes.data);
       setSummary(summaryRes.data);
       setW9Status(w9Res.data);
+      
+      // Cache the data for offline use
+      cache.set(CACHE_KEYS.EMPLOYEE_SHIFTS, entriesRes.data);
+      cache.set(CACHE_KEYS.EMPLOYEE_SUMMARY, summaryRes.data);
+      cache.set(CACHE_KEYS.EMPLOYEE_PROFILE, { 
+        clocked_in: statusRes.data.clocked_in, 
+        entry: statusRes.data.entry 
+      });
+      
+      setIsFromCache(false);
+      setLastUpdated(new Date());
     } catch (error) {
       if (error.response?.status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         navigate("/login");
+      } else {
+        // On error, try to use cached data
+        const cachedShifts = cache.get(CACHE_KEYS.EMPLOYEE_SHIFTS, true); // Ignore expiry
+        const cachedSummary = cache.get(CACHE_KEYS.EMPLOYEE_SUMMARY, true);
+        
+        if (cachedShifts || cachedSummary) {
+          if (cachedShifts) setEntries(cachedShifts);
+          if (cachedSummary) setSummary(cachedSummary);
+          setIsFromCache(true);
+          const meta = cache.getWithMeta(CACHE_KEYS.EMPLOYEE_SHIFTS);
+          if (meta) setLastUpdated(new Date(meta.timestamp));
+          toast.error("Using cached data - couldn't connect to server");
+        }
       }
     }
   };
@@ -625,6 +670,9 @@ export default function EmployeeDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard">
+      {/* Offline Banner */}
+      <OfflineBanner />
+      
       {/* Header */}
       <header 
         className="bg-white/10 backdrop-blur-md border-b border-white/10 px-4 pb-3" 
@@ -878,27 +926,35 @@ export default function EmployeeDashboard() {
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
             <div className="p-6">
-              <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E] mb-4">
-                {(() => {
-                  if (!summary?.period_start || !summary?.period_end) return "Recent Shifts";
-                  const periodStart = new Date(summary.period_start);
-                  const periodEnd = new Date(summary.period_end);
-                  // Check if any entries in current period
-                  const currentPeriodEntries = entries.filter(entry => {
-                    const clockIn = new Date(entry.clock_in);
-                    return clockIn >= periodStart && clockIn <= periodEnd;
-                  });
-                  if (currentPeriodEntries.length > 0) {
-                    return `Current Pay Period Shifts (${periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
-                  }
-                  // Show previous period label
-                  const prevStart = new Date(periodStart);
-                  prevStart.setDate(prevStart.getDate() - 14);
-                  const prevEnd = new Date(periodEnd);
-                  prevEnd.setDate(prevEnd.getDate() - 14);
-                  return `Previous Pay Period Shifts (${prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
-                })()}
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E]">
+                  {(() => {
+                    if (!summary?.period_start || !summary?.period_end) return "Recent Shifts";
+                    const periodStart = new Date(summary.period_start);
+                    const periodEnd = new Date(summary.period_end);
+                    // Check if any entries in current period
+                    const currentPeriodEntries = entries.filter(entry => {
+                      const clockIn = new Date(entry.clock_in);
+                      return clockIn >= periodStart && clockIn <= periodEnd;
+                    });
+                    if (currentPeriodEntries.length > 0) {
+                      return `Current Pay Period Shifts (${periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+                    }
+                    // Show previous period label
+                    const prevStart = new Date(periodStart);
+                    prevStart.setDate(prevStart.getDate() - 14);
+                    const prevEnd = new Date(periodEnd);
+                    prevEnd.setDate(prevEnd.getDate() - 14);
+                    return `Previous Pay Period Shifts (${prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+                  })()}
+                </h2>
+                <CacheStatusBadge 
+                  isFromCache={isFromCache} 
+                  lastUpdated={lastUpdated}
+                  onRefresh={() => fetchData(true)}
+                  loading={loading}
+                />
+              </div>
               {(() => {
                 // Get shifts for display based on pay period
                 let shiftsToShow = [];
