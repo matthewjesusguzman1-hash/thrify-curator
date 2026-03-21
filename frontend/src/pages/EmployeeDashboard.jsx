@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import haptics from "@/lib/haptics";
 import { 
   Clock, 
   LogOut, 
@@ -460,10 +461,12 @@ export default function EmployeeDashboard() {
           // Location verified - proceed with clock in
           try {
             await axios.post(`${API}/time/clock`, { action: "in" }, getAuthHeader());
+            haptics.heavy(); // Strong haptic for clock in
             toast.success("Clocked in!");
             fetchData();
             setElapsedTime(0);
           } catch (error) {
+            haptics.error(); // Error haptic
             toast.error(error.response?.data?.detail || "Failed to clock in");
           } finally {
             setLoading(false);
@@ -495,10 +498,16 @@ export default function EmployeeDashboard() {
     // For clock out, admin clock in, or admin clock out - no location check needed
     try {
       await axios.post(`${API}/time/clock`, { action }, getAuthHeader());
+      if (action === "in") {
+        haptics.heavy(); // Strong haptic for clock in
+      } else {
+        haptics.success(); // Success haptic for clock out
+      }
       toast.success(action === "in" ? "Clocked in!" : "Clocked out!");
       fetchData();
       setElapsedTime(0);
     } catch (error) {
+      haptics.error(); // Error haptic
       toast.error(error.response?.data?.detail || `Failed to clock ${action}`);
     } finally {
       setLoading(false);

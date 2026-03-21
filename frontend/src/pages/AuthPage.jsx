@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import axios from "axios";
 import useBiometricAuth from "@/hooks/useBiometricAuth";
+import haptics from "@/lib/haptics";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
@@ -177,6 +178,7 @@ export default function AuthPage() {
         await setCredentials('employee_portal', trimmedInput, password);
       }
       
+      haptics.success(); // Success haptic on login
       toast.success(`Welcome back, ${user.name}!`);
       
       if (user.role === "admin") {
@@ -185,6 +187,7 @@ export default function AuthPage() {
         navigate("/dashboard");
       }
     } catch (error) {
+      haptics.error(); // Error haptic on login failure
       // Handle error - ensure we display a string, not an object
       let errorMessage = "Login failed";
       if (error.response?.data?.detail) {

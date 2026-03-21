@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import useBiometricAuth from "@/hooks/useBiometricAuth";
+import haptics from "@/lib/haptics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -428,9 +429,11 @@ export default function ConsignmentAgreementForm() {
         // Load agreement data
         await loadAgreementData(addItemsEmail);
         setLoginPassword("");
+        haptics.success(); // Success haptic on login
         toast.success("Login successful!");
       }
     } catch (error) {
+      haptics.error(); // Error haptic on login failure
       toast.error(error.response?.data?.detail || "Invalid password");
     } finally {
       setCheckingEmail(false);
@@ -561,8 +564,10 @@ export default function ConsignmentAgreementForm() {
       if (hasPaymentUpdate) successMsg.push("Payment method updated");
       if (hasProfitSplitUpdate) successMsg.push("Profit split updated");
       if (hasAdditionalInfo || hasPhotos) successMsg.push("Additional info saved");
+      haptics.success(); // Success haptic on submission
       toast.success(successMsg.join(" & ") + " successfully!");
     } catch (error) {
+      haptics.error(); // Error haptic on failure
       toast.error(error.response?.data?.detail || "Failed to submit");
     } finally {
       setLoading(false);
