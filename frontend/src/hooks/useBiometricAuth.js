@@ -87,6 +87,7 @@ export const useBiometricAuth = () => {
       // Fallback to localStorage for web (less secure but functional)
       try {
         localStorage.setItem(`bio_cred_${server}`, JSON.stringify({ username, password }));
+        localStorage.setItem(`bio_has_cred_${server}`, 'true'); // Flag for checking
         return { success: true };
       } catch (error) {
         return { success: false, error: error.message };
@@ -99,6 +100,8 @@ export const useBiometricAuth = () => {
         username,
         password,
       });
+      // Set flag so we know credentials exist without needing to verify
+      localStorage.setItem(`bio_has_cred_${server}`, 'true');
       return { success: true };
     } catch (error) {
       console.log('Failed to store credentials:', error);
@@ -132,6 +135,9 @@ export const useBiometricAuth = () => {
 
   // Delete stored credentials
   const deleteCredentials = useCallback(async (server) => {
+    // Always remove the flag
+    localStorage.removeItem(`bio_has_cred_${server}`);
+    
     if (!isNative() || !NativeBiometric) {
       localStorage.removeItem(`bio_cred_${server}`);
       return { success: true };
@@ -146,9 +152,34 @@ export const useBiometricAuth = () => {
     }
   }, []);
 
-  // Perform biometric login - verify identity then get stored credentials
+  // Check if credentials exist without triggering biometric prompt
+  const hasStoredCredentials = useCallback(async (server) => {
+    if (!isNative() || !NativeBiometric) {
+      // Check localStorage for web fallback
+      const stored = localStorage.getItem(`bio_cred_${server}`);
+      return !!stored;
+    }
+    
+    try {
+      // Try to check if credentials exist - this should NOT trigger biometric prompt
+      // Unfortunately NativeBiometric.getCredentials requires verification first
+      // So we use a flag in localStorage to track if user has saved credentials
+      const hasCredFlag = localStorage.getItem(`bio_has_cred_${server}`);
+      return hasCredFlag === 'true';
+    } catch (error) {
+      return false;
+    }
+  }, []);
+
+  // Perform biometric login - ONLY if credentials exist, verify identity then get stored credentials
   const biometricLogin = useCallback(async (server, options = {}) => {
-    // First verify identity
+    // FIRST check if we have stored credentials before prompting for biometrics
+    const hasCredentials = await hasStoredCredentials(server);
+    if (!hasCredentials) {
+      return { success: false, error: 'No saved credentials', needsPassword: true };
+    }
+    
+    // Now verify identity (this triggers Face ID/Touch ID prompt)
     const verifyResult = await verifyIdentity(options);
     if (!verifyResult.success) {
       return verifyResult;
@@ -164,7 +195,7 @@ export const useBiometricAuth = () => {
       success: true, 
       credentials: credResult.credentials 
     };
-  }, [verifyIdentity, getCredentials]);
+  }, [verifyIdentity, getCredentials, hasStoredCredentials]);
 
   return {
     isNative: isNative(),
@@ -176,6 +207,7 @@ export const useBiometricAuth = () => {
     getCredentials,
     deleteCredentials,
     biometricLogin,
+    hasStoredCredentials,
   };
 };
 
