@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://curator-app-3.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://resale-portal-2.preview.emergentagent.com';
 
 test.describe('OSRM Mileage Tracking Integration', () => {
   

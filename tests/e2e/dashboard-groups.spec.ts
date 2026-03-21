@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts, removeEmergentBadge } from '../fixtures/helpers';
 
-const BASE_URL = 'https://curator-app-3.preview.emergentagent.com';
+const BASE_URL = 'https://resale-portal-2.preview.emergentagent.com';
 
 test.describe('Admin Dashboard - Collapsible Groups', () => {
   test.beforeEach(async ({ page }) => {
