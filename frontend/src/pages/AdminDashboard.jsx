@@ -82,6 +82,7 @@ import PortalW9Modal from "@/components/admin/modals/PortalW9Modal";
 import EmployeeShiftsModal from "@/components/admin/modals/EmployeeShiftsModal";
 import EditEmployeeModal from "@/components/admin/modals/EditEmployeeModal";
 import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
+import liveActivities from "@/lib/liveActivities";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -913,18 +914,31 @@ export default function AdminDashboard() {
   const fetchEmployeeClockStatuses = useCallback(async () => {
     try {
       const statuses = {};
+      const clockedInEmployees = [];
+      
       // Fetch clock status for each employee
       await Promise.all(
         employees.map(async (emp) => {
           try {
             const response = await axios.get(`${API}/admin/employee/${emp.id}/clock-status`, getAuthHeader());
             statuses[emp.id] = response.data.is_clocked_in;
+            if (response.data.is_clocked_in) {
+              clockedInEmployees.push(emp.name);
+            }
           } catch {
             statuses[emp.id] = false;
           }
         })
       );
       setEmployeeClockStatuses(statuses);
+      
+      // Update Live Activity with clocked-in employees count
+      if (clockedInEmployees.length > 0) {
+        liveActivities.updateAdminAlerts(clockedInEmployees.length, clockedInEmployees);
+      } else {
+        // End admin alerts if no one is clocked in
+        liveActivities.endAdminAlerts();
+      }
     } catch (error) {
       console.error("Failed to fetch employee clock statuses:", error);
     }

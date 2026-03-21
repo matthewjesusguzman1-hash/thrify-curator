@@ -5,6 +5,7 @@ import haptics from "@/lib/haptics";
 import cache, { CACHE_KEYS } from "@/lib/offlineCache";
 import { useOnlineStatus } from "@/hooks/useOffline";
 import { OfflineBanner, CacheStatusBadge } from "@/components/OfflineIndicator";
+import liveActivities from "@/lib/liveActivities";
 import { 
   Clock, 
   LogOut, 
@@ -145,10 +146,22 @@ export default function EmployeeDashboard() {
         const now = new Date();
         const elapsed = Math.floor((now - clockInTime) / 1000);
         setElapsedTime(elapsed);
+        
+        // Update Live Activity earnings estimate every minute
+        if (elapsed % 60 === 0) {
+          const hoursWorked = elapsed / 3600;
+          const hourlyRate = summary?.hourly_rate || 15.00;
+          const currentEarnings = hoursWorked * hourlyRate;
+          liveActivities.updateShiftTimer(currentEarnings);
+        }
       }, 1000);
+      
+      // If app opens and employee is already clocked in, resume the Live Activity
+      const hourlyRate = summary?.hourly_rate || 15.00;
+      liveActivities.startShiftTimer(user?.name || 'Employee', currentEntry.clock_in, hourlyRate);
     }
     return () => clearInterval(interval);
-  }, [clockedIn, currentEntry]);
+  }, [clockedIn, currentEntry, user?.name, summary?.hourly_rate]);
 
   // Location monitoring effect - checks location every 30 seconds while clocked in
   useEffect(() => {
@@ -507,6 +520,9 @@ export default function EmployeeDashboard() {
           try {
             await axios.post(`${API}/time/clock`, { action: "in" }, getAuthHeader());
             haptics.heavy(); // Strong haptic for clock in
+            // Start Live Activity for shift timer
+            const hourlyRate = summary?.hourly_rate || 15.00;
+            liveActivities.startShiftTimer(user?.name || 'Employee', new Date().toISOString(), hourlyRate);
             toast.success("Clocked in!");
             fetchData();
             setElapsedTime(0);
@@ -545,8 +561,16 @@ export default function EmployeeDashboard() {
       await axios.post(`${API}/time/clock`, { action }, getAuthHeader());
       if (action === "in") {
         haptics.heavy(); // Strong haptic for clock in
+        // Start Live Activity for shift timer
+        const hourlyRate = summary?.hourly_rate || 15.00;
+        liveActivities.startShiftTimer(user?.name || 'Employee', new Date().toISOString(), hourlyRate);
       } else {
         haptics.success(); // Success haptic for clock out
+        // End Live Activity with final stats
+        const hoursWorked = elapsedTime / 3600;
+        const hourlyRate = summary?.hourly_rate || 15.00;
+        const earnings = hoursWorked * hourlyRate;
+        liveActivities.endShiftTimer(hoursWorked, earnings);
       }
       toast.success(action === "in" ? "Clocked in!" : "Clocked out!");
       fetchData();
