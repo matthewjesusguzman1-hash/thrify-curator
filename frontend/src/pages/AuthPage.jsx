@@ -184,13 +184,33 @@ export default function AuthPage() {
       localStorage.setItem("sessionStart", Date.now().toString());
       
       // Save credentials for biometric login if in native app
-      // Use password or admin code as the credential
-      const credentialToSave = password || adminCode;
-      console.log('Checking biometric save conditions:', { isNative, hasCredential: !!credentialToSave, credential: credentialToSave ? '***' : 'none' });
+      // Determine which credential was used for login
+      let credentialToSave = null;
+      let emailToSave = trimmedInput;
+      
+      if (isOwnerCode) {
+        // Owner code login - save the mapped email and the owner code
+        credentialToSave = trimmedInput; // The 4-digit code they entered
+        emailToSave = OWNER_CODES[trimmedInput]; // The mapped email
+      } else if (showAdminCode && adminCode) {
+        credentialToSave = adminCode;
+      } else if (showPasswordField && password) {
+        credentialToSave = password;
+      }
+      
+      console.log('Checking biometric save conditions:', { 
+        isNative, 
+        hasCredential: !!credentialToSave, 
+        isOwnerCode,
+        showAdminCode,
+        showPasswordField,
+        hasPassword: !!password,
+        hasAdminCode: !!adminCode
+      });
       
       if (isNative && credentialToSave) {
-        console.log('Saving credentials for biometric login...', { email: trimmedInput });
-        const saveResult = await setCredentials('employee_portal', trimmedInput, credentialToSave);
+        console.log('Saving credentials for biometric login...', { email: emailToSave });
+        const saveResult = await setCredentials('employee_portal', emailToSave, credentialToSave);
         console.log('Credential save result:', saveResult);
         if (saveResult.success) {
           toast.success('Face ID enabled for future logins!', { duration: 2000 });
