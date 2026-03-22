@@ -37,11 +37,16 @@ export default function AuthPage() {
   const [resetSent, setResetSent] = useState(false);
   
   // Biometric auth hook
-  const { isNative, isAvailable: biometricAvailable, biometricLogin, setCredentials } = useBiometricAuth();
+  const { isNative, isAvailable: biometricAvailable, isLoading: biometricLoading, biometricLogin, setCredentials } = useBiometricAuth();
 
   // Check for existing session on mount
   useEffect(() => {
     const checkExistingSession = async () => {
+      // Wait for biometric check to complete
+      if (biometricLoading) {
+        return;
+      }
+      
       const token = localStorage.getItem("token");
       const userData = localStorage.getItem("user");
       
@@ -103,7 +108,7 @@ export default function AuthPage() {
     };
 
     checkExistingSession();
-  }, [navigate, biometricAvailable, isNative, biometricLogin]);
+  }, [navigate, biometricAvailable, biometricLoading, isNative, biometricLogin]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

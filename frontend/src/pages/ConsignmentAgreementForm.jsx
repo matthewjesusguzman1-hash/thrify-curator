@@ -129,7 +129,7 @@ export default function ConsignmentAgreementForm() {
   const [passwordResetSent, setPasswordResetSent] = useState(false);
   
   // Biometric auth hook
-  const { isNative, isAvailable: biometricAvailable, biometryType, biometricLogin, setCredentials } = useBiometricAuth();
+  const { isNative, isAvailable: biometricAvailable, isLoading: biometricLoading, biometryType, biometricLogin, setCredentials } = useBiometricAuth();
   
   // Confirmation dialog state
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
@@ -138,6 +138,49 @@ export default function ConsignmentAgreementForm() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Auto-login with biometrics on page load
+  useEffect(() => {
+    const tryBiometricAutoLogin = async () => {
+      // Wait for biometric check to complete
+      if (biometricLoading) return;
+      
+      // Only try if biometrics available and in native app
+      if (!biometricAvailable || !isNative) return;
+      
+      // Only auto-login if we're on the "Add Items" flow initial state
+      if (showAddItems || showInitialChoice || addItemsAgreement) return;
+      
+      const bioResult = await biometricLogin('consignment_portal', {
+        reason: 'Login to your consignment account',
+        title: 'Consignment Portal',
+      });
+      
+      if (bioResult.success && bioResult.credentials) {
+        // Use stored credentials to login
+        try {
+          const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
+            email: bioResult.credentials.username,
+            password: bioResult.credentials.password
+          });
+          
+          if (loginResponse.data.success) {
+            // Set the email and load agreement data
+            setAddItemsEmail(bioResult.credentials.username);
+            setShowAddItems(true);
+            setShowInitialChoice(true);
+            await loadAgreementData(bioResult.credentials.username);
+            toast.success('Welcome back!');
+          }
+        } catch (loginError) {
+          // Credentials might be outdated, let user login manually
+          console.log('Stored credentials invalid');
+        }
+      }
+    };
+    
+    tryBiometricAutoLogin();
+  }, [biometricLoading, biometricAvailable, isNative, showAddItems, showInitialChoice, addItemsAgreement]);
 
   // Photo upload handler
   const handlePhotoUpload = async (files, isUpdate = false) => {
