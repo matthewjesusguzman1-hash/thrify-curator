@@ -7,6 +7,9 @@
     "url": "https://curator-app-3.preview.emergentagent.com",
     "cleartext": false
   },
+  "ios": {
+    "contentInset": "automatic"
+  },
   "plugins": {
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]
