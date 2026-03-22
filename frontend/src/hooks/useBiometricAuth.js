@@ -146,20 +146,22 @@ export const useBiometricAuth = () => {
     }
   }, []);
 
-  // Perform biometric login - verify identity then get stored credentials
+  // Perform biometric login - check for credentials first, then verify identity
   const biometricLogin = useCallback(async (server, options = {}) => {
-    // First verify identity
+    // FIRST check if we have stored credentials
+    const credResult = await getCredentials(server);
+    if (!credResult.success) {
+      // No credentials stored - user needs to login with password first
+      return { success: false, error: 'No saved credentials', needsPassword: true };
+    }
+
+    // We have credentials - now verify identity with Face ID/Touch ID
     const verifyResult = await verifyIdentity(options);
     if (!verifyResult.success) {
       return verifyResult;
     }
 
-    // Then get stored credentials
-    const credResult = await getCredentials(server);
-    if (!credResult.success) {
-      return { success: false, error: 'No saved credentials', needsPassword: true };
-    }
-
+    // Both checks passed - return the credentials
     return { 
       success: true, 
       credentials: credResult.credentials 
