@@ -83,12 +83,16 @@ export const useBiometricAuth = () => {
 
   // Store credentials securely
   const setCredentials = useCallback(async (server, username, password) => {
+    console.log('setCredentials called:', { server, username, isNative: isNative(), hasPlugin: !!NativeBiometric });
+    
     if (!isNative() || !NativeBiometric) {
       // Fallback to localStorage for web (less secure but functional)
       try {
         localStorage.setItem(`bio_cred_${server}`, JSON.stringify({ username, password }));
+        console.log('Credentials saved to localStorage');
         return { success: true };
       } catch (error) {
+        console.log('Failed to save to localStorage:', error);
         return { success: false, error: error.message };
       }
     }
@@ -99,19 +103,23 @@ export const useBiometricAuth = () => {
         username,
         password,
       });
+      console.log('Credentials saved to native keychain');
       return { success: true };
     } catch (error) {
-      console.log('Failed to store credentials:', error);
+      console.log('Failed to store credentials in keychain:', error);
       return { success: false, error: error.message };
     }
   }, []);
 
-  // Get stored credentials
+  // Get stored credentials (checks if credentials exist, doesn't require biometric yet)
   const getCredentials = useCallback(async (server) => {
+    console.log('getCredentials called:', { server, isNative: isNative(), hasPlugin: !!NativeBiometric });
+    
     if (!isNative() || !NativeBiometric) {
       // Fallback to localStorage for web
       try {
         const stored = localStorage.getItem(`bio_cred_${server}`);
+        console.log('localStorage check:', { hasStored: !!stored });
         if (stored) {
           return { success: true, credentials: JSON.parse(stored) };
         }
@@ -123,9 +131,10 @@ export const useBiometricAuth = () => {
 
     try {
       const credentials = await NativeBiometric.getCredentials({ server });
+      console.log('Native keychain credentials found');
       return { success: true, credentials };
     } catch (error) {
-      console.log('Failed to get credentials:', error);
+      console.log('Failed to get credentials from keychain:', error);
       return { success: false, error: error.message };
     }
   }, []);
@@ -148,25 +157,34 @@ export const useBiometricAuth = () => {
 
   // Perform biometric login - check for credentials first, then verify identity
   const biometricLogin = useCallback(async (server, options = {}) => {
+    console.log('biometricLogin called:', { server, isAvailable, isNative: isNative() });
+    
     // FIRST check if we have stored credentials
     const credResult = await getCredentials(server);
+    console.log('Credential check result:', credResult);
+    
     if (!credResult.success) {
       // No credentials stored - user needs to login with password first
+      console.log('No stored credentials found');
       return { success: false, error: 'No saved credentials', needsPassword: true };
     }
 
     // We have credentials - now verify identity with Face ID/Touch ID
+    console.log('Credentials found, verifying identity...');
     const verifyResult = await verifyIdentity(options);
+    console.log('Verify identity result:', verifyResult);
+    
     if (!verifyResult.success) {
       return verifyResult;
     }
 
     // Both checks passed - return the credentials
+    console.log('Biometric login successful');
     return { 
       success: true, 
       credentials: credResult.credentials 
     };
-  }, [verifyIdentity, getCredentials]);
+  }, [isAvailable, verifyIdentity, getCredentials]);
 
   return {
     isNative: isNative(),

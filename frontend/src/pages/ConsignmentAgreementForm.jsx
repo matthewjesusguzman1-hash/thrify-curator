@@ -146,19 +146,29 @@ export default function ConsignmentAgreementForm() {
       if (biometricLoading) return;
       
       // Only try if biometrics available and in native app
-      if (!biometricAvailable || !isNative) return;
+      if (!biometricAvailable || !isNative) {
+        console.log('Biometric auto-login skipped:', { biometricAvailable, isNative });
+        return;
+      }
       
       // Only auto-login if we're on the "Add Items" flow initial state
-      if (showAddItems || showInitialChoice || addItemsAgreement) return;
+      if (showAddItems || showInitialChoice || addItemsAgreement) {
+        console.log('Already in a flow, skipping auto-login');
+        return;
+      }
       
+      console.log('Attempting biometric auto-login for consignment portal...');
       const bioResult = await biometricLogin('consignment_portal', {
         reason: 'Login to your consignment account',
         title: 'Consignment Portal',
       });
       
+      console.log('Biometric auto-login result:', bioResult);
+      
       if (bioResult.success && bioResult.credentials) {
         // Use stored credentials to login
         try {
+          console.log('Using stored credentials to login...');
           const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
             email: bioResult.credentials.username,
             password: bioResult.credentials.password
@@ -174,8 +184,11 @@ export default function ConsignmentAgreementForm() {
           }
         } catch (loginError) {
           // Credentials might be outdated, let user login manually
-          console.log('Stored credentials invalid');
+          console.log('Stored credentials invalid:', loginError);
+          toast.error('Saved credentials expired. Please login again.');
         }
+      } else if (bioResult.needsPassword) {
+        console.log('No saved credentials - user needs to login with password first');
       }
     };
     
