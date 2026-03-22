@@ -1,18 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // Check if running in Capacitor native app
-const isNative = () => {
-  return window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative;
+const checkIsNative = () => {
+  const result = window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative || false;
+  console.log('checkIsNative:', result, 'Capacitor:', !!window.Capacitor);
+  return result;
 };
 
 // Dynamically import the biometric plugin only in native context
 let NativeBiometric = null;
 
 const loadBiometricPlugin = async () => {
-  if (isNative() && !NativeBiometric) {
+  if (checkIsNative() && !NativeBiometric) {
     try {
       const module = await import('@capgo/capacitor-native-biometric');
       NativeBiometric = module.NativeBiometric;
+      console.log('Biometric plugin loaded successfully');
       return true;
     } catch (error) {
       console.log('Biometric plugin not available:', error);
@@ -23,13 +26,20 @@ const loadBiometricPlugin = async () => {
 };
 
 export const useBiometricAuth = () => {
+  const [isNative, setIsNative] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
   const [biometryType, setBiometryType] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Check native status
+    const nativeStatus = checkIsNative();
+    setIsNative(nativeStatus);
+    console.log('useBiometricAuth: isNative =', nativeStatus);
+    
     const checkAvailability = async () => {
-      if (!isNative()) {
+      if (!nativeStatus) {
+        console.log('Not in native app, skipping biometric check');
         setIsLoading(false);
         return;
       }
@@ -83,9 +93,9 @@ export const useBiometricAuth = () => {
 
   // Store credentials securely
   const setCredentials = useCallback(async (server, username, password) => {
-    console.log('setCredentials called:', { server, username, isNative: isNative(), hasPlugin: !!NativeBiometric });
+    console.log('setCredentials called:', { server, username, isNative, hasPlugin: !!NativeBiometric });
     
-    if (!isNative() || !NativeBiometric) {
+    if (!isNative || !NativeBiometric) {
       // Fallback to localStorage for web (less secure but functional)
       try {
         localStorage.setItem(`bio_cred_${server}`, JSON.stringify({ username, password }));
@@ -109,13 +119,13 @@ export const useBiometricAuth = () => {
       console.log('Failed to store credentials in keychain:', error);
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [isNative]);
 
   // Get stored credentials (checks if credentials exist, doesn't require biometric yet)
   const getCredentials = useCallback(async (server) => {
-    console.log('getCredentials called:', { server, isNative: isNative(), hasPlugin: !!NativeBiometric });
+    console.log('getCredentials called:', { server, isNative, hasPlugin: !!NativeBiometric });
     
-    if (!isNative() || !NativeBiometric) {
+    if (!isNative || !NativeBiometric) {
       // Fallback to localStorage for web
       try {
         const stored = localStorage.getItem(`bio_cred_${server}`);
@@ -137,11 +147,11 @@ export const useBiometricAuth = () => {
       console.log('Failed to get credentials from keychain:', error);
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [isNative]);
 
   // Delete stored credentials
   const deleteCredentials = useCallback(async (server) => {
-    if (!isNative() || !NativeBiometric) {
+    if (!isNative || !NativeBiometric) {
       localStorage.removeItem(`bio_cred_${server}`);
       return { success: true };
     }
@@ -153,11 +163,11 @@ export const useBiometricAuth = () => {
       console.log('Failed to delete credentials:', error);
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [isNative]);
 
   // Perform biometric login - check for credentials first, then verify identity
   const biometricLogin = useCallback(async (server, options = {}) => {
-    console.log('biometricLogin called:', { server, isAvailable, isNative: isNative() });
+    console.log('biometricLogin called:', { server, isAvailable, isNative });
     
     // FIRST check if we have stored credentials
     const credResult = await getCredentials(server);
@@ -187,7 +197,7 @@ export const useBiometricAuth = () => {
   }, [isAvailable, verifyIdentity, getCredentials]);
 
   return {
-    isNative: isNative(),
+    isNative,
     isAvailable,
     biometryType,
     isLoading,
