@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import axios from "axios";
 import useBiometricAuth from "@/hooks/useBiometricAuth";
+import { useHaptics } from "@/hooks/useHaptics";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
@@ -38,6 +39,9 @@ export default function AuthPage() {
   
   // Biometric auth hook
   const { isNative, isAvailable: biometricAvailable, isLoading: biometricLoading, biometricLogin, setCredentials } = useBiometricAuth();
+  
+  // Haptic feedback
+  const { buttonPress, heavyPress, lightTap, successFeedback, errorFeedback } = useHaptics();
 
   // Check for existing session on mount
   useEffect(() => {
@@ -229,6 +233,8 @@ export default function AuthPage() {
         console.log('Not in native app, skipping credential save');
       }
       
+      heavyPress(); // Strong haptic for successful login
+      successFeedback();
       toast.success(`Welcome back, ${user.name}!`);
       
       if (user.role === "admin") {
@@ -237,6 +243,7 @@ export default function AuthPage() {
         navigate("/dashboard");
       }
     } catch (error) {
+      errorFeedback(); // Error haptic
       // Handle error - ensure we display a string, not an object
       let errorMessage = "Login failed";
       if (error.response?.data?.detail) {

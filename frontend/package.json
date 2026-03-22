@@ -7,6 +7,7 @@
     "@capacitor/cli": "5",
     "@capacitor/core": "5",
     "@capacitor/geolocation": "5",
+    "@capacitor/haptics": "^8.0.1",
     "@capacitor/local-notifications": "5",
     "@capacitor/push-notifications": "5",
     "@capgo/capacitor-native-biometric": "^6.0.0",

@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import axios from "axios";
 import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
+import { useHaptics } from "@/hooks/useHaptics";
 
 // Check if running in Capacitor native app
 const isNativePlatform = () => {
@@ -129,6 +130,9 @@ export default function EmployeeDashboard() {
   const [loading, setLoading] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [locationStatus, setLocationStatus] = useState({ checking: false, withinRange: null, distance: null, denied: false });
+  
+  // Haptic feedback
+  const { heavyPress, buttonPress, lightTap, successFeedback, errorFeedback, warningFeedback } = useHaptics();
   
   // W-9 state
   const [w9Status, setW9Status] = useState(null);
@@ -472,16 +476,20 @@ export default function EmployeeDashboard() {
         // Location verified - proceed with clock in
         try {
           await axios.post(`${API}/time/clock`, { action: "in" }, getAuthHeader());
+          heavyPress(); // Strong haptic for clock in
+          successFeedback();
           toast.success("Clocked in!");
           fetchData();
           setElapsedTime(0);
         } catch (error) {
+          errorFeedback();
           toast.error(error.response?.data?.detail || "Failed to clock in");
         } finally {
           setLoading(false);
         }
       } catch (error) {
         setLoading(false);
+        errorFeedback();
         console.log('Location error:', error);
         if (error.code === 1) {
           // Permission denied
@@ -509,10 +517,13 @@ export default function EmployeeDashboard() {
     // For clock out, admin clock in, or admin clock out - no location check needed
     try {
       await axios.post(`${API}/time/clock`, { action }, getAuthHeader());
+      heavyPress(); // Strong haptic for clock actions
+      successFeedback();
       toast.success(action === "in" ? "Clocked in!" : "Clocked out!");
       fetchData();
       setElapsedTime(0);
     } catch (error) {
+      errorFeedback();
       toast.error(error.response?.data?.detail || `Failed to clock ${action}`);
     } finally {
       setLoading(false);
@@ -520,6 +531,7 @@ export default function EmployeeDashboard() {
   };
 
   const handleLogout = () => {
+    lightTap(); // Light haptic for navigation
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     // Set flag to prevent auto Face ID on login page

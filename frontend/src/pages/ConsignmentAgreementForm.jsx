@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import useBiometricAuth from "@/hooks/useBiometricAuth";
+import { useHaptics } from "@/hooks/useHaptics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -131,15 +132,12 @@ export default function ConsignmentAgreementForm() {
   // Biometric auth hook
   const { isNative, isAvailable: biometricAvailable, isLoading: biometricLoading, biometryType, biometricLogin, setCredentials } = useBiometricAuth();
   
+  // Haptic feedback
+  const { buttonPress, heavyPress, lightTap, successFeedback, errorFeedback, warningFeedback } = useHaptics();
+  
   // Confirmation dialog state
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
 
-  // Scroll to top when component mounts
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  // Auto-login with biometrics on page load
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -167,9 +165,11 @@ export default function ConsignmentAgreementForm() {
       
       if (response.data.uploaded_paths) {
         photoSetter([...currentPhotos, ...response.data.uploaded_paths]);
+        successFeedback();
         toast.success(`${response.data.uploaded_paths.length} photo(s) uploaded`);
       }
     } catch (error) {
+      errorFeedback();
       toast.error("Failed to upload photos");
       console.error("Upload error:", error);
     } finally {
@@ -567,8 +567,11 @@ export default function ConsignmentAgreementForm() {
       if (hasPaymentUpdate) successMsg.push("Payment method updated");
       if (hasProfitSplitUpdate) successMsg.push("Profit split updated");
       if (hasAdditionalInfo || hasPhotos) successMsg.push("Additional info saved");
+      heavyPress(); // Strong haptic for successful submission
+      successFeedback();
       toast.success(successMsg.join(" & ") + " successfully!");
     } catch (error) {
+      errorFeedback();
       toast.error(error.response?.data?.detail || "Failed to submit");
     } finally {
       setLoading(false);

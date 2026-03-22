@@ -61,6 +61,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DayPicker } from "react-day-picker";
 import { toast } from "sonner";
 import axios from "axios";
+import { useHaptics } from "@/hooks/useHaptics";
 import MonthlyMileageSection from "@/components/admin/sections/MonthlyMileageSection";
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
@@ -87,6 +88,10 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  
+  // Haptic feedback
+  const { buttonPress, heavyPress, lightTap, successFeedback, errorFeedback, warningFeedback } = useHaptics();
+  
   const [user, setUser] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [employeeClockStatuses, setEmployeeClockStatuses] = useState({}); // Track which employees are clocked in
@@ -2048,6 +2053,7 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
+    lightTap(); // Light haptic for navigation
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     // Set flag to prevent auto Face ID on login page
