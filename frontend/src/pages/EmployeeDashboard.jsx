@@ -686,7 +686,10 @@ export default function EmployeeDashboard() {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={handleLogout}
+              onClick={() => {
+                lightTap(); // Haptic on logout
+                handleLogout();
+              }}
               className="text-white/70 hover:text-white hover:bg-white/10"
               data-testid="logout-btn"
             >
@@ -816,7 +819,10 @@ export default function EmployeeDashboard() {
               )}
 
               <button
-                onClick={() => handleClock(clockedIn ? "out" : "in")}
+                onClick={() => {
+                  buttonPress(); // Haptic on button press
+                  handleClock(clockedIn ? "out" : "in");
+                }}
                 disabled={loading || locationStatus.checking}
                 className={`w-full max-w-xs mx-auto py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
                   clockedIn 

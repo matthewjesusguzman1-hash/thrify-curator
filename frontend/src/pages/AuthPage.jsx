@@ -327,7 +327,10 @@ export default function AuthPage() {
             <p className="text-white/60">Clock in and track your hours</p>
           </div>
 
-          <form onSubmit={handleLogin} data-testid="login-form">
+          <form onSubmit={(e) => {
+            buttonPress(); // Haptic on form submit
+            handleLogin(e);
+          }} data-testid="login-form">
             <div className="space-y-2">
               <Label className="text-white/80 text-sm">Email</Label>
               <Input
@@ -425,6 +428,7 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={async () => {
+                  buttonPress(); // Haptic on button press
                   console.log('Employee Face ID button clicked');
                   console.log('biometricAvailable:', biometricAvailable);
                   
