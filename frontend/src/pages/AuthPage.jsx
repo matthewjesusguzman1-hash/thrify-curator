@@ -186,12 +186,19 @@ export default function AuthPage() {
       // Save credentials for biometric login if in native app
       // Use password or admin code as the credential
       const credentialToSave = password || adminCode;
+      console.log('Checking biometric save conditions:', { isNative, hasCredential: !!credentialToSave, credential: credentialToSave ? '***' : 'none' });
+      
       if (isNative && credentialToSave) {
-        console.log('Saving credentials for biometric login...', { email: trimmedInput, hasCredential: !!credentialToSave });
+        console.log('Saving credentials for biometric login...', { email: trimmedInput });
         const saveResult = await setCredentials('employee_portal', trimmedInput, credentialToSave);
         console.log('Credential save result:', saveResult);
+        if (saveResult.success) {
+          toast.success('Face ID enabled for future logins!', { duration: 2000 });
+        }
+      } else if (isNative && !credentialToSave) {
+        console.log('No credential to save - employee without password');
       } else {
-        console.log('NOT saving credentials:', { isNative, hasPassword: !!password, hasAdminCode: !!adminCode });
+        console.log('Not in native app, skipping credential save');
       }
       
       toast.success(`Welcome back, ${user.name}!`);
