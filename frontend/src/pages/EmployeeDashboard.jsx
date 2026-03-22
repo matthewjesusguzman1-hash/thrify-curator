@@ -36,6 +36,57 @@ import { toast } from "sonner";
 import axios from "axios";
 import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
 
+// Check if running in Capacitor native app
+const isNativePlatform = () => {
+  return window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative;
+};
+
+// Geolocation helper - uses Capacitor on native, browser API on web
+const getLocation = async (options = {}) => {
+  // Try Capacitor Geolocation first if in native app
+  if (isNativePlatform()) {
+    try {
+      const { Geolocation } = await import('@capacitor/geolocation');
+      
+      // Request permission first
+      const permResult = await Geolocation.requestPermissions();
+      if (permResult.location !== 'granted') {
+        throw { code: 1, message: 'Location permission denied' };
+      }
+      
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: options.enableHighAccuracy ?? false,
+        timeout: options.timeout ?? 10000,
+        maximumAge: options.maximumAge ?? 60000
+      });
+      
+      return {
+        coords: {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        }
+      };
+    } catch (error) {
+      console.log('Capacitor Geolocation error:', error);
+      // Rethrow with standardized error codes
+      if (error.message?.includes('denied') || error.code === 1) {
+        throw { code: 1, message: 'Location permission denied' };
+      }
+      throw error;
+    }
+  }
+  
+  // Fallback to browser geolocation
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject({ code: 0, message: 'Geolocation not supported' });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+};
+
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Work location coordinates (Omaha, NE area)
@@ -151,45 +202,39 @@ export default function EmployeeDashboard() {
       // Skip if not clocked in or user is admin
       if (!clockedIn || user?.role === 'admin') return;
       
-      // Check if geolocation is available
-      if (!navigator.geolocation) return;
-      
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const distance = calculateDistance(
-            position.coords.latitude,
-            position.coords.longitude,
-            WORK_LOCATION.lat,
-            WORK_LOCATION.lng
-          );
-          const withinRange = distance <= WORK_LOCATION.radiusMiles;
-          
-          if (withinRange) {
-            // User is in range - update the last verified timestamp
-            try {
-              await axios.post(`${API}/time/verify-location`, {}, getAuthHeader());
-              console.log("Location verified - in range");
-            } catch (error) {
-              console.error("Failed to verify location:", error);
-            }
-          } else {
-            // User left the work area - auto clock out
-            console.log("User left work area - auto clocking out");
-            try {
-              const response = await axios.post(`${API}/time/auto-clock-out`, {}, getAuthHeader());
-              toast.warning("You left the work area. Clocked out automatically.", { duration: 5000 });
-              fetchData();
-            } catch (error) {
-              console.error("Auto clock out failed:", error);
-            }
+      try {
+        const position = await getLocation({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        const distance = calculateDistance(
+          position.coords.latitude,
+          position.coords.longitude,
+          WORK_LOCATION.lat,
+          WORK_LOCATION.lng
+        );
+        const withinRange = distance <= WORK_LOCATION.radiusMiles;
+        
+        if (withinRange) {
+          // User is in range - update the last verified timestamp
+          try {
+            await axios.post(`${API}/time/verify-location`, {}, getAuthHeader());
+            console.log("Location verified - in range");
+          } catch (error) {
+            console.error("Failed to verify location:", error);
           }
-        },
-        (error) => {
-          // If we can't get location, just skip this check
-          console.log("Location check failed:", error.message);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
+        } else {
+          // User left the work area - auto clock out
+          console.log("User left work area - auto clocking out");
+          try {
+            const response = await axios.post(`${API}/time/auto-clock-out`, {}, getAuthHeader());
+            toast.warning("You left the work area. Clocked out automatically.", { duration: 5000 });
+            fetchData();
+          } catch (error) {
+            console.error("Auto clock out failed:", error);
+          }
+        }
+      } catch (error) {
+        // If we can't get location, just skip this check
+        console.log("Location check failed:", error.message || error);
+      }
     };
     
     if (clockedIn && user?.role !== 'admin') {
@@ -207,46 +252,40 @@ export default function EmployeeDashboard() {
 
   // Check location on page load/focus - auto clock out if outside work area
   useEffect(() => {
-    const checkLocationOnLoad = () => {
+    const checkLocationOnLoad = async () => {
       // Skip if not clocked in or user is admin
       if (!clockedIn || user?.role === 'admin') return;
       
-      if (!navigator.geolocation) return;
-      
-      // Try to get location - if it fails (denied), just skip auto clock out
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const distance = calculateDistance(
-            position.coords.latitude,
-            position.coords.longitude,
-            WORK_LOCATION.lat,
-            WORK_LOCATION.lng
-          );
-          const withinRange = distance <= WORK_LOCATION.radiusMiles;
-          
-          if (!withinRange) {
-            // User opened app while outside work area - auto clock out with adjusted time
-            console.log("User opened app outside work area - auto clocking out with adjusted time");
-            try {
-              const response = await axios.post(`${API}/time/auto-clock-out`, {}, getAuthHeader());
-              const usedLastVerified = response.data.used_last_verified;
-              if (usedLastVerified) {
-                toast.warning("You were clocked out at your last verified location time.", { duration: 6000 });
-              } else {
-                toast.warning("You left the work area. Clocked out automatically.", { duration: 5000 });
-              }
-              fetchData();
-            } catch (error) {
-              console.error("Auto clock out failed:", error);
+      try {
+        const position = await getLocation({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+        const distance = calculateDistance(
+          position.coords.latitude,
+          position.coords.longitude,
+          WORK_LOCATION.lat,
+          WORK_LOCATION.lng
+        );
+        const withinRange = distance <= WORK_LOCATION.radiusMiles;
+        
+        if (!withinRange) {
+          // User opened app while outside work area - auto clock out with adjusted time
+          console.log("User opened app outside work area - auto clocking out with adjusted time");
+          try {
+            const response = await axios.post(`${API}/time/auto-clock-out`, {}, getAuthHeader());
+            const usedLastVerified = response.data.used_last_verified;
+            if (usedLastVerified) {
+              toast.warning("You were clocked out at your last verified location time.", { duration: 6000 });
+            } else {
+              toast.warning("You left the work area. Clocked out automatically.", { duration: 5000 });
             }
+            fetchData();
+          } catch (error) {
+            console.error("Auto clock out failed:", error);
           }
-        },
-        (error) => {
-          // If GPS is denied or unavailable, just skip auto clock out
-          console.log("Initial location check failed:", error.message);
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
+        }
+      } catch (error) {
+        // If GPS is denied or unavailable, just skip auto clock out
+        console.log("Initial location check failed:", error.message || error);
+      }
     };
     
     // Small delay to let the page settle
@@ -352,64 +391,47 @@ export default function EmployeeDashboard() {
   };
 
   // Check if user is within range of work location
-  const checkLocation = () => {
-    return new Promise((resolve) => {
-      // If user is admin, bypass location check
-      if (user?.role === 'admin') {
-        resolve({ withinRange: true, distance: 0 });
-        return;
-      }
+  const checkLocation = async () => {
+    // If user is admin, bypass location check
+    if (user?.role === 'admin') {
+      return { withinRange: true, distance: 0 };
+    }
 
-      if (!navigator.geolocation) {
-        toast.error("Geolocation is not supported by your browser");
-        resolve({ withinRange: false, error: "Geolocation not supported" });
-        return;
-      }
+    setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
 
-      setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
-
-      // Safety timeout - if location check takes more than 15 seconds, reset state
-      const safetyTimeout = setTimeout(() => {
-        console.log("checkLocation safety timeout triggered");
-        setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
-        resolve({ withinRange: false, error: "timeout" });
-      }, 15000);
-
-      // Request location directly - this will prompt the user if not already granted
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          clearTimeout(safetyTimeout);
-          const distance = calculateDistance(
-            position.coords.latitude,
-            position.coords.longitude,
-            WORK_LOCATION.lat,
-            WORK_LOCATION.lng
-          );
-          const withinRange = distance <= WORK_LOCATION.radiusMiles;
-          setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2), denied: false });
-          resolve({ withinRange, distance: distance.toFixed(2) });
-        },
-        (error) => {
-          clearTimeout(safetyTimeout);
-          if (error.code === 1) {
-            // PERMISSION_DENIED
-            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
-            resolve({ withinRange: false, denied: true });
-          } else if (error.code === 2) {
-            // POSITION_UNAVAILABLE
-            toast.error("GPS is turned off. Please enable Location Services in your device settings.");
-            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
-            resolve({ withinRange: false, error: "GPS unavailable" });
-          } else {
-            // TIMEOUT or other error
-            toast.error("Location request timed out. Please try again.");
-            setLocationStatus({ checking: false, withinRange: false, error: "timeout", denied: false });
-            resolve({ withinRange: false, error: "timeout" });
-          }
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    try {
+      const position = await getLocation({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+      const distance = calculateDistance(
+        position.coords.latitude,
+        position.coords.longitude,
+        WORK_LOCATION.lat,
+        WORK_LOCATION.lng
       );
-    });
+      const withinRange = distance <= WORK_LOCATION.radiusMiles;
+      setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2), denied: false });
+      return { withinRange, distance: distance.toFixed(2) };
+    } catch (error) {
+      console.log('checkLocation error:', error);
+      if (error.code === 1) {
+        // PERMISSION_DENIED
+        setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
+        return { withinRange: false, denied: true };
+      } else if (error.code === 2) {
+        // POSITION_UNAVAILABLE
+        toast.error("GPS is turned off. Please enable Location Services in your device settings.");
+        setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+        return { withinRange: false, error: "GPS unavailable" };
+      } else if (error.code === 0) {
+        toast.error("Geolocation is not supported");
+        setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+        return { withinRange: false, error: "Geolocation not supported" };
+      } else {
+        // TIMEOUT or other error
+        toast.error("Location request timed out. Please try again.");
+        setLocationStatus({ checking: false, withinRange: false, error: "timeout", denied: false });
+        return { withinRange: false, error: "timeout" };
+      }
+    }
   };
 
   const handleClock = async (action) => {
@@ -423,73 +445,65 @@ export default function EmployeeDashboard() {
     // Only check location for clock IN - allow clock out from anywhere
     // Admins bypass location check entirely
     if (action === "in" && user?.role !== 'admin') {
-      if (!navigator.geolocation) {
-        toast.error("Geolocation is not supported by your browser");
-        setLoading(false);
-        return;
-      }
-      
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
       
-      // Safety timeout - if location check takes more than 15 seconds, reset state
-      const safetyTimeout = setTimeout(() => {
-        console.log("Location check safety timeout triggered");
-        setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false });
-        setLoading(false);
-        toast.error("Location check timed out. Please try again or check your location settings.");
-      }, 15000);
-      
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          clearTimeout(safetyTimeout);
-          const distance = calculateDistance(
-            position.coords.latitude,
-            position.coords.longitude,
-            WORK_LOCATION.lat,
-            WORK_LOCATION.lng
-          );
-          const withinRange = distance <= WORK_LOCATION.radiusMiles;
-          setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2), denied: false });
-          
-          if (!withinRange) {
-            toast.error("You are too far from the work location");
-            setLoading(false);
-            return;
-          }
-          
-          // Location verified - proceed with clock in
-          try {
-            await axios.post(`${API}/time/clock`, { action: "in" }, getAuthHeader());
-            toast.success("Clocked in!");
-            fetchData();
-            setElapsedTime(0);
-          } catch (error) {
-            toast.error(error.response?.data?.detail || "Failed to clock in");
-          } finally {
-            setLoading(false);
-          }
-        },
-        (error) => {
-          clearTimeout(safetyTimeout);
+      try {
+        const position = await getLocation({
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 60000
+        });
+        
+        const distance = calculateDistance(
+          position.coords.latitude,
+          position.coords.longitude,
+          WORK_LOCATION.lat,
+          WORK_LOCATION.lng
+        );
+        const withinRange = distance <= WORK_LOCATION.radiusMiles;
+        setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2), denied: false });
+        
+        if (!withinRange) {
+          toast.error("You are too far from the work location");
           setLoading(false);
-          if (error.code === 1) {
-            // Check if running as standalone PWA
-            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-            if (isStandalone) {
-              toast.error("Please enable location for this app in Settings → Privacy → Location Services", { duration: 5000 });
-            }
-            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
-          } else if (error.code === 2) {
-            toast.error("GPS is turned off. Please enable Location Services in your device settings.");
-            setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+          return;
+        }
+        
+        // Location verified - proceed with clock in
+        try {
+          await axios.post(`${API}/time/clock`, { action: "in" }, getAuthHeader());
+          toast.success("Clocked in!");
+          fetchData();
+          setElapsedTime(0);
+        } catch (error) {
+          toast.error(error.response?.data?.detail || "Failed to clock in");
+        } finally {
+          setLoading(false);
+        }
+      } catch (error) {
+        setLoading(false);
+        console.log('Location error:', error);
+        if (error.code === 1) {
+          // Permission denied
+          const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+          if (isStandalone || isNativePlatform()) {
+            toast.error("Please enable location for this app in Settings → Privacy → Location Services", { duration: 5000 });
           } else {
-            toast.error("Location request timed out. Please try again.");
-            setLocationStatus({ checking: false, withinRange: false, error: "timeout", denied: false });
+            toast.error("Location permission denied. Please allow location access.");
           }
-        },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-      );
-      return; // Exit here - the callback will handle the rest
+          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
+        } else if (error.code === 2) {
+          toast.error("GPS is turned off. Please enable Location Services in your device settings.");
+          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+        } else if (error.code === 0) {
+          toast.error("Geolocation is not supported");
+          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+        } else {
+          toast.error("Location request failed. Please try again.");
+          setLocationStatus({ checking: false, withinRange: false, error: "timeout", denied: false });
+        }
+      }
+      return; // Exit here - the async code handles the rest
     }
     
     // For clock out, admin clock in, or admin clock out - no location check needed
