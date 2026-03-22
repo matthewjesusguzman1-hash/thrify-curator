@@ -183,9 +183,11 @@ export default function AuthPage() {
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("sessionStart", Date.now().toString());
       
-      // Save credentials for biometric login if available
-      if (biometricAvailable && isNative && password) {
-        await setCredentials('employee_portal', trimmedInput, password);
+      // Save credentials for biometric login if in native app
+      if (isNative && password) {
+        console.log('Saving credentials for biometric login...');
+        const saveResult = await setCredentials('employee_portal', trimmedInput, password);
+        console.log('Credential save result:', saveResult);
       }
       
       toast.success(`Welcome back, ${user.name}!`);
@@ -277,6 +279,12 @@ export default function AuthPage() {
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-white mb-2">Employee Portal</h1>
             <p className="text-white/60">Clock in and track your hours</p>
+            {/* Debug: Show biometric status */}
+            {process.env.NODE_ENV === 'development' && (
+              <p className="text-xs text-white/40 mt-1">
+                Bio: {biometricAvailable ? 'Yes' : 'No'} | Native: {isNative ? 'Yes' : 'No'} | Loading: {biometricLoading ? 'Yes' : 'No'}
+              </p>
+            )}
           </div>
 
           <form onSubmit={handleLogin} data-testid="login-form">
@@ -373,15 +381,25 @@ export default function AuthPage() {
             </Button>
             
             {/* Face ID / Touch ID login button */}
-            {biometricAvailable && isNative && (
+            {isNative && (
               <button
                 type="button"
                 onClick={async () => {
+                  console.log('Employee Face ID button clicked');
+                  console.log('biometricAvailable:', biometricAvailable);
+                  
+                  if (!biometricAvailable) {
+                    toast.error('Face ID/Touch ID is not available on this device');
+                    return;
+                  }
+                  
                   setLoading(true);
                   const bioResult = await biometricLogin('employee_portal', {
                     reason: 'Login to Employee Portal',
                     title: 'Employee Login',
                   });
+                  
+                  console.log('Biometric result:', bioResult);
                   
                   if (bioResult.success && bioResult.credentials) {
                     try {
@@ -409,7 +427,7 @@ export default function AuthPage() {
                   }
                   setLoading(false);
                 }}
-                className="w-full mt-3 py-2 text-white/70 hover:text-white flex items-center justify-center gap-2 text-sm transition-colors"
+                className="w-full mt-3 py-2 text-white/70 hover:text-white flex items-center justify-center gap-2 text-sm transition-colors border border-white/20 rounded-lg hover:border-white/40"
               >
                 <Fingerprint className="w-5 h-5" />
                 Use Face ID / Touch ID

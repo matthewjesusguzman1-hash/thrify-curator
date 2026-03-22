@@ -140,77 +140,10 @@ export default function ConsignmentAgreementForm() {
   }, []);
 
   // Auto-login with biometrics on page load
+  // Scroll to top when component mounts
   useEffect(() => {
-    const tryBiometricAutoLogin = async () => {
-      // Wait for biometric check to complete
-      if (biometricLoading) return;
-      
-      // Only try if biometrics available and in native app
-      if (!biometricAvailable || !isNative) {
-        console.log('Biometric auto-login skipped:', { biometricAvailable, isNative });
-        return;
-      }
-      
-      // Only auto-login if user hasn't already logged in (no agreement loaded)
-      if (addItemsAgreement) {
-        console.log('Already logged in, skipping auto-login');
-        return;
-      }
-      
-      console.log('Attempting biometric auto-login for consignment portal...');
-      const bioResult = await biometricLogin('consignment_portal', {
-        reason: 'Login to your consignment account',
-        title: 'Consignment Portal',
-      });
-      
-      console.log('Biometric auto-login result:', bioResult);
-      
-      if (bioResult.success && bioResult.credentials) {
-        // Use stored credentials to login
-        try {
-          console.log('Using stored credentials to login...');
-          const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
-            email: bioResult.credentials.username,
-            password: bioResult.credentials.password
-          });
-          
-          if (loginResponse.data.success) {
-            // Set the email and load agreement data
-            const email = bioResult.credentials.username;
-            setAddItemsEmail(email);
-            
-            // Load the agreement data
-            const agreementResponse = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(email)}`);
-            if (agreementResponse.data.has_agreement) {
-              setAddItemsAgreement(agreementResponse.data.agreement);
-              setUpdateEmail(agreementResponse.data.agreement.email || email);
-              setUpdatePhone(agreementResponse.data.agreement.phone || "");
-              setUpdateAddress(agreementResponse.data.agreement.address || "");
-              setUpdatePaymentMethod(agreementResponse.data.agreement.payment_method || "");
-              setUpdatePaymentDetails(agreementResponse.data.agreement.payment_details || "");
-              setUpdateCustomSplit(agreementResponse.data.agreement.agreed_percentage || "50/50");
-              const today = new Date().toISOString().split('T')[0];
-              setUpdateSignatureDate(today);
-              
-              // Show the logged-in view
-              setShowAddItems(true);
-              setShowInitialChoice(true);
-              setLoginMode("email");
-              
-              toast.success('Welcome back!');
-            }
-          }
-        } catch (loginError) {
-          // Credentials might be outdated, let user login manually
-          console.log('Stored credentials invalid:', loginError);
-        }
-      } else if (bioResult.needsPassword) {
-        console.log('No saved credentials - user needs to login with password first');
-      }
-    };
-    
-    tryBiometricAutoLogin();
-  }, [biometricLoading, biometricAvailable, isNative, addItemsAgreement, biometricLogin]);
+    window.scrollTo(0, 0);
+  }, []);
 
   // Photo upload handler
   const handlePhotoUpload = async (files, isUpdate = false) => {
@@ -1053,13 +986,55 @@ export default function ConsignmentAgreementForm() {
                         className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
                         data-testid="find-agreement-btn"
                       >
-                        {checkingEmail ? "Checking..." : biometricAvailable && isNative ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <Fingerprint className="w-5 h-5" />
-                            Continue with Face ID
-                          </span>
-                        ) : "Find My Agreement"}
+                        {checkingEmail ? "Checking..." : "Continue"}
                       </Button>
+                      
+                      {/* Face ID / Touch ID button - separate from email continue */}
+                      {biometricAvailable && isNative && (
+                        <button
+                          type="button"
+                          disabled={checkingEmail}
+                          onClick={async () => {
+                            setCheckingEmail(true);
+                            console.log('Face ID button clicked');
+                            
+                            const bioResult = await biometricLogin('consignment_portal', {
+                              reason: 'Login to your consignment account',
+                              title: 'Consignment Portal',
+                            });
+                            
+                            console.log('Biometric result:', bioResult);
+                            
+                            if (bioResult.success && bioResult.credentials) {
+                              try {
+                                const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
+                                  email: bioResult.credentials.username,
+                                  password: bioResult.credentials.password
+                                });
+                                
+                                if (loginResponse.data.success) {
+                                  const email = bioResult.credentials.username;
+                                  setAddItemsEmail(email);
+                                  await loadAgreementData(email);
+                                  toast.success('Welcome back!');
+                                }
+                              } catch (error) {
+                                toast.error("Saved login is outdated. Please login with email.");
+                              }
+                            } else if (bioResult.needsPassword) {
+                              toast.info("No saved login found. Please login with email and password first.");
+                            } else if (bioResult.cancelled) {
+                              // User cancelled, do nothing
+                            }
+                            setCheckingEmail(false);
+                          }}
+                          className="w-full py-3 text-[#10B981] hover:text-[#059669] flex items-center justify-center gap-2 text-sm font-medium transition-colors border-2 border-[#10B981]/30 hover:border-[#10B981] rounded-lg"
+                          data-testid="face-id-login-btn"
+                        >
+                          <Fingerprint className="w-5 h-5" />
+                          Use Face ID / Touch ID
+                        </button>
+                      )}
                     </>
                   )}
                   
