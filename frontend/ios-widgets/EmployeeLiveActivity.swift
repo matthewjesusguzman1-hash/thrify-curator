@@ -2,22 +2,9 @@ import ActivityKit
 import WidgetKit
 import SwiftUI
 
-// MARK: - Activity Attributes
-
-struct EmployeeShiftAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        // Dynamic state that can be updated
-        var elapsedTime: TimeInterval
-        var isActive: Bool
-    }
-    
-    // Fixed attributes set when activity starts
-    var employeeName: String
-    var clockInTime: Date
-}
-
 // MARK: - Live Activity Widget
 
+@available(iOS 16.2, *)
 struct EmployeeLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: EmployeeShiftAttributes.self) { context in
@@ -89,6 +76,7 @@ struct EmployeeLiveActivity: Widget {
 
 // MARK: - Lock Screen View
 
+@available(iOS 16.2, *)
 struct LockScreenView: View {
     let context: ActivityViewContext<EmployeeShiftAttributes>
     
@@ -137,15 +125,4 @@ struct LockScreenView: View {
         }
         .padding()
     }
-}
-
-// MARK: - Preview
-
-#Preview("Live Activity", as: .content, using: EmployeeShiftAttributes(
-    employeeName: "Sarah Johnson",
-    clockInTime: Date().addingTimeInterval(-3600) // 1 hour ago
-)) {
-    EmployeeLiveActivity()
-} contentStates: {
-    EmployeeShiftAttributes.ContentState(elapsedTime: 3600, isActive: true)
 }

@@ -150,8 +150,14 @@ struct AdminClockedInWidget: Widget {
     
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: AdminWidgetProvider()) { entry in
-            AdminWidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+            if #available(iOS 17.0, *) {
+                AdminWidgetEntryView(entry: entry)
+                    .containerBackground(.fill.tertiary, for: .widget)
+            } else {
+                AdminWidgetEntryView(entry: entry)
+                    .padding()
+                    .background()
+            }
         }
         .configurationDisplayName("Employees Working")
         .description("See who's currently clocked in")
@@ -161,24 +167,4 @@ struct AdminClockedInWidget: Widget {
             .accessoryInline
         ])
     }
-}
-
-// MARK: - Previews
-
-#Preview("Circular", as: .accessoryCircular) {
-    AdminClockedInWidget()
-} timeline: {
-    AdminWidgetEntry(date: Date(), employeeCount: 3, employeeNames: ["Sarah", "Mike", "John"], lastUpdated: Date())
-}
-
-#Preview("Rectangular", as: .accessoryRectangular) {
-    AdminClockedInWidget()
-} timeline: {
-    AdminWidgetEntry(date: Date(), employeeCount: 2, employeeNames: ["Sarah Johnson", "Mike Smith"], lastUpdated: Date())
-}
-
-#Preview("Inline", as: .accessoryInline) {
-    AdminClockedInWidget()
-} timeline: {
-    AdminWidgetEntry(date: Date(), employeeCount: 2, employeeNames: ["Sarah", "Mike"], lastUpdated: Date())
 }
