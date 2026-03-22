@@ -73,13 +73,17 @@ export default function AuthPage() {
       
       // Try biometric login if available and no session
       if (biometricAvailable && isNative) {
+        console.log('Attempting biometric auto-login for employee portal...');
         const bioResult = await biometricLogin('employee_portal', {
           reason: 'Login to Employee Portal',
           title: 'Employee Login',
         });
         
+        console.log('Biometric auto-login result:', bioResult);
+        
         if (bioResult.success && bioResult.credentials) {
           try {
+            console.log('Using stored credentials to login...');
             const response = await axios.post(`${API}/auth/login`, {
               email: bioResult.credentials.username,
               password: bioResult.credentials.password
@@ -99,8 +103,10 @@ export default function AuthPage() {
             return;
           } catch (loginError) {
             // Biometric credentials invalid, continue to normal login
-            console.log('Stored credentials invalid');
+            console.log('Stored credentials invalid:', loginError);
           }
+        } else if (bioResult.needsPassword) {
+          console.log('No saved credentials - user needs to login with password first');
         }
       }
       

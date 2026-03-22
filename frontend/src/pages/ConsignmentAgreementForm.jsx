@@ -151,9 +151,9 @@ export default function ConsignmentAgreementForm() {
         return;
       }
       
-      // Only auto-login if we're on the "Add Items" flow initial state
-      if (showAddItems || showInitialChoice || addItemsAgreement) {
-        console.log('Already in a flow, skipping auto-login');
+      // Only auto-login if user hasn't already logged in (no agreement loaded)
+      if (addItemsAgreement) {
+        console.log('Already logged in, skipping auto-login');
         return;
       }
       
@@ -176,16 +176,33 @@ export default function ConsignmentAgreementForm() {
           
           if (loginResponse.data.success) {
             // Set the email and load agreement data
-            setAddItemsEmail(bioResult.credentials.username);
-            setShowAddItems(true);
-            setShowInitialChoice(true);
-            await loadAgreementData(bioResult.credentials.username);
-            toast.success('Welcome back!');
+            const email = bioResult.credentials.username;
+            setAddItemsEmail(email);
+            
+            // Load the agreement data
+            const agreementResponse = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(email)}`);
+            if (agreementResponse.data.has_agreement) {
+              setAddItemsAgreement(agreementResponse.data.agreement);
+              setUpdateEmail(agreementResponse.data.agreement.email || email);
+              setUpdatePhone(agreementResponse.data.agreement.phone || "");
+              setUpdateAddress(agreementResponse.data.agreement.address || "");
+              setUpdatePaymentMethod(agreementResponse.data.agreement.payment_method || "");
+              setUpdatePaymentDetails(agreementResponse.data.agreement.payment_details || "");
+              setUpdateCustomSplit(agreementResponse.data.agreement.agreed_percentage || "50/50");
+              const today = new Date().toISOString().split('T')[0];
+              setUpdateSignatureDate(today);
+              
+              // Show the logged-in view
+              setShowAddItems(true);
+              setShowInitialChoice(true);
+              setLoginMode("email");
+              
+              toast.success('Welcome back!');
+            }
           }
         } catch (loginError) {
           // Credentials might be outdated, let user login manually
           console.log('Stored credentials invalid:', loginError);
-          toast.error('Saved credentials expired. Please login again.');
         }
       } else if (bioResult.needsPassword) {
         console.log('No saved credentials - user needs to login with password first');
@@ -193,7 +210,7 @@ export default function ConsignmentAgreementForm() {
     };
     
     tryBiometricAutoLogin();
-  }, [biometricLoading, biometricAvailable, isNative, showAddItems, showInitialChoice, addItemsAgreement]);
+  }, [biometricLoading, biometricAvailable, isNative, addItemsAgreement, biometricLogin]);
 
   // Photo upload handler
   const handlePhotoUpload = async (files, isUpdate = false) => {
