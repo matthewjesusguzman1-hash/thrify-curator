@@ -184,10 +184,14 @@ export default function AuthPage() {
       localStorage.setItem("sessionStart", Date.now().toString());
       
       // Save credentials for biometric login if in native app
-      if (isNative && password) {
-        console.log('Saving credentials for biometric login...');
-        const saveResult = await setCredentials('employee_portal', trimmedInput, password);
+      // Use password or admin code as the credential
+      const credentialToSave = password || adminCode;
+      if (isNative && credentialToSave) {
+        console.log('Saving credentials for biometric login...', { email: trimmedInput, hasCredential: !!credentialToSave });
+        const saveResult = await setCredentials('employee_portal', trimmedInput, credentialToSave);
         console.log('Credential save result:', saveResult);
+      } else {
+        console.log('NOT saving credentials:', { isNative, hasPassword: !!password, hasAdminCode: !!adminCode });
       }
       
       toast.success(`Welcome back, ${user.name}!`);
@@ -403,10 +407,21 @@ export default function AuthPage() {
                   
                   if (bioResult.success && bioResult.credentials) {
                     try {
-                      const response = await axios.post(`${API}/auth/login`, {
-                        email: bioResult.credentials.username,
-                        password: bioResult.credentials.password
-                      });
+                      // Try password login first
+                      let response;
+                      try {
+                        response = await axios.post(`${API}/auth/login`, {
+                          email: bioResult.credentials.username,
+                          password: bioResult.credentials.password
+                        });
+                      } catch (pwdError) {
+                        // If password login fails, try as admin code
+                        console.log('Password login failed, trying admin code...');
+                        response = await axios.post(`${API}/auth/login`, {
+                          email: bioResult.credentials.username,
+                          admin_code: bioResult.credentials.password
+                        });
+                      }
                       
                       const { access_token, user } = response.data;
                       localStorage.setItem("token", access_token);
@@ -420,6 +435,7 @@ export default function AuthPage() {
                         navigate("/dashboard");
                       }
                     } catch (error) {
+                      console.log('Login error:', error);
                       toast.error("Saved login is outdated. Please login with email.");
                     }
                   } else if (bioResult.needsPassword) {
