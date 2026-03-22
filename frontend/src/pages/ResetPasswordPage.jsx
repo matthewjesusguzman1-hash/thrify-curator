@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import axios from "axios";
+import { useHaptics } from "@/hooks/useHaptics";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
@@ -14,6 +15,7 @@ const LOGO_URL = process.env.REACT_APP_LOGO_URL;
 export default function ResetPasswordPage() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const { heavyPress, lightTap, successFeedback, errorFeedback } = useHaptics();
   
   const [validating, setValidating] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
@@ -57,15 +59,18 @@ export default function ResetPasswordPage() {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    heavyPress(); // Haptic on form submit
     
     // Validate passwords match
     if (password !== confirmPassword) {
+      errorFeedback();
       toast.error("Passwords do not match");
       return;
     }
     
     // Validate password length
     if (password.length < 4) {
+      errorFeedback();
       toast.error("Password must be at least 4 characters");
       return;
     }
@@ -78,9 +83,11 @@ export default function ResetPasswordPage() {
         new_password: password
       });
       
+      successFeedback();
       setResetSuccess(true);
       toast.success("Password reset successfully!");
     } catch (error) {
+      errorFeedback();
       const message = error.response?.data?.detail || "Failed to reset password";
       toast.error(message);
     } finally {
@@ -131,13 +138,13 @@ export default function ResetPasswordPage() {
             <p className="text-white/60 text-center mb-6">{tokenError}</p>
             
             <div className="space-y-3">
-              <Link to="/login">
+              <Link to="/login" onClick={() => lightTap()}>
                 <Button className="w-full bg-[#00D4FF] hover:bg-[#00A8CC] text-white">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Employee Login
                 </Button>
               </Link>
-              <Link to="/consignment-agreement">
+              <Link to="/consignment-agreement" onClick={() => lightTap()}>
                 <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
                   Back to Consignment Portal
                 </Button>
@@ -181,13 +188,13 @@ export default function ResetPasswordPage() {
             
             <div className="space-y-3">
               {userType === "employee" ? (
-                <Link to="/login">
+                <Link to="/login" onClick={() => lightTap()}>
                   <Button className="w-full bg-[#00D4FF] hover:bg-[#00A8CC] text-white">
                     Go to Employee Login
                   </Button>
                 </Link>
               ) : (
-                <Link to="/consignment-agreement">
+                <Link to="/consignment-agreement" onClick={() => lightTap()}>
                   <Button className="w-full bg-[#00D4FF] hover:bg-[#00A8CC] text-white">
                     Go to Consignment Portal
                   </Button>
@@ -314,7 +321,7 @@ export default function ResetPasswordPage() {
 
           <p className="text-center text-sm text-white/40 mt-6">
             Remember your password?{" "}
-            <Link to="/login" className="text-[#00D4FF] hover:underline">
+            <Link to="/login" onClick={() => lightTap()} className="text-[#00D4FF] hover:underline">
               Sign in
             </Link>
           </p>

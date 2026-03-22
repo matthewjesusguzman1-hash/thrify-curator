@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import axios from "axios";
+import { useHaptics } from "@/hooks/useHaptics";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -22,6 +23,7 @@ const TASK_OPTIONS = [
 ];
 
 export default function JobApplicationForm() {
+  const { heavyPress, lightTap, successFeedback, errorFeedback } = useHaptics();
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -63,13 +65,16 @@ export default function JobApplicationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    heavyPress(); // Haptic on form submit
     setLoading(true);
 
     try {
       await axios.post(`${API}/forms/job-application`, formData);
       setSubmitted(true);
+      successFeedback();
       toast.success("Application submitted successfully!");
     } catch (error) {
+      errorFeedback();
       toast.error(error.response?.data?.detail || "Failed to submit application");
     } finally {
       setLoading(false);
@@ -104,7 +109,7 @@ export default function JobApplicationForm() {
                 </p>
               </div>
             </div>
-            <Link to="/">
+            <Link to="/" onClick={() => lightTap()}>
               <Button className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#6D28D9] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
                 Back to Home
               </Button>
@@ -121,7 +126,7 @@ export default function JobApplicationForm() {
         {/* Back Link and Logo Row */}
         <div className="relative mt-8 mb-6">
           {/* Back Link - Aligned with logo */}
-          <Link to="/" className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#00D4FF] transition-colors" data-testid="back-link-top">
+          <Link to="/" onClick={() => lightTap()} className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#00D4FF] transition-colors" data-testid="back-link-top">
             <ArrowLeft className="w-5 h-5" />
             Back to Home
           </Link>
@@ -364,6 +369,7 @@ export default function JobApplicationForm() {
         {/* Back to Home - Easy access at bottom */}
         <Link 
           to="/" 
+          onClick={() => lightTap()}
           className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
           data-testid="back-link"
         >

@@ -1,154 +1,62 @@
 # Thrifty Curator - Product Requirements Document
 
-## Original Problem Statement
-Build a "Thrifty Curator" reselling application with:
-- Mobile app conversion (iOS/Android) using Capacitor
-- Push notifications for user engagement
-- Consignment portal for consignors to track submissions
-- Admin dashboard for business management
-- Email notifications for key actions
+## Overview
+Thrifty Curator is a reselling application with web and native mobile (iOS/Android) versions. The app features distinct portals for consignors, employees, and admins.
 
-## Current Status
-The web application is fully functional. iOS app has been built and uploaded to App Store Connect. Android app has been built as a signed `.aab` file.
+## Core Features
 
-### What's Been Implemented
+### Completed
+- **Web Application**: Full-stack React/FastAPI/MongoDB application
+- **Consignment Portal**: View submissions, payment history, manage account, add items with custom commission splits
+- **Employee Portal**: Clock-in/out with geolocation verification, view time entries
+- **Admin Dashboard**: Manage employees, consignors, payroll settings, approve/reject submissions
+- **Email System**: Magic link password reset with rate limiting
+- **Password Management**: Set/reset/delete passwords for employees and consignors
+- **Face ID/Biometric Login**: Working for both employee and consignment portals
+- **Haptic Feedback**: Comprehensive implementation across all pages (as of Mar 22, 2026)
+  - Form submissions (heavy press)
+  - Navigation/back buttons (light tap)
+  - Success/error feedback on actions
+- **Native Geolocation**: Using @capacitor/geolocation for clock-in
+- **Native Permissions**: Face ID and Location prompts on iOS
 
-**Core Application (Complete)**
-- Full-stack React/FastAPI/MongoDB application
-- Admin dashboard with employee management, payroll, forms, and reports
-- Employee portal with time tracking and mileage logging
-- Consignment workflow (inquiry → agreement → item additions)
-- Payment processing for employees and consignment clients
+### In Progress
+- Native iOS app build (user is building locally via Capacitor)
 
-**Mobile App (In Progress)**
-- Capacitor integration for iOS and Android
-- iOS app built, archived, and uploaded to App Store Connect
-- Android `.aab` file generated for Play Store submission
-- Push notifications setup needs iOS capabilities enabled in Xcode
+### Upcoming (P1)
+- Guide user through iOS App Store submission
+- Guide user through Android app submission (.aab file)
+- Dynamic Island & Lock Screen widgets for employees
+- Update QR code to dynamic link service after app store launch
 
-**Email Integration (Complete)**
-- Resend email service integrated
-- Transactional emails for user and admin actions
-- Test email functionality (hidden behind triple-click on Admin Dashboard)
-- Default sender email: thriftycurator1@gmail.com
+### Future/Backlog (P2-P3)
+- **CRITICAL**: Refactor ConsignmentAgreementForm.jsx (3000+ lines monolith)
+- Offline usability features
+- Push notification enhancements
 
-**Password & Session Management (March 18, 2026) - IMPLEMENTED**
-1. **Employee Password System**: Employees can now have passwords set for secure login
-   - Password field appears when employee has a password set
-   - Admin can set/reset/remove employee passwords
-   - Login flow: Enter email → shows password field if password is set → authenticate
-2. **Password Management Section**: New admin dashboard section for managing all passwords
-   - Employees tab: View/set/reset passwords for all employees (non-admins)
-   - Consignors tab: View/set/reset passwords for consignment clients
-   - Info banner explaining that admins use access codes (not passwords)
-3. **Session Management**: Session timeout logic added to App.js
-   - 15-minute inactivity timer with automatic logout
-   - Activity listeners for clicks, keydowns, touch, and scroll events
-4. **Edit Employee Modal**: Password section added for employees (not admins)
-   - View password status (set/not set)
-   - Set new password or reset existing
-   - Remove password option
-5. **Self-Service Password Change**: Employees can change their own password
-   - Security button added to Employee Dashboard header
-   - Security Settings modal with password status and change form
-   - Requires current password verification before changing
+## Technical Architecture
 
-**Email-Based Password Reset (March 18, 2026) - IMPLEMENTED**
-1. **Magic Link System**: Users can reset their password via email
-   - Click "Forgot Password" on login page
-   - Enter email address → receive reset link via email
-   - Click link → taken to `/reset-password/:token` page
-   - Enter new password → password updated
-2. **Security Features**:
-   - Tokens expire after 1 hour
-   - Tokens are hashed before storage
-   - Generic success messages (doesn't reveal if email exists)
-   - One-time use tokens
-   - **Rate limiting**: Max 3 requests per email per hour, 10 per IP per hour
-3. **Works for Both Portals**:
-   - Employee Portal (AuthPage.jsx)
-   - Consignment Portal (ConsignmentAgreementForm.jsx)
-4. **Backend**: New router at `/app/backend/app/routers/password_reset.py`
-5. **Frontend**: New page at `/app/frontend/src/pages/ResetPasswordPage.jsx`
+### Frontend
+- React 18 with Vite
+- Capacitor 5 for native iOS/Android
+- Tailwind CSS + Shadcn/UI components
+- Key plugins: @capacitor/haptics, @capacitor/geolocation, @capgo/capacitor-native-biometric
 
-**Recent Changes (March 14, 2026)**
-1. Removed "Add to Home Screen" button from landing page
-2. Set default sender email to thriftycurator1@gmail.com
-3. Removed all individual refresh buttons (kept only master refresh)
-4. Hidden email settings button (accessible via triple-click on "Admin Dashboard")
-5. Removed Status column from Job Applications and Consignment Inquiries tables
-6. Fixed clock-in location check with 15-second safety timeout and cancel button
-7. Updated location permission denied instructions to prompt reload first
-8. Fixed Payment Records tabs to be responsive on mobile
-9. **Created custom picker modals for Employee and Consignment Client selection** (fixes iOS native select issue)
-10. Updated employee dropdown to show ALL employees except owners (6 total)
-11. Updated consignment dropdown to show ALL agreement submitters (18 total)
-
-## Architecture
-
-### Frontend (`/app/frontend`)
-- React with Tailwind CSS and shadcn/ui components
-- Capacitor for mobile app wrapping
-- Pages: Landing, Auth, Admin Dashboard, Employee Dashboard, Forms
-
-### Backend (`/app/backend`)
-- FastAPI with MongoDB
-- Routers: auth, admin, employees, forms, payroll, mileage
-- Services: email_service (Resend integration)
+### Backend
+- FastAPI
+- MongoDB
+- Resend for emails
 
 ### Key Files
-- `/app/frontend/src/App.js` - Main app with routing and push notification initialization
-- `/app/frontend/src/pages/AdminDashboard.jsx` - Admin interface
-- `/app/frontend/src/components/admin/sections/PaymentRecordsSection.jsx` - Payment records with custom picker modals
-- `/app/frontend/src/pages/EmployeeDashboard.jsx` - Employee dashboard with location checking
-- `/app/backend/app/services/email_service.py` - Email handling
-- `/app/backend/app/routers/payroll.py` - Payment and employee endpoints
-- `/app/frontend/ios/App/` - iOS native project
+- `/app/frontend/src/hooks/useHaptics.js` - Haptic feedback utility
+- `/app/frontend/src/hooks/useBiometricAuth.js` - Face ID/Touch ID logic
+- `/app/frontend/src/pages/ConsignmentAgreementForm.jsx` - NEEDS REFACTOR
+- `/app/backend/app/routers/password_reset.py` - Magic link flow
 
-## Priority Backlog
+## Known Issues
+- Password modals had recurring freeze issues (resolved with React Portals)
+- ConsignmentAgreementForm.jsx is a fragile 3000+ line monolith
 
-### P0 (Critical - Blockers)
-1. **iOS Push Notifications** - Need to enable capabilities in Xcode:
-   - Add "Push Notifications" capability
-   - Add "Background Modes" capability with "Remote notifications"
-   - Increment build number and upload to App Store Connect
-2. **iOS App Store Submission** - After push notifications confirmed working
-
-### P1 (High Priority)
-1. Android Play Store submission guidance
-2. APNs key configuration for backend push notification sending
-
-### P2 (Medium Priority)
-1. Refactor `ConsignmentAgreementForm.jsx` (large monolith)
-2. Add more comprehensive test coverage
-
-## Key API Endpoints
-- `GET /api/admin/payroll/all-employees-for-payment` - All employees except owners
-- `GET /api/admin/payroll/consignment-clients` - All consignment agreement submitters
-- `POST /api/admin/test-email` - Send test email
-- `GET /api/admin/email-status` - Check email service status
-
-**Password Management Endpoints**
-- `GET /api/auth/employee/has-password/{email}` - Check if employee has password set
-- `POST /api/auth/employee/set-password` - Employee sets their own password
-- `POST /api/auth/employee/change-password` - Employee changes their password (requires current password)
-- `GET /api/admin/employees/passwords` - Get all employee password statuses
-- `POST /api/admin/employees/{id}/set-password` - Admin sets employee password
-- `DELETE /api/admin/employees/{id}/password` - Admin removes employee password
-- `GET /api/forms/admin/consignment-passwords` - Get all consignor password statuses
-- `POST /api/forms/admin/consignment-password/reset` - Admin resets consignor password
-
-**Email-Based Password Reset Endpoints (NEW - March 18, 2026)**
-- `POST /api/password-reset/request` - Request password reset email (user_type: employee/consignor)
-- `GET /api/password-reset/validate/{token}` - Validate reset token
-- `POST /api/password-reset/reset` - Reset password with valid token
-- `GET /api/password-reset/rate-limit-status?email=` - Check rate limit status (remaining requests)
-- Frontend route: `/reset-password/:token` - Password reset form page
-
-## Key Credentials
-- Admin login: matthewjesusguzman1@gmail.com with code 4399
-- Email sender: thriftycurator1@gmail.com
-- Resend API key: Stored in backend/.env
-
-## User Guidance Notes
-The user is non-technical but capable of following specific command-line and UI instructions on their Mac. Provide clear, step-by-step guidance for any Xcode or terminal operations.
+## Credentials
+- Admin login (Matthew Guzman): Access code `4399`
+- Admin login (Eunice Guzman): Access code `0826`

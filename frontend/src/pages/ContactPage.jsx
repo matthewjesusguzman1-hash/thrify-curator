@@ -7,10 +7,12 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { useHaptics } from '@/hooks/useHaptics';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function ContactPage() {
+  const { heavyPress, lightTap, successFeedback, errorFeedback } = useHaptics();
   const [formData, setFormData] = useState({
     sender_name: '',
     sender_email: '',
@@ -21,12 +23,15 @@ export default function ContactPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    heavyPress(); // Haptic on form submit
     setSending(true);
     try {
       await axios.post(`${API}/api/messages`, formData);
       setSent(true);
+      successFeedback();
       toast.success('Message sent successfully! We will review and respond soon.');
     } catch (error) {
+      errorFeedback();
       if (error.response?.status === 429) {
         toast.error('Too many messages. Please wait a few minutes.');
       } else {
@@ -41,7 +46,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f0f1a]">
       {/* Header */}
       <div className="p-4">
-        <Link to="/" className="inline-flex items-center text-white/70 hover:text-white transition-colors">
+        <Link to="/" onClick={() => lightTap()} className="inline-flex items-center text-white/70 hover:text-white transition-colors">
           <ArrowLeft className="w-5 h-5 mr-2" />
           Back to Home
         </Link>
@@ -70,7 +75,7 @@ export default function ContactPage() {
             <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-2">Message Sent!</h2>
             <p className="text-white/60 mb-6">We'll get back to you as soon as possible.</p>
-            <Link to="/">
+            <Link to="/" onClick={() => lightTap()}>
               <Button className="bg-gradient-to-r from-pink-500 to-purple-600">
                 Back to Home
               </Button>

@@ -580,19 +580,23 @@ export default function ConsignmentAgreementForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    heavyPress(); // Haptic on form submit
     
     if (!formData.agreed_to_terms) {
+      errorFeedback();
       toast.error("Please agree to the terms and conditions");
       return;
     }
     
     if (!formData.payment_method) {
+      errorFeedback();
       toast.error("Please select a payment method");
       return;
     }
     
     const selectedMethod = PAYMENT_METHODS.find(m => m.id === formData.payment_method);
     if (selectedMethod?.needsDetails && !formData.payment_details.trim()) {
+      errorFeedback();
       toast.error(`Please enter your ${selectedMethod.label} details`);
       return;
     }
@@ -610,8 +614,10 @@ export default function ConsignmentAgreementForm() {
     try {
       await axios.post(`${API}/forms/consignment-agreement`, submissionData);
       setSubmitted(true);
+      successFeedback();
       toast.success("Agreement submitted successfully!");
     } catch (error) {
+      errorFeedback();
       toast.error(error.response?.data?.detail || "Failed to submit agreement");
     } finally {
       setLoading(false);
@@ -637,7 +643,7 @@ export default function ConsignmentAgreementForm() {
             <p className="text-[#666] mb-6">
               Your payment method has been successfully updated to <strong>{PAYMENT_METHODS.find(m => m.id === changePaymentMethod)?.label}</strong>.
             </p>
-            <Link to="/">
+            <Link to="/" onClick={() => lightTap()}>
               <Button className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] hover:from-[#7C3AED] hover:to-[#5B21B6] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
                 Back to Home
               </Button>
@@ -678,7 +684,7 @@ export default function ConsignmentAgreementForm() {
                 <p>Payment method updated to <strong>{PAYMENT_METHODS.find(m => m.id === updatePaymentMethod)?.label}</strong>.</p>
               )}
             </div>
-            <Link to="/">
+            <Link to="/" onClick={() => lightTap()}>
               <Button className="bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
                 Back to Home
               </Button>
@@ -725,7 +731,7 @@ export default function ConsignmentAgreementForm() {
             className="space-y-4"
           >
             <button
-              onClick={() => { setShowInitialChoice(false); setShowChangePayment(false); }}
+              onClick={() => { buttonPress(); setShowInitialChoice(false); setShowChangePayment(false); }}
               className="w-full bg-white rounded-xl shadow-2xl p-6 hover:shadow-3xl transition-all duration-300 group"
               data-testid="sign-new-agreement-btn"
             >
@@ -741,7 +747,7 @@ export default function ConsignmentAgreementForm() {
             </button>
 
             <button
-              onClick={() => { setShowInitialChoice(false); setShowAddItems(true); }}
+              onClick={() => { buttonPress(); setShowInitialChoice(false); setShowAddItems(true); }}
               className="w-full bg-white rounded-xl shadow-2xl p-6 hover:shadow-3xl transition-all duration-300 group"
               data-testid="add-more-items-btn"
             >
@@ -779,7 +785,7 @@ export default function ConsignmentAgreementForm() {
           {/* Back Link and Logo Row */}
           <div className="relative mt-8 mb-6">
             <button 
-              onClick={() => { setShowInitialChoice(true); setShowChangePayment(false); setExistingAgreement(null); setChangePaymentEmail(""); }}
+              onClick={() => { lightTap(); setShowInitialChoice(true); setShowChangePayment(false); setExistingAgreement(null); setChangePaymentEmail(""); }}
               className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#8B5CF6] transition-colors"
               data-testid="back-to-choice-btn"
             >
@@ -914,7 +920,7 @@ export default function ConsignmentAgreementForm() {
           </motion.div>
 
           <button 
-            onClick={() => { setShowInitialChoice(true); setShowChangePayment(false); setExistingAgreement(null); setChangePaymentEmail(""); }}
+            onClick={() => { lightTap(); setShowInitialChoice(true); setShowChangePayment(false); setExistingAgreement(null); setChangePaymentEmail(""); }}
             className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
             data-testid="back-link"
           >
@@ -934,7 +940,7 @@ export default function ConsignmentAgreementForm() {
           {/* Back Link and Logo Row */}
           <div className="relative mt-8 mb-6">
             <button 
-              onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setWantsToUpdatePayment(false); setUpdateEmail(""); setUpdatePhone(""); setUpdateAddress(""); setUpdatePaymentMethod(""); setUpdatePaymentDetails(""); }}
+              onClick={() => { lightTap(); setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setWantsToUpdatePayment(false); setUpdateEmail(""); setUpdatePhone(""); setUpdateAddress(""); setUpdatePaymentMethod(""); setUpdatePaymentDetails(""); }}
               className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#10B981] transition-colors"
               data-testid="back-to-choice-btn"
             >
@@ -2362,7 +2368,7 @@ export default function ConsignmentAgreementForm() {
           </motion.div>
 
           <button 
-            onClick={() => { setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setWantsToUpdatePayment(false); setUpdateEmail(""); setUpdatePhone(""); setUpdateAddress(""); setUpdatePaymentMethod(""); setUpdatePaymentDetails(""); }}
+            onClick={() => { lightTap(); setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setWantsToUpdatePayment(false); setUpdateEmail(""); setUpdatePhone(""); setUpdateAddress(""); setUpdatePaymentMethod(""); setUpdatePaymentDetails(""); }}
             className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
             data-testid="back-link"
           >

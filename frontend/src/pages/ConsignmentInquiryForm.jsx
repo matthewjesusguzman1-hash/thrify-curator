@@ -31,6 +31,7 @@ const CLOTHING_BRANDS = "Spanx, Lululemon, Athleta, Beyond Yoga, Miss Me, Torrid
 const SHOE_BRANDS = "Red Wings, Dr Marten, Rothy's, Nike, Frye, Ugg, Cole Haan, Merrell, Keen, Chaco, Hey Dudes, Sorel, Hoka, On Running, Dansko, No Bull, Teva, Birkenstock, Ariat, Crocs, Betsy Johnson, Ecco, Brooks, New Balance, Vans.";
 
 export default function ConsignmentInquiryForm() {
+  const { heavyPress, lightTap, successFeedback, errorFeedback } = useHaptics();
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -94,13 +95,16 @@ export default function ConsignmentInquiryForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    heavyPress(); // Haptic on form submit
     
     // Validate environment section
     if (formData.smoke_free === null) {
+      errorFeedback();
       toast.error("Please select whether your home is smoke free or not");
       return;
     }
     if (formData.pet_free === null) {
+      errorFeedback();
       toast.error("Please select whether your home is pet free or not");
       return;
     }
@@ -110,8 +114,10 @@ export default function ConsignmentInquiryForm() {
     try {
       await axios.post(`${API}/forms/consignment-inquiry`, formData);
       setSubmitted(true);
+      successFeedback();
       toast.success("Inquiry submitted successfully!");
     } catch (error) {
+      errorFeedback();
       toast.error(error.response?.data?.detail || "Failed to submit inquiry");
     } finally {
       setLoading(false);
@@ -146,7 +152,7 @@ export default function ConsignmentInquiryForm() {
                 </p>
               </div>
             </div>
-            <Link to="/">
+            <Link to="/" onClick={() => lightTap()}>
               <Button className="bg-gradient-to-r from-[#FF1493] to-[#8B5CF6] hover:from-[#E91E8C] hover:to-[#6D28D9] text-white font-semibold px-8 py-3 rounded-lg shadow-lg" data-testid="back-to-home-btn">
                 Back to Home
               </Button>
@@ -163,7 +169,7 @@ export default function ConsignmentInquiryForm() {
         {/* Back Link and Logo Row */}
         <div className="relative mt-8 mb-6">
           {/* Back Link - Aligned with logo */}
-          <Link to="/" className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#FF1493] transition-colors" data-testid="back-link-top">
+          <Link to="/" onClick={() => lightTap()} className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#FF1493] transition-colors" data-testid="back-link-top">
             <ArrowLeft className="w-5 h-5" />
             Back to Home
           </Link>
@@ -480,6 +486,7 @@ export default function ConsignmentInquiryForm() {
         {/* Back to Home - Easy access at bottom */}
         <Link 
           to="/" 
+          onClick={() => lightTap()}
           className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
           data-testid="back-link"
         >

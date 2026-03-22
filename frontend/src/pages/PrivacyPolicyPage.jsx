@@ -1,13 +1,15 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useHaptics } from '@/hooks/useHaptics';
 
 export default function PrivacyPolicyPage() {
+  const { lightTap } = useHaptics();
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f0f1a]">
       {/* Header */}
       <div className="p-4">
-        <Link to="/" className="inline-flex items-center text-white/70 hover:text-white transition-colors">
+        <Link to="/" onClick={() => lightTap()} className="inline-flex items-center text-white/70 hover:text-white transition-colors">
           <ArrowLeft className="w-5 h-5 mr-2" />
           Back to Home
         </Link>
