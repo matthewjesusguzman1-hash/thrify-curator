@@ -62,6 +62,7 @@ import { DayPicker } from "react-day-picker";
 import { toast } from "sonner";
 import axios from "axios";
 import { useHaptics } from "@/hooks/useHaptics";
+import LiveActivityService from "@/services/LiveActivityService";
 import MonthlyMileageSection from "@/components/admin/sections/MonthlyMileageSection";
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
@@ -930,6 +931,15 @@ export default function AdminDashboard() {
         })
       );
       setEmployeeClockStatuses(statuses);
+      
+      // Update admin Lock Screen widget with clocked-in employees
+      const clockedInEmployees = employees
+        .filter(emp => statuses[emp.id])
+        .map(emp => ({
+          name: emp.name || emp.email,
+          clockInTime: new Date() // We don't have exact time here, using now as placeholder
+        }));
+      LiveActivityService.updateAdminWidget(clockedInEmployees);
     } catch (error) {
       console.error("Failed to fetch employee clock statuses:", error);
     }

@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
+import LiveActivityService from "@/services/LiveActivityService";
 
 // Check if running in Capacitor native app
 const isNativePlatform = () => {
@@ -316,6 +317,15 @@ export default function EmployeeDashboard() {
       setEntries(entriesRes.data);
       setSummary(summaryRes.data);
       setW9Status(w9Res.data);
+      
+      // Restore Live Activity if employee is clocked in
+      if (statusRes.data.clocked_in && statusRes.data.entry?.clock_in) {
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        LiveActivityService.startEmployeeActivity({
+          employeeName: storedUser?.name || storedUser?.email || 'Employee',
+          clockInTime: new Date(statusRes.data.entry.clock_in)
+        });
+      }
     } catch (error) {
       if (error.response?.status === 401) {
         localStorage.removeItem("token");
@@ -479,6 +489,13 @@ export default function EmployeeDashboard() {
           heavyPress(); // Strong haptic for clock in
           successFeedback();
           toast.success("Clocked in!");
+          
+          // Start Live Activity for Lock Screen timer
+          LiveActivityService.startEmployeeActivity({
+            employeeName: user?.name || user?.email || 'Employee',
+            clockInTime: new Date()
+          });
+          
           fetchData();
           setElapsedTime(0);
         } catch (error) {
@@ -520,6 +537,19 @@ export default function EmployeeDashboard() {
       heavyPress(); // Strong haptic for clock actions
       successFeedback();
       toast.success(action === "in" ? "Clocked in!" : "Clocked out!");
+      
+      // Handle Live Activity based on action
+      if (action === "in") {
+        // Admin clock in - start Live Activity
+        LiveActivityService.startEmployeeActivity({
+          employeeName: user?.name || user?.email || 'Employee',
+          clockInTime: new Date()
+        });
+      } else {
+        // Clock out - end Live Activity
+        LiveActivityService.endEmployeeActivity();
+      }
+      
       fetchData();
       setElapsedTime(0);
     } catch (error) {
