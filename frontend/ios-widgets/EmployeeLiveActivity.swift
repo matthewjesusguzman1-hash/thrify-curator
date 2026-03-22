@@ -2,6 +2,18 @@ import ActivityKit
 import WidgetKit
 import SwiftUI
 
+// MARK: - Activity Attributes (shared definition)
+
+struct EmployeeShiftAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        var elapsedTime: TimeInterval
+        var isActive: Bool
+    }
+    
+    var employeeName: String
+    var clockInTime: Date
+}
+
 // MARK: - Live Activity Widget
 
 @available(iOS 16.2, *)
