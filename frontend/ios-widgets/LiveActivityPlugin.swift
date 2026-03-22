@@ -1,6 +1,18 @@
 import Foundation
 import Capacitor
 import ActivityKit
+import WidgetKit
+
+// Define EmployeeShiftAttributes here so it's available in the App target
+struct EmployeeShiftAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        var elapsedTime: TimeInterval
+        var isActive: Bool
+    }
+    
+    var employeeName: String
+    var clockInTime: Date
+}
 
 @objc(LiveActivityPlugin)
 public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -54,7 +66,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         
         // End any existing activity first
         Task {
-            await endAllExistingActivities()
+            await self.endAllExistingActivities()
             
             // Create attributes
             let attributes = EmployeeShiftAttributes(
@@ -129,7 +141,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         
         Task {
-            await endAllExistingActivities()
+            await self.endAllExistingActivities()
             
             // Clear shared data
             SharedDataManager.clearEmployeeShift()
@@ -172,9 +184,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         SharedDataManager.saveAdminData(adminData)
         
         // Reload widget timeline
-        if #available(iOS 14.0, *) {
-            WidgetCenter.shared.reloadTimelines(ofKind: "AdminClockedInWidget")
-        }
+        WidgetCenter.shared.reloadTimelines(ofKind: "AdminClockedInWidget")
         
         call.resolve()
     }
@@ -192,8 +202,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
-// Also need to add SharedDataManager to the main app target
-// This is a copy - make sure it matches the widget extension version
+// SharedDataManager for App target
 struct SharedDataManager {
     static let appGroupIdentifier = "group.com.thriftycurator.shared"
     
