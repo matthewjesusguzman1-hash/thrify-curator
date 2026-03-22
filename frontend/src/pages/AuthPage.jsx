@@ -47,6 +47,14 @@ export default function AuthPage() {
         return;
       }
       
+      // Check if user just logged out - skip auto biometric login
+      const justLoggedOut = sessionStorage.getItem("justLoggedOut");
+      if (justLoggedOut) {
+        sessionStorage.removeItem("justLoggedOut");
+        setCheckingSession(false);
+        return;
+      }
+      
       const token = localStorage.getItem("token");
       const userData = localStorage.getItem("user");
       
@@ -310,12 +318,6 @@ export default function AuthPage() {
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-white mb-2">Employee Portal</h1>
             <p className="text-white/60">Clock in and track your hours</p>
-            {/* Debug: Show biometric status */}
-            {process.env.NODE_ENV === 'development' && (
-              <p className="text-xs text-white/40 mt-1">
-                Bio: {biometricAvailable ? 'Yes' : 'No'} | Native: {isNative ? 'Yes' : 'No'} | Loading: {biometricLoading ? 'Yes' : 'No'}
-              </p>
-            )}
           </div>
 
           <form onSubmit={handleLogin} data-testid="login-form">

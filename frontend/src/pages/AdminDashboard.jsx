@@ -2050,6 +2050,8 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    // Set flag to prevent auto Face ID on login page
+    sessionStorage.setItem("justLoggedOut", "true");
     toast.success("Logged out successfully");
     navigate("/login");
   };
