@@ -46,10 +46,20 @@ export const useHaptics = () => {
   
   // Impact feedback - for button presses
   const impact = useCallback(async (style = 'medium') => {
-    if (!isNative()) return;
+    console.log('Haptic impact called:', { style, isNative: isNative() });
     
-    await loadHapticsPlugin();
-    if (!Haptics || !ImpactStyle) return;
+    if (!isNative()) {
+      console.log('Not native, skipping haptic');
+      return;
+    }
+    
+    const loaded = await loadHapticsPlugin();
+    console.log('Haptics plugin loaded:', loaded, 'Haptics:', !!Haptics, 'ImpactStyle:', !!ImpactStyle);
+    
+    if (!Haptics || !ImpactStyle) {
+      console.log('Haptics or ImpactStyle not available');
+      return;
+    }
     
     try {
       const styleMap = {
@@ -57,7 +67,9 @@ export const useHaptics = () => {
         medium: ImpactStyle.Medium,
         heavy: ImpactStyle.Heavy,
       };
+      console.log('Calling Haptics.impact with style:', styleMap[style]);
       await Haptics.impact({ style: styleMap[style] || ImpactStyle.Medium });
+      console.log('Haptic impact success');
     } catch (error) {
       console.log('Haptic impact failed:', error);
     }
@@ -65,10 +77,15 @@ export const useHaptics = () => {
   
   // Notification feedback - for action results
   const notification = useCallback(async (type = 'success') => {
+    console.log('Haptic notification called:', { type, isNative: isNative() });
+    
     if (!isNative()) return;
     
-    await loadHapticsPlugin();
-    if (!Haptics || !NotificationType) return;
+    const loaded = await loadHapticsPlugin();
+    if (!Haptics || !NotificationType) {
+      console.log('Haptics or NotificationType not available');
+      return;
+    }
     
     try {
       const typeMap = {
@@ -76,7 +93,9 @@ export const useHaptics = () => {
         warning: NotificationType.Warning,
         error: NotificationType.Error,
       };
+      console.log('Calling Haptics.notification with type:', typeMap[type]);
       await Haptics.notification({ type: typeMap[type] || NotificationType.Success });
+      console.log('Haptic notification success');
     } catch (error) {
       console.log('Haptic notification failed:', error);
     }
