@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import axios from "axios";
+import { useHaptics } from "@/hooks/useHaptics";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
