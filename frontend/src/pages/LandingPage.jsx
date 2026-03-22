@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
+import { useHaptics } from "@/hooks/useHaptics";
 
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
 const TIKTOK_URL = process.env.REACT_APP_TIKTOK_URL;
@@ -115,6 +116,9 @@ const isCapacitor = typeof window !== 'undefined' && window.Capacitor !== undefi
 export default function LandingPage() {
   const [shareLoading, setShareLoading] = useState(false);
   
+  // Haptic feedback
+  const { buttonPress, lightTap, successFeedback, errorFeedback } = useHaptics();
+  
   // reCAPTCHA hook - always call it (hook rules), but may return null executeRecaptcha
   const { executeRecaptcha } = useGoogleReCaptcha();
 
@@ -199,23 +203,27 @@ export default function LandingPage() {
   };
 
   const handleShare = async () => {
+    lightTap(); // Haptic on share button
     setShareLoading(true);
     const shareData = {
       title: "Thrifty Curator",
       text: "Check out Thrifty Curator - Curated resale finds!",
-      url: APP_URL
+      url: WEBSITE_URL
     };
 
     try {
       if (navigator.share) {
         await navigator.share(shareData);
+        successFeedback();
         toast.success("Thanks for sharing!");
       } else {
-        await navigator.clipboard.writeText(APP_URL);
+        await navigator.clipboard.writeText(WEBSITE_URL);
+        successFeedback();
         toast.success("Link copied to clipboard!");
       }
     } catch (err) {
       if (err.name !== "AbortError") {
+        errorFeedback();
         toast.error("Failed to share");
       }
     } finally {
@@ -269,6 +277,7 @@ export default function LandingPage() {
                     <a
                       key={platform.name}
                       href={platform.url}
+                      onClick={() => lightTap()}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#00D4FF]/10 hover:to-[#8B5CF6]/10 transition-all duration-300 group"
@@ -308,7 +317,10 @@ export default function LandingPage() {
                     link.isMessaging ? (
                       <button
                         key={link.name}
-                        onClick={handleOpenMessaging}
+                        onClick={() => {
+                          lightTap();
+                          handleOpenMessaging();
+                        }}
                         className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#FF1493]/10 hover:to-[#8B5CF6]/10 transition-all duration-300 group text-left"
                         data-testid={`connect-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
                       >
@@ -329,6 +341,7 @@ export default function LandingPage() {
                       <a
                         key={link.name}
                         href={link.url}
+                        onClick={() => lightTap()}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#FF1493]/10 hover:to-[#8B5CF6]/10 transition-all duration-300 group"
@@ -374,6 +387,7 @@ export default function LandingPage() {
                     <div key={link.name}>
                       <Link
                         to={link.path}
+                        onClick={() => buttonPress()}
                         className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gradient-to-r hover:from-[#8B5CF6]/10 hover:to-[#00D4FF]/10 transition-all duration-300 group"
                         data-testid={`form-link-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
                       >
@@ -406,6 +420,7 @@ export default function LandingPage() {
                 <div>
                   <Link
                     to="/login"
+                    onClick={() => buttonPress()}
                     className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-[#1A1A2E] to-[#16213E] hover:from-[#16213E] hover:to-[#0F3460] transition-all duration-300 group"
                     data-testid="employee-login-link"
                   >

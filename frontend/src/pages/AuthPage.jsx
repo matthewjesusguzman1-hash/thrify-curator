@@ -305,6 +305,7 @@ export default function AuthPage() {
       >
         <Link 
           to="/" 
+          onClick={() => lightTap()}
           className="mb-6 inline-flex items-center gap-2 text-white/70 hover:text-[#00D4FF] transition-colors" 
           data-testid="back-link"
         >

@@ -660,14 +660,14 @@ export default function EmployeeDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/">
+            <Link to="/" onClick={() => lightTap()}>
               <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="home-btn">
                 <Home className="w-4 h-4 mr-1" />
                 Home
               </Button>
             </Link>
             {user.role === "admin" && (
-              <Link to="/admin">
+              <Link to="/admin" onClick={() => lightTap()}>
                 <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="admin-btn">
                   Admin
                 </Button>
@@ -676,7 +676,10 @@ export default function EmployeeDashboard() {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => setShowPasswordModal(true)}
+              onClick={() => {
+                lightTap();
+                setShowPasswordModal(true);
+              }}
               className="text-white/70 hover:text-white hover:bg-white/10"
               data-testid="security-btn"
             >

@@ -696,7 +696,7 @@ export default function ConsignmentAgreementForm() {
         <div className="max-w-2xl mx-auto">
           {/* Back Link and Logo Row */}
           <div className="relative mt-8 mb-6">
-            <Link to="/" className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#8B5CF6] transition-colors" data-testid="back-link-top">
+            <Link to="/" onClick={() => lightTap()} className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#8B5CF6] transition-colors" data-testid="back-link-top">
               <ArrowLeft className="w-5 h-5" />
               Back to Home
             </Link>
@@ -759,6 +759,7 @@ export default function ConsignmentAgreementForm() {
 
           <Link 
             to="/" 
+            onClick={() => lightTap()}
             className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
             data-testid="back-link"
           >
