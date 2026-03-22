@@ -7,6 +7,9 @@ struct ThriftyCuratorWidgetsBundle: WidgetBundle {
         // Employee Live Activity (real-time timer)
         EmployeeLiveActivity()
         
+        // Admin Live Activity (real-time employee tracking)
+        AdminLiveActivity()
+        
         // Admin Lock Screen Widget (static, refreshes periodically)
         AdminClockedInWidget()
     }

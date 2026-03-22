@@ -14,6 +14,18 @@ struct EmployeeShiftAttributes: ActivityAttributes {
     var clockInTime: Date
 }
 
+// Define AdminShiftAttributes for admin monitoring
+struct AdminShiftAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        var employeeCount: Int
+        var employeeNames: [String]
+        var lastUpdated: Date
+    }
+    
+    var adminName: String
+    var startedAt: Date
+}
+
 @objc(LiveActivityPlugin)
 public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "LiveActivityPlugin"
@@ -22,11 +34,15 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "startEmployeeActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateEmployeeActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endEmployeeActivity", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startAdminActivity", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "updateAdminActivity", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "endAdminActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateAdminData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "isSupported", returnType: CAPPluginReturnPromise)
     ]
     
-    private var currentActivity: Activity<EmployeeShiftAttributes>?
+    private var currentEmployeeActivity: Activity<EmployeeShiftAttributes>?
+    private var currentAdminActivity: Activity<AdminShiftAttributes>?
     
     // Check if Live Activities are supported
     @objc func isSupported(_ call: CAPPluginCall) {
@@ -38,7 +54,8 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
     
-    // Start Live Activity when employee clocks in
+    // MARK: - Employee Activity Methods
+    
     @objc func startEmployeeActivity(_ call: CAPPluginCall) {
         guard #available(iOS 16.2, *) else {
             call.reject("Live Activities require iOS 16.2+")
@@ -55,7 +72,6 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         
-        // Parse clock in time or use current time
         let clockInTime: Date
         if let clockInTimeString = call.getString("clockInTime"),
            let parsedDate = ISO8601DateFormatter().date(from: clockInTimeString) {
@@ -64,11 +80,9 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             clockInTime = Date()
         }
         
-        // End any existing activity first
         Task {
-            await self.endAllExistingActivities()
+            await self.endAllEmployeeActivities()
             
-            // Create attributes
             let attributes = EmployeeShiftAttributes(
                 employeeName: employeeName,
                 clockInTime: clockInTime
@@ -79,10 +93,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                 isActive: true
             )
             
-            let content = ActivityContent(
-                state: initialState,
-                staleDate: nil
-            )
+            let content = ActivityContent(state: initialState, staleDate: nil)
             
             do {
                 let activity = try Activity.request(
@@ -90,10 +101,8 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                     content: content,
                     pushType: nil
                 )
+                self.currentEmployeeActivity = activity
                 
-                self.currentActivity = activity
-                
-                // Save to shared data for widget access
                 let shiftData = SharedDataManager.EmployeeShiftData(
                     employeeName: employeeName,
                     clockInTime: clockInTime,
@@ -108,14 +117,13 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
     
-    // Update the Live Activity (optional - for manual updates)
     @objc func updateEmployeeActivity(_ call: CAPPluginCall) {
         guard #available(iOS 16.2, *) else {
             call.reject("Live Activities require iOS 16.2+")
             return
         }
         
-        guard let activity = currentActivity else {
+        guard let activity = currentEmployeeActivity else {
             call.reject("No active Live Activity")
             return
         }
@@ -127,13 +135,11 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                 elapsedTime: elapsedTime,
                 isActive: true
             )
-            
             await activity.update(using: newState)
             call.resolve()
         }
     }
     
-    // End Live Activity when employee clocks out
     @objc func endEmployeeActivity(_ call: CAPPluginCall) {
         guard #available(iOS 16.2, *) else {
             call.reject("Live Activities require iOS 16.2+")
@@ -141,16 +147,132 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         
         Task {
-            await self.endAllExistingActivities()
-            
-            // Clear shared data
+            await self.endAllEmployeeActivities()
             SharedDataManager.clearEmployeeShift()
-            
             call.resolve()
         }
     }
     
-    // Update admin widget data (list of clocked in employees)
+    // MARK: - Admin Activity Methods (with Push Token for real-time updates)
+    
+    @objc func startAdminActivity(_ call: CAPPluginCall) {
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities require iOS 16.2+")
+            return
+        }
+        
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            call.reject("Live Activities are disabled")
+            return
+        }
+        
+        let adminName = call.getString("adminName") ?? "Admin"
+        let employeeCount = call.getInt("employeeCount") ?? 0
+        let employeeNames = call.getArray("employeeNames", String.self) ?? []
+        
+        Task {
+            await self.endAllAdminActivities()
+            
+            let attributes = AdminShiftAttributes(
+                adminName: adminName,
+                startedAt: Date()
+            )
+            
+            let initialState = AdminShiftAttributes.ContentState(
+                employeeCount: employeeCount,
+                employeeNames: employeeNames,
+                lastUpdated: Date()
+            )
+            
+            let content = ActivityContent(state: initialState, staleDate: nil)
+            
+            do {
+                // Request activity WITH push token for remote updates
+                let activity = try Activity.request(
+                    attributes: attributes,
+                    content: content,
+                    pushType: .token  // Enable push updates!
+                )
+                self.currentAdminActivity = activity
+                
+                // Get the push token and return it
+                var pushTokenString: String? = nil
+                
+                // Observe push token updates
+                Task {
+                    for await pushToken in activity.pushTokenUpdates {
+                        let tokenParts = pushToken.map { data in String(format: "%02.2hhx", data) }
+                        pushTokenString = tokenParts.joined()
+                        print("Admin Live Activity push token: \(pushTokenString ?? "nil")")
+                        
+                        // Notify JS about the token
+                        self.notifyListeners("adminPushTokenReceived", data: [
+                            "pushToken": pushTokenString ?? ""
+                        ])
+                    }
+                }
+                
+                // Wait briefly for token
+                try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                
+                call.resolve([
+                    "activityId": activity.id,
+                    "pushToken": pushTokenString ?? ""
+                ])
+            } catch {
+                call.reject("Failed to start Admin Live Activity: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    @objc func updateAdminActivity(_ call: CAPPluginCall) {
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities require iOS 16.2+")
+            return
+        }
+        
+        let employeeCount = call.getInt("employeeCount") ?? 0
+        let employeeNames = call.getArray("employeeNames", String.self) ?? []
+        
+        Task {
+            if let activity = self.currentAdminActivity {
+                let newState = AdminShiftAttributes.ContentState(
+                    employeeCount: employeeCount,
+                    employeeNames: employeeNames,
+                    lastUpdated: Date()
+                )
+                await activity.update(using: newState)
+                call.resolve()
+            } else {
+                for activity in Activity<AdminShiftAttributes>.activities {
+                    let newState = AdminShiftAttributes.ContentState(
+                        employeeCount: employeeCount,
+                        employeeNames: employeeNames,
+                        lastUpdated: Date()
+                    )
+                    await activity.update(using: newState)
+                    self.currentAdminActivity = activity
+                    call.resolve()
+                    return
+                }
+                call.reject("No active Admin Live Activity")
+            }
+        }
+    }
+    
+    @objc func endAdminActivity(_ call: CAPPluginCall) {
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities require iOS 16.2+")
+            return
+        }
+        
+        Task {
+            await self.endAllAdminActivities()
+            call.resolve()
+        }
+    }
+    
+    // Update admin widget data (for static widget)
     @objc func updateAdminData(_ call: CAPPluginCall) {
         guard let employeesArray = call.getArray("employees") as? [[String: Any]] else {
             call.reject("employees array is required")
@@ -168,7 +290,6 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                 } else {
                     clockInTime = Date()
                 }
-                
                 clockedInEmployees.append(SharedDataManager.ClockedInEmployee(
                     name: name,
                     clockInTime: clockInTime
@@ -182,15 +303,15 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         )
         
         SharedDataManager.saveAdminData(adminData)
-        
-        // Reload widget timeline
         WidgetCenter.shared.reloadTimelines(ofKind: "AdminClockedInWidget")
         
         call.resolve()
     }
     
+    // MARK: - Helper Methods
+    
     @available(iOS 16.2, *)
-    private func endAllExistingActivities() async {
+    private func endAllEmployeeActivities() async {
         for activity in Activity<EmployeeShiftAttributes>.activities {
             let finalState = EmployeeShiftAttributes.ContentState(
                 elapsedTime: 0,
@@ -198,7 +319,20 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             )
             await activity.end(using: finalState, dismissalPolicy: .immediate)
         }
-        currentActivity = nil
+        currentEmployeeActivity = nil
+    }
+    
+    @available(iOS 16.2, *)
+    private func endAllAdminActivities() async {
+        for activity in Activity<AdminShiftAttributes>.activities {
+            let finalState = AdminShiftAttributes.ContentState(
+                employeeCount: 0,
+                employeeNames: [],
+                lastUpdated: Date()
+            )
+            await activity.end(using: finalState, dismissalPolicy: .immediate)
+        }
+        currentAdminActivity = nil
     }
 }
 

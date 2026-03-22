@@ -96,6 +96,7 @@ export default function AdminDashboard() {
   const [user, setUser] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [employeeClockStatuses, setEmployeeClockStatuses] = useState({}); // Track which employees are clocked in
+  const [adminMonitoringActive, setAdminMonitoringActive] = useState(false); // Live Activity monitoring state
   const [timeEntries, setTimeEntries] = useState([]);
   const [summary, setSummary] = useState({ 
     total_employees: 0, 
@@ -2397,6 +2398,49 @@ export default function AdminDashboard() {
               </Button>
             </div>
             <div className="flex gap-2 items-start">
+              {/* Live Activity Toggle */}
+              <Button
+                onClick={async () => {
+                  buttonPress();
+                  if (adminMonitoringActive) {
+                    await LiveActivityService.endAdminActivity(user?.id);
+                    setAdminMonitoringActive(false);
+                    successFeedback();
+                    toast.success("Live monitoring stopped");
+                  } else {
+                    const clockedInNames = employees
+                      .filter(emp => employeeClockStatuses[emp.id])
+                      .map(emp => emp.name || emp.email);
+                    await LiveActivityService.startAdminActivity({
+                      adminName: user?.name || 'Admin',
+                      userId: user?.id,
+                      employeeCount: clockedInNames.length,
+                      employeeNames: clockedInNames
+                    });
+                    setAdminMonitoringActive(true);
+                    successFeedback();
+                    toast.success("Live monitoring started - check your Lock Screen!");
+                  }
+                }}
+                size="sm"
+                className={`flex items-center gap-1 ${adminMonitoringActive 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600'
+                } text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9`}
+                data-testid="live-activity-toggle-btn"
+              >
+                {adminMonitoringActive ? (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    <span className="hidden sm:inline">Monitoring</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    <span className="hidden sm:inline">Live Monitor</span>
+                  </>
+                )}
+              </Button>
               {/* Employee Management + Start Trip */}
               <div className="flex flex-col gap-1">
                 {/* Add, Edit, Remove row */}

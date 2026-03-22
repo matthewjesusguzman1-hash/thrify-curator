@@ -11,6 +11,25 @@ from app.models.notifications import AdminNotification
 router = APIRouter(prefix="/time", tags=["Time Tracking"])
 
 
+async def trigger_admin_live_activity_update():
+    """Helper function to update all admin Live Activities with current clocked-in employees"""
+    try:
+        from app.services.apns_service import update_admin_live_activities
+        
+        # Get all currently clocked in employees
+        clocked_in = await db.time_entries.find(
+            {"clock_out": None},
+            {"user_name": 1, "_id": 0}
+        ).to_list(100)
+        
+        employee_names = [entry.get("user_name", "Unknown") for entry in clocked_in]
+        employee_count = len(employee_names)
+        
+        await update_admin_live_activities(employee_count, employee_names)
+    except Exception as e:
+        print(f"Failed to trigger admin Live Activity update: {e}")
+
+
 def round_to_nearest_minute(seconds: float) -> float:
     """Convert seconds to hours with full precision.
     Time is stored precisely - rounding to minute is done only for display.
@@ -60,6 +79,9 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         )
         await db.admin_notifications.insert_one(notification.model_dump())
         
+        # Trigger admin Live Activity update
+        await trigger_admin_live_activity_update()
+        
         return entry
     
     elif action.action == "out":
@@ -97,6 +119,9 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
             details={"time": now_iso, "hours": total_hours}
         )
         await db.admin_notifications.insert_one(notification.model_dump())
+        
+        # Trigger admin Live Activity update
+        await trigger_admin_live_activity_update()
         
         return TimeEntry(**active)
     

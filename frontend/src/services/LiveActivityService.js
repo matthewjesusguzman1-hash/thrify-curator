@@ -1,11 +1,14 @@
 import { registerPlugin } from '@capacitor/core';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 // Define the plugin interface
 const LiveActivity = registerPlugin('LiveActivity');
 
 /**
  * Live Activity service for iOS
- * Manages employee shift timers on Lock Screen & Dynamic Island
+ * Manages employee shift timers and admin monitoring on Lock Screen & Dynamic Island
  */
 export const LiveActivityService = {
   /**
@@ -14,11 +17,9 @@ export const LiveActivityService = {
    */
   isSupported: async () => {
     try {
-      // Only available on native iOS
       if (!window.Capacitor?.isNativePlatform?.()) {
         return false;
       }
-      
       const result = await LiveActivity.isSupported();
       return result.supported;
     } catch (error) {
@@ -27,9 +28,10 @@ export const LiveActivityService = {
     }
   },
 
+  // ============ EMPLOYEE METHODS ============
+
   /**
    * Start a Live Activity when employee clocks in
-   * Shows real-time timer on Lock Screen and Dynamic Island
    * @param {Object} params
    * @param {string} params.employeeName - Employee's display name
    * @param {Date|string} params.clockInTime - Clock in timestamp
@@ -43,7 +45,6 @@ export const LiveActivityService = {
         return null;
       }
 
-      // Convert Date to ISO string if needed
       const clockInTimeString = clockInTime instanceof Date 
         ? clockInTime.toISOString() 
         : clockInTime;
@@ -53,10 +54,10 @@ export const LiveActivityService = {
         clockInTime: clockInTimeString
       });
       
-      console.log('Live Activity started:', result.activityId);
+      console.log('Employee Live Activity started:', result.activityId);
       return result;
     } catch (error) {
-      console.error('Failed to start Live Activity:', error);
+      console.error('Failed to start Employee Live Activity:', error);
       return null;
     }
   },
@@ -68,31 +69,147 @@ export const LiveActivityService = {
   endEmployeeActivity: async () => {
     try {
       const supported = await LiveActivityService.isSupported();
-      if (!supported) {
-        return;
-      }
+      if (!supported) return;
 
       await LiveActivity.endEmployeeActivity();
-      console.log('Live Activity ended');
+      console.log('Employee Live Activity ended');
     } catch (error) {
-      console.error('Failed to end Live Activity:', error);
+      console.error('Failed to end Employee Live Activity:', error);
+    }
+  },
+
+  // ============ ADMIN METHODS ============
+
+  /**
+   * Start admin monitoring Live Activity with push support
+   * Shows real-time count of clocked-in employees
+   * Registers push token with backend for remote updates
+   * @param {Object} params
+   * @param {string} params.adminName - Admin's display name
+   * @param {string} params.userId - Admin's user ID for token registration
+   * @param {number} params.employeeCount - Current count of clocked-in employees
+   * @param {string[]} params.employeeNames - Names of clocked-in employees
+   * @returns {Promise<{activityId: string, pushToken: string}>}
+   */
+  startAdminActivity: async ({ adminName, userId, employeeCount, employeeNames }) => {
+    try {
+      const supported = await LiveActivityService.isSupported();
+      if (!supported) {
+        console.log('Live Activities not supported, skipping');
+        return null;
+      }
+
+      const result = await LiveActivity.startAdminActivity({
+        adminName: adminName || 'Admin',
+        employeeCount: employeeCount || 0,
+        employeeNames: employeeNames || []
+      });
+      
+      console.log('Admin Live Activity started:', result.activityId);
+      
+      // Register push token with backend for remote updates
+      if (result.pushToken && userId) {
+        try {
+          await axios.post(`${API}/api/live-activity/register-token`, {
+            user_id: userId,
+            push_token: result.pushToken,
+            activity_type: 'admin'
+          });
+          console.log('Admin push token registered with backend');
+        } catch (regError) {
+          console.error('Failed to register push token:', regError);
+        }
+      }
+      
+      // Listen for push token updates (token might come later)
+      LiveActivity.addListener('adminPushTokenReceived', async (data) => {
+        if (data.pushToken && userId) {
+          try {
+            await axios.post(`${API}/api/live-activity/register-token`, {
+              user_id: userId,
+              push_token: data.pushToken,
+              activity_type: 'admin'
+            });
+            console.log('Admin push token updated with backend');
+          } catch (regError) {
+            console.error('Failed to update push token:', regError);
+          }
+        }
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('Failed to start Admin Live Activity:', error);
+      return null;
     }
   },
 
   /**
-   * Update admin widget with current clocked-in employees
-   * Call this whenever the clocked-in employee list changes
+   * Update admin Live Activity with new employee data (local update)
+   * Call this whenever employees clock in/out and app is open
+   * @param {Object} params
+   * @param {number} params.employeeCount - Current count of clocked-in employees
+   * @param {string[]} params.employeeNames - Names of clocked-in employees
+   * @returns {Promise<void>}
+   */
+  updateAdminActivity: async ({ employeeCount, employeeNames }) => {
+    try {
+      const supported = await LiveActivityService.isSupported();
+      if (!supported) return;
+
+      await LiveActivity.updateAdminActivity({
+        employeeCount: employeeCount || 0,
+        employeeNames: employeeNames || []
+      });
+      
+      console.log('Admin Live Activity updated:', employeeCount, 'employees');
+    } catch (error) {
+      console.error('Failed to update Admin Live Activity:', error);
+    }
+  },
+
+  /**
+   * End admin monitoring Live Activity
+   * @param {string} userId - Admin's user ID for token unregistration
+   * @returns {Promise<void>}
+   */
+  endAdminActivity: async (userId) => {
+    try {
+      const supported = await LiveActivityService.isSupported();
+      if (!supported) return;
+
+      await LiveActivity.endAdminActivity();
+      console.log('Admin Live Activity ended');
+      
+      // Unregister push token
+      if (userId) {
+        try {
+          await axios.post(`${API}/api/live-activity/unregister-token`, null, {
+            params: { user_id: userId, activity_type: 'admin' }
+          });
+          console.log('Admin push token unregistered');
+        } catch (unregError) {
+          console.error('Failed to unregister push token:', unregError);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to end Admin Live Activity:', error);
+    }
+  },
+
+  // ============ WIDGET METHODS ============
+
+  /**
+   * Update admin widget with current clocked-in employees (for static widget)
    * @param {Array<{name: string, clockInTime: Date|string}>} employees
    * @returns {Promise<void>}
    */
   updateAdminWidget: async (employees) => {
     try {
-      // Only works on native iOS
       if (!window.Capacitor?.isNativePlatform?.()) {
         return;
       }
 
-      // Format employees for native code
       const formattedEmployees = employees.map(emp => ({
         name: emp.name,
         clockInTime: emp.clockInTime instanceof Date 
