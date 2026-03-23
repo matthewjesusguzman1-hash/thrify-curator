@@ -36,6 +36,7 @@ export const LiveActivityService = {
   registerForPushNotifications: async (userId) => {
     try {
       if (!window.Capacitor?.isNativePlatform?.()) {
+        console.log('Not native platform, skipping push registration');
         return null;
       }
 
@@ -46,33 +47,30 @@ export const LiveActivityService = {
         return null;
       }
 
-      // Register with APNs
-      await PushNotifications.register();
-
-      // Listen for the token
-      return new Promise((resolve) => {
-        PushNotifications.addListener('registration', async (token) => {
-          console.log('Device push token:', token.value);
-          
-          // Send token to backend
-          try {
-            await axios.post(`${API}/api/live-activity/register-device-token`, {
-              user_id: userId,
-              device_token: token.value
-            });
-            console.log('Device push token registered with backend');
-          } catch (error) {
-            console.error('Failed to register device token:', error);
-          }
-          
-          resolve(token.value);
-        });
-
-        PushNotifications.addListener('registrationError', (error) => {
-          console.error('Push registration error:', error);
-          resolve(null);
-        });
+      // Set up listeners BEFORE registering
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('Device push token:', token.value);
+        
+        // Send token to backend
+        try {
+          await axios.post(`${API}/api/live-activity/register-device-token`, {
+            user_id: userId,
+            device_token: token.value
+          });
+          console.log('Device push token registered with backend');
+        } catch (error) {
+          console.error('Failed to register device token:', error);
+        }
       });
+
+      PushNotifications.addListener('registrationError', (error) => {
+        console.error('Push registration error:', error);
+      });
+
+      // Register with APNs (this triggers the 'registration' event)
+      await PushNotifications.register();
+      
+      return true;
     } catch (error) {
       console.error('Failed to register for push notifications:', error);
       return null;

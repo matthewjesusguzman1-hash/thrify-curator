@@ -2408,8 +2408,12 @@ export default function AdminDashboard() {
                     successFeedback();
                     toast.success("Live monitoring stopped");
                   } else {
-                    // Register for push notifications first
-                    await LiveActivityService.registerForPushNotifications(user?.id);
+                    // Try to register for push notifications (don't block if fails)
+                    try {
+                      await LiveActivityService.registerForPushNotifications(user?.id);
+                    } catch (e) {
+                      console.log('Push registration skipped:', e);
+                    }
                     
                     const clockedInNames = employees
                       .filter(emp => employeeClockStatuses[emp.id])
