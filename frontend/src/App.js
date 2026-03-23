@@ -17,8 +17,8 @@ import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
-// Session timeout in milliseconds (15 minutes)
-const SESSION_TIMEOUT = 15 * 60 * 1000;
+// Session timeout in milliseconds (1 hour)
+const SESSION_TIMEOUT = 60 * 60 * 1000;
 
 // Check if running in native app
 const isNativeApp = () => {
