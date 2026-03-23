@@ -457,7 +457,6 @@ export default function ConversationsSection() {
                                 </div>
                               );
                             })}
-                            ))}
                             <div ref={messagesEndRef} />
                           </>
                         )}
