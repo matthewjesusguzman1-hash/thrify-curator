@@ -36,6 +36,171 @@ const PAYMENT_METHODS = [
   { id: "applepay", label: "Apple Pay", needsDetails: true, placeholder: "phone number" }
 ];
 
+// Consignor Messaging Section - Light themed to match other sections
+function ConsignorMessagingSection({ email, userName }) {
+  const [expanded, setExpanded] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const fetchMessages = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `${API}/conversations/consignor/my-conversation?email=${encodeURIComponent(email)}`
+      );
+      setMessages(response.data.messages || []);
+    } catch (error) {
+      console.error("Failed to fetch messages:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (expanded && email) {
+      fetchMessages();
+    }
+  }, [expanded, email]);
+
+  useEffect(() => {
+    if (expanded) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, expanded]);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || sending) return;
+
+    try {
+      setSending(true);
+      await axios.post(
+        `${API}/conversations/consignor/send?email=${encodeURIComponent(email)}`,
+        { content: newMessage.trim(), sender_name: userName }
+      );
+      setNewMessage("");
+      await fetchMessages();
+      toast.success("Message sent!");
+    } catch (error) {
+      toast.error("Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const formatTime = (isoString) => {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    if (diffDays === 1) return "Yesterday";
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  };
+
+  const unreadCount = messages.filter(m => m.sender_type === "admin" && !m.read).length;
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className={`w-full flex items-center justify-between p-3 transition-colors ${
+          expanded ? 'bg-purple-500/10' : 'bg-gray-50 hover:bg-gray-100'
+        }`}
+        data-testid="toggle-messages-section"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+            expanded ? 'bg-purple-500' : 'bg-gray-200'
+          }`}>
+            <MessageSquare className={`w-4 h-4 ${expanded ? 'text-white' : 'text-gray-600'}`} />
+          </div>
+          <span className={`font-medium ${expanded ? 'text-purple-700' : 'text-[#1A1A2E]'}`}>
+            Messages {messages.length > 0 ? `(${messages.length})` : ''}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {unreadCount}
+            </span>
+          )}
+          {expanded ? <ChevronUp className="w-5 h-5 text-purple-500" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-gray-100 bg-purple-50/30">
+          {/* Messages List */}
+          <div className="h-48 overflow-y-auto p-3 space-y-2">
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <RefreshCw className="w-5 h-5 text-purple-400 animate-spin" />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <MessageSquare className="w-8 h-8 text-gray-300 mb-1" />
+                <p className="text-gray-500 text-sm">No messages yet</p>
+                <p className="text-gray-400 text-xs">Send a message to contact admin</p>
+              </div>
+            ) : (
+              <>
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.sender_type === "admin" ? "justify-start" : "justify-end"}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-xl px-3 py-2 ${
+                        msg.sender_type === "admin"
+                          ? "bg-white border border-gray-200 text-gray-800"
+                          : "bg-purple-500 text-white"
+                      }`}
+                    >
+                      {msg.sender_type === "admin" && (
+                        <p className="text-xs text-gray-500 mb-0.5">Admin</p>
+                      )}
+                      <p className="text-sm">{msg.content}</p>
+                      <p className={`text-xs mt-0.5 ${msg.sender_type === "admin" ? "text-gray-400" : "text-purple-200"}`}>
+                        {formatTime(msg.sent_at)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </>
+            )}
+          </div>
+
+          {/* Send Message */}
+          <form onSubmit={handleSend} className="p-3 border-t border-gray-200 bg-white">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400"
+                disabled={sending}
+              />
+              <button
+                type="submit"
+                disabled={!newMessage.trim() || sending}
+                className="bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded-lg px-4 py-2 flex items-center justify-center"
+              >
+                {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ConsignmentAgreementForm() {
   const [formData, setFormData] = useState({
     full_name: "",
@@ -1705,16 +1870,12 @@ export default function ConsignmentAgreementForm() {
                     )}
                   </div>
 
-                  {/* Messaging Section - Dark theme for consistency */}
+                  {/* Messaging Section - Styled to match other sections */}
                   {addItemsAgreement && (
-                    <div className="border border-gray-200 rounded-xl overflow-hidden bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]">
-                      <MessagingSection
-                        userType="consignor"
-                        userId={addItemsAgreement.email}
-                        userName={addItemsAgreement.full_name}
-                        userEmail={addItemsAgreement.email}
-                      />
-                    </div>
+                    <ConsignorMessagingSection 
+                      email={addItemsAgreement.email}
+                      userName={addItemsAgreement.full_name}
+                    />
                   )}
 
                   {/* My Submissions Section */}

@@ -882,6 +882,17 @@ export default function EmployeeDashboard() {
             </div>
           </div>
 
+          {/* Messages - Quick Access */}
+          <MessagingSection
+            userType="employee"
+            userId={user?.id || user?.email}
+            userName={user?.name || user?.email}
+            userEmail={user?.email}
+            getAuthHeader={() => ({
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            })}
+          />
+
           {/* Pay Period Summary Card */}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#FF1493] to-[#8B5CF6]" />
@@ -1281,19 +1292,6 @@ export default function EmployeeDashboard() {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Messaging Section */}
-          <div className="mt-6">
-            <MessagingSection
-              userType="employee"
-              userId={user?.id || user?.email}
-              userName={user?.name || user?.email}
-              userEmail={user?.email}
-              getAuthHeader={() => ({
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-              })}
-            />
           </div>
         </motion.div>
       </main>

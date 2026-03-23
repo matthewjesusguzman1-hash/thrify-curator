@@ -621,6 +621,13 @@ export default function AdminDashboard() {
         await expandGroupIfNeeded('group-forms');
         await expandSectionIfNeeded('[data-testid="messages-section"]', '[data-testid="messages-section-toggle"]');
         break;
+
+      case 'employee_message':
+      case 'consignor_message':
+        // Forms & Communications group contains Conversations
+        await expandGroupIfNeeded('group-forms');
+        await expandSectionIfNeeded('[data-testid="conversations-section"]', '[data-testid="conversations-section-toggle"]');
+        break;
         
       case 'job_application':
       case 'consignment_inquiry':
@@ -2219,6 +2226,10 @@ export default function AdminDashboard() {
                                   ? 'bg-orange-500'
                                   : notification.type === 'new_message'
                                   ? 'bg-pink-500'
+                                  : notification.type === 'employee_message'
+                                  ? 'bg-green-500'
+                                  : notification.type === 'consignor_message'
+                                  ? 'bg-amber-500'
                                   : notification.type === 'job_application'
                                   ? 'bg-purple-500'
                                   : notification.type === 'consignment_inquiry'
@@ -2238,6 +2249,8 @@ export default function AdminDashboard() {
                                   : notification.type === 'w9_submission' || notification.type === 'w9_submitted'
                                   ? <FileText className="w-5 h-5 text-white" />
                                   : notification.type === 'new_message'
+                                  ? <MessageSquare className="w-5 h-5 text-white" />
+                                  : notification.type === 'employee_message' || notification.type === 'consignor_message'
                                   ? <MessageSquare className="w-5 h-5 text-white" />
                                   : notification.type === 'job_application'
                                   ? <Briefcase className="w-5 h-5 text-white" />
