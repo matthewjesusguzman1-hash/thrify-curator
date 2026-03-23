@@ -2408,6 +2408,13 @@ export default function AdminDashboard() {
                     successFeedback();
                     toast.success("Live monitoring stopped");
                   } else {
+                    // Verify we have a valid auth token
+                    const token = localStorage.getItem("token");
+                    if (!token) {
+                      toast.error("Session expired. Please log in again.");
+                      return;
+                    }
+                    
                     // Try to register for push notifications (don't block if fails)
                     try {
                       await LiveActivityService.registerForPushNotifications(user?.id);
@@ -2417,7 +2424,9 @@ export default function AdminDashboard() {
                     
                     // Fetch actual clocked-in employees with their clock-in times
                     let clockedInData = [];
+                    let fetchError = null;
                     try {
+                      console.log('Fetching clocked-in employees with token:', token.substring(0, 20) + '...');
                       const response = await axios.get(`${API}/admin/clocked-in-employees`, getAuthHeader());
                       const clockedEmployees = response.data.employees || [];
                       
@@ -2439,12 +2448,21 @@ export default function AdminDashboard() {
                         
                         return `${name}|${timeStr}|${timestamp}`;
                       });
+                      console.log('Fetched', clockedInData.length, 'clocked-in employees');
                     } catch (e) {
                       console.log('Failed to fetch clocked-in employees:', e);
-                      // Fallback to simple names
+                      fetchError = e;
+                      
+                      // If 401, the session might be invalid
+                      if (e.response?.status === 401) {
+                        console.log('Auth error - using local employee status fallback');
+                      }
+                      
+                      // Fallback to local state (employees we know are clocked in from the UI)
                       clockedInData = employees
                         .filter(emp => employeeClockStatuses[emp.id])
                         .map(emp => `${emp.name || emp.email}|--|0`);
+                      console.log('Using fallback with', clockedInData.length, 'employees from local state');
                     }
                     
                     await LiveActivityService.startAdminActivity({
@@ -2455,7 +2473,12 @@ export default function AdminDashboard() {
                     });
                     setAdminMonitoringActive(true);
                     successFeedback();
-                    toast.success("Live monitoring started - check your Lock Screen!");
+                    
+                    if (fetchError) {
+                      toast.info(`Live monitoring started with ${clockedInData.length} employees (using cached data)`);
+                    } else {
+                      toast.success(`Live monitoring started - ${clockedInData.length} employees tracked`);
+                    }
                   }
                 }}
                 size="sm"

@@ -240,11 +240,44 @@ function App() {
         console.log('Permission result:', permResult);
         
         if (permResult.receive === 'granted') {
-          // Set up listener BEFORE registering to capture the token
+          // First, try to get existing token directly (works on iOS even if registration event doesn't fire)
+          try {
+            const existingToken = await PushNotifications.getToken();
+            if (existingToken?.value) {
+              console.log('Got existing device push token via getToken():', existingToken.value);
+              localStorage.setItem('devicePushToken', existingToken.value);
+              localStorage.setItem('pendingPushToken', existingToken.value);
+              
+              // Try to register immediately if user is logged in
+              const user = JSON.parse(localStorage.getItem('user') || '{}');
+              if (user.id) {
+                try {
+                  const API = process.env.REACT_APP_BACKEND_URL;
+                  await axios.post(`${API}/api/live-activity/register-device-token`, {
+                    user_id: user.id,
+                    device_token: existingToken.value
+                  });
+                  console.log('Device push token registered for notifications!');
+                } catch (err) {
+                  console.error('Failed to register device token:', err);
+                }
+              }
+              return; // Got token, we're done
+            }
+          } catch (getTokenErr) {
+            console.log('getToken() not available, falling back to registration event...');
+          }
+          
+          // Fallback: Set up listener BEFORE registering to capture the token
           PushNotifications.addListener('registration', async (tokenData) => {
-            console.log('Push token received on startup:', tokenData.value);
+            console.log('DEVICE PUSH TOKEN received via registration event:', tokenData.value);
             
-            // Save token for Live Activity clock-out notifications
+            // ALWAYS save to localStorage - iOS only fires this once!
+            localStorage.setItem('devicePushToken', tokenData.value);
+            localStorage.setItem('pendingPushToken', tokenData.value);
+            console.log('Device push token saved to localStorage');
+            
+            // Try to register immediately if user is logged in
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             if (user.id) {
               try {
@@ -253,20 +286,16 @@ function App() {
                   user_id: user.id,
                   device_token: tokenData.value
                 });
-                console.log('Device token registered for clock-out notifications');
+                console.log('Device token registered for push notifications!');
               } catch (err) {
                 console.error('Failed to register device token:', err);
               }
-            } else {
-              // Store token for later registration after login
-              localStorage.setItem('pendingPushToken', tokenData.value);
-              console.log('Token saved for registration after login');
             }
           });
           
-          // Register for push notifications
+          // Register for push notifications (may trigger registration event on first time)
           await PushNotifications.register();
-          console.log('Successfully registered for push notifications!');
+          console.log('PushNotifications.register() called');
         } else {
           console.log('Push notification permission denied');
         }

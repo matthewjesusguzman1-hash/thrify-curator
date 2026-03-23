@@ -2,6 +2,7 @@ import Foundation
 import Capacitor
 import ActivityKit
 import WidgetKit
+import UserNotifications
 
 // Define EmployeeShiftAttributes here so it's available in the App target
 struct EmployeeShiftAttributes: ActivityAttributes {
@@ -38,11 +39,67 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "updateAdminActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endAdminActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateAdminData", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "isSupported", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "isSupported", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getDevicePushToken", returnType: CAPPluginReturnPromise)
     ]
     
     private var currentEmployeeActivity: Activity<EmployeeShiftAttributes>?
     private var currentAdminActivity: Activity<AdminShiftAttributes>?
+    private static var cachedDeviceToken: String?
+    
+    // MARK: - Device Push Token Methods
+    
+    // Static method to cache the device token from AppDelegate
+    public static func cacheDeviceToken(_ token: Data) {
+        let tokenParts = token.map { data in String(format: "%02.2hhx", data) }
+        cachedDeviceToken = tokenParts.joined()
+        print("LiveActivityPlugin: Cached device push token: \(cachedDeviceToken ?? "nil")")
+        
+        // Also store in UserDefaults for persistence
+        UserDefaults.standard.set(cachedDeviceToken, forKey: "cachedDevicePushToken")
+    }
+    
+    // Method to get the device push token
+    @objc func getDevicePushToken(_ call: CAPPluginCall) {
+        // First check memory cache
+        if let token = LiveActivityPlugin.cachedDeviceToken {
+            print("Returning cached device push token from memory")
+            call.resolve(["token": token])
+            return
+        }
+        
+        // Then check UserDefaults
+        if let storedToken = UserDefaults.standard.string(forKey: "cachedDevicePushToken") {
+            LiveActivityPlugin.cachedDeviceToken = storedToken
+            print("Returning cached device push token from UserDefaults")
+            call.resolve(["token": storedToken])
+            return
+        }
+        
+        // No cached token - need to register for notifications
+        print("No cached device push token found, requesting registration...")
+        
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            if granted {
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+                
+                // Wait briefly for token to be cached
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    if let token = LiveActivityPlugin.cachedDeviceToken {
+                        call.resolve(["token": token])
+                    } else if let storedToken = UserDefaults.standard.string(forKey: "cachedDevicePushToken") {
+                        call.resolve(["token": storedToken])
+                    } else {
+                        call.resolve(["token": ""])
+                    }
+                }
+            } else {
+                call.resolve(["token": "", "error": error?.localizedDescription ?? "Permission denied"])
+            }
+        }
+    }
     
     // Check if Live Activities are supported
     @objc func isSupported(_ call: CAPPluginCall) {

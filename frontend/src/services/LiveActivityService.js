@@ -30,6 +30,30 @@ export const LiveActivityService = {
   },
 
   /**
+   * Get the device push token from the native LiveActivity plugin
+   * This is more reliable than the Capacitor PushNotifications plugin
+   * @returns {Promise<string|null>}
+   */
+  getDevicePushToken: async () => {
+    try {
+      if (!window.Capacitor?.isNativePlatform?.()) {
+        console.log('Not native platform');
+        return null;
+      }
+      
+      const result = await LiveActivity.getDevicePushToken();
+      if (result?.token) {
+        console.log('Got device push token from LiveActivity plugin:', result.token.substring(0, 20) + '...');
+        return result.token;
+      }
+      return null;
+    } catch (error) {
+      console.log('Failed to get device push token:', error);
+      return null;
+    }
+  },
+
+  /**
    * Register for regular push notifications and store the device token
    * This is needed for clock-out alerts
    */
@@ -40,7 +64,23 @@ export const LiveActivityService = {
         return null;
       }
 
-      // Request permission
+      // First try to get token from our LiveActivity plugin (more reliable)
+      try {
+        const nativeToken = await LiveActivityService.getDevicePushToken();
+        if (nativeToken && userId) {
+          console.log('Registering device token from LiveActivity plugin...');
+          await axios.post(`${API}/api/live-activity/register-device-token`, {
+            user_id: userId,
+            device_token: nativeToken
+          });
+          console.log('Device push token registered successfully!');
+          return nativeToken;
+        }
+      } catch (nativeErr) {
+        console.log('LiveActivity getDevicePushToken not available:', nativeErr);
+      }
+
+      // Fallback to Capacitor PushNotifications
       const permStatus = await PushNotifications.requestPermissions();
       if (permStatus.receive !== 'granted') {
         console.log('Push notification permission denied');

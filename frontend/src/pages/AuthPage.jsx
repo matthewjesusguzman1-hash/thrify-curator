@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import useBiometricAuth from "@/hooks/useBiometricAuth";
 import { useHaptics } from "@/hooks/useHaptics";
+import { LiveActivityService } from "@/services/LiveActivityService";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
@@ -246,58 +247,79 @@ export default function AuthPage() {
       // Register device push token for admin notifications
       // This MUST run after login to associate token with user
       try {
-        const { PushNotifications } = await import('@capacitor/push-notifications');
-        
-        // First check if we have a pending token from app startup
+        // Check for stored device token first (iOS caches this)
+        const storedToken = localStorage.getItem('devicePushToken');
         const pendingToken = localStorage.getItem('pendingPushToken');
-        if (pendingToken && user.id) {
-          console.log('Found pending push token, registering...');
+        let tokenToUse = pendingToken || storedToken;
+        
+        // If no stored token, try multiple methods to get it
+        if (!tokenToUse) {
+          console.log('No stored device push token, trying to get one...');
+          
+          // Method 1: Try LiveActivity plugin's getDevicePushToken (most reliable on iOS)
+          try {
+            const nativeToken = await LiveActivityService.getDevicePushToken();
+            if (nativeToken) {
+              console.log('Got device push token from LiveActivity plugin');
+              tokenToUse = nativeToken;
+              localStorage.setItem('devicePushToken', nativeToken);
+            }
+          } catch (nativeErr) {
+            console.log('LiveActivity plugin token method not available:', nativeErr);
+          }
+          
+          // Method 2: Try Capacitor PushNotifications plugin
+          if (!tokenToUse) {
+            try {
+              const { PushNotifications } = await import('@capacitor/push-notifications');
+              
+              const permResult = await PushNotifications.checkPermissions();
+              console.log('Push permission check:', permResult);
+              
+              if (permResult.receive === 'granted') {
+                // Set up listener and register
+                await PushNotifications.removeAllListeners();
+                
+                const tokenPromise = new Promise((resolve) => {
+                  const timeout = setTimeout(() => {
+                    console.log('Push token registration timed out');
+                    resolve(null);
+                  }, 5000);
+                  
+                  PushNotifications.addListener('registration', async (tokenData) => {
+                    clearTimeout(timeout);
+                    console.log('Device push token received from registration event:', tokenData.value);
+                    localStorage.setItem('devicePushToken', tokenData.value);
+                    resolve(tokenData.value);
+                  });
+                });
+                
+                await PushNotifications.register();
+                tokenToUse = await tokenPromise;
+              } else {
+                // Request permissions
+                const reqResult = await PushNotifications.requestPermissions();
+                if (reqResult.receive === 'granted') {
+                  await PushNotifications.register();
+                }
+              }
+            } catch (capErr) {
+              console.log('Capacitor push not available:', capErr.message);
+            }
+          }
+        }
+        
+        // Now register the token with backend
+        if (tokenToUse && user.id) {
+          console.log('Registering device push token with backend...');
           await axios.post(`${API}/live-activity/register-device-token`, {
             user_id: user.id,
-            device_token: pendingToken
+            device_token: tokenToUse
           });
           localStorage.removeItem('pendingPushToken');
-          console.log('Pending push token registered!');
+          console.log('Device push token registered successfully for user:', user.id);
         } else {
-          // No pending token - actively request one now
-          console.log('No pending token, requesting fresh push registration...');
-          
-          const permResult = await PushNotifications.requestPermissions();
-          console.log('Push permission result:', permResult);
-          
-          if (permResult.receive === 'granted') {
-            // Remove old listeners and add fresh one
-            await PushNotifications.removeAllListeners();
-            
-            // Set up one-time listener for token
-            const tokenPromise = new Promise((resolve) => {
-              const timeout = setTimeout(() => {
-                console.log('Push token registration timed out');
-                resolve(null);
-              }, 5000);
-              
-              PushNotifications.addListener('registration', async (tokenData) => {
-                clearTimeout(timeout);
-                console.log('Fresh push token received:', tokenData.value);
-                
-                try {
-                  await axios.post(`${API}/live-activity/register-device-token`, {
-                    user_id: user.id,
-                    device_token: tokenData.value
-                  });
-                  console.log('Push token registered successfully!');
-                  resolve(tokenData.value);
-                } catch (regErr) {
-                  console.error('Failed to register token:', regErr);
-                  resolve(null);
-                }
-              });
-            });
-            
-            // Trigger registration
-            await PushNotifications.register();
-            await tokenPromise;
-          }
+          console.log('No device push token available to register');
         }
       } catch (pushErr) {
         // Expected to fail on web - that's okay
