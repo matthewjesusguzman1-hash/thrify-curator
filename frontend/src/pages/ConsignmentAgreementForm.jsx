@@ -93,11 +93,29 @@ function ConsignorMessagingSection({ email, userName }) {
 
   const formatTime = (isoString) => {
     const date = new Date(isoString);
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+
+  const formatDateSeparator = (isoString) => {
+    const date = new Date(isoString);
     const now = new Date();
-    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    if (diffDays === 1) return "Yesterday";
-    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    if (msgDate.getTime() === today.getTime()) {
+      return "Today";
+    } else if (msgDate.getTime() === yesterday.getTime()) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+    }
+  };
+
+  const getDateKey = (isoString) => {
+    const date = new Date(isoString);
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
   };
 
   const unreadCount = messages.filter(m => m.sender_type === "admin" && !m.read).length;
@@ -148,28 +166,41 @@ function ConsignorMessagingSection({ email, userName }) {
               </div>
             ) : (
               <>
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender_type === "admin" ? "justify-start" : "justify-end"}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-xl px-3 py-2 ${
-                        msg.sender_type === "admin"
-                          ? "bg-white border border-gray-200 text-gray-800"
-                          : "bg-purple-500 text-white"
-                      }`}
-                    >
-                      {msg.sender_type === "admin" && (
-                        <p className="text-xs text-gray-500 mb-0.5">Admin</p>
+                {messages.map((msg, index) => {
+                  const prevMsg = messages[index - 1];
+                  const showDateSeparator = !prevMsg || getDateKey(msg.sent_at) !== getDateKey(prevMsg.sent_at);
+                  
+                  return (
+                    <div key={msg.id}>
+                      {showDateSeparator && (
+                        <div className="flex items-center gap-2 my-3">
+                          <div className="flex-1 h-px bg-gray-200"></div>
+                          <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {formatDateSeparator(msg.sent_at)}
+                          </span>
+                          <div className="flex-1 h-px bg-gray-200"></div>
+                        </div>
                       )}
-                      <p className="text-sm">{msg.content}</p>
-                      <p className={`text-xs mt-0.5 ${msg.sender_type === "admin" ? "text-gray-400" : "text-purple-200"}`}>
-                        {formatTime(msg.sent_at)}
-                      </p>
+                      <div className={`flex ${msg.sender_type === "admin" ? "justify-start" : "justify-end"}`}>
+                        <div
+                          className={`max-w-[80%] rounded-xl px-3 py-2 ${
+                            msg.sender_type === "admin"
+                              ? "bg-white border border-gray-200 text-gray-800"
+                              : "bg-purple-500 text-white"
+                          }`}
+                        >
+                          {msg.sender_type === "admin" && (
+                            <p className="text-xs text-gray-500 mb-0.5">Admin</p>
+                          )}
+                          <p className="text-sm">{msg.content}</p>
+                          <p className={`text-xs mt-0.5 ${msg.sender_type === "admin" ? "text-gray-400" : "text-purple-200"}`}>
+                            {formatTime(msg.sent_at)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </>
             )}
