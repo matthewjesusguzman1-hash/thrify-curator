@@ -46,8 +46,12 @@ export default function ConversationsSection() {
 
   const fetchConversations = useCallback(async () => {
     const token = getToken();
-    if (!token) return;
+    if (!token) {
+      console.log("ConversationsSection: No token available");
+      return;
+    }
     setLoading(true);
+    console.log("ConversationsSection: Fetching conversations...");
     try {
       const [convRes, countRes] = await Promise.all([
         axios.get(`${API}/conversations/admin/all`, {
@@ -57,46 +61,47 @@ export default function ConversationsSection() {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
+      console.log("ConversationsSection: Got", convRes.data.length, "conversations");
       setConversations(convRes.data);
       setUnreadCount(countRes.data.unread_count);
     } catch (error) {
       console.error("Error fetching conversations:", error);
+      console.error("Response:", error.response?.data);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Fetch unread count on mount and poll every 30 seconds
+  // Fetch conversations on component mount and when expanded
   useEffect(() => {
     const token = getToken();
-    if (!token) return;
+    if (!token) {
+      console.log("ConversationsSection: No token on mount");
+      return;
+    }
     
-    const fetchUnreadCount = async () => {
-      try {
-        const res = await axios.get(`${API}/conversations/admin/unread-count`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setUnreadCount(res.data.unread_count);
-      } catch (error) {
-        console.error("Error fetching unread count:", error);
-      }
-    };
-
+    console.log("ConversationsSection: Component mounted, fetching data...");
+    
+    // Fetch immediately on mount
     fetchConversations();
-    fetchUnreadCount();
+    
+    // Poll for updates
     const pollInterval = setInterval(() => {
-      fetchUnreadCount();
-      if (showSection) fetchConversations();
+      if (showSection) {
+        fetchConversations();
+      }
     }, 30000);
+    
     return () => clearInterval(pollInterval);
-  }, [fetchConversations, showSection]);
+  }, []); // Run only once on mount
 
-  // Fetch full conversations when section is expanded
+  // Also fetch when section is expanded
   useEffect(() => {
     if (showSection) {
+      console.log("ConversationsSection: Section expanded, refreshing...");
       fetchConversations();
     }
-  }, [showSection, fetchConversations]);
+  }, [showSection]);
 
   const handleSelectConversation = async (conv) => {
     const token = getToken();
