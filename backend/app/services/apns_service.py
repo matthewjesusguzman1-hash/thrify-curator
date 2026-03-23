@@ -19,8 +19,12 @@ APNS_PRIVATE_KEY = os.environ.get("APNS_PRIVATE_KEY", "").replace("\\n", "\n")
 APNS_PRODUCTION_URL = "https://api.push.apple.com"
 APNS_SANDBOX_URL = "https://api.sandbox.push.apple.com"
 
-# Use sandbox for development
-APNS_URL = APNS_SANDBOX_URL
+# Use environment variable to switch between sandbox and production
+# TestFlight and App Store builds use production APNs
+APNS_USE_PRODUCTION = os.environ.get("APNS_USE_PRODUCTION", "true").lower() == "true"
+APNS_URL = APNS_PRODUCTION_URL if APNS_USE_PRODUCTION else APNS_SANDBOX_URL
+
+print(f"APNs configured for: {'PRODUCTION' if APNS_USE_PRODUCTION else 'SANDBOX'}")
 
 
 def generate_apns_token():
