@@ -181,6 +181,31 @@ async def send_clock_out_notification(employee_name: str, hours_worked: float):
     """
     Send a regular push notification to admins when an employee clocks out
     """
+    # Format hours worked
+    hours = int(hours_worked)
+    minutes = int((hours_worked - hours) * 60)
+    if hours > 0:
+        time_str = f"{hours}h {minutes}m"
+    else:
+        time_str = f"{minutes}m"
+    
+    await send_admin_push_notification(
+        title="Employee Clocked Out",
+        body=f"{employee_name} clocked out after {time_str}",
+        notification_type="clock_out"
+    )
+
+
+async def send_admin_push_notification(title: str, body: str, notification_type: str = "general", data: dict = None):
+    """
+    Send a push notification to all admin devices
+    
+    Args:
+        title: Notification title
+        body: Notification body text
+        notification_type: Type for handling tap actions (clock_in, clock_out, form_submission, etc.)
+        data: Additional data to include in the notification payload
+    """
     from app.database import get_database
     
     db = get_database()
@@ -190,16 +215,8 @@ async def send_clock_out_notification(employee_name: str, hours_worked: float):
     admin_tokens = await tokens_collection.find({"active": True}).to_list(100)
     
     if not admin_tokens:
-        print("No active device tokens for clock-out notification")
+        print(f"No active device tokens for {notification_type} notification")
         return
-    
-    # Format hours worked
-    hours = int(hours_worked)
-    minutes = int((hours_worked - hours) * 60)
-    if hours > 0:
-        time_str = f"{hours}h {minutes}m"
-    else:
-        time_str = f"{minutes}m"
     
     try:
         token = generate_apns_token()
@@ -209,20 +226,26 @@ async def send_clock_out_notification(employee_name: str, hours_worked: float):
             if not device_token:
                 continue
                 
-            # Regular alert notification (not Live Activity)
+            # Regular alert notification
             payload = {
                 "aps": {
                     "alert": {
-                        "title": "Employee Clocked Out",
-                        "body": f"{employee_name} clocked out after {time_str}"
+                        "title": title,
+                        "body": body
                     },
-                    "sound": "default"
-                }
+                    "sound": "default",
+                    "badge": 1
+                },
+                "type": notification_type
             }
+            
+            # Add any extra data
+            if data:
+                payload["data"] = data
             
             headers = {
                 "authorization": f"bearer {token}",
-                "apns-topic": APNS_BUNDLE_ID,  # Regular notification uses bundle ID
+                "apns-topic": APNS_BUNDLE_ID,
                 "apns-push-type": "alert",
                 "apns-priority": "10"
             }
@@ -232,9 +255,15 @@ async def send_clock_out_notification(employee_name: str, hours_worked: float):
             async with httpx.AsyncClient(http2=True) as client:
                 response = await client.post(url, json=payload, headers=headers)
                 if response.status_code == 200:
-                    print(f"Clock-out notification sent for {employee_name}")
+                    print(f"Push notification sent: {title}")
                 else:
-                    print(f"Clock-out notification failed: {response.status_code} - {response.text}")
+                    print(f"Push notification failed: {response.status_code} - {response.text}")
+                    # Mark token as inactive if it's invalid
+                    if response.status_code in [400, 410]:
+                        await tokens_collection.update_one(
+                            {"_id": token_doc["_id"]},
+                            {"$set": {"active": False}}
+                        )
                     
     except Exception as e:
-        print(f"Failed to send clock-out notification: {e}")
+        print(f"Failed to send push notification: {e}")

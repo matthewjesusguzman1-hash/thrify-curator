@@ -9,6 +9,7 @@ from app.database import db
 from app.dependencies import get_admin_user
 from app.models.messages import MessageCreate, MessageResponse, UpdateMessageStatus
 from app.services.recaptcha import verify_recaptcha_token
+from app.services.apns_service import send_admin_push_notification
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
 
@@ -105,6 +106,16 @@ async def create_message(message_data: MessageCreate, request: Request):
         "read": False
     }
     await db.admin_notifications.insert_one(notification_doc)
+    
+    # Send push notification for new message
+    try:
+        await send_admin_push_notification(
+            title="New Message",
+            body=f"New message from {message_data.sender_name}",
+            notification_type="new_message"
+        )
+    except Exception as e:
+        print(f"Failed to send message push notification: {e}")
     
     return MessageResponse(**message_doc)
 

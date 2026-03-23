@@ -7,6 +7,7 @@ from app.database import db
 from app.dependencies import get_current_user
 from app.models.time_entry import TimeEntry, ClockInOut
 from app.models.notifications import AdminNotification
+from app.services.apns_service import send_admin_push_notification
 
 router = APIRouter(prefix="/time", tags=["Time Tracking"])
 
@@ -96,6 +97,16 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
             details={"time": now_iso}
         )
         await db.admin_notifications.insert_one(notification.model_dump())
+        
+        # Send push notification for clock in
+        try:
+            await send_admin_push_notification(
+                title="Employee Clocked In",
+                body=f"{display_name} clocked in",
+                notification_type="clock_in"
+            )
+        except Exception as e:
+            print(f"Failed to send clock-in push notification: {e}")
         
         # Trigger admin Live Activity update
         await trigger_admin_live_activity_update()
@@ -425,6 +436,16 @@ async def upload_w9_employee(
         details={"filename": file.filename, "time": now_iso}
     )
     await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send push notification for W-9 submission
+    try:
+        await send_admin_push_notification(
+            title="W-9 Submitted",
+            body=f"{display_name} submitted a W-9 form",
+            notification_type="w9_submission"
+        )
+    except Exception as e:
+        print(f"Failed to send W-9 push notification: {e}")
     
     return {
         "message": "W-9 uploaded successfully",

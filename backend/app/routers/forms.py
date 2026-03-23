@@ -16,6 +16,7 @@ from app.services.email_service import (
     send_test_email,
     get_email_status
 )
+from app.services.apns_service import send_admin_push_notification
 
 router = APIRouter(tags=["Forms"])
 
@@ -73,7 +74,7 @@ async def get_consignment_payment_history(email: str):
 
 # Public form submission routes
 @router.post("/forms/job-application", response_model=JobApplication)
-async def submit_job_application(application: JobApplication):
+async def submit_job_application(application: JobApplication, background_tasks: BackgroundTasks):
     doc = application.model_dump()
     await db.job_applications.insert_one(doc)
     
@@ -87,11 +88,19 @@ async def submit_job_application(application: JobApplication):
     )
     await db.admin_notifications.insert_one(notification.model_dump())
     
+    # Send push notification
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title="New Job Application",
+        body=f"{application.full_name} submitted a job application",
+        notification_type="job_application"
+    )
+    
     return application
 
 
 @router.post("/forms/consignment-inquiry", response_model=ConsignmentInquiry)
-async def submit_consignment_inquiry(inquiry: ConsignmentInquiry):
+async def submit_consignment_inquiry(inquiry: ConsignmentInquiry, background_tasks: BackgroundTasks):
     doc = inquiry.model_dump()
     await db.consignment_inquiries.insert_one(doc)
     
@@ -104,6 +113,14 @@ async def submit_consignment_inquiry(inquiry: ConsignmentInquiry):
         details={"email": inquiry.email}
     )
     await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send push notification
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title="New Consignment Inquiry",
+        body=f"{inquiry.full_name} submitted a consignment inquiry",
+        notification_type="consignment_inquiry"
+    )
     
     return inquiry
 
@@ -122,6 +139,14 @@ async def submit_consignment_agreement(agreement: ConsignmentAgreement, backgrou
         details={"email": agreement.email}
     )
     await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send push notification
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title="New Consignment Agreement",
+        body=f"{agreement.full_name} signed a consignment agreement",
+        notification_type="consignment_agreement"
+    )
     
     # Send confirmation email to user (in background to not block response)
     background_tasks.add_task(
@@ -236,7 +261,7 @@ async def get_user_submissions(email: str):
 
 
 @router.post("/forms/update-payment-method")
-async def update_payment_method(update: PaymentMethodUpdate):
+async def update_payment_method(update: PaymentMethodUpdate, background_tasks: BackgroundTasks):
     """Update payment method for existing consignment agreement"""
     # Find existing agreement by email
     existing = await db.consignment_agreements.find_one({"email": update.email.lower()})
@@ -275,6 +300,14 @@ async def update_payment_method(update: PaymentMethodUpdate):
         }
     )
     await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send push notification
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title="Payment Method Changed",
+        body=f"{existing.get('full_name', 'Unknown')} changed payment to {update.payment_method}",
+        notification_type="payment_method_change"
+    )
     
     # Log the payment method change
     change_log = {
@@ -394,6 +427,19 @@ async def add_consignment_items(addition: ConsignmentItemAddition, background_ta
         }
     )
     await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send push notification
+    push_title = "Consignment Update"
+    push_body = notification.message
+    if addition.items_to_add > 0:
+        push_title = "New Items Added"
+        push_body = f"{addition_dict['full_name']} added {addition.items_to_add} items"
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title=push_title,
+        body=push_body,
+        notification_type="consignment_items_added"
+    )
     
     # Send confirmation email to user (in background)
     full_name = addition_dict["full_name"]
