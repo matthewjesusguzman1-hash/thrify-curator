@@ -67,6 +67,7 @@ import MonthlyMileageSection from "@/components/admin/sections/MonthlyMileageSec
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
 import MessagesSection from "@/components/admin/sections/MessagesSection";
+import ConversationsSection from "@/components/admin/sections/ConversationsSection";
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
 import ReportsSection from "@/components/admin/sections/ReportsSection";
@@ -2908,7 +2909,12 @@ export default function AdminDashboard() {
               badge={`${formsSummary.total_new || 0} new submissions`}
               testId="group-forms"
             >
-              {/* Messages Section */}
+              {/* Conversations Section - Employee & Consignor Messages */}
+              <div data-testid="conversations-section">
+                <ConversationsSection />
+              </div>
+
+              {/* Messages Section - Landing Page Contact Form */}
               <div data-testid="messages-section">
                 <MessagesSection />
               </div>

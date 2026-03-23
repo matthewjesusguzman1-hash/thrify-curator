@@ -1382,6 +1382,8 @@ async def create_consignor_payment(
     admin_user: dict = Depends(get_admin_user)
 ):
     """Admin creates a payment record for a consignor"""
+    from app.routers.conversations import send_user_push_notification
+    
     # Verify consignor exists
     consignor = await db.consignment_agreements.find_one(
         {"email": {"$regex": f"^{payment.consignor_email}$", "$options": "i"}}
@@ -1404,6 +1406,18 @@ async def create_consignor_payment(
     
     await db.consignor_payments.insert_one(payment_doc)
     payment_doc.pop("_id", None)
+    
+    # Send push notification to consignor
+    try:
+        await send_user_push_notification(
+            user_type="consignor",
+            user_id=payment.consignor_email.lower(),
+            title="Payment Received",
+            body=f"A payment of ${payment.amount:.2f} has been recorded for your account.",
+            notification_type="payment_received"
+        )
+    except Exception as e:
+        print(f"Failed to send consignor payment notification: {e}")
     
     return {"success": True, "payment": payment_doc}
 

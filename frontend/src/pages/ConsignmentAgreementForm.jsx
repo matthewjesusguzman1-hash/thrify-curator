@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import useBiometricAuth from "@/hooks/useBiometricAuth";
 import { useHaptics } from "@/hooks/useHaptics";
+import MessagingSection from "@/components/MessagingSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -347,6 +348,22 @@ export default function ConsignmentAgreementForm() {
             });
             
             if (loginResponse.data.success) {
+              // Register for push notifications (consignor)
+              try {
+                const { LiveActivityService } = await import('@/services/LiveActivityService');
+                const deviceToken = await LiveActivityService.getDevicePushToken();
+                if (deviceToken) {
+                  await axios.post(`${API}/live-activity/register-device-token-typed`, {
+                    user_id: addItemsEmail.toLowerCase(),
+                    device_token: deviceToken,
+                    user_type: 'consignor'
+                  });
+                  console.log('Consignor push token registered via biometric login');
+                }
+              } catch (pushErr) {
+                console.log('Push token registration skipped:', pushErr);
+              }
+              
               // Biometric login successful, proceed to load agreement
               await loadAgreementData(addItemsEmail);
               setCheckingEmail(false);
@@ -429,6 +446,22 @@ export default function ConsignmentAgreementForm() {
         // Save credentials for biometric if available
         if (biometricAvailable && isNative) {
           await setCredentials('consignment_portal', addItemsEmail, loginPassword);
+        }
+        
+        // Register for push notifications (consignor)
+        try {
+          const { LiveActivityService } = await import('@/services/LiveActivityService');
+          const deviceToken = await LiveActivityService.getDevicePushToken();
+          if (deviceToken) {
+            await axios.post(`${API}/live-activity/register-device-token-typed`, {
+              user_id: addItemsEmail.toLowerCase(),
+              device_token: deviceToken,
+              user_type: 'consignor'
+            });
+            console.log('Consignor push token registered');
+          }
+        } catch (pushErr) {
+          console.log('Push token registration skipped:', pushErr);
         }
         
         // Load agreement data
@@ -1671,6 +1704,18 @@ export default function ConsignmentAgreementForm() {
                       </div>
                     )}
                   </div>
+
+                  {/* Messaging Section - Dark theme for consistency */}
+                  {addItemsAgreement && (
+                    <div className="border border-gray-200 rounded-xl overflow-hidden bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]">
+                      <MessagingSection
+                        userType="consignor"
+                        userId={addItemsAgreement.email}
+                        userName={addItemsAgreement.full_name}
+                        userEmail={addItemsAgreement.email}
+                      />
+                    </div>
+                  )}
 
                   {/* My Submissions Section */}
                   {userSubmissions && userSubmissions.submissions && userSubmissions.submissions.length > 0 && (

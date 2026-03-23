@@ -309,15 +309,17 @@ export default function AuthPage() {
           }
         }
         
-        // Now register the token with backend
+        // Now register the token with backend - use typed endpoint for proper targeting
         if (tokenToUse && user.id) {
           console.log('Registering device push token with backend...');
-          await axios.post(`${API}/live-activity/register-device-token`, {
+          const userType = user.is_admin ? 'admin' : 'employee';
+          await axios.post(`${API}/live-activity/register-device-token-typed`, {
             user_id: user.id,
-            device_token: tokenToUse
+            device_token: tokenToUse,
+            user_type: userType
           });
           localStorage.removeItem('pendingPushToken');
-          console.log('Device push token registered successfully for user:', user.id);
+          console.log(`Device push token registered successfully for ${userType}:`, user.id);
         } else {
           console.log('No device push token available to register');
         }

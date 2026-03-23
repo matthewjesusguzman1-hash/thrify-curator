@@ -37,6 +37,7 @@ import axios from "axios";
 import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
 import LiveActivityService from "@/services/LiveActivityService";
+import MessagingSection from "@/components/MessagingSection";
 
 // Check if running in Capacitor native app
 const isNativePlatform = () => {
@@ -1280,6 +1281,19 @@ export default function EmployeeDashboard() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Messaging Section */}
+          <div className="mt-6">
+            <MessagingSection
+              userType="employee"
+              userId={user?.id || user?.email}
+              userName={user?.name || user?.email}
+              userEmail={user?.email}
+              getAuthHeader={() => ({
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+              })}
+            />
           </div>
         </motion.div>
       </main>

@@ -571,6 +571,8 @@ async def get_check_records(admin: dict = Depends(get_admin_user)):
 @router.post("/check-records")
 async def upload_check_record(data: CheckRecordUpload, admin: dict = Depends(get_admin_user)):
     """Upload a payroll check image"""
+    from app.routers.conversations import send_user_push_notification
+    
     record = {
         "id": str(uuid.uuid4()),
         "image_data": data.image_data,
@@ -588,6 +590,31 @@ async def upload_check_record(data: CheckRecordUpload, admin: dict = Depends(get
     }
     
     await db.payroll_check_records.insert_one(record)
+    
+    # Send push notification to the recipient
+    try:
+        if data.payment_type == "consignment" and data.consignment_client_email:
+            # Notify consignor
+            await send_user_push_notification(
+                user_type="consignor",
+                user_id=data.consignment_client_email.lower(),
+                title="Payment Recorded",
+                body=f"A payment of ${data.amount:.2f} has been recorded for your account." if data.amount else "A new payment has been recorded for your account.",
+                notification_type="payment_received"
+            )
+        elif data.payment_type == "employee" and data.employee_name:
+            # Try to find the employee by name and notify them
+            employee = await db.users.find_one({"name": data.employee_name})
+            if employee:
+                await send_user_push_notification(
+                    user_type="employee",
+                    user_id=employee.get("id") or employee.get("email"),
+                    title="Payment Recorded",
+                    body=f"A payment of ${data.amount:.2f} has been recorded for you." if data.amount else "A new payment has been recorded for you.",
+                    notification_type="payment_received"
+                )
+    except Exception as e:
+        print(f"Failed to send payment notification: {e}")
     
     # Return without image_data
     del record["image_data"]

@@ -49,9 +49,13 @@ async def register_token(request: RegisterTokenRequest):
 
 @router.post("/register-device-token")
 async def register_device_token(request: RegisterDeviceTokenRequest):
-    """Register a device push token for regular notifications (clock-out alerts)"""
+    """Register a device push token for regular notifications (clock-out alerts, messages, payments)"""
     try:
         db = get_database()
+        
+        # Determine user type from user_id format or additional context
+        # For now, we'll store it without type and let the query handle it
+        # The user_type will be set separately when we know the context
         await db.device_push_tokens.update_one(
             {"user_id": request.user_id},
             {
@@ -59,11 +63,42 @@ async def register_device_token(request: RegisterDeviceTokenRequest):
                     "device_token": request.device_token,
                     "active": True,
                     "updated_at": datetime.now(timezone.utc)
+                },
+                "$setOnInsert": {
+                    "user_type": "admin"  # Default to admin, will be updated by specific registration
                 }
             },
             upsert=True
         )
         return {"success": True, "message": "Device token registered"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class RegisterDeviceTokenWithTypeRequest(BaseModel):
+    user_id: str
+    device_token: str
+    user_type: str  # "admin", "employee", "consignor"
+
+
+@router.post("/register-device-token-typed")
+async def register_device_token_typed(request: RegisterDeviceTokenWithTypeRequest):
+    """Register a device push token with explicit user type for targeted notifications"""
+    try:
+        db = get_database()
+        await db.device_push_tokens.update_one(
+            {"user_id": request.user_id, "user_type": request.user_type},
+            {
+                "$set": {
+                    "device_token": request.device_token,
+                    "active": True,
+                    "user_type": request.user_type,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            },
+            upsert=True
+        )
+        return {"success": True, "message": f"Device token registered for {request.user_type}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
