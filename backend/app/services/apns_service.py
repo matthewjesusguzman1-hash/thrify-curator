@@ -56,14 +56,16 @@ async def send_live_activity_update(push_token: str, content_state: dict, event:
         
         # APNs payload for Live Activity update
         # content-state must match Swift ContentState struct exactly
+        # lastUpdated needs to be a Unix timestamp (Double) for Swift Date decoding
+        timestamp_now = time.time()
         payload = {
             "aps": {
-                "timestamp": int(time.time()),
+                "timestamp": int(timestamp_now),
                 "event": event,  # "update" or "end"
                 "content-state": {
                     "employeeCount": content_state.get("employeeCount", 0),
                     "employeeNames": content_state.get("employeeNames", []),
-                    "lastUpdated": content_state.get("lastUpdated", datetime.now(timezone.utc).isoformat())
+                    "lastUpdated": timestamp_now  # Unix timestamp as Double
                 }
             }
         }

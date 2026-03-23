@@ -8,7 +8,7 @@ struct AdminShiftAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         var employeeCount: Int
         var employeeNames: [String]
-        var lastUpdated: Date
+        var lastUpdated: Double  // Unix timestamp for easier decoding from push
     }
     
     var adminName: String
