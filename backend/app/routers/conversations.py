@@ -16,8 +16,13 @@ from app.models.conversations import (
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
 
-async def send_user_push_notification(user_type: str, user_id: str, title: str, body: str, notification_type: str):
-    """Send push notification to a specific user (employee or consignor)"""
+async def send_user_push_notification(user_type: str, user_id: str, title: str, body: str, notification_type: str, exclude_device_token: str = None):
+    """Send push notification to a specific user (employee or consignor)
+    
+    Args:
+        exclude_device_token: If provided, won't send to this token (used to prevent 
+                             sender from receiving their own notification on same device)
+    """
     from app.services.apns_service import generate_apns_token, APNS_URL, APNS_BUNDLE_ID
     import httpx
     
@@ -34,6 +39,11 @@ async def send_user_push_notification(user_type: str, user_id: str, title: str, 
     
     device_token = token_doc.get("device_token")
     if not device_token:
+        return
+    
+    # Don't send notification to the same device that sent the message
+    if exclude_device_token and device_token == exclude_device_token:
+        print(f"Skipping notification - recipient is on same device as sender")
         return
     
     try:
@@ -403,6 +413,7 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
     
     now = datetime.now(timezone.utc).isoformat()
     admin_name = admin.get("name", "Admin")
+    admin_id = admin.get("id") or admin.get("email")
     
     new_message = {
         "id": str(uuid.uuid4()),
@@ -423,10 +434,16 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
         }
     )
     
-    # Send push notification to the participant
+    # Get admin's device token to exclude from notification
+    admin_token_doc = await db.device_push_tokens.find_one({
+        "user_id": admin_id,
+        "active": True
+    })
+    admin_device_token = admin_token_doc.get("device_token") if admin_token_doc else None
+    
+    # Send push notification to the participant (excluding admin's device)
     participant_type = conversation["participant_type"]
     participant_id = conversation["participant_id"]
-    participant_name = conversation["participant_name"]
     
     try:
         await send_user_push_notification(
@@ -434,7 +451,8 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
             user_id=participant_id,
             title="New message from Thrifty Curator",
             body=reply.content[:100] + "..." if len(reply.content) > 100 else reply.content,
-            notification_type="admin_message"
+            notification_type="admin_message",
+            exclude_device_token=admin_device_token
         )
     except Exception as e:
         print(f"Failed to send admin reply push: {e}")
