@@ -16,16 +16,31 @@ async def trigger_admin_live_activity_update():
     try:
         from app.services.apns_service import update_admin_live_activities
         
-        # Get all currently clocked in employees
+        # Get all currently clocked in employees with their clock-in times
         clocked_in = await db.time_entries.find(
             {"clock_out": None},
-            {"user_name": 1, "_id": 0}
+            {"user_name": 1, "clock_in": 1, "_id": 0}
         ).to_list(100)
         
-        employee_names = [entry.get("user_name", "Unknown") for entry in clocked_in]
-        employee_count = len(employee_names)
+        # Format employee data with names and clock-in times
+        employee_data = []
+        for entry in clocked_in:
+            name = entry.get("user_name", "Unknown")
+            clock_in = entry.get("clock_in", "")
+            # Format time for display (e.g., "9:30 AM")
+            if clock_in:
+                try:
+                    dt = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
+                    time_str = dt.strftime("%-I:%M %p")  # e.g., "9:30 AM"
+                    employee_data.append(f"{name} ({time_str})")
+                except:
+                    employee_data.append(name)
+            else:
+                employee_data.append(name)
         
-        await update_admin_live_activities(employee_count, employee_names)
+        employee_count = len(employee_data)
+        
+        await update_admin_live_activities(employee_count, employee_data)
     except Exception as e:
         print(f"Failed to trigger admin Live Activity update: {e}")
 
