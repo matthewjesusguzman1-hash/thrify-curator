@@ -175,3 +175,68 @@ async def unregister_live_activity_token(user_id: str, activity_type: str):
         {"user_id": user_id, "type": activity_type},
         {"$set": {"active": False}}
     )
+
+
+async def send_clock_out_notification(employee_name: str, hours_worked: float):
+    """
+    Send a regular push notification to admins when an employee clocks out
+    """
+    from app.database import get_database
+    
+    db = get_database()
+    
+    # Get all admin push tokens (for regular notifications, not Live Activities)
+    # We'll use the same tokens collection but send a different type of notification
+    tokens_collection = db.live_activity_tokens
+    admin_tokens = await tokens_collection.find({"type": "admin", "active": True}).to_list(100)
+    
+    if not admin_tokens:
+        print("No active admin tokens for clock-out notification")
+        return
+    
+    # Format hours worked
+    hours = int(hours_worked)
+    minutes = int((hours_worked - hours) * 60)
+    if hours > 0:
+        time_str = f"{hours}h {minutes}m"
+    else:
+        time_str = f"{minutes}m"
+    
+    try:
+        token = generate_apns_token()
+        
+        for token_doc in admin_tokens:
+            push_token = token_doc.get("push_token")
+            if not push_token:
+                continue
+                
+            # Regular alert notification (not Live Activity)
+            payload = {
+                "aps": {
+                    "alert": {
+                        "title": "Employee Clocked Out",
+                        "body": f"{employee_name} clocked out after {time_str}"
+                    },
+                    "sound": "default",
+                    "badge": 1
+                }
+            }
+            
+            headers = {
+                "authorization": f"bearer {token}",
+                "apns-topic": APNS_BUNDLE_ID,  # Regular notification uses bundle ID
+                "apns-push-type": "alert",
+                "apns-priority": "10"
+            }
+            
+            url = f"{APNS_URL}/3/device/{push_token}"
+            
+            async with httpx.AsyncClient(http2=True) as client:
+                response = await client.post(url, json=payload, headers=headers)
+                if response.status_code == 200:
+                    print(f"Clock-out notification sent for {employee_name}")
+                else:
+                    print(f"Clock-out notification failed: {response.status_code} - {response.text}")
+                    
+    except Exception as e:
+        print(f"Failed to send clock-out notification: {e}")

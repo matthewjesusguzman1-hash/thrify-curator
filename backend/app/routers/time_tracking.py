@@ -22,17 +22,27 @@ async def trigger_admin_live_activity_update():
             {"user_name": 1, "clock_in": 1, "_id": 0}
         ).to_list(100)
         
-        # Format employee data with names and clock-in times
+        now = datetime.now(timezone.utc)
+        
+        # Format employee data with names and elapsed time
         employee_data = []
         for entry in clocked_in:
             name = entry.get("user_name", "Unknown")
             clock_in = entry.get("clock_in", "")
-            # Format time for display (e.g., "9:30 AM")
+            
             if clock_in:
                 try:
                     dt = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
-                    time_str = dt.strftime("%-I:%M %p")  # e.g., "9:30 AM"
-                    employee_data.append(f"{name} ({time_str})")
+                    elapsed = now - dt
+                    hours = int(elapsed.total_seconds() // 3600)
+                    minutes = int((elapsed.total_seconds() % 3600) // 60)
+                    
+                    if hours > 0:
+                        time_str = f"{hours}h {minutes}m"
+                    else:
+                        time_str = f"{minutes}m"
+                    
+                    employee_data.append(f"{name} - {time_str}")
                 except:
                     employee_data.append(name)
             else:
@@ -137,6 +147,13 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         
         # Trigger admin Live Activity update
         await trigger_admin_live_activity_update()
+        
+        # Send push notification for clock out
+        try:
+            from app.services.apns_service import send_clock_out_notification
+            await send_clock_out_notification(display_name, total_hours)
+        except Exception as e:
+            print(f"Failed to send clock-out push notification: {e}")
         
         return TimeEntry(**active)
     
