@@ -185,13 +185,12 @@ async def send_clock_out_notification(employee_name: str, hours_worked: float):
     
     db = get_database()
     
-    # Get all admin push tokens (for regular notifications, not Live Activities)
-    # We'll use the same tokens collection but send a different type of notification
-    tokens_collection = db.live_activity_tokens
-    admin_tokens = await tokens_collection.find({"type": "admin", "active": True}).to_list(100)
+    # Get all admin DEVICE push tokens (not Live Activity tokens)
+    tokens_collection = db.device_push_tokens
+    admin_tokens = await tokens_collection.find({"active": True}).to_list(100)
     
     if not admin_tokens:
-        print("No active admin tokens for clock-out notification")
+        print("No active device tokens for clock-out notification")
         return
     
     # Format hours worked
@@ -206,8 +205,8 @@ async def send_clock_out_notification(employee_name: str, hours_worked: float):
         token = generate_apns_token()
         
         for token_doc in admin_tokens:
-            push_token = token_doc.get("push_token")
-            if not push_token:
+            device_token = token_doc.get("device_token")
+            if not device_token:
                 continue
                 
             # Regular alert notification (not Live Activity)
@@ -217,8 +216,7 @@ async def send_clock_out_notification(employee_name: str, hours_worked: float):
                         "title": "Employee Clocked Out",
                         "body": f"{employee_name} clocked out after {time_str}"
                     },
-                    "sound": "default",
-                    "badge": 1
+                    "sound": "default"
                 }
             }
             
@@ -229,7 +227,7 @@ async def send_clock_out_notification(employee_name: str, hours_worked: float):
                 "apns-priority": "10"
             }
             
-            url = f"{APNS_URL}/3/device/{push_token}"
+            url = f"{APNS_URL}/3/device/{device_token}"
             
             async with httpx.AsyncClient(http2=True) as client:
                 response = await client.post(url, json=payload, headers=headers)

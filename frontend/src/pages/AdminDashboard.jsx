@@ -2408,6 +2408,9 @@ export default function AdminDashboard() {
                     successFeedback();
                     toast.success("Live monitoring stopped");
                   } else {
+                    // Register for push notifications first
+                    await LiveActivityService.registerForPushNotifications(user?.id);
+                    
                     const clockedInNames = employees
                       .filter(emp => employeeClockStatuses[emp.id])
                       .map(emp => emp.name || emp.email);

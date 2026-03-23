@@ -12,6 +12,7 @@ from app.services.apns_service import (
     unregister_live_activity_token,
     update_admin_live_activities
 )
+from app.database import get_database
 
 router = APIRouter(prefix="/live-activity", tags=["Live Activity"])
 
@@ -20,6 +21,11 @@ class RegisterTokenRequest(BaseModel):
     user_id: str
     push_token: str
     activity_type: str  # "admin" or "employee"
+
+
+class RegisterDeviceTokenRequest(BaseModel):
+    user_id: str
+    device_token: str
 
 
 class UpdateAdminActivityRequest(BaseModel):
@@ -37,6 +43,27 @@ async def register_token(request: RegisterTokenRequest):
             activity_type=request.activity_type
         )
         return {"success": True, "message": "Token registered"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/register-device-token")
+async def register_device_token(request: RegisterDeviceTokenRequest):
+    """Register a device push token for regular notifications (clock-out alerts)"""
+    try:
+        db = get_database()
+        await db.device_push_tokens.update_one(
+            {"user_id": request.user_id},
+            {
+                "$set": {
+                    "device_token": request.device_token,
+                    "active": True,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            },
+            upsert=True
+        )
+        return {"success": True, "message": "Device token registered"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

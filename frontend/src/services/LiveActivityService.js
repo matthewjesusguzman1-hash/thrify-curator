@@ -1,4 +1,5 @@
 import { registerPlugin } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 import axios from 'axios';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +26,56 @@ export const LiveActivityService = {
     } catch (error) {
       console.log('Live Activities not supported:', error);
       return false;
+    }
+  },
+
+  /**
+   * Register for regular push notifications and store the device token
+   * This is needed for clock-out alerts
+   */
+  registerForPushNotifications: async (userId) => {
+    try {
+      if (!window.Capacitor?.isNativePlatform?.()) {
+        return null;
+      }
+
+      // Request permission
+      const permStatus = await PushNotifications.requestPermissions();
+      if (permStatus.receive !== 'granted') {
+        console.log('Push notification permission denied');
+        return null;
+      }
+
+      // Register with APNs
+      await PushNotifications.register();
+
+      // Listen for the token
+      return new Promise((resolve) => {
+        PushNotifications.addListener('registration', async (token) => {
+          console.log('Device push token:', token.value);
+          
+          // Send token to backend
+          try {
+            await axios.post(`${API}/api/live-activity/register-device-token`, {
+              user_id: userId,
+              device_token: token.value
+            });
+            console.log('Device push token registered with backend');
+          } catch (error) {
+            console.error('Failed to register device token:', error);
+          }
+          
+          resolve(token.value);
+        });
+
+        PushNotifications.addListener('registrationError', (error) => {
+          console.error('Push registration error:', error);
+          resolve(null);
+        });
+      });
+    } catch (error) {
+      console.error('Failed to register for push notifications:', error);
+      return null;
     }
   },
 
