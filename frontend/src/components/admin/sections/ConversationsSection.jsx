@@ -144,7 +144,7 @@ export default function ConversationsSection() {
       setNewMessage("");
       
       // Refresh the conversation
-      const res = await axios.get(`${API}/conversations/admin/${selectedConversation.id}`, {
+      const res = await axios.get(`${API}/conversations/admin/conversation/${selectedConversation.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedConversation(res.data);
