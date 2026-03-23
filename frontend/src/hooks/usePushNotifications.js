@@ -64,6 +64,20 @@ export function usePushNotifications() {
           } catch (err) {
             console.error('Failed to register token with backend:', err);
           }
+          
+          // Also register for Live Activity clock-out notifications
+          try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (user.id) {
+              await axios.post(`${API}/live-activity/register-device-token`, {
+                user_id: user.id,
+                device_token: tokenData.value
+              });
+              console.log('Device token also registered for clock-out notifications');
+            }
+          } catch (err) {
+            console.error('Failed to register device token for clock-out:', err);
+          }
         }
       });
 

@@ -47,27 +47,31 @@ export const LiveActivityService = {
         return null;
       }
 
+      // Check if we already have a delivery token (from previous registration)
+      try {
+        const deliveryStatus = await PushNotifications.getDeliveredNotifications();
+        console.log('Push delivery status check:', deliveryStatus);
+      } catch (e) {
+        // Ignore - just for debugging
+      }
+
       // Return a promise that resolves when we get the token
       return new Promise((resolve) => {
         // Set a timeout in case token never arrives
         const timeout = setTimeout(() => {
-          console.log('Push token registration timed out');
+          console.log('Push token registration timed out - trying fallback');
           resolve(null);
         }, 5000); // 5 second timeout
 
-        // Remove any existing listeners first to avoid duplicates
-        PushNotifications.removeAllListeners();
-
-        // Set up listeners BEFORE registering
-        PushNotifications.addListener('registration', async (token) => {
+        // Helper function to send token to backend
+        const sendTokenToBackend = async (tokenValue) => {
           clearTimeout(timeout);
-          console.log('Device push token received:', token.value);
+          console.log('Device push token received:', tokenValue);
           
-          // Send token to backend
           try {
             await axios.post(`${API}/api/live-activity/register-device-token`, {
               user_id: userId,
-              device_token: token.value
+              device_token: tokenValue
             });
             console.log('Device push token registered with backend');
             resolve(true);
@@ -75,6 +79,14 @@ export const LiveActivityService = {
             console.error('Failed to register device token:', error);
             resolve(false);
           }
+        };
+
+        // Remove any existing listeners first to avoid duplicates
+        PushNotifications.removeAllListeners();
+
+        // Set up listeners BEFORE registering
+        PushNotifications.addListener('registration', (token) => {
+          sendTokenToBackend(token.value);
         });
 
         PushNotifications.addListener('registrationError', (error) => {
@@ -88,8 +100,13 @@ export const LiveActivityService = {
           console.log('Push notification received:', notification);
         });
 
-        // Register with APNs (this triggers the 'registration' event)
-        PushNotifications.register();
+        // Register with APNs - this should trigger 'registration' event
+        // Even if already registered, calling register() should return the cached token
+        PushNotifications.register().then(() => {
+          console.log('PushNotifications.register() completed');
+        }).catch(err => {
+          console.error('PushNotifications.register() error:', err);
+        });
       });
     } catch (error) {
       console.error('Failed to register for push notifications:', error);

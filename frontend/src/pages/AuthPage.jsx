@@ -242,6 +242,21 @@ export default function AuthPage() {
       } else {
         navigate("/dashboard");
       }
+      
+      // Register any pending push token now that we have user ID
+      const pendingToken = localStorage.getItem('pendingPushToken');
+      if (pendingToken && user.id) {
+        try {
+          await axios.post(`${API}/live-activity/register-device-token`, {
+            user_id: user.id,
+            device_token: pendingToken
+          });
+          localStorage.removeItem('pendingPushToken');
+          console.log('Pending push token registered after login');
+        } catch (err) {
+          console.error('Failed to register pending push token:', err);
+        }
+      }
     } catch (error) {
       errorFeedback(); // Error haptic
       // Handle error - ensure we display a string, not an object
