@@ -333,7 +333,7 @@ async def consignor_send_message(email: str, message: ConversationCreate):
 
 # ============ ADMIN MESSAGING ============
 
-@router.get("/admin/all", response_model=List[ConversationListItem])
+@router.get("/admin/list", response_model=List[ConversationListItem])
 async def get_all_conversations(admin: dict = Depends(get_admin_user)):
     """Admin: Get all conversations"""
     conversations = await db.conversations.find({}, {"_id": 0}).sort("last_message_at", -1).to_list(500)
@@ -361,7 +361,21 @@ async def get_all_conversations(admin: dict = Depends(get_admin_user)):
     return result
 
 
-@router.get("/admin/{conversation_id}")
+@router.get("/admin/unread-count")
+async def get_admin_unread_count(admin: dict = Depends(get_admin_user)):
+    """Admin: Get total unread message count across all conversations"""
+    conversations = await db.conversations.find({}, {"messages": 1}).to_list(1000)
+    
+    total_unread = 0
+    for conv in conversations:
+        for msg in conv.get("messages", []):
+            if msg.get("sender_type") != "admin" and not msg.get("read", False):
+                total_unread += 1
+    
+    return {"unread_count": total_unread}
+
+
+@router.get("/admin/conversation/{conversation_id}")
 async def get_conversation(conversation_id: str, admin: dict = Depends(get_admin_user)):
     """Admin: Get a specific conversation"""
     conversation = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})
@@ -426,17 +440,3 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
         print(f"Failed to send admin reply push: {e}")
     
     return {"success": True, "message_id": new_message["id"]}
-
-
-@router.get("/admin/unread-count")
-async def get_admin_unread_count(admin: dict = Depends(get_admin_user)):
-    """Admin: Get total unread message count across all conversations"""
-    conversations = await db.conversations.find({}, {"messages": 1}).to_list(1000)
-    
-    total_unread = 0
-    for conv in conversations:
-        for msg in conv.get("messages", []):
-            if msg.get("sender_type") != "admin" and not msg.get("read", False):
-                total_unread += 1
-    
-    return {"unread_count": total_unread}

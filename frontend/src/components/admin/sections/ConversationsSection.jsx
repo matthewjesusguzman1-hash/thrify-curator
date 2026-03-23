@@ -54,7 +54,7 @@ export default function ConversationsSection() {
     console.log("ConversationsSection: Fetching conversations...");
     try {
       const [convRes, countRes] = await Promise.all([
-        axios.get(`${API}/conversations/admin/all`, {
+        axios.get(`${API}/conversations/admin/list`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
         axios.get(`${API}/conversations/admin/unread-count`, {
@@ -106,7 +106,7 @@ export default function ConversationsSection() {
   const handleSelectConversation = async (conv) => {
     const token = getToken();
     try {
-      const res = await axios.get(`${API}/conversations/admin/${conv.id}`, {
+      const res = await axios.get(`${API}/conversations/admin/conversation/${conv.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedConversation(res.data);
