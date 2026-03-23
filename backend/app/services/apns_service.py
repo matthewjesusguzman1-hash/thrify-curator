@@ -55,14 +55,15 @@ async def send_live_activity_update(push_token: str, content_state: dict, event:
         token = generate_apns_token()
         
         # APNs payload for Live Activity update
+        # content-state must match Swift ContentState struct exactly
         payload = {
             "aps": {
                 "timestamp": int(time.time()),
                 "event": event,  # "update" or "end"
-                "content-state": content_state,
-                "alert": {
-                    "title": "Employee Update",
-                    "body": f"{content_state.get('employeeCount', 0)} employees clocked in"
+                "content-state": {
+                    "employeeCount": content_state.get("employeeCount", 0),
+                    "employeeNames": content_state.get("employeeNames", []),
+                    "lastUpdated": content_state.get("lastUpdated", datetime.now(timezone.utc).isoformat())
                 }
             }
         }
