@@ -243,19 +243,65 @@ export default function AuthPage() {
         navigate("/dashboard");
       }
       
-      // Register any pending push token now that we have user ID
-      const pendingToken = localStorage.getItem('pendingPushToken');
-      if (pendingToken && user.id) {
-        try {
+      // Register device push token for admin notifications
+      // This MUST run after login to associate token with user
+      try {
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        
+        // First check if we have a pending token from app startup
+        const pendingToken = localStorage.getItem('pendingPushToken');
+        if (pendingToken && user.id) {
+          console.log('Found pending push token, registering...');
           await axios.post(`${API}/live-activity/register-device-token`, {
             user_id: user.id,
             device_token: pendingToken
           });
           localStorage.removeItem('pendingPushToken');
-          console.log('Pending push token registered after login');
-        } catch (err) {
-          console.error('Failed to register pending push token:', err);
+          console.log('Pending push token registered!');
+        } else {
+          // No pending token - actively request one now
+          console.log('No pending token, requesting fresh push registration...');
+          
+          const permResult = await PushNotifications.requestPermissions();
+          console.log('Push permission result:', permResult);
+          
+          if (permResult.receive === 'granted') {
+            // Remove old listeners and add fresh one
+            await PushNotifications.removeAllListeners();
+            
+            // Set up one-time listener for token
+            const tokenPromise = new Promise((resolve) => {
+              const timeout = setTimeout(() => {
+                console.log('Push token registration timed out');
+                resolve(null);
+              }, 5000);
+              
+              PushNotifications.addListener('registration', async (tokenData) => {
+                clearTimeout(timeout);
+                console.log('Fresh push token received:', tokenData.value);
+                
+                try {
+                  await axios.post(`${API}/live-activity/register-device-token`, {
+                    user_id: user.id,
+                    device_token: tokenData.value
+                  });
+                  console.log('Push token registered successfully!');
+                  resolve(tokenData.value);
+                } catch (regErr) {
+                  console.error('Failed to register token:', regErr);
+                  resolve(null);
+                }
+              });
+            });
+            
+            // Trigger registration
+            await PushNotifications.register();
+            await tokenPromise;
+          }
         }
+      } catch (pushErr) {
+        // Expected to fail on web - that's okay
+        console.log('Push notification setup skipped:', pushErr.message);
       }
     } catch (error) {
       errorFeedback(); // Error haptic
