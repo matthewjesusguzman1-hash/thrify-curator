@@ -48,7 +48,7 @@ const useSessionManager = () => {
       if (token && sessionStart) {
         const elapsed = Date.now() - parseInt(sessionStart);
         if (elapsed > SESSION_TIMEOUT) {
-          console.log("Session expired");
+          console.log("Session expired after", SESSION_TIMEOUT / 60000, "minutes of inactivity");
           clearSession();
           window.location.href = "/login";
         }
@@ -59,43 +59,12 @@ const useSessionManager = () => {
     const timeoutInterval = setInterval(checkTimeout, 60000);
     checkTimeout(); // Check immediately
 
-    // Handle app visibility change (for native app)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && isNativeApp()) {
-        // App is being closed/backgrounded on native - clear session
-        clearSession();
-      }
-    };
-
-    // Handle page hide (for iOS)
-    const handlePageHide = () => {
-      if (isNativeApp()) {
-        clearSession();
-      }
-    };
-
-    // Handle Capacitor app state changes
-    const handleAppStateChange = (state) => {
-      if (state && !state.isActive && isNativeApp()) {
-        clearSession();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pagehide', handlePageHide);
-    
-    // Listen for Capacitor App state if available
-    if (window.Capacitor?.Plugins?.App) {
-      window.Capacitor.Plugins.App.addListener('appStateChange', handleAppStateChange);
-    }
+    // NOTE: We no longer clear session on visibility change or app backgrounding
+    // This was causing users to be logged out just from checking the lock screen
+    // The session timeout (15 min) handles security instead
 
     return () => {
       clearInterval(timeoutInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pagehide', handlePageHide);
-      if (window.Capacitor?.Plugins?.App) {
-        window.Capacitor.Plugins.App.removeAllListeners();
-      }
     };
   }, [clearSession]);
 
