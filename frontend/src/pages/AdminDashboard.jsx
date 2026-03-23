@@ -2415,14 +2415,43 @@ export default function AdminDashboard() {
                       console.log('Push registration skipped:', e);
                     }
                     
-                    const clockedInNames = employees
-                      .filter(emp => employeeClockStatuses[emp.id])
-                      .map(emp => emp.name || emp.email);
+                    // Fetch actual clocked-in employees with their clock-in times
+                    let clockedInData = [];
+                    try {
+                      const response = await axios.get(`${API}/admin/clocked-in-employees`, getAuthHeader());
+                      const clockedEmployees = response.data.employees || [];
+                      
+                      // Format as "Name|TimeStr|Timestamp" for Swift
+                      clockedInData = clockedEmployees.map(emp => {
+                        const name = emp.name || 'Unknown';
+                        let timeStr = '--';
+                        let timestamp = 0;
+                        
+                        if (emp.clock_in_time) {
+                          try {
+                            const dt = new Date(emp.clock_in_time);
+                            timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                            timestamp = Math.floor(dt.getTime() / 1000);
+                          } catch (e) {
+                            console.log('Failed to parse clock-in time:', e);
+                          }
+                        }
+                        
+                        return `${name}|${timeStr}|${timestamp}`;
+                      });
+                    } catch (e) {
+                      console.log('Failed to fetch clocked-in employees:', e);
+                      // Fallback to simple names
+                      clockedInData = employees
+                        .filter(emp => employeeClockStatuses[emp.id])
+                        .map(emp => `${emp.name || emp.email}|--|0`);
+                    }
+                    
                     await LiveActivityService.startAdminActivity({
                       adminName: user?.name || 'Admin',
                       userId: user?.id,
-                      employeeCount: clockedInNames.length,
-                      employeeNames: clockedInNames
+                      employeeCount: clockedInData.length,
+                      employeeNames: clockedInData
                     });
                     setAdminMonitoringActive(true);
                     successFeedback();

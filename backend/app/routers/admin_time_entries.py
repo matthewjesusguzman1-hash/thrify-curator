@@ -19,6 +19,26 @@ async def get_all_time_entries(admin: dict = Depends(get_admin_user)):
     return entries
 
 
+@router.get("/clocked-in-employees")
+async def get_clocked_in_employees(admin: dict = Depends(get_admin_user)):
+    """Get all currently clocked-in employees with their clock-in times."""
+    clocked_in = await db.time_entries.find(
+        {"clock_out": None},
+        {"user_id": 1, "user_name": 1, "clock_in": 1, "last_clock_in": 1, "_id": 0}
+    ).to_list(100)
+    
+    employees = []
+    for entry in clocked_in:
+        clock_in_time = entry.get("last_clock_in") or entry.get("clock_in")
+        employees.append({
+            "user_id": entry.get("user_id"),
+            "name": entry.get("user_name", "Unknown"),
+            "clock_in_time": clock_in_time
+        })
+    
+    return {"employees": employees, "count": len(employees)}
+
+
 @router.get("/time-entries/{entry_id}")
 async def get_time_entry(entry_id: str, admin: dict = Depends(get_admin_user)):
     """Get a specific time entry."""

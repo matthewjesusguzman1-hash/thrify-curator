@@ -181,7 +181,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             let initialState = AdminShiftAttributes.ContentState(
                 employeeCount: employeeCount,
                 employeeNames: employeeNames,
-                lastUpdated: Date()
+                lastUpdated: Date().timeIntervalSince1970
             )
             
             let content = ActivityContent(state: initialState, staleDate: nil)
@@ -239,7 +239,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                 let newState = AdminShiftAttributes.ContentState(
                     employeeCount: employeeCount,
                     employeeNames: employeeNames,
-                    lastUpdated: Date()
+                    lastUpdated: Date().timeIntervalSince1970
                 )
                 await activity.update(using: newState)
                 call.resolve()
@@ -248,7 +248,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                     let newState = AdminShiftAttributes.ContentState(
                         employeeCount: employeeCount,
                         employeeNames: employeeNames,
-                        lastUpdated: Date()
+                        lastUpdated: Date().timeIntervalSince1970
                     )
                     await activity.update(using: newState)
                     self.currentAdminActivity = activity
@@ -328,7 +328,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             let finalState = AdminShiftAttributes.ContentState(
                 employeeCount: 0,
                 employeeNames: [],
-                lastUpdated: Date()
+                lastUpdated: Date().timeIntervalSince1970
             )
             await activity.end(using: finalState, dismissalPolicy: .immediate)
         }

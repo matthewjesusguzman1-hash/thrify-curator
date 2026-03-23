@@ -47,30 +47,50 @@ export const LiveActivityService = {
         return null;
       }
 
-      // Set up listeners BEFORE registering
-      PushNotifications.addListener('registration', async (token) => {
-        console.log('Device push token:', token.value);
-        
-        // Send token to backend
-        try {
-          await axios.post(`${API}/api/live-activity/register-device-token`, {
-            user_id: userId,
-            device_token: token.value
-          });
-          console.log('Device push token registered with backend');
-        } catch (error) {
-          console.error('Failed to register device token:', error);
-        }
-      });
+      // Return a promise that resolves when we get the token
+      return new Promise((resolve) => {
+        // Set a timeout in case token never arrives
+        const timeout = setTimeout(() => {
+          console.log('Push token registration timed out');
+          resolve(null);
+        }, 5000); // 5 second timeout
 
-      PushNotifications.addListener('registrationError', (error) => {
-        console.error('Push registration error:', error);
-      });
+        // Remove any existing listeners first to avoid duplicates
+        PushNotifications.removeAllListeners();
 
-      // Register with APNs (this triggers the 'registration' event)
-      await PushNotifications.register();
-      
-      return true;
+        // Set up listeners BEFORE registering
+        PushNotifications.addListener('registration', async (token) => {
+          clearTimeout(timeout);
+          console.log('Device push token received:', token.value);
+          
+          // Send token to backend
+          try {
+            await axios.post(`${API}/api/live-activity/register-device-token`, {
+              user_id: userId,
+              device_token: token.value
+            });
+            console.log('Device push token registered with backend');
+            resolve(true);
+          } catch (error) {
+            console.error('Failed to register device token:', error);
+            resolve(false);
+          }
+        });
+
+        PushNotifications.addListener('registrationError', (error) => {
+          clearTimeout(timeout);
+          console.error('Push registration error:', error);
+          resolve(false);
+        });
+
+        // Listen for incoming notifications
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('Push notification received:', notification);
+        });
+
+        // Register with APNs (this triggers the 'registration' event)
+        PushNotifications.register();
+      });
     } catch (error) {
       console.error('Failed to register for push notifications:', error);
       return null;
