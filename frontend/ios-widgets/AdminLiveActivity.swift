@@ -7,12 +7,30 @@ import SwiftUI
 struct AdminShiftAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         var employeeCount: Int
-        var employeeNames: [String]
-        var lastUpdated: Double  // Unix timestamp for easier decoding from push
+        var employeeNames: [String]  // Format: "Name|StartTime|Timestamp"
+        var lastUpdated: Double
     }
     
     var adminName: String
     var startedAt: Date
+}
+
+// Helper to parse employee data
+struct EmployeeData {
+    let name: String
+    let startTime: String
+    let clockInDate: Date?
+    
+    init(from string: String) {
+        let parts = string.split(separator: "|").map { String($0) }
+        self.name = parts.count > 0 ? parts[0] : "Unknown"
+        self.startTime = parts.count > 1 ? parts[1] : "--"
+        if parts.count > 2, let timestamp = Double(parts[2]), timestamp > 0 {
+            self.clockInDate = Date(timeIntervalSince1970: timestamp)
+        } else {
+            self.clockInDate = nil
+        }
+    }
 }
 
 // MARK: - Admin Live Activity Widget
@@ -45,27 +63,30 @@ struct AdminLiveActivity: Widget {
                 }
                 
                 DynamicIslandExpandedRegion(.center) {
-                    VStack {
+                    VStack(spacing: 4) {
                         Text("\(context.state.employeeCount)")
-                            .font(.system(.largeTitle, design: .rounded))
+                            .font(.system(.title, design: .rounded))
                             .fontWeight(.bold)
                             .foregroundColor(.cyan)
-                        Text("Employees Clocked In")
+                        Text("Clocked In")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
                 }
                 
                 DynamicIslandExpandedRegion(.bottom) {
-                    if context.state.employeeNames.isEmpty {
-                        Text("No employees currently working")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text(context.state.employeeNames.prefix(3).joined(separator: ", "))
-                            .font(.caption)
-                            .foregroundColor(.white)
-                            .lineLimit(1)
+                    if let firstEmployee = context.state.employeeNames.first {
+                        let data = EmployeeData(from: firstEmployee)
+                        HStack {
+                            Text(data.name)
+                                .font(.caption)
+                                .foregroundColor(.white)
+                            if let clockIn = data.clockInDate {
+                                Text(clockIn, style: .timer)
+                                    .font(.caption)
+                                    .foregroundColor(.cyan)
+                            }
+                        }
                     }
                 }
             } compactLeading: {
@@ -91,48 +112,60 @@ struct AdminLockScreenView: View {
     let context: ActivityViewContext<AdminShiftAttributes>
     
     var body: some View {
-        HStack(spacing: 16) {
-            // Icon
-            VStack {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header
+            HStack {
                 Image(systemName: "person.2.fill")
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundColor(.blue)
+                Text("\(context.state.employeeCount) Clocked In")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                Spacer()
             }
-            .frame(width: 50)
             
-            // Main content
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("\(context.state.employeeCount)")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.cyan)
-                    Text("Clocked In")
-                        .font(.headline)
-                        .foregroundColor(.white)
+            // Employee list with live timers
+            if context.state.employeeCount == 0 {
+                Text("No employees working")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(context.state.employeeNames.prefix(3), id: \.self) { employeeString in
+                    let data = EmployeeData(from: employeeString)
+                    HStack {
+                        // Employee name
+                        Text(data.name)
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        Spacer()
+                        
+                        // Start time
+                        Text(data.startTime)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        // Live timer
+                        if let clockIn = data.clockInDate {
+                            Text(clockIn, style: .timer)
+                                .font(.system(.subheadline, design: .monospaced))
+                                .fontWeight(.semibold)
+                                .foregroundColor(.cyan)
+                                .frame(minWidth: 60, alignment: .trailing)
+                        }
+                    }
                 }
                 
-                if context.state.employeeNames.isEmpty {
-                    Text("No employees working")
+                // Show +X more if there are more employees
+                if context.state.employeeCount > 3 {
+                    Text("+\(context.state.employeeCount - 3) more")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                } else {
-                    Text(formatNames(context.state.employeeNames))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
                 }
             }
-            
-            Spacer()
         }
         .padding()
-    }
-    
-    private func formatNames(_ names: [String]) -> String {
-        if names.count <= 2 {
-            return names.joined(separator: ", ")
-        }
-        return "\(names.prefix(2).joined(separator: ", ")) +\(names.count - 2) more"
     }
 }

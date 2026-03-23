@@ -22,9 +22,7 @@ async def trigger_admin_live_activity_update():
             {"user_name": 1, "clock_in": 1, "_id": 0}
         ).to_list(100)
         
-        now = datetime.now(timezone.utc)
-        
-        # Format employee data with names and elapsed time
+        # Format employee data with names and clock-in timestamps
         employee_data = []
         for entry in clocked_in:
             name = entry.get("user_name", "Unknown")
@@ -32,21 +30,16 @@ async def trigger_admin_live_activity_update():
             
             if clock_in:
                 try:
+                    # Parse and format the time
                     dt = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
-                    elapsed = now - dt
-                    hours = int(elapsed.total_seconds() // 3600)
-                    minutes = int((elapsed.total_seconds() % 3600) // 60)
-                    
-                    if hours > 0:
-                        time_str = f"{hours}h {minutes}m"
-                    else:
-                        time_str = f"{minutes}m"
-                    
-                    employee_data.append(f"{name} - {time_str}")
+                    time_str = dt.strftime("%-I:%M %p")  # e.g., "9:30 AM"
+                    # Include timestamp for live timer calculation
+                    timestamp = dt.timestamp()
+                    employee_data.append(f"{name}|{time_str}|{timestamp}")
                 except:
-                    employee_data.append(name)
+                    employee_data.append(f"{name}|--|0")
             else:
-                employee_data.append(name)
+                employee_data.append(f"{name}|--|0")
         
         employee_count = len(employee_data)
         
