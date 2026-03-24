@@ -183,37 +183,7 @@ export const LiveActivityService = {
 
       console.log('Starting Employee Live Activity...');
       
-      // Set up listener BEFORE starting activity to catch the token
-      // Remove any existing listener first to avoid duplicates
-      LiveActivity.removeAllListeners();
-      
-      // Create a promise that will resolve when we get the token
-      let tokenResolver = null;
-      const tokenPromise = new Promise((resolve) => {
-        tokenResolver = resolve;
-        // Timeout after 5 seconds
-        setTimeout(() => resolve(null), 5000);
-      });
-      
-      LiveActivity.addListener('employeePushTokenReceived', async (data) => {
-        console.log('Received employeePushTokenReceived event:', data.pushToken ? 'has token' : 'no token');
-        if (data.pushToken && userId) {
-          try {
-            console.log('Registering employee Live Activity token via listener...');
-            await axios.post(`${API}/api/live-activity/register-token`, {
-              user_id: userId,
-              push_token: data.pushToken,
-              activity_type: 'employee'
-            });
-            console.log('Employee Live Activity push token registered via listener!');
-            if (tokenResolver) tokenResolver(data.pushToken);
-          } catch (regError) {
-            console.error('Failed to register employee Live Activity push token:', regError);
-          }
-        }
-      });
-      
-      // Now start the activity
+      // Start the activity
       const result = await LiveActivity.startEmployeeActivity({
         employeeName,
         clockInTime: clockInTimeString
@@ -221,7 +191,10 @@ export const LiveActivityService = {
       
       console.log('Employee Live Activity started:', result.activityId, 'pushToken:', result.pushToken ? 'received' : 'none');
       
-      // Register push token with backend if we got it immediately
+      // Try to register push token with backend
+      let tokenRegistered = false;
+      
+      // Method 1: Use token from initial response
       if (result.pushToken && userId) {
         try {
           console.log('Registering employee Live Activity token from initial response...');
@@ -231,18 +204,55 @@ export const LiveActivityService = {
             activity_type: 'employee'
           });
           console.log('Employee Live Activity push token registered from initial response!');
+          tokenRegistered = true;
         } catch (regError) {
           console.error('Failed to register employee Live Activity push token:', regError);
         }
-      } else {
-        console.log('No token in initial response, waiting for listener...');
-        // Wait for the token via listener
-        const token = await tokenPromise;
-        if (token) {
-          console.log('Got token via listener promise');
-        } else {
-          console.log('Token listener timed out');
+      }
+      
+      // Method 2: If no token yet, wait and try to fetch it directly
+      if (!tokenRegistered && userId) {
+        console.log('No token in initial response, waiting and fetching...');
+        
+        // Wait 2 seconds for the token to be available
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        try {
+          const tokenResult = await LiveActivity.getEmployeeActivityPushToken();
+          if (tokenResult.pushToken) {
+            console.log('Got employee Live Activity token via direct fetch');
+            await axios.post(`${API}/api/live-activity/register-token`, {
+              user_id: userId,
+              push_token: tokenResult.pushToken,
+              activity_type: 'employee'
+            });
+            console.log('Employee Live Activity push token registered via direct fetch!');
+            tokenRegistered = true;
+          }
+        } catch (fetchError) {
+          console.log('Failed to fetch employee Live Activity token:', fetchError);
         }
+      }
+      
+      // Method 3: Set up listener for late-arriving token
+      if (!tokenRegistered) {
+        console.log('Setting up listener for late-arriving token...');
+        LiveActivity.addListener('employeePushTokenReceived', async (data) => {
+          console.log('Received employeePushTokenReceived event:', data.pushToken ? 'has token' : 'no token');
+          if (data.pushToken && userId) {
+            try {
+              console.log('Registering employee Live Activity token via listener...');
+              await axios.post(`${API}/api/live-activity/register-token`, {
+                user_id: userId,
+                push_token: data.pushToken,
+                activity_type: 'employee'
+              });
+              console.log('Employee Live Activity push token registered via listener!');
+            } catch (regError) {
+              console.error('Failed to register employee Live Activity push token:', regError);
+            }
+          }
+        });
       }
       
       return result;

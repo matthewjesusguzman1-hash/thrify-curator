@@ -35,6 +35,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "startEmployeeActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateEmployeeActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endEmployeeActivity", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getEmployeeActivityPushToken", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startAdminActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateAdminActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endAdminActivity", returnType: CAPPluginReturnPromise),
@@ -233,6 +234,39 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             await self.endAllEmployeeActivities()
             SharedDataManager.clearEmployeeShift()
             call.resolve()
+        }
+    }
+    
+    @objc func getEmployeeActivityPushToken(_ call: CAPPluginCall) {
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities require iOS 16.2+")
+            return
+        }
+        
+        Task {
+            // Check current tracked activity first
+            if let activity = self.currentEmployeeActivity {
+                for await pushToken in activity.pushTokenUpdates {
+                    let tokenParts = pushToken.map { data in String(format: "%02.2hhx", data) }
+                    let tokenStr = tokenParts.joined()
+                    print("Got employee push token from tracked activity: \(tokenStr)")
+                    call.resolve(["pushToken": tokenStr])
+                    return
+                }
+            }
+            
+            // Fallback: check all running employee activities
+            for activity in Activity<EmployeeShiftAttributes>.activities {
+                for await pushToken in activity.pushTokenUpdates {
+                    let tokenParts = pushToken.map { data in String(format: "%02.2hhx", data) }
+                    let tokenStr = tokenParts.joined()
+                    print("Got employee push token from running activity: \(tokenStr)")
+                    call.resolve(["pushToken": tokenStr])
+                    return
+                }
+            }
+            
+            call.resolve(["pushToken": ""])
         }
     }
     
