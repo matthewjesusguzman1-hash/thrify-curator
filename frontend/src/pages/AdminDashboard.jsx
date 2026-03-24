@@ -729,6 +729,70 @@ export default function AdminDashboard() {
     fetchPayrollSummary();
     fetchFormSubmissions(); // Auto-fetch form submissions on page load
     
+    // Auto-start Live Activity if employees are clocked in
+    const autoStartLiveActivity = async () => {
+      try {
+        const supported = await LiveActivityService.isSupported();
+        if (!supported) {
+          console.log('Live Activities not supported, skipping auto-start');
+          return;
+        }
+        
+        // Fetch clocked-in employees
+        const response = await axios.get(`${API}/admin/clocked-in-employees`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const clockedEmployees = response.data.employees || [];
+        
+        if (clockedEmployees.length > 0) {
+          console.log(`Auto-starting Live Activity with ${clockedEmployees.length} clocked-in employees`);
+          
+          // Format as "Name|TimeStr|Timestamp" for Swift
+          const clockedInData = clockedEmployees.map(emp => {
+            const name = emp.name || 'Unknown';
+            let timeStr = '--';
+            let timestamp = 0;
+            
+            if (emp.clock_in_time) {
+              try {
+                const dt = new Date(emp.clock_in_time);
+                timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                timestamp = Math.floor(dt.getTime() / 1000);
+              } catch (e) {
+                console.log('Failed to parse clock-in time:', e);
+              }
+            }
+            
+            return `${name}|${timeStr}|${timestamp}`;
+          });
+          
+          // Register for push notifications first
+          try {
+            await LiveActivityService.registerForPushNotifications(parsedUser.id);
+          } catch (e) {
+            console.log('Push registration skipped:', e);
+          }
+          
+          await LiveActivityService.startAdminActivity({
+            adminName: parsedUser?.name || 'Admin',
+            userId: parsedUser?.id,
+            employeeCount: clockedInData.length,
+            employeeNames: clockedInData
+          });
+          
+          setAdminMonitoringActive(true);
+          console.log(`Live Activity auto-started with ${clockedInData.length} employees`);
+        } else {
+          console.log('No employees clocked in, skipping Live Activity auto-start');
+        }
+      } catch (error) {
+        console.log('Failed to auto-start Live Activity:', error);
+      }
+    };
+    
+    // Run auto-start after a short delay to let the app settle
+    setTimeout(autoStartLiveActivity, 1500);
+    
     // Poll for new notifications and data every 30 seconds
     const pollInterval = setInterval(() => {
       fetchNotifications();
