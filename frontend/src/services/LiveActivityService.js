@@ -158,12 +158,14 @@ export const LiveActivityService = {
 
   /**
    * Start a Live Activity when employee clocks in
+   * Registers push token with backend so admin can end it remotely
    * @param {Object} params
    * @param {string} params.employeeName - Employee's display name
+   * @param {string} params.userId - Employee's user ID for token registration
    * @param {Date|string} params.clockInTime - Clock in timestamp
-   * @returns {Promise<{activityId: string}>}
+   * @returns {Promise<{activityId: string, pushToken: string}>}
    */
-  startEmployeeActivity: async ({ employeeName, clockInTime }) => {
+  startEmployeeActivity: async ({ employeeName, userId, clockInTime }) => {
     try {
       const supported = await LiveActivityService.isSupported();
       if (!supported) {
@@ -181,6 +183,37 @@ export const LiveActivityService = {
       });
       
       console.log('Employee Live Activity started:', result.activityId);
+      
+      // Register push token with backend so admin can end it remotely
+      if (result.pushToken && userId) {
+        try {
+          await axios.post(`${API}/api/live-activity/register-token`, {
+            user_id: userId,
+            push_token: result.pushToken,
+            activity_type: 'employee'
+          });
+          console.log('Employee Live Activity push token registered with backend');
+        } catch (regError) {
+          console.error('Failed to register employee Live Activity push token:', regError);
+        }
+      }
+      
+      // Listen for push token updates (token might come later)
+      LiveActivity.addListener('employeePushTokenReceived', async (data) => {
+        if (data.pushToken && userId) {
+          try {
+            await axios.post(`${API}/api/live-activity/register-token`, {
+              user_id: userId,
+              push_token: data.pushToken,
+              activity_type: 'employee'
+            });
+            console.log('Employee Live Activity push token updated with backend');
+          } catch (regError) {
+            console.error('Failed to update employee Live Activity push token:', regError);
+          }
+        }
+      });
+      
       return result;
     } catch (error) {
       console.error('Failed to start Employee Live Activity:', error);
@@ -190,15 +223,28 @@ export const LiveActivityService = {
 
   /**
    * End the Live Activity when employee clocks out
+   * @param {string} userId - Employee's user ID for token unregistration
    * @returns {Promise<void>}
    */
-  endEmployeeActivity: async () => {
+  endEmployeeActivity: async (userId) => {
     try {
       const supported = await LiveActivityService.isSupported();
       if (!supported) return;
 
       await LiveActivity.endEmployeeActivity();
       console.log('Employee Live Activity ended');
+      
+      // Unregister push token from backend
+      if (userId) {
+        try {
+          await axios.post(`${API}/api/live-activity/unregister-token`, null, {
+            params: { user_id: userId, activity_type: 'employee' }
+          });
+          console.log('Employee Live Activity push token unregistered');
+        } catch (unregError) {
+          console.error('Failed to unregister employee Live Activity push token:', unregError);
+        }
+      }
     } catch (error) {
       console.error('Failed to end Employee Live Activity:', error);
     }

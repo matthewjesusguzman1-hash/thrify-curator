@@ -324,6 +324,7 @@ export default function EmployeeDashboard() {
         const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
         LiveActivityService.startEmployeeActivity({
           employeeName: storedUser?.name || storedUser?.email || 'Employee',
+          userId: storedUser?.id,  // Include userId so backend can end it remotely
           clockInTime: new Date(statusRes.data.entry.clock_in)
         });
       }
@@ -494,6 +495,7 @@ export default function EmployeeDashboard() {
           // Start Live Activity for Lock Screen timer
           LiveActivityService.startEmployeeActivity({
             employeeName: user?.name || user?.email || 'Employee',
+            userId: user?.id,  // Include userId so backend can end it remotely
             clockInTime: new Date()
           });
           
@@ -544,11 +546,12 @@ export default function EmployeeDashboard() {
         // Admin clock in - start Live Activity
         LiveActivityService.startEmployeeActivity({
           employeeName: user?.name || user?.email || 'Employee',
+          userId: user?.id,  // Include userId so backend can end it remotely
           clockInTime: new Date()
         });
       } else {
         // Clock out - end Live Activity
-        LiveActivityService.endEmployeeActivity();
+        LiveActivityService.endEmployeeActivity(user?.id);
       }
       
       fetchData();

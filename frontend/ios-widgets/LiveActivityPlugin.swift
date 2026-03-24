@@ -153,10 +153,11 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             let content = ActivityContent(state: initialState, staleDate: nil)
             
             do {
+                // Request activity WITH push token for remote end support
                 let activity = try Activity.request(
                     attributes: attributes,
                     content: content,
-                    pushType: nil
+                    pushType: .token  // Enable push updates so admin can end remotely!
                 )
                 self.currentEmployeeActivity = activity
                 
@@ -167,7 +168,30 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                 )
                 SharedDataManager.saveEmployeeShift(shiftData)
                 
-                call.resolve(["activityId": activity.id])
+                // Get the push token for this Live Activity
+                var pushTokenString: String? = nil
+                
+                // Observe push token updates
+                Task {
+                    for await pushToken in activity.pushTokenUpdates {
+                        let tokenParts = pushToken.map { data in String(format: "%02.2hhx", data) }
+                        pushTokenString = tokenParts.joined()
+                        print("Employee Live Activity push token: \(pushTokenString ?? "nil")")
+                        
+                        // Notify JS about the token so it can be registered with backend
+                        self.notifyListeners("employeePushTokenReceived", data: [
+                            "pushToken": pushTokenString ?? ""
+                        ])
+                    }
+                }
+                
+                // Wait briefly for token
+                try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                
+                call.resolve([
+                    "activityId": activity.id,
+                    "pushToken": pushTokenString ?? ""
+                ])
             } catch {
                 call.reject("Failed to start Live Activity: \(error.localizedDescription)")
             }

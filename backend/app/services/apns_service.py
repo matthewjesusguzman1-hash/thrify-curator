@@ -217,6 +217,8 @@ async def end_employee_live_activity(employee_id: str, total_hours: float = 0):
     
     db = get_database()
     
+    print(f"[LIVE ACTIVITY] Attempting to end Live Activity for employee {employee_id}")
+    
     # Find the employee's Live Activity token
     token_doc = await db.live_activity_tokens.find_one({
         "user_id": employee_id,
@@ -225,13 +227,18 @@ async def end_employee_live_activity(employee_id: str, total_hours: float = 0):
     })
     
     if not token_doc:
-        print(f"No active Live Activity token for employee {employee_id}")
+        print(f"[LIVE ACTIVITY] No active Live Activity token found for employee {employee_id}")
+        # List all tokens for debugging
+        all_tokens = await db.live_activity_tokens.find({"user_id": employee_id}).to_list(10)
+        print(f"[LIVE ACTIVITY] All tokens for {employee_id}: {all_tokens}")
         return False
     
     push_token = token_doc.get("push_token")
     if not push_token:
-        print(f"No push token found for employee {employee_id}")
+        print(f"[LIVE ACTIVITY] Token doc exists but no push_token field for employee {employee_id}")
         return False
+    
+    print(f"[LIVE ACTIVITY] Found push token for employee {employee_id}: {push_token[:20]}...")
     
     try:
         token = generate_apns_token()
@@ -260,12 +267,14 @@ async def end_employee_live_activity(employee_id: str, total_hours: float = 0):
         }
         
         url = f"{APNS_URL}/3/device/{push_token}"
+        print(f"[LIVE ACTIVITY] Sending end push to: {url}")
+        print(f"[LIVE ACTIVITY] Using APNs URL: {APNS_URL}")
         
         async with httpx.AsyncClient(http2=True) as client:
             response = await client.post(url, json=payload, headers=headers)
             
             if response.status_code == 200:
-                print(f"Ended Live Activity for employee {employee_id}")
+                print(f"[LIVE ACTIVITY] Successfully ended Live Activity for employee {employee_id}")
                 # Mark the token as inactive
                 await db.live_activity_tokens.update_one(
                     {"_id": token_doc["_id"]},
@@ -273,11 +282,13 @@ async def end_employee_live_activity(employee_id: str, total_hours: float = 0):
                 )
                 return True
             else:
-                print(f"Failed to end employee Live Activity: {response.status_code} - {response.text}")
+                print(f"[LIVE ACTIVITY] Failed to end employee Live Activity: {response.status_code} - {response.text}")
                 return False
                 
     except Exception as e:
-        print(f"Error ending employee Live Activity: {e}")
+        print(f"[LIVE ACTIVITY] Error ending employee Live Activity: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
