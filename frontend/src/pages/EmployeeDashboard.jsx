@@ -187,7 +187,30 @@ export default function EmployeeDashboard() {
       fetchData();
     }, 60000);
     
-    return () => clearInterval(refreshInterval);
+    // Poll more frequently to detect admin clock-outs (every 10 seconds)
+    // This is a workaround since Live Activity push tokens aren't working for employees
+    const clockStatusInterval = setInterval(async () => {
+      try {
+        const statusRes = await axios.get(`${API}/time/status`, getAuthHeader());
+        const serverClockedIn = statusRes.data.clocked_in;
+        
+        // If we think we're clocked in but server says we're not, admin clocked us out
+        if (liveActivityStartedRef.current && !serverClockedIn) {
+          console.log('Detected admin clock-out, ending Live Activity');
+          liveActivityStartedRef.current = false;
+          LiveActivityService.endEmployeeActivity(parsedUser.id);
+          // Refresh full data to update UI
+          fetchData();
+        }
+      } catch (e) {
+        console.log('Clock status poll error:', e);
+      }
+    }, 10000); // Check every 10 seconds
+    
+    return () => {
+      clearInterval(refreshInterval);
+      clearInterval(clockStatusInterval);
+    };
   }, [navigate]);
 
   // Check if employee has a password set
