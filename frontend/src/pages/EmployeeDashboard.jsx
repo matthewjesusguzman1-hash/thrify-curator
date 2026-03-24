@@ -133,6 +133,9 @@ export default function EmployeeDashboard() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [locationStatus, setLocationStatus] = useState({ checking: false, withinRange: null, distance: null, denied: false });
   
+  // Track if Live Activity has been started this session to avoid restarting
+  const liveActivityStartedRef = useRef(false);
+  
   // Haptic feedback
   const { heavyPress, buttonPress, lightTap, successFeedback, errorFeedback, warningFeedback } = useHaptics();
   
@@ -324,20 +327,27 @@ export default function EmployeeDashboard() {
         axios.get(`${API}/time/w9/status`, getAuthHeader())
       ]);
 
-      setClockedIn(statusRes.data.clocked_in);
+      const isNowClocked = statusRes.data.clocked_in;
+      
+      setClockedIn(isNowClocked);
       setCurrentEntry(statusRes.data.entry);
       setEntries(entriesRes.data);
       setSummary(summaryRes.data);
       setW9Status(w9Res.data);
       
-      // Restore Live Activity if employee is clocked in
-      if (statusRes.data.clocked_in && statusRes.data.entry?.clock_in) {
+      // Start Live Activity ONCE when clocked in (avoid restarting on every fetchData)
+      if (isNowClocked && !liveActivityStartedRef.current && statusRes.data.entry?.clock_in) {
         const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        console.log('Starting Live Activity for clocked-in employee');
+        liveActivityStartedRef.current = true;
         LiveActivityService.startEmployeeActivity({
           employeeName: storedUser?.name || storedUser?.email || 'Employee',
-          userId: storedUser?.id,  // Include userId so backend can end it remotely
+          userId: storedUser?.id,
           clockInTime: new Date(statusRes.data.entry.clock_in)
         });
+      } else if (!isNowClocked && liveActivityStartedRef.current) {
+        // Reset the flag when clocked out so next clock-in starts a new activity
+        liveActivityStartedRef.current = false;
       }
     } catch (error) {
       if (error.response?.status === 401) {
@@ -504,9 +514,10 @@ export default function EmployeeDashboard() {
           toast.success("Clocked in!");
           
           // Start Live Activity for Lock Screen timer
+          liveActivityStartedRef.current = true;
           LiveActivityService.startEmployeeActivity({
             employeeName: user?.name || user?.email || 'Employee',
-            userId: user?.id,  // Include userId so backend can end it remotely
+            userId: user?.id,
             clockInTime: new Date()
           });
           
@@ -555,13 +566,15 @@ export default function EmployeeDashboard() {
       // Handle Live Activity based on action
       if (action === "in") {
         // Admin clock in - start Live Activity
+        liveActivityStartedRef.current = true;
         LiveActivityService.startEmployeeActivity({
           employeeName: user?.name || user?.email || 'Employee',
-          userId: user?.id,  // Include userId so backend can end it remotely
+          userId: user?.id,
           clockInTime: new Date()
         });
       } else {
         // Clock out - end Live Activity
+        liveActivityStartedRef.current = false;
         LiveActivityService.endEmployeeActivity(user?.id);
       }
       

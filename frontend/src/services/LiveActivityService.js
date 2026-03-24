@@ -181,37 +181,45 @@ export const LiveActivityService = {
         ? clockInTime.toISOString() 
         : clockInTime;
 
+      console.log('Starting Employee Live Activity...');
       const result = await LiveActivity.startEmployeeActivity({
         employeeName,
         clockInTime: clockInTimeString
       });
       
-      console.log('Employee Live Activity started:', result.activityId);
+      console.log('Employee Live Activity started:', result.activityId, 'pushToken:', result.pushToken ? 'received' : 'none');
       
       // Register push token with backend so admin can end it remotely
       if (result.pushToken && userId) {
         try {
+          console.log('Registering employee Live Activity token with backend...');
           await axios.post(`${API}/api/live-activity/register-token`, {
             user_id: userId,
             push_token: result.pushToken,
             activity_type: 'employee'
           });
-          console.log('Employee Live Activity push token registered with backend');
+          console.log('Employee Live Activity push token registered with backend successfully!');
         } catch (regError) {
           console.error('Failed to register employee Live Activity push token:', regError);
         }
+      } else if (!result.pushToken) {
+        console.log('No pushToken in initial response, waiting for async token...');
       }
       
-      // Listen for push token updates (token might come later)
+      // Listen for push token updates (token might come later if not in initial response)
+      // Remove any existing listener first to avoid duplicates
+      LiveActivity.removeAllListeners();
       LiveActivity.addListener('employeePushTokenReceived', async (data) => {
+        console.log('Received employeePushTokenReceived event:', data.pushToken ? 'has token' : 'no token');
         if (data.pushToken && userId) {
           try {
+            console.log('Registering late-arriving employee Live Activity token...');
             await axios.post(`${API}/api/live-activity/register-token`, {
               user_id: userId,
               push_token: data.pushToken,
               activity_type: 'employee'
             });
-            console.log('Employee Live Activity push token updated with backend');
+            console.log('Employee Live Activity push token (late) registered with backend!');
           } catch (regError) {
             console.error('Failed to update employee Live Activity push token:', regError);
           }
