@@ -768,7 +768,7 @@ export default function AdminDashboard() {
           
           // Register for push notifications first
           try {
-            await LiveActivityService.registerForPushNotifications(parsedUser.id);
+            await LiveActivityService.registerForPushNotifications(parsedUser.id, "admin");
           } catch (e) {
             console.log('Push registration skipped:', e);
           }
@@ -2509,7 +2509,7 @@ export default function AdminDashboard() {
                     
                     // Try to register for push notifications (don't block if fails)
                     try {
-                      await LiveActivityService.registerForPushNotifications(user?.id);
+                      await LiveActivityService.registerForPushNotifications(user?.id, "admin");
                     } catch (e) {
                       console.log('Push registration skipped:', e);
                     }

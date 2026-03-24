@@ -131,7 +131,7 @@ async def update_admin_live_activities(employee_count: int = None, employee_name
                     clock_in_time = clock_in
                 time_str = clock_in_time.strftime("%I:%M %p")
                 timestamp = str(int(clock_in_time.timestamp()))
-            except:
+            except Exception:
                 time_str = "--:--"
                 timestamp = "0"
             
@@ -325,13 +325,18 @@ async def send_admin_push_notification(title: str, body: str, notification_type:
     
     db = get_database()
     
-    # Get all admin DEVICE push tokens (not Live Activity tokens)
+    # Get only ADMIN device push tokens (filter by user_type)
     tokens_collection = db.device_push_tokens
-    admin_tokens = await tokens_collection.find({"active": True}).to_list(100)
+    admin_tokens = await tokens_collection.find({
+        "active": True,
+        "user_type": "admin"
+    }).to_list(100)
     
     if not admin_tokens:
-        print(f"No active device tokens for {notification_type} notification")
+        print(f"No active admin device tokens for {notification_type} notification")
         return
+    
+    print(f"[PUSH] Sending {notification_type} notification to {len(admin_tokens)} admin device(s)")
     
     try:
         token = generate_apns_token()
@@ -340,6 +345,9 @@ async def send_admin_push_notification(title: str, body: str, notification_type:
             device_token = token_doc.get("device_token")
             if not device_token:
                 continue
+            
+            user_id = token_doc.get("user_id", "unknown")
+            print(f"[PUSH] Sending to admin {user_id}: {title}")
                 
             # Regular alert notification
             payload = {
@@ -370,9 +378,9 @@ async def send_admin_push_notification(title: str, body: str, notification_type:
             async with httpx.AsyncClient(http2=True) as client:
                 response = await client.post(url, json=payload, headers=headers)
                 if response.status_code == 200:
-                    print(f"Push notification sent: {title}")
+                    print(f"[PUSH] Success: {title} to {user_id}")
                 else:
-                    print(f"Push notification failed: {response.status_code} - {response.text}")
+                    print(f"[PUSH] Failed: {response.status_code} - {response.text}")
                     # Mark token as inactive if it's invalid
                     if response.status_code in [400, 410]:
                         await tokens_collection.update_one(
@@ -381,4 +389,4 @@ async def send_admin_push_notification(title: str, body: str, notification_type:
                         )
                     
     except Exception as e:
-        print(f"Failed to send push notification: {e}")
+        print(f"[PUSH] Error sending push notification: {e}")

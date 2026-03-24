@@ -55,9 +55,11 @@ export const LiveActivityService = {
 
   /**
    * Register for regular push notifications and store the device token
-   * This is needed for clock-out alerts
+   * This is needed for clock-out alerts, messages, etc.
+   * @param {string} userId - User's ID
+   * @param {string} userType - User type: "admin", "employee", or "consignor"
    */
-  registerForPushNotifications: async (userId) => {
+  registerForPushNotifications: async (userId, userType = "admin") => {
     try {
       if (!window.Capacitor?.isNativePlatform?.()) {
         console.log('Not native platform, skipping push registration');
@@ -68,12 +70,13 @@ export const LiveActivityService = {
       try {
         const nativeToken = await LiveActivityService.getDevicePushToken();
         if (nativeToken && userId) {
-          console.log('Registering device token from LiveActivity plugin...');
-          await axios.post(`${API}/api/live-activity/register-device-token`, {
+          console.log(`Registering device token for ${userType} from LiveActivity plugin...`);
+          await axios.post(`${API}/api/live-activity/register-device-token-typed`, {
             user_id: userId,
-            device_token: nativeToken
+            device_token: nativeToken,
+            user_type: userType
           });
-          console.log('Device push token registered successfully!');
+          console.log(`Device push token registered successfully for ${userType}!`);
           return nativeToken;
         }
       } catch (nativeErr) {
@@ -109,11 +112,12 @@ export const LiveActivityService = {
           console.log('Device push token received:', tokenValue);
           
           try {
-            await axios.post(`${API}/api/live-activity/register-device-token`, {
+            await axios.post(`${API}/api/live-activity/register-device-token-typed`, {
               user_id: userId,
-              device_token: tokenValue
+              device_token: tokenValue,
+              user_type: userType
             });
-            console.log('Device push token registered with backend');
+            console.log(`Device push token registered with backend for ${userType}`);
             resolve(true);
           } catch (error) {
             console.error('Failed to register device token:', error);

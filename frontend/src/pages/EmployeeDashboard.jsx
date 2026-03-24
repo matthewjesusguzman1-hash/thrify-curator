@@ -168,6 +168,17 @@ export default function EmployeeDashboard() {
     fetchData();
     checkPasswordStatus(parsedUser.email);
     
+    // Register for push notifications as employee
+    const registerPush = async () => {
+      try {
+        await LiveActivityService.registerForPushNotifications(parsedUser.id, "employee");
+        console.log("Employee registered for push notifications");
+      } catch (e) {
+        console.log("Push registration skipped:", e);
+      }
+    };
+    registerPush();
+    
     // Refresh data periodically to keep pay summary up to date (every 60 seconds)
     const refreshInterval = setInterval(() => {
       fetchData();

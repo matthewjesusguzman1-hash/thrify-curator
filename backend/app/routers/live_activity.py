@@ -173,3 +173,32 @@ async def update_admin_activity(request: UpdateAdminActivityRequest):
         return {"success": True, "message": "Admin activities updated"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.get("/debug/tokens")
+async def debug_tokens():
+    """Debug endpoint to view all registered tokens"""
+    db = get_database()
+    
+    device_tokens = await db.device_push_tokens.find({}, {"_id": 0}).to_list(100)
+    live_activity_tokens = await db.live_activity_tokens.find({}, {"_id": 0}).to_list(100)
+    
+    return {
+        "device_push_tokens": device_tokens,
+        "live_activity_tokens": live_activity_tokens
+    }
+
+
+@router.delete("/debug/clear-all-tokens")
+async def clear_all_tokens():
+    """Debug endpoint to clear all tokens for fresh testing"""
+    db = get_database()
+    
+    device_result = await db.device_push_tokens.delete_many({})
+    live_activity_result = await db.live_activity_tokens.delete_many({})
+    
+    return {
+        "device_tokens_deleted": device_result.deleted_count,
+        "live_activity_tokens_deleted": live_activity_result.deleted_count
+    }
