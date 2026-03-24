@@ -102,15 +102,42 @@ async def send_live_activity_update(push_token: str, content_state: dict, event:
         return False
 
 
-async def update_admin_live_activities(employee_count: int, employee_names: list):
+async def update_admin_live_activities(employee_count: int = None, employee_names: list = None):
     """
     Update all registered admin Live Activities with new employee data
     
+    If no parameters provided, it will fetch the current state from the database.
     This function retrieves all stored admin push tokens and sends updates to each
     """
     from app.database import get_database
     
     db = get_database()
+    
+    # If no parameters provided, fetch current clocked-in employees
+    if employee_count is None or employee_names is None:
+        active_sessions = await db.time_entries.find({"clock_out": None}).to_list(100)
+        
+        # Build employee data in the expected format: "Name|Time|Timestamp"
+        employee_names = []
+        for session in active_sessions:
+            name = session.get("user_name") or session.get("display_name") or "Unknown"
+            clock_in = session.get("clock_in") or session.get("last_clock_in")
+            
+            # Format time
+            try:
+                if isinstance(clock_in, str):
+                    clock_in_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
+                else:
+                    clock_in_time = clock_in
+                time_str = clock_in_time.strftime("%I:%M %p")
+                timestamp = str(int(clock_in_time.timestamp()))
+            except:
+                time_str = "--:--"
+                timestamp = "0"
+            
+            employee_names.append(f"{name}|{time_str}|{timestamp}")
+        
+        employee_count = len(employee_names)
     
     # Get all active admin Live Activity tokens
     tokens_collection = db.live_activity_tokens
@@ -179,6 +206,79 @@ async def unregister_live_activity_token(user_id: str, activity_type: str):
         {"user_id": user_id, "type": activity_type},
         {"$set": {"active": False}}
     )
+
+
+async def end_employee_live_activity(employee_id: str, total_hours: float = 0):
+    """
+    End an employee's Live Activity by sending a final update with isActive=false
+    This is called when admin clocks out an employee
+    """
+    from app.database import get_database
+    
+    db = get_database()
+    
+    # Find the employee's Live Activity token
+    token_doc = await db.live_activity_tokens.find_one({
+        "user_id": employee_id,
+        "type": "employee",
+        "active": True
+    })
+    
+    if not token_doc:
+        print(f"No active Live Activity token for employee {employee_id}")
+        return False
+    
+    push_token = token_doc.get("push_token")
+    if not push_token:
+        print(f"No push token found for employee {employee_id}")
+        return False
+    
+    try:
+        token = generate_apns_token()
+        
+        # Send end event to the Live Activity
+        payload = {
+            "aps": {
+                "timestamp": int(datetime.now(timezone.utc).timestamp()),
+                "event": "end",  # This tells iOS to end the Live Activity
+                "content-state": {
+                    "elapsedTime": total_hours * 3600,  # Convert hours to seconds
+                    "isActive": False
+                },
+                "alert": {
+                    "title": "Shift Ended",
+                    "body": f"You were clocked out. Total: {total_hours:.2f} hours"
+                }
+            }
+        }
+        
+        headers = {
+            "authorization": f"bearer {token}",
+            "apns-topic": f"{APNS_BUNDLE_ID}.push-type.liveactivity",
+            "apns-push-type": "liveactivity",
+            "apns-priority": "10"
+        }
+        
+        url = f"{APNS_URL}/3/device/{push_token}"
+        
+        async with httpx.AsyncClient(http2=True) as client:
+            response = await client.post(url, json=payload, headers=headers)
+            
+            if response.status_code == 200:
+                print(f"Ended Live Activity for employee {employee_id}")
+                # Mark the token as inactive
+                await db.live_activity_tokens.update_one(
+                    {"_id": token_doc["_id"]},
+                    {"$set": {"active": False}}
+                )
+                return True
+            else:
+                print(f"Failed to end employee Live Activity: {response.status_code} - {response.text}")
+                return False
+                
+    except Exception as e:
+        print(f"Error ending employee Live Activity: {e}")
+        return False
 
 
 async def send_clock_out_notification(employee_name: str, hours_worked: float):

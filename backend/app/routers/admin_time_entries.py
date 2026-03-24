@@ -191,6 +191,48 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
             }
         )
         
+        # Create clock-out notification
+        notification = {
+            "id": str(uuid.uuid4()),
+            "type": "clock_out",
+            "user_id": employee_id,
+            "user_name": employee["name"],
+            "message": f"{employee['name']} clocked out by {admin.get('name', 'Admin')}",
+            "details": {
+                "total_hours": total_hours,
+                "clocked_out_by_admin": True,
+                "admin_name": admin.get("name", "Admin")
+            },
+            "created_at": now_iso,
+            "read": False
+        }
+        await db.admin_notifications.insert_one(notification)
+        
+        # Send push notification to admin devices
+        try:
+            from app.services.apns_service import send_admin_push_notification
+            await send_admin_push_notification(
+                title=f"{employee['name']} Clocked Out",
+                body=f"Clocked out by {admin.get('name', 'Admin')} - {total_hours:.2f} hours",
+                notification_type="clock_out"
+            )
+        except Exception as e:
+            print(f"Failed to send admin push: {e}")
+        
+        # End employee's Live Activity via push
+        try:
+            from app.services.apns_service import end_employee_live_activity
+            await end_employee_live_activity(employee_id, total_hours)
+        except Exception as e:
+            print(f"Failed to end employee Live Activity: {e}")
+        
+        # Update admin Live Activities to remove this employee
+        try:
+            from app.services.apns_service import update_admin_live_activities
+            await update_admin_live_activities()
+        except Exception as e:
+            print(f"Failed to update admin Live Activities: {e}")
+        
         return {
             "message": f"Clocked out {employee['name']}",
             "action": "out",
