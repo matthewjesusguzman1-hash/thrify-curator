@@ -2071,8 +2071,22 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     lightTap(); // Light haptic for navigation
+    
+    // Deactivate push token on logout to stop receiving notifications
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (currentUser.id) {
+        await axios.post(`${API}/live-activity/deactivate-device-token`, {
+          user_id: currentUser.id,
+          user_type: currentUser.is_admin ? "admin" : "employee"
+        });
+      }
+    } catch (e) {
+      console.log("Failed to deactivate push token:", e);
+    }
+    
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     // Set flag to prevent auto Face ID on login page

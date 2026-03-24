@@ -507,6 +507,39 @@ export default function ConsignmentAgreementForm() {
     }
   };
 
+  // Handle consignor logout - deactivate push token and reset state
+  const handleConsignorLogout = async () => {
+    lightTap();
+    
+    // Deactivate push token on logout
+    if (addItemsAgreement?.email) {
+      try {
+        await axios.post(`${API}/live-activity/deactivate-device-token`, {
+          user_id: addItemsAgreement.email.toLowerCase(),
+          user_type: "consignor"
+        });
+      } catch (e) {
+        console.log("Failed to deactivate push token:", e);
+      }
+    }
+    
+    // Reset all state
+    setShowInitialChoice(true);
+    setShowAddItems(false);
+    setAddItemsAgreement(null);
+    setAddItemsEmail("");
+    setItemsToAdd("");
+    setItemsDescription("");
+    setAcknowledgedTerms(false);
+    setWantsToUpdateContact(false);
+    setWantsToUpdatePayment(false);
+    setUpdateEmail("");
+    setUpdatePhone("");
+    setUpdateAddress("");
+    setUpdatePaymentMethod("");
+    setUpdatePaymentDetails("");
+  };
+
   // Check for existing agreement (for add items flow)
   const handleCheckAddItemsAgreement = async () => {
     if (!addItemsEmail.trim()) {
@@ -1169,12 +1202,12 @@ export default function ConsignmentAgreementForm() {
           {/* Back Link and Logo Row */}
           <div className="relative mt-8 mb-6">
             <button 
-              onClick={() => { lightTap(); setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setWantsToUpdatePayment(false); setUpdateEmail(""); setUpdatePhone(""); setUpdateAddress(""); setUpdatePaymentMethod(""); setUpdatePaymentDetails(""); }}
+              onClick={handleConsignorLogout}
               className="absolute left-0 top-0 inline-flex items-center gap-2 text-white/70 hover:text-[#10B981] transition-colors"
               data-testid="back-to-choice-btn"
             >
               <ArrowLeft className="w-5 h-5" />
-              Back
+              Log Out
             </button>
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -2605,12 +2638,12 @@ export default function ConsignmentAgreementForm() {
           </motion.div>
 
           <button 
-            onClick={() => { lightTap(); setShowInitialChoice(true); setShowAddItems(false); setAddItemsAgreement(null); setAddItemsEmail(""); setItemsToAdd(""); setItemsDescription(""); setAcknowledgedTerms(false); setWantsToUpdateContact(false); setWantsToUpdatePayment(false); setUpdateEmail(""); setUpdatePhone(""); setUpdateAddress(""); setUpdatePaymentMethod(""); setUpdatePaymentDetails(""); }}
+            onClick={handleConsignorLogout}
             className="mt-6 w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium"
             data-testid="back-link"
           >
             <ArrowLeft className="w-5 h-5" />
-            Back
+            Log Out
           </button>
         </div>
 

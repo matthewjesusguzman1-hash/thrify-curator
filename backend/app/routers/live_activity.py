@@ -83,9 +83,31 @@ class RegisterDeviceTokenWithTypeRequest(BaseModel):
 
 @router.post("/register-device-token-typed")
 async def register_device_token_typed(request: RegisterDeviceTokenWithTypeRequest):
-    """Register a device push token with explicit user type for targeted notifications"""
+    """Register a device push token with explicit user type for targeted notifications.
+    
+    When a user logs in on a device, we:
+    1. Deactivate ALL other registrations for this device token (different users)
+    2. Register/update the token for the current user
+    
+    This ensures only the currently logged-in user receives notifications on that device.
+    """
     try:
         db = get_database()
+        
+        # First, deactivate ALL other registrations for this same device token
+        # This prevents other users who previously logged in on this device from getting notifications
+        await db.device_push_tokens.update_many(
+            {
+                "device_token": request.device_token,
+                "$or": [
+                    {"user_id": {"$ne": request.user_id}},
+                    {"user_type": {"$ne": request.user_type}}
+                ]
+            },
+            {"$set": {"active": False}}
+        )
+        
+        # Now register/update the token for the current user
         await db.device_push_tokens.update_one(
             {"user_id": request.user_id, "user_type": request.user_type},
             {
@@ -98,7 +120,31 @@ async def register_device_token_typed(request: RegisterDeviceTokenWithTypeReques
             },
             upsert=True
         )
+        
+        print(f"Device token registered for {request.user_type} {request.user_id}, deactivated other users on same device")
         return {"success": True, "message": f"Device token registered for {request.user_type}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class DeactivateDeviceTokenRequest(BaseModel):
+    user_id: str
+    user_type: str
+
+
+@router.post("/deactivate-device-token")
+async def deactivate_device_token(request: DeactivateDeviceTokenRequest):
+    """Deactivate a device push token when user logs out.
+    This prevents receiving notifications after logout.
+    """
+    try:
+        db = get_database()
+        result = await db.device_push_tokens.update_one(
+            {"user_id": request.user_id, "user_type": request.user_type},
+            {"$set": {"active": False}}
+        )
+        print(f"Deactivated device token for {request.user_type} {request.user_id}")
+        return {"success": True, "deactivated": result.modified_count > 0}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
