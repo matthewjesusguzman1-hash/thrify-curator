@@ -37,13 +37,16 @@ class UpdateAdminActivityRequest(BaseModel):
 async def register_token(request: RegisterTokenRequest):
     """Register a Live Activity push token for future updates"""
     try:
+        print(f"[LIVE ACTIVITY] Registering token: user_id={request.user_id}, type={request.activity_type}, token={request.push_token[:20]}...")
         await register_live_activity_token(
             user_id=request.user_id,
             push_token=request.push_token,
             activity_type=request.activity_type
         )
+        print(f"[LIVE ACTIVITY] Token registered successfully for {request.activity_type} {request.user_id}")
         return {"success": True, "message": "Token registered"}
     except Exception as e:
+        print(f"[LIVE ACTIVITY] Failed to register token: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
