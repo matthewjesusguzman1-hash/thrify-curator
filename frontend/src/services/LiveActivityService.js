@@ -182,6 +182,38 @@ export const LiveActivityService = {
         : clockInTime;
 
       console.log('Starting Employee Live Activity...');
+      
+      // Set up listener BEFORE starting activity to catch the token
+      // Remove any existing listener first to avoid duplicates
+      LiveActivity.removeAllListeners();
+      
+      // Create a promise that will resolve when we get the token
+      let tokenResolver = null;
+      const tokenPromise = new Promise((resolve) => {
+        tokenResolver = resolve;
+        // Timeout after 5 seconds
+        setTimeout(() => resolve(null), 5000);
+      });
+      
+      LiveActivity.addListener('employeePushTokenReceived', async (data) => {
+        console.log('Received employeePushTokenReceived event:', data.pushToken ? 'has token' : 'no token');
+        if (data.pushToken && userId) {
+          try {
+            console.log('Registering employee Live Activity token via listener...');
+            await axios.post(`${API}/api/live-activity/register-token`, {
+              user_id: userId,
+              push_token: data.pushToken,
+              activity_type: 'employee'
+            });
+            console.log('Employee Live Activity push token registered via listener!');
+            if (tokenResolver) tokenResolver(data.pushToken);
+          } catch (regError) {
+            console.error('Failed to register employee Live Activity push token:', regError);
+          }
+        }
+      });
+      
+      // Now start the activity
       const result = await LiveActivity.startEmployeeActivity({
         employeeName,
         clockInTime: clockInTimeString
@@ -189,42 +221,29 @@ export const LiveActivityService = {
       
       console.log('Employee Live Activity started:', result.activityId, 'pushToken:', result.pushToken ? 'received' : 'none');
       
-      // Register push token with backend so admin can end it remotely
+      // Register push token with backend if we got it immediately
       if (result.pushToken && userId) {
         try {
-          console.log('Registering employee Live Activity token with backend...');
+          console.log('Registering employee Live Activity token from initial response...');
           await axios.post(`${API}/api/live-activity/register-token`, {
             user_id: userId,
             push_token: result.pushToken,
             activity_type: 'employee'
           });
-          console.log('Employee Live Activity push token registered with backend successfully!');
+          console.log('Employee Live Activity push token registered from initial response!');
         } catch (regError) {
           console.error('Failed to register employee Live Activity push token:', regError);
         }
-      } else if (!result.pushToken) {
-        console.log('No pushToken in initial response, waiting for async token...');
-      }
-      
-      // Listen for push token updates (token might come later if not in initial response)
-      // Remove any existing listener first to avoid duplicates
-      LiveActivity.removeAllListeners();
-      LiveActivity.addListener('employeePushTokenReceived', async (data) => {
-        console.log('Received employeePushTokenReceived event:', data.pushToken ? 'has token' : 'no token');
-        if (data.pushToken && userId) {
-          try {
-            console.log('Registering late-arriving employee Live Activity token...');
-            await axios.post(`${API}/api/live-activity/register-token`, {
-              user_id: userId,
-              push_token: data.pushToken,
-              activity_type: 'employee'
-            });
-            console.log('Employee Live Activity push token (late) registered with backend!');
-          } catch (regError) {
-            console.error('Failed to update employee Live Activity push token:', regError);
-          }
+      } else {
+        console.log('No token in initial response, waiting for listener...');
+        // Wait for the token via listener
+        const token = await tokenPromise;
+        if (token) {
+          console.log('Got token via listener promise');
+        } else {
+          console.log('Token listener timed out');
         }
-      });
+      }
       
       return result;
     } catch (error) {

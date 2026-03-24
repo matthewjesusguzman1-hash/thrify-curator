@@ -731,6 +731,12 @@ export default function AdminDashboard() {
     
     // Auto-start Live Activity if employees are clocked in
     const autoStartLiveActivity = async () => {
+      // Skip if already monitoring
+      if (adminMonitoringActive) {
+        console.log('Live Activity already active, skipping auto-start');
+        return;
+      }
+      
       try {
         const supported = await LiveActivityService.isSupported();
         if (!supported) {

@@ -171,50 +171,22 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                 // Get the push token for this Live Activity
                 var pushTokenString: String? = nil
                 
-                // Wait for the first push token (with timeout)
-                let tokenTask = Task {
-                    for await pushToken in activity.pushTokenUpdates {
-                        let tokenParts = pushToken.map { data in String(format: "%02.2hhx", data) }
-                        let tokenStr = tokenParts.joined()
-                        print("Employee Live Activity push token received: \(tokenStr)")
-                        return tokenStr
-                    }
-                    return nil as String?
-                }
-                
-                // Wait up to 3 seconds for the token
-                let timeoutTask = Task {
-                    try await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
-                    return nil as String?
-                }
-                
-                // Race between getting token and timeout
-                pushTokenString = await withTaskGroup(of: String?.self) { group in
-                    group.addTask { await tokenTask.value }
-                    group.addTask { try? await timeoutTask.value }
-                    
-                    for await result in group {
-                        if let token = result {
-                            group.cancelAll()
-                            return token
-                        }
-                    }
-                    return nil
-                }
-                
-                // Also set up ongoing listener for token updates (token might change)
+                // Observe push token updates - token will be sent via listener
                 Task {
                     for await pushToken in activity.pushTokenUpdates {
                         let tokenParts = pushToken.map { data in String(format: "%02.2hhx", data) }
-                        let tokenStr = tokenParts.joined()
-                        print("Employee Live Activity push token updated: \(tokenStr)")
+                        pushTokenString = tokenParts.joined()
+                        print("Employee Live Activity push token: \(pushTokenString ?? "nil")")
                         
                         // Notify JS about the token so it can be registered with backend
                         self.notifyListeners("employeePushTokenReceived", data: [
-                            "pushToken": tokenStr
+                            "pushToken": pushTokenString ?? ""
                         ])
                     }
                 }
+                
+                // Wait briefly for token (same as admin which works)
+                try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                 
                 print("Returning employee activity with pushToken: \(pushTokenString ?? "nil")")
                 
