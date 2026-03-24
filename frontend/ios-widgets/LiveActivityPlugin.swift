@@ -169,33 +169,45 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                 )
                 SharedDataManager.saveEmployeeShift(shiftData)
                 
-                // Get the push token for this Live Activity
-                var pushTokenString: String? = nil
+                print("Employee Live Activity created with ID: \(activity.id)")
                 
-                // Observe push token updates - token will be sent via listener
+                // Start a background task to get and report the push token
                 Task {
+                    // Try to get push token via async sequence
                     for await pushToken in activity.pushTokenUpdates {
                         let tokenParts = pushToken.map { data in String(format: "%02.2hhx", data) }
-                        pushTokenString = tokenParts.joined()
-                        print("Employee Live Activity push token: \(pushTokenString ?? "nil")")
+                        let tokenStr = tokenParts.joined()
+                        print("Employee Live Activity push token received: \(tokenStr)")
                         
                         // Notify JS about the token so it can be registered with backend
                         self.notifyListeners("employeePushTokenReceived", data: [
-                            "pushToken": pushTokenString ?? ""
+                            "pushToken": tokenStr
                         ])
+                        
+                        // Only need the first token
+                        break
                     }
                 }
                 
-                // Wait briefly for token (same as admin which works)
-                try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                // Wait for token to potentially arrive
+                try await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
                 
-                print("Returning employee activity with pushToken: \(pushTokenString ?? "nil")")
+                // Try to get current push token directly
+                var pushTokenString = ""
+                if let currentToken = activity.pushToken {
+                    let tokenParts = currentToken.map { data in String(format: "%02.2hhx", data) }
+                    pushTokenString = tokenParts.joined()
+                    print("Employee Live Activity push token (direct): \(pushTokenString)")
+                } else {
+                    print("Employee Live Activity: No push token available yet")
+                }
                 
                 call.resolve([
                     "activityId": activity.id,
-                    "pushToken": pushTokenString ?? ""
+                    "pushToken": pushTokenString
                 ])
             } catch {
+                print("Failed to start Employee Live Activity: \(error)")
                 call.reject("Failed to start Live Activity: \(error.localizedDescription)")
             }
         }
@@ -243,31 +255,30 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         
-        Task {
-            // Check current tracked activity first
-            if let activity = self.currentEmployeeActivity {
-                for await pushToken in activity.pushTokenUpdates {
-                    let tokenParts = pushToken.map { data in String(format: "%02.2hhx", data) }
-                    let tokenStr = tokenParts.joined()
-                    print("Got employee push token from tracked activity: \(tokenStr)")
-                    call.resolve(["pushToken": tokenStr])
-                    return
-                }
+        // Check current tracked activity first
+        if let activity = self.currentEmployeeActivity {
+            if let currentToken = activity.pushToken {
+                let tokenParts = currentToken.map { data in String(format: "%02.2hhx", data) }
+                let tokenStr = tokenParts.joined()
+                print("Got employee push token from tracked activity: \(tokenStr)")
+                call.resolve(["pushToken": tokenStr])
+                return
             }
-            
-            // Fallback: check all running employee activities
-            for activity in Activity<EmployeeShiftAttributes>.activities {
-                for await pushToken in activity.pushTokenUpdates {
-                    let tokenParts = pushToken.map { data in String(format: "%02.2hhx", data) }
-                    let tokenStr = tokenParts.joined()
-                    print("Got employee push token from running activity: \(tokenStr)")
-                    call.resolve(["pushToken": tokenStr])
-                    return
-                }
-            }
-            
-            call.resolve(["pushToken": ""])
         }
+        
+        // Fallback: check all running employee activities
+        for activity in Activity<EmployeeShiftAttributes>.activities {
+            if let currentToken = activity.pushToken {
+                let tokenParts = currentToken.map { data in String(format: "%02.2hhx", data) }
+                let tokenStr = tokenParts.joined()
+                print("Got employee push token from running activity: \(tokenStr)")
+                call.resolve(["pushToken": tokenStr])
+                return
+            }
+        }
+        
+        print("No employee push token available")
+        call.resolve(["pushToken": ""])
     }
     
     // MARK: - Admin Activity Methods (with Push Token for real-time updates)
