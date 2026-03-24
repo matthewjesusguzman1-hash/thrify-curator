@@ -251,7 +251,7 @@ export default function MessagingSection({
                 <Button
                   type="submit"
                   disabled={!newMessage.trim() || sending}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white rounded-xl px-4"
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white rounded-xl px-4 flex-shrink-0 min-w-[44px]"
                   data-testid="send-message-btn"
                 >
                   {sending ? (

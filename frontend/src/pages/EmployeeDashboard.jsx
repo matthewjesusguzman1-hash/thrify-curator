@@ -922,7 +922,7 @@ export default function EmployeeDashboard() {
                 {/* Hours */}
                 <div className="bg-gradient-to-br from-[#00D4FF]/10 to-[#00D4FF]/5 rounded-xl p-4 text-center">
                   <Clock className="w-6 h-6 text-[#00D4FF] mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-[#1A1A2E]" data-testid="period-hours">
+                  <p className="text-lg sm:text-2xl font-bold text-[#1A1A2E] truncate" data-testid="period-hours">
                     {formatHoursToHMS(summary.period_hours)}
                   </p>
                   <p className="text-xs text-gray-500">Hours</p>
@@ -931,7 +931,7 @@ export default function EmployeeDashboard() {
                 {/* Shifts */}
                 <div className="bg-gradient-to-br from-[#8B5CF6]/10 to-[#8B5CF6]/5 rounded-xl p-4 text-center">
                   <Briefcase className="w-6 h-6 text-[#8B5CF6] mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-[#1A1A2E]" data-testid="period-shifts">
+                  <p className="text-lg sm:text-2xl font-bold text-[#1A1A2E]" data-testid="period-shifts">
                     {summary.period_shifts}
                   </p>
                   <p className="text-xs text-gray-500">Shifts</p>
@@ -940,7 +940,7 @@ export default function EmployeeDashboard() {
                 {/* Estimated Pay */}
                 <div className="bg-gradient-to-br from-[#FF1493]/10 to-[#FF1493]/5 rounded-xl p-4 text-center">
                   <DollarSign className="w-6 h-6 text-[#FF1493] mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-[#1A1A2E]" data-testid="estimated-pay">
+                  <p className="text-lg sm:text-2xl font-bold text-[#1A1A2E] truncate" data-testid="estimated-pay">
                     {formatCurrency(roundHoursToMinute(summary.period_hours) * summary.hourly_rate)}
                   </p>
                   <p className="text-xs text-gray-500">Est. Pay</p>
@@ -949,10 +949,8 @@ export default function EmployeeDashboard() {
 
               {/* Rate Info */}
               <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-                <p className="text-sm text-gray-500">
+                <p className="text-xs sm:text-sm text-gray-500">
                   Rate: <span className="font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</span>
-                  <span className="mx-2">•</span>
-                  {formatHoursToHMS(summary.period_hours)} × {formatCurrency(summary.hourly_rate)} = {formatCurrency(roundHoursToMinute(summary.period_hours) * summary.hourly_rate)}
                 </p>
               </div>
             </div>

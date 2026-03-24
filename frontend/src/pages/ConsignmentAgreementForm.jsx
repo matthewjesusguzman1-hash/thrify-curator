@@ -220,7 +220,7 @@ function ConsignorMessagingSection({ email, userName }) {
               <button
                 type="submit"
                 disabled={!newMessage.trim() || sending}
-                className="bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded-lg px-4 py-2 flex items-center justify-center"
+                className="bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded-lg px-4 py-2 flex items-center justify-center flex-shrink-0 min-w-[44px]"
               >
                 {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </button>

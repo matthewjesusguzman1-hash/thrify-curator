@@ -477,7 +477,7 @@ export default function ConversationsSection() {
                           <Button
                             type="submit"
                             disabled={!newMessage.trim() || sending}
-                            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90"
+                            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 flex-shrink-0 min-w-[44px]"
                             data-testid="admin-send-message-btn"
                           >
                             {sending ? (
