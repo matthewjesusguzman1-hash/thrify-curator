@@ -219,6 +219,31 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
         except Exception as e:
             print(f"Failed to send admin push: {e}")
         
+        # Send push notification to the employee
+        try:
+            from app.routers.conversations import send_user_push_notification
+            
+            # Format the clock out time
+            clock_out_time = now.strftime("%-I:%M %p")
+            
+            # Format total hours as hours and minutes
+            hours = int(total_hours)
+            minutes = int((total_hours - hours) * 60)
+            if hours > 0:
+                time_str = f"{hours}h {minutes}m"
+            else:
+                time_str = f"{minutes}m"
+            
+            await send_user_push_notification(
+                user_id=employee_id,
+                user_type="employee",
+                title="You have been clocked out",
+                body=f"Admin clocked you out at {clock_out_time}. Total: {time_str}",
+                notification_type="admin_clock_out"
+            )
+        except Exception as e:
+            print(f"Failed to send employee clock-out push: {e}")
+        
         # End employee's Live Activity via push
         try:
             from app.services.apns_service import end_employee_live_activity

@@ -179,8 +179,16 @@ export default function EmployeeDashboard() {
         if (!statusRes.data.clocked_in) {
           // Employee is clocked out, end any lingering Live Activity
           console.log('App opened while clocked out, ending any lingering Live Activity');
-          await LiveActivityService.endEmployeeActivity(parsedUser.id);
           liveActivityStartedRef.current = false;
+          
+          // Try to end the activity multiple times to ensure it stops
+          await LiveActivityService.endEmployeeActivity(parsedUser.id);
+          
+          // Try again after a short delay in case the first attempt didn't work
+          setTimeout(async () => {
+            console.log('Retrying Live Activity cleanup...');
+            await LiveActivityService.endEmployeeActivity(parsedUser.id);
+          }, 1000);
         }
       } catch (e) {
         console.log('Cleanup Live Activity check failed:', e);
