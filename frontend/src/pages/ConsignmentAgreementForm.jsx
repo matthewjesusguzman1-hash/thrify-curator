@@ -301,6 +301,8 @@ export default function ConsignmentAgreementForm() {
   const [paymentFilterYear, setPaymentFilterYear] = useState(new Date().getFullYear());
   const [paymentCustomStartDate, setPaymentCustomStartDate] = useState("");
   const [paymentCustomEndDate, setPaymentCustomEndDate] = useState("");
+  const [viewingPaymentImage, setViewingPaymentImage] = useState(null);
+  const [loadingPaymentImage, setLoadingPaymentImage] = useState(false);
   
   // View submissions state
   const [showViewSubmissions, setShowViewSubmissions] = useState(false);
@@ -394,6 +396,24 @@ export default function ConsignmentAgreementForm() {
       setPaymentHistory({ payments: [], total_paid: 0, payment_count: 0 });
     } finally {
       setLoadingPaymentHistory(false);
+    }
+  };
+
+  // Fetch payment image
+  const fetchPaymentImage = async (recordId, email) => {
+    setLoadingPaymentImage(true);
+    try {
+      const response = await axios.get(
+        `${API}/forms/payment-image/${recordId}?email=${encodeURIComponent(email)}`,
+        { responseType: 'blob' }
+      );
+      const imageUrl = URL.createObjectURL(response.data);
+      setViewingPaymentImage(imageUrl);
+    } catch (error) {
+      console.error("Failed to fetch payment image:", error);
+      toast.error("Failed to load payment image");
+    } finally {
+      setLoadingPaymentImage(false);
     }
   };
 
@@ -2213,38 +2233,51 @@ export default function ConsignmentAgreementForm() {
                             {filteredPayments.map((payment, index) => (
                               <div 
                                 key={payment.id || index}
-                                className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100"
+                                className="p-3 bg-white rounded-lg border border-gray-100"
                               >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                    <DollarSign className="w-5 h-5 text-green-600" />
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                      <DollarSign className="w-5 h-5 text-green-600" />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-[#1A1A2E]">
+                                        ${(payment.amount || 0).toFixed(2)}
+                                        {payment.commission_split && (
+                                          <span className="ml-2 text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
+                                            {payment.commission_split}
+                                          </span>
+                                        )}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {payment.check_date ? new Date(payment.check_date).toLocaleDateString('en-US', {
+                                          month: 'short',
+                                          day: 'numeric',
+                                          year: 'numeric'
+                                        }) : 'Date not set'}
+                                      </p>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-[#1A1A2E]">
-                                      ${(payment.amount || 0).toFixed(2)}
-                                      {payment.commission_split && (
-                                        <span className="ml-2 text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
-                                          {payment.commission_split}
-                                        </span>
-                                      )}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {payment.check_date ? new Date(payment.check_date).toLocaleDateString('en-US', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                      }) : 'Date not set'}
-                                    </p>
+                                  <div className="text-right">
+                                    {payment.payment_method && (
+                                      <span className="text-xs text-gray-500 capitalize">{payment.payment_method}</span>
+                                    )}
+                                    {payment.check_number && (
+                                      <p className="text-xs text-gray-400">#{payment.check_number}</p>
+                                    )}
                                   </div>
                                 </div>
-                                <div className="text-right">
-                                  {payment.payment_method && (
-                                    <span className="text-xs text-gray-500 capitalize">{payment.payment_method}</span>
-                                  )}
-                                  {payment.check_number && (
-                                    <p className="text-xs text-gray-400">#{payment.check_number}</p>
-                                  )}
-                                </div>
+                                {payment.has_image && (
+                                  <button
+                                    type="button"
+                                    onClick={() => fetchPaymentImage(payment.id, addItemsEmail || existingAgreement?.email)}
+                                    className="mt-2 w-full flex items-center justify-center gap-2 text-xs text-[#8B5CF6] bg-[#8B5CF6]/10 hover:bg-[#8B5CF6]/20 py-2 px-3 rounded-lg transition-colors"
+                                    data-testid={`view-receipt-${payment.id}`}
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    View Receipt
+                                  </button>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -3337,6 +3370,45 @@ export default function ConsignmentAgreementForm() {
                 Close
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Image Viewing Modal */}
+      {viewingPaymentImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            URL.revokeObjectURL(viewingPaymentImage);
+            setViewingPaymentImage(null);
+          }}
+        >
+          <div className="relative max-w-3xl max-h-[90vh] w-full">
+            <button
+              onClick={() => {
+                URL.revokeObjectURL(viewingPaymentImage);
+                setViewingPaymentImage(null);
+              }}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+            >
+              <X className="w-8 h-8" />
+            </button>
+            <img
+              src={viewingPaymentImage}
+              alt="Payment Receipt"
+              className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Loading overlay for payment image */}
+      {loadingPaymentImage && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3">
+            <RefreshCw className="w-8 h-8 text-[#8B5CF6] animate-spin" />
+            <p className="text-sm text-gray-600">Loading receipt...</p>
           </div>
         </div>
       )}

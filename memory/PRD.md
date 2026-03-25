@@ -25,6 +25,13 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Added "Items Description" text field
   - Review process now matches item additions (with items count)
   - Cleared old test data from database
+- **Consignor Payment Receipt Viewing (Mar 25, 2026)**:
+  - Consignors can now view payment receipt images from their portal
+  - "View Receipt" button shows for payments with uploaded images
+  - Secure endpoint verifies consignor email before serving image
+- **Consignor Picker Fixed (Mar 25, 2026)**:
+  - Made identical to the working employee picker (simple button element)
+  - Works in web preview - awaiting iOS TestFlight verification
 
 ### In Progress / Pending User Verification
 - **Consignor Picker Fix (Mar 25, 2026)**: Applied iOS-specific touch event handling and CSS to prevent text selection behavior. Needs TestFlight verification.

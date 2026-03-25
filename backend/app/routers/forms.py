@@ -3,6 +3,7 @@ from typing import List
 from datetime import datetime, timezone
 import os
 import uuid as uuid_module
+import base64
 
 from app.database import db
 from app.dependencies import get_admin_user
@@ -62,6 +63,15 @@ async def get_consignment_payment_history(email: str):
         {"_id": 0, "image_data": 0}  # Exclude image data for performance
     ).sort("check_date", -1).to_list(100)
     
+    # Add has_image flag to each payment
+    for payment in payments:
+        # Check if image_data exists (we excluded it but need to know if it exists)
+        record = await db.payroll_check_records.find_one(
+            {"id": payment.get("id")},
+            {"_id": 0, "image_data": 1}
+        )
+        payment["has_image"] = bool(record and record.get("image_data"))
+    
     # Calculate total paid
     total_paid = sum(p.get("amount", 0) or 0 for p in payments)
     
@@ -70,6 +80,32 @@ async def get_consignment_payment_history(email: str):
         "total_paid": round(total_paid, 2),
         "payment_count": len(payments)
     }
+
+
+@router.get("/forms/payment-image/{record_id}")
+async def get_consignment_payment_image(record_id: str, email: str):
+    """Get payment record image for a consignment client (requires matching email for security)"""
+    from fastapi.responses import Response
+    
+    # Verify this payment belongs to the requesting client
+    record = await db.payroll_check_records.find_one({
+        "id": record_id,
+        "consignment_client_email": email.lower(),
+        "payment_type": "consignment"
+    })
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="Payment record not found")
+    
+    if not record.get("image_data"):
+        raise HTTPException(status_code=404, detail="No image for this payment")
+    
+    image_data = base64.b64decode(record["image_data"])
+    return Response(
+        content=image_data,
+        media_type=record.get("content_type", "image/jpeg"),
+        headers={"Content-Disposition": f"inline; filename={record.get('filename', 'payment.jpg')}"}
+    )
 
 
 # Public form submission routes
