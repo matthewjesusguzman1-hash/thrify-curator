@@ -171,6 +171,23 @@ export default function EmployeeDashboard() {
     fetchData();
     checkPasswordStatus(parsedUser.email);
     
+    // When app opens, end any lingering Live Activity if employee is clocked out
+    // This handles the case where user taps the "clocked out by admin" widget
+    const cleanupLiveActivity = async () => {
+      try {
+        const statusRes = await axios.get(`${API}/time/status`, getAuthHeader());
+        if (!statusRes.data.clocked_in) {
+          // Employee is clocked out, end any lingering Live Activity
+          console.log('App opened while clocked out, ending any lingering Live Activity');
+          await LiveActivityService.endEmployeeActivity(parsedUser.id);
+          liveActivityStartedRef.current = false;
+        }
+      } catch (e) {
+        console.log('Cleanup Live Activity check failed:', e);
+      }
+    };
+    cleanupLiveActivity();
+    
     // Register for push notifications as employee
     const registerPush = async () => {
       try {
@@ -209,10 +226,10 @@ export default function EmployeeDashboard() {
             hour12: true 
           });
           
-          // Create message with time and reminder
-          const message = `Admin clocked you out at ${clockOutTime}. Please re-open the app.`;
+          // Create message with time and instructions
+          const message = `You have been clocked out at ${clockOutTime}. Tap to open app or swipe to dismiss.`;
           
-          // Update the widget to show the message - it will stay visible until user dismisses it
+          // Update the widget to show the message - it will stay visible until user dismisses or taps it
           await LiveActivityService.markClockedOutByAdmin(totalHours, message);
           
           // Refresh full data to update UI
