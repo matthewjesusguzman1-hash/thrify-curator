@@ -2765,15 +2765,17 @@ export default function ConsignmentAgreementForm() {
                 )}
 
                 {/* Items Submitted */}
-                {selectedSubmission.items_to_add > 0 && (
+                {(selectedSubmission.items_to_add > 0 || selectedSubmission.items_accepted > 0) && (
                   <div className="p-3 bg-emerald-50 rounded-lg">
                     <p className="text-xs text-emerald-600 mb-1">Items Submitted</p>
-                    <p className="font-bold text-emerald-700 text-xl">{selectedSubmission.items_to_add} items</p>
+                    <p className="font-bold text-emerald-700 text-xl">
+                      {selectedSubmission.items_to_add > 0 ? selectedSubmission.items_to_add : selectedSubmission.items_accepted} items
+                    </p>
                   </div>
                 )}
 
-                {/* Items Accepted - Show if approved */}
-                {selectedSubmission.approval_status === 'approved' && selectedSubmission.items_accepted !== undefined && (
+                {/* Items Accepted - Show if approved and items_accepted is set */}
+                {selectedSubmission.approval_status === 'approved' && selectedSubmission.items_accepted > 0 && (
                   <div className="p-3 bg-green-50 rounded-lg">
                     <p className="text-xs text-green-600 mb-1">Items Accepted for Consignment</p>
                     <p className="font-bold text-green-700 text-xl">{selectedSubmission.items_accepted} items</p>
@@ -2782,7 +2784,8 @@ export default function ConsignmentAgreementForm() {
 
                 {/* Items Not Accepted + What was done with them */}
                 {selectedSubmission.approval_status === 'approved' && 
-                 selectedSubmission.items_accepted !== undefined && 
+                 selectedSubmission.items_to_add > 0 && 
+                 selectedSubmission.items_accepted >= 0 && 
                  selectedSubmission.items_to_add > selectedSubmission.items_accepted && (
                   <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
                     <p className="text-xs text-amber-600 mb-1">Items Not Accepted</p>
@@ -2797,11 +2800,17 @@ export default function ConsignmentAgreementForm() {
                   </div>
                 )}
 
-                {/* Items Count */}
-                {selectedSubmission.items_to_add > 0 && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">Items Submitted</p>
-                    <p className="font-medium text-[#1A1A2E]">{selectedSubmission.items_to_add} items</p>
+                {/* Rejected items action without item count (for legacy data) */}
+                {selectedSubmission.approval_status === 'approved' && 
+                 selectedSubmission.rejected_items_action && 
+                 (!selectedSubmission.items_to_add || selectedSubmission.items_to_add <= selectedSubmission.items_accepted) && (
+                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-xs text-amber-600 mb-1">Items Not Kept</p>
+                    <p className="text-sm text-amber-600">
+                      {selectedSubmission.rejected_items_action === 'donate' 
+                        ? '→ Donated to charity' 
+                        : '→ Returned to owner'}
+                    </p>
                   </div>
                 )}
 

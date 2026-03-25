@@ -484,30 +484,44 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         Select Consignment Client * 
                         {consignmentClients.length > 0 && <span className="text-emerald-600 ml-1">({consignmentClients.length} available)</span>}
                       </Label>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => { setPickerSearch(""); setShowClientPicker(true); }}
-                        onTouchStart={(e) => {
-                          e.stopPropagation();
+                      <select
+                        value={checkUploadData.consignment_client_email || ""}
+                        onChange={(e) => {
+                          const selectedEmail = e.target.value;
+                          if (selectedEmail) {
+                            const client = consignmentClients.find(c => c.email === selectedEmail);
+                            if (client) {
+                              setCheckUploadData(prev => ({
+                                ...prev,
+                                consignment_client_email: client.email,
+                                employee_name: client.full_name,
+                                payment_method: client.payment_method || prev.payment_method,
+                                commission_split: client.agreed_percentage || prev.commission_split || '50/50'
+                              }));
+                            }
+                          } else {
+                            setCheckUploadData(prev => ({
+                              ...prev,
+                              consignment_client_email: "",
+                              employee_name: ""
+                            }));
+                          }
                         }}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setPickerSearch("");
-                          setShowClientPicker(true);
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white appearance-none cursor-pointer"
+                        style={{ 
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 12px center'
                         }}
-                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-emerald-500 transition-colors cursor-pointer select-none"
-                        style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
                         data-testid="select-consignment-client"
                       >
-                        <span className={`select-none ${checkUploadData.consignment_client_email ? "text-gray-900" : "text-gray-500"}`}>
-                          {checkUploadData.consignment_client_email 
-                            ? consignmentClients.find(c => c.email === checkUploadData.consignment_client_email)?.full_name || checkUploadData.consignment_client_email
-                            : "-- Tap to select a client --"}
-                        </span>
-                        <ChevronDown className="w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
+                        <option value="">-- Tap to select a client --</option>
+                        {consignmentClients.map((client) => (
+                          <option key={client.email} value={client.email}>
+                            {client.full_name} ({client.email})
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
                   
