@@ -19,18 +19,21 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Success/error feedback on actions
 - **Native Geolocation**: Using @capacitor/geolocation for clock-in
 - **Native Permissions**: Face ID and Location prompts on iOS
+- **Live Activities**: Employee shift timer on lock screen with polling fallback for admin clock-outs (as of Mar 25, 2026)
 
-### In Progress
-- Native iOS app build (user is building locally via Capacitor)
+### In Progress / Pending User Verification
+- **Consignor Picker Fix (Mar 25, 2026)**: Applied iOS-specific touch event handling and CSS to prevent text selection behavior. Needs TestFlight verification.
+- **Live Activity Cleanup (Mar 25, 2026)**: Enhanced cleanup logic with multiple retry attempts and visibility change listener. Needs TestFlight verification.
+- **Clock-Out Notification Timezone Fix**: Fixed to show correct local time and duration. Needs TestFlight verification.
 
 ### Upcoming (P1)
 - Guide user through iOS App Store submission
 - Guide user through Android app submission (.aab file)
-- Dynamic Island & Lock Screen widgets for employees
 - Update QR code to dynamic link service after app store launch
 
 ### Future/Backlog (P2-P3)
 - **CRITICAL**: Refactor ConsignmentAgreementForm.jsx (3000+ lines monolith)
+- **CRITICAL**: Refactor PaymentRecordsSection.jsx (complexity causing bugs)
 - Offline usability features
 - Push notification enhancements
 

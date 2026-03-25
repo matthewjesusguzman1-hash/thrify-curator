@@ -181,14 +181,18 @@ export default function EmployeeDashboard() {
           console.log('App opened while clocked out, ending any lingering Live Activity');
           liveActivityStartedRef.current = false;
           
-          // Try to end the activity multiple times to ensure it stops
-          await LiveActivityService.endEmployeeActivity(parsedUser.id);
-          
-          // Try again after a short delay in case the first attempt didn't work
-          setTimeout(async () => {
-            console.log('Retrying Live Activity cleanup...');
-            await LiveActivityService.endEmployeeActivity(parsedUser.id);
-          }, 1000);
+          // Try to end the activity aggressively - multiple attempts with increasing delays
+          const attempts = [0, 500, 1500, 3000]; // Immediate, 0.5s, 1.5s, 3s
+          for (const delay of attempts) {
+            setTimeout(async () => {
+              console.log(`Live Activity cleanup attempt (delay: ${delay}ms)...`);
+              try {
+                await LiveActivityService.endEmployeeActivity(parsedUser.id);
+              } catch (e) {
+                console.log('Cleanup attempt failed:', e);
+              }
+            }, delay);
+          }
         }
       } catch (e) {
         console.log('Cleanup Live Activity check failed:', e);
@@ -248,9 +252,28 @@ export default function EmployeeDashboard() {
       }
     }, 10000); // Check every 10 seconds
     
+    // Also cleanup Live Activity when app becomes visible (user returns to foreground)
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        console.log('App became visible, checking Live Activity status...');
+        try {
+          const statusRes = await axios.get(`${API}/time/status`, getAuthHeader());
+          if (!statusRes.data.clocked_in && liveActivityStartedRef.current) {
+            console.log('App visible + clocked out, ending Live Activity');
+            liveActivityStartedRef.current = false;
+            await LiveActivityService.endEmployeeActivity(parsedUser.id);
+          }
+        } catch (e) {
+          console.log('Visibility change Live Activity check failed:', e);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
       clearInterval(refreshInterval);
       clearInterval(clockStatusInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [navigate]);
 
