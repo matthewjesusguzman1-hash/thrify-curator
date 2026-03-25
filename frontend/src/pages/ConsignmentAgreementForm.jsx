@@ -401,14 +401,24 @@ export default function ConsignmentAgreementForm() {
 
   // Fetch payment image
   const fetchPaymentImage = async (recordId, email) => {
+    console.log("Fetching payment image:", { recordId, email });
+    
+    if (!email) {
+      toast.error("Email not available. Please try again.");
+      return;
+    }
+    
     setLoadingPaymentImage(true);
     try {
       const response = await axios.get(
         `${API}/forms/payment-image/${recordId}?email=${encodeURIComponent(email)}`,
         { responseType: 'blob' }
       );
+      console.log("Image response received:", response.data.size, "bytes");
       const imageUrl = URL.createObjectURL(response.data);
+      console.log("Image URL created:", imageUrl);
       setViewingPaymentImage(imageUrl);
+      console.log("viewingPaymentImage state set");
     } catch (error) {
       console.error("Failed to fetch payment image:", error);
       toast.error("Failed to load payment image");
@@ -2270,7 +2280,7 @@ export default function ConsignmentAgreementForm() {
                                 {payment.has_image && (
                                   <button
                                     type="button"
-                                    onClick={() => fetchPaymentImage(payment.id, addItemsEmail || existingAgreement?.email)}
+                                    onClick={() => fetchPaymentImage(payment.id, addItemsAgreement?.email || addItemsEmail || existingAgreement?.email)}
                                     className="mt-2 w-full flex items-center justify-center gap-2 text-xs text-[#8B5CF6] bg-[#8B5CF6]/10 hover:bg-[#8B5CF6]/20 py-2 px-3 rounded-lg transition-colors"
                                     data-testid={`view-receipt-${payment.id}`}
                                   >
@@ -2845,6 +2855,45 @@ export default function ConsignmentAgreementForm() {
                   Close
                 </Button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Image Viewing Modal - For Consignment Portal */}
+        {viewingPaymentImage && (
+          <div 
+            className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4"
+            onClick={() => {
+              URL.revokeObjectURL(viewingPaymentImage);
+              setViewingPaymentImage(null);
+            }}
+          >
+            <div className="relative max-w-3xl max-h-[90vh] w-full">
+              <button
+                onClick={() => {
+                  URL.revokeObjectURL(viewingPaymentImage);
+                  setViewingPaymentImage(null);
+                }}
+                className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+              >
+                <X className="w-8 h-8" />
+              </button>
+              <img
+                src={viewingPaymentImage}
+                alt="Payment Receipt"
+                className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Loading overlay for payment image - For Consignment Portal */}
+        {loadingPaymentImage && (
+          <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center">
+            <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3">
+              <RefreshCw className="w-8 h-8 text-[#8B5CF6] animate-spin" />
+              <p className="text-sm text-gray-600">Loading receipt...</p>
             </div>
           </div>
         )}
