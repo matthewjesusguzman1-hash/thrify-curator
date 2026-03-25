@@ -238,7 +238,7 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
                 user_id=employee_id,
                 user_type="employee",
                 title="You have been clocked out",
-                body=f"Clocked out at {clock_out_time}. Total: {time_str}. Please open the app to stop the lock screen timer if active.",
+                body=f"Clocked out at {clock_out_time}. Total: {time_str}. Swipe left on the lock screen timer to remove it.",
                 notification_type="admin_clock_out"
             )
         except Exception as e:
