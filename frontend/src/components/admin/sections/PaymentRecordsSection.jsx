@@ -493,22 +493,16 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                           setPickerSearch(""); 
                           setShowClientPicker(true); 
                         }}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log("Consignor picker button touched");
-                          setPickerSearch("");
-                          setShowClientPicker(true);
-                        }}
-                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-emerald-500 transition-colors cursor-pointer active:bg-gray-100"
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-emerald-500 transition-colors cursor-pointer active:bg-gray-100 select-none"
+                        style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none', userSelect: 'none' }}
                         data-testid="select-consignment-client"
                       >
-                        <span className={checkUploadData.consignment_client_email ? "text-gray-900" : "text-gray-500"}>
+                        <span className="pointer-events-none select-none" style={{ WebkitUserSelect: 'none' }}>
                           {checkUploadData.consignment_client_email 
                             ? consignmentClients.find(c => c.email === checkUploadData.consignment_client_email)?.full_name || checkUploadData.consignment_client_email
                             : "-- Tap to select a client --"}
                         </span>
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                        <ChevronDown className="w-4 h-4 text-gray-400 pointer-events-none" />
                       </button>
                     </div>
                   )}
