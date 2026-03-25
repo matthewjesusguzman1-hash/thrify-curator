@@ -223,22 +223,21 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
         try:
             from app.routers.conversations import send_user_push_notification
             
-            # Format the clock out time
-            clock_out_time = now.strftime("%-I:%M %p")
-            
             # Format total hours as hours and minutes
             hours = int(total_hours)
             minutes = int((total_hours - hours) * 60)
-            if hours > 0:
+            if hours > 0 and minutes > 0:
                 time_str = f"{hours}h {minutes}m"
+            elif hours > 0:
+                time_str = f"{hours}h"
             else:
-                time_str = f"{minutes}m"
+                time_str = f"{minutes}m" if minutes > 0 else "less than 1m"
             
             await send_user_push_notification(
                 user_id=employee_id,
                 user_type="employee",
                 title="You have been clocked out",
-                body=f"Clocked out at {clock_out_time}. Total: {time_str}. Swipe left on the lock screen timer to remove it.",
+                body=f"Total time: {time_str}. Swipe left on the lock screen timer to remove it.",
                 notification_type="admin_clock_out"
             )
         except Exception as e:
