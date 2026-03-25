@@ -1059,7 +1059,7 @@ export default function EmployeeDashboard() {
                     });
                   }
                 } else {
-                  shiftsToShow = entries.slice(0, 5);
+                  shiftsToShow = entries;
                 }
                 
                 // Sort by clock_in descending
@@ -1068,7 +1068,11 @@ export default function EmployeeDashboard() {
                 return shiftsToShow.length === 0 ? (
                   <p className="text-center text-gray-500 py-8">No shifts recorded for this pay period</p>
                 ) : (
-                  <div className="space-y-3" data-testid="shifts-list">
+                  <div 
+                    className="space-y-3 max-h-[320px] overflow-y-auto pr-2" 
+                    style={{ scrollbarWidth: 'thin' }}
+                    data-testid="shifts-list"
+                  >
                     {shiftsToShow.map((entry) => (
                       <div 
                         key={entry.id} 
