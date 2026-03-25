@@ -1282,10 +1282,10 @@ Thrifty Curator Team`;
                                   Items Accepted{viewingUpdate.items_to_add > 0 ? ` (of ${viewingUpdate.items_to_add})` : ''}
                                 </Label>
                                 <Input
-                                  type="number"
-                                  min="0"
-                                  max={viewingUpdate.items_to_add > 0 ? viewingUpdate.items_to_add : 9999}
-                                  value={approvalForm.items_accepted === 0 ? '' : approvalForm.items_accepted}
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  value={approvalForm.items_accepted === 0 ? '' : String(approvalForm.items_accepted)}
                                   placeholder="Enter number"
                                   onChange={(e) => {
                                     const val = e.target.value;

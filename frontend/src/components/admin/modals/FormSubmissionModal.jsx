@@ -603,10 +603,10 @@ Thrifty Curator Team`
                           Items Accepted{submission.items_to_add > 0 ? ` (of ${submission.items_to_add})` : ''}
                         </Label>
                         <Input
-                          type="number"
-                          min="0"
-                          max={submission.items_to_add > 0 ? submission.items_to_add : 9999}
-                          value={approvalForm.items_accepted === 0 ? '' : approvalForm.items_accepted}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={approvalForm.items_accepted === 0 ? '' : String(approvalForm.items_accepted)}
                           placeholder="Enter number"
                           onChange={(e) => {
                             const val = e.target.value;
@@ -880,10 +880,10 @@ Thrifty Curator Team`
                             Items Accepted{submission.items_to_add > 0 ? ` (of ${submission.items_to_add})` : ''}
                           </Label>
                           <Input
-                            type="number"
-                            min="0"
-                            max={submission.items_to_add > 0 ? submission.items_to_add : 9999}
-                            value={approvalForm.items_accepted === 0 ? '' : approvalForm.items_accepted}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={approvalForm.items_accepted === 0 ? '' : String(approvalForm.items_accepted)}
                             placeholder="Enter number"
                             onChange={(e) => {
                               const val = e.target.value;
