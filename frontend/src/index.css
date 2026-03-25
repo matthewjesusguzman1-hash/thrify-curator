@@ -627,3 +627,21 @@ table tbody tr:hover {
         display: contents !important;
     }
 }
+
+/* iOS Text Selection Prevention for Picker Buttons */
+.select-none,
+[data-testid="select-consignment-client"],
+[data-testid="select-employee"] {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    -khtml-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Ensure touch events work properly on iOS */
+.touch-manipulation {
+    touch-action: manipulation !important;
+}
