@@ -479,30 +479,23 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                   
                   {/* Consignment Client Selection (only for consignment tab) */}
                   {activeTab === "consignment" && (
-                    <div className="mb-3 relative z-10">
+                    <div className="mb-3">
                       <Label className="text-xs text-[#666]">
                         Select Consignment Client * 
                         {consignmentClients.length > 0 && <span className="text-emerald-600 ml-1">({consignmentClients.length} available)</span>}
                       </Label>
                       <button
                         type="button"
-                        onClick={(e) => { 
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log("Consignor picker button clicked");
-                          setPickerSearch(""); 
-                          setShowClientPicker(true); 
-                        }}
-                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-emerald-500 transition-colors cursor-pointer active:bg-gray-100 select-none"
-                        style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none', userSelect: 'none' }}
+                        onClick={() => { setPickerSearch(""); setShowClientPicker(true); }}
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-emerald-500 transition-colors"
                         data-testid="select-consignment-client"
                       >
-                        <span className="pointer-events-none select-none" style={{ WebkitUserSelect: 'none' }}>
+                        <span className={checkUploadData.consignment_client_email ? "text-gray-900" : "text-gray-500"}>
                           {checkUploadData.consignment_client_email 
                             ? consignmentClients.find(c => c.email === checkUploadData.consignment_client_email)?.full_name || checkUploadData.consignment_client_email
                             : "-- Tap to select a client --"}
                         </span>
-                        <ChevronDown className="w-4 h-4 text-gray-400 pointer-events-none" />
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
                       </button>
                     </div>
                   )}
