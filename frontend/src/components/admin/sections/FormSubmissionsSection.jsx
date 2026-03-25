@@ -1278,11 +1278,13 @@ Thrifty Curator Team`;
 
                               {/* Items Accepted */}
                               <div className="space-y-2">
-                                <Label className="text-sm font-medium">Items Accepted (of {viewingUpdate.items_to_add})</Label>
+                                <Label className="text-sm font-medium">
+                                  Items Accepted{viewingUpdate.items_to_add ? ` (of ${viewingUpdate.items_to_add})` : ''}
+                                </Label>
                                 <Input
                                   type="number"
                                   min="0"
-                                  max={viewingUpdate.items_to_add}
+                                  max={viewingUpdate.items_to_add || 9999}
                                   value={approvalForm.items_accepted === 0 ? '' : approvalForm.items_accepted}
                                   placeholder="Enter number"
                                   onChange={(e) => {
@@ -1291,7 +1293,8 @@ Thrifty Curator Team`;
                                       setApprovalForm({ ...approvalForm, items_accepted: 0 });
                                     } else {
                                       const num = parseInt(val);
-                                      if (!isNaN(num) && num >= 0 && num <= viewingUpdate.items_to_add) {
+                                      const maxItems = viewingUpdate.items_to_add || 9999;
+                                      if (!isNaN(num) && num >= 0 && num <= maxItems) {
                                         setApprovalForm({ ...approvalForm, items_accepted: num });
                                       }
                                     }
@@ -1303,8 +1306,8 @@ Thrifty Curator Team`;
                               </div>
                             </div>
 
-                            {/* Rejected Items Action - Only show if some items are not accepted */}
-                            {approvalForm.items_accepted < viewingUpdate.items_to_add && (
+                            {/* Rejected Items Action - Only show if there's a known total and some items are not accepted */}
+                            {viewingUpdate.items_to_add && approvalForm.items_accepted < viewingUpdate.items_to_add && (
                             <div className="space-y-2">
                               <Label className="text-sm font-medium">
                                 What happens to {viewingUpdate.items_to_add - approvalForm.items_accepted} item(s) not consigned?
@@ -1367,7 +1370,9 @@ Thrifty Curator Team`;
                             >
                               {submittingApproval ? "Processing..." : (
                                 approvalForm.approval_status === 'approved' 
-                                  ? `Approve (${approvalForm.items_accepted} of ${viewingUpdate.items_to_add} items)`
+                                  ? viewingUpdate.items_to_add 
+                                    ? `Approve (${approvalForm.items_accepted} of ${viewingUpdate.items_to_add} items)`
+                                    : `Approve (${approvalForm.items_accepted} items)`
                                   : 'Reject Submission'
                               )}
                             </Button>
