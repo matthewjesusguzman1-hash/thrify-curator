@@ -2164,7 +2164,10 @@ export default function AdminDashboard() {
                   ? 'bg-[#FF1493]/20 border-2 border-[#FF1493] text-white hover:bg-[#FF1493]/30 shadow-lg shadow-[#FF1493]/30 animate-pulse' 
                   : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20'
               }`}
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => {
+                lightTap();
+                setShowNotifications(!showNotifications);
+              }}
               data-testid="notification-bell"
             >
               <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'text-[#FF1493]' : ''}`} />
@@ -2428,7 +2431,10 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleMasterRefresh}
+                onClick={() => {
+                  lightTap();
+                  handleMasterRefresh();
+                }}
                 disabled={masterRefreshing}
                 className="h-9 px-3 border-white/30 text-white hover:bg-white/10 transition-all"
                 data-testid="master-refresh-btn"
@@ -2544,7 +2550,10 @@ export default function AdminDashboard() {
                 {/* Add, Edit, Remove row */}
                 <div className="flex gap-1">
                   <Button 
-                    onClick={() => setShowAddEmployee(true)}
+                    onClick={() => {
+                      buttonPress();
+                      setShowAddEmployee(true);
+                    }}
                     size="sm"
                     className="flex items-center gap-1 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#FF1493]/30 transition-all border-0 text-xs sm:text-sm h-9 flex-1"
                     data-testid="add-employee-btn"
@@ -2554,7 +2563,10 @@ export default function AdminDashboard() {
                     <span className="sm:hidden">Add</span>
                   </Button>
                   <Button 
-                    onClick={() => setShowEditEmployee(true)}
+                    onClick={() => {
+                      buttonPress();
+                      setShowEditEmployee(true);
+                    }}
                     size="sm"
                     className="flex items-center gap-1 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#8B5CF6]/30 transition-all border-0 text-xs sm:text-sm h-9 flex-1"
                     data-testid="edit-employee-btn"
@@ -2564,7 +2576,10 @@ export default function AdminDashboard() {
                     <span className="sm:hidden">Edit</span>
                   </Button>
                   <Button 
-                    onClick={() => setShowRemoveEmployee(true)}
+                    onClick={() => {
+                      buttonPress();
+                      setShowRemoveEmployee(true);
+                    }}
                     variant="outline"
                     size="sm"
                     className="flex items-center gap-1 border-red-400/50 text-red-400 font-semibold hover:bg-red-500/10 transition-all text-xs sm:text-sm h-9 flex-1"
