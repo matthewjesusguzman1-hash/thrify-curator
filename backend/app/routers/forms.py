@@ -401,9 +401,10 @@ async def add_consignment_items(addition: ConsignmentItemAddition, background_ta
     
     # Update item count if items were added
     if addition.items_to_add > 0:
-        current_items = int(existing.get("items_description", "0") or "0")
+        # Get current items_to_add (the numeric field), not items_description (text)
+        current_items = int(existing.get("items_to_add", 0) or 0)
         new_total = current_items + addition.items_to_add
-        update_fields["items_description"] = str(new_total)
+        update_fields["items_to_add"] = new_total
     
     # Update contact info if provided
     if addition.update_email:
