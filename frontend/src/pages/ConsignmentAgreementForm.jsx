@@ -238,6 +238,7 @@ export default function ConsignmentAgreementForm() {
     email: "",
     phone: "",
     address: "",
+    items_to_add: "",
     items_description: "",
     custom_split: "",
     additional_info: "",
@@ -865,9 +866,19 @@ export default function ConsignmentAgreementForm() {
 
     setLoading(true);
 
+    // Validate items count
+    const itemsCount = parseInt(formData.items_to_add) || 0;
+    if (itemsCount <= 0) {
+      errorFeedback();
+      toast.error("Please enter the number of items you're consigning");
+      setLoading(false);
+      return;
+    }
+
     // Prepare submission data - use custom split if provided, otherwise default to 50/50
     const submissionData = {
       ...formData,
+      items_to_add: itemsCount,
       agreed_percentage: formData.custom_split.trim() || "50/50",
       photos: newAgreementPhotos
     };
@@ -2743,6 +2754,14 @@ export default function ConsignmentAgreementForm() {
                   </div>
                 )}
 
+                {/* Items Count */}
+                {selectedSubmission.items_to_add > 0 && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-1">Items Submitted</p>
+                    <p className="font-medium text-[#1A1A2E]">{selectedSubmission.items_to_add} items</p>
+                  </div>
+                )}
+
                 {/* Items Description */}
                 {selectedSubmission.items_description && (
                   <div className="p-3 bg-gray-50 rounded-lg">
@@ -2938,13 +2957,26 @@ export default function ConsignmentAgreementForm() {
               <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Number of Items to Consign *</Label>
               <Input
                 type="number"
-                name="items_description"
-                value={formData.items_description}
+                name="items_to_add"
+                value={formData.items_to_add}
                 onChange={handleChange}
                 required
                 min="1"
                 placeholder="Enter number of items"
                 className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                data-testid="input-items-to-add"
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Items Description *</Label>
+              <Textarea
+                name="items_description"
+                value={formData.items_description}
+                onChange={handleChange}
+                required
+                placeholder="Describe the items you're consigning (brands, types, conditions, etc.)"
+                className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg min-h-[100px]"
                 data-testid="input-items-description"
               />
             </div>

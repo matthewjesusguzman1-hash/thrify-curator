@@ -20,6 +20,11 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - **Native Geolocation**: Using @capacitor/geolocation for clock-in
 - **Native Permissions**: Face ID and Location prompts on iOS
 - **Live Activities**: Employee shift timer on lock screen with polling fallback for admin clock-outs (as of Mar 25, 2026)
+- **Consignment Agreement Form Updated (Mar 25, 2026)**:
+  - Added "Number of Items to Consign" field (items_to_add)
+  - Added "Items Description" text field
+  - Review process now matches item additions (with items count)
+  - Cleared old test data from database
 
 ### In Progress / Pending User Verification
 - **Consignor Picker Fix (Mar 25, 2026)**: Applied iOS-specific touch event handling and CSS to prevent text selection behavior. Needs TestFlight verification.

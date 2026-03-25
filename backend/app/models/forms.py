@@ -44,6 +44,7 @@ class ConsignmentAgreement(BaseModel):
     email: EmailStr
     phone: str
     address: str
+    items_to_add: int = 0  # Number of items being submitted for consignment
     items_description: str
     agreed_percentage: str
     payment_method: str = ""  # Check, Venmo, PayPal, Zelle, CashApp, Apple Pay
