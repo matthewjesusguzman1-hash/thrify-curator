@@ -212,13 +212,8 @@ export default function EmployeeDashboard() {
           // Create message with time and reminder
           const message = `Admin clocked you out at ${clockOutTime}. Please re-open the app.`;
           
-          // First update the widget to show the message
+          // Update the widget to show the message - it will stay visible until user dismisses it
           await LiveActivityService.markClockedOutByAdmin(totalHours, message);
-          
-          // Wait a moment so user can see the message, then end the activity
-          setTimeout(() => {
-            LiveActivityService.endEmployeeActivity(parsedUser.id);
-          }, 8000); // Keep showing message for 8 seconds before ending
           
           // Refresh full data to update UI
           fetchData();
