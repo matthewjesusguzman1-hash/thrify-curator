@@ -484,49 +484,19 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         Select Consignment Client * 
                         {consignmentClients.length > 0 && <span className="text-emerald-600 ml-1">({consignmentClients.length} available)</span>}
                       </Label>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onTouchStart={(e) => {
-                          // Capture touch immediately to prevent text selection
-                          e.preventDefault();
-                        }}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setPickerSearch("");
-                          setShowClientPicker(true);
-                        }}
-                        onClick={(e) => { 
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setPickerSearch(""); 
-                          setShowClientPicker(true); 
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setPickerSearch("");
-                            setShowClientPicker(true);
-                          }
-                        }}
-                        style={{
-                          WebkitTouchCallout: 'none',
-                          WebkitUserSelect: 'none',
-                          userSelect: 'none',
-                          WebkitTapHighlightColor: 'transparent',
-                          cursor: 'pointer'
-                        }}
-                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-emerald-500 transition-colors touch-manipulation select-none"
+                      <button
+                        type="button"
+                        onClick={() => { setPickerSearch(""); setShowClientPicker(true); }}
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-emerald-500 transition-colors"
                         data-testid="select-consignment-client"
                       >
-                        <span className="pointer-events-none select-none">
+                        <span className={checkUploadData.consignment_client_email ? "text-gray-900" : "text-gray-500"}>
                           {checkUploadData.consignment_client_email 
                             ? consignmentClients.find(c => c.email === checkUploadData.consignment_client_email)?.full_name || checkUploadData.consignment_client_email
                             : "-- Tap to select a client --"}
                         </span>
-                        <ChevronDown className="w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </button>
                     </div>
                   )}
                   
