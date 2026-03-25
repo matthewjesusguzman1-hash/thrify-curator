@@ -137,17 +137,49 @@ class DeactivateDeviceTokenRequest(BaseModel):
 
 @router.post("/deactivate-device-token")
 async def deactivate_device_token(request: DeactivateDeviceTokenRequest):
-    """Deactivate a device push token when user logs out.
+    """Deactivate ALL device push tokens when user logs out.
     This prevents receiving notifications after logout.
     """
     try:
         db = get_database()
-        result = await db.device_push_tokens.update_one(
+        # Deactivate ALL tokens for this user and user_type (not just one)
+        result = await db.device_push_tokens.update_many(
             {"user_id": request.user_id, "user_type": request.user_type},
             {"$set": {"active": False}}
         )
-        print(f"Deactivated device token for {request.user_type} {request.user_id}")
-        return {"success": True, "deactivated": result.modified_count > 0}
+        print(f"Deactivated {result.modified_count} device token(s) for {request.user_type} {request.user_id}")
+        return {"success": True, "deactivated_count": result.modified_count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/token-status/{user_id}")
+async def get_token_status(user_id: str):
+    """Get the status of all push tokens for a user (for debugging)"""
+    try:
+        db = get_database()
+        tokens = await db.device_push_tokens.find(
+            {"user_id": user_id},
+            {"_id": 0, "device_token": 0}  # Don't expose full token
+        ).to_list(20)
+        return {"user_id": user_id, "tokens": tokens}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/deactivate-all-admin-tokens")
+async def deactivate_all_admin_tokens():
+    """Emergency endpoint to deactivate ALL admin push tokens.
+    Use this if notifications are being sent incorrectly.
+    """
+    try:
+        db = get_database()
+        result = await db.device_push_tokens.update_many(
+            {"user_type": "admin"},
+            {"$set": {"active": False}}
+        )
+        print(f"Emergency deactivated {result.modified_count} admin token(s)")
+        return {"success": True, "deactivated_count": result.modified_count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
