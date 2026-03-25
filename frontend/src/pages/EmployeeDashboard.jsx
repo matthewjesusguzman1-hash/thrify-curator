@@ -196,9 +196,20 @@ export default function EmployeeDashboard() {
         
         // If we think we're clocked in but server says we're not, admin clocked us out
         if (liveActivityStartedRef.current && !serverClockedIn) {
-          console.log('Detected admin clock-out, ending Live Activity');
+          console.log('Detected admin clock-out, updating Live Activity to show message');
           liveActivityStartedRef.current = false;
-          LiveActivityService.endEmployeeActivity(parsedUser.id);
+          
+          // Get the total hours from the last entry
+          const totalHours = statusRes.data.entry?.total_hours || 0;
+          
+          // First update the widget to show "Clocked out by admin" message
+          await LiveActivityService.markClockedOutByAdmin(totalHours, "Clocked out by admin");
+          
+          // Wait a moment so user can see the message, then end the activity
+          setTimeout(() => {
+            LiveActivityService.endEmployeeActivity(parsedUser.id);
+          }, 5000); // Keep showing message for 5 seconds before ending
+          
           // Refresh full data to update UI
           fetchData();
         }

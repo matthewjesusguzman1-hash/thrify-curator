@@ -8,6 +8,7 @@ struct EmployeeShiftAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         var elapsedTime: TimeInterval
         var isActive: Bool
+        var statusMessage: String?  // Optional message like "Clocked out by admin"
     }
     
     var employeeName: String
@@ -29,18 +30,18 @@ struct EmployeeLiveActivity: Widget {
                 // Expanded UI
                 DynamicIslandExpandedRegion(.leading) {
                     HStack {
-                        Image(systemName: "clock.fill")
-                            .foregroundColor(.green)
-                        Text("Working")
+                        Image(systemName: context.state.isActive ? "clock.fill" : "checkmark.circle.fill")
+                            .foregroundColor(context.state.isActive ? .green : .orange)
+                        Text(context.state.isActive ? "Working" : "Ended")
                             .font(.caption)
-                            .foregroundColor(.green)
+                            .foregroundColor(context.state.isActive ? .green : .orange)
                     }
                 }
                 
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.isActive ? "Active" : "Ended")
+                    Text(context.state.isActive ? "Active" : "Clocked Out")
                         .font(.caption)
-                        .foregroundColor(context.state.isActive ? .green : .gray)
+                        .foregroundColor(context.state.isActive ? .green : .orange)
                 }
                 
                 DynamicIslandExpandedRegion(.center) {
@@ -49,11 +50,27 @@ struct EmployeeLiveActivity: Widget {
                             .font(.headline)
                             .fontWeight(.bold)
                         
-                        // Live updating timer using Date
-                        Text(context.attributes.clockInTime, style: .timer)
-                            .font(.system(.title, design: .monospaced))
-                            .fontWeight(.bold)
-                            .foregroundColor(.cyan)
+                        if context.state.isActive {
+                            // Live updating timer
+                            Text(context.attributes.clockInTime, style: .timer)
+                                .font(.system(.title, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.cyan)
+                        } else {
+                            // Final time
+                            let hours = Int(context.state.elapsedTime) / 3600
+                            let minutes = (Int(context.state.elapsedTime) % 3600) / 60
+                            Text(String(format: "%d:%02d", hours, minutes))
+                                .font(.system(.title, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.orange)
+                            
+                            if let message = context.state.statusMessage {
+                                Text(message)
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                        }
                     }
                 }
                 
@@ -68,19 +85,26 @@ struct EmployeeLiveActivity: Widget {
                 }
             } compactLeading: {
                 // Compact left side
-                Image(systemName: "clock.fill")
-                    .foregroundColor(.green)
+                Image(systemName: context.state.isActive ? "clock.fill" : "checkmark.circle.fill")
+                    .foregroundColor(context.state.isActive ? .green : .orange)
             } compactTrailing: {
-                // Compact right side - live timer
-                Text(context.attributes.clockInTime, style: .timer)
-                    .font(.system(.caption, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundColor(.cyan)
-                    .frame(minWidth: 50)
+                // Compact right side
+                if context.state.isActive {
+                    Text(context.attributes.clockInTime, style: .timer)
+                        .font(.system(.caption, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(.cyan)
+                        .frame(minWidth: 50)
+                } else {
+                    Text("OUT")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.orange)
+                }
             } minimal: {
                 // Minimal view (when other activities present)
-                Image(systemName: "clock.fill")
-                    .foregroundColor(.green)
+                Image(systemName: context.state.isActive ? "clock.fill" : "checkmark.circle.fill")
+                    .foregroundColor(context.state.isActive ? .green : .orange)
             }
         }
     }
@@ -96,13 +120,13 @@ struct LockScreenView: View {
         HStack(spacing: 16) {
             // Status indicator
             VStack {
-                Image(systemName: "clock.fill")
+                Image(systemName: context.state.isActive ? "clock.fill" : "checkmark.circle.fill")
                     .font(.title2)
-                    .foregroundColor(.green)
-                Text("IN")
+                    .foregroundColor(context.state.isActive ? .green : .orange)
+                Text(context.state.isActive ? "IN" : "OUT")
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(.green)
+                    .foregroundColor(context.state.isActive ? .green : .orange)
             }
             .frame(width: 50)
             
@@ -112,27 +136,49 @@ struct LockScreenView: View {
                     .font(.headline)
                     .foregroundColor(.white)
                 
-                HStack {
-                    Text("Since")
+                if let message = context.state.statusMessage, !context.state.isActive {
+                    // Show status message when clocked out
+                    Text(message)
                         .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(context.attributes.clockInTime.formatted(date: .omitted, time: .shortened))
-                        .font(.caption)
-                        .foregroundColor(.cyan)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.orange)
+                } else {
+                    HStack {
+                        Text("Since")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(context.attributes.clockInTime.formatted(date: .omitted, time: .shortened))
+                            .font(.caption)
+                            .foregroundColor(.cyan)
+                    }
                 }
             }
             
             Spacer()
             
-            // Live timer
+            // Timer or final time
             VStack(alignment: .trailing) {
-                Text(context.attributes.clockInTime, style: .timer)
-                    .font(.system(.title2, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundColor(.cyan)
-                Text("worked")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                if context.state.isActive {
+                    // Live timer when active
+                    Text(context.attributes.clockInTime, style: .timer)
+                        .font(.system(.title2, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(.cyan)
+                    Text("worked")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                } else {
+                    // Final elapsed time when clocked out
+                    let hours = Int(context.state.elapsedTime) / 3600
+                    let minutes = (Int(context.state.elapsedTime) % 3600) / 60
+                    Text(String(format: "%d:%02d", hours, minutes))
+                        .font(.system(.title2, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(.orange)
+                    Text("total")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding()

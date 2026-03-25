@@ -9,6 +9,7 @@ struct EmployeeShiftAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         var elapsedTime: TimeInterval
         var isActive: Bool
+        var statusMessage: String?  // Optional message like "Clocked out by admin"
     }
     
     var employeeName: String
@@ -36,6 +37,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "updateEmployeeActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endEmployeeActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getEmployeeActivityPushToken", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "markEmployeeClockedOutByAdmin", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startAdminActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateAdminActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endAdminActivity", returnType: CAPPluginReturnPromise),
@@ -279,6 +281,55 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         
         print("No employee push token available")
         call.resolve(["pushToken": ""])
+    }
+    
+    @objc func markEmployeeClockedOutByAdmin(_ call: CAPPluginCall) {
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities require iOS 16.2+")
+            return
+        }
+        
+        let totalHours = call.getDouble("totalHours") ?? 0.0
+        let message = call.getString("message") ?? "Clocked out by admin"
+        
+        Task {
+            // Update all running employee activities to show the clocked out message
+            for activity in Activity<EmployeeShiftAttributes>.activities {
+                let finalState = EmployeeShiftAttributes.ContentState(
+                    elapsedTime: totalHours * 3600, // Convert hours to seconds
+                    isActive: false,
+                    statusMessage: message
+                )
+                
+                // Update the activity with the final state (keeps it visible with message)
+                await activity.update(
+                    ActivityContent<EmployeeShiftAttributes.ContentState>(
+                        state: finalState,
+                        staleDate: nil
+                    )
+                )
+                
+                print("Updated employee Live Activity with message: \(message)")
+            }
+            
+            // Also update tracked activity if exists
+            if let activity = self.currentEmployeeActivity {
+                let finalState = EmployeeShiftAttributes.ContentState(
+                    elapsedTime: totalHours * 3600,
+                    isActive: false,
+                    statusMessage: message
+                )
+                
+                await activity.update(
+                    ActivityContent<EmployeeShiftAttributes.ContentState>(
+                        state: finalState,
+                        staleDate: nil
+                    )
+                )
+            }
+            
+            call.resolve(["success": true])
+        }
     }
     
     // MARK: - Admin Activity Methods (with Push Token for real-time updates)

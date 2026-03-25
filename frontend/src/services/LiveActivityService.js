@@ -304,6 +304,28 @@ export const LiveActivityService = {
     }
   },
 
+  /**
+   * Mark the employee's Live Activity as clocked out by admin
+   * Updates the widget to show "Clocked out by admin" message without fully ending it
+   * @param {number} totalHours - Total hours worked
+   * @param {string} message - Message to display (default: "Clocked out by admin")
+   * @returns {Promise<void>}
+   */
+  markClockedOutByAdmin: async (totalHours = 0, message = "Clocked out by admin") => {
+    try {
+      const supported = await LiveActivityService.isSupported();
+      if (!supported) return;
+
+      await LiveActivity.markEmployeeClockedOutByAdmin({
+        totalHours: totalHours,
+        message: message
+      });
+      console.log('Employee Live Activity marked as clocked out by admin');
+    } catch (error) {
+      console.error('Failed to mark employee clocked out by admin:', error);
+    }
+  },
+
   // ============ ADMIN METHODS ============
 
   /**
