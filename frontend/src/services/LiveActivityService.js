@@ -84,10 +84,23 @@ export const LiveActivityService = {
       }
 
       // Fallback to Capacitor PushNotifications
-      const permStatus = await PushNotifications.requestPermissions();
-      if (permStatus.receive !== 'granted') {
-        console.log('Push notification permission denied');
+      // Check current permission status first - don't prompt if already granted
+      const currentStatus = await PushNotifications.checkPermissions();
+      
+      if (currentStatus.receive === 'granted') {
+        // Already have permission, just register without prompting
+        console.log('Push permission already granted, registering...');
+      } else if (currentStatus.receive === 'denied') {
+        // User denied, don't prompt again
+        console.log('Push notification permission was denied');
         return null;
+      } else {
+        // Permission not yet requested, ask for it
+        const permStatus = await PushNotifications.requestPermissions();
+        if (permStatus.receive !== 'granted') {
+          console.log('Push notification permission denied');
+          return null;
+        }
       }
 
       // Check if we already have a delivery token (from previous registration)
