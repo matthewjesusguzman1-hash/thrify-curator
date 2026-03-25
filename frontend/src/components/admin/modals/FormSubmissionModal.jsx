@@ -600,12 +600,12 @@ Thrifty Curator Team`
                       {/* Items Accepted */}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">
-                          Items Accepted{submission.items_to_add ? ` (of ${submission.items_to_add})` : ''}
+                          Items Accepted{submission.items_to_add > 0 ? ` (of ${submission.items_to_add})` : ''}
                         </Label>
                         <Input
                           type="number"
                           min="0"
-                          max={submission.items_to_add || 9999}
+                          max={submission.items_to_add > 0 ? submission.items_to_add : 9999}
                           value={approvalForm.items_accepted === 0 ? '' : approvalForm.items_accepted}
                           placeholder="Enter number"
                           onChange={(e) => {
@@ -614,7 +614,7 @@ Thrifty Curator Team`
                               setApprovalForm({ ...approvalForm, items_accepted: 0 });
                             } else {
                               const num = parseInt(val);
-                              const maxItems = submission.items_to_add || 9999;
+                              const maxItems = submission.items_to_add > 0 ? submission.items_to_add : 9999;
                               if (!isNaN(num) && num >= 0 && num <= maxItems) {
                                 setApprovalForm({ ...approvalForm, items_accepted: num });
                               }
@@ -877,12 +877,12 @@ Thrifty Curator Team`
                         {/* Items Accepted */}
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">
-                            Items Accepted{submission.items_to_add ? ` (of ${submission.items_to_add})` : ''}
+                            Items Accepted{submission.items_to_add > 0 ? ` (of ${submission.items_to_add})` : ''}
                           </Label>
                           <Input
                             type="number"
                             min="0"
-                            max={submission.items_to_add || 9999}
+                            max={submission.items_to_add > 0 ? submission.items_to_add : 9999}
                             value={approvalForm.items_accepted === 0 ? '' : approvalForm.items_accepted}
                             placeholder="Enter number"
                             onChange={(e) => {
@@ -891,7 +891,7 @@ Thrifty Curator Team`
                                 setApprovalForm({ ...approvalForm, items_accepted: 0 });
                               } else {
                                 const num = parseInt(val);
-                                const maxItems = submission.items_to_add || 9999;
+                                const maxItems = submission.items_to_add > 0 ? submission.items_to_add : 9999;
                                 if (!isNaN(num) && num >= 0 && num <= maxItems) {
                                   setApprovalForm({ ...approvalForm, items_accepted: num });
                                 }
@@ -905,10 +905,10 @@ Thrifty Curator Team`
                       </div>
 
                       {/* Rejected Items Action - Only show if some items are not accepted */}
-                      {approvalForm.items_accepted < (submission.items_to_add || 0) && (
+                      {submission.items_to_add > 0 && approvalForm.items_accepted < submission.items_to_add && (
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">
-                          What happens to {(submission.items_to_add || 0) - approvalForm.items_accepted} item(s) not consigned?
+                          What happens to {submission.items_to_add - approvalForm.items_accepted} item(s) not consigned?
                         </Label>
                         <Select
                           value={approvalForm.rejected_items_action}

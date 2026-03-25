@@ -1279,12 +1279,12 @@ Thrifty Curator Team`;
                               {/* Items Accepted */}
                               <div className="space-y-2">
                                 <Label className="text-sm font-medium">
-                                  Items Accepted{viewingUpdate.items_to_add ? ` (of ${viewingUpdate.items_to_add})` : ''}
+                                  Items Accepted{viewingUpdate.items_to_add > 0 ? ` (of ${viewingUpdate.items_to_add})` : ''}
                                 </Label>
                                 <Input
                                   type="number"
                                   min="0"
-                                  max={viewingUpdate.items_to_add || 9999}
+                                  max={viewingUpdate.items_to_add > 0 ? viewingUpdate.items_to_add : 9999}
                                   value={approvalForm.items_accepted === 0 ? '' : approvalForm.items_accepted}
                                   placeholder="Enter number"
                                   onChange={(e) => {
@@ -1293,7 +1293,7 @@ Thrifty Curator Team`;
                                       setApprovalForm({ ...approvalForm, items_accepted: 0 });
                                     } else {
                                       const num = parseInt(val);
-                                      const maxItems = viewingUpdate.items_to_add || 9999;
+                                      const maxItems = viewingUpdate.items_to_add > 0 ? viewingUpdate.items_to_add : 9999;
                                       if (!isNaN(num) && num >= 0 && num <= maxItems) {
                                         setApprovalForm({ ...approvalForm, items_accepted: num });
                                       }
@@ -1307,7 +1307,7 @@ Thrifty Curator Team`;
                             </div>
 
                             {/* Rejected Items Action - Only show if there's a known total and some items are not accepted */}
-                            {viewingUpdate.items_to_add && approvalForm.items_accepted < viewingUpdate.items_to_add && (
+                            {viewingUpdate.items_to_add > 0 && approvalForm.items_accepted < viewingUpdate.items_to_add && (
                             <div className="space-y-2">
                               <Label className="text-sm font-medium">
                                 What happens to {viewingUpdate.items_to_add - approvalForm.items_accepted} item(s) not consigned?
