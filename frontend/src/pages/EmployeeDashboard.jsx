@@ -202,13 +202,23 @@ export default function EmployeeDashboard() {
           // Get the total hours from the last entry
           const totalHours = statusRes.data.entry?.total_hours || 0;
           
-          // First update the widget to show "Clocked out by admin" message
-          await LiveActivityService.markClockedOutByAdmin(totalHours, "Clocked out by admin");
+          // Format the current time
+          const clockOutTime = new Date().toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          });
+          
+          // Create message with time and reminder
+          const message = `Admin clocked you out at ${clockOutTime}. Please re-open the app.`;
+          
+          // First update the widget to show the message
+          await LiveActivityService.markClockedOutByAdmin(totalHours, message);
           
           // Wait a moment so user can see the message, then end the activity
           setTimeout(() => {
             LiveActivityService.endEmployeeActivity(parsedUser.id);
-          }, 5000); // Keep showing message for 5 seconds before ending
+          }, 8000); // Keep showing message for 8 seconds before ending
           
           // Refresh full data to update UI
           fetchData();
