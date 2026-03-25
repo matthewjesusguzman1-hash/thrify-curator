@@ -150,7 +150,8 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             
             let initialState = EmployeeShiftAttributes.ContentState(
                 elapsedTime: Date().timeIntervalSince(clockInTime),
-                isActive: true
+                isActive: true,
+                statusMessage: nil
             )
             
             let content = ActivityContent(state: initialState, staleDate: nil)
@@ -231,7 +232,8 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             let newState = EmployeeShiftAttributes.ContentState(
                 elapsedTime: elapsedTime,
-                isActive: true
+                isActive: true,
+                statusMessage: nil
             )
             await activity.update(using: newState)
             call.resolve()
@@ -494,7 +496,8 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         for activity in Activity<EmployeeShiftAttributes>.activities {
             let finalState = EmployeeShiftAttributes.ContentState(
                 elapsedTime: 0,
-                isActive: false
+                isActive: false,
+                statusMessage: nil
             )
             await activity.end(using: finalState, dismissalPolicy: .immediate)
         }
