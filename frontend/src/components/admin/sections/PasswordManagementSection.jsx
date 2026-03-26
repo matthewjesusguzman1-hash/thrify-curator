@@ -393,15 +393,15 @@ export default function PasswordManagementSection({ token }) {
                               size="sm"
                               onClick={() => handleToggleLock('employee', employee.email, employee.name, employee.is_locked)}
                               className={employee.is_locked 
-                                ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
-                                : "text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                                ? "text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200" 
+                                : "text-green-600 hover:text-green-700 hover:bg-green-50 border border-green-200"
                               }
                               data-testid={`lock-employee-btn-${employee.id}`}
-                              title={employee.is_locked ? "Unlock account" : "Lock account"}
+                              title={employee.is_locked ? "Click to unlock account" : "Click to lock account"}
                             >
                               {employee.is_locked 
-                                ? <><Unlock className="w-4 h-4 mr-1" /> Unlock</>
-                                : <><ShieldAlert className="w-4 h-4 mr-1" /> Lock</>
+                                ? <><Lock className="w-4 h-4 mr-1" /> Locked</>
+                                : <><Unlock className="w-4 h-4 mr-1" /> Unlocked</>
                               }
                             </Button>
                           </div>
@@ -518,15 +518,15 @@ export default function PasswordManagementSection({ token }) {
                               size="sm"
                               onClick={() => handleToggleLock('consignor', consignor.email, consignor.name, consignor.is_locked)}
                               className={consignor.is_locked 
-                                ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
-                                : "text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                                ? "text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200" 
+                                : "text-green-600 hover:text-green-700 hover:bg-green-50 border border-green-200"
                               }
                               data-testid={`lock-consignor-btn-${idx}`}
-                              title={consignor.is_locked ? "Unlock account" : "Lock account"}
+                              title={consignor.is_locked ? "Click to unlock account" : "Click to lock account"}
                             >
                               {consignor.is_locked 
-                                ? <><Unlock className="w-4 h-4 mr-1" /> Unlock</>
-                                : <><ShieldAlert className="w-4 h-4 mr-1" /> Lock</>
+                                ? <><Lock className="w-4 h-4 mr-1" /> Locked</>
+                                : <><Unlock className="w-4 h-4 mr-1" /> Unlocked</>
                               }
                             </Button>
                           </div>
