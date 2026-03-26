@@ -32,6 +32,19 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - **Consignor Picker Fixed (Mar 25, 2026)**:
   - Made identical to the working employee picker (simple button element)
   - Works in web preview - awaiting iOS TestFlight verification
+- **Login Help Text (Mar 26, 2026)**:
+  - Added "Need more help logging in? Send a message from the homepage." to Employee and Consignor login screens
+- **Donate or Return Preference (Mar 26, 2026)**:
+  - Added to both initial consignment agreement form and Add Items form
+  - Consignors can choose "Returned to me" or "Donated" for items not accepted
+  - Preference shown in admin review for context when deciding item fate
+- **Account Lock Feature (Mar 26, 2026)**:
+  - Admins can lock/unlock employee and consignor accounts
+  - Locked accounts see "Your account has been locked" error on login
+  - Visual indicators in Password Management section (lock status badges)
+- **Password Reset Email Fix (Mar 26, 2026)**:
+  - Email now properly sending via background task with error logging
+  - Verified working via backend logs
 
 ### In Progress / Pending User Verification
 - **Consignor Picker Fix (Mar 25, 2026)**: Applied iOS-specific touch event handling and CSS to prevent text selection behavior. Needs TestFlight verification.
@@ -44,7 +57,7 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - Update QR code to dynamic link service after app store launch
 
 ### Future/Backlog (P2-P3)
-- **CRITICAL**: Refactor ConsignmentAgreementForm.jsx (3000+ lines monolith)
+- **CRITICAL**: Refactor ConsignmentAgreementForm.jsx (3500+ lines monolith)
 - **CRITICAL**: Refactor PaymentRecordsSection.jsx (complexity causing bugs)
 - Offline usability features
 - Push notification enhancements
@@ -65,12 +78,18 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 ### Key Files
 - `/app/frontend/src/hooks/useHaptics.js` - Haptic feedback utility
 - `/app/frontend/src/hooks/useBiometricAuth.js` - Face ID/Touch ID logic
-- `/app/frontend/src/pages/ConsignmentAgreementForm.jsx` - NEEDS REFACTOR
+- `/app/frontend/src/pages/ConsignmentAgreementForm.jsx` - NEEDS REFACTOR (3500+ lines)
 - `/app/backend/app/routers/password_reset.py` - Magic link flow
+- `/app/backend/app/routers/auth.py` - Login + account lock endpoints
+
+### Key DB Schema Changes (Mar 26, 2026)
+- `consignment_agreements`: Added `rejected_items_preference` field ("return" | "donate"), `is_locked`, `locked_at`, `locked_by`
+- `consignment_item_additions`: Added `rejected_items_preference` field
+- `users`: Added `is_locked`, `locked_at`, `locked_by` fields
 
 ## Known Issues
 - Password modals had recurring freeze issues (resolved with React Portals)
-- ConsignmentAgreementForm.jsx is a fragile 3000+ line monolith
+- ConsignmentAgreementForm.jsx is a fragile 3500+ line monolith
 
 ## Credentials
 - Admin login (Matthew Guzman): Access code `4399`
