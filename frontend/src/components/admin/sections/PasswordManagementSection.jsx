@@ -62,12 +62,13 @@ export default function PasswordManagementSection({ token }) {
       const res = await axios.get(`${API}/forms/admin/consignment-passwords`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Map the response to match the expected format
+      // Map the response to match the expected format (including is_locked)
       const mapped = res.data.map(c => ({
         email: c.email,
-        name: c.full_name,
+        name: c.full_name || c.name,
         has_password: c.has_password,
-        password_set_at: c.password_set_at
+        password_set_at: c.password_set_at,
+        is_locked: c.is_locked || false
       }));
       setConsignors(mapped);
     } catch (error) {
