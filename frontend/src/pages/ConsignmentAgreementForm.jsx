@@ -27,6 +27,22 @@ import axios from "axios";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_f87e31a4-f19a-4a3f-9c26-c5ad57e131e1/artifacts/vh1p37dl_IMG_0092.png";
 
+// Helper function to extract error message from API responses
+// Handles both string errors and Pydantic validation error arrays
+const getErrorMessage = (error, fallback = "An error occurred") => {
+  const detail = error?.response?.data?.detail;
+  if (!detail) return fallback;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    // Pydantic validation error format: [{type, loc, msg, input, url}]
+    const firstError = detail[0];
+    if (firstError?.msg) return firstError.msg;
+    if (firstError?.message) return firstError.message;
+  }
+  if (typeof detail === 'object' && detail.msg) return detail.msg;
+  return fallback;
+};
+
 const PAYMENT_METHODS = [
   { id: "check", label: "Check", needsDetails: false },
   { id: "venmo", label: "Venmo", needsDetails: true, placeholder: "@username" },
@@ -536,7 +552,7 @@ export default function ConsignmentAgreementForm() {
       setPaymentUpdated(true);
       toast.success("Payment method updated successfully!");
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to update payment method");
+      toast.error(getErrorMessage(error, "Failed to update payment method"));
     } finally {
       setLoading(false);
     }
@@ -734,7 +750,7 @@ export default function ConsignmentAgreementForm() {
         toast.success("Login successful!");
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Invalid password");
+      toast.error(getErrorMessage(error, "Invalid password"));
     } finally {
       setCheckingEmail(false);
     }
@@ -775,7 +791,7 @@ export default function ConsignmentAgreementForm() {
       setConfirmPassword("");
       setHasPassword(true);
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to set password");
+      toast.error(getErrorMessage(error, "Failed to set password"));
     } finally {
       setSettingPassword(false);
     }
@@ -851,7 +867,7 @@ export default function ConsignmentAgreementForm() {
         update_payment_method: hasPaymentUpdate ? updatePaymentMethod : null,
         update_payment_details: hasPaymentUpdate ? updatePaymentDetails : null,
         update_profit_split: hasProfitSplitUpdate ? updateCustomSplit : null,
-        rejected_items_preference: hasItems ? updateRejectedItemsPreference : null,
+        rejected_items_preference: updateRejectedItemsPreference || "return",
         additional_info: updateAdditionalInfo || null,
         photos: updatePhotos,
         signature: hasItems ? updateSignature : null,
@@ -870,7 +886,7 @@ export default function ConsignmentAgreementForm() {
       toast.success(successMsg.join(" & ") + " successfully!");
     } catch (error) {
       errorFeedback();
-      toast.error(error.response?.data?.detail || "Failed to submit");
+      toast.error(getErrorMessage(error, "Failed to submit"));
     } finally {
       setLoading(false);
     }
@@ -926,7 +942,7 @@ export default function ConsignmentAgreementForm() {
       toast.success("Agreement submitted successfully!");
     } catch (error) {
       errorFeedback();
-      toast.error(error.response?.data?.detail || "Failed to submit agreement");
+      toast.error(getErrorMessage(error, "Failed to submit agreement"));
     } finally {
       setLoading(false);
     }

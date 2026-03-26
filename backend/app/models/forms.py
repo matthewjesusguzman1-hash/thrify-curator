@@ -86,7 +86,7 @@ class ConsignmentItemAddition(BaseModel):
     update_payment_method: Optional[str] = None  # New payment method if updating
     update_payment_details: Optional[str] = None  # New payment details if updating
     update_profit_split: Optional[str] = None  # Custom profit split if updating
-    rejected_items_preference: str = "return"  # "return" or "donate" - consignor's preference for non-accepted items
+    rejected_items_preference: Optional[str] = "return"  # "return" or "donate" - consignor's preference for non-accepted items
     additional_info: Optional[str] = None  # Additional information about items
     photos: List[str] = []  # List of uploaded photo URLs/paths
     signature: Optional[str] = None  # Electronic signature for the update
