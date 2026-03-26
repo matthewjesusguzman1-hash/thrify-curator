@@ -18,7 +18,7 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 // App version - increment this on each release to force cache clear
-const APP_VERSION = "1.0.4";
+const APP_VERSION = "1.0.5";
 
 // Session timeout in milliseconds (1 hour)
 const SESSION_TIMEOUT = 60 * 60 * 1000;
