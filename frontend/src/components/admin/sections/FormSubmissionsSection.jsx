@@ -260,10 +260,19 @@ export default function FormSubmissionsSection({
     
     setDeletingUpdate(update.id);
     try {
-      await axios.delete(`${API}/admin/forms/item-additions/${update.id}`, getAuthHeader());
-      toast.success("Update deleted successfully");
-      if (fetchItemAdditions) fetchItemAdditions();
+      if (update.source === 'payment_change') {
+        // Delete payment method change
+        await axios.delete(`${API}/admin/forms/payment-method-changes/${update.id}`, getAuthHeader());
+        toast.success("Payment change deleted successfully");
+        if (fetchPaymentMethodChanges) fetchPaymentMethodChanges();
+      } else {
+        // Delete item addition
+        await axios.delete(`${API}/admin/forms/item-additions/${update.id}`, getAuthHeader());
+        toast.success("Update deleted successfully");
+        if (fetchItemAdditions) fetchItemAdditions();
+      }
     } catch (error) {
+      console.error("Delete error:", error);
       toast.error("Failed to delete update");
     } finally {
       setDeletingUpdate(null);

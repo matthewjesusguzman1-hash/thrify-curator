@@ -377,6 +377,16 @@ async def get_payment_method_changes(admin: dict = Depends(get_admin_user)):
     return changes
 
 
+@router.delete("/admin/forms/payment-method-changes/{change_id}")
+async def delete_payment_method_change(change_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a payment method change record"""
+    result = await db.payment_method_changes.delete_one({"id": change_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Payment method change not found")
+    return {"success": True, "message": "Payment method change deleted"}
+
+
+
 @router.post("/forms/add-consignment-items", response_model=ConsignmentItemAddition)
 async def add_consignment_items(addition: ConsignmentItemAddition, background_tasks: BackgroundTasks):
     """Add more items to an existing consignment agreement or update contact/payment info"""

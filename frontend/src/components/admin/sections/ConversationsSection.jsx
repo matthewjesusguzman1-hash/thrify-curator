@@ -11,7 +11,8 @@ import {
   Search,
   X,
   Briefcase,
-  Package
+  Package,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,6 +159,32 @@ export default function ConversationsSection() {
       toast.error("Failed to send message");
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDeleteConversation = async (conversationId, participantName) => {
+    if (!window.confirm(`Delete entire conversation with ${participantName}? This cannot be undone and will remove messages for both parties.`)) {
+      return;
+    }
+
+    const token = getToken();
+    try {
+      await axios.delete(`${API}/conversations/admin/conversation/${conversationId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success(`Conversation with ${participantName} deleted`);
+      
+      // Clear selection if this was the selected conversation
+      if (selectedConversation?.id === conversationId) {
+        setSelectedConversation(null);
+      }
+      
+      // Refresh conversation list
+      fetchConversations();
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      toast.error("Failed to delete conversation");
     }
   };
 
@@ -399,13 +426,23 @@ export default function ConversationsSection() {
                             <p className="text-xs text-[#888]">{selectedConversation.participant_email}</p>
                           </div>
                         </div>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          selectedConversation.participant_type === 'employee'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {selectedConversation.participant_type === 'employee' ? 'Employee' : 'Consignor'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            selectedConversation.participant_type === 'employee'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {selectedConversation.participant_type === 'employee' ? 'Employee' : 'Consignor'}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteConversation(selectedConversation.id, selectedConversation.participant_name)}
+                            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete conversation"
+                            data-testid="delete-conversation-btn"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Messages */}

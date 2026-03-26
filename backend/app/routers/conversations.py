@@ -458,3 +458,29 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
         print(f"Failed to send admin reply push: {e}")
     
     return {"success": True, "message_id": new_message["id"]}
+
+
+
+@router.delete("/admin/conversation/{conversation_id}")
+async def delete_conversation(conversation_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin: Delete a conversation thread. This removes the entire conversation
+    so neither party can see the messages anymore."""
+    
+    # Find the conversation first to verify it exists
+    conversation = await db.conversations.find_one({"id": conversation_id})
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    # Delete the conversation (this removes it for both parties)
+    result = await db.conversations.delete_one({"id": conversation_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Failed to delete conversation")
+    
+    return {
+        "success": True, 
+        "message": "Conversation deleted successfully",
+        "participant_name": conversation.get("participant_name"),
+        "participant_type": conversation.get("participant_type")
+    }
