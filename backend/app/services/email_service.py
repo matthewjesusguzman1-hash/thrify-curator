@@ -354,7 +354,7 @@ async def send_approval_notification(
 async def send_test_email(to_email: str) -> dict:
     """Send a test email to verify email configuration"""
     
-    content = f"""
+    content = """
     <p style="color: #333; line-height: 1.6;">
         This is a test email from <strong>Thrifty Curator</strong>.
     </p>
@@ -502,7 +502,49 @@ async def send_password_reset_email(
     """
     
     html = build_email_template("Reset Your Password", content)
-    return await send_email(to_email, f"Thrifty Curator - Password Reset Request", html)
+    return await send_email(to_email, "Thrifty Curator - Password Reset Request", html)
+
+
+async def send_consignment_inquiry_confirmation(to_email: str, full_name: str) -> dict:
+    """Send automated confirmation email when someone submits a consignment inquiry"""
+    
+    content = f"""
+    <h2 style="color: #1a1a2e; font-size: 22px; margin-bottom: 20px;">Thank You for Your Inquiry!</h2>
+    
+    <p style="color: #333; font-size: 16px; line-height: 1.6;">
+        Hi {full_name},
+    </p>
+    
+    <p style="color: #333; font-size: 16px; line-height: 1.6;">
+        Thank you for reaching out to Thrifty Curator! We've received your consignment inquiry 
+        and are excited to learn more about what you'd like to consign with us.
+    </p>
+    
+    <div style="background: #f8f4ff; border-left: 4px solid #8B5CF6; padding: 15px; margin: 25px 0;">
+        <p style="color: #1a1a2e; margin: 0; font-weight: 600;">What happens next?</p>
+        <p style="color: #555; margin: 10px 0 0 0; font-size: 14px;">
+            Our team will review your submission and reach out soon to discuss the next steps 
+            in the consignment process.
+        </p>
+    </div>
+    
+    <p style="color: #333; font-size: 16px; line-height: 1.6;">
+        In the meantime, if you have any questions, feel free to send us a message through 
+        the <strong>Contact Us</strong> section on our homepage. We're happy to help!
+    </p>
+    
+    <p style="color: #333; font-size: 16px; line-height: 1.6; margin-top: 25px;">
+        We look forward to working with you!
+    </p>
+    
+    <p style="color: #555; font-size: 14px; margin-top: 30px;">
+        Warm regards,<br>
+        <strong style="color: #1a1a2e;">The Thrifty Curator Team</strong>
+    </p>
+    """
+    
+    html = build_email_template("Thank You for Your Consignment Inquiry", content)
+    return await send_email(to_email, "Thrifty Curator - We've Received Your Inquiry!", html)
 
 
 def get_email_status() -> dict:

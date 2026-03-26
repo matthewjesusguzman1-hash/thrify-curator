@@ -15,7 +15,8 @@ from app.services.email_service import (
     send_info_update_confirmation,
     send_approval_notification,
     send_test_email,
-    get_email_status
+    get_email_status,
+    send_consignment_inquiry_confirmation
 )
 from app.services.apns_service import send_admin_push_notification
 
@@ -150,12 +151,19 @@ async def submit_consignment_inquiry(inquiry: ConsignmentInquiry, background_tas
     )
     await db.admin_notifications.insert_one(notification.model_dump())
     
-    # Send push notification
+    # Send push notification to admins
     background_tasks.add_task(
         send_admin_push_notification,
         title="New Consignment Inquiry",
         body=f"{inquiry.full_name} submitted a consignment inquiry",
         notification_type="consignment_inquiry"
+    )
+    
+    # Send automated confirmation email to the user
+    background_tasks.add_task(
+        send_consignment_inquiry_confirmation,
+        inquiry.email,
+        inquiry.full_name
     )
     
     return inquiry
