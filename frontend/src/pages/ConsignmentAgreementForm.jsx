@@ -1351,6 +1351,68 @@ export default function ConsignmentAgreementForm() {
                           Use Face ID / Touch ID
                         </button>
                       )}
+                      
+                      {/* Forgot Password Button - visible on email entry screen */}
+                      <button
+                        type="button"
+                        disabled={sendingPasswordReset || !addItemsEmail}
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!addItemsEmail) {
+                            toast.error("Please enter your email first");
+                            return;
+                          }
+                          setSendingPasswordReset(true);
+                          try {
+                            await axios.post(`${API}/password-reset/request`, {
+                              email: addItemsEmail,
+                              user_type: "consignor"
+                            });
+                            setPasswordResetSent(true);
+                            toast.success("Check your email for reset link!", {
+                              description: "If account exists, you'll receive a password reset email shortly."
+                            });
+                          } catch (error) {
+                            if (error.response?.status === 429) {
+                              toast.error("Too many requests", {
+                                description: "Please wait a while before requesting another reset link."
+                              });
+                            } else {
+                              setPasswordResetSent(true);
+                              toast.success("Check your email for reset link!", {
+                                description: "If account exists, you'll receive a password reset email shortly."
+                              });
+                            }
+                          } finally {
+                            setSendingPasswordReset(false);
+                          }
+                        }}
+                        className="w-full text-sm text-amber-600 hover:text-amber-700 flex items-center justify-center gap-2 py-2 disabled:opacity-50"
+                        data-testid="forgot-password-link-email-screen"
+                      >
+                        {sendingPasswordReset ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Sending reset link...
+                          </>
+                        ) : passwordResetSent ? (
+                          <>
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            Reset link sent! Check your email
+                          </>
+                        ) : (
+                          <>
+                            <HelpCircle className="w-4 h-4" />
+                            Forgot your password?
+                          </>
+                        )}
+                      </button>
+                      
+                      {/* Help text */}
+                      <p className="text-center text-xs text-gray-400 mt-2 px-4">
+                        Need more help logging in? Send a message from the homepage.
+                      </p>
                     </>
                   )}
                   

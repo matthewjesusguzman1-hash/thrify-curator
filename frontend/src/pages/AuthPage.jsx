@@ -577,21 +577,20 @@ export default function AuthPage() {
             )}
           </form>
 
-          {/* Forgot Password Link */}
-          {showPasswordField && (
-            <button
-              type="button"
-              onClick={() => {
-                setShowForgotPassword(true);
-                setForgotEmail(email);
-              }}
-              className="w-full mt-3 text-center text-sm text-[#00D4FF] hover:text-[#00D4FF]/80 transition-colors flex items-center justify-center gap-2"
-              data-testid="forgot-password-link"
-            >
-              <HelpCircle className="w-4 h-4" />
-              Forgot your password?
-            </button>
-          )}
+          {/* Forgot Password Link - Always visible */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowForgotPassword(true);
+              setForgotEmail(email);
+            }}
+            disabled={!email}
+            className="w-full mt-3 text-center text-sm text-[#00D4FF] hover:text-[#00D4FF]/80 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="forgot-password-link"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Forgot your password?
+          </button>
 
           <p className="text-center text-sm text-white/40 mt-6">
             Need more help logging in? Send a message from the homepage.

@@ -400,8 +400,8 @@ export default function PasswordManagementSection({ token }) {
                               title={employee.is_locked ? "Unlock account" : "Lock account"}
                             >
                               {employee.is_locked 
-                                ? <Unlock className="w-4 h-4" />
-                                : <ShieldAlert className="w-4 h-4" />
+                                ? <><Unlock className="w-4 h-4 mr-1" /> Unlock</>
+                                : <><ShieldAlert className="w-4 h-4 mr-1" /> Lock</>
                               }
                             </Button>
                           </div>
@@ -525,8 +525,8 @@ export default function PasswordManagementSection({ token }) {
                               title={consignor.is_locked ? "Unlock account" : "Lock account"}
                             >
                               {consignor.is_locked 
-                                ? <Unlock className="w-4 h-4" />
-                                : <ShieldAlert className="w-4 h-4" />
+                                ? <><Unlock className="w-4 h-4 mr-1" /> Unlock</>
+                                : <><ShieldAlert className="w-4 h-4 mr-1" /> Lock</>
                               }
                             </Button>
                           </div>
