@@ -301,6 +301,7 @@ async def send_approval_notification(
     full_name: str,
     approval_status: str,
     items_accepted: int = 0,
+    items_submitted: int = 0,
     rejected_items_action: str = "return",
     admin_notes: str = None,
     submission_type: str = "agreement"
@@ -321,7 +322,16 @@ async def send_approval_notification(
         status_text = "Not Approved"
         emoji = "❌"
     
-    rejected_action_text = "donated to charity" if rejected_items_action == "donate" else "available for pickup"
+    # Calculate items not accepted
+    items_not_accepted = items_submitted - items_accepted if items_submitted > items_accepted else 0
+    
+    # Build rejected items message based on chosen action
+    rejected_action_text = ""
+    if is_approved and items_not_accepted > 0:
+        if rejected_items_action == "donate":
+            rejected_action_text = f"Items not accepted will be donated."
+        else:
+            rejected_action_text = f"Items not accepted will be returned."
     
     content = f"""
     <p style="color: #333; line-height: 1.6;">
@@ -335,7 +345,7 @@ async def send_approval_notification(
     <div style="background: {status_bg}; border-left: 4px solid {status_color}; padding: 15px; margin: 20px 0;">
         <h3 style="color: {status_color}; margin: 0 0 10px 0; font-size: 16px;">{emoji} {status_text}</h3>
         {f'<p style="margin: 5px 0; color: #333;"><strong>Items Accepted:</strong> {items_accepted}</p>' if is_approved and items_accepted > 0 else ''}
-        {f'<p style="margin: 5px 0; color: #666; font-size: 13px;">Items not accepted will be {rejected_action_text}.</p>' if is_approved else ''}
+        {f'<p style="margin: 5px 0; color: #666; font-size: 13px;">{rejected_action_text}</p>' if rejected_action_text else ''}
     </div>
     
     {f'''
