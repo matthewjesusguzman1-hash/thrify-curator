@@ -179,7 +179,7 @@ async def send_consignment_agreement_confirmation(
     </ol>
     
     <p style="color: #333; line-height: 1.6;">
-        You can check your status, update account information (including payment method), message us directly, 
+        You can check your status, update account information (including payment method), 
         or add more items to consign by visiting the <strong>Consignment Portal</strong>.
     </p>
     
