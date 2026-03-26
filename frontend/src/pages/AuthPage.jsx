@@ -582,10 +582,10 @@ export default function AuthPage() {
             type="button"
             onClick={() => {
               setShowForgotPassword(true);
-              setForgotEmail(email);
+              setForgotEmail(""); // Clear email so user enters it fresh
+              setResetSent(false);
             }}
-            disabled={!email}
-            className="w-full mt-3 text-center text-sm text-[#00D4FF] hover:text-[#00D4FF]/80 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full mt-3 text-center text-sm text-[#00D4FF] hover:text-[#00D4FF]/80 transition-colors flex items-center justify-center gap-2"
             data-testid="forgot-password-link"
           >
             <HelpCircle className="w-4 h-4" />

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle, Lock, Fingerprint, EyeOff, HelpCircle, MessageSquare, AlertCircle } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle, Lock, Fingerprint, EyeOff, HelpCircle, MessageSquare, AlertCircle, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -330,6 +330,8 @@ export default function ConsignmentAgreementForm() {
   // Password reset state (minimal for stability)
   const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
   const [passwordResetSent, setPasswordResetSent] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   
   // Biometric auth hook
   const { isNative, isAvailable: biometricAvailable, isLoading: biometricLoading, biometryType, biometricLogin, setCredentials } = useBiometricAuth();
@@ -1242,6 +1244,168 @@ export default function ConsignmentAgreementForm() {
   if (showAddItems) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] py-8 px-4" data-testid="add-items-page">
+        {/* Forgot Password Modal - rendered at top level */}
+        {showForgotPasswordModal && createPortal(
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 99999,
+              padding: '20px'
+            }}
+            onClick={() => {
+              setShowForgotPasswordModal(false);
+              setPasswordResetSent(false);
+            }}
+          >
+            <div 
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '20px',
+                padding: '32px',
+                width: '100%',
+                maxWidth: '400px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                textAlign: 'center'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Icon */}
+              <div style={{ 
+                width: '70px', 
+                height: '70px', 
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                margin: '0 auto 20px auto',
+                boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)'
+              }}>
+                <Key size={32} color="white" />
+              </div>
+              
+              <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#1A1A2E', marginBottom: '12px' }}>
+                Reset Your Password
+              </h2>
+              
+              <p style={{ fontSize: '15px', color: '#6b7280', marginBottom: '24px', lineHeight: '1.5' }}>
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
+
+              {!passwordResetSent ? (
+                <>
+                  <div style={{ textAlign: 'left', marginBottom: '16px' }}>
+                    <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '8px' }}>
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={forgotPasswordEmail}
+                      onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '10px',
+                        fontSize: '16px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      data-testid="forgot-password-email-input"
+                    />
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      if (!forgotPasswordEmail || !forgotPasswordEmail.includes('@')) {
+                        toast.error("Please enter a valid email address");
+                        return;
+                      }
+                      setSendingPasswordReset(true);
+                      try {
+                        await axios.post(`${API}/password-reset/request`, {
+                          email: forgotPasswordEmail,
+                          user_type: "consignor"
+                        });
+                        setPasswordResetSent(true);
+                      } catch (error) {
+                        if (error.response?.status === 429) {
+                          toast.error("Too many requests. Please wait a while before trying again.");
+                        } else {
+                          setPasswordResetSent(true);
+                        }
+                      } finally {
+                        setSendingPasswordReset(false);
+                      }
+                    }}
+                    disabled={sendingPasswordReset || !forgotPasswordEmail}
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      background: sendingPasswordReset ? '#d1d5db' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: sendingPasswordReset ? 'not-allowed' : 'pointer',
+                      marginBottom: '16px'
+                    }}
+                    data-testid="send-reset-link-btn"
+                  >
+                    {sendingPasswordReset ? "Sending..." : "Send Reset Link"}
+                  </button>
+                </>
+              ) : (
+                <div style={{
+                  backgroundColor: '#f0fdf4',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  marginBottom: '16px'
+                }}>
+                  <CheckCircle size={48} color="#10b981" style={{ margin: '0 auto 12px auto', display: 'block' }} />
+                  <p style={{ fontSize: '16px', fontWeight: '600', color: '#166534', marginBottom: '8px' }}>
+                    Check Your Email!
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#4b5563' }}>
+                    If an account exists with {forgotPasswordEmail}, you'll receive a password reset link shortly.
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  setShowForgotPasswordModal(false);
+                  setPasswordResetSent(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#4b5563',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '15px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+        
         <div className="max-w-2xl mx-auto">
           {/* Back Link and Logo Row */}
           <div className="relative mt-8 mb-6">
@@ -1352,61 +1516,19 @@ export default function ConsignmentAgreementForm() {
                         </button>
                       )}
                       
-                      {/* Forgot Password Button - visible on email entry screen */}
+                      {/* Forgot Password Button - opens modal */}
                       <button
                         type="button"
-                        disabled={sendingPasswordReset || !addItemsEmail}
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!addItemsEmail) {
-                            toast.error("Please enter your email first");
-                            return;
-                          }
-                          setSendingPasswordReset(true);
-                          try {
-                            await axios.post(`${API}/password-reset/request`, {
-                              email: addItemsEmail,
-                              user_type: "consignor"
-                            });
-                            setPasswordResetSent(true);
-                            toast.success("Check your email for reset link!", {
-                              description: "If account exists, you'll receive a password reset email shortly."
-                            });
-                          } catch (error) {
-                            if (error.response?.status === 429) {
-                              toast.error("Too many requests", {
-                                description: "Please wait a while before requesting another reset link."
-                              });
-                            } else {
-                              setPasswordResetSent(true);
-                              toast.success("Check your email for reset link!", {
-                                description: "If account exists, you'll receive a password reset email shortly."
-                              });
-                            }
-                          } finally {
-                            setSendingPasswordReset(false);
-                          }
+                        onClick={() => {
+                          setShowForgotPasswordModal(true);
+                          setForgotPasswordEmail("");
+                          setPasswordResetSent(false);
                         }}
-                        className="w-full text-sm text-amber-600 hover:text-amber-700 flex items-center justify-center gap-2 py-2 disabled:opacity-50"
+                        className="w-full text-sm text-amber-600 hover:text-amber-700 flex items-center justify-center gap-2 py-2"
                         data-testid="forgot-password-link-email-screen"
                       >
-                        {sendingPasswordReset ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            Sending reset link...
-                          </>
-                        ) : passwordResetSent ? (
-                          <>
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                            Reset link sent! Check your email
-                          </>
-                        ) : (
-                          <>
-                            <HelpCircle className="w-4 h-4" />
-                            Forgot your password?
-                          </>
-                        )}
+                        <HelpCircle className="w-4 h-4" />
+                        Forgot your password?
                       </button>
                       
                       {/* Help text */}
@@ -1455,64 +1577,19 @@ export default function ConsignmentAgreementForm() {
                         {checkingEmail ? "Logging in..." : "Login"}
                       </Button>
                       
-                      {/* Forgot Password Button */}
+                      {/* Forgot Password Button - opens modal */}
                       <button
                         type="button"
-                        disabled={sendingPasswordReset}
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const userEmail = addItemsEmail || "";
-                          if (!userEmail) {
-                            toast.error("Please enter your email first");
-                            return;
-                          }
-                          setSendingPasswordReset(true);
-                          try {
-                            await axios.post(`${API}/password-reset/request`, {
-                              email: userEmail,
-                              user_type: "consignor"
-                            });
-                            setPasswordResetSent(true);
-                            toast.success("Check your email for reset link!", {
-                              description: "If account exists, you'll receive a password reset email shortly."
-                            });
-                          } catch (error) {
-                            // Handle rate limiting
-                            if (error.response?.status === 429) {
-                              toast.error("Too many requests", {
-                                description: "Please wait a while before requesting another reset link."
-                              });
-                            } else {
-                              // Still show success for security
-                              setPasswordResetSent(true);
-                              toast.success("Check your email for reset link!", {
-                                description: "If account exists, you'll receive a password reset email shortly."
-                              });
-                            }
-                          } finally {
-                            setSendingPasswordReset(false);
-                          }
+                        onClick={() => {
+                          setShowForgotPasswordModal(true);
+                          setForgotPasswordEmail(addItemsEmail || "");
+                          setPasswordResetSent(false);
                         }}
-                        className="w-full text-sm text-amber-600 hover:text-amber-700 flex items-center justify-center gap-2 py-2 disabled:opacity-50"
+                        className="w-full text-sm text-amber-600 hover:text-amber-700 flex items-center justify-center gap-2 py-2"
                         data-testid="forgot-password-link"
                       >
-                        {sendingPasswordReset ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            Sending reset link...
-                          </>
-                        ) : passwordResetSent ? (
-                          <>
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                            Reset link sent! Check your email
-                          </>
-                        ) : (
-                          <>
-                            <HelpCircle className="w-4 h-4" />
-                            Forgot your password?
-                          </>
-                        )}
+                        <HelpCircle className="w-4 h-4" />
+                        Forgot your password?
                       </button>
                       
                       {/* Try Face ID again button */}
