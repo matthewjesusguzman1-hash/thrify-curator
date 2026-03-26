@@ -1,0 +1,58 @@
+{
+  "summary": "Tested new features: Login help text, Donate/Return preference in consignment forms, Admin Lock/Unlock account feature, and Password Management section. All backend API tests (13) and frontend E2E tests (8) passed.",
+  "mode": "generate",
+  "baseline_commit": "a0a0b449a4b768cce01e471e0ab1ad02821d3b33",
+  "head_commit": "ea30bdac74561cfecbb36fd0596e5befc9a23af1",
+  "specs_created": [
+    "/app/tests/e2e/new-features.spec.ts",
+    "/app/backend/tests/test_account_lock_and_password_reset.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_account_lock_and_password_reset.py",
+    "/app/test_reports/pytest/account_lock_results.xml"
+  ],
+  "regression_results": {
+    "total_specs": 21,
+    "passed": 21,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/new-features.spec.ts",
+    "/app/backend/tests/test_account_lock_and_password_reset.py"
+  ],
+  "test_results": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "Created test consignment agreements with rejected_items_preference field during backend API tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All new features tested and working: 1) Login help text visible on Employee and Consignor login screens, 2) Donate/Return preference options visible in consignment agreement form with 'Returned to me' and 'Donated' buttons, 3) Admin Password Management section has lock/unlock buttons for both employees and consignors, 4) Password reset API endpoints working correctly. The lock account feature prevents locked users from logging in with proper error message.",
+  "features_verified": {
+    "login_help_text": {
+      "status": "PASS",
+      "details": "Help text 'Need more help logging in? Send a message from the homepage.' visible on both Employee Portal (/login) and Consignor login screens"
+    },
+    "donate_or_return_preference": {
+      "status": "PASS",
+      "details": "Consignment agreement form shows 'Returned to me' and 'Donated' options with data-testid='preference-return' and data-testid='preference-donate'. Default is 'return'. Backend accepts rejected_items_preference field."
+    },
+    "admin_lock_unlock_accounts": {
+      "status": "PASS",
+      "details": "Password Management section in Admin Dashboard shows lock/unlock buttons for both Employees and Consignors tabs. Admin accounts cannot be locked (403 error). Locked accounts receive 'Your account has been locked' error on login attempt."
+    },
+    "password_reset_email": {
+      "status": "PASS",
+      "details": "Password reset request endpoint (/api/password-reset/request) working for both employee and consignor user types. Rate limiting and token validation endpoints functional."
+    },
+    "admin_form_review_preference": {
+      "status": "PASS",
+      "details": "Admin can access Form Submissions section. The rejected_items_preference field is stored in consignment agreements and available for admin review."
+    }
+  }
+}

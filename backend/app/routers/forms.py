@@ -1018,6 +1018,10 @@ async def consignment_password_login(request: PasswordLoginRequest):
     if not agreement:
         raise HTTPException(status_code=404, detail="No consignment agreement found with this email")
     
+    # Check if account is locked
+    if agreement.get("is_locked"):
+        raise HTTPException(status_code=403, detail="Your account has been locked. Please contact an administrator.")
+    
     # Check if password is set
     stored_hash = agreement.get("password_hash")
     if not stored_hash:
@@ -1054,7 +1058,7 @@ async def get_consignment_passwords(admin: dict = Depends(get_admin_user)):
     """Get all consignment clients with their password status"""
     agreements = await db.consignment_agreements.find(
         {},
-        {"_id": 0, "email": 1, "full_name": 1, "password_hash": 1, "password_set_at": 1}
+        {"_id": 0, "email": 1, "full_name": 1, "password_hash": 1, "password_set_at": 1, "is_locked": 1}
     ).to_list(1000)
     
     result = []
@@ -1062,8 +1066,10 @@ async def get_consignment_passwords(admin: dict = Depends(get_admin_user)):
         result.append({
             "email": a.get("email"),
             "full_name": a.get("full_name"),
+            "name": a.get("full_name"),  # Add 'name' as alias for consistency with employees
             "has_password": bool(a.get("password_hash")),
             "password_set_at": a.get("password_set_at"),
+            "is_locked": a.get("is_locked", False),
             # For admin viewing - show if password exists (not the actual password)
             "password_status": "Set" if a.get("password_hash") else "Not set"
         })

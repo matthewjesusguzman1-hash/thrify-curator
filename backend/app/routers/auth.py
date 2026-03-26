@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 from datetime import datetime, timezone
 import uuid
 import hashlib
@@ -67,6 +68,10 @@ async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": {"$regex": f"^{email_lower}$", "$options": "i"}}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Email not registered. Contact your administrator.")
+    
+    # Check if account is locked (doesn't apply to admins)
+    if user.get("is_locked") and user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Your account has been locked. Please contact an administrator.")
     
     # Admin users must use their admin code to login
     if user["role"] == "admin":
@@ -233,3 +238,108 @@ async def change_employee_password(
     )
     
     return {"success": True, "message": "Password changed successfully"}
+
+
+
+# ============ ACCOUNT LOCK ENDPOINTS ============
+
+class AccountLockRequest(BaseModel):
+    user_type: str  # "employee" or "consignor"
+    email: str
+    lock: bool  # True to lock, False to unlock
+
+
+@router.post("/admin/lock-account")
+async def lock_account(request: AccountLockRequest, admin: dict = Depends(get_current_user)):
+    """Lock or unlock a user account. Only admins can do this."""
+    
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can lock/unlock accounts")
+    
+    email_lower = request.email.lower().strip()
+    
+    if request.user_type == "employee":
+        # Find the employee
+        user = await db.users.find_one({"email": {"$regex": f"^{email_lower}$", "$options": "i"}})
+        if not user:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        
+        # Don't allow locking admin accounts
+        if user.get("role") == "admin":
+            raise HTTPException(status_code=403, detail="Cannot lock admin accounts")
+        
+        # Update the lock status
+        await db.users.update_one(
+            {"email": {"$regex": f"^{email_lower}$", "$options": "i"}},
+            {"$set": {
+                "is_locked": request.lock,
+                "locked_at": datetime.now(timezone.utc).isoformat() if request.lock else None,
+                "locked_by": admin["email"] if request.lock else None
+            }}
+        )
+        
+        action = "locked" if request.lock else "unlocked"
+        return {"success": True, "message": f"Employee account {action} successfully"}
+    
+    elif request.user_type == "consignor":
+        # Find the consignor
+        agreement = await db.consignment_agreements.find_one({"email": {"$regex": f"^{email_lower}$", "$options": "i"}})
+        if not agreement:
+            raise HTTPException(status_code=404, detail="Consignor not found")
+        
+        # Update the lock status
+        await db.consignment_agreements.update_one(
+            {"email": {"$regex": f"^{email_lower}$", "$options": "i"}},
+            {"$set": {
+                "is_locked": request.lock,
+                "locked_at": datetime.now(timezone.utc).isoformat() if request.lock else None,
+                "locked_by": admin["email"] if request.lock else None
+            }}
+        )
+        
+        action = "locked" if request.lock else "unlocked"
+        return {"success": True, "message": f"Consignor account {action} successfully"}
+    
+    else:
+        raise HTTPException(status_code=400, detail="Invalid user type. Must be 'employee' or 'consignor'")
+
+
+@router.get("/admin/account-lock-status/{user_type}/{email}")
+async def get_account_lock_status(user_type: str, email: str, admin: dict = Depends(get_current_user)):
+    """Get the lock status of an account."""
+    
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can check account status")
+    
+    email_lower = email.lower().strip()
+    
+    if user_type == "employee":
+        user = await db.users.find_one(
+            {"email": {"$regex": f"^{email_lower}$", "$options": "i"}},
+            {"_id": 0, "is_locked": 1, "locked_at": 1, "locked_by": 1}
+        )
+        if not user:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        
+        return {
+            "is_locked": user.get("is_locked", False),
+            "locked_at": user.get("locked_at"),
+            "locked_by": user.get("locked_by")
+        }
+    
+    elif user_type == "consignor":
+        agreement = await db.consignment_agreements.find_one(
+            {"email": {"$regex": f"^{email_lower}$", "$options": "i"}},
+            {"_id": 0, "is_locked": 1, "locked_at": 1, "locked_by": 1}
+        )
+        if not agreement:
+            raise HTTPException(status_code=404, detail="Consignor not found")
+        
+        return {
+            "is_locked": agreement.get("is_locked", False),
+            "locked_at": agreement.get("locked_at"),
+            "locked_by": agreement.get("locked_by")
+        }
+    
+    else:
+        raise HTTPException(status_code=400, detail="Invalid user type")

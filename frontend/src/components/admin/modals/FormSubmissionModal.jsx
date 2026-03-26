@@ -48,11 +48,11 @@ export default function FormSubmissionModal({
   formatSubmissionDate,
   refreshData
 }) {
-  // Approval form state
+  // Approval form state - default rejected_items_action to consignor's preference if available
   const [approvalForm, setApprovalForm] = useState({
     approval_status: submission?.approval_status || "approved",
     items_accepted: submission?.items_accepted || 0,
-    rejected_items_action: submission?.rejected_items_action || "return",
+    rejected_items_action: submission?.rejected_items_action || submission?.rejected_items_preference || "return",
     admin_notes: submission?.admin_notes || ""
   });
   const [submittingApproval, setSubmittingApproval] = useState(false);
@@ -633,6 +633,12 @@ Thrifty Curator Team`
                       <Label className="text-sm font-medium">
                         What happens to {submission.items_to_add - approvalForm.items_accepted} item(s) not consigned?
                       </Label>
+                      {/* Show consignor's preference if available */}
+                      {submission.rejected_items_preference && (
+                        <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          Consignor's preference: {submission.rejected_items_preference === 'donate' ? 'Donated' : 'Returned to them'}
+                        </p>
+                      )}
                       <Select
                         value={approvalForm.rejected_items_action}
                         onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}
@@ -910,6 +916,12 @@ Thrifty Curator Team`
                         <Label className="text-sm font-medium">
                           What happens to {submission.items_to_add - approvalForm.items_accepted} item(s) not consigned?
                         </Label>
+                        {/* Show consignor's preference if available */}
+                        {submission.rejected_items_preference && (
+                          <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                            Consignor's preference: {submission.rejected_items_preference === 'donate' ? 'Donated' : 'Returned to them'}
+                          </p>
+                        )}
                         <Select
                           value={approvalForm.rejected_items_action}
                           onValueChange={(value) => setApprovalForm({ ...approvalForm, rejected_items_action: value })}

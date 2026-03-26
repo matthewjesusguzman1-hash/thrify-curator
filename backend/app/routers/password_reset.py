@@ -189,13 +189,23 @@ async def request_password_reset(request: PasswordResetRequest, background_tasks
     await db.password_reset_tokens.insert_one(reset_doc)
     
     # Send email with reset link (in background)
-    background_tasks.add_task(
-        send_password_reset_email,
-        to_email=email_lower,
-        full_name=full_name,
-        reset_token=token,
-        user_type=user_type
-    )
+    # Using a wrapper to ensure async function runs properly and logs errors
+    async def send_reset_email_with_logging():
+        try:
+            print(f"🔐 Initiating password reset email to: {email_lower}")
+            result = await send_password_reset_email(
+                to_email=email_lower,
+                full_name=full_name,
+                reset_token=token,
+                user_type=user_type
+            )
+            print(f"🔐 Password reset email result: {result}")
+        except Exception as e:
+            print(f"❌ Password reset email failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+    
+    background_tasks.add_task(send_reset_email_with_logging)
     
     return {"success": True, "message": "If an account exists with this email, you will receive a password reset link."}
 

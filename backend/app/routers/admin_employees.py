@@ -361,7 +361,7 @@ async def get_all_employee_passwords(admin: dict = Depends(get_admin_user)):
     # Exclude business owners
     users = await db.users.find(
         {"email": {"$nin": OWNER_EMAILS}},
-        {"_id": 0, "id": 1, "email": 1, "name": 1, "role": 1, "password_hash": 1, "password_set_at": 1}
+        {"_id": 0, "id": 1, "email": 1, "name": 1, "role": 1, "password_hash": 1, "password_set_at": 1, "is_locked": 1}
     ).to_list(500)
     
     result = []
@@ -375,7 +375,8 @@ async def get_all_employee_passwords(admin: dict = Depends(get_admin_user)):
                 "role": u.get("role"),
                 "has_password": False,
                 "uses_admin_code": True,
-                "password_set_at": None
+                "password_set_at": None,
+                "is_locked": u.get("is_locked", False)
             })
         else:
             result.append({
@@ -385,7 +386,8 @@ async def get_all_employee_passwords(admin: dict = Depends(get_admin_user)):
                 "role": u.get("role"),
                 "has_password": bool(u.get("password_hash")),
                 "uses_admin_code": False,
-                "password_set_at": u.get("password_set_at")
+                "password_set_at": u.get("password_set_at"),
+                "is_locked": u.get("is_locked", False)
             })
     
     return result

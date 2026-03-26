@@ -594,7 +594,7 @@ export default function AuthPage() {
           )}
 
           <p className="text-center text-sm text-white/40 mt-6">
-            Contact your administrator if you need access
+            Need more help logging in? Send a message from the homepage.
           </p>
         </div>
 

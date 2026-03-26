@@ -244,6 +244,7 @@ export default function ConsignmentAgreementForm() {
     additional_info: "",
     payment_method: "",
     payment_details: "",
+    rejected_items_preference: "return", // "return" or "donate"
     signature: "",
     signature_date: "",
     agreed_to_terms: false
@@ -283,6 +284,7 @@ export default function ConsignmentAgreementForm() {
   const [updateCustomSplit, setUpdateCustomSplit] = useState("");
   const [itemAdditionSplit, setItemAdditionSplit] = useState(""); // Split for new items being added
   const [useAccountDefaultSplit, setUseAccountDefaultSplit] = useState(true);
+  const [updateRejectedItemsPreference, setUpdateRejectedItemsPreference] = useState("return"); // For add items form
   const [updateAdditionalInfo, setUpdateAdditionalInfo] = useState("");
   const [updatePhotos, setUpdatePhotos] = useState([]);
   const [updateSignature, setUpdateSignature] = useState("");
@@ -847,6 +849,7 @@ export default function ConsignmentAgreementForm() {
         update_payment_method: hasPaymentUpdate ? updatePaymentMethod : null,
         update_payment_details: hasPaymentUpdate ? updatePaymentDetails : null,
         update_profit_split: hasProfitSplitUpdate ? updateCustomSplit : null,
+        rejected_items_preference: hasItems ? updateRejectedItemsPreference : null,
         additional_info: updateAdditionalInfo || null,
         photos: updatePhotos,
         signature: hasItems ? updateSignature : null,
@@ -1467,6 +1470,11 @@ export default function ConsignmentAgreementForm() {
                       >
                         Use a different email
                       </button>
+                      
+                      {/* Help text */}
+                      <p className="text-center text-xs text-gray-400 mt-4 px-4">
+                        Need more help logging in? Send a message from the homepage.
+                      </p>
                     </>
                   )}
                 </>
@@ -2622,6 +2630,57 @@ export default function ConsignmentAgreementForm() {
                               </p>
                             </div>
 
+                            {/* Rejected Items Preference */}
+                            <div>
+                              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                                If any items are not accepted, I prefer them to be:
+                              </Label>
+                              <div className="grid grid-cols-2 gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setUpdateRejectedItemsPreference("return")}
+                                  className={`p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+                                    updateRejectedItemsPreference === "return"
+                                      ? "border-[#10B981] bg-[#10B981]/10 shadow-md"
+                                      : "border-gray-200 hover:border-[#10B981]/50 hover:bg-gray-50"
+                                  }`}
+                                  data-testid="add-items-preference-return"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                      updateRejectedItemsPreference === "return" ? "bg-[#10B981]" : "bg-gray-200"
+                                    }`}>
+                                      <RotateCcw className={`w-4 h-4 ${updateRejectedItemsPreference === "return" ? "text-white" : "text-gray-500"}`} />
+                                    </div>
+                                    <span className={`text-sm font-medium ${updateRejectedItemsPreference === "return" ? "text-[#1A1A2E]" : "text-gray-600"}`}>
+                                      Returned to me
+                                    </span>
+                                  </div>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setUpdateRejectedItemsPreference("donate")}
+                                  className={`p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+                                    updateRejectedItemsPreference === "donate"
+                                      ? "border-[#10B981] bg-[#10B981]/10 shadow-md"
+                                      : "border-gray-200 hover:border-[#10B981]/50 hover:bg-gray-50"
+                                  }`}
+                                  data-testid="add-items-preference-donate"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                      updateRejectedItemsPreference === "donate" ? "bg-[#10B981]" : "bg-gray-200"
+                                    }`}>
+                                      <Gift className={`w-4 h-4 ${updateRejectedItemsPreference === "donate" ? "text-white" : "text-gray-500"}`} />
+                                    </div>
+                                    <span className={`text-sm font-medium ${updateRejectedItemsPreference === "donate" ? "text-[#1A1A2E]" : "text-gray-600"}`}>
+                                      Donated
+                                    </span>
+                                  </div>
+                                </button>
+                              </div>
+                            </div>
+
                             {/* Terms and Conditions */}
                             <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
                               <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
@@ -3162,6 +3221,57 @@ export default function ConsignmentAgreementForm() {
                 className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg min-h-[80px]"
                 data-testid="input-additional-info"
               />
+            </div>
+
+            {/* Rejected Items Preference */}
+            <div>
+              <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
+                If any items are not accepted for consignment, I prefer them to be:
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, rejected_items_preference: "return" })}
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                    formData.rejected_items_preference === "return"
+                      ? "border-[#8B5CF6] bg-[#8B5CF6]/10 shadow-md"
+                      : "border-gray-200 hover:border-[#8B5CF6]/50 hover:bg-gray-50"
+                  }`}
+                  data-testid="preference-return"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      formData.rejected_items_preference === "return" ? "bg-[#8B5CF6]" : "bg-gray-200"
+                    }`}>
+                      <RotateCcw className={`w-5 h-5 ${formData.rejected_items_preference === "return" ? "text-white" : "text-gray-500"}`} />
+                    </div>
+                    <span className={`font-medium ${formData.rejected_items_preference === "return" ? "text-[#1A1A2E]" : "text-gray-600"}`}>
+                      Returned to me
+                    </span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, rejected_items_preference: "donate" })}
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                    formData.rejected_items_preference === "donate"
+                      ? "border-[#8B5CF6] bg-[#8B5CF6]/10 shadow-md"
+                      : "border-gray-200 hover:border-[#8B5CF6]/50 hover:bg-gray-50"
+                  }`}
+                  data-testid="preference-donate"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      formData.rejected_items_preference === "donate" ? "bg-[#8B5CF6]" : "bg-gray-200"
+                    }`}>
+                      <Gift className={`w-5 h-5 ${formData.rejected_items_preference === "donate" ? "text-white" : "text-gray-500"}`} />
+                    </div>
+                    <span className={`font-medium ${formData.rejected_items_preference === "donate" ? "text-[#1A1A2E]" : "text-gray-600"}`}>
+                      Donated
+                    </span>
+                  </div>
+                </button>
+              </div>
             </div>
 
             {/* Photo Upload Section */}

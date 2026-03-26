@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { 
   Key, 
   Lock, 
+  Unlock,
   User, 
   Users, 
   Eye, 
@@ -15,7 +16,9 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Search
+  Search,
+  ShieldAlert,
+  ShieldCheck
 } from "lucide-react";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
@@ -167,6 +170,31 @@ export default function PasswordManagementSection({ token }) {
     }
   };
 
+  // Lock/Unlock account
+  const handleToggleLock = async (userType, email, name, isCurrentlyLocked) => {
+    const action = isCurrentlyLocked ? "unlock" : "lock";
+    if (!window.confirm(`Are you sure you want to ${action} the account for ${name || email}?`)) return;
+
+    try {
+      await axios.post(`${API}/auth/admin/lock-account`, {
+        user_type: userType,
+        email: email,
+        lock: !isCurrentlyLocked
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`Account ${action}ed successfully`);
+      // Refresh the appropriate list
+      if (userType === 'employee') {
+        fetchEmployeePasswords();
+      } else {
+        fetchConsignorPasswords();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || `Failed to ${action} account`);
+    }
+  };
+
   // Filter users based on search - exclude business owners who use access codes
   const filteredEmployees = employees.filter(e => 
     !e.uses_admin_code && (
@@ -300,11 +328,13 @@ export default function PasswordManagementSection({ token }) {
                       >
                         <td className="py-3 px-4">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            employee.has_password ? 'bg-green-100' : 'bg-red-100'
+                            employee.is_locked ? 'bg-red-100' : employee.has_password ? 'bg-green-100' : 'bg-yellow-100'
                           }`}>
-                            {employee.has_password 
+                            {employee.is_locked 
+                              ? <ShieldAlert className="w-4 h-4 text-red-600" />
+                              : employee.has_password 
                               ? <CheckCircle className="w-4 h-4 text-green-600" />
-                              : <XCircle className="w-4 h-4 text-red-500" />
+                              : <XCircle className="w-4 h-4 text-yellow-500" />
                             }
                           </div>
                         </td>
@@ -315,13 +345,20 @@ export default function PasswordManagementSection({ token }) {
                           <span className="text-[#666] text-sm">{employee.email}</span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            employee.has_password 
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-600'
-                          }`}>
-                            {employee.has_password ? "Password Set" : "No Password"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              employee.has_password 
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {employee.has_password ? "Password Set" : "No Password"}
+                            </span>
+                            {employee.is_locked && (
+                              <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">
+                                Locked
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -350,6 +387,23 @@ export default function PasswordManagementSection({ token }) {
                                 <XCircle className="w-4 h-4" />
                               </Button>
                             )}
+                            
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleLock('employee', employee.email, employee.name, employee.is_locked)}
+                              className={employee.is_locked 
+                                ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
+                                : "text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                              }
+                              data-testid={`lock-employee-btn-${employee.id}`}
+                              title={employee.is_locked ? "Unlock account" : "Lock account"}
+                            >
+                              {employee.is_locked 
+                                ? <Unlock className="w-4 h-4" />
+                                : <ShieldAlert className="w-4 h-4" />
+                              }
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -399,11 +453,13 @@ export default function PasswordManagementSection({ token }) {
                       >
                         <td className="py-3 px-4">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            consignor.has_password ? 'bg-green-100' : 'bg-red-100'
+                            consignor.is_locked ? 'bg-red-100' : consignor.has_password ? 'bg-green-100' : 'bg-yellow-100'
                           }`}>
-                            {consignor.has_password 
+                            {consignor.is_locked 
+                              ? <ShieldAlert className="w-4 h-4 text-red-600" />
+                              : consignor.has_password 
                               ? <CheckCircle className="w-4 h-4 text-green-600" />
-                              : <XCircle className="w-4 h-4 text-red-500" />
+                              : <XCircle className="w-4 h-4 text-yellow-500" />
                             }
                           </div>
                         </td>
@@ -414,13 +470,20 @@ export default function PasswordManagementSection({ token }) {
                           <span className="text-[#666] text-sm">{consignor.email}</span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            consignor.has_password 
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-600'
-                          }`}>
-                            {consignor.has_password ? "Password Set" : "No Password"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              consignor.has_password 
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {consignor.has_password ? "Password Set" : "No Password"}
+                            </span>
+                            {consignor.is_locked && (
+                              <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">
+                                Locked
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -449,6 +512,23 @@ export default function PasswordManagementSection({ token }) {
                                 <XCircle className="w-4 h-4" />
                               </Button>
                             )}
+                            
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleLock('consignor', consignor.email, consignor.name, consignor.is_locked)}
+                              className={consignor.is_locked 
+                                ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
+                                : "text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                              }
+                              data-testid={`lock-consignor-btn-${idx}`}
+                              title={consignor.is_locked ? "Unlock account" : "Lock account"}
+                            >
+                              {consignor.is_locked 
+                                ? <Unlock className="w-4 h-4" />
+                                : <ShieldAlert className="w-4 h-4" />
+                              }
+                            </Button>
                           </div>
                         </td>
                       </tr>
