@@ -161,28 +161,36 @@ async def send_consignment_agreement_confirmation(
     </p>
     
     <div style="background: #f8f4ff; border-left: 4px solid #8B5CF6; padding: 15px; margin: 20px 0;">
-        <h3 style="color: #8B5CF6; margin: 0 0 10px 0; font-size: 14px;">AGREEMENT DETAILS</h3>
-        <p style="margin: 5px 0; color: #333;"><strong>Profit Split:</strong> {agreed_percentage}</p>
-        {f'<p style="margin: 5px 0; color: #333;"><strong>Items:</strong> {items_description}</p>' if items_description else ''}
+        <p style="margin: 0; color: #333; line-height: 1.6;">
+            To see the details of your consignment agreement, go to the <strong>Consignment Portal</strong> 
+            from the homepage, then select <strong>Manage My Account</strong>. Use the email address 
+            you provided to log in and create a secure password.
+        </p>
     </div>
     
     <p style="color: #333; line-height: 1.6;">
         <strong>What happens next?</strong>
     </p>
     <ol style="color: #333; line-height: 1.8;">
-        <li>Our team will review your submitted items</li>
+        <li>Our team will review your submitted items and let you know what items are approved</li>
         <li>We'll photograph and list approved items in our store</li>
         <li>You'll receive updates when items sell</li>
-        <li>Payments will be processed according to your agreed schedule</li>
+        <li>Sold items will be entered in your account with proof of payment for you to access and review. You'll be paid according to your chosen preference.</li>
     </ol>
     
     <p style="color: #333; line-height: 1.6;">
-        You can check your submission status anytime by visiting our 
-        <a href="https://thrifty-curator.com/consignment-agreement" style="color: #8B5CF6;">Consignment Portal</a>.
+        You can check your status, update account information (including payment method), message us directly, 
+        or add more items to consign by visiting the <strong>Consignment Portal</strong>.
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        In addition, you can message us directly from the Consignment Portal after you log into your account 
+        if there are any questions.
     </p>
     
     <p style="color: #666; font-size: 13px; margin-top: 30px;">
-        If you have any questions, feel free to reply to this email or contact us directly.
+        We look forward to working with you!<br>
+        <strong>The Thrifty Curator Team</strong>
     </p>
     """
     
