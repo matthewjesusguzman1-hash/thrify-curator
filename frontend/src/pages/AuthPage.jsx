@@ -13,6 +13,10 @@ import { LiveActivityService } from "@/services/LiveActivityService";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
+const APP_VERSION = "1.0.4"; // Keep in sync with App.js
+
+// Log version on load for debugging
+console.log(`[AuthPage] App Version: ${APP_VERSION} | Build: ${new Date().toISOString()}`);
 
 // Business owner codes - these map directly to their emails
 const OWNER_CODES = {

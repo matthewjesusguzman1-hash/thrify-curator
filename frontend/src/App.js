@@ -17,6 +17,9 @@ import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
+// App version - increment this on each release to force cache clear
+const APP_VERSION = "1.0.4";
+
 // Session timeout in milliseconds (1 hour)
 const SESSION_TIMEOUT = 60 * 60 * 1000;
 
@@ -24,6 +27,56 @@ const SESSION_TIMEOUT = 60 * 60 * 1000;
 const isNativeApp = () => {
   return window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative;
 };
+
+// Clear all caches on version change
+const clearCachesOnVersionChange = async () => {
+  const storedVersion = localStorage.getItem("app_version");
+  
+  if (storedVersion !== APP_VERSION) {
+    console.log(`[App] Version changed from ${storedVersion} to ${APP_VERSION}, clearing caches...`);
+    
+    // Clear service worker caches
+    if ('caches' in window) {
+      try {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(cache => caches.delete(cache)));
+        console.log('[App] All caches cleared');
+      } catch (e) {
+        console.log('[App] Cache clear error:', e);
+      }
+    }
+    
+    // Tell service worker to update
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+        // Force update check
+        await registration.update();
+        console.log('[App] Service worker update triggered');
+      } catch (e) {
+        console.log('[App] Service worker update error:', e);
+      }
+    }
+    
+    // Store new version
+    localStorage.setItem("app_version", APP_VERSION);
+    
+    // Reload to get fresh content (only if we're not already in a reload loop)
+    const reloadCount = parseInt(sessionStorage.getItem("reload_count") || "0");
+    if (reloadCount < 1) {
+      sessionStorage.setItem("reload_count", (reloadCount + 1).toString());
+      window.location.reload(true);
+    } else {
+      sessionStorage.removeItem("reload_count");
+    }
+  }
+};
+
+// Run cache clear on app start
+clearCachesOnVersionChange();
 
 // Session management hook
 const useSessionManager = () => {

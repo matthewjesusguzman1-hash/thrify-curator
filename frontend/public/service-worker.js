@@ -1,128 +1,72 @@
 // Thrifty Curator Service Worker
-// Provides offline capabilities and background sync for mileage tracking
+// Version 4 - Aggressive cache clearing for App Store review
 
-const CACHE_NAME = 'thrifty-curator-v3';  // Force cache refresh
+const CACHE_VERSION = 'v4-' + Date.now(); // Unique version on each build
+const CACHE_NAME = 'thrifty-curator-' + CACHE_VERSION;
 const OFFLINE_URL = '/offline.html';
 
-// Assets to cache for offline use - minimal set
+// Minimal assets to cache
 const STATIC_ASSETS = [
   '/offline.html',
   '/manifest.json'
 ];
 
-// Install event - cache static assets
+// Install event - immediately take over
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install');
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[ServiceWorker] Caching static assets');
-      return cache.addAll(STATIC_ASSETS);
-    })
-  );
-  // Activate immediately
+  console.log('[ServiceWorker] Install - Version:', CACHE_VERSION);
+  // Skip waiting to activate immediately
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - AGGRESSIVELY clean up ALL old caches
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate');
+  console.log('[ServiceWorker] Activate - Clearing all old caches');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
+          // Delete ALL caches except the current one
           if (cacheName !== CACHE_NAME) {
-            console.log('[ServiceWorker] Removing old cache:', cacheName);
+            console.log('[ServiceWorker] Deleting cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
+    }).then(() => {
+      console.log('[ServiceWorker] Taking control of all clients');
+      return self.clients.claim();
     })
   );
-  // Take control immediately
-  self.clients.claim();
 });
 
-// Fetch event - NETWORK FIRST for HTML, cache for assets
+// Fetch event - NETWORK FIRST for everything, no caching of app files
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
   
-  // Skip API calls - always fetch from network
+  // Skip API calls entirely
   if (event.request.url.includes('/api/')) {
     return;
   }
 
-  // For HTML pages - always try network first
-  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => caches.match(OFFLINE_URL))
-    );
-    return;
-  }
-
-  // For other assets - try cache first, then network
+  // ALWAYS try network first for all requests
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
+    fetch(event.request, {
+      // Add cache-busting headers
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
       }
-      return fetch(event.request).then((response) => {
-        // Don't cache non-successful responses
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-        // Clone the response for caching
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-        return response;
-      });
     }).catch(() => {
-      // Return offline page for navigation requests
+      // Only use cache as absolute last resort for offline
       if (event.request.mode === 'navigate') {
         return caches.match(OFFLINE_URL);
       }
+      return caches.match(event.request);
     })
   );
 });
-
-// Background sync for mileage tracking
-self.addEventListener('sync', (event) => {
-  console.log('[ServiceWorker] Sync event:', event.tag);
-  if (event.tag === 'sync-mileage') {
-    event.waitUntil(syncMileageData());
-  }
-});
-
-// Sync mileage data when back online
-async function syncMileageData() {
-  try {
-    const cache = await caches.open('mileage-pending');
-    const requests = await cache.keys();
-    
-    for (const request of requests) {
-      const response = await cache.match(request);
-      const data = await response.json();
-      
-      // Attempt to send to server
-      try {
-        await fetch(request.url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        // Remove from pending cache on success
-        await cache.delete(request);
-      } catch (err) {
-        console.error('[ServiceWorker] Failed to sync:', err);
-      }
-    }
-  } catch (err) {
-    console.error('[ServiceWorker] Sync failed:', err);
-  }
-}
 
 // Listen for messages from the main app
 self.addEventListener('message', (event) => {
@@ -131,16 +75,19 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-});
-
-// Periodic background sync (if supported)
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'mileage-check') {
-    event.waitUntil(checkActiveTripStatus());
+  
+  // Force clear all caches on demand
+  if (event.data && event.data.type === 'CLEAR_ALL_CACHES') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(cacheNames.map(cache => caches.delete(cache)));
+      }).then(() => {
+        console.log('[ServiceWorker] All caches cleared');
+        // Notify clients
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => client.postMessage({ type: 'CACHES_CLEARED' }));
+        });
+      })
+    );
   }
 });
-
-async function checkActiveTripStatus() {
-  // This would check if there's an active trip and notify user
-  console.log('[ServiceWorker] Checking active trip status');
-}
