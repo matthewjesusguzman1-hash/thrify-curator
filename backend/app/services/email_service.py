@@ -530,7 +530,7 @@ async def send_consignment_inquiry_confirmation(to_email: str, full_name: str) -
     
     <p style="color: #333; font-size: 16px; line-height: 1.6;">
         In the meantime, if you have any questions, feel free to send us a message through 
-        the <strong>Contact Us</strong> section on our homepage. We're happy to help!
+        the <strong>Message Us</strong> section on our homepage. We're happy to help!
     </p>
     
     <p style="color: #333; font-size: 16px; line-height: 1.6; margin-top: 25px;">
