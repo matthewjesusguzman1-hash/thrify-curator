@@ -944,6 +944,7 @@ Thrifty Curator Team`;
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
             onClick={() => setViewingUpdate(null)}
+            style={{ touchAction: 'none' }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -951,6 +952,8 @@ Thrifty Curator Team`;
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl"
               onClick={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+              style={{ touchAction: 'auto' }}
               data-testid="view-update-modal"
             >
               {/* Modal Header */}
@@ -958,8 +961,15 @@ Thrifty Curator Team`;
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-white">Update Details</h3>
                   <button
+                    type="button"
                     onClick={() => setViewingUpdate(null)}
-                    className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setViewingUpdate(null);
+                    }}
+                    className="p-2 hover:bg-white/20 active:bg-white/30 rounded-full transition-colors"
+                    style={{ touchAction: 'manipulation' }}
                   >
                     <X className="w-5 h-5 text-white" />
                   </button>
@@ -967,39 +977,60 @@ Thrifty Curator Team`;
               </div>
 
               {/* Action Buttons Bar */}
-              <div className="flex items-center justify-end gap-2 px-6 py-3 bg-[#F9F6F7] border-b">
-                <Button
-                  variant="outline"
-                  size="sm"
+              <div className="flex items-center justify-end gap-2 px-6 py-3 bg-[#F9F6F7] border-b" style={{ touchAction: 'manipulation' }}>
+                <button
+                  type="button"
                   onClick={() => handleDownloadUpdate(viewingUpdate)}
-                  className="text-[#10B981] border-[#10B981] hover:bg-[#10B981]/10"
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDownloadUpdate(viewingUpdate);
+                  }}
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border text-[#10B981] border-[#10B981] hover:bg-[#10B981]/10 active:bg-[#10B981]/20 transition-colors"
+                  style={{ touchAction: 'manipulation' }}
+                  data-testid="download-update-btn"
                 >
                   <Download className="w-4 h-4 mr-1" /> Download
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     setMessageModal({ open: true, update: viewingUpdate });
                     setMessageContent(getEmailTemplate(viewingUpdate));
                     setViewingUpdate(null);
                   }}
-                  className="text-[#00D4FF] border-[#00D4FF] hover:bg-[#00D4FF]/10"
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMessageModal({ open: true, update: viewingUpdate });
+                    setMessageContent(getEmailTemplate(viewingUpdate));
+                    setViewingUpdate(null);
+                  }}
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border text-[#00D4FF] border-[#00D4FF] hover:bg-[#00D4FF]/10 active:bg-[#00D4FF]/20 transition-colors"
+                  style={{ touchAction: 'manipulation' }}
+                  data-testid="email-update-btn"
                 >
                   <Mail className="w-4 h-4 mr-1" /> Email
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     handleDeleteUpdate(viewingUpdate);
                     setViewingUpdate(null);
                   }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDeleteUpdate(viewingUpdate);
+                    setViewingUpdate(null);
+                  }}
                   disabled={deletingUpdate === viewingUpdate?.id}
-                  className="text-red-500 border-red-500 hover:bg-red-50"
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border text-red-500 border-red-500 hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-50"
+                  style={{ touchAction: 'manipulation' }}
+                  data-testid="delete-update-btn"
                 >
                   <Trash2 className="w-4 h-4 mr-1" /> Delete
-                </Button>
+                </button>
               </div>
 
               {/* Modal Body */}
