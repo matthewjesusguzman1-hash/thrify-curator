@@ -841,26 +841,25 @@ export default function EmployeeDashboard() {
         className="bg-white/10 backdrop-blur-md border-b border-white/10 px-4 pb-3" 
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center">
+        <div className="max-w-2xl mx-auto">
+          {/* Name centered on top */}
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center flex-shrink-0">
               <User className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <p className="font-semibold text-white" data-testid="user-name">{user.name}</p>
-              <p className="text-sm text-white/60 capitalize">{user.role}</p>
-            </div>
+            <p className="font-semibold text-white truncate max-w-[200px]" data-testid="user-name">{user.name}</p>
           </div>
-          <div className="flex items-center gap-2">
+          {/* Navigation buttons below, centered */}
+          <div className="flex items-center justify-center gap-1 flex-wrap">
             <Link to="/" onClick={() => lightTap()}>
-              <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="home-btn">
+              <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 px-2" data-testid="home-btn">
                 <Home className="w-4 h-4 mr-1" />
                 Home
               </Button>
             </Link>
             {user.role === "admin" && (
               <Link to="/admin" onClick={() => lightTap()}>
-                <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="admin-btn">
+                <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 px-2" data-testid="admin-btn">
                   Admin
                 </Button>
               </Link>
@@ -872,7 +871,7 @@ export default function EmployeeDashboard() {
                 lightTap();
                 setShowPasswordModal(true);
               }}
-              className="text-white/70 hover:text-white hover:bg-white/10"
+              className="text-white/70 hover:text-white hover:bg-white/10 px-2"
               data-testid="security-btn"
             >
               <Lock className="w-4 h-4 mr-1" />
@@ -885,7 +884,7 @@ export default function EmployeeDashboard() {
                 lightTap(); // Haptic on logout
                 handleLogout();
               }}
-              className="text-white/70 hover:text-white hover:bg-white/10"
+              className="text-white/70 hover:text-white hover:bg-white/10 px-2"
               data-testid="logout-btn"
             >
               <LogOut className="w-4 h-4 mr-1" />
@@ -1057,40 +1056,40 @@ export default function EmployeeDashboard() {
           {/* Pay Period Summary Card */}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#FF1493] to-[#8B5CF6]" />
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E]">Current Pay Period</h2>
-                <span className="text-sm text-gray-500">
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-1">
+                <h2 className="font-poppins text-base sm:text-lg font-semibold text-[#1A1A2E]">Current Pay Period</h2>
+                <span className="text-xs sm:text-sm text-gray-500">
                   {formatDate(summary.period_start)} - {formatDate(summary.period_end)}
                 </span>
               </div>
               
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 {/* Hours */}
-                <div className="bg-gradient-to-br from-[#00D4FF]/10 to-[#00D4FF]/5 rounded-xl p-4 text-center">
-                  <Clock className="w-6 h-6 text-[#00D4FF] mx-auto mb-2" />
-                  <p className="text-lg sm:text-2xl font-bold text-[#1A1A2E] truncate" data-testid="period-hours">
+                <div className="bg-gradient-to-br from-[#00D4FF]/10 to-[#00D4FF]/5 rounded-xl p-3 sm:p-4 text-center">
+                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-[#00D4FF] mx-auto mb-1 sm:mb-2" />
+                  <p className="text-sm sm:text-2xl font-bold text-[#1A1A2E]" data-testid="period-hours">
                     {formatHoursToHMS(summary.period_hours)}
                   </p>
-                  <p className="text-xs text-gray-500">Hours</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500">Hours</p>
                 </div>
                 
                 {/* Shifts */}
-                <div className="bg-gradient-to-br from-[#8B5CF6]/10 to-[#8B5CF6]/5 rounded-xl p-4 text-center">
-                  <Briefcase className="w-6 h-6 text-[#8B5CF6] mx-auto mb-2" />
-                  <p className="text-lg sm:text-2xl font-bold text-[#1A1A2E]" data-testid="period-shifts">
+                <div className="bg-gradient-to-br from-[#8B5CF6]/10 to-[#8B5CF6]/5 rounded-xl p-3 sm:p-4 text-center">
+                  <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B5CF6] mx-auto mb-1 sm:mb-2" />
+                  <p className="text-sm sm:text-2xl font-bold text-[#1A1A2E]" data-testid="period-shifts">
                     {summary.period_shifts}
                   </p>
-                  <p className="text-xs text-gray-500">Shifts</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500">Shifts</p>
                 </div>
                 
                 {/* Estimated Pay */}
-                <div className="bg-gradient-to-br from-[#FF1493]/10 to-[#FF1493]/5 rounded-xl p-4 text-center">
-                  <DollarSign className="w-6 h-6 text-[#FF1493] mx-auto mb-2" />
-                  <p className="text-lg sm:text-2xl font-bold text-[#1A1A2E] truncate" data-testid="estimated-pay">
+                <div className="bg-gradient-to-br from-[#FF1493]/10 to-[#FF1493]/5 rounded-xl p-3 sm:p-4 text-center">
+                  <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF1493] mx-auto mb-1 sm:mb-2" />
+                  <p className="text-sm sm:text-2xl font-bold text-[#1A1A2E]" data-testid="estimated-pay">
                     {formatCurrency(roundHoursToMinute(summary.period_hours) * summary.hourly_rate)}
                   </p>
-                  <p className="text-xs text-gray-500">Est. Pay</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500">Est. Pay</p>
                 </div>
               </div>
 
@@ -1106,8 +1105,8 @@ export default function EmployeeDashboard() {
           {/* Recent Shifts */}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
-            <div className="p-6">
-              <h2 className="font-poppins text-lg font-semibold text-[#1A1A2E] mb-4">
+            <div className="p-4 sm:p-6">
+              <h2 className="font-poppins text-sm sm:text-lg font-semibold text-[#1A1A2E] mb-4">
                 {(() => {
                   if (!summary?.period_start || !summary?.period_end) return "Recent Shifts";
                   const periodStart = new Date(summary.period_start);
@@ -1117,15 +1116,29 @@ export default function EmployeeDashboard() {
                     const clockIn = new Date(entry.clock_in);
                     return clockIn >= periodStart && clockIn <= periodEnd;
                   });
+                  const startStr = periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const endStr = periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                   if (currentPeriodEntries.length > 0) {
-                    return `Current Pay Period Shifts (${periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+                    return (
+                      <span className="block">
+                        <span className="block sm:inline">Pay Period Shifts</span>
+                        <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({startStr} - {endStr})</span>
+                      </span>
+                    );
                   }
                   // Show previous period label
                   const prevStart = new Date(periodStart);
                   prevStart.setDate(prevStart.getDate() - 14);
                   const prevEnd = new Date(periodEnd);
                   prevEnd.setDate(prevEnd.getDate() - 14);
-                  return `Previous Pay Period Shifts (${prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+                  const prevStartStr = prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const prevEndStr = prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  return (
+                    <span className="block">
+                      <span className="block sm:inline">Previous Period</span>
+                      <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({prevStartStr} - {prevEndStr})</span>
+                    </span>
+                  );
                 })()}
               </h2>
               {(() => {
