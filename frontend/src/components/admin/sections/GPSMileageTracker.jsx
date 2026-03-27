@@ -384,13 +384,14 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         setTrackingStatus("tracking");
         setLocationCount(1);
         
-        // Start the external GPS tracker if provided
+        // If external GPS tracker is provided, use ONLY that (avoid duplicate tracking)
         if (externalGpsTracker?.startTracking) {
           await externalGpsTracker.startTracking();
+          // Don't start internal tracking - external handles it
+        } else {
+          // Fallback to internal tracking only if no external tracker
+          await startLocationTracking(tripId);
         }
-        
-        // Start continuous tracking
-        await startLocationTracking(tripId);
         
         toast.success("Trip started! GPS tracking is active.", {
           description: "Drive safely. Tracking continues in background."
@@ -417,9 +418,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       // Sync any pending locations first
       await syncLocations(activeTrip.id);
       
-      // Stop the external GPS tracker first (this is the main source of location updates)
+      // If using external GPS tracker, pause that. Otherwise pause internal.
       if (externalGpsTracker?.pauseTracking) {
         await externalGpsTracker.pauseTracking();
+      } else {
+        await stopLocationTracking();
       }
       
       const response = await axios.post(
@@ -431,7 +434,6 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       if (response.data.success) {
         setTrackingStatus("paused");
         setActiveTrip(prev => ({ ...prev, status: "paused" }));
-        await stopLocationTracking();
         toast.info("Trip paused");
       }
     } catch (error) {
@@ -455,13 +457,13 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         setTrackingStatus("tracking");
         setActiveTrip(prev => ({ ...prev, status: "active" }));
         
-        // Resume the external GPS tracker if provided (main tracking source)
+        // If using external GPS tracker, resume that. Otherwise resume internal.
         if (externalGpsTracker?.resumeTracking) {
           await externalGpsTracker.resumeTracking();
+        } else {
+          await startLocationTracking(activeTrip.id);
         }
         
-        // Also start internal location tracking as backup
-        await startLocationTracking(activeTrip.id);
         toast.success("Trip resumed");
       }
     } catch (error) {
@@ -477,11 +479,12 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     try {
       // Sync final locations
       await syncLocations(activeTrip.id);
-      await stopLocationTracking();
       
-      // Also stop the external GPS tracker if provided
+      // Stop whichever tracking method is active
       if (externalGpsTracker?.stopTracking) {
         await externalGpsTracker.stopTracking();
+      } else {
+        await stopLocationTracking();
       }
       
       // Set status to "completing" to show the form (showCompletionForm = trackingStatus === "completing")
@@ -574,15 +577,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     
     try {
       // Stop the external GPS tracker if provided
+      // Stop whichever tracking method is active
       if (externalGpsTracker?.stopTracking) {
         await externalGpsTracker.stopTracking();
+        if (externalGpsTracker?.reset) {
+          externalGpsTracker.reset();
+        }
+      } else {
+        await stopLocationTracking();
       }
-      if (externalGpsTracker?.reset) {
-        externalGpsTracker.reset();
-      }
-      
-      // Also stop internal location tracking
-      await stopLocationTracking();
       
       await axios.delete(`${API}/admin/gps-trips/${activeTrip.id}`, getAuthHeader());
       

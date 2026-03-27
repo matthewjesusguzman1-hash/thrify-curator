@@ -133,19 +133,27 @@ export default function useGPSTracking() {
 
   // Clear the GPS watch
   const clearWatch = useCallback(async () => {
-    if (watchIdRef.current !== null) {
-      console.log('Clearing GPS watch:', watchIdRef.current);
+    const watchId = watchIdRef.current;
+    
+    // Clear the ref immediately to prevent double-clearing
+    watchIdRef.current = null;
+    
+    if (watchId !== null) {
+      console.log('Clearing GPS watch ID:', watchId);
       try {
         if (isNative()) {
           const { Geolocation } = await import('@capacitor/geolocation');
-          await Geolocation.clearWatch({ id: watchIdRef.current });
+          await Geolocation.clearWatch({ id: watchId });
+          console.log('Native GPS watch cleared successfully');
         } else {
-          navigator.geolocation.clearWatch(watchIdRef.current);
+          navigator.geolocation.clearWatch(watchId);
+          console.log('Web GPS watch cleared successfully');
         }
       } catch (err) {
         console.error('Error clearing watch:', err);
       }
-      watchIdRef.current = null;
+    } else {
+      console.log('No GPS watch to clear');
     }
   }, []);
 
@@ -248,31 +256,37 @@ export default function useGPSTracking() {
 
   // Stop tracking completely
   const stopTracking = useCallback(async () => {
-    console.log('Stopping GPS tracking');
+    console.log('Stopping GPS tracking - setting refs FIRST');
     
-    // Set state first to prevent any more location processing
-    setIsTracking(false);
+    // CRITICAL: Set refs IMMEDIATELY before any async operations
+    // This prevents the callback from processing any more locations
     isTrackingRef.current = false;
-    setIsPaused(false);
     isPausedRef.current = false;
     
-    // Then clear the watch
+    // Clear the watch BEFORE updating React state (to prevent race conditions)
     await clearWatch();
     
-    console.log('GPS tracking stopped');
+    // Now update React state for UI
+    setIsTracking(false);
+    setIsPaused(false);
+    
+    console.log('GPS tracking stopped completely');
   }, [clearWatch]);
 
   // Pause tracking (keeps watch but ignores updates)
   const pauseTracking = useCallback(async () => {
-    console.log('Pausing GPS tracking');
-    setIsPaused(true);
+    console.log('Pausing GPS tracking - setting refs FIRST');
+    
+    // CRITICAL: Set paused ref IMMEDIATELY to stop processing locations
     isPausedRef.current = true;
     
-    // Optionally clear the watch to save battery
-    // But keep the data
+    // Clear the watch to save battery (also stops callbacks)
     await clearWatch();
     
-    console.log('GPS tracking paused');
+    // Now update React state for UI
+    setIsPaused(true);
+    
+    console.log('GPS tracking paused completely');
   }, [clearWatch]);
 
   // Resume tracking
