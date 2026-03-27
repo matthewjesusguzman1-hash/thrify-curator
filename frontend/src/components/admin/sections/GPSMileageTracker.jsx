@@ -58,7 +58,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   externalTrackingStatus,
   onTripCompleted,
   setExternalTrip,
-  setExternalTrackingStatus
+  setExternalTrackingStatus,
+  gpsTracker: externalGpsTracker
 }, ref) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [tripHistory, setTripHistory] = useState([]);
@@ -70,6 +71,9 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const setActiveTrip = setExternalTrip || (() => {});
   const trackingStatus = externalTrackingStatus || "idle";
   const setTrackingStatus = setExternalTrackingStatus || (() => {});
+  
+  // Use external GPS tracker if provided
+  const gpsTracker = externalGpsTracker;
   
   // Determine if completion form should show
   const showCompletionForm = trackingStatus === "completing";
@@ -683,21 +687,21 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   {!showCompletionForm && (
                     <div className="grid grid-cols-3 gap-3 mb-4">
                       <div className="bg-white/60 rounded-lg p-3 text-center">
-                        <Car className="w-5 h-5 text-green-600 mx-auto mb-1" />
+                        <Car className={`w-5 h-5 text-green-600 mx-auto mb-1 ${trackingStatus === "tracking" ? "animate-pulse" : ""}`} />
                         <p className="text-xl font-bold text-green-700">
-                          {activeTrip?.total_miles?.toFixed(2) || "0.00"}
+                          {gpsTracker?.totalMiles?.toFixed(2) || activeTrip?.total_miles?.toFixed(2) || "0.00"}
                         </p>
                         <p className="text-xs text-green-600">Miles</p>
                       </div>
                       <div className="bg-white/60 rounded-lg p-3 text-center">
                         <MapPin className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                        <p className="text-xl font-bold text-green-700">{locationCount}</p>
+                        <p className="text-xl font-bold text-green-700">{gpsTracker?.locationCount || locationCount || 0}</p>
                         <p className="text-xs text-green-600">Points</p>
                       </div>
                       <div className="bg-white/60 rounded-lg p-3 text-center">
                         <DollarSign className="w-5 h-5 text-green-600 mx-auto mb-1" />
                         <p className="text-xl font-bold text-green-700">
-                          ${((activeTrip?.total_miles || 0) * IRS_RATE_2026).toFixed(2)}
+                          ${((gpsTracker?.totalMiles || activeTrip?.total_miles || 0) * IRS_RATE_2026).toFixed(2)}
                         </p>
                         <p className="text-xs text-green-600">Deduction</p>
                       </div>
@@ -760,7 +764,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>
                             <span className="text-gray-500">Distance:</span>
-                            <span className="ml-2 font-semibold">{activeTrip?.total_miles?.toFixed(2) || "0.00"} miles</span>
+                            <span className="ml-2 font-semibold">{gpsTracker?.totalMiles?.toFixed(2) || activeTrip?.total_miles?.toFixed(2) || "0.00"} miles</span>
                           </div>
                           <div>
                             <span className="text-gray-500">Duration:</span>
@@ -769,7 +773,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                           <div className="col-span-2">
                             <span className="text-gray-500">IRS Deduction:</span>
                             <span className="ml-2 font-semibold text-green-600">
-                              ${((activeTrip?.total_miles || 0) * IRS_RATE_2026).toFixed(2)}
+                              ${((gpsTracker?.totalMiles || activeTrip?.total_miles || 0) * IRS_RATE_2026).toFixed(2)}
                             </span>
                             <span className="text-xs text-gray-400 ml-1">@ ${IRS_RATE_2026}/mi</span>
                           </div>
