@@ -83,6 +83,24 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - Batch label printing for multiple orders
 - QR code option for no-printer scenarios
 
+**Bluetooth Thermal Printer Support:**
+- iOS Bluetooth LE integration via Capacitor
+- ZPL/ESC/POS protocol support
+- Recommended: Zebra ZD421 or Munbyn Bluetooth
+
+**Tear-Off Pick Ticket Feature:**
+- Two-part label: Pick ticket (top) + Shipping label (bottom)
+- Pick ticket includes:
+  - Date (for filing/records)
+  - Order number
+  - SKU
+  - Item description
+  - Storage location
+  - Optional: Picked by / Time fields
+- Tear off pick ticket after pulling, file for future reference
+- Customer only sees standard shipping label
+- Paper trail for disputes, returns, audits
+
 ## Technical Architecture
 
 ### Frontend
