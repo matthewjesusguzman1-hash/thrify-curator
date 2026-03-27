@@ -622,12 +622,23 @@ export default function ConsignmentAgreementForm() {
         if (bioResult.success && bioResult.credentials) {
           // Use stored credentials to login
           try {
-            const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
-              email: bioResult.credentials.username,
-              password: bioResult.credentials.password
-            });
+            let loginSuccessful = false;
             
-            if (loginResponse.data.success) {
+            // Handle passwordless consignor login
+            if (bioResult.credentials.password === 'EMAIL_ONLY_LOGIN') {
+              // Email-only login - just load the agreement data directly
+              await loadAgreementData(bioResult.credentials.username);
+              loginSuccessful = true;
+            } else {
+              // Password-based login
+              const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
+                email: bioResult.credentials.username,
+                password: bioResult.credentials.password
+              });
+              loginSuccessful = loginResponse.data.success;
+            }
+            
+            if (loginSuccessful) {
               // Register for push notifications (consignor)
               try {
                 const { LiveActivityService } = await import('@/services/LiveActivityService');
@@ -644,8 +655,7 @@ export default function ConsignmentAgreementForm() {
                 console.log('Push token registration skipped:', pushErr);
               }
               
-              // Biometric login successful, proceed to load agreement
-              await loadAgreementData(addItemsEmail);
+              // Biometric login successful
               setCheckingEmail(false);
               return;
             }
@@ -669,6 +679,13 @@ export default function ConsignmentAgreementForm() {
       
       // No password set, use email-only login (existing behavior)
       await loadAgreementData(addItemsEmail);
+      
+      // Save credentials for Face ID even for passwordless login
+      if (biometricAvailable && isNative) {
+        await setCredentials('consignment_portal', addItemsEmail, 'EMAIL_ONLY_LOGIN');
+        toast.success("Face ID enabled for future logins!", { duration: 2000 });
+      }
+      
       // Show first-time password setup prompt
       setShowFirstTimePasswordPrompt(true);
     } catch (error) {
@@ -1503,22 +1520,30 @@ export default function ConsignmentAgreementForm() {
                             
                             if (bioResult.success && bioResult.credentials) {
                               try {
-                                const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
-                                  email: bioResult.credentials.username,
-                                  password: bioResult.credentials.password
-                                });
+                                const email = bioResult.credentials.username;
+                                setAddItemsEmail(email);
                                 
-                                if (loginResponse.data.success) {
-                                  const email = bioResult.credentials.username;
-                                  setAddItemsEmail(email);
+                                // Handle passwordless consignor login
+                                if (bioResult.credentials.password === 'EMAIL_ONLY_LOGIN') {
                                   await loadAgreementData(email);
                                   toast.success('Welcome back!');
+                                } else {
+                                  // Password-based login
+                                  const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
+                                    email: email,
+                                    password: bioResult.credentials.password
+                                  });
+                                  
+                                  if (loginResponse.data.success) {
+                                    await loadAgreementData(email);
+                                    toast.success('Welcome back!');
+                                  }
                                 }
                               } catch (error) {
                                 toast.error("Saved login is outdated. Please login with email.");
                               }
                             } else if (bioResult.needsPassword) {
-                              toast.info("No saved login found. Please login with email and password first.");
+                              toast.info("No saved login found. Please login with email first.");
                             } else if (bioResult.cancelled) {
                               // User cancelled, do nothing
                             }
