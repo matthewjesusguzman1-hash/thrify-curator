@@ -1,9 +1,8 @@
 /**
  * useGPSTracking Hook
- * Optimized GPS tracking for Capacitor native apps with background support
+ * Optimized GPS tracking for Capacitor native apps with proper start/stop control
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Geolocation } from '@capacitor/geolocation';
 import { toast } from 'sonner';
 
 // Check if running in native Capacitor app
@@ -26,69 +25,37 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 export default function useGPSTracking() {
   const [isTracking, setIsTracking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [totalMiles, setTotalMiles] = useState(0);
   const [locationCount, setLocationCount] = useState(0);
   const [error, setError] = useState(null);
   
+  // Use refs to track state that shouldn't trigger re-renders
   const watchIdRef = useRef(null);
   const locationsRef = useRef([]);
   const lastLocationRef = useRef(null);
   const totalDistanceRef = useRef(0);
+  const isTrackingRef = useRef(false); // Mirror of isTracking for callbacks
+  const isPausedRef = useRef(false); // Mirror of isPaused for callbacks
 
-  // Request permissions
-  const requestPermissions = async () => {
-    try {
-      if (isNative()) {
-        const status = await Geolocation.requestPermissions();
-        return status.location === 'granted';
-      } else {
-        // Web fallback - permissions requested on first use
-        return true;
-      }
-    } catch (err) {
-      console.error('Permission error:', err);
-      return false;
-    }
-  };
+  // Update refs when state changes
+  useEffect(() => {
+    isTrackingRef.current = isTracking;
+  }, [isTracking]);
 
-  // Get current position (one-time)
-  const getCurrentPosition = async () => {
-    try {
-      if (isNative()) {
-        const position = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        return {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          timestamp: new Date().toISOString()
-        };
-      } else {
-        // Web fallback
-        return new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => resolve({
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-              accuracy: pos.coords.accuracy,
-              timestamp: new Date().toISOString()
-            }),
-            reject,
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-        });
-      }
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  };
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
 
   // Process new location point
   const processLocation = useCallback((location) => {
+    // Don't process if not tracking or paused
+    if (!isTrackingRef.current || isPausedRef.current) {
+      console.log('Skipping location - tracking:', isTrackingRef.current, 'paused:', isPausedRef.current);
+      return;
+    }
+
     const point = {
       latitude: location.latitude,
       longitude: location.longitude,
@@ -118,6 +85,7 @@ export default function useGPSTracking() {
       if (distance > 0.001 && distance < 0.3) {
         totalDistanceRef.current += distance;
         setTotalMiles(totalDistanceRef.current);
+        console.log('Added distance:', distance.toFixed(4), 'Total:', totalDistanceRef.current.toFixed(4));
       }
     }
 
@@ -127,16 +95,74 @@ export default function useGPSTracking() {
     setLocationCount(prev => prev + 1);
   }, []);
 
+  // Get current position (one-time)
+  const getCurrentPosition = useCallback(async () => {
+    try {
+      if (isNative()) {
+        const { Geolocation } = await import('@capacitor/geolocation');
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+        return {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        // Web fallback
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              timestamp: new Date().toISOString()
+            }),
+            reject,
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        });
+      }
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
+  // Clear the GPS watch
+  const clearWatch = useCallback(async () => {
+    if (watchIdRef.current !== null) {
+      console.log('Clearing GPS watch:', watchIdRef.current);
+      try {
+        if (isNative()) {
+          const { Geolocation } = await import('@capacitor/geolocation');
+          await Geolocation.clearWatch({ id: watchIdRef.current });
+        } else {
+          navigator.geolocation.clearWatch(watchIdRef.current);
+        }
+      } catch (err) {
+        console.error('Error clearing watch:', err);
+      }
+      watchIdRef.current = null;
+    }
+  }, []);
+
   // Start tracking
   const startTracking = useCallback(async () => {
     try {
       setError(null);
       
-      const hasPermission = await requestPermissions();
-      if (!hasPermission) {
-        setError('Location permission denied');
-        toast.error('Please enable location permissions');
-        return false;
+      // Request permissions on native
+      if (isNative()) {
+        const { Geolocation } = await import('@capacitor/geolocation');
+        const status = await Geolocation.requestPermissions();
+        if (status.location !== 'granted') {
+          setError('Location permission denied');
+          toast.error('Please enable location permissions');
+          return false;
+        }
       }
 
       // Reset state
@@ -145,14 +171,23 @@ export default function useGPSTracking() {
       totalDistanceRef.current = 0;
       setTotalMiles(0);
       setLocationCount(0);
+      setIsPaused(false);
+      isPausedRef.current = false;
 
       // Get initial position
       const initialPosition = await getCurrentPosition();
+      
+      // Set tracking state BEFORE starting watch
+      setIsTracking(true);
+      isTrackingRef.current = true;
+      
+      // Process initial position
       processLocation(initialPosition);
 
+      // Start watching
       if (isNative()) {
-        // Use Capacitor Geolocation for native - more accurate
-        watchIdRef.current = await Geolocation.watchPosition(
+        const { Geolocation } = await import('@capacitor/geolocation');
+        const callbackId = await Geolocation.watchPosition(
           {
             enableHighAccuracy: true,
             timeout: 10000,
@@ -173,9 +208,11 @@ export default function useGPSTracking() {
             }
           }
         );
+        watchIdRef.current = callbackId;
+        console.log('Native GPS watch started, ID:', callbackId);
       } else {
         // Web fallback
-        watchIdRef.current = navigator.geolocation.watchPosition(
+        const watchId = navigator.geolocation.watchPosition(
           (position) => {
             processLocation({
               latitude: position.coords.latitude,
@@ -194,47 +231,65 @@ export default function useGPSTracking() {
             maximumAge: 5000
           }
         );
+        watchIdRef.current = watchId;
+        console.log('Web GPS watch started, ID:', watchId);
       }
 
-      setIsTracking(true);
       return true;
     } catch (err) {
       console.error('Start tracking error:', err);
       setError(err.message);
+      setIsTracking(false);
+      isTrackingRef.current = false;
       toast.error('Failed to start GPS tracking');
       return false;
     }
-  }, [processLocation]);
+  }, [getCurrentPosition, processLocation]);
 
-  // Stop tracking
+  // Stop tracking completely
   const stopTracking = useCallback(async () => {
-    try {
-      if (watchIdRef.current !== null) {
-        if (isNative()) {
-          await Geolocation.clearWatch({ id: watchIdRef.current });
-        } else {
-          navigator.geolocation.clearWatch(watchIdRef.current);
-        }
-        watchIdRef.current = null;
-      }
-      setIsTracking(false);
-    } catch (err) {
-      console.error('Stop tracking error:', err);
-    }
-  }, []);
+    console.log('Stopping GPS tracking');
+    
+    // Set state first to prevent any more location processing
+    setIsTracking(false);
+    isTrackingRef.current = false;
+    setIsPaused(false);
+    isPausedRef.current = false;
+    
+    // Then clear the watch
+    await clearWatch();
+    
+    console.log('GPS tracking stopped');
+  }, [clearWatch]);
 
-  // Pause tracking (just stops watch, keeps data)
+  // Pause tracking (keeps watch but ignores updates)
   const pauseTracking = useCallback(async () => {
-    await stopTracking();
-  }, [stopTracking]);
+    console.log('Pausing GPS tracking');
+    setIsPaused(true);
+    isPausedRef.current = true;
+    
+    // Optionally clear the watch to save battery
+    // But keep the data
+    await clearWatch();
+    
+    console.log('GPS tracking paused');
+  }, [clearWatch]);
 
-  // Resume tracking (restarts watch, continues accumulating)
+  // Resume tracking
   const resumeTracking = useCallback(async () => {
+    console.log('Resuming GPS tracking');
+    
     try {
       setError(null);
+      setIsPaused(false);
+      isPausedRef.current = false;
+      setIsTracking(true);
+      isTrackingRef.current = true;
 
+      // Restart watching
       if (isNative()) {
-        watchIdRef.current = await Geolocation.watchPosition(
+        const { Geolocation } = await import('@capacitor/geolocation');
+        const callbackId = await Geolocation.watchPosition(
           {
             enableHighAccuracy: true,
             timeout: 10000,
@@ -255,8 +310,10 @@ export default function useGPSTracking() {
             }
           }
         );
+        watchIdRef.current = callbackId;
+        console.log('Native GPS watch resumed, ID:', callbackId);
       } else {
-        watchIdRef.current = navigator.geolocation.watchPosition(
+        const watchId = navigator.geolocation.watchPosition(
           (position) => {
             processLocation({
               latitude: position.coords.latitude,
@@ -275,9 +332,10 @@ export default function useGPSTracking() {
             maximumAge: 5000
           }
         );
+        watchIdRef.current = watchId;
+        console.log('Web GPS watch resumed, ID:', watchId);
       }
 
-      setIsTracking(true);
       return true;
     } catch (err) {
       console.error('Resume tracking error:', err);
@@ -292,7 +350,8 @@ export default function useGPSTracking() {
   }, []);
 
   // Reset all data
-  const reset = useCallback(() => {
+  const reset = useCallback(async () => {
+    await stopTracking();
     locationsRef.current = [];
     lastLocationRef.current = null;
     totalDistanceRef.current = 0;
@@ -300,14 +359,19 @@ export default function useGPSTracking() {
     setLocationCount(0);
     setCurrentLocation(null);
     setError(null);
-  }, []);
+    setIsPaused(false);
+    isPausedRef.current = false;
+  }, [stopTracking]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (watchIdRef.current !== null) {
+        console.log('Cleanup: clearing GPS watch');
         if (isNative()) {
-          Geolocation.clearWatch({ id: watchIdRef.current }).catch(() => {});
+          import('@capacitor/geolocation').then(({ Geolocation }) => {
+            Geolocation.clearWatch({ id: watchIdRef.current }).catch(() => {});
+          });
         } else {
           navigator.geolocation.clearWatch(watchIdRef.current);
         }
@@ -317,6 +381,7 @@ export default function useGPSTracking() {
 
   return {
     isTracking,
+    isPaused,
     currentLocation,
     totalMiles,
     locationCount,
