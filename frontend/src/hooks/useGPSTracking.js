@@ -162,14 +162,31 @@ export default function useGPSTracking() {
     try {
       setError(null);
       
-      // Request permissions on native
+      // Request permissions on native - need "always" for background tracking
       if (isNative()) {
         const { Geolocation } = await import('@capacitor/geolocation');
-        const status = await Geolocation.requestPermissions();
-        if (status.location !== 'granted') {
+        
+        // First check current permission status
+        const currentStatus = await Geolocation.checkPermissions();
+        console.log('Current location permission:', currentStatus.location);
+        
+        // Request "always" permission for background GPS tracking
+        // This will show the "Always Allow" option on iOS
+        const status = await Geolocation.requestPermissions({
+          permissions: ['location', 'coarseLocation']
+        });
+        
+        console.log('Permission request result:', status.location);
+        
+        if (status.location === 'denied') {
           setError('Location permission denied');
-          toast.error('Please enable location permissions');
+          toast.error('Please enable location permissions in Settings');
           return false;
+        }
+        
+        // If only "when in use" granted, still proceed but warn about background
+        if (status.location === 'prompt' || status.location === 'prompt-with-rationale') {
+          toast.info('For best results, allow "Always" location access');
         }
       }
 
