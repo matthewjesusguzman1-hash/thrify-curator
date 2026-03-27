@@ -317,6 +317,7 @@ export default function AdminDashboard() {
   const [gpsTrip, setGpsTrip] = useState(null); // { id, status, total_miles, start_time }
   const [gpsTripLoading, setGpsTripLoading] = useState(false);
   const [gpsTrackingStatus, setGpsTrackingStatus] = useState("idle"); // idle, tracking, paused
+  const [forceOpenOperations, setForceOpenOperations] = useState(false); // Force open Operations group
   const gpsTrackerRef = useRef(null); // Reference to scroll to GPS section
   const gpsWatchId = useRef(null);
   const gpsLocationBuffer = useRef([]);
@@ -996,13 +997,20 @@ export default function AdminDashboard() {
       await syncGpsLocations(gpsTrip.id);
       stopGpsTracking();
       
-      // Scroll to GPS tracker section for completion
-      if (gpsTrackerRef.current) {
-        gpsTrackerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      // Force open the Operations & Reports group
+      setForceOpenOperations(true);
       
+      // Set status to completing (this will trigger the GPS tracker to expand)
       setGpsTrackingStatus("completing");
-      toast.info("Complete your trip details below");
+      
+      // Scroll to GPS tracker section after a short delay for the group to open
+      setTimeout(() => {
+        if (gpsTrackerRef.current) {
+          gpsTrackerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 400);
+      
+      toast.info("Complete your trip details below", { duration: 3000 });
     } catch (error) {
       console.error("Error stopping trip:", error);
     }
@@ -2824,7 +2832,7 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
                 {/* GPS Trip Controls Row */}
-                <div className="flex gap-1">
+                <div className="flex gap-1 items-center">
                   {gpsTrackingStatus === "idle" ? (
                     <Button
                       onClick={handleStartGpsTrip}
@@ -2841,46 +2849,44 @@ export default function AdminDashboard() {
                         </>
                       )}
                     </Button>
-                  ) : gpsTrackingStatus === "tracking" ? (
+                  ) : gpsTrackingStatus === "tracking" || gpsTrackingStatus === "paused" ? (
                     <>
-                      <Button
-                        onClick={handlePauseGpsTrip}
-                        size="sm"
-                        className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
-                        data-testid="pause-trip-header-btn"
-                      >
-                        <Pause className="w-4 h-4" />
-                        <span className="hidden sm:inline">Pause</span>
-                        {gpsTrip?.total_miles > 0 && (
-                          <span className="text-[10px] opacity-80 ml-1">{gpsTrip.total_miles.toFixed(1)}mi</span>
-                        )}
-                      </Button>
+                      {/* Mileage Display - Always visible when tracking */}
+                      <div className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-lg border border-white/20">
+                        <Car className="w-3.5 h-3.5 text-green-400 animate-pulse" />
+                        <span className="text-sm font-bold text-white">
+                          {gpsTrip?.total_miles?.toFixed(2) || "0.00"}
+                        </span>
+                        <span className="text-[10px] text-white/60">mi</span>
+                      </div>
+                      
+                      {gpsTrackingStatus === "tracking" ? (
+                        <Button
+                          onClick={handlePauseGpsTrip}
+                          size="sm"
+                          className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                          data-testid="pause-trip-header-btn"
+                        >
+                          <Pause className="w-4 h-4" />
+                          <span className="hidden sm:inline">Pause</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleResumeGpsTrip}
+                          size="sm"
+                          className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                          data-testid="resume-trip-header-btn"
+                        >
+                          <Play className="w-4 h-4" />
+                          <span className="hidden sm:inline">Resume</span>
+                        </Button>
+                      )}
+                      
                       <Button
                         onClick={handleStopGpsTrip}
                         size="sm"
-                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
+                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
                         data-testid="stop-trip-header-btn"
-                      >
-                        <Square className="w-4 h-4" />
-                        <span className="hidden sm:inline">Stop</span>
-                      </Button>
-                    </>
-                  ) : gpsTrackingStatus === "paused" ? (
-                    <>
-                      <Button
-                        onClick={handleResumeGpsTrip}
-                        size="sm"
-                        className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
-                        data-testid="resume-trip-header-btn"
-                      >
-                        <Play className="w-4 h-4" />
-                        <span className="hidden sm:inline">Resume</span>
-                      </Button>
-                      <Button
-                        onClick={handleStopGpsTrip}
-                        size="sm"
-                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
-                        data-testid="stop-trip-paused-header-btn"
                       >
                         <Square className="w-4 h-4" />
                         <span className="hidden sm:inline">Stop</span>
@@ -2888,8 +2894,9 @@ export default function AdminDashboard() {
                     </>
                   ) : gpsTrackingStatus === "completing" ? (
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-400/50 rounded-lg text-xs text-green-300">
-                      <Car className="w-4 h-4 animate-pulse" />
-                      <span>Complete trip below</span>
+                      <Car className="w-4 h-4" />
+                      <span className="font-bold">{gpsTrip?.total_miles?.toFixed(2) || "0.00"} mi</span>
+                      <span className="hidden sm:inline">- Complete below</span>
                     </div>
                   ) : null}
                 </div>
@@ -3309,6 +3316,10 @@ export default function AdminDashboard() {
               defaultOpen={false}
               badge="GPS Mileage, W-9s & analytics"
               testId="group-operations"
+              forceOpen={forceOpenOperations}
+              onOpenChange={(open) => {
+                if (!open) setForceOpenOperations(false);
+              }}
             >
               {/* GPS Mileage Tracker - New real-time tracking */}
               <GPSMileageTracker 

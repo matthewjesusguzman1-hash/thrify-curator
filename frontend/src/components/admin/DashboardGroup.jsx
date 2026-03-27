@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
@@ -9,9 +9,25 @@ export default function DashboardGroup({
   defaultOpen = false,
   badge,
   children,
-  testId
+  testId,
+  forceOpen = false,  // External control to force open
+  onOpenChange        // Callback when open state changes
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  // Allow external control via forceOpen prop
+  useEffect(() => {
+    if (forceOpen && !isOpen) {
+      setIsOpen(true);
+      if (onOpenChange) onOpenChange(true);
+    }
+  }, [forceOpen]);
+
+  const handleToggle = () => {
+    const newState = !isOpen;
+    setIsOpen(newState);
+    if (onOpenChange) onOpenChange(newState);
+  };
 
   return (
     <div 
@@ -20,7 +36,7 @@ export default function DashboardGroup({
     >
       {/* Group Header */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="w-full flex items-center justify-between p-5 cursor-pointer hover:bg-white/5 transition-colors"
         data-testid={`${testId}-toggle`}
       >
