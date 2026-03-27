@@ -64,6 +64,7 @@ import axios from "axios";
 import { useHaptics } from "@/hooks/useHaptics";
 import LiveActivityService from "@/services/LiveActivityService";
 import MonthlyMileageSection from "@/components/admin/sections/MonthlyMileageSection";
+import GPSMileageTracker from "@/components/admin/sections/GPSMileageTracker";
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
 import MessagesSection from "@/components/admin/sections/MessagesSection";
@@ -3003,10 +3004,13 @@ export default function AdminDashboard() {
               icon={TrendingUp}
               gradient="from-[#FFB800] to-[#F59E0B]"
               defaultOpen={false}
-              badge="Mileage, W-9s & analytics"
+              badge="GPS Mileage, W-9s & analytics"
               testId="group-operations"
             >
-              {/* Monthly Mileage Section */}
+              {/* GPS Mileage Tracker - New real-time tracking */}
+              <GPSMileageTracker getAuthHeader={getAuthHeader} />
+
+              {/* Legacy Monthly Mileage Section (for historical data) */}
               <MonthlyMileageSection getAuthHeader={getAuthHeader} />
 
               {/* Reports Section */}

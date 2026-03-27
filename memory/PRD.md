@@ -101,6 +101,41 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - Customer only sees standard shipping label
 - Paper trail for disputes, returns, audits
 
+### Implemented: GPS Mileage Tracker (Mar 27, 2026)
+**Real-time GPS tracking for business mileage with IRS deduction calculations**
+
+**Features Implemented:**
+- Start/Pause/Resume/Stop trip controls
+- Real-time GPS tracking (background on native, foreground on web)
+- Live distance calculation using Haversine formula
+- Auto-calculate IRS deduction at $0.725/mile (2026 rate)
+- Trip purpose selection: Post Office, Sourcing, Other
+- Custom notes field when "Other" is selected
+- Receipt photo upload capability
+- Year summary with total trips, miles, and deductions
+- Trip history with delete capability
+
+**Technical Details:**
+- Backend: `/app/backend/app/routers/gps_trips.py`
+- Frontend: `/app/frontend/src/components/admin/sections/GPSMileageTracker.jsx`
+- Uses `@capacitor-community/background-geolocation` for native background tracking
+- Falls back to standard geolocation API for web
+- Syncs location data every 30 seconds
+- GPS jump filtering (excludes unrealistic distances)
+- Receipt storage: `/app/backend/uploads/receipts/`
+
+**API Endpoints:**
+- `POST /api/admin/gps-trips/start` - Start a new trip
+- `POST /api/admin/gps-trips/update-locations` - Add GPS points
+- `POST /api/admin/gps-trips/pause/{trip_id}` - Pause tracking
+- `POST /api/admin/gps-trips/resume/{trip_id}` - Resume tracking
+- `POST /api/admin/gps-trips/complete` - Complete with purpose/notes
+- `POST /api/admin/gps-trips/upload-receipt/{trip_id}` - Upload receipt
+- `GET /api/admin/gps-trips/active` - Get current active trip
+- `GET /api/admin/gps-trips/history` - Get completed trips
+- `GET /api/admin/gps-trips/summary` - Get yearly summary
+- `DELETE /api/admin/gps-trips/{trip_id}` - Delete a trip
+
 ## Technical Architecture
 
 ### Frontend

@@ -24,6 +24,7 @@ from app.routers.push_notifications import router as push_notifications_router
 from app.routers.password_reset import router as password_reset_router
 from app.routers.live_activity import router as live_activity_router
 from app.routers.conversations import router as conversations_router
+from app.routers.gps_trips import router as gps_trips_router
 
 # Configure logging
 logging.basicConfig(
@@ -145,6 +146,7 @@ app.include_router(push_notifications_router, prefix="/api")
 app.include_router(password_reset_router, prefix="/api")
 app.include_router(live_activity_router, prefix="/api")
 app.include_router(conversations_router, prefix="/api")
+app.include_router(gps_trips_router, prefix="/api")
 
 
 @app.get("/api/")
