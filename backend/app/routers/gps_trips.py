@@ -61,6 +61,13 @@ class ManualTrip(BaseModel):
     notes: Optional[str] = None
 
 
+class TripUpdate(BaseModel):
+    date: Optional[str] = None  # ISO date string (YYYY-MM-DD)
+    total_miles: Optional[float] = None
+    purpose: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class TripResponse(BaseModel):
     id: str
     user_id: str
@@ -503,6 +510,71 @@ async def get_mileage_summary(
         "tax_deduction": round(total_miles * irs_rate, 2),
         "by_purpose": by_purpose,
         "monthly": monthly
+    }
+
+
+@router.put("/{trip_id}")
+async def update_trip(
+    trip_id: str,
+    trip_data: TripUpdate,
+    admin: dict = Depends(get_admin_user)
+):
+    """Update a completed trip's details"""
+    trip = await db.gps_trips.find_one({
+        "id": trip_id,
+        "user_id": admin["email"]
+    })
+    
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    update_fields = {}
+    
+    # Update date if provided
+    if trip_data.date:
+        try:
+            trip_date = datetime.strptime(trip_data.date, "%Y-%m-%d")
+            trip_date = trip_date.replace(tzinfo=timezone.utc)
+            update_fields["start_time"] = trip_date.isoformat()
+            # Also update end_time for manual trips
+            if trip.get("is_manual"):
+                update_fields["end_time"] = trip_date.isoformat()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    # Update miles if provided
+    if trip_data.total_miles is not None:
+        if trip_data.total_miles <= 0:
+            raise HTTPException(status_code=400, detail="Miles must be greater than 0")
+        if trip_data.total_miles > 1000:
+            raise HTTPException(status_code=400, detail="Miles seems too high. Please verify.")
+        
+        update_fields["total_miles"] = round(trip_data.total_miles, 2)
+        
+        # Recalculate tax deduction
+        irs_rate = get_irs_rate()
+        update_fields["tax_deduction"] = round(trip_data.total_miles * irs_rate, 2)
+    
+    # Update purpose if provided
+    if trip_data.purpose:
+        update_fields["purpose"] = trip_data.purpose
+    
+    # Update notes
+    if trip_data.notes is not None:
+        update_fields["notes"] = trip_data.notes if trip_data.notes else None
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    await db.gps_trips.update_one(
+        {"id": trip_id},
+        {"$set": update_fields}
+    )
+    
+    return {
+        "success": True,
+        "message": "Trip updated successfully",
+        "updated_fields": list(update_fields.keys())
     }
 
 

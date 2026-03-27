@@ -27,7 +27,8 @@ import {
   AlertCircle,
   TrendingUp,
   Map,
-  Eye
+  Eye,
+  Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,6 +101,16 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     receipt: null
   });
   const [savingManualTrip, setSavingManualTrip] = useState(false);
+  
+  // Edit trip state
+  const [editingTrip, setEditingTrip] = useState(null); // The trip being edited
+  const [editTripData, setEditTripData] = useState({
+    date: "",
+    miles: "",
+    purpose: "",
+    notes: ""
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
   
   // Location tracking state
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -719,6 +730,67 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     } finally {
       setSavingManualTrip(false);
     }
+  };
+
+  // Open edit modal for a trip
+  const handleEditTrip = (trip) => {
+    setEditingTrip(trip);
+    setEditTripData({
+      date: trip.start_time ? trip.start_time.split('T')[0] : new Date().toISOString().split('T')[0],
+      miles: trip.total_miles?.toString() || "",
+      purpose: trip.purpose || "",
+      notes: trip.notes || ""
+    });
+  };
+
+  // Save edited trip
+  const handleSaveEditTrip = async () => {
+    if (!editingTrip) return;
+    
+    if (!editTripData.miles || parseFloat(editTripData.miles) <= 0) {
+      toast.error("Please enter valid miles");
+      return;
+    }
+    if (!editTripData.purpose) {
+      toast.error("Please select a trip purpose");
+      return;
+    }
+    
+    setSavingEdit(true);
+    
+    try {
+      const response = await axios.put(
+        `${API}/admin/gps-trips/${editingTrip.id}`,
+        {
+          date: editTripData.date,
+          total_miles: parseFloat(editTripData.miles),
+          purpose: editTripData.purpose,
+          notes: editTripData.purpose === "other" ? editTripData.notes : null
+        },
+        getAuthHeader()
+      );
+      
+      if (response.data.success) {
+        toast.success("Trip updated successfully");
+        setEditingTrip(null);
+        setEditTripData({ date: "", miles: "", purpose: "", notes: "" });
+        
+        // Refresh data
+        await fetchTripHistory();
+        await fetchSummary();
+      }
+    } catch (error) {
+      console.error("Failed to update trip:", error);
+      toast.error(error.response?.data?.detail || "Failed to update trip");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  // Cancel editing
+  const handleCancelEdit = () => {
+    setEditingTrip(null);
+    setEditTripData({ date: "", miles: "", purpose: "", notes: "" });
   };
 
   // View trip on map
@@ -1442,11 +1514,23 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                                 <Receipt className="w-4 h-4" />
                               </Button>
                             )}
+                            {/* Edit Button */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditTrip(trip)}
+                              className="text-blue-500 hover:text-blue-700"
+                              data-testid={`edit-trip-${trip.id}`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            {/* Delete Button */}
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => handleDeleteTrip(trip.id)}
                               className="text-red-500 hover:text-red-700"
+                              data-testid={`delete-trip-${trip.id}`}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -1458,6 +1542,153 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Edit Trip Modal */}
+      <AnimatePresence>
+        {editingTrip && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={handleCancelEdit}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Pencil className="w-5 h-5 text-blue-600" />
+                  Edit Trip
+                </h3>
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="p-4 space-y-4">
+                {/* Date */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Trip Date</Label>
+                  <Input
+                    type="date"
+                    value={editTripData.date}
+                    onChange={(e) => setEditTripData(prev => ({ ...prev, date: e.target.value }))}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="mt-1"
+                    data-testid="edit-trip-date"
+                  />
+                </div>
+                
+                {/* Miles */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Miles Driven</Label>
+                  <div className="relative mt-1">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="1000"
+                      value={editTripData.miles}
+                      onChange={(e) => setEditTripData(prev => ({ ...prev, miles: e.target.value }))}
+                      className="pr-16"
+                      data-testid="edit-trip-miles"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">miles</span>
+                  </div>
+                  {editTripData.miles && parseFloat(editTripData.miles) > 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Tax Deduction: ${(parseFloat(editTripData.miles) * IRS_RATE_2026).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Purpose */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Trip Purpose</Label>
+                  <Select
+                    value={editTripData.purpose}
+                    onValueChange={(value) => setEditTripData(prev => ({ ...prev, purpose: value }))}
+                  >
+                    <SelectTrigger className="mt-1" data-testid="edit-trip-purpose">
+                      <SelectValue placeholder="Select purpose..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRIP_PURPOSES.map(purpose => (
+                        <SelectItem key={purpose.value} value={purpose.value}>
+                          <div className="flex items-center gap-2">
+                            <purpose.icon className="w-4 h-4" />
+                            {purpose.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Notes (for "Other" purpose) */}
+                {editTripData.purpose === "other" && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Trip Notes</Label>
+                    <Textarea
+                      value={editTripData.notes}
+                      onChange={(e) => setEditTripData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Describe the purpose of this trip..."
+                      className="mt-1"
+                      rows={2}
+                      data-testid="edit-trip-notes"
+                    />
+                  </div>
+                )}
+                
+                {/* GPS Info */}
+                {editingTrip.location_count > 0 && (
+                  <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+                    <p>This trip has {editingTrip.location_count} GPS points recorded.</p>
+                    <p className="text-xs text-gray-400 mt-1">GPS data cannot be edited.</p>
+                  </div>
+                )}
+                
+                {/* Buttons */}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={handleCancelEdit}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveEditTrip}
+                    disabled={savingEdit || !editTripData.miles || !editTripData.purpose}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    data-testid="save-edit-trip-btn"
+                  >
+                    {savingEdit ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
