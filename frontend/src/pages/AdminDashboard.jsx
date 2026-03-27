@@ -993,6 +993,35 @@ export default function AdminDashboard() {
     gpsTracker.reset();
   };
 
+  // Cancel/Discard the current trip
+  const handleCancelGpsTrip = async () => {
+    if (!gpsTrip) return;
+    
+    if (!window.confirm("Discard this trip? All tracking data will be lost.")) {
+      return;
+    }
+    
+    heavyPress();
+    
+    try {
+      // Stop GPS tracking
+      await gpsTracker.stopTracking();
+      
+      // Delete the trip from backend
+      await axios.delete(`${API}/admin/gps-trips/${gpsTrip.id}`, getAuthHeader());
+      
+      // Reset state
+      setGpsTrip(null);
+      setGpsTrackingStatus("idle");
+      gpsTracker.reset();
+      
+      toast.info("Trip discarded");
+    } catch (error) {
+      console.error("Failed to discard trip:", error);
+      toast.error("Failed to discard trip");
+    }
+  };
+
   // Fetch active trip on mount
   useEffect(() => {
     fetchActiveGpsTrip();
@@ -2858,12 +2887,35 @@ export default function AdminDashboard() {
                         <Square className="w-4 h-4" />
                         <span className="hidden sm:inline">Stop</span>
                       </Button>
+                      
+                      {/* Cancel/Discard Button */}
+                      <Button
+                        onClick={handleCancelGpsTrip}
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-1 border-gray-400/50 text-gray-300 hover:bg-gray-500/20 transition-all text-xs sm:text-sm h-9"
+                        data-testid="cancel-trip-header-btn"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
                     </>
                   ) : gpsTrackingStatus === "completing" ? (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-400/50 rounded-lg text-xs text-green-300">
-                      <Car className="w-4 h-4" />
-                      <span className="font-bold">{gpsTracker.totalMiles?.toFixed(2) || "0.00"} mi</span>
-                      <span className="hidden sm:inline">- Complete below</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-400/50 rounded-lg text-xs text-green-300">
+                        <Car className="w-4 h-4" />
+                        <span className="font-bold">{gpsTracker.totalMiles?.toFixed(2) || "0.00"} mi</span>
+                        <span className="hidden sm:inline">- Complete below</span>
+                      </div>
+                      {/* Cancel button during completion */}
+                      <Button
+                        onClick={handleCancelGpsTrip}
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-1 border-gray-400/50 text-gray-300 hover:bg-gray-500/20 transition-all text-xs h-9"
+                        data-testid="cancel-completing-btn"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
                   ) : null}
                 </div>
