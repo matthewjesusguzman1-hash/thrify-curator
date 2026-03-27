@@ -27,7 +27,8 @@ import {
   RefreshCw,
   Lock,
   Key,
-  Shield
+  Shield,
+  Fingerprint
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
+import useBiometricAuth from "@/hooks/useBiometricAuth";
 import LiveActivityService from "@/services/LiveActivityService";
 import MessagingSection from "@/components/MessagingSection";
 
@@ -156,6 +158,37 @@ export default function EmployeeDashboard() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+
+  // Biometric auth for Face ID reset
+  const { isAvailable: biometricAvailable, deleteCredentials } = useBiometricAuth();
+  const [resettingFaceId, setResettingFaceId] = useState(false);
+
+  // Reset Face ID credentials
+  const handleResetFaceId = async () => {
+    if (!window.confirm("Reset Face ID login? You'll need to log in with your password again to re-enable Face ID.")) {
+      return;
+    }
+    
+    setResettingFaceId(true);
+    try {
+      const result = await deleteCredentials('employee_portal');
+      if (result.success) {
+        successFeedback();
+        toast.success("Face ID reset successfully", {
+          description: "Log in with your password to set up Face ID again."
+        });
+      } else {
+        throw new Error(result.error || "Failed to reset");
+      }
+    } catch (error) {
+      errorFeedback();
+      toast.error("Failed to reset Face ID", {
+        description: error.message || "Please try again"
+      });
+    } finally {
+      setResettingFaceId(false);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -1596,6 +1629,33 @@ export default function EmployeeDashboard() {
                     )}
                   </div>
                 </div>
+
+                {/* Face ID / Biometric Section - Only show on native platform */}
+                {isNativePlatform() && biometricAvailable && (
+                  <div className="p-4 rounded-xl mb-6 bg-blue-50 border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Fingerprint className="w-5 h-5 text-blue-600" />
+                        <div>
+                          <p className="font-medium text-blue-800">Face ID / Touch ID</p>
+                          <p className="text-sm text-blue-600">Quick login with biometrics</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleResetFaceId}
+                        disabled={resettingFaceId}
+                        className="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 active:bg-blue-300 rounded-lg transition-colors disabled:opacity-50"
+                        style={{ touchAction: 'manipulation' }}
+                        data-testid="reset-faceid-btn"
+                      >
+                        {resettingFaceId ? "Resetting..." : "Reset"}
+                      </button>
+                    </div>
+                    <p className="text-xs text-blue-500 mt-2">
+                      Reset if Face ID isn't working or you want to use a different account
+                    </p>
+                  </div>
+                )}
 
                 {/* Password Form */}
                 <div className="space-y-4">

@@ -350,7 +350,7 @@ export default function ConsignmentAgreementForm() {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   
   // Biometric auth hook
-  const { isNative, isAvailable: biometricAvailable, isLoading: biometricLoading, biometryType, biometricLogin, setCredentials } = useBiometricAuth();
+  const { isNative, isAvailable: biometricAvailable, isLoading: biometricLoading, biometryType, biometricLogin, setCredentials, deleteCredentials } = useBiometricAuth();
   
   // Haptic feedback
   const { buttonPress, heavyPress, lightTap, successFeedback, errorFeedback, warningFeedback } = useHaptics();
@@ -2134,6 +2134,41 @@ export default function ConsignmentAgreementForm() {
                             )}
                           </div>
                         </div>
+
+                        {/* Face ID / Touch ID Reset - Only show on native platform */}
+                        {isNative && biometricAvailable && (
+                          <div className="bg-white rounded-lg border border-blue-100 p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Fingerprint className="w-4 h-4 text-blue-500" />
+                                <div>
+                                  <span className="text-sm text-gray-600">Face ID / Touch ID</span>
+                                  <p className="text-xs text-gray-400">Quick biometric login</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm("Reset Face ID login? You'll need to log in with your password again to re-enable it.")) return;
+                                  try {
+                                    const result = await deleteCredentials('consignment_portal');
+                                    if (result.success) {
+                                      toast.success("Face ID reset successfully", {
+                                        description: "Log in with password to set up Face ID again."
+                                      });
+                                    }
+                                  } catch (error) {
+                                    toast.error("Failed to reset Face ID");
+                                  }
+                                }}
+                                className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium hover:bg-blue-200 active:bg-blue-300 transition-colors"
+                                style={{ touchAction: 'manipulation' }}
+                                data-testid="reset-faceid-consignor-btn"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
