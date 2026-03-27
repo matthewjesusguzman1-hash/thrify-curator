@@ -334,6 +334,39 @@ async def get_receipt(filename: str):
     return FileResponse(file_path)
 
 
+@router.get("/trip/{trip_id}")
+async def get_trip_details(
+    trip_id: str,
+    include_locations: bool = True,
+    admin: dict = Depends(get_admin_user)
+):
+    """Get a single trip with optional location data for map display"""
+    projection = {"_id": 0}
+    if not include_locations:
+        projection["locations"] = 0
+    
+    trip = await db.gps_trips.find_one(
+        {
+            "id": trip_id,
+            "user_id": admin["email"]
+        },
+        projection
+    )
+    
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    irs_rate = get_irs_rate()
+    
+    return {
+        "trip": {
+            **trip,
+            "location_count": len(trip.get("locations", [])),
+            "tax_deduction": round(trip.get("total_miles", 0) * irs_rate, 2)
+        }
+    }
+
+
 @router.get("/active")
 async def get_active_trip(admin: dict = Depends(get_admin_user)):
     """Get the current active or paused trip"""

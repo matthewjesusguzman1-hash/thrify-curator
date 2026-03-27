@@ -2,7 +2,7 @@
  * GPS Mileage Tracker Component
  * Real-time GPS tracking for business mileage with IRS deduction calculations
  */
-import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Navigation,
@@ -25,7 +25,9 @@ import {
   X,
   Check,
   AlertCircle,
-  TrendingUp
+  TrendingUp,
+  Map,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +36,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import axios from "axios";
+
+// Lazy load the map component
+const TripMap = lazy(() => import("@/components/TripMap"));
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -93,6 +98,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const locationBufferRef = useRef([]);
   const syncIntervalRef = useRef(null);
   const completionFormRef = useRef(null);
+  
+  // Map viewing state
+  const [viewingTripMap, setViewingTripMap] = useState(null); // { trip, locations }
+  const [loadingMap, setLoadingMap] = useState(false);
   
   // Background geolocation (native only)
   const backgroundGeoRef = useRef(null);
@@ -577,6 +586,34 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   };
 
+  // View trip on map
+  const handleViewTripMap = async (tripId) => {
+    setLoadingMap(true);
+    try {
+      const response = await axios.get(
+        `${API}/admin/gps-trips/trip/${tripId}?include_locations=true`,
+        getAuthHeader()
+      );
+      
+      if (response.data.trip) {
+        setViewingTripMap({
+          trip: response.data.trip,
+          locations: response.data.trip.locations || []
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load trip map:", error);
+      toast.error("Failed to load trip map");
+    } finally {
+      setLoadingMap(false);
+    }
+  };
+
+  // Close trip map modal
+  const closeTripMap = () => {
+    setViewingTripMap(null);
+  };
+
   // Format duration
   const formatDuration = (startTime, endTime) => {
     const start = new Date(startTime);
@@ -780,6 +817,26 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                         </div>
                       </div>
                       
+                      {/* Trip Route Map */}
+                      {gpsTracker?.getLocations && gpsTracker.getLocations().length > 0 && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
+                            <Map className="w-4 h-4" />
+                            Your Route
+                          </Label>
+                          <Suspense fallback={
+                            <div className="h-[200px] bg-gray-100 rounded-lg flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                            </div>
+                          }>
+                            <TripMap 
+                              locations={gpsTracker.getLocations()} 
+                              height="200px"
+                            />
+                          </Suspense>
+                        </div>
+                      )}
+                      
                       {/* Purpose Selection */}
                       <div>
                         <Label className="text-sm font-medium text-gray-700">Trip Purpose *</Label>
@@ -969,6 +1026,16 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
+                            {/* View Map Button */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleViewTripMap(trip.id)}
+                              className="text-green-600 hover:text-green-700"
+                              data-testid={`view-map-${trip.id}`}
+                            >
+                              <Map className="w-4 h-4" />
+                            </Button>
                             {trip.receipt_url && (
                               <Button
                                 size="sm"
@@ -995,6 +1062,106 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Trip Map Modal */}
+      <AnimatePresence>
+        {viewingTripMap && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={closeTripMap}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="p-4 border-b bg-gradient-to-r from-green-50 to-emerald-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Map className="w-5 h-5 text-green-600" />
+                    <h3 className="font-semibold text-gray-800">Trip Route</h3>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={closeTripMap}
+                    className="text-gray-500"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+                
+                {/* Trip Info */}
+                <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-500">Date:</span>
+                    <span className="ml-1 font-medium">{formatDate(viewingTripMap.trip.start_time)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Distance:</span>
+                    <span className="ml-1 font-medium">{viewingTripMap.trip.total_miles?.toFixed(2)} mi</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Purpose:</span>
+                    <span className="ml-1 font-medium">{getPurposeLabel(viewingTripMap.trip.purpose)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Map */}
+              <div className="p-4">
+                {loadingMap ? (
+                  <div className="h-[300px] bg-gray-100 rounded-lg flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
+                  </div>
+                ) : (
+                  <Suspense fallback={
+                    <div className="h-[300px] bg-gray-100 rounded-lg flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
+                    </div>
+                  }>
+                    <TripMap 
+                      locations={viewingTripMap.locations} 
+                      height="300px"
+                    />
+                  </Suspense>
+                )}
+              </div>
+              
+              {/* Trip Stats */}
+              <div className="p-4 border-t bg-gray-50">
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <p className="text-lg font-bold text-green-600">{viewingTripMap.trip.total_miles?.toFixed(2)}</p>
+                    <p className="text-xs text-gray-500">Miles</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-green-600">${viewingTripMap.trip.tax_deduction?.toFixed(2)}</p>
+                    <p className="text-xs text-gray-500">IRS Deduction</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-green-600">{viewingTripMap.locations?.length || 0}</p>
+                    <p className="text-xs text-gray-500">GPS Points</p>
+                  </div>
+                </div>
+                
+                {viewingTripMap.trip.notes && (
+                  <div className="mt-3 p-2 bg-white rounded border">
+                    <p className="text-xs text-gray-500">Notes:</p>
+                    <p className="text-sm">{viewingTripMap.trip.notes}</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
