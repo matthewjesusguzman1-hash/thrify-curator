@@ -62,6 +62,27 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - Offline usability features
 - Push notification enhancements
 
+### Future Feature: Fast Shipping Labels (P3)
+*Saved Mar 27, 2026 - User requested to save for later*
+
+**Current Setup:**
+- Using Pirate Ship for label generation
+- Carriers: UPS + USPS
+- Thermal label printer (DYMO/ROLLO style)
+- Volume: 10-15 packages/day
+- Admin-only shipping workflow
+
+**Goal:** Minimize clicks/time per label (speed is #1 priority)
+
+**Potential Implementation:**
+- Integrate Pirate Ship API or EasyPost for rate comparison
+- Saved package presets (e.g., "Poly Mailer 8oz", "Small Box 2lb")
+- One-tap label from sold item record
+- Auto-fill dimensions from inventory data
+- Direct thermal printer integration (ZPL format)
+- Batch label printing for multiple orders
+- QR code option for no-printer scenarios
+
 ## Technical Architecture
 
 ### Frontend
