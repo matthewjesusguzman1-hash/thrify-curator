@@ -383,7 +383,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         });
         setTrackingStatus("tracking");
         setLocationCount(1);
-        setShowCompletionForm(false);
+        
+        // Start the external GPS tracker if provided
+        if (externalGpsTracker?.startTracking) {
+          await externalGpsTracker.startTracking();
+        }
         
         // Start continuous tracking
         await startLocationTracking(tripId);
@@ -412,6 +416,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     try {
       // Sync any pending locations first
       await syncLocations(activeTrip.id);
+      
+      // Stop the external GPS tracker first (this is the main source of location updates)
+      if (externalGpsTracker?.pauseTracking) {
+        await externalGpsTracker.pauseTracking();
+      }
       
       const response = await axios.post(
         `${API}/admin/gps-trips/pause/${activeTrip.id}`,
@@ -445,6 +454,13 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       if (response.data.success) {
         setTrackingStatus("tracking");
         setActiveTrip(prev => ({ ...prev, status: "active" }));
+        
+        // Resume the external GPS tracker if provided (main tracking source)
+        if (externalGpsTracker?.resumeTracking) {
+          await externalGpsTracker.resumeTracking();
+        }
+        
+        // Also start internal location tracking as backup
         await startLocationTracking(activeTrip.id);
         toast.success("Trip resumed");
       }
@@ -463,8 +479,13 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       await syncLocations(activeTrip.id);
       await stopLocationTracking();
       
-      setShowCompletionForm(true);
-      setTrackingStatus("idle");
+      // Also stop the external GPS tracker if provided
+      if (externalGpsTracker?.stopTracking) {
+        await externalGpsTracker.stopTracking();
+      }
+      
+      // Set status to "completing" to show the form (showCompletionForm = trackingStatus === "completing")
+      setTrackingStatus("completing");
       
       // Scroll to completion form
       setTimeout(() => {
@@ -552,6 +573,17 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
     
     try {
+      // Stop the external GPS tracker if provided
+      if (externalGpsTracker?.stopTracking) {
+        await externalGpsTracker.stopTracking();
+      }
+      if (externalGpsTracker?.reset) {
+        externalGpsTracker.reset();
+      }
+      
+      // Also stop internal location tracking
+      await stopLocationTracking();
+      
       await axios.delete(`${API}/admin/gps-trips/${activeTrip.id}`, getAuthHeader());
       
       setActiveTrip(null);
@@ -747,49 +779,63 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   
                   {/* Control Buttons */}
                   {!showCompletionForm && (
-                    <div className="flex gap-2">
-                      {trackingStatus === "tracking" ? (
-                        <>
-                          <Button
-                            onClick={handlePauseTrip}
-                            variant="outline"
-                            className="flex-1 border-amber-400 text-amber-700 hover:bg-amber-50"
-                            data-testid="pause-trip-btn"
-                          >
-                            <Pause className="w-4 h-4 mr-2" />
-                            Pause
-                          </Button>
-                          <Button
-                            onClick={handleStopTrip}
-                            variant="outline"
-                            className="flex-1 border-red-400 text-red-700 hover:bg-red-50"
-                            data-testid="stop-trip-btn"
-                          >
-                            <Square className="w-4 h-4 mr-2" />
-                            Stop
-                          </Button>
-                        </>
-                      ) : trackingStatus === "paused" ? (
-                        <>
-                          <Button
-                            onClick={handleResumeTrip}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                            data-testid="resume-trip-btn"
-                          >
-                            <Play className="w-4 h-4 mr-2" />
-                            Resume
-                          </Button>
-                          <Button
-                            onClick={handleStopTrip}
-                            variant="outline"
-                            className="flex-1 border-red-400 text-red-700 hover:bg-red-50"
-                            data-testid="stop-trip-btn-paused"
-                          >
-                            <Square className="w-4 h-4 mr-2" />
-                            Stop
-                          </Button>
-                        </>
-                      ) : null}
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        {trackingStatus === "tracking" ? (
+                          <>
+                            <Button
+                              onClick={handlePauseTrip}
+                              variant="outline"
+                              className="flex-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                              data-testid="pause-trip-btn"
+                            >
+                              <Pause className="w-4 h-4 mr-2" />
+                              Pause
+                            </Button>
+                            <Button
+                              onClick={handleStopTrip}
+                              variant="outline"
+                              className="flex-1 border-red-400 text-red-700 hover:bg-red-50"
+                              data-testid="stop-trip-btn"
+                            >
+                              <Square className="w-4 h-4 mr-2" />
+                              Stop
+                            </Button>
+                          </>
+                        ) : trackingStatus === "paused" ? (
+                          <>
+                            <Button
+                              onClick={handleResumeTrip}
+                              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                              data-testid="resume-trip-btn"
+                            >
+                              <Play className="w-4 h-4 mr-2" />
+                              Resume
+                            </Button>
+                            <Button
+                              onClick={handleStopTrip}
+                              variant="outline"
+                              className="flex-1 border-red-400 text-red-700 hover:bg-red-50"
+                              data-testid="stop-trip-btn-paused"
+                            >
+                              <Square className="w-4 h-4 mr-2" />
+                              Stop
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
+                      {/* Cancel/Discard button - always visible when trip is active */}
+                      {(trackingStatus === "tracking" || trackingStatus === "paused") && (
+                        <Button
+                          onClick={handleCancelTrip}
+                          variant="ghost"
+                          className="w-full text-gray-500 hover:text-red-600 hover:bg-red-50 text-sm"
+                          data-testid="cancel-trip-section-btn"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Discard Trip
+                        </Button>
+                      )}
                     </div>
                   )}
                   
