@@ -3,7 +3,7 @@
  * Displays a GPS trip route on an interactive map using Leaflet
  */
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -54,6 +54,51 @@ const endIcon = new L.DivIcon({
   iconAnchor: [12, 12],
 });
 
+// Current position icon (pulsing blue dot)
+const currentPositionIcon = new L.DivIcon({
+  className: 'current-position-marker',
+  html: `<div style="
+    position: relative;
+    width: 20px;
+    height: 20px;
+  ">
+    <div style="
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 20px;
+      height: 20px;
+      background: #3B82F6;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+      animation: pulse 2s ease-in-out infinite;
+    "></div>
+    <div style="
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      width: 30px;
+      height: 30px;
+      background: rgba(59, 130, 246, 0.3);
+      border-radius: 50%;
+      animation: ripple 2s ease-out infinite;
+    "></div>
+  </div>
+  <style>
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    @keyframes ripple {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+  </style>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
 // Component to fit map bounds to the route
 function FitBounds({ positions }) {
   const map = useMap();
@@ -68,10 +113,24 @@ function FitBounds({ positions }) {
   return null;
 }
 
+// Component to pan to current position when it changes
+function PanToPosition({ position, enabled }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (enabled && position) {
+      map.panTo(position, { animate: true, duration: 0.5 });
+    }
+  }, [map, position, enabled]);
+  
+  return null;
+}
+
 export default function TripMap({ 
   locations = [], 
   height = "200px",
   showMarkers = true,
+  showCurrentPosition = false,
   className = ""
 }) {
   const mapRef = useRef(null);
@@ -99,15 +158,15 @@ export default function TripMap({
   }
   
   const startPosition = positions[0];
-  const endPosition = positions[positions.length - 1];
-  const center = startPosition;
+  const currentPosition = positions[positions.length - 1];
+  const center = showCurrentPosition ? currentPosition : startPosition;
   
   return (
     <div className={`rounded-lg overflow-hidden shadow-md ${className}`} style={{ height }}>
       <MapContainer
         ref={mapRef}
         center={center}
-        zoom={13}
+        zoom={15}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={false}
         zoomControl={true}
@@ -145,9 +204,26 @@ export default function TripMap({
           </Marker>
         )}
         
-        {/* End marker (only if different from start) */}
-        {showMarkers && positions.length > 1 && (
-          <Marker position={endPosition} icon={endIcon}>
+        {/* Current position marker (pulsing) for live tracking */}
+        {showCurrentPosition && positions.length > 1 && (
+          <Marker position={currentPosition} icon={currentPositionIcon}>
+            <Popup>
+              <div className="text-center">
+                <strong className="text-blue-600">Current Location</strong>
+                <br />
+                <span className="text-xs text-gray-500">
+                  {locations[locations.length - 1]?.timestamp 
+                    ? new Date(locations[locations.length - 1].timestamp).toLocaleTimeString() 
+                    : 'Now'}
+                </span>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+        
+        {/* End marker (only show when NOT live tracking and trip is complete) */}
+        {showMarkers && !showCurrentPosition && positions.length > 1 && (
+          <Marker position={currentPosition} icon={endIcon}>
             <Popup>
               <div className="text-center">
                 <strong className="text-red-600">End</strong>
@@ -164,6 +240,11 @@ export default function TripMap({
         
         {/* Fit bounds to route */}
         <FitBounds positions={positions} />
+        
+        {/* Pan to current position during live tracking */}
+        {showCurrentPosition && (
+          <PanToPosition position={currentPosition} enabled={showCurrentPosition} />
+        )}
       </MapContainer>
     </div>
   );
