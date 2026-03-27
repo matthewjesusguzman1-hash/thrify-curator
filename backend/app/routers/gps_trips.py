@@ -54,6 +54,13 @@ class TripComplete(BaseModel):
     notes: Optional[str] = None
 
 
+class ManualTrip(BaseModel):
+    date: str  # ISO date string (YYYY-MM-DD)
+    total_miles: float
+    purpose: str  # "post_office", "sourcing", "other"
+    notes: Optional[str] = None
+
+
 class TripResponse(BaseModel):
     id: str
     user_id: str
@@ -514,3 +521,55 @@ async def delete_trip(
         raise HTTPException(status_code=404, detail="Trip not found")
     
     return {"success": True, "message": "Trip deleted"}
+
+
+@router.post("/manual")
+async def create_manual_trip(
+    trip_data: ManualTrip,
+    admin: dict = Depends(get_admin_user)
+):
+    """Create a manually entered trip (without GPS tracking)"""
+    try:
+        # Parse the date
+        trip_date = datetime.strptime(trip_data.date, "%Y-%m-%d")
+        trip_date = trip_date.replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    if trip_data.total_miles <= 0:
+        raise HTTPException(status_code=400, detail="Miles must be greater than 0")
+    
+    if trip_data.total_miles > 1000:
+        raise HTTPException(status_code=400, detail="Miles seems too high. Please verify.")
+    
+    trip_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    irs_rate = get_irs_rate(trip_date.year)
+    tax_deduction = round(trip_data.total_miles * irs_rate, 2)
+    
+    trip_doc = {
+        "id": trip_id,
+        "user_id": admin["email"],
+        "user_name": admin.get("name", admin["email"]),
+        "status": "completed",
+        "purpose": trip_data.purpose,
+        "notes": trip_data.notes,
+        "start_time": trip_date.isoformat(),
+        "end_time": trip_date.isoformat(),
+        "locations": [],  # No GPS locations for manual entry
+        "total_miles": round(trip_data.total_miles, 2),
+        "tax_deduction": tax_deduction,
+        "receipt_url": None,
+        "is_manual": True,  # Flag to identify manual entries
+        "created_at": now.isoformat()
+    }
+    
+    await db.gps_trips.insert_one(trip_doc)
+    
+    return {
+        "success": True,
+        "trip_id": trip_id,
+        "total_miles": round(trip_data.total_miles, 2),
+        "tax_deduction": tax_deduction,
+        "message": "Manual trip logged successfully"
+    }

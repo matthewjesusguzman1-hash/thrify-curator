@@ -90,6 +90,17 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     receipt: null
   });
   
+  // Manual trip entry state
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [manualTripData, setManualTripData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    miles: "",
+    purpose: "",
+    notes: "",
+    receipt: null
+  });
+  const [savingManualTrip, setSavingManualTrip] = useState(false);
+  
   // Location tracking state
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
@@ -475,29 +486,43 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
 
   // Stop trip (show completion form)
   const handleStopTrip = async () => {
-    if (!activeTrip) return;
+    if (!activeTrip) {
+      console.log("No active trip to stop");
+      return;
+    }
+    
+    console.log("Stopping trip, current status:", trackingStatus);
     
     try {
-      // Sync final locations
-      await syncLocations(activeTrip.id);
-      
-      // Stop whichever tracking method is active
-      if (externalGpsTracker?.stopTracking) {
-        await externalGpsTracker.stopTracking();
-      } else {
-        await stopLocationTracking();
+      // Try to sync final locations (don't fail if this errors)
+      try {
+        await syncLocations(activeTrip.id);
+      } catch (syncError) {
+        console.log("Sync locations error (non-fatal):", syncError);
       }
       
-      // Set status to "completing" to show the form (showCompletionForm = trackingStatus === "completing")
-      setTrackingStatus("completing");
-      
-      // Scroll to completion form
-      setTimeout(() => {
-        completionFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
+      // Stop whichever tracking method is active (don't fail if this errors)
+      try {
+        if (externalGpsTracker?.stopTracking) {
+          await externalGpsTracker.stopTracking();
+        } else {
+          await stopLocationTracking();
+        }
+      } catch (stopError) {
+        console.log("Stop tracking error (non-fatal):", stopError);
+      }
     } catch (error) {
-      console.error("Error stopping trip:", error);
+      console.error("Error in stop cleanup:", error);
     }
+    
+    // ALWAYS show the completion form, regardless of errors above
+    console.log("Setting status to completing");
+    setTrackingStatus("completing");
+    
+    // Scroll to completion form
+    setTimeout(() => {
+      completionFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
   };
 
   // Complete trip with details
@@ -619,6 +644,80 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     } catch (error) {
       console.error("Failed to delete trip:", error);
       toast.error("Failed to delete trip");
+    }
+  };
+
+  // Save a manually entered trip
+  const handleSaveManualTrip = async () => {
+    if (!manualTripData.miles || parseFloat(manualTripData.miles) <= 0) {
+      toast.error("Please enter the miles driven");
+      return;
+    }
+    if (!manualTripData.purpose) {
+      toast.error("Please select a trip purpose");
+      return;
+    }
+    
+    setSavingManualTrip(true);
+    
+    try {
+      const response = await axios.post(
+        `${API}/admin/gps-trips/manual`,
+        {
+          date: manualTripData.date,
+          total_miles: parseFloat(manualTripData.miles),
+          purpose: manualTripData.purpose,
+          notes: manualTripData.purpose === "other" ? manualTripData.notes : null
+        },
+        getAuthHeader()
+      );
+      
+      if (response.data.success) {
+        // Upload receipt if provided
+        if (manualTripData.receipt && response.data.trip_id) {
+          try {
+            const formData = new FormData();
+            formData.append("receipt", manualTripData.receipt);
+            await axios.post(
+              `${API}/admin/gps-trips/upload-receipt/${response.data.trip_id}`,
+              formData,
+              {
+                ...getAuthHeader(),
+                headers: {
+                  ...getAuthHeader().headers,
+                  "Content-Type": "multipart/form-data"
+                }
+              }
+            );
+          } catch (uploadError) {
+            console.log("Receipt upload failed:", uploadError);
+          }
+        }
+        
+        toast.success(
+          `Trip logged! ${response.data.total_miles} miles.`,
+          { description: `Tax deduction: $${response.data.tax_deduction}` }
+        );
+        
+        // Reset form
+        setManualTripData({
+          date: new Date().toISOString().split('T')[0],
+          miles: "",
+          purpose: "",
+          notes: "",
+          receipt: null
+        });
+        setShowManualEntry(false);
+        
+        // Refresh data
+        await fetchTripHistory();
+        await fetchSummary();
+      }
+    } catch (error) {
+      console.error("Failed to save manual trip:", error);
+      toast.error(error.response?.data?.detail || "Failed to save trip");
+    } finally {
+      setSavingManualTrip(false);
     }
   };
 
@@ -1057,23 +1156,208 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 </div>
               )}
               
-              {/* Start New Trip Button */}
-              {!activeTrip && !showCompletionForm && (
-                <Button
-                  onClick={handleStartTrip}
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg"
-                  data-testid="start-trip-btn"
-                >
-                  {loading ? (
-                    "Getting location..."
-                  ) : (
-                    <>
-                      <Play className="w-5 h-5 mr-2" />
-                      Start New Trip
-                    </>
+              {/* Start New Trip Button or Manual Entry */}
+              {!activeTrip && !showCompletionForm && !showManualEntry && (
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleStartTrip}
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg"
+                    data-testid="start-trip-btn"
+                  >
+                    {loading ? (
+                      "Getting location..."
+                    ) : (
+                      <>
+                        <Play className="w-5 h-5 mr-2" />
+                        Start GPS Tracking
+                      </>
+                    )}
+                  </Button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">or</span>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    onClick={() => setShowManualEntry(true)}
+                    variant="outline"
+                    className="w-full border-gray-300 text-gray-700 py-4"
+                    data-testid="manual-entry-btn"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Log Trip Manually
+                  </Button>
+                </div>
+              )}
+              
+              {/* Manual Trip Entry Form */}
+              {!activeTrip && !showCompletionForm && showManualEntry && (
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-blue-800 flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      Manual Trip Entry
+                    </h4>
+                    <button
+                      onClick={() => {
+                        setShowManualEntry(false);
+                        setManualTripData({
+                          date: new Date().toISOString().split('T')[0],
+                          miles: "",
+                          purpose: "",
+                          notes: "",
+                          receipt: null
+                        });
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  
+                  <p className="text-sm text-blue-600">
+                    Log a trip you took without GPS tracking
+                  </p>
+                  
+                  {/* Date */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Trip Date *</Label>
+                    <Input
+                      type="date"
+                      value={manualTripData.date}
+                      onChange={(e) => setManualTripData(prev => ({ ...prev, date: e.target.value }))}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="mt-1"
+                      data-testid="manual-trip-date"
+                    />
+                  </div>
+                  
+                  {/* Miles */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Miles Driven *</Label>
+                    <div className="relative mt-1">
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        max="1000"
+                        placeholder="e.g., 15.5"
+                        value={manualTripData.miles}
+                        onChange={(e) => setManualTripData(prev => ({ ...prev, miles: e.target.value }))}
+                        className="pr-16"
+                        data-testid="manual-trip-miles"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">miles</span>
+                    </div>
+                    {manualTripData.miles && parseFloat(manualTripData.miles) > 0 && (
+                      <p className="text-xs text-green-600 mt-1">
+                        Tax Deduction: ${(parseFloat(manualTripData.miles) * IRS_RATE_2026).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Purpose */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Trip Purpose *</Label>
+                    <Select
+                      value={manualTripData.purpose}
+                      onValueChange={(value) => setManualTripData(prev => ({ ...prev, purpose: value }))}
+                    >
+                      <SelectTrigger className="mt-1" data-testid="manual-trip-purpose">
+                        <SelectValue placeholder="Select purpose..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TRIP_PURPOSES.map(purpose => (
+                          <SelectItem key={purpose.value} value={purpose.value}>
+                            <div className="flex items-center gap-2">
+                              <purpose.icon className="w-4 h-4" />
+                              {purpose.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Notes (for "Other" purpose) */}
+                  {manualTripData.purpose === "other" && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Trip Notes</Label>
+                      <Textarea
+                        value={manualTripData.notes}
+                        onChange={(e) => setManualTripData(prev => ({ ...prev, notes: e.target.value }))}
+                        placeholder="Describe the purpose of this trip..."
+                        className="mt-1"
+                        rows={2}
+                        data-testid="manual-trip-notes"
+                      />
+                    </div>
                   )}
-                </Button>
+                  
+                  {/* Receipt Upload */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Receipt (Optional)</Label>
+                    <Input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => setManualTripData(prev => ({ 
+                        ...prev, 
+                        receipt: e.target.files?.[0] || null 
+                      }))}
+                      className="mt-1"
+                      data-testid="manual-trip-receipt"
+                    />
+                    {manualTripData.receipt && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {manualTripData.receipt.name}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Submit Button */}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={() => {
+                        setShowManualEntry(false);
+                        setManualTripData({
+                          date: new Date().toISOString().split('T')[0],
+                          miles: "",
+                          purpose: "",
+                          notes: "",
+                          receipt: null
+                        });
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveManualTrip}
+                      disabled={savingManualTrip || !manualTripData.miles || !manualTripData.purpose}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      data-testid="save-manual-trip-btn"
+                    >
+                      {savingManualTrip ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 mr-2" />
+                          Save Trip
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               )}
               
               {/* Location Error */}
