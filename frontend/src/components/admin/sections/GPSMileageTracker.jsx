@@ -2,7 +2,7 @@
  * GPS Mileage Tracker Component
  * Real-time GPS tracking for business mileage with IRS deduction calculations
  */
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Navigation,
@@ -52,14 +52,27 @@ const TRIP_PURPOSES = [
 // IRS rate for display
 const IRS_RATE_2026 = 0.725;
 
-export default function GPSMileageTracker({ getAuthHeader }) {
+const GPSMileageTracker = forwardRef(function GPSMileageTracker({ 
+  getAuthHeader,
+  externalTrip,
+  externalTrackingStatus,
+  onTripCompleted,
+  setExternalTrip,
+  setExternalTrackingStatus
+}, ref) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTrip, setActiveTrip] = useState(null);
   const [tripHistory, setTripHistory] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showCompletionForm, setShowCompletionForm] = useState(false);
-  const [trackingStatus, setTrackingStatus] = useState("idle"); // idle, tracking, paused
+  
+  // Use external state if provided, otherwise internal
+  const activeTrip = externalTrip;
+  const setActiveTrip = setExternalTrip || (() => {});
+  const trackingStatus = externalTrackingStatus || "idle";
+  const setTrackingStatus = setExternalTrackingStatus || (() => {});
+  
+  // Determine if completion form should show
+  const showCompletionForm = trackingStatus === "completing";
   
   // Completion form data
   const [completionData, setCompletionData] = useState({
@@ -79,24 +92,46 @@ export default function GPSMileageTracker({ getAuthHeader }) {
   
   // Background geolocation (native only)
   const backgroundGeoRef = useRef(null);
+  const containerRef = useRef(null);
 
-  // Fetch active trip on mount
+  // Expose scrollIntoView via ref
+  useImperativeHandle(ref, () => ({
+    scrollIntoView: (options) => {
+      if (containerRef.current) {
+        containerRef.current.scrollIntoView(options);
+      }
+    }
+  }));
+
+  // Auto-expand and scroll when completing
+  useEffect(() => {
+    if (trackingStatus === "completing") {
+      setIsExpanded(true);
+      // Scroll to completion form after a short delay
+      setTimeout(() => {
+        if (completionFormRef.current) {
+          completionFormRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 300);
+    }
+  }, [trackingStatus]);
+
+  // Fetch active trip on mount (only if no external trip provided)
   const fetchActiveTrip = useCallback(async () => {
+    // Skip if external state is managing the trip
+    if (externalTrip !== undefined) return;
+    
     try {
       const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
       if (response.data.active_trip) {
         setActiveTrip(response.data.active_trip);
         setTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
         setLocationCount(response.data.active_trip.location_count || 0);
-        // Resume tracking if there's an active trip
-        if (response.data.active_trip.status === "active") {
-          startLocationTracking(response.data.active_trip.id);
-        }
       }
     } catch (error) {
       console.error("Failed to fetch active trip:", error);
     }
-  }, [getAuthHeader]);
+  }, [getAuthHeader, externalTrip, setActiveTrip, setTrackingStatus]);
 
   // Fetch trip history
   const fetchTripHistory = useCallback(async () => {
@@ -474,9 +509,14 @@ export default function GPSMileageTracker({ getAuthHeader }) {
         
         // Reset state
         setActiveTrip(null);
-        setShowCompletionForm(false);
+        setTrackingStatus("idle");
         setCompletionData({ purpose: "", notes: "", receipt: null });
         setLocationCount(0);
+        
+        // Notify parent
+        if (onTripCompleted) {
+          onTripCompleted();
+        }
         
         // Refresh data
         await fetchTripHistory();
@@ -502,9 +542,14 @@ export default function GPSMileageTracker({ getAuthHeader }) {
       await axios.delete(`${API}/admin/gps-trips/${activeTrip.id}`, getAuthHeader());
       
       setActiveTrip(null);
-      setShowCompletionForm(false);
+      setTrackingStatus("idle");
       setCompletionData({ purpose: "", notes: "", receipt: null });
       setLocationCount(0);
+      
+      // Notify parent
+      if (onTripCompleted) {
+        onTripCompleted();
+      }
       
       toast.info("Trip discarded");
     } catch (error) {
@@ -566,22 +611,24 @@ export default function GPSMileageTracker({ getAuthHeader }) {
   };
 
   return (
-    <div className="dashboard-card" data-testid="gps-mileage-tracker">
+    <div ref={containerRef} className="dashboard-card" data-testid="gps-mileage-tracker">
       {/* Header - Always Visible */}
       <div 
         className="flex items-center justify-between cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-xl flex items-center justify-center">
+          <div className={`w-10 h-10 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-xl flex items-center justify-center ${trackingStatus === "tracking" ? "animate-pulse" : ""}`}>
             <Navigation className="w-5 h-5 text-white" />
           </div>
           <div>
             <h3 className="font-semibold text-[#333]">GPS Mileage Tracker</h3>
             <p className="text-xs text-[#888]">
               {activeTrip ? (
-                <span className="text-green-600 font-medium">
-                  {trackingStatus === "paused" ? "Trip paused" : "Tracking active"} • {activeTrip.total_miles?.toFixed(2) || "0.00"} mi
+                <span className={`font-medium ${trackingStatus === "completing" ? "text-amber-600" : "text-green-600"}`}>
+                  {trackingStatus === "paused" ? "Trip paused" : 
+                   trackingStatus === "completing" ? "Complete your trip below" :
+                   "Tracking active"} • {activeTrip.total_miles?.toFixed(2) || "0.00"} mi
                 </span>
               ) : summary ? (
                 `${summary.total_miles?.toFixed(1) || 0} mi this year • $${summary.tax_deduction?.toFixed(2) || "0.00"} deduction`
@@ -593,82 +640,7 @@ export default function GPSMileageTracker({ getAuthHeader }) {
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Quick Action Buttons - Always visible when collapsed */}
-          {!isExpanded && !activeTrip && (
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsExpanded(true);
-                setTimeout(() => handleStartTrip(), 100);
-              }}
-              className="bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white"
-              data-testid="quick-start-trip-btn"
-            >
-              <Play className="w-4 h-4 mr-1" />
-              Start Trip
-            </Button>
-          )}
-          
-          {!isExpanded && activeTrip && trackingStatus === "tracking" && (
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePauseTrip();
-                }}
-                className="text-amber-600 border-amber-300"
-                data-testid="quick-pause-btn"
-              >
-                <Pause className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsExpanded(true);
-                  handleStopTrip();
-                }}
-                className="text-red-600 border-red-300"
-                data-testid="quick-stop-btn"
-              >
-                <Square className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-          
-          {!isExpanded && activeTrip && trackingStatus === "paused" && (
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleResumeTrip();
-                }}
-                className="bg-green-600 hover:bg-green-700 text-white"
-                data-testid="quick-resume-btn"
-              >
-                <Play className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsExpanded(true);
-                  handleStopTrip();
-                }}
-                className="text-red-600 border-red-300"
-                data-testid="quick-stop-btn-paused"
-              >
-                <Square className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-          
+          {/* Hide quick action buttons since we have header buttons */}
           <Button variant="ghost" size="sm" className="text-[#888]">
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </Button>
@@ -1024,4 +996,6 @@ export default function GPSMileageTracker({ getAuthHeader }) {
       </AnimatePresence>
     </div>
   );
-}
+});
+
+export default GPSMileageTracker;

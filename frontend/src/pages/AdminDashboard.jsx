@@ -51,7 +51,12 @@ import {
   MessageSquare,
   Mail,
   CreditCard,
-  Key
+  Key,
+  Navigation,
+  Play,
+  Pause,
+  Square,
+  Car
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -307,6 +312,15 @@ export default function AdminDashboard() {
   // Back to top button state
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  
+  // GPS Trip tracking state (for header buttons)
+  const [gpsTrip, setGpsTrip] = useState(null); // { id, status, total_miles, start_time }
+  const [gpsTripLoading, setGpsTripLoading] = useState(false);
+  const [gpsTrackingStatus, setGpsTrackingStatus] = useState("idle"); // idle, tracking, paused
+  const gpsTrackerRef = useRef(null); // Reference to scroll to GPS section
+  const gpsWatchId = useRef(null);
+  const gpsLocationBuffer = useRef([]);
+  const gpsSyncInterval = useRef(null);
   
   // Hidden email settings trigger - triple click on title
   const titleClickCount = useRef(0);
@@ -789,6 +803,225 @@ export default function AdminDashboard() {
       setMasterRefreshing(false);
     }
   };
+
+  // ========== GPS TRIP FUNCTIONS ==========
+  
+  // Fetch active GPS trip on mount
+  const fetchActiveGpsTrip = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
+      if (response.data.active_trip) {
+        setGpsTrip(response.data.active_trip);
+        setGpsTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
+        // Resume tracking if active
+        if (response.data.active_trip.status === "active") {
+          startGpsTracking(response.data.active_trip.id);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch active GPS trip:", error);
+    }
+  }, []);
+
+  // Start GPS location tracking
+  const startGpsTracking = (tripId) => {
+    if (!navigator.geolocation) {
+      toast.error("GPS not supported on this device");
+      return;
+    }
+    
+    gpsWatchId.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const point = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          timestamp: new Date().toISOString(),
+          accuracy: position.coords.accuracy,
+          speed: position.coords.speed
+        };
+        gpsLocationBuffer.current.push(point);
+      },
+      (error) => {
+        console.error("GPS error:", error);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+    );
+    
+    // Sync locations to server every 30 seconds
+    gpsSyncInterval.current = setInterval(() => {
+      syncGpsLocations(tripId);
+    }, 30000);
+  };
+
+  // Sync GPS locations to backend
+  const syncGpsLocations = async (tripId) => {
+    if (gpsLocationBuffer.current.length === 0) return;
+    
+    const locationsToSync = [...gpsLocationBuffer.current];
+    gpsLocationBuffer.current = [];
+    
+    try {
+      const response = await axios.post(
+        `${API}/admin/gps-trips/update-locations`,
+        { trip_id: tripId, locations: locationsToSync },
+        getAuthHeader()
+      );
+      
+      if (response.data.success) {
+        setGpsTrip(prev => ({
+          ...prev,
+          total_miles: response.data.total_miles
+        }));
+      }
+    } catch (error) {
+      // Re-add failed locations to buffer
+      gpsLocationBuffer.current = [...locationsToSync, ...gpsLocationBuffer.current];
+    }
+  };
+
+  // Stop GPS tracking
+  const stopGpsTracking = () => {
+    if (gpsSyncInterval.current) {
+      clearInterval(gpsSyncInterval.current);
+      gpsSyncInterval.current = null;
+    }
+    if (gpsWatchId.current) {
+      navigator.geolocation.clearWatch(gpsWatchId.current);
+      gpsWatchId.current = null;
+    }
+  };
+
+  // Start a new GPS trip
+  const handleStartGpsTrip = async () => {
+    setGpsTripLoading(true);
+    buttonPress();
+    
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000
+        });
+      });
+      
+      const response = await axios.post(
+        `${API}/admin/gps-trips/start`,
+        {
+          start_latitude: position.coords.latitude,
+          start_longitude: position.coords.longitude
+        },
+        getAuthHeader()
+      );
+      
+      if (response.data.success) {
+        const tripId = response.data.trip_id;
+        setGpsTrip({
+          id: tripId,
+          status: "active",
+          start_time: response.data.start_time,
+          total_miles: 0
+        });
+        setGpsTrackingStatus("tracking");
+        startGpsTracking(tripId);
+        successFeedback();
+        toast.success("Trip started! GPS tracking active.");
+      }
+    } catch (error) {
+      errorFeedback();
+      if (error.code === 1) {
+        toast.error("Location permission denied. Please enable GPS.");
+      } else {
+        toast.error(error.response?.data?.detail || "Failed to start trip");
+      }
+    } finally {
+      setGpsTripLoading(false);
+    }
+  };
+
+  // Pause GPS trip
+  const handlePauseGpsTrip = async () => {
+    if (!gpsTrip) return;
+    buttonPress();
+    
+    try {
+      await syncGpsLocations(gpsTrip.id);
+      const response = await axios.post(
+        `${API}/admin/gps-trips/pause/${gpsTrip.id}`,
+        {},
+        getAuthHeader()
+      );
+      
+      if (response.data.success) {
+        setGpsTrackingStatus("paused");
+        setGpsTrip(prev => ({ ...prev, status: "paused" }));
+        stopGpsTracking();
+        lightTap();
+        toast.info("Trip paused");
+      }
+    } catch (error) {
+      toast.error("Failed to pause trip");
+    }
+  };
+
+  // Resume GPS trip
+  const handleResumeGpsTrip = async () => {
+    if (!gpsTrip) return;
+    buttonPress();
+    
+    try {
+      const response = await axios.post(
+        `${API}/admin/gps-trips/resume/${gpsTrip.id}`,
+        {},
+        getAuthHeader()
+      );
+      
+      if (response.data.success) {
+        setGpsTrackingStatus("tracking");
+        setGpsTrip(prev => ({ ...prev, status: "active" }));
+        startGpsTracking(gpsTrip.id);
+        successFeedback();
+        toast.success("Trip resumed");
+      }
+    } catch (error) {
+      toast.error("Failed to resume trip");
+    }
+  };
+
+  // Stop GPS trip and scroll to completion form
+  const handleStopGpsTrip = async () => {
+    if (!gpsTrip) return;
+    heavyPress();
+    
+    try {
+      await syncGpsLocations(gpsTrip.id);
+      stopGpsTracking();
+      
+      // Scroll to GPS tracker section for completion
+      if (gpsTrackerRef.current) {
+        gpsTrackerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      
+      setGpsTrackingStatus("completing");
+      toast.info("Complete your trip details below");
+    } catch (error) {
+      console.error("Error stopping trip:", error);
+    }
+  };
+
+  // Callback when trip is completed from the GPSMileageTracker component
+  const handleGpsTripCompleted = () => {
+    setGpsTrip(null);
+    setGpsTrackingStatus("idle");
+  };
+
+  // Fetch active trip on mount
+  useEffect(() => {
+    fetchActiveGpsTrip();
+    // Cleanup on unmount
+    return () => {
+      stopGpsTracking();
+    };
+  }, [fetchActiveGpsTrip]);
 
   // Email configuration functions
   const fetchEmailStatus = useCallback(async () => {
@@ -2590,6 +2823,76 @@ export default function AdminDashboard() {
                     <span className="hidden sm:inline">Remove</span>
                   </Button>
                 </div>
+                {/* GPS Trip Controls Row */}
+                <div className="flex gap-1">
+                  {gpsTrackingStatus === "idle" ? (
+                    <Button
+                      onClick={handleStartGpsTrip}
+                      disabled={gpsTripLoading}
+                      size="sm"
+                      className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#10B981]/30 transition-all border-0 text-xs sm:text-sm h-9 flex-1"
+                      data-testid="start-trip-header-btn"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      {gpsTripLoading ? "Starting..." : (
+                        <>
+                          <span className="hidden sm:inline">Start Trip</span>
+                          <span className="sm:hidden">Trip</span>
+                        </>
+                      )}
+                    </Button>
+                  ) : gpsTrackingStatus === "tracking" ? (
+                    <>
+                      <Button
+                        onClick={handlePauseGpsTrip}
+                        size="sm"
+                        className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
+                        data-testid="pause-trip-header-btn"
+                      >
+                        <Pause className="w-4 h-4" />
+                        <span className="hidden sm:inline">Pause</span>
+                        {gpsTrip?.total_miles > 0 && (
+                          <span className="text-[10px] opacity-80 ml-1">{gpsTrip.total_miles.toFixed(1)}mi</span>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={handleStopGpsTrip}
+                        size="sm"
+                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
+                        data-testid="stop-trip-header-btn"
+                      >
+                        <Square className="w-4 h-4" />
+                        <span className="hidden sm:inline">Stop</span>
+                      </Button>
+                    </>
+                  ) : gpsTrackingStatus === "paused" ? (
+                    <>
+                      <Button
+                        onClick={handleResumeGpsTrip}
+                        size="sm"
+                        className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
+                        data-testid="resume-trip-header-btn"
+                      >
+                        <Play className="w-4 h-4" />
+                        <span className="hidden sm:inline">Resume</span>
+                      </Button>
+                      <Button
+                        onClick={handleStopGpsTrip}
+                        size="sm"
+                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
+                        data-testid="stop-trip-paused-header-btn"
+                      >
+                        <Square className="w-4 h-4" />
+                        <span className="hidden sm:inline">Stop</span>
+                      </Button>
+                    </>
+                  ) : gpsTrackingStatus === "completing" ? (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-400/50 rounded-lg text-xs text-green-300">
+                      <Car className="w-4 h-4 animate-pulse" />
+                      <span>Complete trip below</span>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
@@ -3008,7 +3311,15 @@ export default function AdminDashboard() {
               testId="group-operations"
             >
               {/* GPS Mileage Tracker - New real-time tracking */}
-              <GPSMileageTracker getAuthHeader={getAuthHeader} />
+              <GPSMileageTracker 
+                ref={gpsTrackerRef}
+                getAuthHeader={getAuthHeader}
+                externalTrip={gpsTrip}
+                externalTrackingStatus={gpsTrackingStatus}
+                onTripCompleted={handleGpsTripCompleted}
+                setExternalTrip={setGpsTrip}
+                setExternalTrackingStatus={setGpsTrackingStatus}
+              />
 
               {/* Legacy Monthly Mileage Section (for historical data) */}
               <MonthlyMileageSection getAuthHeader={getAuthHeader} />
