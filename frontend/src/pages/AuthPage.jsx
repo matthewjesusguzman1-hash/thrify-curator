@@ -101,10 +101,21 @@ export default function AuthPage() {
         if (bioResult.success && bioResult.credentials) {
           try {
             console.log('Using stored credentials to login...');
-            const response = await axios.post(`${API}/auth/login`, {
-              email: bioResult.credentials.username,
-              password: bioResult.credentials.password
-            });
+            
+            // Build login payload based on credential type
+            let loginPayload;
+            if (bioResult.credentials.password === 'EMAIL_ONLY_LOGIN') {
+              // Passwordless employee - login with email only
+              loginPayload = { email: bioResult.credentials.username };
+            } else {
+              // Has password/admin code
+              loginPayload = {
+                email: bioResult.credentials.username,
+                password: bioResult.credentials.password
+              };
+            }
+            
+            const response = await axios.post(`${API}/auth/login`, loginPayload);
             
             const { access_token, user } = response.data;
             localStorage.setItem("token", access_token);
@@ -213,6 +224,10 @@ export default function AuthPage() {
         credentialToSave = adminCode;
       } else if (showPasswordField && password) {
         credentialToSave = password;
+      } else {
+        // Employee without password - save email as credential for Face ID
+        // This allows passwordless employees to use biometric login
+        credentialToSave = 'EMAIL_ONLY_LOGIN';
       }
       
       console.log('Checking biometric save conditions:', { 
@@ -537,20 +552,28 @@ export default function AuthPage() {
                   
                   if (bioResult.success && bioResult.credentials) {
                     try {
-                      // Try password login first
                       let response;
-                      try {
+                      
+                      // Handle passwordless employee login
+                      if (bioResult.credentials.password === 'EMAIL_ONLY_LOGIN') {
                         response = await axios.post(`${API}/auth/login`, {
-                          email: bioResult.credentials.username,
-                          password: bioResult.credentials.password
+                          email: bioResult.credentials.username
                         });
-                      } catch (pwdError) {
-                        // If password login fails, try as admin code
-                        console.log('Password login failed, trying admin code...');
-                        response = await axios.post(`${API}/auth/login`, {
-                          email: bioResult.credentials.username,
-                          admin_code: bioResult.credentials.password
-                        });
+                      } else {
+                        // Try password login first
+                        try {
+                          response = await axios.post(`${API}/auth/login`, {
+                            email: bioResult.credentials.username,
+                            password: bioResult.credentials.password
+                          });
+                        } catch (pwdError) {
+                          // If password login fails, try as admin code
+                          console.log('Password login failed, trying admin code...');
+                          response = await axios.post(`${API}/auth/login`, {
+                            email: bioResult.credentials.username,
+                            admin_code: bioResult.credentials.password
+                          });
+                        }
                       }
                       
                       const { access_token, user } = response.data;
