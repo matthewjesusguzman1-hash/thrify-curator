@@ -63,6 +63,57 @@ const TRIP_PURPOSES = [
 // IRS rate for display
 const IRS_RATE_2026 = 0.725;
 
+// Reusable Trip Row component for hierarchical view
+const TripRow = ({ trip, onViewMap, onEdit, onDelete, getPurposeIcon, getPurposeLabel, formatDate, API, compact = false, nested = false }) => {
+  const PurposeIcon = getPurposeIcon(trip.purpose);
+  
+  return (
+    <div className={`flex items-center justify-between ${compact ? 'p-2' : 'p-3'} ${nested ? 'pl-12' : compact ? 'pl-6' : ''} hover:bg-gray-100 transition-colors border-b border-gray-50 last:border-b-0`}>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className={`${compact ? 'w-6 h-6' : 'w-8 h-8'} bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0`}>
+          <PurposeIcon className={`${compact ? 'w-3 h-3' : 'w-4 h-4'} text-gray-600`} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={`font-medium ${compact ? 'text-xs' : 'text-sm'} text-gray-800 truncate`}>
+            {getPurposeLabel(trip.purpose)}
+            {trip.notes && <span className="text-gray-500 font-normal"> - {trip.notes}</span>}
+          </p>
+          <p className={`${compact ? 'text-[10px]' : 'text-xs'} text-gray-500`}>
+            {trip.total_miles?.toFixed(2)} mi • ${trip.tax_deduction?.toFixed(2)}
+            {!compact && ` • ${formatDate(trip.start_time)}`}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-0.5 flex-shrink-0">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onViewMap(trip.id)}
+          className="text-green-600 hover:text-green-700 h-7 w-7 p-0"
+        >
+          <Map className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onEdit(trip)}
+          className="text-blue-500 hover:text-blue-700 h-7 w-7 p-0"
+        >
+          <Pencil className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onDelete(trip.id)}
+          className="text-red-500 hover:text-red-700 h-7 w-7 p-0"
+        >
+          <Trash2 className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const GPSMileageTracker = forwardRef(function GPSMileageTracker({ 
   getAuthHeader,
   externalTrip,
@@ -77,6 +128,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [summaryView, setSummaryView] = useState("year"); // "today", "month", "year"
+  
+  // Collapsible state for hierarchical trip view
+  const [expandedMonths, setExpandedMonths] = useState({}); // { "2026-03": true }
+  const [expandedDays, setExpandedDays] = useState({}); // { "2026-03-28": true }
   
   // Mileage adjustment state
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -1761,77 +1816,216 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 )}
               </AnimatePresence>
               
-              {/* Trip History */}
+              {/* Hierarchical Trip History - Changes based on selected tab */}
               {tripHistory.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2">Recent Trips</h4>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {tripHistory.map(trip => {
-                      const PurposeIcon = getPurposeIcon(trip.purpose);
-                      return (
-                        <div
-                          key={trip.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center">
-                              <PurposeIcon className="w-4 h-4 text-gray-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm text-gray-800">
-                                {getPurposeLabel(trip.purpose)}
-                                {trip.notes && <span className="text-gray-500 font-normal"> - {trip.notes}</span>}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {formatDate(trip.start_time)} • {trip.total_miles?.toFixed(2)} mi • ${trip.tax_deduction?.toFixed(2)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {/* View Map Button */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleViewTripMap(trip.id)}
-                              className="text-green-600 hover:text-green-700"
-                              data-testid={`view-map-${trip.id}`}
-                            >
-                              <Map className="w-4 h-4" />
-                            </Button>
-                            {trip.receipt_url && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => window.open(`${API.replace('/api', '')}${trip.receipt_url}`, '_blank')}
-                                className="text-gray-500"
-                              >
-                                <Receipt className="w-4 h-4" />
-                              </Button>
-                            )}
-                            {/* Edit Button */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleEditTrip(trip)}
-                              className="text-blue-500 hover:text-blue-700"
-                              data-testid={`edit-trip-${trip.id}`}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            {/* Delete Button */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDeleteTrip(trip.id)}
-                              className="text-red-500 hover:text-red-700"
-                              data-testid={`delete-trip-${trip.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
+                    <h4 className="font-medium text-gray-700 text-sm">
+                      {summaryView === "today" ? "Today's Trips" : 
+                       summaryView === "month" ? `${summary?.this_month?.name || "This Month"}'s Trips` :
+                       `${summary?.year || new Date().getFullYear()} Trips`}
+                    </h4>
+                  </div>
+                  
+                  <div className="max-h-64 overflow-y-auto">
+                    {/* TODAY VIEW - Simple list of today's trips */}
+                    {summaryView === "today" && (() => {
+                      const today = new Date().toISOString().split('T')[0];
+                      const todayTrips = tripHistory.filter(trip => 
+                        trip.start_time?.split('T')[0] === today
                       );
-                    })}
+                      
+                      if (todayTrips.length === 0) {
+                        return (
+                          <div className="p-4 text-center text-gray-500 text-sm">
+                            No trips recorded today
+                          </div>
+                        );
+                      }
+                      
+                      return todayTrips.map(trip => (
+                        <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} />
+                      ));
+                    })()}
+                    
+                    {/* MONTH VIEW - Days collapsible, then trips */}
+                    {summaryView === "month" && (() => {
+                      const now = new Date();
+                      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                      
+                      // Group trips by day for current month
+                      const tripsByDay = {};
+                      tripHistory.forEach(trip => {
+                        const tripDate = trip.start_time?.split('T')[0];
+                        if (tripDate?.startsWith(currentMonth)) {
+                          if (!tripsByDay[tripDate]) {
+                            tripsByDay[tripDate] = { trips: [], miles: 0 };
+                          }
+                          tripsByDay[tripDate].trips.push(trip);
+                          tripsByDay[tripDate].miles += trip.total_miles || 0;
+                        }
+                      });
+                      
+                      const sortedDays = Object.keys(tripsByDay).sort().reverse();
+                      
+                      if (sortedDays.length === 0) {
+                        return (
+                          <div className="p-4 text-center text-gray-500 text-sm">
+                            No trips this month
+                          </div>
+                        );
+                      }
+                      
+                      return sortedDays.map(day => (
+                        <div key={day} className="border-b border-gray-100 last:border-b-0">
+                          <button
+                            onClick={() => setExpandedDays(prev => ({ ...prev, [day]: !prev[day] }))}
+                            className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-blue-500" />
+                              <span className="font-medium text-sm text-gray-700">
+                                {new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">
+                                {tripsByDay[day].trips.length} trip{tripsByDay[day].trips.length !== 1 ? 's' : ''} • {tripsByDay[day].miles.toFixed(1)} mi
+                              </span>
+                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedDays[day] ? 'rotate-180' : ''}`} />
+                            </div>
+                          </button>
+                          
+                          <AnimatePresence>
+                            {expandedDays[day] && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden bg-gray-50"
+                              >
+                                {tripsByDay[day].trips.map(trip => (
+                                  <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} compact />
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ));
+                    })()}
+                    
+                    {/* YEAR VIEW - Months collapsible, then days, then trips */}
+                    {summaryView === "year" && (() => {
+                      const currentYear = summary?.year || new Date().getFullYear();
+                      
+                      // Group trips by month
+                      const tripsByMonth = {};
+                      tripHistory.forEach(trip => {
+                        const tripDate = trip.start_time?.split('T')[0];
+                        if (tripDate?.startsWith(String(currentYear))) {
+                          const month = tripDate.substring(0, 7); // "2026-03"
+                          if (!tripsByMonth[month]) {
+                            tripsByMonth[month] = { trips: [], miles: 0, byDay: {} };
+                          }
+                          tripsByMonth[month].trips.push(trip);
+                          tripsByMonth[month].miles += trip.total_miles || 0;
+                          
+                          // Also group by day within month
+                          if (!tripsByMonth[month].byDay[tripDate]) {
+                            tripsByMonth[month].byDay[tripDate] = { trips: [], miles: 0 };
+                          }
+                          tripsByMonth[month].byDay[tripDate].trips.push(trip);
+                          tripsByMonth[month].byDay[tripDate].miles += trip.total_miles || 0;
+                        }
+                      });
+                      
+                      const sortedMonths = Object.keys(tripsByMonth).sort().reverse();
+                      
+                      if (sortedMonths.length === 0) {
+                        return (
+                          <div className="p-4 text-center text-gray-500 text-sm">
+                            No trips this year
+                          </div>
+                        );
+                      }
+                      
+                      return sortedMonths.map(month => {
+                        const monthName = new Date(month + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                        const sortedDays = Object.keys(tripsByMonth[month].byDay).sort().reverse();
+                        
+                        return (
+                          <div key={month} className="border-b border-gray-100 last:border-b-0">
+                            {/* Month Header */}
+                            <button
+                              onClick={() => setExpandedMonths(prev => ({ ...prev, [month]: !prev[month] }))}
+                              className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                <CalendarDays className="w-4 h-4 text-blue-500" />
+                                <span className="font-medium text-sm text-gray-700">{monthName}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">
+                                  {tripsByMonth[month].trips.length} trip{tripsByMonth[month].trips.length !== 1 ? 's' : ''} • {tripsByMonth[month].miles.toFixed(1)} mi
+                                </span>
+                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedMonths[month] ? 'rotate-180' : ''}`} />
+                              </div>
+                            </button>
+                            
+                            {/* Days within Month */}
+                            <AnimatePresence>
+                              {expandedMonths[month] && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  {sortedDays.map(day => (
+                                    <div key={day} className="border-t border-gray-100 bg-gray-50">
+                                      {/* Day Header */}
+                                      <button
+                                        onClick={() => setExpandedDays(prev => ({ ...prev, [day]: !prev[day] }))}
+                                        className="w-full flex items-center justify-between p-2 pl-8 hover:bg-gray-100 transition-colors"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="w-3 h-3 text-gray-400" />
+                                          <span className="text-sm text-gray-600">
+                                            {new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs text-gray-400">
+                                            {tripsByMonth[month].byDay[day].trips.length} • {tripsByMonth[month].byDay[day].miles.toFixed(1)} mi
+                                          </span>
+                                          <ChevronDown className={`w-3 h-3 text-gray-300 transition-transform ${expandedDays[day] ? 'rotate-180' : ''}`} />
+                                        </div>
+                                      </button>
+                                      
+                                      {/* Trips within Day */}
+                                      <AnimatePresence>
+                                        {expandedDays[day] && (
+                                          <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden bg-white"
+                                          >
+                                            {tripsByMonth[month].byDay[day].trips.map(trip => (
+                                              <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} compact nested />
+                                            ))}
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </div>
+                                  ))}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               )}
