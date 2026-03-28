@@ -123,10 +123,13 @@ def calculate_trip_distance(locations: List[dict]) -> float:
             prev["latitude"], prev["longitude"],
             curr["latitude"], curr["longitude"]
         )
-        # Filter out GPS jumps (unrealistic distances between consecutive points)
-        # If distance is more than 0.5 miles between points, likely a GPS error
-        if distance > 0.001 and distance < 0.5:  # Only count reasonable movements
+        # Filter out extreme GPS jumps (unrealistic distances between consecutive points)
+        # Allow up to 5 miles between points (car at 60mph = 1 mile/min, so 5 min gap allowed)
+        # Filter out tiny noise < 0.001 miles (about 5 feet)
+        if distance > 0.001 and distance < 5.0:
             total_distance += distance
+        elif distance >= 5.0:
+            print(f"Skipping large GPS jump: {distance:.4f} miles")
     
     return round(total_distance, 2)
 
