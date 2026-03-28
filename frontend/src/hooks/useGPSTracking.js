@@ -116,40 +116,23 @@ export default function useGPSTracking() {
     setLocationCount(locationsRef.current.length);
   }, []);
 
-  // Get current position (one-time)
+  // Get current position (one-time) - uses web API
   const getCurrentPosition = useCallback(async () => {
-    try {
-      if (isNative()) {
-        const { Geolocation } = await import('@capacitor/geolocation');
-        const position = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        return {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
           timestamp: new Date().toISOString()
-        };
-      } else {
-        // Web fallback
-        return new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => resolve({
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-              accuracy: pos.coords.accuracy,
-              timestamp: new Date().toISOString()
-            }),
-            reject,
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-        });
-      }
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
+        }),
+        (err) => {
+          setError(err.message);
+          reject(err);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
   }, []);
 
   // Initialize Transistorsoft Background Geolocation
@@ -254,34 +237,10 @@ export default function useGPSTracking() {
             return true;
           }
         } catch (bgError) {
-          console.log('BackgroundGeolocation not available, falling back:', bgError);
-          // Fall through to standard geolocation
-        }
-
-        // Fallback to standard Capacitor geolocation (foreground only)
-        const { Geolocation } = await import('@capacitor/geolocation');
-        
-        // Request permissions
-        const status = await Geolocation.requestPermissions();
-        if (status.location === 'denied') {
-          setError('Location permission denied');
-          toast.error('Please enable location permissions in Settings');
+          console.log('BackgroundGeolocation not available:', bgError);
+          toast.error('Background GPS not available. Please try again.');
           return false;
         }
-        
-        // Set tracking state
-        setIsTracking(true);
-        isTrackingRef.current = true;
-        
-        // Get initial position
-        const initialPosition = await getCurrentPosition();
-        processLocation({
-          coords: initialPosition,
-          timestamp: initialPosition.timestamp
-        });
-
-        // Warn about background limitations
-        toast.warning('Keep the app open for tracking (background mode unavailable)', { duration: 5000 });
         
       } else {
         // Web fallback
