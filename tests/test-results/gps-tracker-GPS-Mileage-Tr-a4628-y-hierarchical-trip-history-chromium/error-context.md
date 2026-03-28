@@ -1,0 +1,161 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e5]:
+      - banner [ref=e6]:
+        - generic [ref=e7]:
+          - img [ref=e9]
+          - paragraph [ref=e12]: Matthew Guzman
+        - generic [ref=e13]:
+          - button "Alerts" [ref=e15] [cursor=pointer]:
+            - img
+            - generic [ref=e16]: Alerts
+          - link "Home" [ref=e17] [cursor=pointer]:
+            - /url: /
+            - button "Home" [ref=e18]:
+              - img
+              - text: Home
+          - link "My Dashboard" [ref=e19] [cursor=pointer]:
+            - /url: /dashboard
+            - button "My Dashboard" [ref=e20]
+          - button "Logout" [ref=e21] [cursor=pointer]:
+            - img
+            - text: Logout
+      - main [ref=e22]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]:
+              - heading "Admin Dashboard" [level=1] [ref=e27]
+              - button [ref=e28] [cursor=pointer]:
+                - img
+            - generic [ref=e29]:
+              - button "Live Monitor" [ref=e30] [cursor=pointer]:
+                - img
+                - generic [ref=e31]: Live Monitor
+              - generic [ref=e32]:
+                - generic [ref=e33]:
+                  - button "Add Employee" [ref=e34] [cursor=pointer]:
+                    - img
+                    - generic [ref=e35]: Add Employee
+                  - button "Edit Employee" [ref=e36] [cursor=pointer]:
+                    - img
+                    - generic [ref=e37]: Edit Employee
+                  - button "Remove" [ref=e38] [cursor=pointer]:
+                    - img
+                    - generic [ref=e39]: Remove
+                - button "Start Trip" [ref=e42] [cursor=pointer]:
+                  - img
+                  - generic [ref=e43]: Start Trip
+          - generic [ref=e44]:
+            - button "Team Management 4 team members" [ref=e46] [cursor=pointer]:
+              - generic [ref=e47]:
+                - img [ref=e49]
+                - generic [ref=e54]:
+                  - heading "Team Management" [level=2] [ref=e55]
+                  - generic [ref=e57]: 4 team members
+              - img [ref=e59]
+            - button "Payroll & Payments Track earnings & payments" [ref=e62] [cursor=pointer]:
+              - generic [ref=e63]:
+                - img [ref=e65]
+                - generic [ref=e67]:
+                  - heading "Payroll & Payments" [level=2] [ref=e68]
+                  - generic [ref=e70]: Track earnings & payments
+              - img [ref=e72]
+            - button "Forms & Communications 0 new submissions" [ref=e75] [cursor=pointer]:
+              - generic [ref=e76]:
+                - img [ref=e78]
+                - generic [ref=e80]:
+                  - heading "Forms & Communications" [level=2] [ref=e81]
+                  - generic [ref=e83]: 0 new submissions
+              - img [ref=e85]
+            - generic [ref=e87]:
+              - button "Operations & Reports GPS Mileage, W-9s & analytics" [ref=e88] [cursor=pointer]:
+                - generic [ref=e89]:
+                  - img [ref=e91]
+                  - generic [ref=e94]:
+                    - heading "Operations & Reports" [level=2] [ref=e95]
+                    - generic [ref=e97]: GPS Mileage, W-9s & analytics
+                - img [ref=e99]
+              - generic [ref=e104]:
+                - generic [ref=e105]:
+                  - generic [ref=e106] [cursor=pointer]:
+                    - generic [ref=e107]:
+                      - img [ref=e109]
+                      - generic [ref=e111]:
+                        - heading "GPS Mileage Tracker" [level=3] [ref=e112]
+                        - paragraph [ref=e113]:
+                          - generic [ref=e115]: "Today: 6.0 mi • March : 6.0 mi • YTD: 11.0 mi"
+                    - button [ref=e117]:
+                      - img
+                  - generic [ref=e119]:
+                    - generic [ref=e121]:
+                      - button "Start GPS Tracking" [ref=e122] [cursor=pointer]:
+                        - img
+                        - text: Start GPS Tracking
+                      - generic [ref=e127]: or
+                      - button "Log Trip Manually" [ref=e128] [cursor=pointer]:
+                        - img
+                        - text: Log Trip Manually
+                    - generic [ref=e130]:
+                      - generic [ref=e131]:
+                        - button "Today" [ref=e132] [cursor=pointer]:
+                          - img [ref=e133]
+                          - text: Today
+                        - button "March" [ref=e135] [cursor=pointer]:
+                          - img [ref=e136]
+                          - text: March
+                        - button "2026" [ref=e138] [cursor=pointer]:
+                          - img [ref=e139]
+                          - text: "2026"
+                      - generic [ref=e142]:
+                        - generic [ref=e144]:
+                          - paragraph [ref=e145]: 2026 Year-to-Date
+                          - generic [ref=e146]:
+                            - generic [ref=e147]:
+                              - paragraph [ref=e148]: "4"
+                              - paragraph [ref=e149]: Trips
+                            - generic [ref=e150]:
+                              - paragraph [ref=e151]: "11.0"
+                              - paragraph [ref=e152]: Miles
+                            - generic [ref=e153]:
+                              - paragraph [ref=e154]: $ 8
+                              - paragraph [ref=e155]: Deduction
+                        - generic [ref=e156]:
+                          - paragraph [ref=e157]: "IRS Rate: $ 0.725 /mile"
+                          - button "Adjust" [ref=e158] [cursor=pointer]:
+                            - img [ref=e159]
+                            - text: Adjust
+                    - generic [ref=e163]:
+                      - heading "2026 Trips" [level=4] [ref=e165]
+                      - generic [ref=e168]:
+                        - button "March 2026 3 trip s • 6.0 mi" [active] [ref=e169] [cursor=pointer]:
+                          - generic [ref=e170]:
+                            - img [ref=e171]
+                            - generic [ref=e173]: March 2026
+                          - generic [ref=e174]:
+                            - generic [ref=e175]: 3 trip s • 6.0 mi
+                            - img [ref=e176]
+                        - button "28 Sat 3 • 6.0 mi" [ref=e180] [cursor=pointer]:
+                          - generic [ref=e181]:
+                            - img [ref=e182]
+                            - generic [ref=e184]: 28 Sat
+                          - generic [ref=e185]:
+                            - generic [ref=e186]: 3 • 6.0 mi
+                            - img [ref=e187]
+                - generic [ref=e190] [cursor=pointer]:
+                  - generic [ref=e191]:
+                    - img [ref=e193]
+                    - generic [ref=e195]:
+                      - heading "Reports" [level=2] [ref=e196]
+                      - paragraph [ref=e197]: Generate payroll/shift and W-9 reports
+                  - img [ref=e200]
+      - button "Back to top" [ref=e202] [cursor=pointer]:
+        - img [ref=e203]
+    - region "Notifications alt+T"
+  - link "Made with Emergent" [ref=e205] [cursor=pointer]:
+    - /url: https://app.emergent.sh/?utm_source=emergent-badge
+    - img [ref=e206]
+    - paragraph [ref=e209]: Made with Emergent
+```
