@@ -59,13 +59,18 @@ export default function useGPSTracking() {
       return;
     }
 
+    // Handle both Transistorsoft format (direct) and standard format (coords nested)
+    const coords = location.coords || location;
+    
     const point = {
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      accuracy: location.coords.accuracy,
-      speed: location.coords.speed,
-      timestamp: location.timestamp
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      accuracy: coords.accuracy,
+      speed: coords.speed,
+      timestamp: location.timestamp || new Date().toISOString()
     };
+
+    console.log('[GPS] Processing point:', point.latitude, point.longitude, 'accuracy:', point.accuracy);
 
     // Basic validation
     if (typeof point.latitude !== 'number' || typeof point.longitude !== 'number') {
