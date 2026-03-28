@@ -68,7 +68,6 @@ import { toast } from "sonner";
 import axios from "axios";
 import { useHaptics } from "@/hooks/useHaptics";
 import LiveActivityService from "@/services/LiveActivityService";
-import MonthlyMileageSection from "@/components/admin/sections/MonthlyMileageSection";
 import GPSMileageTracker from "@/components/admin/sections/GPSMileageTracker";
 import useGPSTracking from "@/hooks/useGPSTracking";
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
@@ -3383,9 +3382,6 @@ export default function AdminDashboard() {
                 setExternalTrackingStatus={setGpsTrackingStatus}
                 gpsTracker={gpsTracker}
               />
-
-              {/* Legacy Monthly Mileage Section (for historical data) */}
-              <MonthlyMileageSection getAuthHeader={getAuthHeader} />
 
               {/* Reports Section */}
               <ReportsSection
