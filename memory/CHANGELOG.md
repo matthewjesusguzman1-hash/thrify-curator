@@ -1,5 +1,27 @@
 # Thrifty Curator - Changelog
 
+## [Mar 28, 2026] - Hierarchical Trip View
+
+### Added
+- Scrollable, hierarchical "Recent Trips" section in GPS Mileage Tracker
+- **Today tab**: Simple flat list of today's trips
+- **Month tab**: Collapsible days → trips accordion
+- **Year tab**: Collapsible months → days → trips accordion
+- `TripRow` reusable component for compact trip display
+- `expandedMonths` and `expandedDays` state for accordion control
+
+### Changed
+- Trip history now dynamically renders based on selected summary tab
+- Each trip row shows purpose icon, miles, deduction, and action buttons
+- Scrollable container with max-height (max-h-64)
+
+### Technical
+- File: `/app/frontend/src/components/admin/sections/GPSMileageTracker.jsx`
+- Lines added: ~350 (hierarchical rendering logic)
+- Total file size: ~2288 lines
+
+---
+
 ## [Feb 24, 2026] - W-9 Dark Theme & Button Verification
 
 ### Fixed

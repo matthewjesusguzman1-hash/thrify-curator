@@ -101,7 +101,7 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - Customer only sees standard shipping label
 - Paper trail for disputes, returns, audits
 
-### Implemented: GPS Mileage Tracker (Mar 27, 2026)
+### Implemented: GPS Mileage Tracker (Mar 27-28, 2026)
 **Real-time GPS tracking for business mileage with IRS deduction calculations**
 
 **Features Implemented:**
@@ -112,8 +112,17 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - Trip purpose selection: Post Office, Sourcing, Other
 - Custom notes field when "Other" is selected
 - Receipt photo upload capability
-- Year summary with total trips, miles, and deductions
-- Trip history with delete capability
+- Tabbed mileage summary (Today | Month | Year) with stats
+- Manual trip entry (Log Trip Manually)
+- Edit/Delete trip functionality
+- Silent mileage adjustments (Adjust button)
+- Collapsible live map during tracking
+- **Hierarchical trip history (Mar 28, 2026)**:
+  - Today: Simple flat list
+  - Month: Collapsible days → trips accordion
+  - Year: Collapsible months → days → trips accordion
+  - Scrollable container with max-height
+  - `TripRow` component for compact trip display
 
 **Technical Details:**
 - Backend: `/app/backend/app/routers/gps_trips.py`
