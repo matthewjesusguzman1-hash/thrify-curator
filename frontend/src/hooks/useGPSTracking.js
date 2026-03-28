@@ -80,12 +80,14 @@ export default function useGPSTracking() {
         point.longitude
       );
 
-      // Filter out GPS jumps (> 0.3 miles in one reading is unrealistic)
+      // Filter out GPS jumps (> 0.5 miles in one reading is unrealistic for normal driving)
       // Also filter tiny movements < 0.001 miles (about 5 feet) to reduce noise
-      if (distance > 0.001 && distance < 0.3) {
+      if (distance > 0.001 && distance < 0.5) {
         totalDistanceRef.current += distance;
         setTotalMiles(totalDistanceRef.current);
         console.log('Added distance:', distance.toFixed(4), 'Total:', totalDistanceRef.current.toFixed(4));
+      } else if (distance >= 0.5) {
+        console.log('Skipping large GPS jump:', distance.toFixed(4), 'miles');
       }
     }
 

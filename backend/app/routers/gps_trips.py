@@ -117,8 +117,8 @@ def calculate_trip_distance(locations: List[dict]) -> float:
             curr["latitude"], curr["longitude"]
         )
         # Filter out GPS jumps (unrealistic distances between consecutive points)
-        # If distance is more than 0.5 miles in less than 30 seconds, likely a GPS error
-        if distance < 0.5:  # Max reasonable distance between tracking points
+        # If distance is more than 0.5 miles between points, likely a GPS error
+        if distance > 0.001 and distance < 0.5:  # Only count reasonable movements
             total_distance += distance
     
     return round(total_distance, 2)
@@ -395,9 +395,9 @@ async def get_active_trip(admin: dict = Depends(get_admin_user)):
     if not trip:
         return {"active_trip": None}
     
-    # Get location count separately
+    # Get location count separately (with null check)
     full_trip = await db.gps_trips.find_one({"id": trip["id"]})
-    location_count = len(full_trip.get("locations", []))
+    location_count = len(full_trip.get("locations", [])) if full_trip else 0
     
     return {
         "active_trip": {
