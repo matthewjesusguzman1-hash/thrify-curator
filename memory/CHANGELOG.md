@@ -1,5 +1,30 @@
 # Thrifty Curator - Changelog
 
+## [Mar 28, 2026] - GPS Tracker Refactoring & Component Extraction
+
+### Added
+- Created `/app/frontend/src/components/admin/sections/gps-tracker/` folder with extracted components:
+  - `TripRow.jsx` - Reusable trip display row
+  - `MileageSummaryTabs.jsx` - Today/Month/Year summary tabs
+  - `HierarchicalTripList.jsx` - Collapsible trip history view
+  - `ManualTripForm.jsx` - Manual trip entry form
+  - `EditTripModal.jsx` - Trip editing modal
+  - `TripMapModal.jsx` - Trip route map viewer
+  - `MileageAdjustmentModal.jsx` - Silent mileage adjustment
+  - `index.js` - Component exports
+
+### Changed
+- Updated `GPSMileageTracker.jsx` to import new sub-components (partial integration)
+- Fixed missing icon imports after initial refactor
+- Maintained backward compatibility with existing inline code
+
+### Technical
+- Components are ready for full integration in future refactor pass
+- Main file still functional with inline code
+- Total file size: ~2250 lines (reduced from 2287)
+
+---
+
 ## [Mar 28, 2026] - Hierarchical Trip View
 
 ### Added

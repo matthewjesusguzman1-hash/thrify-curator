@@ -59,6 +59,7 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 ### Future/Backlog (P2-P3)
 - **CRITICAL**: Refactor ConsignmentAgreementForm.jsx (3500+ lines monolith)
 - **CRITICAL**: Refactor PaymentRecordsSection.jsx (complexity causing bugs)
+- **IN PROGRESS**: Complete GPSMileageTracker.jsx refactor (components created, not fully integrated)
 - Offline usability features
 - Push notification enhancements
 

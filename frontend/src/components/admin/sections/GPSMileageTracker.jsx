@@ -1,6 +1,8 @@
 /**
  * GPS Mileage Tracker Component
  * Real-time GPS tracking for business mileage with IRS deduction calculations
+ * 
+ * Refactored: Mar 28, 2026 - Extracted sub-components to gps-tracker/ folder
  */
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,8 +13,6 @@ import {
   Square,
   MapPin,
   DollarSign,
-  Clock,
-  Upload,
   Camera,
   ChevronDown,
   ChevronUp,
@@ -25,15 +25,14 @@ import {
   X,
   Check,
   AlertCircle,
-  TrendingUp,
   Map,
-  Eye,
-  Pencil,
   Calendar,
   CalendarDays,
+  TrendingUp,
+  Settings2,
   Plus,
   Minus,
-  Settings2
+  Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +41,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import axios from "axios";
+
+// Import refactored sub-components
+import {
+  MileageSummaryTabs,
+  HierarchicalTripList,
+  ManualTripForm,
+  EditTripModal,
+  TripMapModal,
+  MileageAdjustmentModal,
+  TripRow
+} from "./gps-tracker";
 
 // Lazy load the map component
 const TripMap = lazy(() => import("@/components/TripMap"));
@@ -63,57 +73,6 @@ const TRIP_PURPOSES = [
 // IRS rate for display
 const IRS_RATE_2026 = 0.725;
 
-// Reusable Trip Row component for hierarchical view
-const TripRow = ({ trip, onViewMap, onEdit, onDelete, getPurposeIcon, getPurposeLabel, formatDate, API, compact = false, nested = false }) => {
-  const PurposeIcon = getPurposeIcon(trip.purpose);
-  
-  return (
-    <div className={`flex items-center justify-between ${compact ? 'p-2' : 'p-3'} ${nested ? 'pl-12' : compact ? 'pl-6' : ''} hover:bg-gray-100 transition-colors border-b border-gray-50 last:border-b-0`}>
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <div className={`${compact ? 'w-6 h-6' : 'w-8 h-8'} bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0`}>
-          <PurposeIcon className={`${compact ? 'w-3 h-3' : 'w-4 h-4'} text-gray-600`} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className={`font-medium ${compact ? 'text-xs' : 'text-sm'} text-gray-800 truncate`}>
-            {getPurposeLabel(trip.purpose)}
-            {trip.notes && <span className="text-gray-500 font-normal"> - {trip.notes}</span>}
-          </p>
-          <p className={`${compact ? 'text-[10px]' : 'text-xs'} text-gray-500`}>
-            {trip.total_miles?.toFixed(2)} mi • ${trip.tax_deduction?.toFixed(2)}
-            {!compact && ` • ${formatDate(trip.start_time)}`}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-0.5 flex-shrink-0">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => onViewMap(trip.id)}
-          className="text-green-600 hover:text-green-700 h-7 w-7 p-0"
-        >
-          <Map className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} />
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => onEdit(trip)}
-          className="text-blue-500 hover:text-blue-700 h-7 w-7 p-0"
-        >
-          <Pencil className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} />
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => onDelete(trip.id)}
-          className="text-red-500 hover:text-red-700 h-7 w-7 p-0"
-        >
-          <Trash2 className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} />
-        </Button>
-      </div>
-    </div>
-  );
-};
-
 const GPSMileageTracker = forwardRef(function GPSMileageTracker({ 
   getAuthHeader,
   externalTrip,
@@ -130,10 +89,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const [summaryView, setSummaryView] = useState("year"); // "today", "month", "year"
   
   // Collapsible state for hierarchical trip view
-  const [expandedMonths, setExpandedMonths] = useState({}); // { "2026-03": true }
-  const [expandedDays, setExpandedDays] = useState({}); // { "2026-03-28": true }
+  const [expandedMonths, setExpandedMonths] = useState({});
+  const [expandedDays, setExpandedDays] = useState({});
   
-  // Mileage adjustment state
+  // Mileage adjustment state (used by MileageAdjustmentModal)
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustmentData, setAdjustmentData] = useState({
     miles: "",
@@ -171,8 +130,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   });
   const [savingManualTrip, setSavingManualTrip] = useState(false);
   
-  // Edit trip state
-  const [editingTrip, setEditingTrip] = useState(null); // The trip being edited
+  // Edit trip state (used by EditTripModal)
+  const [editingTrip, setEditingTrip] = useState(null);
   const [editTripData, setEditTripData] = useState({
     date: "",
     miles: "",
@@ -191,10 +150,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const completionFormRef = useRef(null);
   const isCompletingRef = useRef(false); // Ref to prevent stale closure issues
   
-  // Map viewing state
-  const [viewingTripMap, setViewingTripMap] = useState(null); // { trip, locations }
+  // Map viewing state (used by TripMapModal)
+  const [viewingTripMap, setViewingTripMap] = useState(null);
   const [loadingMap, setLoadingMap] = useState(false);
-  const [showLiveMap, setShowLiveMap] = useState(false); // Collapsible live map during tracking
+  const [showLiveMap, setShowLiveMap] = useState(false);
   
   // Background geolocation (native only)
   const backgroundGeoRef = useRef(null);
@@ -746,13 +705,16 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   };
 
-  // Save a manually entered trip
-  const handleSaveManualTrip = async () => {
-    if (!manualTripData.miles || parseFloat(manualTripData.miles) <= 0) {
+  // Save a manually entered trip (can receive form data from ManualTripForm component or use internal state)
+  const handleSaveManualTrip = async (formData = null) => {
+    // Use passed formData or fall back to internal state
+    const data = formData || manualTripData;
+    
+    if (!data.miles || parseFloat(data.miles) <= 0) {
       toast.error("Please enter the miles driven");
       return;
     }
-    if (!manualTripData.purpose) {
+    if (!data.purpose) {
       toast.error("Please select a trip purpose");
       return;
     }
@@ -763,23 +725,23 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       const response = await axios.post(
         `${API}/admin/gps-trips/manual`,
         {
-          date: manualTripData.date,
-          total_miles: parseFloat(manualTripData.miles),
-          purpose: manualTripData.purpose,
-          notes: manualTripData.purpose === "other" ? manualTripData.notes : null
+          date: data.date,
+          total_miles: parseFloat(data.miles),
+          purpose: data.purpose,
+          notes: data.purpose === "other" ? data.notes : null
         },
         getAuthHeader()
       );
       
       if (response.data.success) {
         // Upload receipt if provided
-        if (manualTripData.receipt && response.data.trip_id) {
+        if (data.receipt && response.data.trip_id) {
           try {
-            const formData = new FormData();
-            formData.append("receipt", manualTripData.receipt);
+            const receiptFormData = new FormData();
+            receiptFormData.append("receipt", data.receipt);
             await axios.post(
               `${API}/admin/gps-trips/upload-receipt/${response.data.trip_id}`,
-              formData,
+              receiptFormData,
               {
                 ...getAuthHeader(),
                 headers: {
@@ -798,7 +760,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
           { description: `Tax deduction: $${response.data.tax_deduction}` }
         );
         
-        // Reset form
+        // Reset internal state
         setManualTripData({
           date: new Date().toISOString().split('T')[0],
           miles: "",
