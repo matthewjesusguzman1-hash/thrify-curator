@@ -4,7 +4,7 @@ Handles real-time GPS mileage tracking with trip management
 """
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 import uuid
 import math
@@ -470,10 +470,18 @@ async def get_trip_history(
 @router.get("/summary")
 async def get_mileage_summary(
     year: Optional[int] = None,
+    tz_offset: Optional[int] = None,  # Client timezone offset in minutes (e.g., -300 for US Central)
     admin: dict = Depends(get_admin_user)
 ):
     """Get mileage summary for ALL users (admin view)"""
-    now = datetime.now(timezone.utc)
+    # Use client's local time if timezone offset provided, otherwise UTC
+    if tz_offset is not None:
+        # Convert offset minutes to timedelta (offset is minutes behind UTC, so negate)
+        client_tz = timezone(timedelta(minutes=-tz_offset))
+        now = datetime.now(client_tz)
+    else:
+        now = datetime.now(timezone.utc)
+    
     if not year:
         year = now.year
     
@@ -537,7 +545,9 @@ async def get_mileage_summary(
         monthly[month_key]["deduction"] = round(monthly[month_key]["miles"] * irs_rate, 2)
     
     # Calculate daily breakdown (current month)
-    current_month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    # Use client timezone for date comparison if provided
+    client_tz = timezone(timedelta(minutes=-tz_offset)) if tz_offset is not None else timezone.utc
+    current_month_start = datetime(now.year, now.month, 1, tzinfo=client_tz)
     daily = {}
     today_key = now.strftime("%Y-%m-%d")
     today_miles = 0
@@ -545,8 +555,11 @@ async def get_mileage_summary(
     
     for trip in trips:
         start_time = datetime.fromisoformat(trip["start_time"].replace("Z", "+00:00"))
-        if start_time >= current_month_start:
-            day_key = start_time.strftime("%Y-%m-%d")
+        # Convert to client timezone for proper day grouping
+        start_time_local = start_time.astimezone(client_tz)
+        day_key = start_time_local.strftime("%Y-%m-%d")
+        
+        if start_time_local >= current_month_start:
             if day_key not in daily:
                 daily[day_key] = {"trips": 0, "miles": 0, "deduction": 0}
             daily[day_key]["trips"] += 1
@@ -561,8 +574,10 @@ async def get_mileage_summary(
     # Add hidden adjustment miles to daily totals (but not trip counts)
     for adj in hidden_adjustments:
         start_time = datetime.fromisoformat(adj["start_time"].replace("Z", "+00:00"))
-        if start_time >= current_month_start:
-            day_key = start_time.strftime("%Y-%m-%d")
+        start_time_local = start_time.astimezone(client_tz)
+        day_key = start_time_local.strftime("%Y-%m-%d")
+        
+        if start_time_local >= current_month_start:
             if day_key not in daily:
                 daily[day_key] = {"trips": 0, "miles": 0, "deduction": 0}
             daily[day_key]["miles"] += adj.get("total_miles", 0)

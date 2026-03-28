@@ -226,7 +226,9 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   // Fetch summary
   const fetchSummary = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/admin/gps-trips/summary`, getAuthHeader());
+      // Pass timezone offset so backend can calculate "today" in client's local time
+      const tzOffset = new Date().getTimezoneOffset(); // Minutes behind UTC (e.g., -300 for US Central)
+      const response = await axios.get(`${API}/admin/gps-trips/summary?tz_offset=${tzOffset}`, getAuthHeader());
       setSummary(response.data);
     } catch (error) {
       console.error("Failed to fetch summary:", error);
