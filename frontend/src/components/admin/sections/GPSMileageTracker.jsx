@@ -1720,10 +1720,17 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   <div className="max-h-64 overflow-y-auto">
                     {/* TODAY VIEW - Simple list of today's trips */}
                     {summaryView === "today" && (() => {
-                      const today = new Date().toISOString().split('T')[0];
-                      const todayTrips = tripHistory.filter(trip => 
-                        trip.start_time?.split('T')[0] === today
-                      );
+                      // Get today's date in local timezone (YYYY-MM-DD format)
+                      const now = new Date();
+                      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                      
+                      const todayTrips = tripHistory.filter(trip => {
+                        if (!trip.start_time) return false;
+                        // Parse the trip's start_time and compare in local timezone
+                        const tripDate = new Date(trip.start_time);
+                        const tripDateStr = `${tripDate.getFullYear()}-${String(tripDate.getMonth() + 1).padStart(2, '0')}-${String(tripDate.getDate()).padStart(2, '0')}`;
+                        return tripDateStr === today;
+                      });
                       
                       if (todayTrips.length === 0) {
                         return (
@@ -1741,18 +1748,22 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     {/* MONTH VIEW - Days collapsible, then trips */}
                     {summaryView === "month" && (() => {
                       const now = new Date();
-                      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                      const currentYear = now.getFullYear();
+                      const currentMonth = now.getMonth(); // 0-indexed
                       
                       // Group trips by day for current month
                       const tripsByDay = {};
                       tripHistory.forEach(trip => {
-                        const tripDate = trip.start_time?.split('T')[0];
-                        if (tripDate?.startsWith(currentMonth)) {
-                          if (!tripsByDay[tripDate]) {
-                            tripsByDay[tripDate] = { trips: [], miles: 0 };
+                        if (!trip.start_time) return;
+                        const tripDate = new Date(trip.start_time);
+                        // Check if trip is in current month (local timezone)
+                        if (tripDate.getFullYear() === currentYear && tripDate.getMonth() === currentMonth) {
+                          const dateKey = `${tripDate.getFullYear()}-${String(tripDate.getMonth() + 1).padStart(2, '0')}-${String(tripDate.getDate()).padStart(2, '0')}`;
+                          if (!tripsByDay[dateKey]) {
+                            tripsByDay[dateKey] = { trips: [], miles: 0 };
                           }
-                          tripsByDay[tripDate].trips.push(trip);
-                          tripsByDay[tripDate].miles += trip.total_miles || 0;
+                          tripsByDay[dateKey].trips.push(trip);
+                          tripsByDay[dateKey].miles += trip.total_miles || 0;
                         }
                       });
                       
@@ -1811,21 +1822,25 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       // Group trips by month
                       const tripsByMonth = {};
                       tripHistory.forEach(trip => {
-                        const tripDate = trip.start_time?.split('T')[0];
-                        if (tripDate?.startsWith(String(currentYear))) {
-                          const month = tripDate.substring(0, 7); // "2026-03"
-                          if (!tripsByMonth[month]) {
-                            tripsByMonth[month] = { trips: [], miles: 0, byDay: {} };
+                        if (!trip.start_time) return;
+                        const tripDate = new Date(trip.start_time);
+                        // Check if trip is in the current year (local timezone)
+                        if (tripDate.getFullYear() === currentYear) {
+                          const monthKey = `${tripDate.getFullYear()}-${String(tripDate.getMonth() + 1).padStart(2, '0')}`;
+                          const dayKey = `${tripDate.getFullYear()}-${String(tripDate.getMonth() + 1).padStart(2, '0')}-${String(tripDate.getDate()).padStart(2, '0')}`;
+                          
+                          if (!tripsByMonth[monthKey]) {
+                            tripsByMonth[monthKey] = { trips: [], miles: 0, byDay: {} };
                           }
-                          tripsByMonth[month].trips.push(trip);
-                          tripsByMonth[month].miles += trip.total_miles || 0;
+                          tripsByMonth[monthKey].trips.push(trip);
+                          tripsByMonth[monthKey].miles += trip.total_miles || 0;
                           
                           // Also group by day within month
-                          if (!tripsByMonth[month].byDay[tripDate]) {
-                            tripsByMonth[month].byDay[tripDate] = { trips: [], miles: 0 };
+                          if (!tripsByMonth[monthKey].byDay[dayKey]) {
+                            tripsByMonth[monthKey].byDay[dayKey] = { trips: [], miles: 0 };
                           }
-                          tripsByMonth[month].byDay[tripDate].trips.push(trip);
-                          tripsByMonth[month].byDay[tripDate].miles += trip.total_miles || 0;
+                          tripsByMonth[monthKey].byDay[dayKey].trips.push(trip);
+                          tripsByMonth[monthKey].byDay[dayKey].miles += trip.total_miles || 0;
                         }
                       });
                       
