@@ -422,9 +422,8 @@ async def get_trip_history(
     month: Optional[int] = None,
     admin: dict = Depends(get_admin_user)
 ):
-    """Get completed trip history with optional date filtering"""
+    """Get completed trip history for ALL users (admin view)"""
     query = {
-        "user_id": admin["email"],
         "status": "completed",
         "is_hidden": {"$ne": True}  # Exclude hidden adjustments from trip history
     }
@@ -458,7 +457,8 @@ async def get_trip_history(
         result.append({
             **trip,
             "location_count": len(full_trip.get("locations", [])),
-            "tax_deduction": round(trip.get("total_miles", 0) * irs_rate, 2)
+            "tax_deduction": round(trip.get("total_miles", 0) * irs_rate, 2),
+            "logged_by": trip.get("user_name", trip.get("user_id", "Unknown"))
         })
     
     return {"trips": result}
@@ -469,7 +469,7 @@ async def get_mileage_summary(
     year: Optional[int] = None,
     admin: dict = Depends(get_admin_user)
 ):
-    """Get mileage summary for IRS purposes"""
+    """Get mileage summary for ALL users (admin view)"""
     now = datetime.now(timezone.utc)
     if not year:
         year = now.year
@@ -477,8 +477,8 @@ async def get_mileage_summary(
     start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
     end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
     
+    # Get ALL completed trips (not filtered by user)
     trips = await db.gps_trips.find({
-        "user_id": admin["email"],
         "status": "completed",
         "start_time": {
             "$gte": start_date.isoformat(),
@@ -538,13 +538,24 @@ async def get_mileage_summary(
     current_month_key = now.strftime("%Y-%m")
     current_month_data = monthly.get(current_month_key, {"trips": 0, "miles": 0})
     
+    # Calculate breakdown by user
+    by_user = {}
+    for trip in trips:
+        user_name = trip.get("user_name", trip.get("user_id", "Unknown"))
+        if user_name not in by_user:
+            by_user[user_name] = {"trips": 0, "miles": 0, "deduction": 0}
+        by_user[user_name]["trips"] += 1
+        by_user[user_name]["miles"] += trip.get("total_miles", 0)
+        by_user[user_name]["deduction"] = round(by_user[user_name]["miles"] * irs_rate, 2)
+    
     return {
         "year": year,
         "irs_rate": irs_rate,
         "total_miles": round(total_miles, 2),
         "total_trips": total_trips,
-        "tax_deduction": round(total_miles * irs_rate, 2),
+        "total_deduction": round(total_miles * irs_rate, 2),
         "by_purpose": by_purpose,
+        "by_user": by_user,
         "monthly": monthly,
         "daily": daily,
         # Quick access summaries

@@ -3,7 +3,7 @@
  * Reusable row for displaying trip information in lists
  */
 import { Button } from "@/components/ui/button";
-import { Map, Pencil, Trash2 } from "lucide-react";
+import { Map, Pencil, Trash2, User } from "lucide-react";
 
 const TripRow = ({ 
   trip, 
@@ -17,6 +17,7 @@ const TripRow = ({
   nested = false 
 }) => {
   const PurposeIcon = getPurposeIcon(trip.purpose);
+  const loggedBy = trip.logged_by || trip.user_name || null;
   
   return (
     <div 
@@ -35,6 +36,12 @@ const TripRow = ({
           <p className={`${compact ? 'text-[10px]' : 'text-xs'} text-gray-500`}>
             {trip.total_miles?.toFixed(2)} mi • ${trip.tax_deduction?.toFixed(2)}
             {!compact && ` • ${formatDate(trip.start_time)}`}
+            {loggedBy && (
+              <span className="ml-1 text-blue-500">
+                <User className="w-3 h-3 inline -mt-0.5 mr-0.5" />
+                {loggedBy.split(' ')[0]}
+              </span>
+            )}
           </p>
         </div>
       </div>
