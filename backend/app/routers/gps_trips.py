@@ -480,20 +480,32 @@ async def get_mileage_summary(
     start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
     end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
     
-    # Get ALL completed trips (not filtered by user)
+    # Get ALL completed trips, excluding hidden adjustments
     trips = await db.gps_trips.find({
         "status": "completed",
+        "is_hidden": {"$ne": True},  # Exclude hidden adjustment entries from trip counts
         "start_time": {
             "$gte": start_date.isoformat(),
             "$lt": end_date.isoformat()
         }
     }, {"_id": 0, "locations": 0}).to_list(1000)
     
+    # Get hidden adjustments separately to add to mileage totals (but not trip counts)
+    hidden_adjustments = await db.gps_trips.find({
+        "status": "completed",
+        "is_hidden": True,
+        "start_time": {
+            "$gte": start_date.isoformat(),
+            "$lt": end_date.isoformat()
+        }
+    }, {"_id": 0, "total_miles": 1, "start_time": 1}).to_list(1000)
+    
     irs_rate = get_irs_rate(year)
     
-    # Calculate totals
+    # Calculate totals - trips don't include hidden, but miles do
     total_miles = sum(t.get("total_miles", 0) for t in trips)
-    total_trips = len(trips)
+    total_miles += sum(t.get("total_miles", 0) for t in hidden_adjustments)  # Add hidden adjustment miles
+    total_trips = len(trips)  # Hidden entries are NOT counted as trips
     
     # Calculate by purpose
     by_purpose = {}
@@ -513,6 +525,15 @@ async def get_mileage_summary(
             monthly[month_key] = {"trips": 0, "miles": 0, "deduction": 0}
         monthly[month_key]["trips"] += 1
         monthly[month_key]["miles"] += trip.get("total_miles", 0)
+        monthly[month_key]["deduction"] = round(monthly[month_key]["miles"] * irs_rate, 2)
+    
+    # Add hidden adjustment miles to monthly totals (but not trip counts)
+    for adj in hidden_adjustments:
+        start_time = datetime.fromisoformat(adj["start_time"].replace("Z", "+00:00"))
+        month_key = start_time.strftime("%Y-%m")
+        if month_key not in monthly:
+            monthly[month_key] = {"trips": 0, "miles": 0, "deduction": 0}
+        monthly[month_key]["miles"] += adj.get("total_miles", 0)
         monthly[month_key]["deduction"] = round(monthly[month_key]["miles"] * irs_rate, 2)
     
     # Calculate daily breakdown (current month)
@@ -536,6 +557,19 @@ async def get_mileage_summary(
             if day_key == today_key:
                 today_miles += trip.get("total_miles", 0)
                 today_trips += 1
+    
+    # Add hidden adjustment miles to daily totals (but not trip counts)
+    for adj in hidden_adjustments:
+        start_time = datetime.fromisoformat(adj["start_time"].replace("Z", "+00:00"))
+        if start_time >= current_month_start:
+            day_key = start_time.strftime("%Y-%m-%d")
+            if day_key not in daily:
+                daily[day_key] = {"trips": 0, "miles": 0, "deduction": 0}
+            daily[day_key]["miles"] += adj.get("total_miles", 0)
+            daily[day_key]["deduction"] = round(daily[day_key]["miles"] * irs_rate, 2)
+            
+            if day_key == today_key:
+                today_miles += adj.get("total_miles", 0)
     
     # Current month totals
     current_month_key = now.strftime("%Y-%m")
