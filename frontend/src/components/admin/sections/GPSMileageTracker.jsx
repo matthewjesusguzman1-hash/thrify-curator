@@ -28,7 +28,9 @@ import {
   TrendingUp,
   Map,
   Eye,
-  Pencil
+  Pencil,
+  Calendar,
+  CalendarDays
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +73,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const [tripHistory, setTripHistory] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [summaryView, setSummaryView] = useState("year"); // "today", "month", "year"
   
   // Use external state if provided, otherwise internal
   const activeTrip = externalTrip;
@@ -898,7 +901,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                    "Tracking active"} • {activeTrip.total_miles?.toFixed(2) || "0.00"} mi
                 </span>
               ) : summary ? (
-                `${summary.total_miles?.toFixed(1) || 0} mi this year • $${summary.tax_deduction?.toFixed(2) || "0.00"} deduction`
+                <span>
+                  Today: {summary.today?.miles?.toFixed(1) || 0} mi • 
+                  {summary.this_month?.name}: {summary.this_month?.miles?.toFixed(1) || 0} mi • 
+                  YTD: {summary.total_miles?.toFixed(1) || 0} mi
+                </span>
               ) : (
                 "Track business mileage for IRS deductions"
               )}
@@ -1459,30 +1466,118 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 </div>
               )}
               
-              {/* Year Summary */}
+              {/* Mileage Summary - Day/Month/Year Tabs */}
               {summary && (
-                <div className="p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <TrendingUp className="w-5 h-5 text-amber-600" />
-                    <span className="font-medium text-amber-800">{summary.year} Summary</span>
+                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200 overflow-hidden">
+                  {/* Tab Headers */}
+                  <div className="flex border-b border-amber-200">
+                    <button
+                      onClick={() => setSummaryView("today")}
+                      className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
+                        summaryView === "today"
+                          ? "bg-amber-100 text-amber-800 border-b-2 border-amber-500"
+                          : "text-amber-600 hover:bg-amber-50"
+                      }`}
+                      data-testid="summary-tab-today"
+                    >
+                      <Calendar className="w-4 h-4 inline mr-1" />
+                      Today
+                    </button>
+                    <button
+                      onClick={() => setSummaryView("month")}
+                      className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
+                        summaryView === "month"
+                          ? "bg-amber-100 text-amber-800 border-b-2 border-amber-500"
+                          : "text-amber-600 hover:bg-amber-50"
+                      }`}
+                      data-testid="summary-tab-month"
+                    >
+                      <CalendarDays className="w-4 h-4 inline mr-1" />
+                      {summary.this_month?.name || "Month"}
+                    </button>
+                    <button
+                      onClick={() => setSummaryView("year")}
+                      className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
+                        summaryView === "year"
+                          ? "bg-amber-100 text-amber-800 border-b-2 border-amber-500"
+                          : "text-amber-600 hover:bg-amber-50"
+                      }`}
+                      data-testid="summary-tab-year"
+                    >
+                      <TrendingUp className="w-4 h-4 inline mr-1" />
+                      {summary.year}
+                    </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-white/60 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-amber-700">{summary.total_trips}</p>
-                      <p className="text-xs text-amber-600">Trips</p>
-                    </div>
-                    <div className="bg-white/60 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-amber-700">{summary.total_miles?.toFixed(1)}</p>
-                      <p className="text-xs text-amber-600">Miles</p>
-                    </div>
-                    <div className="bg-white/60 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-amber-700">${summary.tax_deduction?.toFixed(0)}</p>
-                      <p className="text-xs text-amber-600">Deduction</p>
-                    </div>
+                  
+                  {/* Tab Content */}
+                  <div className="p-4">
+                    {summaryView === "today" && (
+                      <div className="text-center">
+                        <p className="text-xs text-amber-600 mb-2">Today's Mileage</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="bg-white/60 rounded-lg p-3">
+                            <p className="text-2xl font-bold text-amber-700">{summary.today?.trips || 0}</p>
+                            <p className="text-xs text-amber-600">Trips</p>
+                          </div>
+                          <div className="bg-white/60 rounded-lg p-3">
+                            <p className="text-2xl font-bold text-amber-700">{summary.today?.miles?.toFixed(1) || "0.0"}</p>
+                            <p className="text-xs text-amber-600">Miles</p>
+                          </div>
+                          <div className="bg-white/60 rounded-lg p-3">
+                            <p className="text-2xl font-bold text-amber-700">${summary.today?.deduction?.toFixed(2) || "0.00"}</p>
+                            <p className="text-xs text-amber-600">Deduction</p>
+                          </div>
+                        </div>
+                        {summary.today?.trips === 0 && (
+                          <p className="text-xs text-amber-500 mt-3">No trips recorded today</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {summaryView === "month" && (
+                      <div className="text-center">
+                        <p className="text-xs text-amber-600 mb-2">{summary.this_month?.name} Mileage</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="bg-white/60 rounded-lg p-3">
+                            <p className="text-2xl font-bold text-amber-700">{summary.this_month?.trips || 0}</p>
+                            <p className="text-xs text-amber-600">Trips</p>
+                          </div>
+                          <div className="bg-white/60 rounded-lg p-3">
+                            <p className="text-2xl font-bold text-amber-700">{summary.this_month?.miles?.toFixed(1) || "0.0"}</p>
+                            <p className="text-xs text-amber-600">Miles</p>
+                          </div>
+                          <div className="bg-white/60 rounded-lg p-3">
+                            <p className="text-2xl font-bold text-amber-700">${summary.this_month?.deduction?.toFixed(2) || "0.00"}</p>
+                            <p className="text-xs text-amber-600">Deduction</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {summaryView === "year" && (
+                      <div className="text-center">
+                        <p className="text-xs text-amber-600 mb-2">{summary.year} Year-to-Date</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="bg-white/60 rounded-lg p-3">
+                            <p className="text-2xl font-bold text-amber-700">{summary.total_trips || 0}</p>
+                            <p className="text-xs text-amber-600">Trips</p>
+                          </div>
+                          <div className="bg-white/60 rounded-lg p-3">
+                            <p className="text-2xl font-bold text-amber-700">{summary.total_miles?.toFixed(1) || "0.0"}</p>
+                            <p className="text-xs text-amber-600">Miles</p>
+                          </div>
+                          <div className="bg-white/60 rounded-lg p-3">
+                            <p className="text-2xl font-bold text-amber-700">${summary.tax_deduction?.toFixed(0) || "0"}</p>
+                            <p className="text-xs text-amber-600">Deduction</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-amber-600 mt-3 text-center">
+                      IRS Rate: ${summary.irs_rate}/mile
+                    </p>
                   </div>
-                  <p className="text-xs text-amber-600 mt-2 text-center">
-                    IRS Rate: ${summary.irs_rate}/mile
-                  </p>
                 </div>
               )}
               

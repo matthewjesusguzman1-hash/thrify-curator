@@ -462,8 +462,9 @@ async def get_mileage_summary(
     admin: dict = Depends(get_admin_user)
 ):
     """Get mileage summary for IRS purposes"""
+    now = datetime.now(timezone.utc)
     if not year:
-        year = datetime.now(timezone.utc).year
+        year = now.year
     
     start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
     end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
@@ -498,9 +499,36 @@ async def get_mileage_summary(
         start_time = datetime.fromisoformat(trip["start_time"].replace("Z", "+00:00"))
         month_key = start_time.strftime("%Y-%m")
         if month_key not in monthly:
-            monthly[month_key] = {"trips": 0, "miles": 0}
+            monthly[month_key] = {"trips": 0, "miles": 0, "deduction": 0}
         monthly[month_key]["trips"] += 1
         monthly[month_key]["miles"] += trip.get("total_miles", 0)
+        monthly[month_key]["deduction"] = round(monthly[month_key]["miles"] * irs_rate, 2)
+    
+    # Calculate daily breakdown (current month)
+    current_month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    daily = {}
+    today_key = now.strftime("%Y-%m-%d")
+    today_miles = 0
+    today_trips = 0
+    
+    for trip in trips:
+        start_time = datetime.fromisoformat(trip["start_time"].replace("Z", "+00:00"))
+        if start_time >= current_month_start:
+            day_key = start_time.strftime("%Y-%m-%d")
+            if day_key not in daily:
+                daily[day_key] = {"trips": 0, "miles": 0, "deduction": 0}
+            daily[day_key]["trips"] += 1
+            daily[day_key]["miles"] += trip.get("total_miles", 0)
+            daily[day_key]["deduction"] = round(daily[day_key]["miles"] * irs_rate, 2)
+            
+            # Track today's totals
+            if day_key == today_key:
+                today_miles += trip.get("total_miles", 0)
+                today_trips += 1
+    
+    # Current month totals
+    current_month_key = now.strftime("%Y-%m")
+    current_month_data = monthly.get(current_month_key, {"trips": 0, "miles": 0})
     
     return {
         "year": year,
@@ -509,7 +537,20 @@ async def get_mileage_summary(
         "total_trips": total_trips,
         "tax_deduction": round(total_miles * irs_rate, 2),
         "by_purpose": by_purpose,
-        "monthly": monthly
+        "monthly": monthly,
+        "daily": daily,
+        # Quick access summaries
+        "today": {
+            "trips": today_trips,
+            "miles": round(today_miles, 2),
+            "deduction": round(today_miles * irs_rate, 2)
+        },
+        "this_month": {
+            "trips": current_month_data["trips"],
+            "miles": round(current_month_data["miles"], 2),
+            "deduction": round(current_month_data["miles"] * irs_rate, 2),
+            "name": now.strftime("%B")
+        }
     }
 
 
