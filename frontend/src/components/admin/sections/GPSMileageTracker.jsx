@@ -1129,68 +1129,6 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     </div>
                   )}
                   
-                  {/* Control Buttons */}
-                  {!showCompletionForm && (
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        {trackingStatus === "tracking" ? (
-                          <>
-                            <Button
-                              onClick={handlePauseTrip}
-                              variant="outline"
-                              className="flex-1 border-amber-400 text-amber-700 hover:bg-amber-50"
-                              data-testid="pause-trip-btn"
-                            >
-                              <Pause className="w-4 h-4 mr-2" />
-                              Pause
-                            </Button>
-                            <Button
-                              onClick={handleStopTrip}
-                              variant="outline"
-                              className="flex-1 border-red-400 text-red-700 hover:bg-red-50"
-                              data-testid="stop-trip-btn"
-                            >
-                              <Square className="w-4 h-4 mr-2" />
-                              Stop
-                            </Button>
-                          </>
-                        ) : trackingStatus === "paused" ? (
-                          <>
-                            <Button
-                              onClick={handleResumeTrip}
-                              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                              data-testid="resume-trip-btn"
-                            >
-                              <Play className="w-4 h-4 mr-2" />
-                              Resume
-                            </Button>
-                            <Button
-                              onClick={handleStopTrip}
-                              variant="outline"
-                              className="flex-1 border-red-400 text-red-700 hover:bg-red-50"
-                              data-testid="stop-trip-btn-paused"
-                            >
-                              <Square className="w-4 h-4 mr-2" />
-                              Stop
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                      {/* Cancel/Discard button - always visible when trip is active */}
-                      {(trackingStatus === "tracking" || trackingStatus === "paused") && (
-                        <Button
-                          onClick={handleCancelTrip}
-                          variant="ghost"
-                          className="w-full text-gray-500 hover:text-red-600 hover:bg-red-50 text-sm"
-                          data-testid="cancel-trip-section-btn"
-                        >
-                          <X className="w-4 h-4 mr-2" />
-                          Discard Trip
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                  
                   {/* Completion Form */}
                   {showCompletionForm && (
                     <div ref={completionFormRef} className="space-y-4">
@@ -1343,34 +1281,9 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 </div>
               )}
               
-              {/* Start New Trip Button or Manual Entry */}
+              {/* Manual Entry Button - only show when no active trip */}
               {!activeTrip && !showCompletionForm && !showManualEntry && (
                 <div className="space-y-3">
-                  <Button
-                    onClick={handleStartTrip}
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg"
-                    data-testid="start-trip-btn"
-                  >
-                    {loading ? (
-                      "Getting location..."
-                    ) : (
-                      <>
-                        <Play className="w-5 h-5 mr-2" />
-                        Start GPS Tracking
-                      </>
-                    )}
-                  </Button>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-200" />
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-gray-500">or</span>
-                    </div>
-                  </div>
-                  
                   <Button
                     onClick={() => setShowManualEntry(true)}
                     variant="outline"
@@ -1380,6 +1293,9 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     <FileText className="w-4 h-4 mr-2" />
                     Log Trip Manually
                   </Button>
+                  <p className="text-xs text-gray-500 text-center">
+                    Use the GPS controls at the top of the dashboard to start tracking
+                  </p>
                 </div>
               )}
               
