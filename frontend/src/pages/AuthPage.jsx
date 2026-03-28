@@ -41,6 +41,7 @@ export default function AuthPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [sendingReset, setSendingReset] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [biometricAttempted, setBiometricAttempted] = useState(false);
   
   // Biometric auth hook
   const { isNative, isAvailable: biometricAvailable, isLoading: biometricLoading, biometricLogin, setCredentials } = useBiometricAuth();
@@ -89,53 +90,10 @@ export default function AuthPage() {
       }
       
       // Try biometric login if available and no session
+      // Skip auto-scan - let user initiate Face ID to avoid double-scanning
       if (biometricAvailable && isNative) {
-        console.log('Attempting biometric auto-login for employee portal...');
-        const bioResult = await biometricLogin('employee_portal', {
-          reason: 'Login to Employee Portal',
-          title: 'Employee Login',
-        });
-        
-        console.log('Biometric auto-login result:', bioResult);
-        
-        if (bioResult.success && bioResult.credentials) {
-          try {
-            console.log('Using stored credentials to login...');
-            
-            // Build login payload based on credential type
-            let loginPayload;
-            if (bioResult.credentials.password === 'EMAIL_ONLY_LOGIN') {
-              // Passwordless employee - login with email only
-              loginPayload = { email: bioResult.credentials.username };
-            } else {
-              // Has password/admin code
-              loginPayload = {
-                email: bioResult.credentials.username,
-                password: bioResult.credentials.password
-              };
-            }
-            
-            const response = await axios.post(`${API}/auth/login`, loginPayload);
-            
-            const { access_token, user } = response.data;
-            localStorage.setItem("token", access_token);
-            localStorage.setItem("user", JSON.stringify(user));
-            
-            toast.success(`Welcome back, ${user.name}!`);
-            
-            if (user.role === "admin") {
-              navigate("/admin");
-            } else {
-              navigate("/dashboard");
-            }
-            return;
-          } catch (loginError) {
-            // Biometric credentials invalid, continue to normal login
-            console.log('Stored credentials invalid:', loginError);
-          }
-        } else if (bioResult.needsPassword) {
-          console.log('No saved credentials - user needs to login with password first');
-        }
+        console.log('Biometric available - user can tap Face ID button to login');
+        // Don't auto-scan, just show the login page with Face ID button
       }
       
       setCheckingSession(false);
