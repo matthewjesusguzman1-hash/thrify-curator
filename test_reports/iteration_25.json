@@ -1,0 +1,79 @@
+{
+  "summary": "Tested GPS tracking features, login flows, and location data processing. All backend API tests (14) and frontend E2E tests (12) passed. GPS tracking hook correctly handles both Transistorsoft direct format and standard coords nested format.",
+  "mode": "generate",
+  "baseline_commit": "ea30bdac74561cfecbb36fd0596e5befc9a23af1",
+  "head_commit": "ee3fdef6d469d378a800e2e60c5dfd6cb8b170df",
+  "specs_created": [
+    "/app/tests/e2e/gps-login-flows.spec.ts",
+    "/app/backend/tests/test_gps_api_integration.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_gps_api_integration.py",
+    "/app/test_reports/pytest/gps_api_results.xml",
+    "/app/tests/e2e/gps-login-flows.spec.ts"
+  ],
+  "regression_results": {
+    "total_specs": 26,
+    "passed": 26,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/gps-login-flows.spec.ts",
+    "/app/backend/tests/test_gps_api_integration.py"
+  ],
+  "test_results": {
+    "backend": "100% (14/14 passed)",
+    "frontend": "100% (12/12 passed)"
+  },
+  "seed_data_creation": "Test trips created and cleaned up during API tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All GPS tracking features tested and working: 1) GPS tracking hook handles both Transistorsoft direct format (location.latitude) and standard format (location.coords.latitude), 2) Distance calculation using Haversine formula verified, 3) GPS noise filtering (< 0.001 mi) and jump filtering (>= 5 mi) working correctly, 4) Employee login shows 'Find My Account' button, 5) Consignor login shows 'Find My Agreement' button, 6) Admin dashboard GPS Mileage Tracker displays summary tabs (Today/Month/Year), IRS rate ($0.725/mile), and trip history.",
+  "features_verified": {
+    "gps_location_format_handling": {
+      "status": "PASS",
+      "details": "useGPSTracking.js correctly handles both Transistorsoft format (location.latitude directly) and standard format (location.coords.latitude) using 'const coords = location.coords || location'"
+    },
+    "distance_calculation": {
+      "status": "PASS",
+      "details": "Haversine formula correctly calculates distance in miles. Test: Atlanta to Marietta = ~16.86 miles"
+    },
+    "gps_noise_filtering": {
+      "status": "PASS",
+      "details": "Filters out movements < 0.001 miles (GPS noise) and >= 5 miles (GPS jumps)"
+    },
+    "employee_login_button_label": {
+      "status": "PASS",
+      "details": "Button shows 'Find My Account' instead of 'Continue'"
+    },
+    "consignor_login_button_label": {
+      "status": "PASS",
+      "details": "Button shows 'Find My Agreement' instead of 'Continue'"
+    },
+    "gps_tracker_summary_tabs": {
+      "status": "PASS",
+      "details": "Today, Month (March), Year (2026) tabs visible with IRS rate $0.725/mile"
+    },
+    "trip_in_progress_display": {
+      "status": "PASS",
+      "details": "Active trip shows Miles, Points, Deduction stats and duration"
+    },
+    "manual_trip_entry_api": {
+      "status": "PASS",
+      "details": "POST /api/admin/gps-trips/manual creates trip with correct tax deduction calculation"
+    },
+    "mileage_adjustment_api": {
+      "status": "PASS",
+      "details": "POST /api/admin/gps-trips/adjust creates hidden adjustment entries"
+    },
+    "trip_update_api": {
+      "status": "PASS",
+      "details": "PUT /api/admin/gps-trips/{id} updates trip details correctly"
+    }
+  }
+}
