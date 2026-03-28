@@ -142,7 +142,7 @@ export default function useGPSTracking() {
     try {
       const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
       
-      // Configure the plugin
+      // Configure the plugin with aggressive iOS background settings
       const state = await BackgroundGeolocation.ready({
         // License
         license: IOS_LICENSE_KEY,
@@ -150,18 +150,24 @@ export default function useGPSTracking() {
         // Geolocation Config
         desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
         distanceFilter: 10, // meters
-        stopTimeout: 5, // minutes to wait before stopping when stationary
+        stopTimeout: 0, // Never stop - keep tracking continuously
         
-        // Activity Recognition
-        stopOnStationary: false, // Don't stop tracking when stationary
+        // Activity Recognition - DISABLE to prevent auto-stop
+        stopOnStationary: false,
+        disableStopDetection: true, // Don't stop when phone thinks you stopped
+        
+        // iOS specific - CRITICAL for background
+        preventSuspend: true, // Keep JS alive in background
+        showsBackgroundLocationIndicator: true, // Show blue bar
+        pausesLocationUpdatesAutomatically: false, // Never pause
+        locationAuthorizationRequest: 'Always', // Request "Always" permission
+        
+        // Heartbeat to keep alive (iOS)
+        heartbeatInterval: 60, // Send heartbeat every 60 seconds
         
         // Application Config
-        debug: false, // Disable debug sounds
+        debug: true, // Enable debug sounds to verify it's working
         logLevel: BackgroundGeolocation.LOG_LEVEL_VERBOSE,
-        
-        // iOS specific
-        preventSuspend: true, // Keep tracking in background
-        showsBackgroundLocationIndicator: true, // Show blue bar
         
         // Notification config (Android mainly, but good to have)
         notification: {
