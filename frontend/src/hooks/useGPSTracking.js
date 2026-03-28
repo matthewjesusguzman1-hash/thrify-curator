@@ -1,6 +1,7 @@
 /**
  * useGPSTracking Hook
- * Optimized GPS tracking for Capacitor native apps with proper start/stop control
+ * GPS tracking with background location support for iOS/Android
+ * Uses @capacitor-community/background-geolocation for continuous tracking
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -36,8 +37,10 @@ export default function useGPSTracking() {
   const locationsRef = useRef([]);
   const lastLocationRef = useRef(null);
   const totalDistanceRef = useRef(0);
-  const isTrackingRef = useRef(false); // Mirror of isTracking for callbacks
-  const isPausedRef = useRef(false); // Mirror of isPaused for callbacks
+  const isTrackingRef = useRef(false);
+  const isPausedRef = useRef(false);
+  const backgroundWatcherRef = useRef(null);
+  const usingBackgroundGeoRef = useRef(false);
 
   // Update refs when state changes
   useEffect(() => {
@@ -48,28 +51,27 @@ export default function useGPSTracking() {
     isPausedRef.current = isPaused;
   }, [isPaused]);
 
-  // Process new location point
-  const processLocation = useCallback((location) => {
-    // Don't process if not tracking or paused
+  // Process incoming location
+  const processLocation = useCallback((point) => {
+    // Ignore if not tracking or paused
     if (!isTrackingRef.current || isPausedRef.current) {
-      console.log('Skipping location - tracking:', isTrackingRef.current, 'paused:', isPausedRef.current);
       return;
     }
 
-    const point = {
-      latitude: location.latitude,
-      longitude: location.longitude,
-      accuracy: location.accuracy,
-      speed: location.speed,
-      timestamp: new Date().toISOString()
-    };
-
-    // Filter out inaccurate readings (accuracy > 50 meters on native, > 100 on web)
-    const maxAccuracy = isNative() ? 50 : 100;
-    if (point.accuracy && point.accuracy > maxAccuracy) {
-      console.log('Skipping inaccurate reading:', point.accuracy);
+    // Basic validation
+    if (!point || typeof point.latitude !== 'number' || typeof point.longitude !== 'number') {
+      console.log('Invalid location point:', point);
       return;
     }
+
+    // Skip low accuracy readings (> 100 meters)
+    if (point.accuracy && point.accuracy > 100) {
+      console.log('Skipping low accuracy reading:', point.accuracy, 'meters');
+      return;
+    }
+
+    // Update current location
+    setCurrentLocation(point);
 
     // Calculate distance from last point
     if (lastLocationRef.current) {
@@ -81,7 +83,6 @@ export default function useGPSTracking() {
       );
 
       // Filter out extreme GPS jumps (> 5 miles in one reading)
-      // Allow larger distances since GPS updates may be infrequent in background
       // Also filter tiny movements < 0.001 miles (about 5 feet) to reduce noise
       if (distance > 0.001 && distance < 5.0) {
         totalDistanceRef.current += distance;
@@ -92,10 +93,18 @@ export default function useGPSTracking() {
       }
     }
 
+    // Store location
+    const locationData = {
+      latitude: point.latitude,
+      longitude: point.longitude,
+      accuracy: point.accuracy || 0,
+      speed: point.speed || 0,
+      timestamp: point.timestamp || new Date().toISOString()
+    };
+    
+    locationsRef.current.push(locationData);
     lastLocationRef.current = point;
-    locationsRef.current.push(point);
-    setCurrentLocation(point);
-    setLocationCount(prev => prev + 1);
+    setLocationCount(locationsRef.current.length);
   }, []);
 
   // Get current position (one-time)
@@ -134,65 +143,45 @@ export default function useGPSTracking() {
     }
   }, []);
 
-  // Clear the GPS watch
-  const clearWatch = useCallback(async () => {
-    const watchId = watchIdRef.current;
+  // Stop all tracking methods
+  const stopAllTracking = useCallback(async () => {
+    console.log('Stopping all tracking...');
     
-    // Clear the ref immediately to prevent double-clearing
-    watchIdRef.current = null;
+    // Stop background geolocation if active
+    if (usingBackgroundGeoRef.current) {
+      try {
+        const BackgroundGeolocation = (await import('@capacitor-community/background-geolocation')).BackgroundGeolocation;
+        await BackgroundGeolocation.removeWatcher({ id: backgroundWatcherRef.current });
+        console.log('Background geolocation stopped');
+      } catch (err) {
+        console.log('Error stopping background geo:', err);
+      }
+      usingBackgroundGeoRef.current = false;
+      backgroundWatcherRef.current = null;
+    }
     
-    if (watchId !== null) {
-      console.log('Clearing GPS watch ID:', watchId);
+    // Stop standard watch if active
+    if (watchIdRef.current !== null) {
       try {
         if (isNative()) {
           const { Geolocation } = await import('@capacitor/geolocation');
-          await Geolocation.clearWatch({ id: watchId });
-          console.log('Native GPS watch cleared successfully');
+          await Geolocation.clearWatch({ id: watchIdRef.current });
         } else {
-          navigator.geolocation.clearWatch(watchId);
-          console.log('Web GPS watch cleared successfully');
+          navigator.geolocation.clearWatch(watchIdRef.current);
         }
+        console.log('Standard geolocation watch stopped');
       } catch (err) {
-        console.error('Error clearing watch:', err);
+        console.log('Error stopping standard geo:', err);
       }
-    } else {
-      console.log('No GPS watch to clear');
+      watchIdRef.current = null;
     }
   }, []);
 
-  // Start tracking
+  // Start tracking with background support
   const startTracking = useCallback(async () => {
     try {
       setError(null);
       
-      // Request permissions on native - need "always" for background tracking
-      if (isNative()) {
-        const { Geolocation } = await import('@capacitor/geolocation');
-        
-        // First check current permission status
-        const currentStatus = await Geolocation.checkPermissions();
-        console.log('Current location permission:', currentStatus.location);
-        
-        // Request "always" permission for background GPS tracking
-        // This will show the "Always Allow" option on iOS
-        const status = await Geolocation.requestPermissions({
-          permissions: ['location', 'coarseLocation']
-        });
-        
-        console.log('Permission request result:', status.location);
-        
-        if (status.location === 'denied') {
-          setError('Location permission denied');
-          toast.error('Please enable location permissions in Settings');
-          return false;
-        }
-        
-        // If only "when in use" granted, still proceed but warn about background
-        if (status.location === 'prompt' || status.location === 'prompt-with-rationale') {
-          toast.info('For best results, allow "Always" location access');
-        }
-      }
-
       // Reset state
       locationsRef.current = [];
       lastLocationRef.current = null;
@@ -202,19 +191,83 @@ export default function useGPSTracking() {
       setIsPaused(false);
       isPausedRef.current = false;
 
-      // Get initial position
-      const initialPosition = await getCurrentPosition();
-      
-      // Set tracking state BEFORE starting watch
-      setIsTracking(true);
-      isTrackingRef.current = true;
-      
-      // Process initial position
-      processLocation(initialPosition);
+      // Try to use background geolocation on native platforms
+      if (isNative()) {
+        try {
+          const BackgroundGeolocation = (await import('@capacitor-community/background-geolocation')).BackgroundGeolocation;
+          
+          // Add watcher with background capability
+          const watcherId = await BackgroundGeolocation.addWatcher(
+            {
+              backgroundMessage: "Tracking your mileage for tax deductions",
+              backgroundTitle: "GPS Tracking Active",
+              requestPermissions: true,
+              stale: false,
+              distanceFilter: 10 // Get updates every 10 meters
+            },
+            (location, error) => {
+              if (error) {
+                if (error.code === "NOT_AUTHORIZED") {
+                  toast.error("Please enable 'Always' location access for background tracking");
+                  console.log("Location not authorized");
+                }
+                return;
+              }
+              
+              if (location) {
+                console.log('Background location:', location.latitude, location.longitude);
+                processLocation({
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  accuracy: location.accuracy,
+                  speed: location.speed,
+                  timestamp: new Date().toISOString()
+                });
+              }
+            }
+          );
+          
+          backgroundWatcherRef.current = watcherId;
+          usingBackgroundGeoRef.current = true;
+          console.log('Background geolocation started, watcher ID:', watcherId);
+          
+          // Set tracking state
+          setIsTracking(true);
+          isTrackingRef.current = true;
+          
+          // Get initial position
+          const initialPosition = await getCurrentPosition();
+          processLocation(initialPosition);
+          
+          return true;
+          
+        } catch (bgError) {
+          console.log('Background geolocation not available, falling back to standard:', bgError);
+          // Fall through to standard geolocation
+        }
+      }
 
-      // Start watching
+      // Standard geolocation (foreground only)
       if (isNative()) {
         const { Geolocation } = await import('@capacitor/geolocation');
+        
+        // Request permissions
+        const status = await Geolocation.requestPermissions();
+        if (status.location === 'denied') {
+          setError('Location permission denied');
+          toast.error('Please enable location permissions in Settings');
+          return false;
+        }
+        
+        // Set tracking state
+        setIsTracking(true);
+        isTrackingRef.current = true;
+        
+        // Get initial position
+        const initialPosition = await getCurrentPosition();
+        processLocation(initialPosition);
+
+        // Start watching
         const callbackId = await Geolocation.watchPosition(
           {
             enableHighAccuracy: true,
@@ -237,9 +290,19 @@ export default function useGPSTracking() {
           }
         );
         watchIdRef.current = callbackId;
-        console.log('Native GPS watch started, ID:', callbackId);
+        console.log('Standard GPS watch started, ID:', callbackId);
+        
+        // Warn about background limitations
+        toast.info('Keep the app open for continuous tracking', { duration: 5000 });
+        
       } else {
         // Web fallback
+        setIsTracking(true);
+        isTrackingRef.current = true;
+        
+        const initialPosition = await getCurrentPosition();
+        processLocation(initialPosition);
+
         const watchId = navigator.geolocation.watchPosition(
           (position) => {
             processLocation({
@@ -265,127 +328,49 @@ export default function useGPSTracking() {
 
       return true;
     } catch (err) {
-      console.error('Start tracking error:', err);
+      console.error('Failed to start tracking:', err);
       setError(err.message);
-      setIsTracking(false);
-      isTrackingRef.current = false;
-      toast.error('Failed to start GPS tracking');
       return false;
     }
   }, [getCurrentPosition, processLocation]);
 
-  // Stop tracking completely
-  const stopTracking = useCallback(async () => {
-    console.log('Stopping GPS tracking - setting refs FIRST');
-    
-    // CRITICAL: Set refs IMMEDIATELY before any async operations
-    // This prevents the callback from processing any more locations
-    isTrackingRef.current = false;
-    isPausedRef.current = false;
-    
-    // Clear the watch BEFORE updating React state (to prevent race conditions)
-    await clearWatch();
-    
-    // Now update React state for UI
-    setIsTracking(false);
-    setIsPaused(false);
-    
-    console.log('GPS tracking stopped completely');
-  }, [clearWatch]);
-
-  // Pause tracking (keeps watch but ignores updates)
-  const pauseTracking = useCallback(async () => {
-    console.log('Pausing GPS tracking - setting refs FIRST');
-    
-    // CRITICAL: Set paused ref IMMEDIATELY to stop processing locations
-    isPausedRef.current = true;
-    
-    // Clear the watch to save battery (also stops callbacks)
-    await clearWatch();
-    
-    // Now update React state for UI
+  // Pause tracking
+  const pauseTracking = useCallback(() => {
+    if (!isTrackingRef.current) return;
     setIsPaused(true);
-    
-    console.log('GPS tracking paused completely');
-  }, [clearWatch]);
-
-  // Resume tracking
-  const resumeTracking = useCallback(async () => {
-    console.log('Resuming GPS tracking');
-    
-    try {
-      setError(null);
-      setIsPaused(false);
-      isPausedRef.current = false;
-      setIsTracking(true);
-      isTrackingRef.current = true;
-
-      // Restart watching
-      if (isNative()) {
-        const { Geolocation } = await import('@capacitor/geolocation');
-        const callbackId = await Geolocation.watchPosition(
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          },
-          (position, err) => {
-            if (err) {
-              console.error('Watch error:', err);
-              return;
-            }
-            if (position) {
-              processLocation({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                speed: position.coords.speed
-              });
-            }
-          }
-        );
-        watchIdRef.current = callbackId;
-        console.log('Native GPS watch resumed, ID:', callbackId);
-      } else {
-        const watchId = navigator.geolocation.watchPosition(
-          (position) => {
-            processLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy,
-              speed: position.coords.speed
-            });
-          },
-          (err) => {
-            console.error('Watch error:', err);
-            setError(err.message);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 5000
-          }
-        );
-        watchIdRef.current = watchId;
-        console.log('Web GPS watch resumed, ID:', watchId);
-      }
-
-      return true;
-    } catch (err) {
-      console.error('Resume tracking error:', err);
-      setError(err.message);
-      return false;
-    }
-  }, [processLocation]);
-
-  // Get all recorded locations
-  const getLocations = useCallback(() => {
-    return [...locationsRef.current];
+    isPausedRef.current = true;
+    console.log('Tracking paused');
   }, []);
 
-  // Reset all data
-  const reset = useCallback(async () => {
-    await stopTracking();
+  // Resume tracking
+  const resumeTracking = useCallback(() => {
+    if (!isTrackingRef.current) return;
+    setIsPaused(false);
+    isPausedRef.current = false;
+    console.log('Tracking resumed');
+  }, []);
+
+  // Stop tracking
+  const stopTracking = useCallback(async () => {
+    console.log('stopTracking called, isTracking:', isTrackingRef.current);
+    
+    if (!isTrackingRef.current) {
+      console.log('Not tracking, nothing to stop');
+      return;
+    }
+
+    await stopAllTracking();
+    
+    setIsTracking(false);
+    isTrackingRef.current = false;
+    setIsPaused(false);
+    isPausedRef.current = false;
+    
+    console.log('Tracking stopped. Total distance:', totalDistanceRef.current);
+  }, [stopAllTracking]);
+
+  // Reset all state
+  const reset = useCallback(() => {
     locationsRef.current = [];
     lastLocationRef.current = null;
     totalDistanceRef.current = 0;
@@ -393,40 +378,44 @@ export default function useGPSTracking() {
     setLocationCount(0);
     setCurrentLocation(null);
     setError(null);
+    setIsTracking(false);
+    isTrackingRef.current = false;
     setIsPaused(false);
     isPausedRef.current = false;
-  }, [stopTracking]);
+    console.log('GPS tracking reset');
+  }, []);
+
+  // Get all recorded locations
+  const getLocations = useCallback(() => {
+    return [...locationsRef.current];
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (watchIdRef.current !== null) {
-        console.log('Cleanup: clearing GPS watch');
-        if (isNative()) {
-          import('@capacitor/geolocation').then(({ Geolocation }) => {
-            Geolocation.clearWatch({ id: watchIdRef.current }).catch(() => {});
-          });
-        } else {
-          navigator.geolocation.clearWatch(watchIdRef.current);
-        }
+      if (isTrackingRef.current) {
+        stopAllTracking();
       }
     };
-  }, []);
+  }, [stopAllTracking]);
 
   return {
+    // State
     isTracking,
     isPaused,
     currentLocation,
     totalMiles,
     locationCount,
     error,
+    isNative: isNative(),
+    
+    // Actions
     startTracking,
     stopTracking,
     pauseTracking,
     resumeTracking,
     getCurrentPosition,
     getLocations,
-    reset,
-    isNative: isNative()
+    reset
   };
 }
