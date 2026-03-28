@@ -539,20 +539,29 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   };
 
   // Stop trip (show completion form)
-  const handleStopTrip = async () => {
-    if (!activeTrip) {
-      console.log("No active trip to stop");
+  const handleStopTrip = useCallback(async () => {
+    // Use props directly to avoid stale closure issues
+    const trip = externalTrip;
+    const setStatus = setExternalTrackingStatus;
+    
+    if (!trip) {
+      console.log("No active trip to stop - externalTrip is:", externalTrip);
       return;
     }
     
-    console.log("Stopping trip, current status:", trackingStatus);
+    if (!setStatus) {
+      console.log("No setExternalTrackingStatus provided");
+      return;
+    }
+    
+    console.log("Stopping trip, trip id:", trip.id);
     
     // CRITICAL: Set the ref FIRST to prevent any fetchActiveTrip from running
     isCompletingRef.current = true;
     
     // IMMEDIATELY set status to completing - this is the most important thing
     // Do this BEFORE any async operations to prevent race conditions
-    setTrackingStatus("completing");
+    setStatus("completing");
     console.log("Status set to completing");
     
     // Scroll to completion form right away
@@ -565,7 +574,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     (async () => {
       try {
         // Try to sync final locations
-        await syncLocations(activeTrip.id);
+        await syncLocations(trip.id);
       } catch (syncError) {
         console.log("Sync locations error (non-fatal):", syncError);
       }
@@ -581,7 +590,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         console.log("Stop tracking error (non-fatal):", stopError);
       }
     })();
-  };
+  }, [externalTrip, setExternalTrackingStatus, externalGpsTracker, syncLocations, stopLocationTracking]);
 
   // Complete trip with details
   const handleCompleteTrip = async () => {
