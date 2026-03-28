@@ -157,17 +157,23 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     // Skip if external state is managing the trip
     if (externalTrip !== undefined) return;
     
+    // Skip if we're in "completing" state - don't override it
+    if (trackingStatus === "completing") return;
+    
     try {
       const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
       if (response.data.active_trip) {
         setActiveTrip(response.data.active_trip);
-        setTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
+        // Only update status if not already completing
+        if (trackingStatus !== "completing") {
+          setTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
+        }
         setLocationCount(response.data.active_trip.location_count || 0);
       }
     } catch (error) {
       console.error("Failed to fetch active trip:", error);
     }
-  }, [getAuthHeader, externalTrip, setActiveTrip, setTrackingStatus]);
+  }, [getAuthHeader, externalTrip, setActiveTrip, setTrackingStatus, trackingStatus]);
 
   // Fetch trip history
   const fetchTripHistory = useCallback(async () => {

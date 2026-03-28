@@ -810,11 +810,17 @@ export default function AdminDashboard() {
   
   // Fetch active GPS trip on mount
   const fetchActiveGpsTrip = useCallback(async () => {
+    // Skip if we're in "completing" state - don't override it
+    if (gpsTrackingStatus === "completing") return;
+    
     try {
       const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
       if (response.data.active_trip) {
         setGpsTrip(response.data.active_trip);
-        setGpsTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
+        // Only update status if not already completing
+        if (gpsTrackingStatus !== "completing") {
+          setGpsTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
+        }
         // Resume tracking if active (hook will handle it)
         if (response.data.active_trip.status === "active") {
           gpsTracker.resumeTracking();
@@ -823,7 +829,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Failed to fetch active GPS trip:", error);
     }
-  }, [gpsTracker]);
+  }, [gpsTracker, gpsTrackingStatus]);
 
   // Sync GPS locations to backend
   const syncGpsLocations = async (tripId) => {
