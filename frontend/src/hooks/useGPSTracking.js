@@ -1,7 +1,7 @@
 /**
  * useGPSTracking Hook
  * GPS tracking with background location support for iOS/Android
- * Uses @capacitor-community/background-geolocation for continuous tracking
+ * Uses @transistorsoft/capacitor-background-geolocation for reliable background tracking
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -24,6 +24,9 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
+// iOS License Key
+const IOS_LICENSE_KEY = "eyJhbGciOiJFZERTQSIsImtpZCI6ImVkMjU1MTktbWFpbi12MSJ9.eyJvcyI6ImlvcyIsImFwcF9pZCI6ImNvbS50aHJpZnR5Y3VyYXRvci5hcHAiLCJvcmRlcl9udW1iZXIiOjE1ODQ1LCJyZW5ld2FsX3VybCI6Imh0dHBzOi8vc2hvcC50cmFuc2lzdG9yc29mdC5jb20vY2FydC8zOTM2NzA3MTIzNjE5OToxP25vdGU9MTA1MzciLCJjdXN0b21lcl9pZCI6OTU4NCwicHJvZHVjdCI6ImNhcGFjaXRvci1iYWNrZ3JvdW5kLWdlb2xvY2F0aW9uIiwia2V5X3ZlcnNpb24iOjEsImFsbG93ZWRfc3VmZml4ZXMiOlsiLmRldiIsIi5kZXZlbG9wbWVudCIsIi5zdGFnaW5nIiwiLnN0YWdlIiwiLnFhIiwiLnVhdCIsIi50ZXN0IiwiLmRlYnVnIl0sIm1heF9idWlsZF9zdGFtcCI6MjAyNzA0MjgsImdyYWNlX2J1aWxkcyI6MCwiZW50aXRsZW1lbnRzIjpbImNvcmUiXSwiaWF0IjoxNzc0NzMxNzUyfQ.l4Y2irFhuAPfyN-cRj1Csok7OpJgOOrE0LNeurWqGyAqyl8g72t30GzPDEFnFenJePEnfy9VKZ5h-fF3M_52CA";
+
 export default function useGPSTracking() {
   const [isTracking, setIsTracking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -33,14 +36,12 @@ export default function useGPSTracking() {
   const [error, setError] = useState(null);
   
   // Use refs to track state that shouldn't trigger re-renders
-  const watchIdRef = useRef(null);
   const locationsRef = useRef([]);
   const lastLocationRef = useRef(null);
   const totalDistanceRef = useRef(0);
   const isTrackingRef = useRef(false);
   const isPausedRef = useRef(false);
-  const backgroundWatcherRef = useRef(null);
-  const usingBackgroundGeoRef = useRef(false);
+  const bgGeoReadyRef = useRef(false);
 
   // Update refs when state changes
   useEffect(() => {
@@ -52,14 +53,22 @@ export default function useGPSTracking() {
   }, [isPaused]);
 
   // Process incoming location
-  const processLocation = useCallback((point) => {
+  const processLocation = useCallback((location) => {
     // Ignore if not tracking or paused
     if (!isTrackingRef.current || isPausedRef.current) {
       return;
     }
 
+    const point = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      accuracy: location.coords.accuracy,
+      speed: location.coords.speed,
+      timestamp: location.timestamp
+    };
+
     // Basic validation
-    if (!point || typeof point.latitude !== 'number' || typeof point.longitude !== 'number') {
+    if (typeof point.latitude !== 'number' || typeof point.longitude !== 'number') {
       console.log('Invalid location point:', point);
       return;
     }
@@ -143,39 +152,68 @@ export default function useGPSTracking() {
     }
   }, []);
 
-  // Stop all tracking methods
-  const stopAllTracking = useCallback(async () => {
-    console.log('Stopping all tracking...');
-    
-    // Stop background geolocation if active
-    if (usingBackgroundGeoRef.current) {
-      try {
-        const BackgroundGeolocation = (await import('@capacitor-community/background-geolocation')).BackgroundGeolocation;
-        await BackgroundGeolocation.removeWatcher({ id: backgroundWatcherRef.current });
-        console.log('Background geolocation stopped');
-      } catch (err) {
-        console.log('Error stopping background geo:', err);
-      }
-      usingBackgroundGeoRef.current = false;
-      backgroundWatcherRef.current = null;
-    }
-    
-    // Stop standard watch if active
-    if (watchIdRef.current !== null) {
-      try {
-        if (isNative()) {
-          const { Geolocation } = await import('@capacitor/geolocation');
-          await Geolocation.clearWatch({ id: watchIdRef.current });
-        } else {
-          navigator.geolocation.clearWatch(watchIdRef.current);
+  // Initialize Transistorsoft Background Geolocation
+  const initBackgroundGeolocation = useCallback(async () => {
+    if (!isNative() || bgGeoReadyRef.current) return null;
+
+    try {
+      const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
+      
+      // Configure the plugin
+      const state = await BackgroundGeolocation.ready({
+        // License
+        license: IOS_LICENSE_KEY,
+        
+        // Geolocation Config
+        desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
+        distanceFilter: 10, // meters
+        stopTimeout: 5, // minutes to wait before stopping when stationary
+        
+        // Activity Recognition
+        stopOnStationary: false, // Don't stop tracking when stationary
+        
+        // Application Config
+        debug: false, // Disable debug sounds
+        logLevel: BackgroundGeolocation.LOG_LEVEL_VERBOSE,
+        
+        // iOS specific
+        preventSuspend: true, // Keep tracking in background
+        showsBackgroundLocationIndicator: true, // Show blue bar
+        
+        // Notification config (Android mainly, but good to have)
+        notification: {
+          title: "Thrifty Curator",
+          text: "Tracking mileage for tax deductions"
         }
-        console.log('Standard geolocation watch stopped');
-      } catch (err) {
-        console.log('Error stopping standard geo:', err);
-      }
-      watchIdRef.current = null;
+      });
+
+      console.log('BackgroundGeolocation ready:', state);
+      bgGeoReadyRef.current = true;
+
+      // Add location listener
+      BackgroundGeolocation.onLocation((location) => {
+        console.log('[BackgroundGeolocation] Location:', location);
+        processLocation(location);
+      }, (error) => {
+        console.log('[BackgroundGeolocation] Error:', error);
+      });
+
+      // Add motion change listener
+      BackgroundGeolocation.onMotionChange((event) => {
+        console.log('[BackgroundGeolocation] Motion change:', event.isMoving);
+      });
+
+      // Add provider change listener
+      BackgroundGeolocation.onProviderChange((event) => {
+        console.log('[BackgroundGeolocation] Provider change:', event);
+      });
+
+      return BackgroundGeolocation;
+    } catch (err) {
+      console.log('BackgroundGeolocation init error:', err);
+      return null;
     }
-  }, []);
+  }, [processLocation]);
 
   // Start tracking with background support
   const startTracking = useCallback(async () => {
@@ -191,64 +229,36 @@ export default function useGPSTracking() {
       setIsPaused(false);
       isPausedRef.current = false;
 
-      // Try to use background geolocation on native platforms
+      // Try to use Transistorsoft Background Geolocation on native platforms
       if (isNative()) {
         try {
-          const BackgroundGeolocation = (await import('@capacitor-community/background-geolocation')).BackgroundGeolocation;
+          const BackgroundGeolocation = await initBackgroundGeolocation();
           
-          // Add watcher with background capability
-          const watcherId = await BackgroundGeolocation.addWatcher(
-            {
-              backgroundMessage: "Tracking your mileage for tax deductions",
-              backgroundTitle: "GPS Tracking Active",
-              requestPermissions: true,
-              stale: false,
-              distanceFilter: 10 // Get updates every 10 meters
-            },
-            (location, error) => {
-              if (error) {
-                if (error.code === "NOT_AUTHORIZED") {
-                  toast.error("Please enable 'Always' location access for background tracking");
-                  console.log("Location not authorized");
-                }
-                return;
-              }
-              
-              if (location) {
-                console.log('Background location:', location.latitude, location.longitude);
-                processLocation({
-                  latitude: location.latitude,
-                  longitude: location.longitude,
-                  accuracy: location.accuracy,
-                  speed: location.speed,
-                  timestamp: new Date().toISOString()
-                });
-              }
-            }
-          );
-          
-          backgroundWatcherRef.current = watcherId;
-          usingBackgroundGeoRef.current = true;
-          console.log('Background geolocation started, watcher ID:', watcherId);
-          
-          // Set tracking state
-          setIsTracking(true);
-          isTrackingRef.current = true;
-          
-          // Get initial position
-          const initialPosition = await getCurrentPosition();
-          processLocation(initialPosition);
-          
-          return true;
-          
+          if (BackgroundGeolocation) {
+            // Start tracking
+            const state = await BackgroundGeolocation.start();
+            console.log('BackgroundGeolocation started:', state);
+            
+            // Set tracking state
+            setIsTracking(true);
+            isTrackingRef.current = true;
+            
+            // Get initial position
+            const location = await BackgroundGeolocation.getCurrentPosition({
+              samples: 1,
+              persist: true
+            });
+            processLocation(location);
+            
+            toast.success('GPS tracking started - works in background!');
+            return true;
+          }
         } catch (bgError) {
-          console.log('Background geolocation not available, falling back to standard:', bgError);
+          console.log('BackgroundGeolocation not available, falling back:', bgError);
           // Fall through to standard geolocation
         }
-      }
 
-      // Standard geolocation (foreground only)
-      if (isNative()) {
+        // Fallback to standard Capacitor geolocation (foreground only)
         const { Geolocation } = await import('@capacitor/geolocation');
         
         // Request permissions
@@ -265,35 +275,13 @@ export default function useGPSTracking() {
         
         // Get initial position
         const initialPosition = await getCurrentPosition();
-        processLocation(initialPosition);
+        processLocation({
+          coords: initialPosition,
+          timestamp: initialPosition.timestamp
+        });
 
-        // Start watching
-        const callbackId = await Geolocation.watchPosition(
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          },
-          (position, err) => {
-            if (err) {
-              console.error('Watch error:', err);
-              return;
-            }
-            if (position) {
-              processLocation({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                speed: position.coords.speed
-              });
-            }
-          }
-        );
-        watchIdRef.current = callbackId;
-        console.log('Standard GPS watch started, ID:', callbackId);
-        
         // Warn about background limitations
-        toast.info('Keep the app open for continuous tracking', { duration: 5000 });
+        toast.warning('Keep the app open for tracking (background mode unavailable)', { duration: 5000 });
         
       } else {
         // Web fallback
@@ -301,15 +289,22 @@ export default function useGPSTracking() {
         isTrackingRef.current = true;
         
         const initialPosition = await getCurrentPosition();
-        processLocation(initialPosition);
+        processLocation({
+          coords: initialPosition,
+          timestamp: initialPosition.timestamp
+        });
 
+        // Start web watch
         const watchId = navigator.geolocation.watchPosition(
           (position) => {
             processLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy,
-              speed: position.coords.speed
+              coords: {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                speed: position.coords.speed
+              },
+              timestamp: new Date().toISOString()
             });
           },
           (err) => {
@@ -322,17 +317,18 @@ export default function useGPSTracking() {
             maximumAge: 5000
           }
         );
-        watchIdRef.current = watchId;
         console.log('Web GPS watch started, ID:', watchId);
+        toast.info('Web tracking started (foreground only)');
       }
 
       return true;
     } catch (err) {
       console.error('Failed to start tracking:', err);
       setError(err.message);
+      toast.error('Failed to start GPS tracking');
       return false;
     }
-  }, [getCurrentPosition, processLocation]);
+  }, [getCurrentPosition, processLocation, initBackgroundGeolocation]);
 
   // Pause tracking
   const pauseTracking = useCallback(() => {
@@ -340,6 +336,7 @@ export default function useGPSTracking() {
     setIsPaused(true);
     isPausedRef.current = true;
     console.log('Tracking paused');
+    toast.info('Tracking paused');
   }, []);
 
   // Resume tracking
@@ -348,6 +345,7 @@ export default function useGPSTracking() {
     setIsPaused(false);
     isPausedRef.current = false;
     console.log('Tracking resumed');
+    toast.success('Tracking resumed');
   }, []);
 
   // Stop tracking
@@ -359,7 +357,16 @@ export default function useGPSTracking() {
       return;
     }
 
-    await stopAllTracking();
+    // Stop Transistorsoft Background Geolocation
+    if (isNative() && bgGeoReadyRef.current) {
+      try {
+        const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
+        await BackgroundGeolocation.stop();
+        console.log('BackgroundGeolocation stopped');
+      } catch (err) {
+        console.log('Error stopping BackgroundGeolocation:', err);
+      }
+    }
     
     setIsTracking(false);
     isTrackingRef.current = false;
@@ -367,7 +374,7 @@ export default function useGPSTracking() {
     isPausedRef.current = false;
     
     console.log('Tracking stopped. Total distance:', totalDistanceRef.current);
-  }, [stopAllTracking]);
+  }, []);
 
   // Reset all state
   const reset = useCallback(() => {
@@ -393,11 +400,13 @@ export default function useGPSTracking() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (isTrackingRef.current) {
-        stopAllTracking();
+      if (isTrackingRef.current && isNative() && bgGeoReadyRef.current) {
+        import('@transistorsoft/capacitor-background-geolocation').then(({ default: BackgroundGeolocation }) => {
+          BackgroundGeolocation.stop();
+        });
       }
     };
-  }, [stopAllTracking]);
+  }, []);
 
   return {
     // State
