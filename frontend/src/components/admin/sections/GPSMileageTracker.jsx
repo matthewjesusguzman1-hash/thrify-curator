@@ -504,16 +504,28 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     
     console.log("Stopping trip, current status:", trackingStatus);
     
-    try {
-      // Try to sync final locations (don't fail if this errors)
+    // IMMEDIATELY set status to completing - this is the most important thing
+    // Do this BEFORE any async operations to prevent race conditions
+    setTrackingStatus("completing");
+    console.log("Status set to completing");
+    
+    // Scroll to completion form right away
+    setTimeout(() => {
+      completionFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+    
+    // Now do cleanup in the background (non-blocking)
+    // These are "fire and forget" - we don't wait for them
+    (async () => {
       try {
+        // Try to sync final locations
         await syncLocations(activeTrip.id);
       } catch (syncError) {
         console.log("Sync locations error (non-fatal):", syncError);
       }
       
-      // Stop whichever tracking method is active (don't fail if this errors)
       try {
+        // Stop whichever tracking method is active
         if (externalGpsTracker?.stopTracking) {
           await externalGpsTracker.stopTracking();
         } else {
@@ -522,18 +534,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       } catch (stopError) {
         console.log("Stop tracking error (non-fatal):", stopError);
       }
-    } catch (error) {
-      console.error("Error in stop cleanup:", error);
-    }
-    
-    // ALWAYS show the completion form, regardless of errors above
-    console.log("Setting status to completing");
-    setTrackingStatus("completing");
-    
-    // Scroll to completion form
-    setTimeout(() => {
-      completionFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 100);
+    })();
   };
 
   // Complete trip with details

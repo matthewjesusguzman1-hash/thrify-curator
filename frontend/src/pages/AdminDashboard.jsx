@@ -905,28 +905,38 @@ export default function AdminDashboard() {
     if (!gpsTrip) return;
     buttonPress();
     
-    try {
-      // Sync current locations first
-      await syncGpsLocations(gpsTrip.id);
-      
-      // Pause the tracker
-      await gpsTracker.pauseTracking();
-      
-      const response = await axios.post(
-        `${API}/admin/gps-trips/pause/${gpsTrip.id}`,
-        {},
-        getAuthHeader()
-      );
-      
-      if (response.data.success) {
-        setGpsTrackingStatus("paused");
-        setGpsTrip(prev => ({ ...prev, status: "paused" }));
-        lightTap();
-        toast.info("Trip paused");
+    // IMMEDIATELY update UI state
+    setGpsTrackingStatus("paused");
+    setGpsTrip(prev => ({ ...prev, status: "paused" }));
+    lightTap();
+    toast.info("Trip paused");
+    
+    // Do the actual pause operations in background
+    (async () => {
+      try {
+        // Sync current locations first
+        await syncGpsLocations(gpsTrip.id);
+      } catch (error) {
+        console.log("Sync error (non-fatal):", error);
       }
-    } catch (error) {
-      toast.error("Failed to pause trip");
-    }
+      
+      try {
+        // Pause the tracker
+        await gpsTracker.pauseTracking();
+      } catch (error) {
+        console.log("Pause tracking error (non-fatal):", error);
+      }
+      
+      try {
+        await axios.post(
+          `${API}/admin/gps-trips/pause/${gpsTrip.id}`,
+          {},
+          getAuthHeader()
+        );
+      } catch (error) {
+        console.log("API pause error (non-fatal):", error);
+      }
+    })();
   };
 
   // Resume GPS trip
@@ -960,30 +970,37 @@ export default function AdminDashboard() {
     if (!gpsTrip) return;
     heavyPress();
     
-    try {
-      // Sync final locations
-      await syncGpsLocations(gpsTrip.id);
+    // IMMEDIATELY set status to completing - do this FIRST before any async work
+    setGpsTrackingStatus("completing");
+    
+    // Force open the Operations & Reports group
+    setForceOpenOperations(true);
+    
+    // Scroll to GPS tracker section after a short delay for the group to open
+    setTimeout(() => {
+      if (gpsTrackerRef.current) {
+        gpsTrackerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 400);
+    
+    toast.info("Complete your trip details below", { duration: 3000 });
+    
+    // Do cleanup in the background (non-blocking)
+    (async () => {
+      try {
+        // Sync final locations
+        await syncGpsLocations(gpsTrip.id);
+      } catch (error) {
+        console.log("Sync error (non-fatal):", error);
+      }
       
-      // Stop GPS tracking
-      await gpsTracker.stopTracking();
-      
-      // Force open the Operations & Reports group
-      setForceOpenOperations(true);
-      
-      // Set status to completing (this will trigger the GPS tracker to expand)
-      setGpsTrackingStatus("completing");
-      
-      // Scroll to GPS tracker section after a short delay for the group to open
-      setTimeout(() => {
-        if (gpsTrackerRef.current) {
-          gpsTrackerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 400);
-      
-      toast.info("Complete your trip details below", { duration: 3000 });
-    } catch (error) {
-      console.error("Error stopping trip:", error);
-    }
+      try {
+        // Stop GPS tracking
+        await gpsTracker.stopTracking();
+      } catch (error) {
+        console.log("Stop tracking error (non-fatal):", error);
+      }
+    })();
   };
 
   // Callback when trip is completed from the GPSMileageTracker component
