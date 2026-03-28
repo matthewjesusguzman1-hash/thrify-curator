@@ -168,8 +168,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   }));
 
-  // Auto-expand and scroll when completing
+  // Auto-expand when tracking is active or completing
   useEffect(() => {
+    if (trackingStatus === "tracking" || trackingStatus === "paused") {
+      setIsExpanded(true);
+    }
     if (trackingStatus === "completing") {
       setIsExpanded(true);
       // Scroll to completion form after a short delay

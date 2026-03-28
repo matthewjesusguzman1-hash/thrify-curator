@@ -372,6 +372,13 @@ export default function AdminDashboard() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Keep Operations & Reports group open while GPS tracking is active
+  useEffect(() => {
+    if (gpsTrackingStatus === "tracking" || gpsTrackingStatus === "paused" || gpsTrackingStatus === "completing") {
+      setForceOpenOperations(true);
+    }
+  }, [gpsTrackingStatus]);
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -862,6 +869,9 @@ export default function AdminDashboard() {
     setGpsTripLoading(true);
     buttonPress();
     
+    // Force open Operations & Reports group so user can see the tracker
+    setForceOpenOperations(true);
+    
     try {
       // Start GPS tracking first
       const started = await gpsTracker.startTracking();
@@ -894,11 +904,19 @@ export default function AdminDashboard() {
         toast.success("Trip started! GPS tracking active.", {
           description: gpsTracker.isNative ? "Background tracking enabled" : "Keep app open for best results"
         });
+        
+        // Scroll to GPS tracker section
+        setTimeout(() => {
+          if (gpsTrackerRef.current) {
+            gpsTrackerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 400);
       }
     } catch (error) {
       errorFeedback();
       gpsTracker.stopTracking();
       gpsTracker.reset();
+      setForceOpenOperations(false);
       if (error.code === 1 || error.message?.includes("permission")) {
         toast.error("Location permission denied. Please enable GPS in Settings.");
       } else {
