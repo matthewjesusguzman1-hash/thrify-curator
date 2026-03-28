@@ -247,15 +247,25 @@ function App() {
     };
   }, [resetSession]);
 
-  // Force push notification request - bypass platform detection
+  // Request push notifications only for logged-in users (employees/consignors/admins)
   useEffect(() => {
     const requestPushNotifications = async () => {
       try {
+        // Only request notifications if user is logged in
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const consignorEmail = localStorage.getItem('consignorEmail');
+        
+        // Skip if no user is logged in (casual visitors don't need notifications)
+        if (!user.id && !consignorEmail) {
+          console.log('Skipping push notifications - no logged in user');
+          return;
+        }
+        
         // Dynamic import to avoid issues on web
         const { PushNotifications } = await import('@capacitor/push-notifications');
         const axios = (await import('axios')).default;
         
-        console.log('Directly requesting push notification permissions...');
+        console.log('Requesting push notification permissions for logged-in user...');
         
         // Request permissions
         const permResult = await PushNotifications.requestPermissions();
@@ -271,7 +281,6 @@ function App() {
               localStorage.setItem('pendingPushToken', existingToken.value);
               
               // Try to register immediately if user is logged in
-              const user = JSON.parse(localStorage.getItem('user') || '{}');
               if (user.id) {
                 try {
                   const API = process.env.REACT_APP_BACKEND_URL;
@@ -300,12 +309,12 @@ function App() {
             console.log('Device push token saved to localStorage');
             
             // Try to register immediately if user is logged in
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            if (user.id) {
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            if (currentUser.id) {
               try {
                 const API = process.env.REACT_APP_BACKEND_URL;
                 await axios.post(`${API}/api/live-activity/register-device-token`, {
-                  user_id: user.id,
+                  user_id: currentUser.id,
                   device_token: tokenData.value
                 });
                 console.log('Device token registered for push notifications!');
@@ -327,7 +336,7 @@ function App() {
       }
     };
 
-    // Wait for app to fully load, then request permissions
+    // Wait for app to fully load, then request permissions (only if logged in)
     const timer = setTimeout(requestPushNotifications, 1500);
     return () => clearTimeout(timer);
   }, []);
