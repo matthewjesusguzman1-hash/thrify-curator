@@ -821,8 +821,9 @@ export default function AdminDashboard() {
         if (gpsTrackingStatus !== "completing") {
           setGpsTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
         }
-        // Resume tracking if active (hook will handle it)
-        if (response.data.active_trip.status === "active") {
+        // Only resume tracking if active AND we're not already tracking
+        // This prevents repeated resume calls which cause a loop
+        if (response.data.active_trip.status === "active" && !gpsTracker.isTracking) {
           gpsTracker.resumeTracking();
         }
       }

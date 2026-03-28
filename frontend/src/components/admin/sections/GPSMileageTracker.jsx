@@ -200,12 +200,14 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
 
   // Load data when expanded
   useEffect(() => {
-    if (isExpanded) {
+    // Only fetch if expanded AND not in completing state
+    // (to prevent overwriting the completing status when scrolling/expanding)
+    if (isExpanded && trackingStatus !== "completing") {
       fetchActiveTrip();
       fetchTripHistory();
       fetchSummary();
     }
-  }, [isExpanded, fetchActiveTrip, fetchTripHistory, fetchSummary]);
+  }, [isExpanded, trackingStatus, fetchActiveTrip, fetchTripHistory, fetchSummary]);
 
   // Cleanup on unmount
   useEffect(() => {
