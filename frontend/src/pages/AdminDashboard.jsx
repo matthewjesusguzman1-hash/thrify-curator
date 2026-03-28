@@ -320,6 +320,7 @@ export default function AdminDashboard() {
   const [gpsTrackingStatus, setGpsTrackingStatus] = useState("idle"); // idle, tracking, paused, completing
   const [forceOpenOperations, setForceOpenOperations] = useState(false); // Force open Operations group
   const gpsTrackerRef = useRef(null); // Reference to scroll to GPS section
+  const isCompletingRef = useRef(false); // Ref to track completing state (avoids stale closure)
   
   // Use the optimized GPS tracking hook
   const gpsTracker = useGPSTracking();
@@ -810,27 +811,29 @@ export default function AdminDashboard() {
   
   // Fetch active GPS trip on mount
   const fetchActiveGpsTrip = useCallback(async () => {
-    // Skip if we're in "completing" state - don't override it
-    if (gpsTrackingStatus === "completing") return;
+    // Skip if we're in "completing" state - use REF to avoid stale closure
+    if (isCompletingRef.current) {
+      console.log("Skipping fetchActiveGpsTrip - isCompletingRef is true");
+      return;
+    }
     
     try {
       const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
       if (response.data.active_trip) {
         setGpsTrip(response.data.active_trip);
-        // Only update status if not already completing
-        if (gpsTrackingStatus !== "completing") {
+        // Only update status if not already completing (check ref again)
+        if (!isCompletingRef.current) {
           setGpsTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
         }
-        // Only resume tracking if active AND we're not already tracking
-        // This prevents repeated resume calls which cause a loop
-        if (response.data.active_trip.status === "active" && !gpsTracker.isTracking) {
+        // Only resume tracking if active AND we're not already tracking AND not completing
+        if (response.data.active_trip.status === "active" && !gpsTracker.isTracking && !isCompletingRef.current) {
           gpsTracker.resumeTracking();
         }
       }
     } catch (error) {
       console.error("Failed to fetch active GPS trip:", error);
     }
-  }, [gpsTracker, gpsTrackingStatus]);
+  }, [gpsTracker]);
 
   // Sync GPS locations to backend
   const syncGpsLocations = async (tripId) => {
@@ -977,6 +980,9 @@ export default function AdminDashboard() {
     if (!gpsTrip) return;
     heavyPress();
     
+    // CRITICAL: Set the ref FIRST to prevent any fetchActiveGpsTrip from running
+    isCompletingRef.current = true;
+    
     // IMMEDIATELY set status to completing - do this FIRST before any async work
     setGpsTrackingStatus("completing");
     
@@ -1012,6 +1018,7 @@ export default function AdminDashboard() {
 
   // Callback when trip is completed from the GPSMileageTracker component
   const handleGpsTripCompleted = () => {
+    isCompletingRef.current = false; // Reset the completing flag
     setGpsTrip(null);
     setGpsTrackingStatus("idle");
     gpsTracker.reset();
@@ -1026,6 +1033,7 @@ export default function AdminDashboard() {
     }
     
     heavyPress();
+    isCompletingRef.current = false; // Reset the completing flag
     
     try {
       // Stop GPS tracking

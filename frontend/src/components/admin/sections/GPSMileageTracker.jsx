@@ -120,6 +120,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const locationBufferRef = useRef([]);
   const syncIntervalRef = useRef(null);
   const completionFormRef = useRef(null);
+  const isCompletingRef = useRef(false); // Ref to prevent stale closure issues
   
   // Map viewing state
   const [viewingTripMap, setViewingTripMap] = useState(null); // { trip, locations }
@@ -157,15 +158,18 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     // Skip if external state is managing the trip
     if (externalTrip !== undefined) return;
     
-    // Skip if we're in "completing" state - don't override it
-    if (trackingStatus === "completing") return;
+    // Skip if we're in "completing" state - use REF to avoid stale closure
+    if (isCompletingRef.current) {
+      console.log("Skipping fetchActiveTrip - isCompletingRef is true");
+      return;
+    }
     
     try {
       const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
       if (response.data.active_trip) {
         setActiveTrip(response.data.active_trip);
-        // Only update status if not already completing
-        if (trackingStatus !== "completing") {
+        // Only update status if not already completing (check ref again)
+        if (!isCompletingRef.current) {
           setTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
         }
         setLocationCount(response.data.active_trip.location_count || 0);
@@ -173,7 +177,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     } catch (error) {
       console.error("Failed to fetch active trip:", error);
     }
-  }, [getAuthHeader, externalTrip, setActiveTrip, setTrackingStatus, trackingStatus]);
+  }, [getAuthHeader, externalTrip, setActiveTrip, setTrackingStatus]);
 
   // Fetch trip history
   const fetchTripHistory = useCallback(async () => {
@@ -512,6 +516,9 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     
     console.log("Stopping trip, current status:", trackingStatus);
     
+    // CRITICAL: Set the ref FIRST to prevent any fetchActiveTrip from running
+    isCompletingRef.current = true;
+    
     // IMMEDIATELY set status to completing - this is the most important thing
     // Do this BEFORE any async operations to prevent race conditions
     setTrackingStatus("completing");
@@ -591,6 +598,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         );
         
         // Reset state
+        isCompletingRef.current = false; // Reset the completing flag
         setActiveTrip(null);
         setTrackingStatus("idle");
         setCompletionData({ purpose: "", notes: "", receipt: null });
@@ -635,6 +643,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       
       await axios.delete(`${API}/admin/gps-trips/${activeTrip.id}`, getAuthHeader());
       
+      // Reset state
+      isCompletingRef.current = false; // Reset the completing flag
       setActiveTrip(null);
       setTrackingStatus("idle");
       setCompletionData({ purpose: "", notes: "", receipt: null });
