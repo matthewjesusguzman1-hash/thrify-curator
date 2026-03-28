@@ -639,17 +639,26 @@ export default function ConsignmentAgreementForm() {
             }
             
             if (loginSuccessful) {
-              // Register for push notifications (consignor)
+              // Request and register for push notifications (consignor)
               try {
-                const { LiveActivityService } = await import('@/services/LiveActivityService');
-                const deviceToken = await LiveActivityService.getDevicePushToken();
-                if (deviceToken) {
-                  await axios.post(`${API}/live-activity/register-device-token-typed`, {
-                    user_id: addItemsEmail.toLowerCase(),
-                    device_token: deviceToken,
-                    user_type: 'consignor'
-                  });
-                  console.log('Consignor push token registered via biometric login');
+                const { PushNotifications } = await import('@capacitor/push-notifications');
+                const permResult = await PushNotifications.requestPermissions();
+                
+                if (permResult.receive === 'granted') {
+                  await PushNotifications.register();
+                  try {
+                    const tokenResult = await PushNotifications.getToken();
+                    if (tokenResult?.value) {
+                      await axios.post(`${API}/live-activity/register-device-token-typed`, {
+                        user_id: addItemsEmail.toLowerCase(),
+                        device_token: tokenResult.value,
+                        user_type: 'consignor'
+                      });
+                      console.log('Consignor push token registered via biometric login');
+                    }
+                  } catch (tokenErr) {
+                    console.log('Token retrieval skipped:', tokenErr);
+                  }
                 }
               } catch (pushErr) {
                 console.log('Push token registration skipped:', pushErr);
@@ -679,6 +688,31 @@ export default function ConsignmentAgreementForm() {
       
       // No password set, use email-only login (existing behavior)
       await loadAgreementData(addItemsEmail);
+      
+      // Request push notifications for passwordless consignor
+      try {
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        const permResult = await PushNotifications.requestPermissions();
+        
+        if (permResult.receive === 'granted') {
+          await PushNotifications.register();
+          try {
+            const tokenResult = await PushNotifications.getToken();
+            if (tokenResult?.value) {
+              await axios.post(`${API}/live-activity/register-device-token-typed`, {
+                user_id: addItemsEmail.toLowerCase(),
+                device_token: tokenResult.value,
+                user_type: 'consignor'
+              });
+              console.log('Consignor push token registered (passwordless)');
+            }
+          } catch (tokenErr) {
+            console.log('Token retrieval skipped:', tokenErr);
+          }
+        }
+      } catch (pushErr) {
+        console.log('Push notification registration skipped:', pushErr);
+      }
       
       // Save credentials for Face ID even for passwordless login
       if (biometricAvailable && isNative) {
@@ -745,20 +779,31 @@ export default function ConsignmentAgreementForm() {
           await setCredentials('consignment_portal', addItemsEmail, loginPassword);
         }
         
-        // Register for push notifications (consignor)
+        // Request and register for push notifications (consignor)
         try {
-          const { LiveActivityService } = await import('@/services/LiveActivityService');
-          const deviceToken = await LiveActivityService.getDevicePushToken();
-          if (deviceToken) {
-            await axios.post(`${API}/live-activity/register-device-token-typed`, {
-              user_id: addItemsEmail.toLowerCase(),
-              device_token: deviceToken,
-              user_type: 'consignor'
-            });
-            console.log('Consignor push token registered');
+          const { PushNotifications } = await import('@capacitor/push-notifications');
+          const permResult = await PushNotifications.requestPermissions();
+          
+          if (permResult.receive === 'granted') {
+            await PushNotifications.register();
+            
+            // Try to get existing token
+            try {
+              const tokenResult = await PushNotifications.getToken();
+              if (tokenResult?.value) {
+                await axios.post(`${API}/live-activity/register-device-token-typed`, {
+                  user_id: addItemsEmail.toLowerCase(),
+                  device_token: tokenResult.value,
+                  user_type: 'consignor'
+                });
+                console.log('Consignor push token registered');
+              }
+            } catch (tokenErr) {
+              console.log('Token retrieval skipped:', tokenErr);
+            }
           }
         } catch (pushErr) {
-          console.log('Push token registration skipped:', pushErr);
+          console.log('Push notification registration skipped:', pushErr);
         }
         
         // Load agreement data
