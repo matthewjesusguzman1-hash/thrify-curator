@@ -481,7 +481,7 @@ export default function AuthPage() {
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  {showPasswordField || showAdminCode ? "Sign In" : "Continue"}
+                  {showPasswordField || showAdminCode ? "Sign In" : "Find My Account"}
                 </>
               )}
             </Button>

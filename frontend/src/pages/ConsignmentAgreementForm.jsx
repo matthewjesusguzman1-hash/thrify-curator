@@ -1499,7 +1499,7 @@ export default function ConsignmentAgreementForm() {
                         className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold py-3 rounded-lg"
                         data-testid="find-agreement-btn"
                       >
-                        {checkingEmail ? "Checking..." : "Continue"}
+                        {checkingEmail ? "Checking..." : "Find My Agreement"}
                       </Button>
                       
                       {/* Face ID / Touch ID button - separate from email continue */}
