@@ -30,7 +30,10 @@ import {
   Eye,
   Pencil,
   Calendar,
-  CalendarDays
+  CalendarDays,
+  Plus,
+  Minus,
+  Settings2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +77,14 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [summaryView, setSummaryView] = useState("year"); // "today", "month", "year"
+  
+  // Mileage adjustment state
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustmentData, setAdjustmentData] = useState({
+    miles: "",
+    reason: ""
+  });
+  const [savingAdjustment, setSavingAdjustment] = useState(false);
   
   // Use external state if provided, otherwise internal
   const activeTrip = externalTrip;
@@ -815,6 +826,55 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     setEditTripData({ date: "", miles: "", purpose: "", notes: "" });
   };
 
+  // Handle mileage adjustment
+  const handleSaveAdjustment = async () => {
+    const miles = parseFloat(adjustmentData.miles);
+    if (isNaN(miles) || miles === 0) {
+      toast.error("Please enter a valid adjustment amount");
+      return;
+    }
+    
+    setSavingAdjustment(true);
+    
+    try {
+      // Determine the date based on current summary view
+      let adjustDate;
+      const now = new Date();
+      if (summaryView === "today") {
+        adjustDate = now.toISOString().split('T')[0];
+      } else if (summaryView === "month") {
+        adjustDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      } else {
+        adjustDate = `${now.getFullYear()}-01-01`;
+      }
+      
+      const response = await axios.post(
+        `${API}/admin/gps-trips/adjust`,
+        {
+          period: summaryView === "today" ? "day" : summaryView,
+          date: adjustDate,
+          adjustment_miles: miles,
+          reason: adjustmentData.reason || null
+        },
+        getAuthHeader()
+      );
+      
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setShowAdjustModal(false);
+        setAdjustmentData({ miles: "", reason: "" });
+        
+        // Refresh summary
+        await fetchSummary();
+      }
+    } catch (error) {
+      console.error("Failed to adjust mileage:", error);
+      toast.error(error.response?.data?.detail || "Failed to adjust mileage");
+    } finally {
+      setSavingAdjustment(false);
+    }
+  };
+
   // View trip on map
   const handleViewTripMap = async (tripId) => {
     setLoadingMap(true);
@@ -1468,15 +1528,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
               
               {/* Mileage Summary - Day/Month/Year Tabs */}
               {summary && (
-                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 overflow-hidden">
                   {/* Tab Headers */}
-                  <div className="flex border-b border-amber-200">
+                  <div className="flex border-b border-blue-200">
                     <button
                       onClick={() => setSummaryView("today")}
                       className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
                         summaryView === "today"
-                          ? "bg-amber-100 text-amber-800 border-b-2 border-amber-500"
-                          : "text-amber-600 hover:bg-amber-50"
+                          ? "bg-blue-100 text-blue-800 border-b-2 border-blue-500"
+                          : "text-blue-600 hover:bg-blue-50"
                       }`}
                       data-testid="summary-tab-today"
                     >
@@ -1487,8 +1547,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       onClick={() => setSummaryView("month")}
                       className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
                         summaryView === "month"
-                          ? "bg-amber-100 text-amber-800 border-b-2 border-amber-500"
-                          : "text-amber-600 hover:bg-amber-50"
+                          ? "bg-blue-100 text-blue-800 border-b-2 border-blue-500"
+                          : "text-blue-600 hover:bg-blue-50"
                       }`}
                       data-testid="summary-tab-month"
                     >
@@ -1499,8 +1559,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       onClick={() => setSummaryView("year")}
                       className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
                         summaryView === "year"
-                          ? "bg-amber-100 text-amber-800 border-b-2 border-amber-500"
-                          : "text-amber-600 hover:bg-amber-50"
+                          ? "bg-blue-100 text-blue-800 border-b-2 border-blue-500"
+                          : "text-blue-600 hover:bg-blue-50"
                       }`}
                       data-testid="summary-tab-year"
                     >
@@ -1513,42 +1573,42 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   <div className="p-4">
                     {summaryView === "today" && (
                       <div className="text-center">
-                        <p className="text-xs text-amber-600 mb-2">Today's Mileage</p>
+                        <p className="text-xs text-blue-600 mb-2">Today's Mileage</p>
                         <div className="grid grid-cols-3 gap-3">
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-amber-700">{summary.today?.trips || 0}</p>
-                            <p className="text-xs text-amber-600">Trips</p>
+                            <p className="text-2xl font-bold text-blue-700">{summary.today?.trips || 0}</p>
+                            <p className="text-xs text-blue-600">Trips</p>
                           </div>
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-amber-700">{summary.today?.miles?.toFixed(1) || "0.0"}</p>
-                            <p className="text-xs text-amber-600">Miles</p>
+                            <p className="text-2xl font-bold text-blue-700">{summary.today?.miles?.toFixed(1) || "0.0"}</p>
+                            <p className="text-xs text-blue-600">Miles</p>
                           </div>
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-amber-700">${summary.today?.deduction?.toFixed(2) || "0.00"}</p>
-                            <p className="text-xs text-amber-600">Deduction</p>
+                            <p className="text-2xl font-bold text-blue-700">${summary.today?.deduction?.toFixed(2) || "0.00"}</p>
+                            <p className="text-xs text-blue-600">Deduction</p>
                           </div>
                         </div>
                         {summary.today?.trips === 0 && (
-                          <p className="text-xs text-amber-500 mt-3">No trips recorded today</p>
+                          <p className="text-xs text-blue-500 mt-3">No trips recorded today</p>
                         )}
                       </div>
                     )}
                     
                     {summaryView === "month" && (
                       <div className="text-center">
-                        <p className="text-xs text-amber-600 mb-2">{summary.this_month?.name} Mileage</p>
+                        <p className="text-xs text-blue-600 mb-2">{summary.this_month?.name} Mileage</p>
                         <div className="grid grid-cols-3 gap-3">
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-amber-700">{summary.this_month?.trips || 0}</p>
-                            <p className="text-xs text-amber-600">Trips</p>
+                            <p className="text-2xl font-bold text-blue-700">{summary.this_month?.trips || 0}</p>
+                            <p className="text-xs text-blue-600">Trips</p>
                           </div>
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-amber-700">{summary.this_month?.miles?.toFixed(1) || "0.0"}</p>
-                            <p className="text-xs text-amber-600">Miles</p>
+                            <p className="text-2xl font-bold text-blue-700">{summary.this_month?.miles?.toFixed(1) || "0.0"}</p>
+                            <p className="text-xs text-blue-600">Miles</p>
                           </div>
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-amber-700">${summary.this_month?.deduction?.toFixed(2) || "0.00"}</p>
-                            <p className="text-xs text-amber-600">Deduction</p>
+                            <p className="text-2xl font-bold text-blue-700">${summary.this_month?.deduction?.toFixed(2) || "0.00"}</p>
+                            <p className="text-xs text-blue-600">Deduction</p>
                           </div>
                         </div>
                       </div>
@@ -1556,30 +1616,150 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     
                     {summaryView === "year" && (
                       <div className="text-center">
-                        <p className="text-xs text-amber-600 mb-2">{summary.year} Year-to-Date</p>
+                        <p className="text-xs text-blue-600 mb-2">{summary.year} Year-to-Date</p>
                         <div className="grid grid-cols-3 gap-3">
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-amber-700">{summary.total_trips || 0}</p>
-                            <p className="text-xs text-amber-600">Trips</p>
+                            <p className="text-2xl font-bold text-blue-700">{summary.total_trips || 0}</p>
+                            <p className="text-xs text-blue-600">Trips</p>
                           </div>
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-amber-700">{summary.total_miles?.toFixed(1) || "0.0"}</p>
-                            <p className="text-xs text-amber-600">Miles</p>
+                            <p className="text-2xl font-bold text-blue-700">{summary.total_miles?.toFixed(1) || "0.0"}</p>
+                            <p className="text-xs text-blue-600">Miles</p>
                           </div>
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-amber-700">${summary.tax_deduction?.toFixed(0) || "0"}</p>
-                            <p className="text-xs text-amber-600">Deduction</p>
+                            <p className="text-2xl font-bold text-blue-700">${summary.tax_deduction?.toFixed(0) || "0"}</p>
+                            <p className="text-xs text-blue-600">Deduction</p>
                           </div>
                         </div>
                       </div>
                     )}
                     
-                    <p className="text-xs text-amber-600 mt-3 text-center">
-                      IRS Rate: ${summary.irs_rate}/mile
-                    </p>
+                    {/* Adjust Button and IRS Rate */}
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-blue-100">
+                      <p className="text-xs text-blue-600">
+                        IRS Rate: ${summary.irs_rate}/mile
+                      </p>
+                      <button
+                        onClick={() => setShowAdjustModal(true)}
+                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+                        data-testid="adjust-mileage-btn"
+                      >
+                        <Settings2 className="w-3 h-3" />
+                        Adjust
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
+              
+              {/* Adjustment Modal */}
+              <AnimatePresence>
+                {showAdjustModal && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    onClick={() => setShowAdjustModal(false)}
+                  >
+                    <motion.div
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                      className="bg-white rounded-2xl shadow-xl max-w-sm w-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="p-4 border-b border-gray-200">
+                        <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                          <Settings2 className="w-5 h-5 text-blue-600" />
+                          Adjust {summaryView === "today" ? "Today's" : summaryView === "month" ? summary?.this_month?.name : summary?.year} Mileage
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Add or subtract miles without creating a trip entry
+                        </p>
+                      </div>
+                      
+                      <div className="p-4 space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Miles Adjustment</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <button
+                              onClick={() => setAdjustmentData(prev => ({
+                                ...prev,
+                                miles: prev.miles.startsWith('-') ? prev.miles.slice(1) : `-${prev.miles}`
+                              }))}
+                              className={`p-2 rounded-lg border ${
+                                adjustmentData.miles.startsWith('-') 
+                                  ? 'bg-red-50 border-red-200 text-red-600' 
+                                  : 'bg-green-50 border-green-200 text-green-600'
+                              }`}
+                            >
+                              {adjustmentData.miles.startsWith('-') ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                            </button>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0.1"
+                              max="100"
+                              placeholder="0.0"
+                              value={adjustmentData.miles.replace('-', '')}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const isNeg = adjustmentData.miles.startsWith('-');
+                                setAdjustmentData(prev => ({
+                                  ...prev,
+                                  miles: isNeg ? `-${val}` : val
+                                }));
+                              }}
+                              className="flex-1"
+                              data-testid="adjustment-miles-input"
+                            />
+                            <span className="text-gray-500">miles</span>
+                          </div>
+                          {adjustmentData.miles && parseFloat(adjustmentData.miles) !== 0 && (
+                            <p className={`text-xs mt-1 ${parseFloat(adjustmentData.miles) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              Tax impact: {parseFloat(adjustmentData.miles) > 0 ? '+' : ''}${(parseFloat(adjustmentData.miles) * (summary?.irs_rate || 0.70)).toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Reason (Optional)</Label>
+                          <Input
+                            type="text"
+                            placeholder="e.g., GPS tracking error correction"
+                            value={adjustmentData.reason}
+                            onChange={(e) => setAdjustmentData(prev => ({ ...prev, reason: e.target.value }))}
+                            className="mt-1"
+                            data-testid="adjustment-reason-input"
+                          />
+                        </div>
+                        
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            onClick={() => {
+                              setShowAdjustModal(false);
+                              setAdjustmentData({ miles: "", reason: "" });
+                            }}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleSaveAdjustment}
+                            disabled={savingAdjustment || !adjustmentData.miles || parseFloat(adjustmentData.miles) === 0}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                            data-testid="save-adjustment-btn"
+                          >
+                            {savingAdjustment ? "Saving..." : "Apply Adjustment"}
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               {/* Trip History */}
               {tripHistory.length > 0 && (

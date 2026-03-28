@@ -68,6 +68,13 @@ class TripUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class MileageAdjustment(BaseModel):
+    period: str  # "day", "month", "year"
+    date: str  # ISO date string (YYYY-MM-DD) - the day, first of month, or first of year
+    adjustment_miles: float  # Can be positive or negative
+    reason: Optional[str] = None
+
+
 class TripResponse(BaseModel):
     id: str
     user_id: str
@@ -418,7 +425,8 @@ async def get_trip_history(
     """Get completed trip history with optional date filtering"""
     query = {
         "user_id": admin["email"],
-        "status": "completed"
+        "status": "completed",
+        "is_hidden": {"$ne": True}  # Exclude hidden adjustments from trip history
     }
     
     # Add date filters if provided
@@ -551,6 +559,88 @@ async def get_mileage_summary(
             "deduction": round(current_month_data["miles"] * irs_rate, 2),
             "name": now.strftime("%B")
         }
+    }
+
+
+@router.post("/adjust")
+async def adjust_mileage(
+    adjustment: MileageAdjustment,
+    admin: dict = Depends(get_admin_user)
+):
+    """
+    Adjust mileage totals without creating a visible trip entry.
+    This creates a special 'adjustment' entry that is hidden from trip history
+    but included in totals. Useful for corrections without appearing suspicious.
+    """
+    try:
+        adjust_date = datetime.strptime(adjustment.date, "%Y-%m-%d")
+        adjust_date = adjust_date.replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    if abs(adjustment.adjustment_miles) > 100:
+        raise HTTPException(status_code=400, detail="Adjustment too large. Max 100 miles per adjustment.")
+    
+    irs_rate = get_irs_rate(adjust_date.year)
+    adjustment_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    
+    # Create a hidden adjustment entry
+    adjustment_doc = {
+        "id": adjustment_id,
+        "user_id": admin["email"],
+        "user_name": admin.get("name", admin["email"]),
+        "status": "completed",
+        "purpose": "adjustment",
+        "notes": adjustment.reason or f"Mileage adjustment for {adjustment.period}",
+        "start_time": adjust_date.isoformat(),
+        "end_time": adjust_date.isoformat(),
+        "locations": [],
+        "total_miles": round(adjustment.adjustment_miles, 2),
+        "tax_deduction": round(adjustment.adjustment_miles * irs_rate, 2),
+        "receipt_url": None,
+        "is_adjustment": True,  # Flag to identify adjustments
+        "is_hidden": True,  # Hide from trip history list
+        "adjustment_period": adjustment.period,
+        "created_at": now.isoformat()
+    }
+    
+    await db.gps_trips.insert_one(adjustment_doc)
+    
+    return {
+        "success": True,
+        "adjustment_id": adjustment_id,
+        "adjustment_miles": round(adjustment.adjustment_miles, 2),
+        "tax_impact": round(adjustment.adjustment_miles * irs_rate, 2),
+        "message": f"Mileage adjusted by {adjustment.adjustment_miles:+.2f} miles"
+    }
+
+
+@router.get("/adjustments")
+async def get_adjustments(
+    year: Optional[int] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Get list of mileage adjustments for audit purposes"""
+    if not year:
+        year = datetime.now(timezone.utc).year
+    
+    start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
+    end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    
+    adjustments = await db.gps_trips.find({
+        "user_id": admin["email"],
+        "is_adjustment": True,
+        "start_time": {
+            "$gte": start_date.isoformat(),
+            "$lt": end_date.isoformat()
+        }
+    }, {"_id": 0, "locations": 0}).sort("start_time", -1).to_list(100)
+    
+    return {
+        "year": year,
+        "adjustments": adjustments,
+        "total_adjustment": sum(a.get("total_miles", 0) for a in adjustments)
     }
 
 
