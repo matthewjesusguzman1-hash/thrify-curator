@@ -162,31 +162,32 @@ export default function useGPSTracking() {
         // Geolocation Config
         desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
         distanceFilter: 5, // meters - smaller for more frequent updates
-        stationaryRadius: 5, // meters - very small
+        stationaryRadius: 1, // meters - minimum possible
         
-        // DISABLE ALL MOTION DETECTION
-        disableMotionActivityUpdates: true, // Disable motion activity
-        disableStopDetection: true, // Don't detect stops
-        stopOnStationary: false, // Never stop when stationary
-        stopTimeout: 525600, // Set to 1 year in minutes (never timeout)
+        // FORCE CONTINUOUS TRACKING - Disable ALL motion/stop detection
+        disableMotionActivityUpdates: true,
+        disableStopDetection: true,
+        stopOnStationary: false,
+        stopTimeout: 525600, // 1 year in minutes
+        isMoving: true, // FORCE moving state on start
         
-        // iOS specific - Keep GPS always on
+        // iOS specific - Maximum background persistence
         preventSuspend: true,
-        showsBackgroundLocationIndicator: true, // Show blue bar
-        pausesLocationUpdatesAutomatically: false, // Never auto-pause
+        showsBackgroundLocationIndicator: true,
+        pausesLocationUpdatesAutomatically: false,
         locationAuthorizationRequest: 'Always',
-        activityType: BackgroundGeolocation.ACTIVITY_TYPE_AUTOMOTIVE_NAVIGATION, // Hint: we're driving
+        activityType: BackgroundGeolocation.ACTIVITY_TYPE_AUTOMOTIVE_NAVIGATION,
         
-        // Continuous location mode
-        locationUpdateInterval: 5000, // Request location every 5 seconds
-        fastestLocationUpdateInterval: 2000, // Accept as fast as 2 seconds
+        // Aggressive location updates
+        locationUpdateInterval: 3000, // Every 3 seconds
+        fastestLocationUpdateInterval: 1000, // Accept every 1 second
         
-        // Heartbeat for background
-        heartbeatInterval: 30, // Heartbeat every 30 seconds
+        // Heartbeat keeps plugin alive in background
+        heartbeatInterval: 15, // Every 15 seconds (more frequent)
         
-        // Debug
-        debug: false, // Disable debug sounds
-        logLevel: BackgroundGeolocation.LOG_LEVEL_WARNING,
+        // Enable debug temporarily to see what's happening
+        debug: true, // Enable debug sounds to hear when tracking
+        logLevel: BackgroundGeolocation.LOG_LEVEL_VERBOSE,
         
         // Notification (Android)
         notification: {
@@ -260,6 +261,10 @@ export default function useGPSTracking() {
             // Start tracking
             const state = await BackgroundGeolocation.start();
             console.log('BackgroundGeolocation started:', state);
+            
+            // FORCE the plugin into "moving" mode to prevent auto-stop
+            await BackgroundGeolocation.changePace(true);
+            console.log('BackgroundGeolocation forced to moving pace');
             
             // Set tracking state
             setIsTracking(true);
