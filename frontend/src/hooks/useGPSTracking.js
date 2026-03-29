@@ -168,7 +168,7 @@ export default function useGPSTracking() {
         disableMotionActivityUpdates: true, // Disable motion activity
         disableStopDetection: true, // Don't detect stops
         stopOnStationary: false, // Never stop when stationary
-        stopTimeout: 0, // Never timeout
+        stopTimeout: 525600, // Set to 1 year in minutes (never timeout)
         
         // iOS specific - Keep GPS always on
         preventSuspend: true,
