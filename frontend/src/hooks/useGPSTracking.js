@@ -54,36 +54,45 @@ export default function useGPSTracking() {
 
   // Process incoming location
   const processLocation = useCallback((location) => {
+    console.log('[GPS] Raw location received:', JSON.stringify(location).substring(0, 500));
+    
     // Ignore if not tracking or paused
     if (!isTrackingRef.current || isPausedRef.current) {
+      console.log('[GPS] Ignoring - tracking:', isTrackingRef.current, 'paused:', isPausedRef.current);
       return;
     }
 
-    // Handle both Transistorsoft format (direct) and standard format (coords nested)
-    const coords = location.coords || location;
+    // Transistorsoft returns latitude/longitude directly on the location object
+    // Standard geolocation uses location.coords.latitude
+    const lat = location.latitude ?? location.coords?.latitude;
+    const lng = location.longitude ?? location.coords?.longitude;
+    const acc = location.accuracy ?? location.coords?.accuracy;
+    const spd = location.speed ?? location.coords?.speed;
     
     const point = {
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-      accuracy: coords.accuracy,
-      speed: coords.speed,
-      timestamp: location.timestamp || new Date().toISOString()
+      latitude: lat,
+      longitude: lng,
+      accuracy: acc,
+      speed: spd,
+      timestamp: location.timestamp || location.time || new Date().toISOString()
     };
 
-    console.log('[GPS] Processing point:', point.latitude, point.longitude, 'accuracy:', point.accuracy);
+    console.log('[GPS] Parsed point:', point.latitude, point.longitude, 'accuracy:', point.accuracy);
 
     // Basic validation
     if (typeof point.latitude !== 'number' || typeof point.longitude !== 'number') {
-      console.log('Invalid location point:', point);
+      console.log('[GPS] Invalid location - lat/lng not numbers:', typeof point.latitude, typeof point.longitude);
       return;
     }
 
     // Skip low accuracy readings (> 100 meters)
     if (point.accuracy && point.accuracy > 100) {
-      console.log('Skipping low accuracy reading:', point.accuracy, 'meters');
+      console.log('[GPS] Skipping low accuracy reading:', point.accuracy, 'meters');
       return;
     }
 
+    console.log('[GPS] Point accepted! Updating state...');
+    
     // Update current location
     setCurrentLocation(point);
 
@@ -184,17 +193,34 @@ export default function useGPSTracking() {
       console.log('BackgroundGeolocation ready:', state);
       bgGeoReadyRef.current = true;
 
-      // Add location listener
-      BackgroundGeolocation.onLocation((location) => {
-        console.log('[BackgroundGeolocation] Location:', location);
+      // Add location listener - this fires for EVERY location update
+      const onLocationSubscription = BackgroundGeolocation.onLocation((location) => {
+        console.log('[BackgroundGeolocation] *** LOCATION RECEIVED ***');
+        console.log('[BackgroundGeolocation] Raw:', JSON.stringify(location).substring(0, 300));
+        console.log('[BackgroundGeolocation] isTracking:', isTrackingRef.current);
         processLocation(location);
       }, (error) => {
-        console.log('[BackgroundGeolocation] Error:', error);
+        console.log('[BackgroundGeolocation] Location Error:', error);
       });
+      
+      console.log('[BackgroundGeolocation] onLocation listener registered');
 
       // Add motion change listener
       BackgroundGeolocation.onMotionChange((event) => {
-        console.log('[BackgroundGeolocation] Motion change:', event.isMoving);
+        console.log('[BackgroundGeolocation] Motion change - isMoving:', event.isMoving);
+        // Force a location update when motion changes
+        if (event.isMoving && event.location) {
+          console.log('[BackgroundGeolocation] Motion location:', event.location.latitude, event.location.longitude);
+          processLocation(event.location);
+        }
+      });
+
+      // Add heartbeat listener for periodic updates
+      BackgroundGeolocation.onHeartbeat((event) => {
+        console.log('[BackgroundGeolocation] Heartbeat received');
+        if (event.location) {
+          processLocation(event.location);
+        }
       });
 
       // Add provider change listener
@@ -242,7 +268,30 @@ export default function useGPSTracking() {
               samples: 1,
               persist: true
             });
+            console.log('[GPS] Initial position:', location.latitude, location.longitude);
             processLocation(location);
+            
+            // Set up a polling fallback every 5 seconds to catch locations
+            // This helps when onLocation events don't fire reliably
+            const pollInterval = setInterval(async () => {
+              if (!isTrackingRef.current) {
+                clearInterval(pollInterval);
+                return;
+              }
+              try {
+                const currentLoc = await BackgroundGeolocation.getCurrentPosition({
+                  samples: 1,
+                  persist: false
+                });
+                console.log('[GPS] Poll location:', currentLoc.latitude, currentLoc.longitude);
+                processLocation(currentLoc);
+              } catch (pollErr) {
+                console.log('[GPS] Poll error:', pollErr);
+              }
+            }, 5000);
+            
+            // Store interval ID for cleanup
+            window._gpsPollingInterval = pollInterval;
             
             toast.success('GPS tracking started - works in background!');
             return true;
@@ -325,6 +374,12 @@ export default function useGPSTracking() {
     if (!isTrackingRef.current) {
       console.log('Not tracking, nothing to stop');
       return;
+    }
+
+    // Clear polling interval
+    if (window._gpsPollingInterval) {
+      clearInterval(window._gpsPollingInterval);
+      window._gpsPollingInterval = null;
     }
 
     // Stop Transistorsoft Background Geolocation
