@@ -3382,7 +3382,7 @@ export default function AdminDashboard() {
               icon={TrendingUp}
               gradient="from-[#FFB800] to-[#F59E0B]"
               defaultOpen={false}
-              badge="GPS Mileage, W-9s & analytics"
+              badge="W-9s & analytics"
               testId="group-operations"
               forceOpen={forceOpenOperations}
               onOpenChange={(open) => {
@@ -3390,6 +3390,8 @@ export default function AdminDashboard() {
               }}
             >
               {/* GPS Mileage Tracker - New real-time tracking */}
+              {/* FEATURE FLAG: Set to true to enable GPS tracking (disabled for App Store submission) */}
+              {false && (
               <GPSMileageTracker 
                 ref={gpsTrackerRef}
                 getAuthHeader={getAuthHeader}
@@ -3400,6 +3402,7 @@ export default function AdminDashboard() {
                 setExternalTrackingStatus={setGpsTrackingStatus}
                 gpsTracker={gpsTracker}
               />
+              )}
 
               {/* Reports Section */}
               <ReportsSection
