@@ -156,34 +156,41 @@ export default function useGPSTracking() {
     try {
       const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
       
-      // Configure the plugin with aggressive iOS background settings
+      // Configure the plugin - MOTION DETECTION DISABLED for continuous tracking
       const state = await BackgroundGeolocation.ready({
         // License
         license: IOS_LICENSE_KEY,
         
         // Geolocation Config
         desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
-        distanceFilter: 10, // meters
-        stopTimeout: 0, // Never stop - keep tracking continuously
+        distanceFilter: 5, // meters - smaller for more frequent updates
+        stationaryRadius: 5, // meters - very small
         
-        // Activity Recognition - DISABLE to prevent auto-stop
-        stopOnStationary: false,
-        disableStopDetection: true, // Don't stop when phone thinks you stopped
+        // DISABLE ALL MOTION DETECTION
+        disableMotionActivityUpdates: true, // Disable motion activity
+        disableStopDetection: true, // Don't detect stops
+        stopOnStationary: false, // Never stop when stationary
+        stopTimeout: 0, // Never timeout
         
-        // iOS specific - CRITICAL for background
-        preventSuspend: true, // Keep JS alive in background
+        // iOS specific - Keep GPS always on
+        preventSuspend: true,
         showsBackgroundLocationIndicator: true, // Show blue bar
-        pausesLocationUpdatesAutomatically: false, // Never pause
-        locationAuthorizationRequest: 'Always', // Request "Always" permission
+        pausesLocationUpdatesAutomatically: false, // Never auto-pause
+        locationAuthorizationRequest: 'Always',
+        activityType: BackgroundGeolocation.ACTIVITY_TYPE_AUTOMOTIVE_NAVIGATION, // Hint: we're driving
         
-        // Heartbeat to keep alive (iOS)
-        heartbeatInterval: 60, // Send heartbeat every 60 seconds
+        // Continuous location mode
+        locationUpdateInterval: 5000, // Request location every 5 seconds
+        fastestLocationUpdateInterval: 2000, // Accept as fast as 2 seconds
         
-        // Application Config
-        debug: true, // Enable debug sounds to verify it's working
-        logLevel: BackgroundGeolocation.LOG_LEVEL_VERBOSE,
+        // Heartbeat for background
+        heartbeatInterval: 30, // Heartbeat every 30 seconds
         
-        // Notification config (Android mainly, but good to have)
+        // Debug
+        debug: false, // Disable debug sounds
+        logLevel: BackgroundGeolocation.LOG_LEVEL_WARNING,
+        
+        // Notification (Android)
         notification: {
           title: "Thrifty Curator",
           text: "Tracking mileage for tax deductions"
@@ -194,9 +201,9 @@ export default function useGPSTracking() {
       bgGeoReadyRef.current = true;
 
       // Add location listener - this fires for EVERY location update
-      const onLocationSubscription = BackgroundGeolocation.onLocation((location) => {
+      BackgroundGeolocation.onLocation((location) => {
         console.log('[BackgroundGeolocation] *** LOCATION RECEIVED ***');
-        console.log('[BackgroundGeolocation] Raw:', JSON.stringify(location).substring(0, 300));
+        console.log('[BackgroundGeolocation] Lat:', location.coords?.latitude || location.latitude);
         console.log('[BackgroundGeolocation] isTracking:', isTrackingRef.current);
         processLocation(location);
       }, (error) => {
@@ -205,25 +212,22 @@ export default function useGPSTracking() {
       
       console.log('[BackgroundGeolocation] onLocation listener registered');
 
-      // Add motion change listener
-      BackgroundGeolocation.onMotionChange((event) => {
-        console.log('[BackgroundGeolocation] Motion change - isMoving:', event.isMoving);
-        // Force a location update when motion changes
-        if (event.isMoving && event.location) {
-          console.log('[BackgroundGeolocation] Motion location:', event.location.latitude, event.location.longitude);
-          processLocation(event.location);
-        }
-      });
-
-      // Add heartbeat listener for periodic updates
+      // Heartbeat listener for periodic updates when stationary
       BackgroundGeolocation.onHeartbeat((event) => {
-        console.log('[BackgroundGeolocation] Heartbeat received');
-        if (event.location) {
-          processLocation(event.location);
-        }
+        console.log('[BackgroundGeolocation] Heartbeat - forcing location update');
+        // Get current position on heartbeat since motion is disabled
+        BackgroundGeolocation.getCurrentPosition({
+          samples: 1,
+          persist: false
+        }).then(location => {
+          console.log('[BackgroundGeolocation] Heartbeat location:', location.coords?.latitude || location.latitude);
+          processLocation(location);
+        }).catch(err => {
+          console.log('[BackgroundGeolocation] Heartbeat getCurrentPosition error:', err);
+        });
       });
 
-      // Add provider change listener
+      // Provider change listener
       BackgroundGeolocation.onProviderChange((event) => {
         console.log('[BackgroundGeolocation] Provider change:', event);
       });
