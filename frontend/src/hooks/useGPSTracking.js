@@ -24,8 +24,8 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// iOS License Key
-const IOS_LICENSE_KEY = "eyJhbGciOiJFZERTQSIsImtpZCI6ImVkMjU1MTktbWFpbi12MSJ9.eyJvcyI6ImlvcyIsImFwcF9pZCI6ImNvbS50aHJpZnR5Y3VyYXRvci5hcHAiLCJvcmRlcl9udW1iZXIiOjE1ODQ1LCJyZW5ld2FsX3VybCI6Imh0dHBzOi8vc2hvcC50cmFuc2lzdG9yc29mdC5jb20vY2FydC8zOTM2NzA3MTIzNjE5OToxP25vdGU9MTA1MzciLCJjdXN0b21lcl9pZCI6OTU4NCwicHJvZHVjdCI6ImNhcGFjaXRvci1iYWNrZ3JvdW5kLWdlb2xvY2F0aW9uIiwia2V5X3ZlcnNpb24iOjEsImFsbG93ZWRfc3VmZml4ZXMiOlsiLmRldiIsIi5kZXZlbG9wbWVudCIsIi5zdGFnaW5nIiwiLnN0YWdlIiwiLnFhIiwiLnVhdCIsIi50ZXN0IiwiLmRlYnVnIl0sIm1heF9idWlsZF9zdGFtcCI6MjAyNzA0MjgsImdyYWNlX2J1aWxkcyI6MCwiZW50aXRsZW1lbnRzIjpbImNvcmUiXSwiaWF0IjoxNzc0NzMxNzUyfQ.l4Y2irFhuAPfyN-cRj1Csok7OpJgOOrE0LNeurWqGyAqyl8g72t30GzPDEFnFenJePEnfy9VKZ5h-fF3M_52CA";
+// Note: iOS license key is configured in Info.plist (TSLocationManagerLicense)
+// Note: Android license key is configured in AndroidManifest.xml
 
 export default function useGPSTracking() {
   const [isTracking, setIsTracking] = useState(false);
@@ -62,12 +62,12 @@ export default function useGPSTracking() {
       return;
     }
 
-    // Transistorsoft returns latitude/longitude directly on the location object
-    // Standard geolocation uses location.coords.latitude
-    const lat = location.latitude ?? location.coords?.latitude;
-    const lng = location.longitude ?? location.coords?.longitude;
-    const acc = location.accuracy ?? location.coords?.accuracy;
-    const spd = location.speed ?? location.coords?.speed;
+    // Transistorsoft v5.x returns location.coords.latitude (same as standard geolocation)
+    // Support both formats for compatibility
+    const lat = location.coords?.latitude ?? location.latitude;
+    const lng = location.coords?.longitude ?? location.longitude;
+    const acc = location.coords?.accuracy ?? location.accuracy;
+    const spd = location.coords?.speed ?? location.speed;
     
     const point = {
       latitude: lat,
@@ -157,10 +157,8 @@ export default function useGPSTracking() {
       const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
       
       // Configure the plugin - MOTION DETECTION DISABLED for continuous tracking
+      // Note: License is read from Info.plist (iOS) and AndroidManifest.xml (Android)
       const state = await BackgroundGeolocation.ready({
-        // License
-        license: IOS_LICENSE_KEY,
-        
         // Geolocation Config
         desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
         distanceFilter: 5, // meters - smaller for more frequent updates
@@ -272,7 +270,7 @@ export default function useGPSTracking() {
               samples: 1,
               persist: true
             });
-            console.log('[GPS] Initial position:', location.latitude, location.longitude);
+            console.log('[GPS] Initial position:', location.coords?.latitude, location.coords?.longitude);
             processLocation(location);
             
             // Set up a polling fallback every 5 seconds to catch locations
@@ -287,7 +285,7 @@ export default function useGPSTracking() {
                   samples: 1,
                   persist: false
                 });
-                console.log('[GPS] Poll location:', currentLoc.latitude, currentLoc.longitude);
+                console.log('[GPS] Poll location:', currentLoc.coords?.latitude, currentLoc.coords?.longitude);
                 processLocation(currentLoc);
               } catch (pollErr) {
                 console.log('[GPS] Poll error:', pollErr);
