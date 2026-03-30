@@ -2876,7 +2876,8 @@ export default function AdminDashboard() {
                     <span className="hidden sm:inline">Remove</span>
                   </Button>
                 </div>
-                {/* GPS Trip Controls Row */}
+                {/* GPS Trip Controls Row - HIDDEN until GPS plugin is fixed */}
+                {false && (
                 <div className="flex gap-1 items-center">
                   {gpsTrackingStatus === "idle" ? (
                     <Button
@@ -2968,6 +2969,7 @@ export default function AdminDashboard() {
                     </div>
                   ) : null}
                 </div>
+                )}
               </div>
             </div>
           </div>
