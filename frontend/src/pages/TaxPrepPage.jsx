@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft,
   Check,
@@ -17,11 +17,19 @@ const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 const TaxPrepPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  // Get year from URL param, fallback to current year
+  const urlYear = searchParams.get('year');
+  const [selectedYear, setSelectedYear] = useState(urlYear ? parseInt(urlYear) : currentYear);
   const [progress, setProgress] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Update URL when year changes
+  useEffect(() => {
+    setSearchParams({ year: selectedYear.toString() });
+  }, [selectedYear, setSearchParams]);
   
   // Get auth header from localStorage
   const getAuthHeader = () => {
@@ -145,6 +153,7 @@ const TaxPrepPage = () => {
             return (
               <div
                 key={step.num}
+                data-testid={`tax-prep-step-${step.num}`}
                 className={`bg-white rounded-lg border overflow-hidden transition-all ${
                   status === 'locked' 
                     ? 'border-gray-200 opacity-60' 
@@ -156,10 +165,11 @@ const TaxPrepPage = () => {
                 <button
                   onClick={() => {
                     if (status !== 'locked') {
-                      navigate(`/admin/tax-prep/step/${step.num}`);
+                      navigate(`/admin/tax-prep/step/${step.num}?year=${selectedYear}`);
                     }
                   }}
                   disabled={status === 'locked'}
+                  data-testid={`tax-prep-step-${step.num}-btn`}
                   className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 disabled:hover:bg-white disabled:cursor-not-allowed"
                 >
                   <div className="flex items-center gap-4">

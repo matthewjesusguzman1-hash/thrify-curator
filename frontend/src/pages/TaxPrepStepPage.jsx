@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft,
   Plus,
@@ -56,9 +56,12 @@ const CATEGORY_LABELS = {
 const TaxPrepStepPage = () => {
   const navigate = useNavigate();
   const { step } = useParams();
+  const [searchParams] = useSearchParams();
   const stepNum = parseInt(step);
   const currentYear = new Date().getFullYear();
-  const [selectedYear] = useState(currentYear);
+  // Get year from URL param, fallback to current year
+  const urlYear = searchParams.get('year');
+  const [selectedYear] = useState(urlYear ? parseInt(urlYear) : currentYear);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -136,7 +139,7 @@ const TaxPrepStepPage = () => {
       });
       
       if (stepNum < 5) {
-        navigate(`/admin/tax-prep/step/${stepNum + 1}`);
+        navigate(`/admin/tax-prep/step/${stepNum + 1}?year=${selectedYear}`);
       } else {
         navigate('/admin/tax-prep');
       }
@@ -181,7 +184,7 @@ const TaxPrepStepPage = () => {
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => navigate('/admin/tax-prep')}
+              onClick={() => navigate(`/admin/tax-prep?year=${selectedYear}`)}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -212,6 +215,7 @@ const TaxPrepStepPage = () => {
                   variant="outline" 
                   size="sm"
                   onClick={() => setShowAdd1099(true)}
+                  data-testid="add-1099-btn"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add 1099
@@ -268,6 +272,7 @@ const TaxPrepStepPage = () => {
                   variant="outline" 
                   size="sm"
                   onClick={() => setShowAddOther(true)}
+                  data-testid="add-other-income-btn"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add
@@ -314,10 +319,10 @@ const TaxPrepStepPage = () => {
             </div>
 
             {/* Total */}
-            <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+            <div className="bg-blue-50 rounded-lg border border-blue-200 p-4" data-testid="total-income-section">
               <div className="flex justify-between items-center text-lg font-bold">
                 <span className="text-blue-900">TOTAL INCOME</span>
-                <span className="text-blue-600">{formatCurrency(income.total)}</span>
+                <span className="text-blue-600" data-testid="total-income-amount">{formatCurrency(income.total)}</span>
               </div>
             </div>
           </div>
@@ -680,7 +685,7 @@ const TaxPrepStepPage = () => {
           <Button
             variant="outline"
             className="flex-1"
-            onClick={() => navigate('/admin/tax-prep')}
+            onClick={() => navigate(`/admin/tax-prep?year=${selectedYear}`)}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back

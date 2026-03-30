@@ -145,10 +145,10 @@ const FinancialsSection = ({ getAuthHeader }) => {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="financials-summary-cards">
+        <div className="bg-white rounded-lg border border-gray-200 p-4" data-testid="gross-sales-card">
           <div className="text-sm text-gray-500 mb-1">Gross Sales</div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-2xl font-bold text-gray-900" data-testid="gross-sales-amount">
             {formatCurrency(summary?.income?.total)}
           </div>
           {comparison && comparison.previous.gross_sales > 0 && (
