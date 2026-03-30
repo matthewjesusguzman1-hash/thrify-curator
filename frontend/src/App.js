@@ -15,6 +15,8 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import ContactPage from "@/pages/ContactPage";
 import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import TaxPrepPage from "@/pages/TaxPrepPage";
+import TaxPrepStepPage from "@/pages/TaxPrepStepPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 // App version - increment this on each release to force cache clear
@@ -211,6 +213,16 @@ function AnimatedRoutes() {
         <Route path="/reset-password/:token" element={
           <PageTransition>
             <ResetPasswordPage />
+          </PageTransition>
+        } />
+        <Route path="/admin/tax-prep" element={
+          <PageTransition>
+            <TaxPrepPage />
+          </PageTransition>
+        } />
+        <Route path="/admin/tax-prep/step/:step" element={
+          <PageTransition>
+            <TaxPrepStepPage />
           </PageTransition>
         } />
       </Routes>

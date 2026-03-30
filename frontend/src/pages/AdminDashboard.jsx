@@ -78,6 +78,7 @@ import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
 import ReportsSection from "@/components/admin/sections/ReportsSection";
 import PasswordManagementSection from "@/components/admin/sections/PasswordManagementSection";
+import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
@@ -3384,7 +3385,7 @@ export default function AdminDashboard() {
               icon={TrendingUp}
               gradient="from-[#FFB800] to-[#F59E0B]"
               defaultOpen={false}
-              badge="W-9s & analytics"
+              badge="Financials, W-9s & analytics"
               testId="group-operations"
               forceOpen={forceOpenOperations}
               onOpenChange={(open) => {
@@ -3405,6 +3406,9 @@ export default function AdminDashboard() {
                 gpsTracker={gpsTracker}
               />
               )}
+
+              {/* Financials Section - Year-round tracking + Tax Prep */}
+              <FinancialsSection getAuthHeader={getAuthHeader} />
 
               {/* Reports Section */}
               <ReportsSection
