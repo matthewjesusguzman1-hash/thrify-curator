@@ -4,7 +4,6 @@
   "webDir": "build",
   "server": {
     "androidScheme": "https",
-    "url": "https://curator-app-3.preview.emergentagent.com",
     "cleartext": false
   },
   "ios": {
