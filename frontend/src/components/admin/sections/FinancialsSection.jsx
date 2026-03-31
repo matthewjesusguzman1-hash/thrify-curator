@@ -1477,16 +1477,37 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
     setSaving(true);
     
     try {
+      // Parse date from extracted dateRange (e.g., "January 2026", "Jan 1 - Jan 31, 2026")
+      const monthMap = { 
+        'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
+        'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12',
+        'january': '01', 'february': '02', 'march': '03', 'april': '04', 'june': '06',
+        'july': '07', 'august': '08', 'september': '09', 'october': '10', 'november': '11', 'december': '12'
+      };
+      
+      let entryDate = new Date().toISOString().split('T')[0]; // Default to today
+      if (dateRange) {
+        const dateStr = dateRange.toLowerCase();
+        // Try to find month and year
+        for (const [monthName, monthNum] of Object.entries(monthMap)) {
+          if (dateStr.includes(monthName)) {
+            // Look for a 4-digit year
+            const yearMatch = dateStr.match(/20\d{2}/);
+            const extractedYear = yearMatch ? yearMatch[0] : year.toString();
+            entryDate = `${extractedYear}-${monthNum}-15`; // Use 15th of month
+            break;
+          }
+        }
+      }
+      
       // Build notes with all extracted metrics for reference
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       let notes = `Scanned ${new Date().toLocaleDateString()}`;
       if (itemsSold) notes += ` | ${itemsSold} sold`;
       if (itemsListed) notes += ` | ${itemsListed} listed`;
       if (avgSalePrice) notes += ` | Avg $${avgSalePrice}`;
-      if (netProfit) notes += ` | Net $${parseFloat(netProfit).toLocaleString()}`;
       if (dateRange) notes += ` | ${dateRange}`;
       
-      // Create income entry with gross revenue ONLY (no auto-deductions)
+      // Create income entry with gross revenue
       const incomeResponse = await fetch(`${API_URL}/api/financials/income`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
@@ -1495,10 +1516,26 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
           platform: 'other',
           amount: parseFloat(grossRevenue),
           is_1099: false,
-          date_received: today,
-          notes: notes
+          date_received: entryDate,
+          notes: `Gross Revenue${notes}`
         })
       });
+      
+      // Also save Net Profit as separate entry if provided
+      if (netProfit && parseFloat(netProfit) > 0) {
+        await fetch(`${API_URL}/api/financials/income`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({
+            year,
+            platform: 'profit',
+            amount: parseFloat(netProfit),
+            is_1099: false,
+            date_received: entryDate,
+            notes: `Net Profit${notes}`
+          })
+        });
+      }
       
       if (incomeResponse.ok) {
         setSavedCount(prev => prev + 1);
