@@ -192,6 +192,11 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - `GET /api/financials/monthly/{year}` - Monthly breakdown for charts
 - `POST /api/financials/vendoo/import` - Import Vendoo CSV export
 - `GET /api/financials/vendoo/template` - Get Vendoo import format info
+- `GET /api/financials/1099/eligible/{year}` - Get consignors with $600+ payouts
+- `GET /api/financials/1099/generate/{year}/{email}` - Generate individual 1099-NEC PDF
+- `GET /api/financials/1099/batch/{year}` - Generate batch 1099-NEC PDF
+- `POST /api/financials/1099/update-tin` - Store recipient TIN from W-9
+- `GET /api/financials/tax-summary/{year}/download` - Download tax summary (PDF/CSV)
 
 **Vendoo CSV Import (Mar 30, 2026):**
 - Upload Vendoo sales export to auto-populate income data
@@ -200,6 +205,18 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - Optional marketplace fees import as expenses
 - Platform mapping: eBay, Poshmark, Mercari, Depop, Etsy, Facebook Marketplace
 - VendooImportModal with drag-and-drop file upload
+
+**1099-NEC Generation (Mar 31, 2026):**
+- Auto-detect consignors who received $600+ in payouts
+- Generate IRS-compliant 1099-NEC forms (Copy B for recipient records)
+- Individual or batch PDF download
+- W-9 TIN storage for official filing
+- Form1099Section UI component in Tax Prep Step 5
+
+**Tax Summary Downloads:**
+- PDF and CSV export of Schedule C tax summary
+- Includes Gross Income, COGS, Deductions, Net Profit
+- Professional formatting with Thrifty Curator branding
 
 **DB Collections:**
 - `income_entries` - Income/Sales data
