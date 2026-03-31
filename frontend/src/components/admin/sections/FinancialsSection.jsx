@@ -642,10 +642,12 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
   const fileInputRef = React.useRef(null);
 
   const handleFileSelect = (e) => {
+    e.stopPropagation();
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (!selectedFile.name.endsWith('.csv')) {
+      if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
         setError('Please select a CSV file');
+        setFile(null);
         return;
       }
       setFile(selectedFile);
@@ -656,10 +658,12 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
 
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     const droppedFile = e.dataTransfer.files?.[0];
     if (droppedFile) {
-      if (!droppedFile.name.endsWith('.csv')) {
+      if (!droppedFile.name.toLowerCase().endsWith('.csv')) {
         setError('Please select a CSV file');
+        setFile(null);
         return;
       }
       setFile(droppedFile);
@@ -668,10 +672,20 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
     }
   };
 
+  const handleBrowseClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     if (!file) {
-      setError('Please select a CSV file');
+      setError('Please select a CSV file first');
       return;
     }
 
@@ -701,14 +715,21 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
         setError(data.detail || 'Import failed');
       }
     } catch (err) {
+      console.error('Upload error:', err);
       setError('Failed to upload file. Please try again.');
     }
     setUploading(false);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-lg font-semibold mb-2">Import Vendoo CSV</h3>
         <p className="text-sm text-gray-500 mb-4">
           Upload your Vendoo sales export to automatically populate income data for {year}.
@@ -727,54 +748,64 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* File Drop Zone */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-              file ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-blue-400'
-            }`}
-            onClick={() => fileInputRef.current?.click()}
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-          >
+          {/* File Input - visible on mobile for better UX */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Select CSV File
+            </label>
+            
+            {/* Standard file input for better mobile compatibility */}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".csv,text/csv"
               onChange={handleFileSelect}
-              className="hidden"
+              className="block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-lg file:border-0
+                file:text-sm file:font-medium
+                file:bg-blue-50 file:text-blue-700
+                hover:file:bg-blue-100
+                cursor-pointer border border-gray-300 rounded-lg"
+              data-testid="vendoo-file-input"
             />
-            {file ? (
-              <div className="text-green-700">
-                <FileText className="w-8 h-8 mx-auto mb-2" />
-                <p className="font-medium">{file.name}</p>
-                <p className="text-sm text-green-600">Click to change file</p>
-              </div>
-            ) : (
-              <div className="text-gray-500">
-                <Upload className="w-8 h-8 mx-auto mb-2" />
-                <p>Drop CSV file here or click to browse</p>
-                <p className="text-xs mt-1">Vendoo export format</p>
+            
+            {/* Show selected file */}
+            {file && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <FileText className="w-5 h-5 text-green-600" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-green-700 truncate">{file.name}</p>
+                  <p className="text-xs text-green-600">{(file.size / 1024).toFixed(1)} KB</p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                  className="text-green-600 hover:text-green-800 p-1"
+                >
+                  ✕
+                </button>
               </div>
             )}
           </div>
 
           {/* Import Options */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm">
+          <div className="space-y-3 pt-2">
+            <label className="flex items-center gap-3 text-sm cursor-pointer p-2 hover:bg-gray-50 rounded-lg">
               <input
                 type="checkbox"
                 checked={importCogs}
                 onChange={(e) => setImportCogs(e.target.checked)}
-                className="rounded border-gray-300"
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span>Also import Cost of Goods (if available in CSV)</span>
             </label>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-3 text-sm cursor-pointer p-2 hover:bg-gray-50 rounded-lg">
               <input
                 type="checkbox"
                 checked={importFees}
                 onChange={(e) => setImportFees(e.target.checked)}
-                className="rounded border-gray-300"
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span>Import marketplace fees as expenses</span>
             </label>
@@ -806,15 +837,21 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
           )}
 
           {/* Buttons */}
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+          <div className="flex gap-3 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="flex-1 py-3" 
+              onClick={onClose}
+            >
               {result ? 'Close' : 'Cancel'}
             </Button>
             {!result && (
               <Button 
                 type="submit" 
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" 
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed" 
                 disabled={uploading || !file}
+                data-testid="vendoo-import-submit"
               >
                 {uploading ? 'Importing...' : 'Import'}
               </Button>
@@ -822,7 +859,7 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
             {result && (
               <Button 
                 type="button" 
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white"
                 onClick={onSuccess}
               >
                 Done
