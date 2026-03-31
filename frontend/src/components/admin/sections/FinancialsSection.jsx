@@ -59,6 +59,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
   const [showAddMileage, setShowAddMileage] = useState(false);
   const [showVendooImport, setShowVendooImport] = useState(false);
   const [showManageData, setShowManageData] = useState(false);
+  const [showAddIncome, setShowAddIncome] = useState(false);
   
   // Show tax prep banner Jan-Apr only
   const showTaxBanner = currentMonth >= 1 && currentMonth <= 4;
@@ -270,11 +271,11 @@ const FinancialsSection = ({ getAuthHeader }) => {
                 variant="outline" 
                 size="sm" 
                 className="flex items-center gap-1"
-                onClick={(e) => { e.stopPropagation(); setShowVendooImport(true); }}
-                data-testid="import-vendoo-btn"
+                onClick={(e) => { e.stopPropagation(); setShowAddIncome(true); }}
+                data-testid="add-income-btn"
               >
-                <Upload className="w-4 h-4" />
-                Import
+                <Plus className="w-4 h-4" />
+                Add
               </Button>
             </div>
           </button>
@@ -474,7 +475,202 @@ const FinancialsSection = ({ getAuthHeader }) => {
           onDataChanged={() => { fetchData(); }}
         />
       )}
+
+      {/* Add Income Modal */}
+      {showAddIncome && (
+        <AddIncomeModal
+          year={selectedYear}
+          getAuthHeader={getAuthHeader}
+          onClose={() => setShowAddIncome(false)}
+          onSave={() => { setShowAddIncome(false); fetchData(); }}
+        />
+      )}
     </div>
+  );
+};
+
+// Add Income Modal Component - for manually entering sales data
+const AddIncomeModal = ({ year, getAuthHeader, onClose, onSave }) => {
+  const [platform, setPlatform] = useState('ebay');
+  const [amount, setAmount] = useState('');
+  const [month, setMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [is1099, setIs1099] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const platforms = [
+    { value: 'ebay', label: 'eBay' },
+    { value: 'poshmark', label: 'Poshmark' },
+    { value: 'mercari', label: 'Mercari' },
+    { value: 'depop', label: 'Depop' },
+    { value: 'etsy', label: 'Etsy' },
+    { value: 'fb_marketplace', label: 'Facebook Marketplace' },
+    { value: 'amazon', label: 'Amazon' },
+    { value: 'whatnot', label: 'Whatnot' },
+    { value: 'in_person', label: 'In-Person Sales' },
+    { value: 'other', label: 'Other' },
+  ];
+
+  const months = [
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!amount || parseFloat(amount) <= 0) return;
+    
+    setSaving(true);
+    
+    try {
+      const response = await fetch(`${API_URL}/api/financials/income`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({
+          year,
+          platform,
+          amount: parseFloat(amount),
+          is_1099: is1099,
+          date_received: `${year}-${month}-01`,
+          notes: notes || `${months.find(m => m.value === month)?.label} ${year} sales`
+        })
+      });
+      
+      if (response.ok) {
+        onSave();
+      }
+    } catch (error) {
+      console.error('Error adding income:', error);
+    }
+    setSaving(false);
+  };
+
+  return ReactDOM.createPortal(
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 99999, touchAction: 'manipulation' }}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
+        style={{ touchAction: 'manipulation' }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold">Add Sales Income</h3>
+          <button 
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-3 -mr-2 min-w-[48px] min-h-[48px] flex items-center justify-center"
+          >
+            <span className="text-2xl">✕</span>
+          </button>
+        </div>
+        
+        <p className="text-sm text-gray-500 mb-4">
+          Enter your monthly sales total from Vendoo Analytics or platform reports.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Platform */}
+          <div>
+            <label className="block text-base font-medium text-gray-700 mb-2">Platform</label>
+            <select
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-300 rounded-xl bg-white min-h-[56px]"
+            >
+              {platforms.map(p => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Month */}
+          <div>
+            <label className="block text-base font-medium text-gray-700 mb-2">Month</label>
+            <select
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-300 rounded-xl bg-white min-h-[56px]"
+            >
+              {months.map(m => (
+                <option key={m.value} value={m.value}>{m.label} {year}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Amount */}
+          <div>
+            <label className="block text-base font-medium text-gray-700 mb-2">Total Sales Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">$</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full p-4 pl-8 text-base border-2 border-gray-300 rounded-xl min-h-[56px]"
+                placeholder="0.00"
+                required
+              />
+            </div>
+          </div>
+
+          {/* 1099 Checkbox */}
+          <label className="flex items-center gap-4 p-4 bg-gray-50 hover:bg-gray-100 rounded-xl cursor-pointer min-h-[56px]">
+            <input
+              type="checkbox"
+              checked={is1099}
+              onChange={(e) => setIs1099(e.target.checked)}
+              className="w-6 h-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-base">This is from a 1099 form</span>
+          </label>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-base font-medium text-gray-700 mb-2">Notes (optional)</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-300 rounded-xl min-h-[56px]"
+              placeholder="e.g., From Vendoo Analytics"
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-4 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="flex-1 py-4 text-base min-h-[56px]" 
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit"
+              className="flex-1 py-4 text-base min-h-[56px] bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50" 
+              disabled={saving || !amount}
+            >
+              {saving ? 'Saving...' : 'Add Income'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
   );
 };
 

@@ -576,13 +576,17 @@ VENDOO_PLATFORM_MAP = {
     "facebook marketplace": "fb_marketplace",
     "fb marketplace": "fb_marketplace",
     "facebook": "fb_marketplace",
+    "amazon": "amazon",
+    "whatnot": "whatnot",
+    "in-person": "in_person",
+    "in person": "in_person",
+    "local": "in_person",
     "offerup": "other",
     "tradesy": "other",
     "grailed": "other",
     "kidizen": "other",
     "curtsy": "other",
     "vestiaire": "other",
-    "whatnot": "other",
     "shopify": "other",
 }
 

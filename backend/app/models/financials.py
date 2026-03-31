@@ -31,6 +31,8 @@ class Platform(str, Enum):
     DEPOP = "depop"
     ETSY = "etsy"
     FB_MARKETPLACE = "fb_marketplace"
+    AMAZON = "amazon"
+    WHATNOT = "whatnot"
     IN_PERSON = "in_person"
     OTHER = "other"
 
