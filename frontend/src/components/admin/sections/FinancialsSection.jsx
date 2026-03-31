@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { 
   TrendingUp, 
   TrendingDown,
@@ -8,7 +9,8 @@ import {
   ChevronRight,
   Upload,
   Plus,
-  FileText
+  FileText,
+  Trash2
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 
@@ -43,6 +45,8 @@ const FinancialsSection = ({ getAuthHeader }) => {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [summary, setSummary] = useState(null);
   const [comparison, setComparison] = useState(null);
+  const [income, setIncome] = useState({ entries: [], total_1099: 0, total_other: 0, total: 0 });
+  const [cogs, setCogs] = useState({ entries: [], total: 0 });
   const [expenses, setExpenses] = useState({ entries: [], by_category: {}, total: 0, count: 0 });
   const [mileage, setMileage] = useState({ entries: [], total_miles: 0, deduction: 0 });
   const [loading, setLoading] = useState(true);
@@ -54,6 +58,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddMileage, setShowAddMileage] = useState(false);
   const [showVendooImport, setShowVendooImport] = useState(false);
+  const [showManageData, setShowManageData] = useState(false);
   
   // Show tax prep banner Jan-Apr only
   const showTaxBanner = currentMonth >= 1 && currentMonth <= 4;
@@ -63,15 +68,19 @@ const FinancialsSection = ({ getAuthHeader }) => {
     try {
       const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
       
-      const [summaryRes, comparisonRes, expensesRes, mileageRes] = await Promise.all([
+      const [summaryRes, comparisonRes, incomeRes, cogsRes, expensesRes, mileageRes] = await Promise.all([
         fetch(`${API_URL}/api/financials/summary/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/comparison/${selectedYear}`, { headers }),
+        fetch(`${API_URL}/api/financials/income/${selectedYear}`, { headers }),
+        fetch(`${API_URL}/api/financials/cogs/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/expenses/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/mileage/${selectedYear}`, { headers })
       ]);
       
       if (summaryRes.ok) setSummary(await summaryRes.json());
       if (comparisonRes.ok) setComparison(await comparisonRes.json());
+      if (incomeRes.ok) setIncome(await incomeRes.json());
+      if (cogsRes.ok) setCogs(await cogsRes.json());
       if (expensesRes.ok) setExpenses(await expensesRes.json());
       if (mileageRes.ok) setMileage(await mileageRes.json());
     } catch (error) {
@@ -246,16 +255,28 @@ const FinancialsSection = ({ getAuthHeader }) => {
               <span className="font-medium text-gray-900">Sales Data</span>
               <span className="text-sm text-gray-500">({formatCurrency(summary?.income?.total)})</span>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center gap-1"
-              onClick={(e) => { e.stopPropagation(); setShowVendooImport(true); }}
-              data-testid="import-vendoo-btn"
-            >
-              <Upload className="w-4 h-4" />
-              Import CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={(e) => { e.stopPropagation(); setShowManageData(true); }}
+                data-testid="manage-data-btn"
+              >
+                <Trash2 className="w-4 h-4" />
+                Manage
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={(e) => { e.stopPropagation(); setShowVendooImport(true); }}
+                data-testid="import-vendoo-btn"
+              >
+                <Upload className="w-4 h-4" />
+                Import
+              </Button>
+            </div>
           </button>
           
           {expandedSection === 'sales' && (
@@ -269,13 +290,17 @@ const FinancialsSection = ({ getAuthHeader }) => {
                   <span className="text-gray-600">Other Income</span>
                   <span className="font-medium">{formatCurrency(summary?.income?.other)}</span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">COGS</span>
+                  <span className="font-medium">-{formatCurrency(summary?.cogs)}</span>
+                </div>
                 <div className="border-t border-gray-300 pt-2 flex justify-between text-sm font-medium">
-                  <span>Total</span>
+                  <span>Total Income</span>
                   <span>{formatCurrency(summary?.income?.total)}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-3">
-                Import your Vendoo CSV export to automatically populate sales data.
+                {income.entries?.length || 0} income entries, {cogs.entries?.length || 0} COGS entries
               </p>
             </div>
           )}
@@ -433,6 +458,20 @@ const FinancialsSection = ({ getAuthHeader }) => {
           getAuthHeader={getAuthHeader}
           onClose={() => setShowVendooImport(false)}
           onSuccess={() => { setShowVendooImport(false); fetchData(); }}
+        />
+      )}
+
+      {/* Manage Data Modal */}
+      {showManageData && (
+        <ManageDataModal
+          year={selectedYear}
+          income={income}
+          cogs={cogs}
+          expenses={expenses}
+          mileage={mileage}
+          getAuthHeader={getAuthHeader}
+          onClose={() => setShowManageData(false)}
+          onDataChanged={() => { fetchData(); }}
         />
       )}
     </div>
@@ -721,13 +760,14 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
     setUploading(false);
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
-      style={{ touchAction: 'none' }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 99999, touchAction: 'manipulation' }}
     >
       <div 
         className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
+        style={{ touchAction: 'manipulation' }}
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-semibold">Import Vendoo CSV</h3>
@@ -874,7 +914,225 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
+  );
+};
+
+// Manage Data Modal Component - for deleting imported data
+const ManageDataModal = ({ year, income, cogs, expenses, mileage, getAuthHeader, onClose, onDataChanged }) => {
+  const [activeTab, setActiveTab] = useState('income');
+  const [deleting, setDeleting] = useState(null);
+
+  const deleteEntry = async (type, id) => {
+    setDeleting(id);
+    try {
+      const response = await fetch(`${API_URL}/api/financials/${type}/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+      });
+      if (response.ok) {
+        onDataChanged();
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+    }
+    setDeleting(null);
+  };
+
+  const deleteAllOfType = async (type) => {
+    if (!window.confirm(`Delete ALL ${type} entries for ${year}? This cannot be undone.`)) return;
+    
+    setDeleting('all');
+    try {
+      const entries = type === 'income' ? income.entries : 
+                      type === 'cogs' ? cogs.entries :
+                      type === 'expenses' ? expenses.entries : mileage.entries;
+      
+      for (const entry of entries) {
+        await fetch(`${API_URL}/api/financials/${type}/${entry.id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+        });
+      }
+      onDataChanged();
+    } catch (error) {
+      console.error('Delete all error:', error);
+    }
+    setDeleting(null);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString();
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+  };
+
+  const tabs = [
+    { id: 'income', label: 'Income', count: income.entries?.length || 0 },
+    { id: 'cogs', label: 'COGS', count: cogs.entries?.length || 0 },
+    { id: 'expenses', label: 'Expenses', count: expenses.entries?.length || 0 },
+    { id: 'mileage', label: 'Mileage', count: mileage.entries?.length || 0 }
+  ];
+
+  const renderEntries = () => {
+    let entries = [];
+    let type = activeTab;
+
+    switch (activeTab) {
+      case 'income':
+        entries = income.entries || [];
+        return entries.map(e => (
+          <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{e.platform} - {formatCurrency(e.amount)}</p>
+              <p className="text-sm text-gray-500">{formatDate(e.date_received)} {e.is_1099 ? '(1099)' : ''}</p>
+            </div>
+            <button
+              onClick={() => deleteEntry('income', e.id)}
+              disabled={deleting === e.id}
+              className="ml-3 p-3 text-red-500 hover:bg-red-50 rounded-lg min-w-[48px] min-h-[48px] flex items-center justify-center"
+            >
+              {deleting === e.id ? '...' : <Trash2 className="w-5 h-5" />}
+            </button>
+          </div>
+        ));
+      case 'cogs':
+        entries = cogs.entries || [];
+        return entries.map(e => (
+          <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{e.source} - {formatCurrency(e.amount)}</p>
+              <p className="text-sm text-gray-500">{formatDate(e.date)} • {e.item_count || 0} items</p>
+            </div>
+            <button
+              onClick={() => deleteEntry('cogs', e.id)}
+              disabled={deleting === e.id}
+              className="ml-3 p-3 text-red-500 hover:bg-red-50 rounded-lg min-w-[48px] min-h-[48px] flex items-center justify-center"
+            >
+              {deleting === e.id ? '...' : <Trash2 className="w-5 h-5" />}
+            </button>
+          </div>
+        ));
+      case 'expenses':
+        entries = expenses.entries || [];
+        return entries.map(e => (
+          <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{e.category} - {formatCurrency(e.amount)}</p>
+              <p className="text-sm text-gray-500">{formatDate(e.date)}</p>
+            </div>
+            <button
+              onClick={() => deleteEntry('expenses', e.id)}
+              disabled={deleting === e.id}
+              className="ml-3 p-3 text-red-500 hover:bg-red-50 rounded-lg min-w-[48px] min-h-[48px] flex items-center justify-center"
+            >
+              {deleting === e.id ? '...' : <Trash2 className="w-5 h-5" />}
+            </button>
+          </div>
+        ));
+      case 'mileage':
+        entries = mileage.entries || [];
+        return entries.map(e => (
+          <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{e.miles} miles - {formatCurrency(e.miles * 0.70)}</p>
+              <p className="text-sm text-gray-500">{formatDate(e.date)} • {e.purpose || 'Business'}</p>
+            </div>
+            <button
+              onClick={() => deleteEntry('mileage', e.id)}
+              disabled={deleting === e.id}
+              className="ml-3 p-3 text-red-500 hover:bg-red-50 rounded-lg min-w-[48px] min-h-[48px] flex items-center justify-center"
+            >
+              {deleting === e.id ? '...' : <Trash2 className="w-5 h-5" />}
+            </button>
+          </div>
+        ));
+      default:
+        return null;
+    }
+  };
+
+  const currentCount = tabs.find(t => t.id === activeTab)?.count || 0;
+
+  return ReactDOM.createPortal(
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 99999, touchAction: 'manipulation' }}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
+        style={{ touchAction: 'manipulation' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="text-xl font-semibold">Manage Data - {year}</h3>
+          <button 
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-3 -mr-2 min-w-[48px] min-h-[48px] flex items-center justify-center"
+          >
+            <span className="text-2xl">✕</span>
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b overflow-x-auto">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 px-4 py-3 text-sm font-medium whitespace-nowrap min-h-[48px] ${
+                activeTab === tab.id 
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
+                  : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {currentCount === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No {activeTab} entries for {year}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {renderEntries()}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t flex gap-3">
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="flex-1 py-3 min-h-[48px]" 
+            onClick={onClose}
+          >
+            Done
+          </Button>
+          {currentCount > 0 && (
+            <Button 
+              type="button"
+              onClick={() => deleteAllOfType(activeTab)}
+              className="flex-1 py-3 min-h-[48px] bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleting === 'all'}
+            >
+              {deleting === 'all' ? 'Deleting...' : `Delete All ${activeTab}`}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };
 
