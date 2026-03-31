@@ -1159,10 +1159,47 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
   );
 };
 
-// Manage Data Modal Component - for deleting imported data
-const ManageDataModal = ({ year, income, cogs, expenses, mileage, getAuthHeader, onClose, onDataChanged }) => {
-  const [activeTab, setActiveTab] = useState('income');
+// Manage Data Modal Component - for viewing/deleting imported data by year
+const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initialCogs, expenses: initialExpenses, mileage: initialMileage, getAuthHeader, onClose, onDataChanged }) => {
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(initialYear);
+  const [activeTab, setActiveTab] = useState('overview');
   const [deleting, setDeleting] = useState(null);
+  const [loading, setLoading] = useState(false);
+  
+  // Local data state for selected year
+  const [income, setIncome] = useState(initialIncome);
+  const [cogs, setCogs] = useState(initialCogs);
+  const [expenses, setExpenses] = useState(initialExpenses);
+  const [mileage, setMileage] = useState(initialMileage);
+
+  // Fetch data when year changes
+  const fetchYearData = async (year) => {
+    setLoading(true);
+    try {
+      const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
+      const [incomeRes, cogsRes, expensesRes, mileageRes] = await Promise.all([
+        fetch(`${API_URL}/api/financials/income/${year}`, { headers }),
+        fetch(`${API_URL}/api/financials/cogs/${year}`, { headers }),
+        fetch(`${API_URL}/api/financials/expenses/${year}`, { headers }),
+        fetch(`${API_URL}/api/financials/mileage/${year}`, { headers })
+      ]);
+      
+      if (incomeRes.ok) setIncome(await incomeRes.json());
+      if (cogsRes.ok) setCogs(await cogsRes.json());
+      if (expensesRes.ok) setExpenses(await expensesRes.json());
+      if (mileageRes.ok) setMileage(await mileageRes.json());
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+    setLoading(false);
+  };
+
+  // When year changes, fetch new data
+  const handleYearChange = (newYear) => {
+    setSelectedYear(newYear);
+    fetchYearData(newYear);
+  };
 
   const deleteEntry = async (type, id) => {
     setDeleting(id);
@@ -1172,7 +1209,8 @@ const ManageDataModal = ({ year, income, cogs, expenses, mileage, getAuthHeader,
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
       });
       if (response.ok) {
-        onDataChanged();
+        fetchYearData(selectedYear);
+        if (selectedYear === initialYear) onDataChanged();
       }
     } catch (error) {
       console.error('Delete error:', error);
@@ -1181,7 +1219,7 @@ const ManageDataModal = ({ year, income, cogs, expenses, mileage, getAuthHeader,
   };
 
   const deleteAllOfType = async (type) => {
-    if (!window.confirm(`Delete ALL ${type} entries for ${year}? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ALL ${type} entries for ${selectedYear}? This cannot be undone.`)) return;
     
     setDeleting('all');
     try {
@@ -1195,99 +1233,205 @@ const ManageDataModal = ({ year, income, cogs, expenses, mileage, getAuthHeader,
           headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
         });
       }
-      onDataChanged();
+      fetchYearData(selectedYear);
+      if (selectedYear === initialYear) onDataChanged();
     } catch (error) {
       console.error('Delete all error:', error);
     }
     setDeleting(null);
   };
 
-  const formatDate = (dateStr) => {
+  const formatMonthYear = (dateStr) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleDateString();
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount || 0);
+  };
+
+  // Group income entries by month and separate gross revenue from profit
+  const getMonthlyData = () => {
+    const monthlyData = {};
+    const entries = income.entries || [];
+    
+    entries.forEach(e => {
+      const date = new Date(e.date_received);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { 
+          label: monthLabel, 
+          grossRevenue: 0, 
+          netProfit: 0, 
+          entries: [] 
+        };
+      }
+      
+      // Check if it's a profit entry or gross revenue
+      if (e.platform === 'profit' || e.notes?.includes('Net Profit')) {
+        monthlyData[monthKey].netProfit += e.amount;
+      } else {
+        monthlyData[monthKey].grossRevenue += e.amount;
+      }
+      monthlyData[monthKey].entries.push(e);
+    });
+    
+    // Sort by month key descending (newest first)
+    return Object.entries(monthlyData)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, data]) => ({ monthKey: key, ...data }));
   };
 
   const tabs = [
+    { id: 'overview', label: 'Overview', count: null },
     { id: 'income', label: 'Income', count: income.entries?.length || 0 },
     { id: 'cogs', label: 'COGS', count: cogs.entries?.length || 0 },
     { id: 'expenses', label: 'Expenses', count: expenses.entries?.length || 0 },
     { id: 'mileage', label: 'Mileage', count: mileage.entries?.length || 0 }
   ];
 
+  const monthlyData = getMonthlyData();
+
+  const renderOverview = () => {
+    if (monthlyData.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          No data for {selectedYear}
+        </div>
+      );
+    }
+
+    // Calculate totals
+    const totalGross = monthlyData.reduce((sum, m) => sum + m.grossRevenue, 0);
+    const totalProfit = monthlyData.reduce((sum, m) => sum + m.netProfit, 0);
+
+    return (
+      <div className="space-y-4">
+        {/* Year Summary */}
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 mb-2">{selectedYear} Totals</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-blue-700">Gross Revenue</p>
+              <p className="text-xl font-bold text-blue-900">{formatCurrency(totalGross)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-blue-700">Net Profit</p>
+              <p className="text-xl font-bold text-green-600">{formatCurrency(totalProfit)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Breakdown */}
+        <h4 className="font-semibold text-gray-700">Monthly Breakdown</h4>
+        <div className="space-y-2">
+          {monthlyData.map(month => (
+            <div key={month.monthKey} className="bg-gray-50 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-gray-900">{month.label}</span>
+                <div className="text-right">
+                  <p className="font-semibold">{formatCurrency(month.grossRevenue)}</p>
+                  {month.netProfit > 0 && (
+                    <p className="text-sm text-green-600">Profit: {formatCurrency(month.netProfit)}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderEntries = () => {
     let entries = [];
-    let type = activeTab;
 
     switch (activeTab) {
+      case 'overview':
+        return renderOverview();
       case 'income':
         entries = income.entries || [];
-        return entries.map(e => (
-          <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{e.platform} - {formatCurrency(e.amount)}</p>
-              <p className="text-sm text-gray-500">{formatDate(e.date_received)} {e.is_1099 ? '(1099)' : ''}</p>
-            </div>
-            <button
-              onClick={() => deleteEntry('income', e.id)}
-              disabled={deleting === e.id}
-              className="ml-3 p-3 text-red-500 hover:bg-red-50 rounded-lg min-w-[48px] min-h-[48px] flex items-center justify-center"
-            >
-              {deleting === e.id ? '...' : <Trash2 className="w-5 h-5" />}
-            </button>
+        // Group by month
+        const groupedIncome = {};
+        entries.forEach(e => {
+          const monthLabel = formatMonthYear(e.date_received);
+          if (!groupedIncome[monthLabel]) groupedIncome[monthLabel] = [];
+          groupedIncome[monthLabel].push(e);
+        });
+        
+        return Object.entries(groupedIncome).map(([month, monthEntries]) => (
+          <div key={month} className="mb-4">
+            <h4 className="font-semibold text-gray-700 mb-2 sticky top-0 bg-white py-1">{month}</h4>
+            {monthEntries.map(e => (
+              <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-1">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">
+                    {e.notes?.includes('Net Profit') ? '📈 Net Profit' : '💰 Gross Revenue'} - {formatCurrency(e.amount)}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{e.notes}</p>
+                </div>
+                <button
+                  onClick={() => deleteEntry('income', e.id)}
+                  disabled={deleting === e.id}
+                  className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
+                >
+                  {deleting === e.id ? '...' : <Trash2 className="w-4 h-4" />}
+                </button>
+              </div>
+            ))}
           </div>
         ));
       case 'cogs':
         entries = cogs.entries || [];
         return entries.map(e => (
-          <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{e.source} - {formatCurrency(e.amount)}</p>
-              <p className="text-sm text-gray-500">{formatDate(e.date)} • {e.item_count || 0} items</p>
+              <p className="text-sm text-gray-500">{formatMonthYear(e.date)} • {e.item_count || 0} items</p>
             </div>
             <button
               onClick={() => deleteEntry('cogs', e.id)}
               disabled={deleting === e.id}
-              className="ml-3 p-3 text-red-500 hover:bg-red-50 rounded-lg min-w-[48px] min-h-[48px] flex items-center justify-center"
+              className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
             >
-              {deleting === e.id ? '...' : <Trash2 className="w-5 h-5" />}
+              {deleting === e.id ? '...' : <Trash2 className="w-4 h-4" />}
             </button>
           </div>
         ));
       case 'expenses':
         entries = expenses.entries || [];
         return entries.map(e => (
-          <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{e.category} - {formatCurrency(e.amount)}</p>
-              <p className="text-sm text-gray-500">{formatDate(e.date)}</p>
+              <p className="text-sm text-gray-500">{formatMonthYear(e.date)}</p>
             </div>
             <button
               onClick={() => deleteEntry('expenses', e.id)}
               disabled={deleting === e.id}
-              className="ml-3 p-3 text-red-500 hover:bg-red-50 rounded-lg min-w-[48px] min-h-[48px] flex items-center justify-center"
+              className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
             >
-              {deleting === e.id ? '...' : <Trash2 className="w-5 h-5" />}
+              {deleting === e.id ? '...' : <Trash2 className="w-4 h-4" />}
             </button>
           </div>
         ));
       case 'mileage':
         entries = mileage.entries || [];
         return entries.map(e => (
-          <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{e.miles} miles - {formatCurrency(e.miles * 0.70)}</p>
-              <p className="text-sm text-gray-500">{formatDate(e.date)} • {e.purpose || 'Business'}</p>
+              <p className="text-sm text-gray-500">{formatMonthYear(e.date)} • {e.purpose || 'Business'}</p>
             </div>
             <button
               onClick={() => deleteEntry('mileage', e.id)}
               disabled={deleting === e.id}
-              className="ml-3 p-3 text-red-500 hover:bg-red-50 rounded-lg min-w-[48px] min-h-[48px] flex items-center justify-center"
+              className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
             >
-              {deleting === e.id ? '...' : <Trash2 className="w-5 h-5" />}
+              {deleting === e.id ? '...' : <Trash2 className="w-4 h-4" />}
             </button>
           </div>
         ));
@@ -1296,7 +1440,7 @@ const ManageDataModal = ({ year, income, cogs, expenses, mileage, getAuthHeader,
     }
   };
 
-  const currentCount = tabs.find(t => t.id === activeTab)?.count || 0;
+  const currentCount = activeTab === 'overview' ? null : tabs.find(t => t.id === activeTab)?.count || 0;
 
   return ReactDOM.createPortal(
     <div 
@@ -1307,9 +1451,20 @@ const ManageDataModal = ({ year, income, cogs, expenses, mileage, getAuthHeader,
         className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
         style={{ touchAction: 'manipulation' }}
       >
-        {/* Header */}
+        {/* Header with Year Selector */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-xl font-semibold">Manage Data - {year}</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-xl font-semibold">Manage Data</h3>
+            <select
+              value={selectedYear}
+              onChange={(e) => handleYearChange(parseInt(e.target.value))}
+              className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium bg-white"
+            >
+              {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4].map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
           <button 
             type="button"
             onClick={onClose}
@@ -1338,9 +1493,13 @@ const ManageDataModal = ({ year, income, cogs, expenses, mileage, getAuthHeader,
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          {currentCount === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : currentCount === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No {activeTab} entries for {year}
+              No {activeTab} entries for {selectedYear}
             </div>
           ) : (
             <div className="space-y-2">
