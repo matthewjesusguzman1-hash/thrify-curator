@@ -213,6 +213,17 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - W-9 TIN storage for official filing
 - Form1099Section UI component in Tax Prep Step 5
 
+**AI-Powered Screenshot Import (Mar 31, 2026):**
+- Scan Vendoo Analytics or platform dashboard screenshots
+- Uses GPT-4o Vision via emergentintegrations library to extract:
+  - Gross Revenue, Net Profit, Items Sold, Items Listed, Avg Sale Price
+  - Platform name, date range, fees, shipping costs
+- "Save & Add Another" continuous entry loop for rapid monthly data entry
+- After saving, shows confirmation and "+ Add Another Month" button
+- resetForm() clears all fields for seamless next entry
+- Uses React Portals for proper modal rendering
+- Both "Take Photo" (camera) and "Choose File" (upload) options
+
 **Tax Summary Downloads:**
 - PDF and CSV export of Schedule C tax summary
 - Includes Gross Income, COGS, Deductions, Net Profit
@@ -254,6 +265,12 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 ## Known Issues
 - Password modals had recurring freeze issues (resolved with React Portals)
 - ConsignmentAgreementForm.jsx is a fragile 3500+ line monolith
+- FinancialsSection.jsx growing large (~1900 lines) - consider extracting modals
+
+## Testing Status (Mar 31, 2026)
+- AI Screenshot Import: VERIFIED ✅ (iteration_29.json - 50/50 backend, 5/5 frontend)
+- Financials CRUD: VERIFIED ✅
+- Screenshot analysis API: VERIFIED ✅
 
 ## Credentials
 - Admin login (Matthew Guzman): Access code `4399`
