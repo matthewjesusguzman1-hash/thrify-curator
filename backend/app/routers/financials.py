@@ -1537,17 +1537,22 @@ async def analyze_screenshot(
             Extract sales and financial data from screenshots of selling platforms like Vendoo, eBay, Poshmark, etc.
             Return the data as valid JSON only, no other text.
             
-            Extract these fields if visible:
-            - total_revenue: total sales/revenue amount (number)
-            - total_profit: profit amount if shown (number)
-            - total_items: number of items sold (number)
+            Extract these fields if visible (read the EXACT numbers shown):
+            - gross_revenue: total sales/revenue amount - look for "Revenue", "Total Sales", "Gross" (number)
+            - net_profit: profit amount - look for "Profit", "Net", "Earnings" (number) - this is DIFFERENT from revenue
+            - items_sold: number of items SOLD (number)
+            - items_listed: number of items LISTED or active listings if shown (number)
+            - avg_sale_price: average sale price if shown (number)
             - platform: the platform name if identifiable (string)
             - date_range: the date range shown, e.g. "January 2026" or "Jan 1 - Jan 31, 2026" (string)
-            - fees: any fees shown (number)
-            - shipping: shipping costs if shown (number)
-            - cogs: cost of goods if shown (number)
+            - fees: any marketplace/platform fees shown (number)
+            - shipping_cost: shipping costs if shown (number)
             
-            If a field is not visible or unclear, omit it from the response.
+            IMPORTANT: 
+            - gross_revenue and net_profit are DIFFERENT numbers - extract both separately
+            - If you see "Revenue: $7,882" and "Profit: $5,795", those are TWO different values
+            - If a field is not visible or unclear, omit it from the response
+            
             Return ONLY valid JSON, no markdown, no explanation."""
         ).with_model("openai", "gpt-4o")
         
