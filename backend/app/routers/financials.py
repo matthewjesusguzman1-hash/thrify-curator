@@ -689,7 +689,7 @@ async def import_vendoo_csv(
                     return header_map[normalized]
             return None
         
-        platform_col = find_column(["platform_sold", "platform", "marketplace", "sold_on"])
+        platform_col = find_column(["sold_platform", "platform_sold", "platform", "marketplace", "sold_on"])
         date_col = find_column(["sold_date", "date_sold", "sale_date", "date"])
         price_col = find_column(["price_sold", "sale_price", "revenue", "sold_price", "price"])
         cogs_col = find_column(["cost_of_goods", "cog", "cogs", "cost", "purchase_price"])
