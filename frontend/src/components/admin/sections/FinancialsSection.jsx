@@ -60,7 +60,6 @@ const FinancialsSection = ({ getAuthHeader }) => {
   const [showAddMileage, setShowAddMileage] = useState(false);
   const [showVendooImport, setShowVendooImport] = useState(false);
   const [showManageData, setShowManageData] = useState(false);
-  const [showAddIncome, setShowAddIncome] = useState(false);
   const [showScreenshotImport, setShowScreenshotImport] = useState(false);
   
   // Show tax prep banner Jan-Apr only
@@ -268,16 +267,6 @@ const FinancialsSection = ({ getAuthHeader }) => {
               >
                 <Trash2 className="w-4 h-4" />
                 Manage
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={(e) => { e.stopPropagation(); setShowAddIncome(true); }}
-                data-testid="add-income-btn"
-              >
-                <Plus className="w-4 h-4" />
-                Add
               </Button>
               <Button 
                 variant="outline" 
@@ -495,23 +484,13 @@ const FinancialsSection = ({ getAuthHeader }) => {
         />
       )}
 
-      {/* Add Income Modal */}
-      {showAddIncome && (
-        <AddIncomeModal
-          year={selectedYear}
-          getAuthHeader={getAuthHeader}
-          onClose={() => setShowAddIncome(false)}
-          onSave={() => { setShowAddIncome(false); fetchData(); }}
-        />
-      )}
-
       {/* Screenshot Import Modal */}
       {showScreenshotImport && (
         <ScreenshotImportModal
           year={selectedYear}
           getAuthHeader={getAuthHeader}
           onClose={() => setShowScreenshotImport(false)}
-          onSave={() => { setShowScreenshotImport(false); fetchData(); }}
+          onSave={() => { fetchData(); }}
         />
       )}
     </div>
@@ -1410,45 +1389,13 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
   const [lastSaved, setLastSaved] = useState(null);
   const fileInputRef = React.useRef(null);
 
-  // Editable fields
+  // Editable fields - only what we need
   const [grossRevenue, setGrossRevenue] = useState('');
   const [netProfit, setNetProfit] = useState('');
   const [itemsSold, setItemsSold] = useState('');
   const [itemsListed, setItemsListed] = useState('');
   const [avgSalePrice, setAvgSalePrice] = useState('');
-  const [platform, setPlatform] = useState('other');
   const [dateRange, setDateRange] = useState('');
-  const [fees, setFees] = useState('');
-  const [shippingCost, setShippingCost] = useState('');
-  const [month, setMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
-
-  const platforms = [
-    { value: 'ebay', label: 'eBay' },
-    { value: 'poshmark', label: 'Poshmark' },
-    { value: 'mercari', label: 'Mercari' },
-    { value: 'depop', label: 'Depop' },
-    { value: 'etsy', label: 'Etsy' },
-    { value: 'fb_marketplace', label: 'Facebook' },
-    { value: 'amazon', label: 'Amazon' },
-    { value: 'whatnot', label: 'Whatnot' },
-    { value: 'vendoo', label: 'Vendoo (All)' },
-    { value: 'other', label: 'Other' },
-  ];
-
-  const months = [
-    { value: '01', label: 'January' },
-    { value: '02', label: 'February' },
-    { value: '03', label: 'March' },
-    { value: '04', label: 'April' },
-    { value: '05', label: 'May' },
-    { value: '06', label: 'June' },
-    { value: '07', label: 'July' },
-    { value: '08', label: 'August' },
-    { value: '09', label: 'September' },
-    { value: '10', label: 'October' },
-    { value: '11', label: 'November' },
-    { value: '12', label: 'December' },
-  ];
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -1474,11 +1421,7 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
     setItemsSold('');
     setItemsListed('');
     setAvgSalePrice('');
-    setPlatform('other');
     setDateRange('');
-    setFees('');
-    setShippingCost('');
-    setMonth(String(new Date().getMonth() + 1).padStart(2, '0'));
   };
 
   const analyzeImage = async () => {
@@ -1501,39 +1444,18 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
       
       if (data.success && data.extracted_data) {
         setExtractedData(data.extracted_data);
-        // Populate editable fields from new field names
+        // Populate editable fields
         setGrossRevenue(data.extracted_data.gross_revenue?.toString() || data.extracted_data.total_revenue?.toString() || '');
         setNetProfit(data.extracted_data.net_profit?.toString() || data.extracted_data.total_profit?.toString() || '');
         setItemsSold(data.extracted_data.items_sold?.toString() || data.extracted_data.total_items?.toString() || '');
         setItemsListed(data.extracted_data.items_listed?.toString() || '');
         setAvgSalePrice(data.extracted_data.avg_sale_price?.toString() || '');
-        setFees(data.extracted_data.fees?.toString() || '');
-        setShippingCost(data.extracted_data.shipping_cost?.toString() || '');
         setDateRange(data.extracted_data.date_range || '');
         
         // Calculate avg sale price if not provided
         if (!data.extracted_data.avg_sale_price && data.extracted_data.gross_revenue && data.extracted_data.items_sold) {
           const avg = data.extracted_data.gross_revenue / data.extracted_data.items_sold;
           setAvgSalePrice(avg.toFixed(2));
-        }
-        
-        // Try to detect platform
-        const detectedPlatform = data.extracted_data.platform?.toLowerCase() || '';
-        if (detectedPlatform.includes('ebay')) setPlatform('ebay');
-        else if (detectedPlatform.includes('poshmark')) setPlatform('poshmark');
-        else if (detectedPlatform.includes('mercari')) setPlatform('mercari');
-        else if (detectedPlatform.includes('vendoo')) setPlatform('vendoo');
-        else if (detectedPlatform.includes('depop')) setPlatform('depop');
-        
-        // Try to detect month from date range
-        const dateStr = data.extracted_data.date_range?.toLowerCase() || '';
-        const monthMap = { 'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
-                          'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12' };
-        for (const [key, val] of Object.entries(monthMap)) {
-          if (dateStr.includes(key)) {
-            setMonth(val);
-            break;
-          }
         }
         
         setEditMode(true);
@@ -1555,75 +1477,34 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
     setSaving(true);
     
     try {
-      const monthLabel = months.find(m => m.value === month)?.label || '';
-      
-      // Build notes with all metrics
-      let notes = `${monthLabel} ${year}`;
+      // Build notes with all extracted metrics for reference
+      let notes = `Scanned ${new Date().toLocaleDateString()}`;
       if (itemsSold) notes += ` | ${itemsSold} sold`;
       if (itemsListed) notes += ` | ${itemsListed} listed`;
       if (avgSalePrice) notes += ` | Avg $${avgSalePrice}`;
       if (netProfit) notes += ` | Net $${parseFloat(netProfit).toLocaleString()}`;
+      if (dateRange) notes += ` | ${dateRange}`;
       
-      // Create income entry with gross revenue
+      // Create income entry with gross revenue ONLY (no auto-deductions)
       const incomeResponse = await fetch(`${API_URL}/api/financials/income`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify({
           year,
-          platform: platform === 'vendoo' ? 'other' : platform,
+          platform: 'other',
           amount: parseFloat(grossRevenue),
           is_1099: false,
-          date_received: `${year}-${month}-01`,
+          date_received: `${year}-01-01`,
           notes: notes
         })
       });
       
-      // Create fees expense if provided (calculated from gross - net - shipping if not explicit)
-      let totalFees = fees ? parseFloat(fees) : 0;
-      if (!totalFees && grossRevenue && netProfit) {
-        // Estimate fees as gross - net - shipping
-        const shipping = shippingCost ? parseFloat(shippingCost) : 0;
-        totalFees = parseFloat(grossRevenue) - parseFloat(netProfit) - shipping;
-        if (totalFees < 0) totalFees = 0;
-      }
-      
-      if (totalFees > 0) {
-        await fetch(`${API_URL}/api/financials/expenses`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-          body: JSON.stringify({
-            year,
-            category: 'bank_payment_fees',
-            amount: totalFees,
-            date: `${year}-${month}-01`,
-            description: `${monthLabel} ${year} platform/marketplace fees`
-          })
-        });
-      }
-      
-      // Create shipping expense if provided
-      if (shippingCost && parseFloat(shippingCost) > 0) {
-        await fetch(`${API_URL}/api/financials/expenses`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-          body: JSON.stringify({
-            year,
-            category: 'shipping_supplies',
-            amount: parseFloat(shippingCost),
-            date: `${year}-${month}-01`,
-            description: `${monthLabel} ${year} shipping costs`
-          })
-        });
-      }
-      
       if (incomeResponse.ok) {
-        const monthLabel = months.find(m => m.value === month)?.label || '';
         setSavedCount(prev => prev + 1);
         setLastSaved({
-          month: monthLabel,
-          year: year,
           amount: parseFloat(grossRevenue),
-          platform: platforms.find(p => p.value === platform)?.label || platform
+          netProfit: netProfit ? parseFloat(netProfit) : null,
+          itemsSold: itemsSold || null
         });
         // Don't close - let user add more
         onSave(); // This refreshes the data
@@ -1662,17 +1543,21 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
         
         {/* Last saved confirmation */}
         {lastSaved && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-            <p className="text-sm font-medium text-blue-800">
-              ✓ Saved: {lastSaved.platform} - {lastSaved.month} {lastSaved.year}
+          <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 mb-4">
+            <p className="text-lg font-bold text-green-800 mb-2">
+              ✓ Saved: ${lastSaved.amount.toLocaleString()}
             </p>
-            <p className="text-lg font-bold text-blue-900">${lastSaved.amount.toLocaleString()}</p>
+            {lastSaved.netProfit && (
+              <p className="text-sm text-green-700">Net Profit: ${lastSaved.netProfit.toLocaleString()}</p>
+            )}
+            {lastSaved.itemsSold && (
+              <p className="text-sm text-green-700">Items Sold: {lastSaved.itemsSold}</p>
+            )}
             <Button 
-              size="sm" 
-              className="mt-2 bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full mt-3 py-4 text-base min-h-[56px] bg-blue-600 hover:bg-blue-700 text-white"
               onClick={resetForm}
             >
-              + Add Another Month
+              + Scan Another Screenshot
             </Button>
           </div>
         )}
@@ -1745,36 +1630,8 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
           {/* Extracted/Editable Data */}
           {editMode && (
             <div className="space-y-4 bg-gray-50 rounded-xl p-4">
-              <p className="text-sm font-medium text-green-700 mb-2">✓ Data extracted - verify and edit if needed:</p>
+              <p className="text-sm font-medium text-green-700 mb-2">✓ Data extracted - verify and save:</p>
               
-              {/* Month & Platform Row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-                  <select
-                    value={month}
-                    onChange={(e) => setMonth(e.target.value)}
-                    className="w-full p-3 border-2 border-gray-300 rounded-lg bg-white"
-                  >
-                    {months.map(m => (
-                      <option key={m.value} value={m.value}>{m.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
-                  <select
-                    value={platform}
-                    onChange={(e) => setPlatform(e.target.value)}
-                    className="w-full p-3 border-2 border-gray-300 rounded-lg bg-white"
-                  >
-                    {platforms.map(p => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
               {/* Gross Revenue & Net Profit */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1846,41 +1703,9 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
                   />
                 </div>
               </div>
-
-              {/* Fees & Shipping */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Platform Fees</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={fees}
-                      onChange={(e) => setFees(e.target.value)}
-                      className="w-full p-3 pl-7 border-2 border-gray-300 rounded-lg"
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Costs</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={shippingCost}
-                      onChange={(e) => setShippingCost(e.target.value)}
-                      className="w-full p-3 pl-7 border-2 border-gray-300 rounded-lg"
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-              </div>
               
               <p className="text-xs text-gray-500">
-                * COGS and mileage deductions can be added later via the Manage button
+                * Only Gross Revenue is saved as income. Add deductions separately via the Manage button.
               </p>
             </div>
           )}
