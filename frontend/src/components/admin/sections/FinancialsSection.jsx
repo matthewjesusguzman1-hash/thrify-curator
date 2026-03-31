@@ -277,6 +277,16 @@ const FinancialsSection = ({ getAuthHeader }) => {
                 <Plus className="w-4 h-4" />
                 Add
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={(e) => { e.stopPropagation(); setShowVendooImport(true); }}
+                data-testid="import-vendoo-btn"
+              >
+                <Upload className="w-4 h-4" />
+                Import
+              </Button>
             </div>
           </button>
           
