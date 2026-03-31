@@ -1478,6 +1478,7 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
     
     try {
       // Build notes with all extracted metrics for reference
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       let notes = `Scanned ${new Date().toLocaleDateString()}`;
       if (itemsSold) notes += ` | ${itemsSold} sold`;
       if (itemsListed) notes += ` | ${itemsListed} listed`;
@@ -1494,7 +1495,7 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
           platform: 'other',
           amount: parseFloat(grossRevenue),
           is_1099: false,
-          date_received: `${year}-01-01`,
+          date_received: today,
           notes: notes
         })
       });
