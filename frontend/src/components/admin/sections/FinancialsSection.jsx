@@ -1406,6 +1406,8 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [savedCount, setSavedCount] = useState(0);
+  const [lastSaved, setLastSaved] = useState(null);
   const fileInputRef = React.useRef(null);
 
   // Editable fields
@@ -1456,7 +1458,27 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
       setError(null);
       setExtractedData(null);
       setEditMode(false);
+      setLastSaved(null);
     }
+  };
+
+  const resetForm = () => {
+    setImage(null);
+    setImagePreview(null);
+    setExtractedData(null);
+    setEditMode(false);
+    setError(null);
+    setLastSaved(null);
+    setGrossRevenue('');
+    setNetProfit('');
+    setItemsSold('');
+    setItemsListed('');
+    setAvgSalePrice('');
+    setPlatform('other');
+    setDateRange('');
+    setFees('');
+    setShippingCost('');
+    setMonth(String(new Date().getMonth() + 1).padStart(2, '0'));
   };
 
   const analyzeImage = async () => {
@@ -1595,7 +1617,16 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
       }
       
       if (incomeResponse.ok) {
-        onSave();
+        const monthLabel = months.find(m => m.value === month)?.label || '';
+        setSavedCount(prev => prev + 1);
+        setLastSaved({
+          month: monthLabel,
+          year: year,
+          amount: parseFloat(grossRevenue),
+          platform: platforms.find(p => p.value === platform)?.label || platform
+        });
+        // Don't close - let user add more
+        onSave(); // This refreshes the data
       }
     } catch (err) {
       setError('Failed to save data');
@@ -1612,7 +1643,7 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
         className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
         style={{ touchAction: 'manipulation' }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           <h3 className="text-xl font-semibold">Scan Screenshot</h3>
           <button 
             type="button"
@@ -1623,9 +1654,34 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
           </button>
         </div>
         
-        <p className="text-sm text-gray-500 mb-4">
-          Take a screenshot of your Vendoo Analytics or platform dashboard and we'll extract the data automatically.
-        </p>
+        {savedCount > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-2 mb-3 text-sm text-green-700">
+            ✓ {savedCount} entry{savedCount > 1 ? 'ies' : ''} saved this session
+          </div>
+        )}
+        
+        {/* Last saved confirmation */}
+        {lastSaved && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <p className="text-sm font-medium text-blue-800">
+              ✓ Saved: {lastSaved.platform} - {lastSaved.month} {lastSaved.year}
+            </p>
+            <p className="text-lg font-bold text-blue-900">${lastSaved.amount.toLocaleString()}</p>
+            <Button 
+              size="sm" 
+              className="mt-2 bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={resetForm}
+            >
+              + Add Another Month
+            </Button>
+          </div>
+        )}
+        
+        {!lastSaved && (
+          <p className="text-sm text-gray-500 mb-4">
+            Scan your Vendoo Analytics or platform dashboard. Add data for each month.
+          </p>
+        )}
 
         <div className="space-y-4">
           {/* Image Upload */}
