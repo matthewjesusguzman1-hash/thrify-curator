@@ -190,6 +190,16 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - `GET /api/financials/summary/{year}` - Financial summary
 - `GET /api/financials/comparison/{year}` - Year-over-year comparison
 - `GET /api/financials/monthly/{year}` - Monthly breakdown for charts
+- `POST /api/financials/vendoo/import` - Import Vendoo CSV export
+- `GET /api/financials/vendoo/template` - Get Vendoo import format info
+
+**Vendoo CSV Import (Mar 30, 2026):**
+- Upload Vendoo sales export to auto-populate income data
+- Supports filtering by year
+- Optional COGS import from Cost of Goods column
+- Optional marketplace fees import as expenses
+- Platform mapping: eBay, Poshmark, Mercari, Depop, Etsy, Facebook Marketplace
+- VendooImportModal with drag-and-drop file upload
 
 **DB Collections:**
 - `income_entries` - Income/Sales data
