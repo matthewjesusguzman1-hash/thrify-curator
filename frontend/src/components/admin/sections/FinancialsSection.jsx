@@ -724,13 +724,21 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
   return (
     <div 
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ touchAction: 'none' }}
     >
       <div 
         className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold mb-2">Import Vendoo CSV</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold">Import Vendoo CSV</h3>
+          <button 
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-1"
+          >
+            ✕
+          </button>
+        </div>
         <p className="text-sm text-gray-500 mb-4">
           Upload your Vendoo sales export to automatically populate income data for {year}.
         </p>
@@ -747,33 +755,32 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
           </ol>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* File Input - visible on mobile for better UX */}
+        <div className="space-y-4">
+          {/* File Input - visible for better mobile compatibility */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
               Select CSV File
             </label>
             
-            {/* Standard file input for better mobile compatibility */}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,text/csv,application/vnd.ms-excel"
               onChange={handleFileSelect}
               className="block w-full text-sm text-gray-500
-                file:mr-4 file:py-2 file:px-4
+                file:mr-4 file:py-3 file:px-4
                 file:rounded-lg file:border-0
                 file:text-sm file:font-medium
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100
-                cursor-pointer border border-gray-300 rounded-lg"
+                file:bg-blue-600 file:text-white
+                hover:file:bg-blue-700
+                cursor-pointer border border-gray-300 rounded-lg p-2"
               data-testid="vendoo-file-input"
             />
             
             {/* Show selected file */}
             {file && (
               <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <FileText className="w-5 h-5 text-green-600" />
+                <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-green-700 truncate">{file.name}</p>
                   <p className="text-xs text-green-600">{(file.size / 1024).toFixed(1)} KB</p>
@@ -781,7 +788,7 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
                 <button 
                   type="button"
                   onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                  className="text-green-600 hover:text-green-800 p-1"
+                  className="text-green-600 hover:text-green-800 p-2"
                 >
                   ✕
                 </button>
@@ -796,16 +803,16 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
                 type="checkbox"
                 checked={importCogs}
                 onChange={(e) => setImportCogs(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span>Also import Cost of Goods (if available in CSV)</span>
+              <span>Also import Cost of Goods (if available)</span>
             </label>
             <label className="flex items-center gap-3 text-sm cursor-pointer p-2 hover:bg-gray-50 rounded-lg">
               <input
                 type="checkbox"
                 checked={importFees}
                 onChange={(e) => setImportFees(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span>Import marketplace fees as expenses</span>
             </label>
@@ -829,7 +836,7 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
                   <p>• {result.details.cogs_entries_created} COGS entries created</p>
                 )}
                 {result.details.fee_expenses_created > 0 && (
-                  <p>• Fee expense of ${result.details.total_fees?.toFixed(2)} created</p>
+                  <p>• Fees expense created</p>
                 )}
                 <p className="font-medium pt-1">Total Sales: ${result.details.total_sales.toLocaleString()}</p>
               </div>
@@ -848,7 +855,8 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
             </Button>
             {!result && (
               <Button 
-                type="submit" 
+                type="button"
+                onClick={handleSubmit}
                 className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed" 
                 disabled={uploading || !file}
                 data-testid="vendoo-import-submit"
@@ -866,7 +874,7 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
               </Button>
             )}
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
