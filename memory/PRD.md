@@ -146,6 +146,59 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - `GET /api/admin/gps-trips/summary` - Get yearly summary
 - `DELETE /api/admin/gps-trips/{trip_id}` - Delete a trip
 
+### Implemented: Taxes & Deductions Feature (Mar 30, 2026)
+**Dual-mode tax system: Year-round Financials Dashboard + Seasonal 5-step Tax Prep Portal**
+
+**Year-Round Financials Dashboard (FinancialsSection.jsx):**
+- Summary cards: Gross Sales, COGS, Deductions, Net Profit
+- Year-over-year comparison with trend indicators
+- Collapsible sections: Sales Data, Deductible Expenses, Mileage
+- Add/Delete Expenses with 19 IRS-recognized categories
+- Add/Delete Mileage trips with IRS rate ($0.70/mile for 2025)
+- Tax Prep banner (shown Jan-Apr) linking to Tax Prep Portal
+
+**5-Step Tax Prep Portal (TaxPrepPage.jsx, TaxPrepStepPage.jsx):**
+- Linear wizard with progress tracking
+- Year selector persists across all step pages via URL params
+- **Step 1: Income** - Add/Delete 1099s and Other Income by platform
+- **Step 2: Cost of Goods** - Add/Delete inventory purchases with source, date, item count
+- **Step 3: Deductions** - Review/Add Mileage and Expenses by category
+- **Step 4: Documents** - Upload receipts, 1099s, licenses (PDF, JPEG, PNG up to 10MB)
+- **Step 5: Generate Reports** - Tax Summary with download options (PDF/CSV)
+
+**Financial Calculations:**
+- Gross Profit = Total Income - COGS
+- Total Deductions = Expenses + Mileage Deduction
+- Net Profit = Gross Profit - Total Deductions
+- Mileage Deduction = Total Miles × IRS Rate
+
+**Technical Details:**
+- Backend: `/app/backend/app/routers/financials.py` (~560 lines)
+- Backend Models: `/app/backend/app/models/financials.py`
+- Frontend: `/app/frontend/src/components/admin/sections/FinancialsSection.jsx`
+- Frontend: `/app/frontend/src/pages/TaxPrepPage.jsx`, `TaxPrepStepPage.jsx`
+- Routes: `/admin/tax-prep`, `/admin/tax-prep/step/:step?year=YYYY`
+
+**API Endpoints:**
+- `GET/POST/PUT/DELETE /api/financials/income/{year}` - Income entries
+- `GET/POST/PUT/DELETE /api/financials/cogs/{year}` - COGS entries  
+- `GET/POST/PUT/DELETE /api/financials/expenses/{year}` - Expense entries
+- `GET/POST/DELETE /api/financials/mileage/{year}` - Mileage entries
+- `POST /api/financials/documents/upload` - Upload tax documents
+- `GET /api/financials/documents/{year}` - List documents
+- `GET/PUT /api/financials/tax-prep/progress/{year}` - Step completion tracking
+- `GET /api/financials/summary/{year}` - Financial summary
+- `GET /api/financials/comparison/{year}` - Year-over-year comparison
+- `GET /api/financials/monthly/{year}` - Monthly breakdown for charts
+
+**DB Collections:**
+- `income_entries` - Income/Sales data
+- `cogs_entries` - Cost of Goods Sold
+- `expense_entries` - Deductible expenses by category
+- `mileage_entries` - Business mileage trips
+- `tax_documents` - Uploaded documents (base64 encoded)
+- `tax_prep_progress` - Step completion status per year
+
 ## Technical Architecture
 
 ### Frontend
