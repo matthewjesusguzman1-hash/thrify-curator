@@ -1605,19 +1605,31 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
           {/* Image Upload */}
           {!editMode && (
             <>
-              <label className="block w-full p-6 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-center rounded-xl cursor-pointer transition-colors min-h-[60px] flex items-center justify-center">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <span className="text-lg font-medium">
-                  {image ? '📷 Change Image' : '📷 Take Photo or Choose Image'}
-                </span>
-              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block p-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-center rounded-xl cursor-pointer transition-colors min-h-[60px] flex flex-col items-center justify-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Camera className="w-6 h-6 mb-1" />
+                  <span className="text-sm font-medium">Take Photo</span>
+                </label>
+                
+                <label className="block p-4 bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white text-center rounded-xl cursor-pointer transition-colors min-h-[60px] flex flex-col items-center justify-center">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Upload className="w-6 h-6 mb-1" />
+                  <span className="text-sm font-medium">Choose File</span>
+                </label>
+              </div>
               
               {imagePreview && (
                 <div className="relative">
@@ -1626,6 +1638,13 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
                     alt="Screenshot preview" 
                     className="w-full rounded-lg border-2 border-gray-200 max-h-48 object-contain bg-gray-100"
                   />
+                  <button
+                    type="button"
+                    onClick={() => { setImage(null); setImagePreview(null); }}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
               
