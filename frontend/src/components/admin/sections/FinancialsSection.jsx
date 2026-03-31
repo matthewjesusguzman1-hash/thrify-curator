@@ -14,6 +14,7 @@ import {
   Camera
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -111,6 +112,33 @@ const FinancialsSection = ({ getAuthHeader }) => {
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
   };
+
+  // Get monthly chart data for the selected year
+  const getMonthlyChartData = () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const data = months.map((month, index) => ({
+      month,
+      monthIndex: index + 1,
+      grossRevenue: 0,
+      netProfit: 0
+    }));
+
+    // Process income entries
+    (income.entries || []).forEach(entry => {
+      const date = new Date(entry.date_received);
+      const monthIndex = date.getMonth();
+      
+      if (entry.platform === 'profit' || entry.notes?.includes('Net Profit')) {
+        data[monthIndex].netProfit += entry.amount;
+      } else {
+        data[monthIndex].grossRevenue += entry.amount;
+      }
+    });
+
+    return data;
+  };
+
+  const monthlyChartData = getMonthlyChartData();
 
   if (loading) {
     return (
@@ -211,36 +239,80 @@ const FinancialsSection = ({ getAuthHeader }) => {
         </div>
       </div>
 
-      {/* Year Comparison Graphs Placeholder */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Monthly Chart */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <h3 className="font-medium text-gray-900 mb-4">Monthly Revenue & Profit - {selectedYear}</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={monthlyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis 
+                dataKey="month" 
+                tick={{ fontSize: 12, fill: '#666' }}
+                axisLine={{ stroke: '#e0e0e0' }}
+              />
+              <YAxis 
+                tick={{ fontSize: 11, fill: '#666' }}
+                axisLine={{ stroke: '#e0e0e0' }}
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              />
+              <Tooltip 
+                formatter={(value) => [`$${value.toLocaleString()}`, '']}
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '8px',
+                  fontSize: '13px'
+                }}
+              />
+              <Legend 
+                wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
+              />
+              <Bar 
+                dataKey="grossRevenue" 
+                name="Gross Revenue" 
+                fill="#3b82f6" 
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar 
+                dataKey="netProfit" 
+                name="Net Profit" 
+                fill="#22c55e" 
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Year Summary Cards */}
+      <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <h3 className="font-medium text-gray-900 mb-4">Gross Sales</h3>
-          <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg">
-            <div className="text-center text-gray-500">
-              <TrendingUp className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <div className="text-2xl font-bold text-gray-900">{formatCurrency(summary?.income?.total)}</div>
-              <div className="text-sm mt-1">
-                <span className="inline-block w-3 h-3 bg-blue-500 rounded mr-1"></span> {selectedYear}
-                <span className="inline-block w-3 h-3 bg-gray-300 rounded ml-3 mr-1"></span> {selectedYear - 1}
-              </div>
+          <h3 className="text-sm text-gray-500 mb-1">Total Gross Sales</h3>
+          <div className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.income?.total)}</div>
+          {comparison && comparison.previous.gross_sales > 0 && (
+            <div className={`text-xs flex items-center gap-1 mt-1 ${
+              summary?.income?.total >= comparison.previous.gross_sales ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {summary?.income?.total >= comparison.previous.gross_sales ? '↑' : '↓'}
+              vs {formatCurrency(comparison.previous.gross_sales)} in {selectedYear - 1}
             </div>
-          </div>
+          )}
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <h3 className="font-medium text-gray-900 mb-4">Profit</h3>
-          <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg">
-            <div className="text-center text-gray-500">
-              <TrendingUp className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <div className={`text-2xl font-bold ${summary?.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(summary?.net_profit)}
-              </div>
-              <div className="text-sm mt-1">
-                <span className="inline-block w-3 h-3 bg-blue-500 rounded mr-1"></span> {selectedYear}
-                <span className="inline-block w-3 h-3 bg-gray-300 rounded ml-3 mr-1"></span> {selectedYear - 1}
-              </div>
-            </div>
+          <h3 className="text-sm text-gray-500 mb-1">Total Net Profit</h3>
+          <div className="text-2xl font-bold text-green-600">
+            {formatCurrency(monthlyChartData.reduce((sum, m) => sum + m.netProfit, 0))}
           </div>
+          {comparison && comparison.previous.profit !== 0 && (
+            <div className={`text-xs flex items-center gap-1 mt-1 ${
+              summary?.net_profit >= comparison.previous.profit ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {summary?.net_profit >= comparison.previous.profit ? '↑' : '↓'}
+              vs {formatCurrency(comparison.previous.profit)} in {selectedYear - 1}
+            </div>
+          )}
         </div>
       </div>
 
