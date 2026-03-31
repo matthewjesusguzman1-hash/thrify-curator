@@ -10,7 +10,8 @@ import {
   Upload,
   Plus,
   FileText,
-  Trash2
+  Trash2,
+  Camera
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 
@@ -60,6 +61,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
   const [showVendooImport, setShowVendooImport] = useState(false);
   const [showManageData, setShowManageData] = useState(false);
   const [showAddIncome, setShowAddIncome] = useState(false);
+  const [showScreenshotImport, setShowScreenshotImport] = useState(false);
   
   // Show tax prep banner Jan-Apr only
   const showTaxBanner = currentMonth >= 1 && currentMonth <= 4;
@@ -281,11 +283,11 @@ const FinancialsSection = ({ getAuthHeader }) => {
                 variant="outline" 
                 size="sm" 
                 className="flex items-center gap-1"
-                onClick={(e) => { e.stopPropagation(); setShowVendooImport(true); }}
-                data-testid="import-vendoo-btn"
+                onClick={(e) => { e.stopPropagation(); setShowScreenshotImport(true); }}
+                data-testid="screenshot-import-btn"
               >
                 <Upload className="w-4 h-4" />
-                Import
+                Scan
               </Button>
             </div>
           </button>
@@ -310,9 +312,16 @@ const FinancialsSection = ({ getAuthHeader }) => {
                   <span>{formatCurrency(summary?.income?.total)}</span>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-3">
-                {income.entries?.length || 0} income entries, {cogs.entries?.length || 0} COGS entries
-              </p>
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => setShowVendooImport(true)}
+                >
+                  Import from Vendoo CSV (Advanced)
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -493,6 +502,16 @@ const FinancialsSection = ({ getAuthHeader }) => {
           getAuthHeader={getAuthHeader}
           onClose={() => setShowAddIncome(false)}
           onSave={() => { setShowAddIncome(false); fetchData(); }}
+        />
+      )}
+
+      {/* Screenshot Import Modal */}
+      {showScreenshotImport && (
+        <ScreenshotImportModal
+          year={selectedYear}
+          getAuthHeader={getAuthHeader}
+          onClose={() => setShowScreenshotImport(false)}
+          onSave={() => { setShowScreenshotImport(false); fetchData(); }}
         />
       )}
     </div>
@@ -1371,6 +1390,380 @@ const ManageDataModal = ({ year, income, cogs, expenses, mileage, getAuthHeader,
               {deleting === 'all' ? 'Deleting...' : `Delete All ${activeTab}`}
             </Button>
           )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+// Screenshot Import Modal - AI-powered data extraction
+const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [extractedData, setExtractedData] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const fileInputRef = React.useRef(null);
+
+  // Editable fields
+  const [revenue, setRevenue] = useState('');
+  const [profit, setProfit] = useState('');
+  const [itemCount, setItemCount] = useState('');
+  const [platform, setPlatform] = useState('other');
+  const [dateRange, setDateRange] = useState('');
+  const [fees, setFees] = useState('');
+  const [cogs, setCogs] = useState('');
+  const [month, setMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+
+  const platforms = [
+    { value: 'ebay', label: 'eBay' },
+    { value: 'poshmark', label: 'Poshmark' },
+    { value: 'mercari', label: 'Mercari' },
+    { value: 'depop', label: 'Depop' },
+    { value: 'etsy', label: 'Etsy' },
+    { value: 'fb_marketplace', label: 'Facebook' },
+    { value: 'amazon', label: 'Amazon' },
+    { value: 'whatnot', label: 'Whatnot' },
+    { value: 'vendoo', label: 'Vendoo (All)' },
+    { value: 'other', label: 'Other' },
+  ];
+
+  const months = [
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+      setError(null);
+      setExtractedData(null);
+      setEditMode(false);
+    }
+  };
+
+  const analyzeImage = async () => {
+    if (!image) return;
+    
+    setAnalyzing(true);
+    setError(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', image);
+      
+      const response = await fetch(`${API_URL}/api/financials/screenshot/analyze`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+        body: formData
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.extracted_data) {
+        setExtractedData(data.extracted_data);
+        // Populate editable fields
+        setRevenue(data.extracted_data.total_revenue?.toString() || '');
+        setProfit(data.extracted_data.total_profit?.toString() || '');
+        setItemCount(data.extracted_data.total_items?.toString() || '');
+        setFees(data.extracted_data.fees?.toString() || '');
+        setCogs(data.extracted_data.cogs?.toString() || '');
+        setDateRange(data.extracted_data.date_range || '');
+        
+        // Try to detect platform
+        const detectedPlatform = data.extracted_data.platform?.toLowerCase() || '';
+        if (detectedPlatform.includes('ebay')) setPlatform('ebay');
+        else if (detectedPlatform.includes('poshmark')) setPlatform('poshmark');
+        else if (detectedPlatform.includes('mercari')) setPlatform('mercari');
+        else if (detectedPlatform.includes('vendoo')) setPlatform('vendoo');
+        else if (detectedPlatform.includes('depop')) setPlatform('depop');
+        
+        // Try to detect month from date range
+        const dateStr = data.extracted_data.date_range?.toLowerCase() || '';
+        const monthMap = { 'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
+                          'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12' };
+        for (const [key, val] of Object.entries(monthMap)) {
+          if (dateStr.includes(key)) {
+            setMonth(val);
+            break;
+          }
+        }
+        
+        setEditMode(true);
+      } else {
+        setError(data.error || 'Could not extract data from image');
+      }
+    } catch (err) {
+      setError('Failed to analyze image. Please try again.');
+    }
+    setAnalyzing(false);
+  };
+
+  const saveData = async () => {
+    if (!revenue || parseFloat(revenue) <= 0) {
+      setError('Please enter a valid revenue amount');
+      return;
+    }
+    
+    setSaving(true);
+    
+    try {
+      // Create income entry
+      const incomeResponse = await fetch(`${API_URL}/api/financials/income`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({
+          year,
+          platform: platform === 'vendoo' ? 'other' : platform,
+          amount: parseFloat(revenue),
+          is_1099: false,
+          date_received: `${year}-${month}-01`,
+          notes: `From screenshot: ${dateRange || months.find(m => m.value === month)?.label + ' ' + year}${itemCount ? ', ' + itemCount + ' items' : ''}`
+        })
+      });
+      
+      // Create COGS entry if provided
+      if (cogs && parseFloat(cogs) > 0) {
+        await fetch(`${API_URL}/api/financials/cogs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({
+            year,
+            date: `${year}-${month}-01`,
+            source: 'Screenshot Import',
+            description: `${months.find(m => m.value === month)?.label} ${year} COGS`,
+            amount: parseFloat(cogs),
+            item_count: parseInt(itemCount) || 0
+          })
+        });
+      }
+      
+      // Create fees expense if provided
+      if (fees && parseFloat(fees) > 0) {
+        await fetch(`${API_URL}/api/financials/expenses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({
+            year,
+            category: 'bank_payment_fees',
+            amount: parseFloat(fees),
+            date: `${year}-${month}-01`,
+            description: `${months.find(m => m.value === month)?.label} ${year} platform fees`
+          })
+        });
+      }
+      
+      if (incomeResponse.ok) {
+        onSave();
+      }
+    } catch (err) {
+      setError('Failed to save data');
+    }
+    setSaving(false);
+  };
+
+  return ReactDOM.createPortal(
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 99999, touchAction: 'manipulation' }}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
+        style={{ touchAction: 'manipulation' }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold">Scan Screenshot</h3>
+          <button 
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-3 -mr-2 min-w-[48px] min-h-[48px] flex items-center justify-center"
+          >
+            <span className="text-2xl">✕</span>
+          </button>
+        </div>
+        
+        <p className="text-sm text-gray-500 mb-4">
+          Take a screenshot of your Vendoo Analytics or platform dashboard and we'll extract the data automatically.
+        </p>
+
+        <div className="space-y-4">
+          {/* Image Upload */}
+          {!editMode && (
+            <>
+              <label className="block w-full p-6 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-center rounded-xl cursor-pointer transition-colors min-h-[60px] flex items-center justify-center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <span className="text-lg font-medium">
+                  {image ? '📷 Change Image' : '📷 Take Photo or Choose Image'}
+                </span>
+              </label>
+              
+              {imagePreview && (
+                <div className="relative">
+                  <img 
+                    src={imagePreview} 
+                    alt="Screenshot preview" 
+                    className="w-full rounded-lg border-2 border-gray-200 max-h-48 object-contain bg-gray-100"
+                  />
+                </div>
+              )}
+              
+              {image && !extractedData && (
+                <Button
+                  onClick={analyzeImage}
+                  disabled={analyzing}
+                  className="w-full py-4 text-base min-h-[56px] bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {analyzing ? 'Analyzing...' : 'Extract Data from Image'}
+                </Button>
+              )}
+            </>
+          )}
+
+          {/* Extracted/Editable Data */}
+          {editMode && (
+            <div className="space-y-4 bg-gray-50 rounded-xl p-4">
+              <p className="text-sm font-medium text-green-700 mb-2">✓ Data extracted - verify and edit if needed:</p>
+              
+              {/* Month */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                <select
+                  value={month}
+                  onChange={(e) => setMonth(e.target.value)}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg bg-white"
+                >
+                  {months.map(m => (
+                    <option key={m.value} value={m.value}>{m.label} {year}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Platform */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                <select
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value)}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg bg-white"
+                >
+                  {platforms.map(p => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Revenue */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Total Revenue *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={revenue}
+                    onChange={(e) => setRevenue(e.target.value)}
+                    className="w-full p-3 pl-7 border-2 border-gray-300 rounded-lg"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              {/* Items Sold */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Items Sold</label>
+                <input
+                  type="number"
+                  value={itemCount}
+                  onChange={(e) => setItemCount(e.target.value)}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* COGS */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cost of Goods (optional)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={cogs}
+                    onChange={(e) => setCogs(e.target.value)}
+                    className="w-full p-3 pl-7 border-2 border-gray-300 rounded-lg"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              {/* Fees */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Platform Fees (optional)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={fees}
+                    onChange={(e) => setFees(e.target.value)}
+                    className="w-full p-3 pl-7 border-2 border-gray-300 rounded-lg"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-base text-red-700">
+              {error}
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex gap-4 pt-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="flex-1 py-4 text-base min-h-[56px]" 
+              onClick={editMode ? () => setEditMode(false) : onClose}
+            >
+              {editMode ? 'Back' : 'Cancel'}
+            </Button>
+            {editMode && (
+              <Button 
+                type="button"
+                onClick={saveData}
+                className="flex-1 py-4 text-base min-h-[56px] bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50" 
+                disabled={saving || !revenue}
+              >
+                {saving ? 'Saving...' : 'Save Data'}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>,

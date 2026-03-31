@@ -2,10 +2,15 @@ from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from datetime import datetime, timezone
+from dotenv import load_dotenv
 import uuid
 import base64
 import csv
 import io
+import os
+import json
+
+load_dotenv()
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -1495,4 +1500,92 @@ async def download_tax_summary(year: int, format: str = "pdf"):
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename=tax_summary_{year}.pdf"}
         )
+
+
+# ============== SCREENSHOT IMPORT (AI-POWERED) ==============
+
+@router.post("/screenshot/analyze")
+async def analyze_screenshot(
+    file: UploadFile = File(...)
+):
+    """
+    Analyze a screenshot from Vendoo or other platform and extract financial data.
+    Uses AI vision to read the numbers from the image.
+    """
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    
+    # Validate file type
+    content_type = file.content_type or ""
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Please upload an image file (PNG, JPG, etc.)")
+    
+    # Read and encode the image
+    image_data = await file.read()
+    image_base64 = base64.b64encode(image_data).decode('utf-8')
+    
+    # Get API key
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    try:
+        # Initialize AI chat
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"screenshot-{uuid.uuid4()}",
+            system_message="""You are a financial data extraction assistant. 
+            Extract sales and financial data from screenshots of selling platforms like Vendoo, eBay, Poshmark, etc.
+            Return the data as valid JSON only, no other text.
+            
+            Extract these fields if visible:
+            - total_revenue: total sales/revenue amount (number)
+            - total_profit: profit amount if shown (number)
+            - total_items: number of items sold (number)
+            - platform: the platform name if identifiable (string)
+            - date_range: the date range shown, e.g. "January 2026" or "Jan 1 - Jan 31, 2026" (string)
+            - fees: any fees shown (number)
+            - shipping: shipping costs if shown (number)
+            - cogs: cost of goods if shown (number)
+            
+            If a field is not visible or unclear, omit it from the response.
+            Return ONLY valid JSON, no markdown, no explanation."""
+        ).with_model("openai", "gpt-4o")
+        
+        # Create message with image
+        image_content = ImageContent(image_base64=image_base64)
+        user_message = UserMessage(
+            text="Extract the financial data from this screenshot. Return only valid JSON.",
+            file_contents=[image_content]
+        )
+        
+        # Get AI response
+        response = await chat.send_message(user_message)
+        
+        # Parse JSON response
+        try:
+            # Clean up response - remove markdown code blocks if present
+            cleaned = response.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned.rsplit("```", 1)[0]
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:].strip()
+            
+            data = json.loads(cleaned)
+            
+            return {
+                "success": True,
+                "extracted_data": data,
+                "raw_response": response
+            }
+        except json.JSONDecodeError:
+            return {
+                "success": False,
+                "error": "Could not parse AI response as JSON",
+                "raw_response": response
+            }
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI analysis failed: {str(e)}")
 
