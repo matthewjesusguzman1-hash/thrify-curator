@@ -981,3 +981,140 @@ TEST_Item4,Unknown Platform,2092-02-15,50.00"""
         for entry in income_data["entries"]:
             self.created_income_ids.append(entry["id"])
 
+
+
+
+class Test1099NECAPI:
+    """Tests for 1099-NEC generation endpoints"""
+    
+    def test_get_1099_eligible_empty(self):
+        """Test getting 1099 eligible recipients when none exist"""
+        # Use a test year where no consignment payments exist
+        response = requests.get(f"{BASE_URL}/api/financials/1099/eligible/2099")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["year"] == 2099
+        assert data["threshold"] == 600
+        assert "eligible_count" in data
+        assert "eligible_recipients" in data
+        assert "below_threshold_count" in data
+        assert "total_to_report" in data
+    
+    def test_get_1099_eligible_structure(self):
+        """Test that 1099 eligible endpoint returns correct structure"""
+        response = requests.get(f"{BASE_URL}/api/financials/1099/eligible/2025")
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify structure
+        assert "year" in data
+        assert "threshold" in data
+        assert "eligible_count" in data
+        assert "eligible_recipients" in data
+        assert "below_threshold_count" in data
+        assert "total_to_report" in data
+        
+        # If there are eligible recipients, verify their structure
+        if data["eligible_count"] > 0:
+            recipient = data["eligible_recipients"][0]
+            assert "email" in recipient
+            assert "name" in recipient
+            assert "total_paid" in recipient
+            assert "payment_count" in recipient
+            assert recipient["total_paid"] >= 600
+    
+    def test_generate_1099_nonexistent_consignor(self):
+        """Test generating 1099 for non-existent consignor returns 404"""
+        response = requests.get(f"{BASE_URL}/api/financials/1099/generate/2025/nonexistent@test.com")
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+    
+    def test_batch_1099_no_eligible(self):
+        """Test batch 1099 generation when no eligible recipients"""
+        # Use a test year where no consignment payments exist
+        response = requests.get(f"{BASE_URL}/api/financials/1099/batch/2099")
+        assert response.status_code == 404
+        assert "No recipients" in response.json()["detail"]
+
+
+class TestTaxSummaryDownloadAPI:
+    """Tests for Tax Summary download endpoints"""
+    
+    def test_download_tax_summary_csv(self):
+        """Test downloading tax summary as CSV"""
+        response = requests.get(f"{BASE_URL}/api/financials/tax-summary/2025/download?format=csv")
+        assert response.status_code == 200
+        assert "text/csv" in response.headers.get("content-type", "")
+        
+        # Verify CSV content structure
+        content = response.text
+        assert "Thrifty Curator Tax Summary" in content
+        assert "Gross Income" in content
+        assert "Cost of Goods Sold" in content
+        assert "GROSS PROFIT" in content
+        assert "NET PROFIT" in content
+    
+    def test_download_tax_summary_pdf(self):
+        """Test downloading tax summary as PDF"""
+        response = requests.get(f"{BASE_URL}/api/financials/tax-summary/2025/download?format=pdf")
+        assert response.status_code == 200
+        assert "application/pdf" in response.headers.get("content-type", "")
+        
+        # Verify it's a valid PDF (starts with %PDF)
+        assert response.content[:4] == b'%PDF'
+    
+    def test_download_tax_summary_default_format(self):
+        """Test that default format is PDF"""
+        response = requests.get(f"{BASE_URL}/api/financials/tax-summary/2025/download")
+        assert response.status_code == 200
+        assert "application/pdf" in response.headers.get("content-type", "")
+    
+    def test_download_tax_summary_empty_year(self):
+        """Test downloading tax summary for year with no data"""
+        response = requests.get(f"{BASE_URL}/api/financials/tax-summary/2099/download?format=csv")
+        assert response.status_code == 200
+        
+        # Should still return valid CSV with zero values
+        content = response.text
+        assert "Thrifty Curator Tax Summary" in content
+        assert "$0.00" in content
+    
+    def test_download_tax_summary_pdf_empty_year(self):
+        """Test downloading PDF tax summary for year with no data"""
+        response = requests.get(f"{BASE_URL}/api/financials/tax-summary/2099/download?format=pdf")
+        assert response.status_code == 200
+        assert "application/pdf" in response.headers.get("content-type", "")
+        assert response.content[:4] == b'%PDF'
+
+
+class TestUpdateTINAPI:
+    """Tests for TIN update endpoint"""
+    
+    def test_update_tin(self):
+        """Test updating TIN for a recipient"""
+        response = requests.post(
+            f"{BASE_URL}/api/financials/1099/update-tin",
+            data={
+                "email": "test_tin@example.com",
+                "tin": "123-45-6789",
+                "tin_type": "SSN"
+            }
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "TIN updated successfully"
+        assert data["email"] == "test_tin@example.com"
+    
+    def test_update_tin_ein(self):
+        """Test updating TIN with EIN type"""
+        response = requests.post(
+            f"{BASE_URL}/api/financials/1099/update-tin",
+            data={
+                "email": "test_ein@example.com",
+                "tin": "12-3456789",
+                "tin_type": "EIN"
+            }
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "TIN updated successfully"

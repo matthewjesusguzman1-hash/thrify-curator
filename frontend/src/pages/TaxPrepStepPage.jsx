@@ -622,61 +622,36 @@ const TaxPrepStepPage = () => {
               <h2 className="font-semibold text-gray-900 mb-4">Download Reports</h2>
               
               <div className="space-y-3">
-                <Button className="w-full justify-between" variant="outline">
+                <Button 
+                  className="w-full justify-between" 
+                  variant="outline"
+                  onClick={() => window.open(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=pdf`, '_blank')}
+                  data-testid="download-tax-summary-pdf"
+                >
                   <span className="flex items-center gap-2">
                     <FileText className="w-4 h-4" />
-                    Income Report
+                    Tax Summary (Schedule C)
                   </span>
-                  <div className="flex gap-2">
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">PDF</span>
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">CSV</span>
-                  </div>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">PDF</span>
                 </Button>
                 
-                <Button className="w-full justify-between" variant="outline">
+                <Button 
+                  className="w-full justify-between" 
+                  variant="outline"
+                  onClick={() => window.open(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=csv`, '_blank')}
+                  data-testid="download-tax-summary-csv"
+                >
                   <span className="flex items-center gap-2">
                     <FileText className="w-4 h-4" />
-                    COGS Report
+                    Tax Summary (Schedule C)
                   </span>
-                  <div className="flex gap-2">
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">PDF</span>
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">CSV</span>
-                  </div>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">CSV</span>
                 </Button>
-                
-                <Button className="w-full justify-between" variant="outline">
-                  <span className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Deductions Report
-                  </span>
-                  <div className="flex gap-2">
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">PDF</span>
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">CSV</span>
-                  </div>
-                </Button>
-                
-                <Button className="w-full justify-between" variant="outline">
-                  <span className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Mileage Log
-                  </span>
-                  <div className="flex gap-2">
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">PDF</span>
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">CSV</span>
-                  </div>
-                </Button>
-              </div>
-              
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Complete Tax Package
-                </Button>
-                <p className="text-xs text-gray-500 text-center mt-2">
-                  Includes all reports and uploaded documents in a single ZIP file
-                </p>
               </div>
             </div>
+
+            {/* 1099-NEC Section */}
+            <Form1099Section year={selectedYear} getAuthHeader={getAuthHeader} />
           </div>
         )}
 
@@ -1153,6 +1128,159 @@ const AddMileageModal = ({ year, getAuthHeader, onClose, onSave }) => {
           </div>
         </form>
       </div>
+    </div>
+  );
+};
+
+// 1099-NEC Section Component
+const Form1099Section = ({ year, getAuthHeader }) => {
+  const [loading, setLoading] = useState(true);
+  const [eligibleData, setEligibleData] = useState(null);
+  const [generating, setGenerating] = useState(null);
+
+  useEffect(() => {
+    fetchEligible();
+  }, [year]);
+
+  const fetchEligible = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/financials/1099/eligible/${year}`, {
+        headers: { ...getAuthHeader() }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEligibleData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching 1099 eligible:', error);
+    }
+    setLoading(false);
+  };
+
+  const download1099 = (email, name) => {
+    setGenerating(email);
+    window.open(`${API_URL}/api/financials/1099/generate/${year}/${encodeURIComponent(email)}`, '_blank');
+    setTimeout(() => setGenerating(null), 1000);
+  };
+
+  const downloadBatch = () => {
+    setGenerating('batch');
+    window.open(`${API_URL}/api/financials/1099/batch/${year}`, '_blank');
+    setTimeout(() => setGenerating(null), 1000);
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="font-semibold text-gray-900 mb-4">1099-NEC Forms</h2>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6" data-testid="form-1099-section">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-semibold text-gray-900">1099-NEC Forms</h2>
+        {eligibleData?.eligible_count > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={downloadBatch}
+            disabled={generating === 'batch'}
+            data-testid="download-batch-1099"
+          >
+            <Download className="w-4 h-4 mr-1" />
+            {generating === 'batch' ? 'Generating...' : 'Download All'}
+          </Button>
+        )}
+      </div>
+
+      {/* Info Box */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
+        <p className="text-blue-800">
+          <strong>IRS Requirement:</strong> You must issue a 1099-NEC to anyone you paid $600 or more 
+          for services during the tax year. This includes consignors who received payouts.
+        </p>
+      </div>
+
+      {eligibleData?.eligible_count === 0 ? (
+        <div className="text-center py-6 text-gray-500">
+          <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+          <p>No consignors received $600+ in payouts for {year}.</p>
+          <p className="text-sm mt-1">No 1099-NEC forms required.</p>
+          {eligibleData?.below_threshold_count > 0 && (
+            <p className="text-xs mt-3 text-gray-400">
+              {eligibleData.below_threshold_count} consignor(s) received payouts below the $600 threshold.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-gray-900">{eligibleData?.eligible_count}</div>
+              <div className="text-xs text-gray-500">Recipients</div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-gray-900">
+                ${eligibleData?.total_to_report?.toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500">Total to Report</div>
+            </div>
+          </div>
+
+          {/* Recipient List */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-500 grid grid-cols-3">
+              <span>Recipient</span>
+              <span className="text-right">Amount</span>
+              <span className="text-right">Action</span>
+            </div>
+            <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+              {eligibleData?.eligible_recipients?.map((recipient) => (
+                <div key={recipient.email} className="px-4 py-3 grid grid-cols-3 items-center">
+                  <div>
+                    <div className="font-medium text-gray-900 text-sm">{recipient.name}</div>
+                    <div className="text-xs text-gray-500">{recipient.email}</div>
+                  </div>
+                  <div className="text-right font-medium text-gray-900">
+                    ${recipient.total_paid.toLocaleString()}
+                  </div>
+                  <div className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => download1099(recipient.email, recipient.name)}
+                      disabled={generating === recipient.email}
+                      data-testid={`download-1099-${recipient.email}`}
+                    >
+                      {generating === recipient.email ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* W-9 Notice */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+            <p className="text-yellow-800">
+              <strong>Note:</strong> Before filing official 1099-NEC forms with the IRS, you'll need 
+              W-9 forms from each recipient to obtain their Tax ID (SSN/EIN). The downloaded forms 
+              show "XXX-XX-XXXX" as a placeholder.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

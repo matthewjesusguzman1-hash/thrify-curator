@@ -282,13 +282,16 @@ test.describe('Tax Prep Step 5 - Generate Reports', () => {
     await expect(page.getByText('NET PROFIT')).toBeVisible();
   });
 
-  test('should display download options', async ({ page }) => {
+  test('should display download options with PDF and CSV buttons', async ({ page }) => {
     await expect(page.getByText('Download Reports')).toBeVisible();
-    await expect(page.getByText('Income Report')).toBeVisible();
-    await expect(page.getByText('COGS Report')).toBeVisible();
-    await expect(page.getByText('Deductions Report')).toBeVisible();
-    await expect(page.getByText('Mileage Log')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Download Complete Tax Package/ })).toBeVisible();
+    
+    // Check Tax Summary download buttons
+    await expect(page.getByTestId('download-tax-summary-pdf')).toBeVisible();
+    await expect(page.getByTestId('download-tax-summary-csv')).toBeVisible();
+    
+    // Check PDF and CSV labels
+    await expect(page.getByText('PDF').first()).toBeVisible();
+    await expect(page.getByText('CSV').first()).toBeVisible();
   });
 
   test('should display financial calculations', async ({ page }) => {
@@ -296,6 +299,60 @@ test.describe('Tax Prep Step 5 - Generate Reports', () => {
     await expect(page.getByText('NET PROFIT')).toBeVisible();
     // Check that there's at least one currency value displayed
     await expect(page.locator('span').filter({ hasText: /\$\d/ }).first()).toBeVisible();
+  });
+
+  test('should display 1099-NEC Forms section', async ({ page }) => {
+    // Check for 1099-NEC section
+    const section = page.getByTestId('form-1099-section');
+    await expect(section).toBeVisible();
+    await expect(section.getByRole('heading', { name: '1099-NEC Forms' })).toBeVisible();
+    
+    // Check for IRS requirement info box
+    await expect(section.getByText('IRS Requirement')).toBeVisible();
+    // Check that the info box mentions the $600 threshold
+    await expect(section.locator('.bg-blue-50').getByText('$600')).toBeVisible();
+  });
+
+  test('should show no eligible recipients message when none exist', async ({ page }) => {
+    // For 2025, there may be no consignors with $600+ payouts
+    // Check for either eligible recipients or the "no recipients" message
+    const section = page.getByTestId('form-1099-section');
+    
+    // Either we see eligible recipients or the "no recipients" message
+    const hasEligible = await section.getByText('Recipients').count() > 0;
+    const hasNoEligible = await section.getByText('No consignors received $600+').count() > 0;
+    
+    expect(hasEligible || hasNoEligible).toBeTruthy();
+  });
+});
+
+test.describe('Tax Prep Step 5 - 1099-NEC Section', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/admin/tax-prep/step/5?year=2025', { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('should display 1099-NEC section with proper structure', async ({ page }) => {
+    const section = page.getByTestId('form-1099-section');
+    await expect(section).toBeVisible();
+    
+    // Check section title using heading role
+    await expect(section.getByRole('heading', { name: '1099-NEC Forms' })).toBeVisible();
+    
+    // Check IRS info box
+    await expect(section.locator('.bg-blue-50')).toBeVisible();
+    await expect(section.getByText('IRS Requirement')).toBeVisible();
+  });
+
+  test('should show appropriate message based on eligible recipients', async ({ page }) => {
+    const section = page.getByTestId('form-1099-section');
+    await expect(section).toBeVisible();
+    
+    // Either we see eligible recipients stats or the "no recipients" message
+    const hasStats = await section.locator('.grid-cols-2').count() > 0;
+    const hasNoEligible = await section.getByText('No consignors received $600+').count() > 0;
+    
+    expect(hasStats || hasNoEligible).toBeTruthy();
   });
 });
 

@@ -1,10 +1,16 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
 import base64
 import csv
 import io
+
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
 
 from app.database import db
 from app.models.financials import (
@@ -853,4 +859,618 @@ async def get_vendoo_template():
         ],
         "supported_platforms": list(VENDOO_PLATFORM_MAP.keys())
     }
+
+
+# ============== 1099-NEC GENERATION ==============
+
+# Business info for 1099 forms - should be configurable in settings
+PAYER_INFO = {
+    "name": "Thrifty Curator LLC",
+    "address": "123 Main Street",
+    "city_state_zip": "Your City, ST 12345",
+    "phone": "(555) 123-4567",
+    "tin": "XX-XXXXXXX",  # Will need to be configured
+    "tin_type": "EIN"  # EIN or SSN
+}
+
+@router.get("/1099/eligible/{year}")
+async def get_1099_eligible_recipients(year: int):
+    """
+    Get list of consignors/contractors who received $600+ in payouts for the year.
+    These are the recipients who need 1099-NEC forms.
+    """
+    # Get all consignment payments for the year
+    start_date = f"{year}-01-01"
+    end_date = f"{year}-12-31"
+    
+    # Aggregate payments by recipient
+    pipeline = [
+        {
+            "$match": {
+                "payment_type": "consignment",
+                "check_date": {"$gte": start_date, "$lte": end_date}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$consignment_client_email",
+                "total_paid": {"$sum": "$amount"},
+                "payment_count": {"$sum": 1},
+                "payments": {"$push": {
+                    "date": "$check_date",
+                    "amount": "$amount",
+                    "description": "$description"
+                }}
+            }
+        },
+        {
+            "$match": {
+                "total_paid": {"$gte": 600}  # Only those who received $600+
+            }
+        },
+        {
+            "$sort": {"total_paid": -1}
+        }
+    ]
+    
+    results = await db.payroll_check_records.aggregate(pipeline).to_list(1000)
+    
+    # Enrich with consignor details from consignment_agreements
+    eligible = []
+    for result in results:
+        email = result["_id"]
+        
+        # Get consignor details
+        consignor = await db.consignment_agreements.find_one(
+            {"email": email.lower()},
+            {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "address": 1}
+        )
+        
+        if consignor:
+            eligible.append({
+                "email": email,
+                "name": consignor.get("full_name", "Unknown"),
+                "address": consignor.get("address", ""),
+                "phone": consignor.get("phone", ""),
+                "total_paid": round(result["total_paid"], 2),
+                "payment_count": result["payment_count"],
+                "needs_tin": True,  # Will need to collect W-9 info
+                "tin": None,  # To be filled from W-9
+                "status": "pending"  # pending, tin_collected, form_generated
+            })
+    
+    # Also calculate totals below threshold (for reference)
+    below_threshold_pipeline = [
+        {
+            "$match": {
+                "payment_type": "consignment",
+                "check_date": {"$gte": start_date, "$lte": end_date}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$consignment_client_email",
+                "total_paid": {"$sum": "$amount"}
+            }
+        },
+        {
+            "$match": {
+                "total_paid": {"$lt": 600, "$gt": 0}
+            }
+        }
+    ]
+    
+    below_results = await db.payroll_check_records.aggregate(below_threshold_pipeline).to_list(1000)
+    
+    return {
+        "year": year,
+        "threshold": 600,
+        "eligible_count": len(eligible),
+        "eligible_recipients": eligible,
+        "below_threshold_count": len(below_results),
+        "total_to_report": round(sum(r["total_paid"] for r in eligible), 2)
+    }
+
+
+@router.post("/1099/update-tin")
+async def update_recipient_tin(
+    email: str = Form(...),
+    tin: str = Form(...),
+    tin_type: str = Form("SSN")  # SSN or EIN
+):
+    """
+    Store TIN (Tax ID Number) for a recipient.
+    This would typically come from their W-9 form.
+    """
+    # Store in a separate collection for tax info
+    await db.tax_recipient_info.update_one(
+        {"email": email.lower()},
+        {
+            "$set": {
+                "email": email.lower(),
+                "tin": tin,  # Should be encrypted in production
+                "tin_type": tin_type,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        },
+        upsert=True
+    )
+    
+    return {"message": "TIN updated successfully", "email": email}
+
+
+def generate_1099_nec_pdf(
+    buffer: io.BytesIO,
+    year: int,
+    payer: dict,
+    recipient: dict,
+    amount: float
+):
+    """
+    Generate a 1099-NEC form PDF.
+    
+    Note: This is a simplified representation for record-keeping purposes.
+    Official IRS filing requires specific forms from IRS or approved software.
+    """
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    
+    # Header
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width/2, height - 0.75*inch, "1099-NEC Nonemployee Compensation")
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(width/2, height - 1*inch, f"Tax Year {year}")
+    c.drawCentredString(width/2, height - 1.2*inch, "COPY B - For Recipient's Records")
+    
+    # Draw boxes
+    c.setStrokeColor(colors.black)
+    c.setLineWidth(1)
+    
+    # Payer box (left side)
+    payer_box_y = height - 3.5*inch
+    c.rect(0.5*inch, payer_box_y, 3.5*inch, 2*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(0.6*inch, payer_box_y + 1.8*inch, "PAYER'S name, street address, city or town, state or province,")
+    c.drawString(0.6*inch, payer_box_y + 1.65*inch, "country, ZIP or foreign postal code, and telephone no.")
+    c.setFont("Helvetica", 10)
+    c.drawString(0.6*inch, payer_box_y + 1.4*inch, payer.get("name", ""))
+    c.drawString(0.6*inch, payer_box_y + 1.2*inch, payer.get("address", ""))
+    c.drawString(0.6*inch, payer_box_y + 1.0*inch, payer.get("city_state_zip", ""))
+    c.drawString(0.6*inch, payer_box_y + 0.8*inch, payer.get("phone", ""))
+    
+    # Payer TIN box
+    c.rect(0.5*inch, payer_box_y - 0.6*inch, 3.5*inch, 0.5*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(0.6*inch, payer_box_y - 0.2*inch, "PAYER'S TIN")
+    c.setFont("Helvetica", 10)
+    c.drawString(0.6*inch, payer_box_y - 0.45*inch, payer.get("tin", "XX-XXXXXXX"))
+    
+    # Recipient TIN box (right side top)
+    c.rect(4.25*inch, payer_box_y + 1.4*inch, 3.5*inch, 0.5*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(4.35*inch, payer_box_y + 1.75*inch, "RECIPIENT'S TIN")
+    c.setFont("Helvetica", 10)
+    c.drawString(4.35*inch, payer_box_y + 1.55*inch, recipient.get("tin", "XXX-XX-XXXX"))
+    
+    # Recipient box
+    c.rect(4.25*inch, payer_box_y - 0.6*inch, 3.5*inch, 1.9*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(4.35*inch, payer_box_y + 1.1*inch, "RECIPIENT'S name")
+    c.setFont("Helvetica", 10)
+    c.drawString(4.35*inch, payer_box_y + 0.9*inch, recipient.get("name", ""))
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(4.35*inch, payer_box_y + 0.6*inch, "Street address (including apt. no.)")
+    c.setFont("Helvetica", 10)
+    address_lines = recipient.get("address", "").split("\n")
+    y_offset = 0.4*inch
+    for line in address_lines[:2]:
+        c.drawString(4.35*inch, payer_box_y + y_offset, line)
+        y_offset -= 0.2*inch
+    
+    # Amount box - Box 1 Nonemployee compensation
+    amount_box_y = payer_box_y - 1.5*inch
+    c.rect(0.5*inch, amount_box_y, 2.5*inch, 0.75*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(0.6*inch, amount_box_y + 0.55*inch, "1  Nonemployee compensation")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(0.6*inch, amount_box_y + 0.2*inch, f"$ {amount:,.2f}")
+    
+    # Other boxes (2-7) - empty for this use case
+    box_width = 1.25*inch
+    for i, label in enumerate(["2 (Reserved)", "3 (Reserved)", "4 Federal income tax withheld"]):
+        x = 3.25*inch + (i * box_width)
+        c.rect(x, amount_box_y, box_width, 0.75*inch)
+        c.setFont("Helvetica-Bold", 7)
+        c.drawString(x + 0.05*inch, amount_box_y + 0.55*inch, label)
+        c.setFont("Helvetica", 10)
+        c.drawString(x + 0.1*inch, amount_box_y + 0.2*inch, "$ 0.00")
+    
+    # Footer notice
+    c.setFont("Helvetica", 8)
+    footer_y = 2*inch
+    c.drawString(0.5*inch, footer_y + 0.4*inch, "This is important tax information and is being furnished to the IRS. If you are required to file a return,")
+    c.drawString(0.5*inch, footer_y + 0.2*inch, "a negligence penalty or other sanction may be imposed on you if this income is taxable and the IRS")
+    c.drawString(0.5*inch, footer_y, "determines that it has not been reported.")
+    
+    # Account number (optional)
+    c.rect(0.5*inch, footer_y - 0.6*inch, 3*inch, 0.4*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(0.6*inch, footer_y - 0.35*inch, "Account number (see instructions)")
+    c.setFont("Helvetica", 9)
+    c.drawString(0.6*inch, footer_y - 0.52*inch, recipient.get("email", ""))
+    
+    # Disclaimer
+    c.setFont("Helvetica-Oblique", 7)
+    c.drawString(0.5*inch, 0.75*inch, "This document is for record-keeping purposes. Official IRS forms must be filed using approved software or IRS forms.")
+    c.drawString(0.5*inch, 0.55*inch, f"Generated by Thrifty Curator on {datetime.now().strftime('%B %d, %Y')}")
+    
+    c.save()
+
+
+@router.get("/1099/generate/{year}/{email}")
+async def generate_1099_for_recipient(year: int, email: str):
+    """
+    Generate a 1099-NEC PDF for a specific recipient.
+    """
+    # Get recipient info
+    consignor = await db.consignment_agreements.find_one(
+        {"email": email.lower()},
+        {"_id": 0, "full_name": 1, "email": 1, "address": 1}
+    )
+    
+    if not consignor:
+        raise HTTPException(status_code=404, detail="Consignor not found")
+    
+    # Get their total payments for the year
+    start_date = f"{year}-01-01"
+    end_date = f"{year}-12-31"
+    
+    pipeline = [
+        {
+            "$match": {
+                "payment_type": "consignment",
+                "consignment_client_email": email.lower(),
+                "check_date": {"$gte": start_date, "$lte": end_date}
+            }
+        },
+        {
+            "$group": {
+                "_id": None,
+                "total_paid": {"$sum": "$amount"}
+            }
+        }
+    ]
+    
+    result = await db.payroll_check_records.aggregate(pipeline).to_list(1)
+    
+    if not result or result[0]["total_paid"] < 600:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Recipient has less than $600 in payments for {year}. 1099 not required."
+        )
+    
+    total_amount = result[0]["total_paid"]
+    
+    # Get TIN if available
+    tax_info = await db.tax_recipient_info.find_one(
+        {"email": email.lower()},
+        {"_id": 0, "tin": 1, "tin_type": 1}
+    )
+    
+    recipient = {
+        "name": consignor.get("full_name", ""),
+        "address": consignor.get("address", ""),
+        "email": email,
+        "tin": tax_info.get("tin", "XXX-XX-XXXX") if tax_info else "XXX-XX-XXXX"
+    }
+    
+    # Generate PDF
+    buffer = io.BytesIO()
+    generate_1099_nec_pdf(buffer, year, PAYER_INFO, recipient, total_amount)
+    buffer.seek(0)
+    
+    # Log the generation
+    await db.tax_1099_generated.insert_one({
+        "year": year,
+        "recipient_email": email.lower(),
+        "recipient_name": consignor.get("full_name", ""),
+        "amount": total_amount,
+        "generated_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    filename = f"1099-NEC_{year}_{consignor.get('full_name', 'recipient').replace(' ', '_')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/1099/batch/{year}")
+async def generate_batch_1099s(year: int):
+    """
+    Generate a single PDF containing all 1099-NEC forms for the year.
+    """
+    # Get all eligible recipients
+    eligible_data = await get_1099_eligible_recipients(year)
+    
+    if eligible_data["eligible_count"] == 0:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No recipients with $600+ payments found for {year}"
+        )
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    
+    # Cover page
+    c.setFont("Helvetica-Bold", 24)
+    c.drawCentredString(width/2, height - 2*inch, f"1099-NEC Forms - Tax Year {year}")
+    c.setFont("Helvetica", 14)
+    c.drawCentredString(width/2, height - 2.5*inch, PAYER_INFO["name"])
+    c.setFont("Helvetica", 12)
+    c.drawCentredString(width/2, height - 3*inch, f"Total Recipients: {eligible_data['eligible_count']}")
+    c.drawCentredString(width/2, height - 3.3*inch, f"Total Amount: ${eligible_data['total_to_report']:,.2f}")
+    
+    c.setFont("Helvetica", 10)
+    y_pos = height - 4.5*inch
+    c.drawString(1*inch, y_pos, "Recipients:")
+    y_pos -= 0.3*inch
+    
+    for recipient in eligible_data["eligible_recipients"][:20]:  # Show first 20
+        c.drawString(1.2*inch, y_pos, f"• {recipient['name']}: ${recipient['total_paid']:,.2f}")
+        y_pos -= 0.25*inch
+        if y_pos < 2*inch:
+            break
+    
+    if eligible_data["eligible_count"] > 20:
+        c.drawString(1.2*inch, y_pos, f"... and {eligible_data['eligible_count'] - 20} more")
+    
+    c.setFont("Helvetica-Oblique", 8)
+    c.drawCentredString(width/2, 1*inch, f"Generated by Thrifty Curator on {datetime.now().strftime('%B %d, %Y')}")
+    c.showPage()
+    
+    # Generate individual forms
+    for recipient_data in eligible_data["eligible_recipients"]:
+        email = recipient_data["email"]
+        
+        # Get TIN if available
+        tax_info = await db.tax_recipient_info.find_one(
+            {"email": email.lower()},
+            {"_id": 0, "tin": 1}
+        )
+        
+        recipient = {
+            "name": recipient_data["name"],
+            "address": recipient_data.get("address", ""),
+            "email": email,
+            "tin": tax_info.get("tin", "XXX-XX-XXXX") if tax_info else "XXX-XX-XXXX"
+        }
+        
+        # Draw the form on current page
+        generate_1099_page(c, year, PAYER_INFO, recipient, recipient_data["total_paid"])
+        c.showPage()
+    
+    c.save()
+    buffer.seek(0)
+    
+    filename = f"1099-NEC_Batch_{year}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+def generate_1099_page(c: canvas.Canvas, year: int, payer: dict, recipient: dict, amount: float):
+    """Generate a single 1099-NEC page on the canvas."""
+    width, height = letter
+    
+    # Header
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width/2, height - 0.75*inch, "1099-NEC Nonemployee Compensation")
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(width/2, height - 1*inch, f"Tax Year {year}")
+    c.drawCentredString(width/2, height - 1.2*inch, "COPY B - For Recipient's Records")
+    
+    # Draw boxes
+    c.setStrokeColor(colors.black)
+    c.setLineWidth(1)
+    
+    # Payer box
+    payer_box_y = height - 3.5*inch
+    c.rect(0.5*inch, payer_box_y, 3.5*inch, 2*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(0.6*inch, payer_box_y + 1.8*inch, "PAYER'S name, street address, city, state, ZIP, phone")
+    c.setFont("Helvetica", 10)
+    c.drawString(0.6*inch, payer_box_y + 1.4*inch, payer.get("name", ""))
+    c.drawString(0.6*inch, payer_box_y + 1.2*inch, payer.get("address", ""))
+    c.drawString(0.6*inch, payer_box_y + 1.0*inch, payer.get("city_state_zip", ""))
+    c.drawString(0.6*inch, payer_box_y + 0.8*inch, payer.get("phone", ""))
+    
+    # Payer TIN
+    c.rect(0.5*inch, payer_box_y - 0.6*inch, 3.5*inch, 0.5*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(0.6*inch, payer_box_y - 0.2*inch, "PAYER'S TIN")
+    c.setFont("Helvetica", 10)
+    c.drawString(0.6*inch, payer_box_y - 0.45*inch, payer.get("tin", "XX-XXXXXXX"))
+    
+    # Recipient TIN
+    c.rect(4.25*inch, payer_box_y + 1.4*inch, 3.5*inch, 0.5*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(4.35*inch, payer_box_y + 1.75*inch, "RECIPIENT'S TIN")
+    c.setFont("Helvetica", 10)
+    c.drawString(4.35*inch, payer_box_y + 1.55*inch, recipient.get("tin", "XXX-XX-XXXX"))
+    
+    # Recipient box
+    c.rect(4.25*inch, payer_box_y - 0.6*inch, 3.5*inch, 1.9*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(4.35*inch, payer_box_y + 1.1*inch, "RECIPIENT'S name")
+    c.setFont("Helvetica", 10)
+    c.drawString(4.35*inch, payer_box_y + 0.9*inch, recipient.get("name", ""))
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(4.35*inch, payer_box_y + 0.6*inch, "Street address")
+    c.setFont("Helvetica", 9)
+    address = recipient.get("address", "")
+    if len(address) > 40:
+        c.drawString(4.35*inch, payer_box_y + 0.4*inch, address[:40])
+        c.drawString(4.35*inch, payer_box_y + 0.2*inch, address[40:80])
+    else:
+        c.drawString(4.35*inch, payer_box_y + 0.4*inch, address)
+    
+    # Amount box
+    amount_box_y = payer_box_y - 1.5*inch
+    c.rect(0.5*inch, amount_box_y, 2.5*inch, 0.75*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(0.6*inch, amount_box_y + 0.55*inch, "1  Nonemployee compensation")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(0.6*inch, amount_box_y + 0.2*inch, f"$ {amount:,.2f}")
+    
+    # Account number
+    c.rect(0.5*inch, amount_box_y - 0.6*inch, 3*inch, 0.4*inch)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(0.6*inch, amount_box_y - 0.35*inch, "Account number")
+    c.setFont("Helvetica", 9)
+    c.drawString(0.6*inch, amount_box_y - 0.52*inch, recipient.get("email", ""))
+    
+    # Footer
+    c.setFont("Helvetica-Oblique", 7)
+    c.drawString(0.5*inch, 0.75*inch, "This document is for record-keeping purposes. Official IRS forms must be filed using approved software.")
+    c.drawString(0.5*inch, 0.55*inch, f"Generated by Thrifty Curator on {datetime.now().strftime('%B %d, %Y')}")
+
+
+@router.get("/tax-summary/{year}/download")
+async def download_tax_summary(year: int, format: str = "pdf"):
+    """
+    Download a complete tax summary for the year.
+    Includes income, COGS, deductions, and net profit calculations.
+    """
+    # Get financial summary
+    summary = await get_financial_summary(year)
+    
+    if format == "csv":
+        # Generate CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        writer.writerow([f"Thrifty Curator Tax Summary - {year}"])
+        writer.writerow([])
+        writer.writerow(["Category", "Amount"])
+        writer.writerow(["Gross Income (Total Sales)", f"${summary['income']['total']:,.2f}"])
+        writer.writerow(["  - From 1099s", f"${summary['income']['from_1099']:,.2f}"])
+        writer.writerow(["  - Other Income", f"${summary['income']['other']:,.2f}"])
+        writer.writerow([])
+        writer.writerow(["Cost of Goods Sold (COGS)", f"${summary['cogs']:,.2f}"])
+        writer.writerow([])
+        writer.writerow(["GROSS PROFIT", f"${summary['gross_profit']:,.2f}"])
+        writer.writerow([])
+        writer.writerow(["Deductions:"])
+        writer.writerow(["  - Business Expenses", f"${summary['deductions']['expenses']:,.2f}"])
+        writer.writerow(["  - Mileage Deduction", f"${summary['deductions']['mileage']:,.2f}"])
+        writer.writerow([f"    ({summary['deductions']['mileage_miles']:.1f} miles @ ${summary['deductions']['mileage_rate']}/mile)"])
+        writer.writerow(["Total Deductions", f"${summary['deductions']['total']:,.2f}"])
+        writer.writerow([])
+        writer.writerow(["NET PROFIT (Schedule C)", f"${summary['net_profit']:,.2f}"])
+        writer.writerow([])
+        writer.writerow([f"Generated on {datetime.now().strftime('%B %d, %Y')}"])
+        
+        output.seek(0)
+        return StreamingResponse(
+            io.BytesIO(output.getvalue().encode()),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=tax_summary_{year}.csv"}
+        )
+    
+    else:  # PDF
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+        
+        # Title
+        c.setFont("Helvetica-Bold", 20)
+        c.drawCentredString(width/2, height - 1*inch, f"Tax Summary - {year}")
+        c.setFont("Helvetica", 12)
+        c.drawCentredString(width/2, height - 1.3*inch, PAYER_INFO["name"])
+        
+        # Summary table
+        y_pos = height - 2*inch
+        
+        def draw_row(label, value, bold=False, indent=0):
+            nonlocal y_pos
+            if bold:
+                c.setFont("Helvetica-Bold", 11)
+            else:
+                c.setFont("Helvetica", 11)
+            c.drawString(1*inch + indent, y_pos, label)
+            c.drawRightString(width - 1*inch, y_pos, value)
+            y_pos -= 0.3*inch
+        
+        def draw_line():
+            nonlocal y_pos
+            c.setStrokeColor(colors.gray)
+            c.line(1*inch, y_pos + 0.15*inch, width - 1*inch, y_pos + 0.15*inch)
+            y_pos -= 0.1*inch
+        
+        # Income section
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(1*inch, y_pos, "INCOME")
+        y_pos -= 0.4*inch
+        
+        draw_row("Gross Sales", f"${summary['income']['total']:,.2f}", bold=True)
+        draw_row("From 1099s", f"${summary['income']['from_1099']:,.2f}", indent=0.3*inch)
+        draw_row("Other Income", f"${summary['income']['other']:,.2f}", indent=0.3*inch)
+        
+        y_pos -= 0.2*inch
+        draw_line()
+        
+        # COGS
+        draw_row("Cost of Goods Sold", f"(${summary['cogs']:,.2f})")
+        
+        draw_line()
+        draw_row("GROSS PROFIT", f"${summary['gross_profit']:,.2f}", bold=True)
+        
+        y_pos -= 0.3*inch
+        
+        # Deductions
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(1*inch, y_pos, "DEDUCTIONS")
+        y_pos -= 0.4*inch
+        
+        draw_row("Business Expenses", f"${summary['deductions']['expenses']:,.2f}")
+        draw_row("Mileage Deduction", f"${summary['deductions']['mileage']:,.2f}")
+        c.setFont("Helvetica", 9)
+        c.drawString(1.3*inch, y_pos + 0.15*inch, f"({summary['deductions']['mileage_miles']:.1f} miles @ ${summary['deductions']['mileage_rate']}/mile)")
+        y_pos -= 0.15*inch
+        
+        draw_line()
+        draw_row("Total Deductions", f"(${summary['deductions']['total']:,.2f})", bold=True)
+        
+        y_pos -= 0.3*inch
+        draw_line()
+        c.setLineWidth(2)
+        draw_line()
+        
+        # Net profit
+        c.setFont("Helvetica-Bold", 14)
+        c.setFillColor(colors.darkgreen if summary['net_profit'] >= 0 else colors.red)
+        c.drawString(1*inch, y_pos, "NET PROFIT (Schedule C)")
+        c.drawRightString(width - 1*inch, y_pos, f"${summary['net_profit']:,.2f}")
+        c.setFillColor(colors.black)
+        
+        # Footer
+        c.setFont("Helvetica-Oblique", 8)
+        c.drawCentredString(width/2, 1*inch, f"Generated by Thrifty Curator on {datetime.now().strftime('%B %d, %Y')}")
+        c.drawCentredString(width/2, 0.75*inch, "This summary is for reference. Consult a tax professional for official filings.")
+        
+        c.save()
+        buffer.seek(0)
+        
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=tax_summary_{year}.pdf"}
+        )
 
