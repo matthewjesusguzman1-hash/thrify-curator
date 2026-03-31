@@ -2,13 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260331_012416/test-results',
+  outputDir: '/root/.emergent/automation_output/20260331_224251/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260331_012416/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260331_224251/results.json' }],
   ],
   use: {
     baseURL: 'https://curator-app-3.preview.emergentagent.com',

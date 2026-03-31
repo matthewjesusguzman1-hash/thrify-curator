@@ -1118,3 +1118,62 @@ class TestUpdateTINAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "TIN updated successfully"
+
+
+class TestScreenshotAnalyzeAPI:
+    """Tests for Screenshot Analysis endpoint (AI-powered data extraction)"""
+    
+    def test_screenshot_analyze_missing_file(self):
+        """Test that screenshot analyze returns 422 when no file is provided"""
+        response = requests.post(f"{BASE_URL}/api/financials/screenshot/analyze")
+        assert response.status_code == 422  # Validation error for missing file
+    
+    def test_screenshot_analyze_invalid_file_type(self):
+        """Test that screenshot analyze rejects non-image files"""
+        # Create a fake text file
+        files = {
+            'file': ('test.txt', b'This is not an image', 'text/plain')
+        }
+        response = requests.post(
+            f"{BASE_URL}/api/financials/screenshot/analyze",
+            files=files
+        )
+        assert response.status_code == 400
+        assert "image" in response.json()["detail"].lower()
+    
+    def test_screenshot_analyze_endpoint_exists(self):
+        """Test that the screenshot analyze endpoint exists and is accessible"""
+        # Create a minimal valid PNG image (1x1 pixel)
+        # PNG header + minimal IHDR + IDAT + IEND chunks
+        png_data = bytes([
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,  # PNG signature
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,  # IHDR chunk
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,  # 1x1 dimensions
+            0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,  # bit depth, color type, etc
+            0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41,  # IDAT chunk
+            0x54, 0x08, 0xD7, 0x63, 0xF8, 0xFF, 0xFF, 0x3F,  # compressed data
+            0x00, 0x05, 0xFE, 0x02, 0xFE, 0xDC, 0xCC, 0x59,  # checksum
+            0xE7, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E,  # IEND chunk
+            0x44, 0xAE, 0x42, 0x60, 0x82                      # IEND CRC
+        ])
+        
+        files = {
+            'file': ('test.png', png_data, 'image/png')
+        }
+        response = requests.post(
+            f"{BASE_URL}/api/financials/screenshot/analyze",
+            files=files
+        )
+        
+        # The endpoint should accept the image and attempt to analyze it
+        # It may return success with extracted data or an error from AI service
+        # Either way, it should not be a 404 or 405
+        assert response.status_code in [200, 500]  # 200 for success, 500 if AI fails
+        
+        if response.status_code == 200:
+            data = response.json()
+            assert "success" in data
+            if data["success"]:
+                assert "extracted_data" in data
+            else:
+                assert "error" in data or "raw_response" in data
