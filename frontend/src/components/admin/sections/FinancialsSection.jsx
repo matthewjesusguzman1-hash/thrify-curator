@@ -673,12 +673,29 @@ const AddMileageModal = ({ year, getAuthHeader, onClose, onSave }) => {
 // Vendoo Import Modal Component
 const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
   const [file, setFile] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or '01'-'12'
   const [importCogs, setImportCogs] = useState(false);
   const [importFees, setImportFees] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const fileInputRef = React.useRef(null);
+
+  const months = [
+    { value: 'all', label: 'All Months' },
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
 
   const handleFileSelect = (e) => {
     e.stopPropagation();
@@ -736,6 +753,7 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('year', year.toString());
+      formData.append('month', selectedMonth);
       formData.append('import_income', 'true');
       formData.append('import_cogs', importCogs.toString());
       formData.append('import_fees_as_expense', importFees.toString());
@@ -834,6 +852,24 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Month Filter */}
+          <div>
+            <label className="block text-base font-medium text-gray-700 mb-3">
+              Import Sales From:
+            </label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-300 rounded-xl bg-white min-h-[56px]"
+            >
+              {months.map(m => (
+                <option key={m.value} value={m.value}>
+                  {m.value === 'all' ? `All of ${year}` : `${m.label} ${year}`}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Import Options - Large touch targets */}

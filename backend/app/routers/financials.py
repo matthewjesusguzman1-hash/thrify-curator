@@ -629,12 +629,18 @@ def normalize_header(header: str) -> str:
 async def import_vendoo_csv(
     file: UploadFile = File(...),
     year: int = Form(...),
+    month: str = Form("all"),
     import_income: bool = Form(True),
     import_cogs: bool = Form(False),
     import_fees_as_expense: bool = Form(False)
 ):
     """
     Import sales data from Vendoo CSV export.
+    
+    Args:
+        file: CSV file from Vendoo export
+        year: Tax year to import data for
+        month: Month to filter ('all' for entire year, or '01'-'12' for specific month)
     
     Vendoo CSV exports are customizable, but commonly include:
     - Title, SKU, Category
@@ -651,6 +657,12 @@ async def import_vendoo_csv(
     - Optionally: COGS entries
     - Optionally: Fee expenses
     """
+    
+    # Build the date filter
+    if month == "all":
+        date_prefix = f"{year}-"
+    else:
+        date_prefix = f"{year}-{month}"
     
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
@@ -706,28 +718,29 @@ async def import_vendoo_csv(
                 rows_skipped += 1
                 continue
             
-            # Get date and check if it's in the target year
+            # Get date and check if it matches our filter
             date_str = row.get(date_col, "") if date_col else None
             parsed_date = parse_date(date_str) if date_str else None
             
             if parsed_date:
-                sale_year = int(parsed_date.split("-")[0])
-                if sale_year != year:
+                # Check if date matches our filter (year and optionally month)
+                if not parsed_date.startswith(date_prefix):
                     rows_skipped += 1
                     continue
-                month = parsed_date[:7]  # YYYY-MM
+                sale_month = parsed_date[:7]  # YYYY-MM
             else:
-                # If no date, assume it's for the target year
-                month = f"{year}-01"
+                # If no date, skip (we need a date to filter properly)
+                rows_skipped += 1
+                continue
             
             # Get platform
             platform_name = row.get(platform_col, "other").lower().strip() if platform_col else "other"
             platform = VENDOO_PLATFORM_MAP.get(platform_name, "other")
             
             # Aggregate by platform and month
-            key = f"{platform}_{month}"
+            key = f"{platform}_{sale_month}"
             if key not in sales_by_platform_month:
-                sales_by_platform_month[key] = {"total": 0, "count": 0, "platform": platform, "month": month}
+                sales_by_platform_month[key] = {"total": 0, "count": 0, "platform": platform, "month": sale_month}
             sales_by_platform_month[key]["total"] += price
             sales_by_platform_month[key]["count"] += 1
             
@@ -751,9 +764,14 @@ async def import_vendoo_csv(
             rows_processed += 1
         
         if rows_processed == 0:
+            month_name = ""
+            if month != "all":
+                month_names = ["", "January", "February", "March", "April", "May", "June", 
+                              "July", "August", "September", "October", "November", "December"]
+                month_name = f" {month_names[int(month)]}"
             raise HTTPException(
                 status_code=400, 
-                detail=f"No valid sales found for year {year}. Check that your CSV has data for this year."
+                detail=f"No valid sales found for{month_name} {year}. Check that your CSV has 'Sold Date' data for this period."
             )
         
         # Create income entries (one per platform per month)
