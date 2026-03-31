@@ -729,126 +729,124 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
       <div 
         className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-semibold">Import Vendoo CSV</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold">Import Vendoo CSV</h3>
           <button 
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1"
+            className="text-gray-400 hover:text-gray-600 p-3 -mr-2 min-w-[48px] min-h-[48px] flex items-center justify-center"
           >
-            ✕
+            <span className="text-2xl">✕</span>
           </button>
         </div>
         <p className="text-sm text-gray-500 mb-4">
-          Upload your Vendoo sales export to automatically populate income data for {year}.
+          Upload your Vendoo sales export for {year}.
         </p>
 
-        {/* Instructions */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
-          <p className="font-medium text-blue-900 mb-2">How to export from Vendoo:</p>
-          <ol className="text-blue-800 space-y-1 list-decimal list-inside">
+        {/* Instructions - Collapsible on mobile */}
+        <details className="bg-blue-50 border border-blue-200 rounded-lg mb-4">
+          <summary className="p-4 text-sm font-medium text-blue-900 cursor-pointer">
+            How to export from Vendoo (tap to expand)
+          </summary>
+          <ol className="px-4 pb-4 text-blue-800 text-sm space-y-1 list-decimal list-inside">
             <li>Go to Inventory in Vendoo</li>
-            <li>Click the multi-action button → Export to CSV</li>
-            <li>Filter by sold date range for {year}</li>
+            <li>Click Export to CSV</li>
+            <li>Filter by sold date for {year}</li>
             <li>Include: Platform Sold, Sold Date, Price Sold</li>
-            <li>Optional: Cost of Goods, Marketplace Fees</li>
           </ol>
-        </div>
+        </details>
 
-        <div className="space-y-4">
-          {/* File Input - visible for better mobile compatibility */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Select CSV File
+        <div className="space-y-5">
+          {/* File Input - Large touch target */}
+          <div>
+            <label className="block text-base font-medium text-gray-700 mb-3">
+              Select Your CSV File
             </label>
             
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv,application/vnd.ms-excel"
-              onChange={handleFileSelect}
-              className="block w-full text-sm text-gray-500
-                file:mr-4 file:py-3 file:px-4
-                file:rounded-lg file:border-0
-                file:text-sm file:font-medium
-                file:bg-blue-600 file:text-white
-                hover:file:bg-blue-700
-                cursor-pointer border border-gray-300 rounded-lg p-2"
-              data-testid="vendoo-file-input"
-            />
+            <label className="block w-full p-6 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-center rounded-xl cursor-pointer transition-colors min-h-[60px] flex items-center justify-center">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv,application/vnd.ms-excel"
+                onChange={handleFileSelect}
+                className="hidden"
+                data-testid="vendoo-file-input"
+              />
+              <span className="text-lg font-medium">
+                {file ? '📄 Change File' : '📁 Choose CSV File'}
+              </span>
+            </label>
             
             {/* Show selected file */}
             {file && (
-              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-4 mt-3 bg-green-50 border-2 border-green-300 rounded-xl">
+                <FileText className="w-6 h-6 text-green-600 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-green-700 truncate">{file.name}</p>
-                  <p className="text-xs text-green-600">{(file.size / 1024).toFixed(1)} KB</p>
+                  <p className="font-semibold text-green-700 truncate">{file.name}</p>
+                  <p className="text-sm text-green-600">{(file.size / 1024).toFixed(1)} KB - Ready to import</p>
                 </div>
                 <button 
                   type="button"
                   onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                  className="text-green-600 hover:text-green-800 p-2"
+                  className="text-green-600 hover:text-green-800 p-3 min-w-[48px] min-h-[48px] flex items-center justify-center"
                 >
-                  ✕
+                  <span className="text-xl">✕</span>
                 </button>
               </div>
             )}
           </div>
 
-          {/* Import Options */}
-          <div className="space-y-3 pt-2">
-            <label className="flex items-center gap-3 text-sm cursor-pointer p-2 hover:bg-gray-50 rounded-lg">
+          {/* Import Options - Large touch targets */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-gray-600">Optional Settings:</p>
+            <label className="flex items-center gap-4 p-4 bg-gray-50 hover:bg-gray-100 rounded-xl cursor-pointer min-h-[56px]">
               <input
                 type="checkbox"
                 checked={importCogs}
                 onChange={(e) => setImportCogs(e.target.checked)}
-                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="w-6 h-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span>Also import Cost of Goods (if available)</span>
+              <span className="text-base">Import Cost of Goods</span>
             </label>
-            <label className="flex items-center gap-3 text-sm cursor-pointer p-2 hover:bg-gray-50 rounded-lg">
+            <label className="flex items-center gap-4 p-4 bg-gray-50 hover:bg-gray-100 rounded-xl cursor-pointer min-h-[56px]">
               <input
                 type="checkbox"
                 checked={importFees}
                 onChange={(e) => setImportFees(e.target.checked)}
-                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="w-6 h-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span>Import marketplace fees as expenses</span>
+              <span className="text-base">Import marketplace fees</span>
             </label>
           </div>
 
           {/* Error */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-base text-red-700">
               {error}
             </div>
           )}
 
           {/* Result */}
           {result && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="font-medium text-green-900 mb-2">Import Successful!</p>
-              <div className="text-sm text-green-800 space-y-1">
+            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-5">
+              <p className="font-semibold text-green-900 text-lg mb-3">✓ Import Successful!</p>
+              <div className="text-base text-green-800 space-y-2">
                 <p>• {result.details.rows_processed} sales processed</p>
                 <p>• {result.details.income_entries_created} income entries created</p>
                 {result.details.cogs_entries_created > 0 && (
                   <p>• {result.details.cogs_entries_created} COGS entries created</p>
                 )}
-                {result.details.fee_expenses_created > 0 && (
-                  <p>• Fees expense created</p>
-                )}
-                <p className="font-medium pt-1">Total Sales: ${result.details.total_sales.toLocaleString()}</p>
+                <p className="font-semibold pt-2 text-lg">Total: ${result.details.total_sales.toLocaleString()}</p>
               </div>
             </div>
           )}
 
-          {/* Buttons */}
-          <div className="flex gap-3 pt-4">
+          {/* Buttons - Large touch targets */}
+          <div className="flex gap-4 pt-4">
             <Button 
               type="button" 
               variant="outline" 
-              className="flex-1 py-3" 
+              className="flex-1 py-4 text-base min-h-[56px]" 
               onClick={onClose}
             >
               {result ? 'Close' : 'Cancel'}
@@ -857,17 +855,17 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
               <Button 
                 type="button"
                 onClick={handleSubmit}
-                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed" 
+                className="flex-1 py-4 text-base min-h-[56px] bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white disabled:opacity-50 disabled:cursor-not-allowed" 
                 disabled={uploading || !file}
                 data-testid="vendoo-import-submit"
               >
-                {uploading ? 'Importing...' : 'Import'}
+                {uploading ? 'Importing...' : 'Import Data'}
               </Button>
             )}
             {result && (
               <Button 
                 type="button" 
-                className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white"
+                className="flex-1 py-4 text-base min-h-[56px] bg-green-600 hover:bg-green-700 active:bg-green-800 text-white"
                 onClick={onSuccess}
               >
                 Done
