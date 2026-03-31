@@ -654,3 +654,330 @@ class TestFinancialSummaryAPI:
         assert "cogs" in jan
         assert "expenses" in jan
         assert "profit" in jan
+
+
+class TestVendooImportAPI:
+    """Tests for Vendoo CSV Import endpoint"""
+    
+    created_income_ids = []
+    created_cogs_ids = []
+    created_expense_ids = []
+    
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self):
+        yield
+        # Cleanup created entries
+        for entry_id in self.created_income_ids:
+            try:
+                requests.delete(f"{BASE_URL}/api/financials/income/{entry_id}")
+            except:
+                pass
+        for entry_id in self.created_cogs_ids:
+            try:
+                requests.delete(f"{BASE_URL}/api/financials/cogs/{entry_id}")
+            except:
+                pass
+        for entry_id in self.created_expense_ids:
+            try:
+                requests.delete(f"{BASE_URL}/api/financials/expenses/{entry_id}")
+            except:
+                pass
+        self.created_income_ids.clear()
+        self.created_cogs_ids.clear()
+        self.created_expense_ids.clear()
+    
+    def test_get_vendoo_template(self):
+        """Test getting Vendoo template information"""
+        response = requests.get(f"{BASE_URL}/api/financials/vendoo/template")
+        assert response.status_code == 200
+        data = response.json()
+        assert "description" in data
+        assert "instructions" in data
+        assert "required_columns" in data
+        assert "optional_columns" in data
+        assert "supported_platforms" in data
+        assert "ebay" in data["supported_platforms"]
+        assert "poshmark" in data["supported_platforms"]
+    
+    def test_import_income_only(self):
+        """Test importing Vendoo CSV with income only"""
+        # Create test CSV
+        csv_content = """Title,Platform Sold,Sold Date,Price Sold,Cost of Goods,Marketplace Fees
+TEST_Item1,eBay,2097-01-15,100.00,20.00,10.00
+TEST_Item2,Poshmark,2097-01-20,200.00,40.00,20.00
+TEST_Item3,Mercari,2097-02-10,150.00,30.00,15.00"""
+        
+        files = {'file': ('test.csv', csv_content, 'text/csv')}
+        data = {
+            'year': '2097',
+            'import_income': 'true',
+            'import_cogs': 'false',
+            'import_fees_as_expense': 'false'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/vendoo/import",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["success"] == True
+        assert result["details"]["rows_processed"] == 3
+        assert result["details"]["income_entries_created"] == 3
+        assert result["details"]["cogs_entries_created"] == 0
+        assert result["details"]["fee_expenses_created"] == 0
+        assert result["details"]["total_sales"] == 450.00
+        
+        # Verify income entries via GET
+        income_response = requests.get(f"{BASE_URL}/api/financials/income/2097")
+        income_data = income_response.json()
+        assert income_data["total"] == 450.00
+        
+        # Track for cleanup
+        for entry in income_data["entries"]:
+            self.created_income_ids.append(entry["id"])
+    
+    def test_import_with_cogs(self):
+        """Test importing Vendoo CSV with COGS"""
+        csv_content = """Title,Platform Sold,Sold Date,Price Sold,Cost of Goods,Marketplace Fees
+TEST_Item1,eBay,2096-01-15,100.00,20.00,10.00
+TEST_Item2,eBay,2096-01-20,200.00,40.00,20.00"""
+        
+        files = {'file': ('test.csv', csv_content, 'text/csv')}
+        data = {
+            'year': '2096',
+            'import_income': 'true',
+            'import_cogs': 'true',
+            'import_fees_as_expense': 'false'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/vendoo/import",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["success"] == True
+        assert result["details"]["cogs_entries_created"] > 0
+        
+        # Verify COGS entries via GET
+        cogs_response = requests.get(f"{BASE_URL}/api/financials/cogs/2096")
+        cogs_data = cogs_response.json()
+        assert cogs_data["total"] == 60.00  # 20 + 40
+        
+        # Track for cleanup
+        income_response = requests.get(f"{BASE_URL}/api/financials/income/2096")
+        for entry in income_response.json()["entries"]:
+            self.created_income_ids.append(entry["id"])
+        for entry in cogs_data["entries"]:
+            self.created_cogs_ids.append(entry["id"])
+    
+    def test_import_with_fees_as_expense(self):
+        """Test importing Vendoo CSV with fees as expense"""
+        csv_content = """Title,Platform Sold,Sold Date,Price Sold,Cost of Goods,Marketplace Fees
+TEST_Item1,eBay,2095-01-15,100.00,20.00,10.00
+TEST_Item2,Poshmark,2095-01-20,200.00,40.00,25.00"""
+        
+        files = {'file': ('test.csv', csv_content, 'text/csv')}
+        data = {
+            'year': '2095',
+            'import_income': 'true',
+            'import_cogs': 'false',
+            'import_fees_as_expense': 'true'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/vendoo/import",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["success"] == True
+        assert result["details"]["fee_expenses_created"] == 1
+        
+        # Verify expense entry via GET
+        expenses_response = requests.get(f"{BASE_URL}/api/financials/expenses/2095")
+        expenses_data = expenses_response.json()
+        assert expenses_data["total"] == 35.00  # 10 + 25
+        
+        # Track for cleanup
+        income_response = requests.get(f"{BASE_URL}/api/financials/income/2095")
+        for entry in income_response.json()["entries"]:
+            self.created_income_ids.append(entry["id"])
+        for entry in expenses_data["entries"]:
+            self.created_expense_ids.append(entry["id"])
+    
+    def test_import_all_options(self):
+        """Test importing Vendoo CSV with all options enabled"""
+        csv_content = """Title,Platform Sold,Sold Date,Price Sold,Cost of Goods,Marketplace Fees
+TEST_Item1,eBay,2094-01-15,100.00,20.00,10.00
+TEST_Item2,Poshmark,2094-02-20,200.00,40.00,25.00
+TEST_Item3,Mercari,2094-03-10,150.00,30.00,15.00"""
+        
+        files = {'file': ('test.csv', csv_content, 'text/csv')}
+        data = {
+            'year': '2094',
+            'import_income': 'true',
+            'import_cogs': 'true',
+            'import_fees_as_expense': 'true'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/vendoo/import",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["success"] == True
+        assert result["details"]["rows_processed"] == 3
+        assert result["details"]["income_entries_created"] == 3
+        assert result["details"]["cogs_entries_created"] > 0
+        assert result["details"]["fee_expenses_created"] == 1
+        assert result["details"]["total_sales"] == 450.00
+        
+        # Track for cleanup
+        income_response = requests.get(f"{BASE_URL}/api/financials/income/2094")
+        for entry in income_response.json()["entries"]:
+            self.created_income_ids.append(entry["id"])
+        cogs_response = requests.get(f"{BASE_URL}/api/financials/cogs/2094")
+        for entry in cogs_response.json()["entries"]:
+            self.created_cogs_ids.append(entry["id"])
+        expenses_response = requests.get(f"{BASE_URL}/api/financials/expenses/2094")
+        for entry in expenses_response.json()["entries"]:
+            self.created_expense_ids.append(entry["id"])
+    
+    def test_import_year_filtering(self):
+        """Test that import filters by year correctly"""
+        csv_content = """Title,Platform Sold,Sold Date,Price Sold
+TEST_Item1,eBay,2093-01-15,100.00
+TEST_Item2,eBay,2092-01-20,200.00
+TEST_Item3,eBay,2093-02-10,150.00"""
+        
+        files = {'file': ('test.csv', csv_content, 'text/csv')}
+        data = {
+            'year': '2093',
+            'import_income': 'true',
+            'import_cogs': 'false',
+            'import_fees_as_expense': 'false'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/vendoo/import",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["success"] == True
+        assert result["details"]["rows_processed"] == 2  # Only 2093 rows
+        assert result["details"]["rows_skipped"] == 1  # 2092 row skipped
+        assert result["details"]["total_sales"] == 250.00  # 100 + 150
+        
+        # Track for cleanup
+        income_response = requests.get(f"{BASE_URL}/api/financials/income/2093")
+        for entry in income_response.json()["entries"]:
+            self.created_income_ids.append(entry["id"])
+    
+    def test_import_non_csv_file_error(self):
+        """Test that non-CSV files are rejected"""
+        files = {'file': ('test.txt', 'not a csv', 'text/plain')}
+        data = {
+            'year': '2098',
+            'import_income': 'true',
+            'import_cogs': 'false',
+            'import_fees_as_expense': 'false'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/vendoo/import",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 400
+        assert "CSV" in response.json()["detail"]
+    
+    def test_import_missing_price_column_error(self):
+        """Test that CSV without price column is rejected"""
+        csv_content = """Title,Platform Sold,Sold Date
+TEST_Item1,eBay,2098-01-15"""
+        
+        files = {'file': ('test.csv', csv_content, 'text/csv')}
+        data = {
+            'year': '2098',
+            'import_income': 'true',
+            'import_cogs': 'false',
+            'import_fees_as_expense': 'false'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/vendoo/import",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 500  # Import failed error
+        assert "price" in response.json()["detail"].lower()
+    
+    def test_import_no_valid_sales_error(self):
+        """Test that CSV with no valid sales for year is rejected"""
+        csv_content = """Title,Platform Sold,Sold Date,Price Sold
+TEST_Item1,eBay,2091-01-15,100.00"""
+        
+        files = {'file': ('test.csv', csv_content, 'text/csv')}
+        data = {
+            'year': '2098',  # Different year than CSV data
+            'import_income': 'true',
+            'import_cogs': 'false',
+            'import_fees_as_expense': 'false'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/vendoo/import",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 500  # Import failed error
+        assert "No valid sales" in response.json()["detail"]
+    
+    def test_import_platform_mapping(self):
+        """Test that platforms are correctly mapped"""
+        csv_content = """Title,Platform Sold,Sold Date,Price Sold
+TEST_Item1,eBay,2092-01-15,100.00
+TEST_Item2,Facebook Marketplace,2092-01-20,200.00
+TEST_Item3,Depop,2092-02-10,150.00
+TEST_Item4,Unknown Platform,2092-02-15,50.00"""
+        
+        files = {'file': ('test.csv', csv_content, 'text/csv')}
+        data = {
+            'year': '2092',
+            'import_income': 'true',
+            'import_cogs': 'false',
+            'import_fees_as_expense': 'false'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/vendoo/import",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["success"] == True
+        
+        # Verify platform mapping via GET
+        income_response = requests.get(f"{BASE_URL}/api/financials/income/2092")
+        income_data = income_response.json()
+        
+        platforms = [e["platform"] for e in income_data["entries"]]
+        assert "ebay" in platforms
+        assert "fb_marketplace" in platforms
+        assert "depop" in platforms
+        assert "other" in platforms  # Unknown platform maps to other
+        
+        # Track for cleanup
+        for entry in income_data["entries"]:
+            self.created_income_ids.append(entry["id"])
+

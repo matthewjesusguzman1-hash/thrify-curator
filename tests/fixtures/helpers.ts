@@ -27,15 +27,18 @@ export async function checkForErrors(page: Page): Promise<string[]> {
 export async function loginAsAdmin(page: Page) {
   await page.goto('/login');
   await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(1000);
   // Step 1: Enter email
-  await page.fill('input[placeholder="your@email.com"]', 'matthewjesusguzman1@gmail.com');
-  await page.waitForTimeout(300);
-  await page.getByRole('button', { name: 'Continue' }).click();
+  const emailInput = page.locator('input[type="email"], input[placeholder*="email"]').first();
+  await emailInput.fill('matthewjesusguzman1@gmail.com');
+  await page.waitForTimeout(500);
+  await page.locator('button').filter({ hasText: /Find My Account/i }).click();
   await page.waitForTimeout(2000);
   // Step 2: Enter access code
-  await page.fill('input[placeholder="4-digit code"]', '4399');
-  await page.waitForTimeout(300);
-  await page.getByRole('button', { name: 'Sign In' }).click();
+  const codeInput = page.locator('input[placeholder*="4-digit"]');
+  await codeInput.fill('4399');
+  await page.waitForTimeout(500);
+  await page.locator('button').filter({ hasText: /Sign In/i }).click();
   await expect(page.getByTestId('admin-dashboard')).toBeVisible({ timeout: 15000 });
 }
 

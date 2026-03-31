@@ -1,0 +1,78 @@
+{
+  "summary": "Tested Vendoo CSV Import feature - new endpoint POST /api/financials/vendoo/import and VendooImportModal UI component. All backend API tests (36) and frontend E2E tests (17) passed.",
+  "mode": "update",
+  "baseline_commit": "8d591d2e2d8da5a1e9952fa48208901ddd07d62e",
+  "head_commit": "f5a06a9e8eb3840be84b18d4ddf95f4890623556",
+  "specs_created": [
+    "/app/tests/e2e/vendoo-import.spec.ts"
+  ],
+  "specs_updated": [
+    "/app/backend/tests/test_financials_api.py",
+    "/app/tests/fixtures/helpers.ts"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_financials_api.py",
+    "/app/test_reports/pytest/vendoo_import_results.xml",
+    "/app/tests/e2e/vendoo-import.spec.ts"
+  ],
+  "regression_results": {
+    "total_specs": 53,
+    "passed": 53,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/vendoo-import.spec.ts",
+    "/app/backend/tests/test_financials_api.py",
+    "/app/tests/fixtures/helpers.ts"
+  ],
+  "test_results": {
+    "backend": "100% (36/36 passed)",
+    "frontend": "100% (17/17 passed)"
+  },
+  "seed_data_creation": "Test data created and cleaned up during API tests using years 2087-2097 to avoid conflicts with production data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Vendoo CSV Import feature fully tested: 1) Backend endpoint POST /api/financials/vendoo/import accepts multipart form with file, year, import_income, import_cogs, import_fees_as_expense options, 2) GET /api/financials/vendoo/template returns format information, 3) Frontend VendooImportModal in FinancialsSection works correctly with file drop zone, checkboxes for COGS and fees, and proper validation (Import button disabled until file selected), 4) Year filtering works correctly - only imports sales matching the specified year, 5) Platform mapping works for eBay, Poshmark, Mercari, Depop, Etsy, Facebook Marketplace, and unknown platforms map to 'other', 6) Error handling for non-CSV files and missing price columns works correctly.",
+  "features_verified": {
+    "vendoo_import_endpoint": {
+      "status": "PASS",
+      "details": "POST /api/financials/vendoo/import accepts CSV file and creates income, COGS, and expense entries based on options"
+    },
+    "vendoo_template_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/financials/vendoo/template returns format information and supported platforms"
+    },
+    "vendoo_import_modal_ui": {
+      "status": "PASS",
+      "details": "Modal opens from Import CSV button, displays instructions, file drop zone, and import options"
+    },
+    "import_income_only": {
+      "status": "PASS",
+      "details": "Creates income entries grouped by platform and month"
+    },
+    "import_with_cogs": {
+      "status": "PASS",
+      "details": "Creates COGS entries grouped by month when import_cogs=true"
+    },
+    "import_with_fees": {
+      "status": "PASS",
+      "details": "Creates expense entry for marketplace fees when import_fees_as_expense=true"
+    },
+    "year_filtering": {
+      "status": "PASS",
+      "details": "Only imports sales matching the specified year, skips others"
+    },
+    "platform_mapping": {
+      "status": "PASS",
+      "details": "Maps Vendoo platform names to internal platform enum values"
+    },
+    "error_handling": {
+      "status": "PASS",
+      "details": "Rejects non-CSV files, CSVs without price column, and CSVs with no valid sales for year"
+    }
+  }
+}

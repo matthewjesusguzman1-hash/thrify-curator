@@ -3,6 +3,8 @@ from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
 import base64
+import csv
+import io
 
 from app.database import db
 from app.models.financials import (
@@ -555,3 +557,300 @@ async def get_monthly_data(year: int):
     ]
     
     return {"monthly": monthly_list, "year": year}
+
+# ============== VENDOO CSV IMPORT ==============
+
+# Mapping of Vendoo platform names to our Platform enum
+VENDOO_PLATFORM_MAP = {
+    "ebay": "ebay",
+    "poshmark": "poshmark",
+    "mercari": "mercari",
+    "depop": "depop",
+    "etsy": "etsy",
+    "facebook marketplace": "fb_marketplace",
+    "fb marketplace": "fb_marketplace",
+    "facebook": "fb_marketplace",
+    "offerup": "other",
+    "tradesy": "other",
+    "grailed": "other",
+    "kidizen": "other",
+    "curtsy": "other",
+    "vestiaire": "other",
+    "whatnot": "other",
+    "shopify": "other",
+}
+
+def parse_currency(value: str) -> float:
+    """Parse currency string to float, handling various formats"""
+    if not value or value.strip() == "":
+        return 0.0
+    # Remove currency symbols, commas, and spaces
+    cleaned = value.replace("$", "").replace(",", "").replace(" ", "").strip()
+    try:
+        return float(cleaned)
+    except ValueError:
+        return 0.0
+
+def parse_date(value: str) -> Optional[str]:
+    """Parse date string to ISO format"""
+    if not value or value.strip() == "":
+        return None
+    
+    # Try common date formats
+    formats = [
+        "%Y-%m-%d",
+        "%m/%d/%Y",
+        "%m/%d/%y",
+        "%d/%m/%Y",
+        "%Y/%m/%d",
+        "%b %d, %Y",
+        "%B %d, %Y",
+    ]
+    
+    for fmt in formats:
+        try:
+            parsed = datetime.strptime(value.strip(), fmt)
+            return parsed.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return None
+
+def normalize_header(header: str) -> str:
+    """Normalize column header for matching"""
+    return header.lower().strip().replace(" ", "_").replace("-", "_")
+
+@router.post("/vendoo/import")
+async def import_vendoo_csv(
+    file: UploadFile = File(...),
+    year: int = Form(...),
+    import_income: bool = Form(True),
+    import_cogs: bool = Form(False),
+    import_fees_as_expense: bool = Form(False)
+):
+    """
+    Import sales data from Vendoo CSV export.
+    
+    Vendoo CSV exports are customizable, but commonly include:
+    - Title, SKU, Category
+    - Platform Sold (marketplace name)
+    - Sold Date
+    - Price Sold / Sale Price / Revenue
+    - Cost of Goods (COG) / COGS
+    - Marketplace Fees
+    - Shipping Fees
+    - Profit
+    
+    This endpoint parses the CSV and creates:
+    - Income entries (grouped by platform, monthly totals)
+    - Optionally: COGS entries
+    - Optionally: Fee expenses
+    """
+    
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are supported")
+    
+    try:
+        # Read file content
+        content = await file.read()
+        decoded = content.decode('utf-8-sig')  # Handle BOM if present
+        
+        # Parse CSV
+        reader = csv.DictReader(io.StringIO(decoded))
+        
+        # Normalize headers
+        if reader.fieldnames:
+            header_map = {normalize_header(h): h for h in reader.fieldnames}
+        else:
+            raise HTTPException(status_code=400, detail="CSV file has no headers")
+        
+        # Find relevant columns
+        def find_column(possible_names: List[str]) -> Optional[str]:
+            for name in possible_names:
+                normalized = normalize_header(name)
+                if normalized in header_map:
+                    return header_map[normalized]
+            return None
+        
+        platform_col = find_column(["platform_sold", "platform", "marketplace", "sold_on"])
+        date_col = find_column(["sold_date", "date_sold", "sale_date", "date"])
+        price_col = find_column(["price_sold", "sale_price", "revenue", "sold_price", "price"])
+        cogs_col = find_column(["cost_of_goods", "cog", "cogs", "cost", "purchase_price"])
+        fees_col = find_column(["marketplace_fees", "fees", "platform_fees", "selling_fees"])
+        shipping_col = find_column(["shipping_fees", "shipping_cost", "shipping"])
+        title_col = find_column(["title", "item_name", "name", "description"])
+        
+        if not price_col:
+            raise HTTPException(
+                status_code=400, 
+                detail="CSV must have a price/revenue column (e.g., 'Price Sold', 'Revenue', 'Sale Price')"
+            )
+        
+        # Process rows
+        sales_by_platform_month = {}  # { "ebay_2025-01": { total: 0, count: 0 } }
+        cogs_entries = []
+        fee_total = 0.0
+        
+        rows_processed = 0
+        rows_skipped = 0
+        
+        for row in reader:
+            # Get sale price
+            price = parse_currency(row.get(price_col, ""))
+            if price <= 0:
+                rows_skipped += 1
+                continue
+            
+            # Get date and check if it's in the target year
+            date_str = row.get(date_col, "") if date_col else None
+            parsed_date = parse_date(date_str) if date_str else None
+            
+            if parsed_date:
+                sale_year = int(parsed_date.split("-")[0])
+                if sale_year != year:
+                    rows_skipped += 1
+                    continue
+                month = parsed_date[:7]  # YYYY-MM
+            else:
+                # If no date, assume it's for the target year
+                month = f"{year}-01"
+            
+            # Get platform
+            platform_name = row.get(platform_col, "other").lower().strip() if platform_col else "other"
+            platform = VENDOO_PLATFORM_MAP.get(platform_name, "other")
+            
+            # Aggregate by platform and month
+            key = f"{platform}_{month}"
+            if key not in sales_by_platform_month:
+                sales_by_platform_month[key] = {"total": 0, "count": 0, "platform": platform, "month": month}
+            sales_by_platform_month[key]["total"] += price
+            sales_by_platform_month[key]["count"] += 1
+            
+            # Track COGS if requested
+            if import_cogs and cogs_col:
+                cogs = parse_currency(row.get(cogs_col, ""))
+                if cogs > 0:
+                    cogs_entries.append({
+                        "date": parsed_date or f"{year}-01-01",
+                        "source": "Vendoo Import",
+                        "description": row.get(title_col, "Imported item") if title_col else "Imported item",
+                        "amount": cogs
+                    })
+            
+            # Track fees if requested
+            if import_fees_as_expense and fees_col:
+                fee_total += parse_currency(row.get(fees_col, ""))
+            if import_fees_as_expense and shipping_col:
+                fee_total += parse_currency(row.get(shipping_col, ""))
+            
+            rows_processed += 1
+        
+        if rows_processed == 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"No valid sales found for year {year}. Check that your CSV has data for this year."
+            )
+        
+        # Create income entries (one per platform per month)
+        income_created = 0
+        if import_income:
+            for key, data in sales_by_platform_month.items():
+                entry = IncomeEntry(
+                    id=str(uuid.uuid4()),
+                    year=year,
+                    platform=data["platform"],
+                    amount=round(data["total"], 2),
+                    is_1099=False,  # Vendoo imports are raw sales, not 1099
+                    date_received=f"{data['month']}-01",
+                    notes=f"Vendoo import: {data['count']} sales",
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                    updated_at=datetime.now(timezone.utc).isoformat()
+                )
+                await db.income_entries.insert_one(entry.model_dump())
+                income_created += 1
+        
+        # Create COGS entries (batch them by source)
+        cogs_created = 0
+        if import_cogs and cogs_entries:
+            # Group by month to avoid too many entries
+            cogs_by_month = {}
+            for entry in cogs_entries:
+                month = entry["date"][:7]
+                if month not in cogs_by_month:
+                    cogs_by_month[month] = {"total": 0, "count": 0}
+                cogs_by_month[month]["total"] += entry["amount"]
+                cogs_by_month[month]["count"] += 1
+            
+            for month, data in cogs_by_month.items():
+                cogs_entry = COGSEntry(
+                    id=str(uuid.uuid4()),
+                    year=year,
+                    date=f"{month}-01",
+                    source="Vendoo Import",
+                    description=f"{data['count']} items",
+                    amount=round(data["total"], 2),
+                    item_count=data["count"],
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                    updated_at=datetime.now(timezone.utc).isoformat()
+                )
+                await db.cogs_entries.insert_one(cogs_entry.model_dump())
+                cogs_created += 1
+        
+        # Create fee expense if requested
+        fees_created = 0
+        if import_fees_as_expense and fee_total > 0:
+            expense_entry = ExpenseEntry(
+                id=str(uuid.uuid4()),
+                year=year,
+                category="bank_payment_fees",
+                amount=round(fee_total, 2),
+                date=f"{year}-12-31",
+                description="Vendoo import - marketplace & shipping fees",
+                created_at=datetime.now(timezone.utc).isoformat(),
+                updated_at=datetime.now(timezone.utc).isoformat()
+            )
+            await db.expense_entries.insert_one(expense_entry.model_dump())
+            fees_created = 1
+        
+        return {
+            "success": True,
+            "message": f"Successfully imported {rows_processed} sales",
+            "details": {
+                "rows_processed": rows_processed,
+                "rows_skipped": rows_skipped,
+                "income_entries_created": income_created,
+                "cogs_entries_created": cogs_created,
+                "fee_expenses_created": fees_created,
+                "total_sales": round(sum(d["total"] for d in sales_by_platform_month.values()), 2)
+            }
+        }
+        
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Could not decode CSV file. Ensure it's UTF-8 encoded.")
+    except csv.Error as e:
+        raise HTTPException(status_code=400, detail=f"CSV parsing error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+
+@router.get("/vendoo/template")
+async def get_vendoo_template():
+    """Return expected Vendoo CSV format information"""
+    return {
+        "description": "Vendoo CSV Export Format",
+        "instructions": [
+            "1. In Vendoo, go to Inventory and click the multi-action button",
+            "2. Select 'Export to CSV'",
+            "3. Choose your date range (filter by sold date)",
+            "4. Select these columns: Platform Sold, Sold Date, Price Sold, Cost of Goods (optional)",
+            "5. Download and upload the CSV here"
+        ],
+        "required_columns": ["Price Sold (or Revenue, Sale Price)"],
+        "optional_columns": [
+            "Platform Sold - to categorize by marketplace",
+            "Sold Date - to filter by year",
+            "Cost of Goods - to import COGS",
+            "Marketplace Fees - to import as expenses",
+            "Shipping Fees - to import as expenses"
+        ],
+        "supported_platforms": list(VENDOO_PLATFORM_MAP.keys())
+    }
+

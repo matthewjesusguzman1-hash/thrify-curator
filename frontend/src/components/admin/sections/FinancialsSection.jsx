@@ -53,6 +53,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
   // Modals
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddMileage, setShowAddMileage] = useState(false);
+  const [showVendooImport, setShowVendooImport] = useState(false);
   
   // Show tax prep banner Jan-Apr only
   const showTaxBanner = currentMonth >= 1 && currentMonth <= 4;
@@ -245,7 +246,13 @@ const FinancialsSection = ({ getAuthHeader }) => {
               <span className="font-medium text-gray-900">Sales Data</span>
               <span className="text-sm text-gray-500">({formatCurrency(summary?.income?.total)})</span>
             </div>
-            <Button variant="outline" size="sm" className="flex items-center gap-1">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={(e) => { e.stopPropagation(); setShowVendooImport(true); }}
+              data-testid="import-vendoo-btn"
+            >
               <Upload className="w-4 h-4" />
               Import CSV
             </Button>
@@ -416,6 +423,16 @@ const FinancialsSection = ({ getAuthHeader }) => {
           getAuthHeader={getAuthHeader}
           onClose={() => setShowAddMileage(false)}
           onSave={() => { setShowAddMileage(false); fetchData(); }}
+        />
+      )}
+
+      {/* Vendoo Import Modal */}
+      {showVendooImport && (
+        <VendooImportModal
+          year={selectedYear}
+          getAuthHeader={getAuthHeader}
+          onClose={() => setShowVendooImport(false)}
+          onSuccess={() => { setShowVendooImport(false); fetchData(); }}
         />
       )}
     </div>
@@ -607,6 +624,210 @@ const AddMileageModal = ({ year, getAuthHeader, onClose, onSave }) => {
             <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={saving}>
               {saving ? 'Saving...' : 'Save'}
             </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Vendoo Import Modal Component
+const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
+  const [file, setFile] = useState(null);
+  const [importCogs, setImportCogs] = useState(false);
+  const [importFees, setImportFees] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const fileInputRef = React.useRef(null);
+
+  const handleFileSelect = (e) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      if (!selectedFile.name.endsWith('.csv')) {
+        setError('Please select a CSV file');
+        return;
+      }
+      setFile(selectedFile);
+      setError(null);
+      setResult(null);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      if (!droppedFile.name.endsWith('.csv')) {
+        setError('Please select a CSV file');
+        return;
+      }
+      setFile(droppedFile);
+      setError(null);
+      setResult(null);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!file) {
+      setError('Please select a CSV file');
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('year', year.toString());
+      formData.append('import_income', 'true');
+      formData.append('import_cogs', importCogs.toString());
+      formData.append('import_fees_as_expense', importFees.toString());
+
+      const response = await fetch(`${API_URL}/api/financials/vendoo/import`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResult(data);
+      } else {
+        setError(data.detail || 'Import failed');
+      }
+    } catch (err) {
+      setError('Failed to upload file. Please try again.');
+    }
+    setUploading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-lg font-semibold mb-2">Import Vendoo CSV</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Upload your Vendoo sales export to automatically populate income data for {year}.
+        </p>
+
+        {/* Instructions */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
+          <p className="font-medium text-blue-900 mb-2">How to export from Vendoo:</p>
+          <ol className="text-blue-800 space-y-1 list-decimal list-inside">
+            <li>Go to Inventory in Vendoo</li>
+            <li>Click the multi-action button → Export to CSV</li>
+            <li>Filter by sold date range for {year}</li>
+            <li>Include: Platform Sold, Sold Date, Price Sold</li>
+            <li>Optional: Cost of Goods, Marketplace Fees</li>
+          </ol>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* File Drop Zone */}
+          <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+              file ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-blue-400'
+            }`}
+            onClick={() => fileInputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            {file ? (
+              <div className="text-green-700">
+                <FileText className="w-8 h-8 mx-auto mb-2" />
+                <p className="font-medium">{file.name}</p>
+                <p className="text-sm text-green-600">Click to change file</p>
+              </div>
+            ) : (
+              <div className="text-gray-500">
+                <Upload className="w-8 h-8 mx-auto mb-2" />
+                <p>Drop CSV file here or click to browse</p>
+                <p className="text-xs mt-1">Vendoo export format</p>
+              </div>
+            )}
+          </div>
+
+          {/* Import Options */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={importCogs}
+                onChange={(e) => setImportCogs(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span>Also import Cost of Goods (if available in CSV)</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={importFees}
+                onChange={(e) => setImportFees(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span>Import marketplace fees as expenses</span>
+            </label>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {/* Result */}
+          {result && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="font-medium text-green-900 mb-2">Import Successful!</p>
+              <div className="text-sm text-green-800 space-y-1">
+                <p>• {result.details.rows_processed} sales processed</p>
+                <p>• {result.details.income_entries_created} income entries created</p>
+                {result.details.cogs_entries_created > 0 && (
+                  <p>• {result.details.cogs_entries_created} COGS entries created</p>
+                )}
+                {result.details.fee_expenses_created > 0 && (
+                  <p>• Fee expense of ${result.details.total_fees?.toFixed(2)} created</p>
+                )}
+                <p className="font-medium pt-1">Total Sales: ${result.details.total_sales.toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+              {result ? 'Close' : 'Cancel'}
+            </Button>
+            {!result && (
+              <Button 
+                type="submit" 
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" 
+                disabled={uploading || !file}
+              >
+                {uploading ? 'Importing...' : 'Import'}
+              </Button>
+            )}
+            {result && (
+              <Button 
+                type="button" 
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={onSuccess}
+              >
+                Done
+              </Button>
+            )}
           </div>
         </form>
       </div>
