@@ -48,7 +48,11 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
 
         // Check if year has any data
         const hasFiledReturn = (taxReturns.documents || []).length > 0;
-        const hasIncome = summary && (summary.gross_income > 0 || summary.net_profit !== 0);
+        const hasIncome = summary && (
+          (summary.income?.total > 0) || 
+          (summary.net_profit !== 0) ||
+          (summary.gross_profit > 0)
+        );
 
         if (hasFiledReturn || hasIncome) {
           yearsFound.push({
@@ -324,7 +328,7 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
                             <div className="grid grid-cols-2 gap-3 text-sm">
                               <div>
                                 <span className="text-gray-500">Gross Income:</span>
-                                <span className="ml-2 font-medium">{formatCurrency(data.summary.gross_income)}</span>
+                                <span className="ml-2 font-medium">{formatCurrency(data.summary.income?.total || 0)}</span>
                               </div>
                               <div>
                                 <span className="text-gray-500">Net Profit:</span>
