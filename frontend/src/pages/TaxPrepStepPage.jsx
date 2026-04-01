@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft,
@@ -1136,39 +1137,56 @@ const AddMileageModal = ({ year, getAuthHeader, onClose, onSave }) => {
 const Form1099Section = ({ year, getAuthHeader }) => {
   const [loading, setLoading] = useState(true);
   const [eligibleData, setEligibleData] = useState(null);
+  const [manualRecipients, setManualRecipients] = useState([]);
   const [generating, setGenerating] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingRecipient, setEditingRecipient] = useState(null);
 
   useEffect(() => {
-    fetchEligible();
+    fetchData();
   }, [year]);
 
-  const fetchEligible = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/financials/1099/eligible/${year}`, {
-        headers: { ...getAuthHeader() }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setEligibleData(data);
+      const [eligibleRes, manualRes] = await Promise.all([
+        fetch(`${API_URL}/api/financials/1099/eligible/${year}`, { headers: { ...getAuthHeader() } }),
+        fetch(`${API_URL}/api/financials/1099/manual/${year}`, { headers: { ...getAuthHeader() } })
+      ]);
+      
+      if (eligibleRes.ok) setEligibleData(await eligibleRes.json());
+      if (manualRes.ok) {
+        const data = await manualRes.json();
+        setManualRecipients(data.recipients || []);
       }
     } catch (error) {
-      console.error('Error fetching 1099 eligible:', error);
+      console.error('Error fetching 1099 data:', error);
     }
     setLoading(false);
   };
 
-  const download1099 = (email, name) => {
-    setGenerating(email);
-    window.open(`${API_URL}/api/financials/1099/generate/${year}/${encodeURIComponent(email)}`, '_blank');
+  const downloadManual1099 = (recipientId, name) => {
+    setGenerating(recipientId);
+    window.open(`${API_URL}/api/financials/1099/manual/${year}/${recipientId}/download`, '_blank');
     setTimeout(() => setGenerating(null), 1000);
   };
 
-  const downloadBatch = () => {
-    setGenerating('batch');
-    window.open(`${API_URL}/api/financials/1099/batch/${year}`, '_blank');
-    setTimeout(() => setGenerating(null), 1000);
+  const deleteRecipient = async (recipientId) => {
+    if (!window.confirm('Delete this 1099-NEC recipient?')) return;
+    
+    try {
+      await fetch(`${API_URL}/api/financials/1099/manual/${recipientId}`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeader() }
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting recipient:', error);
+    }
   };
+
+  const totalRecipients = (eligibleData?.eligible_count || 0) + manualRecipients.length;
+  const totalAmount = (eligibleData?.total_to_report || 0) + manualRecipients.reduce((sum, r) => sum + (r.amount_paid || 0), 0);
 
   if (loading) {
     return (
@@ -1184,104 +1202,350 @@ const Form1099Section = ({ year, getAuthHeader }) => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6" data-testid="form-1099-section">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900">1099-NEC Forms</h2>
-        {eligibleData?.eligible_count > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={downloadBatch}
-            disabled={generating === 'batch'}
-            data-testid="download-batch-1099"
-          >
-            <Download className="w-4 h-4 mr-1" />
-            {generating === 'batch' ? 'Generating...' : 'Download All'}
-          </Button>
-        )}
+        <h2 className="font-semibold text-gray-900">1099-NEC Forms - {year}</h2>
+        <Button
+          size="sm"
+          onClick={() => { setEditingRecipient(null); setShowAddModal(true); }}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+          data-testid="add-1099-recipient"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Add Recipient
+        </Button>
       </div>
 
       {/* Info Box */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
         <p className="text-blue-800">
-          <strong>IRS Requirement:</strong> You must issue a 1099-NEC to anyone you paid $600 or more 
-          for services during the tax year. This includes consignors who received payouts.
+          <strong>IRS Requirement:</strong> Issue a 1099-NEC to anyone you paid $600+ for services during the tax year.
         </p>
       </div>
 
-      {eligibleData?.eligible_count === 0 ? (
+      {totalRecipients === 0 ? (
         <div className="text-center py-6 text-gray-500">
           <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p>No consignors received $600+ in payouts for {year}.</p>
-          <p className="text-sm mt-1">No 1099-NEC forms required.</p>
-          {eligibleData?.below_threshold_count > 0 && (
-            <p className="text-xs mt-3 text-gray-400">
-              {eligibleData.below_threshold_count} consignor(s) received payouts below the $600 threshold.
-            </p>
-          )}
+          <p>No 1099-NEC recipients for {year}.</p>
+          <p className="text-sm mt-1">Click "Add Recipient" to add contractors you paid $600+.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {/* Summary Stats */}
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-gray-900">{eligibleData?.eligible_count}</div>
+              <div className="text-2xl font-bold text-gray-900">{totalRecipients}</div>
               <div className="text-xs text-gray-500">Recipients</div>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-gray-900">
-                ${eligibleData?.total_to_report?.toLocaleString()}
+                ${totalAmount.toLocaleString()}
               </div>
               <div className="text-xs text-gray-500">Total to Report</div>
             </div>
           </div>
 
-          {/* Recipient List */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-500 grid grid-cols-3">
-              <span>Recipient</span>
-              <span className="text-right">Amount</span>
-              <span className="text-right">Action</span>
-            </div>
-            <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-              {eligibleData?.eligible_recipients?.map((recipient) => (
-                <div key={recipient.email} className="px-4 py-3 grid grid-cols-3 items-center">
-                  <div>
-                    <div className="font-medium text-gray-900 text-sm">{recipient.name}</div>
-                    <div className="text-xs text-gray-500">{recipient.email}</div>
-                  </div>
-                  <div className="text-right font-medium text-gray-900">
-                    ${recipient.total_paid.toLocaleString()}
-                  </div>
-                  <div className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => download1099(recipient.email, recipient.name)}
-                      disabled={generating === recipient.email}
-                      data-testid={`download-1099-${recipient.email}`}
-                    >
-                      {generating === recipient.email ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      ) : (
-                        <Download className="w-4 h-4" />
+          {/* Manual Recipients */}
+          {manualRecipients.length > 0 && (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-500 flex justify-between">
+                <span>Manually Added Recipients</span>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {manualRecipients.map((recipient) => (
+                  <div key={recipient.id} className="px-4 py-3 flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900 text-sm">{recipient.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {recipient.address && `${recipient.address}, `}
+                        {recipient.city && `${recipient.city}, `}
+                        {recipient.state} {recipient.zip_code}
+                      </div>
+                      {recipient.description && (
+                        <div className="text-xs text-gray-400 mt-1">{recipient.description}</div>
                       )}
-                    </Button>
+                    </div>
+                    <div className="text-right font-medium text-gray-900 mx-4">
+                      ${recipient.amount_paid?.toLocaleString()}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setEditingRecipient(recipient); setShowAddModal(true); }}
+                        className="p-2"
+                      >
+                        <FileText className="w-4 h-4 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => downloadManual1099(recipient.id, recipient.name)}
+                        disabled={generating === recipient.id}
+                        className="p-2"
+                      >
+                        {generating === recipient.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        ) : (
+                          <Download className="w-4 h-4 text-blue-600" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteRecipient(recipient.id)}
+                        className="p-2"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Consignment Recipients (auto-detected) */}
+          {eligibleData?.eligible_count > 0 && (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-500">
+                From Consignment Payouts
+              </div>
+              <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                {eligibleData?.eligible_recipients?.map((recipient) => (
+                  <div key={recipient.email} className="px-4 py-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-gray-900 text-sm">{recipient.name}</div>
+                      <div className="text-xs text-gray-500">{recipient.email}</div>
+                    </div>
+                    <div className="text-right font-medium text-gray-900">
+                      ${recipient.total_paid.toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* W-9 Notice */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
             <p className="text-yellow-800">
-              <strong>Note:</strong> Before filing official 1099-NEC forms with the IRS, you'll need 
-              W-9 forms from each recipient to obtain their Tax ID (SSN/EIN). The downloaded forms 
-              show "XXX-XX-XXXX" as a placeholder.
+              <strong>Note:</strong> You'll need W-9 forms from each recipient to obtain their Tax ID (SSN/EIN) 
+              for official IRS filing. Add the TIN when editing a recipient.
             </p>
           </div>
         </div>
       )}
+
+      {/* Add/Edit Modal */}
+      {showAddModal && (
+        <Add1099RecipientModal
+          year={year}
+          recipient={editingRecipient}
+          getAuthHeader={getAuthHeader}
+          onClose={() => { setShowAddModal(false); setEditingRecipient(null); }}
+          onSave={() => { setShowAddModal(false); setEditingRecipient(null); fetchData(); }}
+        />
+      )}
     </div>
+  );
+};
+
+// Add/Edit 1099 Recipient Modal
+const Add1099RecipientModal = ({ year, recipient, getAuthHeader, onClose, onSave }) => {
+  const [name, setName] = useState(recipient?.name || '');
+  const [address, setAddress] = useState(recipient?.address || '');
+  const [city, setCity] = useState(recipient?.city || '');
+  const [state, setState] = useState(recipient?.state || '');
+  const [zipCode, setZipCode] = useState(recipient?.zip_code || '');
+  const [tin, setTin] = useState(recipient?.tin || '');
+  const [tinType, setTinType] = useState(recipient?.tin_type || 'SSN');
+  const [amountPaid, setAmountPaid] = useState(recipient?.amount_paid?.toString() || '');
+  const [description, setDescription] = useState(recipient?.description || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name || !amountPaid) {
+      setError('Name and amount are required');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const url = recipient?.id 
+        ? `${API_URL}/api/financials/1099/manual/${recipient.id}`
+        : `${API_URL}/api/financials/1099/manual`;
+      
+      const response = await fetch(url, {
+        method: recipient?.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({
+          year,
+          name,
+          address,
+          city,
+          state,
+          zip_code: zipCode,
+          tin,
+          tin_type: tinType,
+          amount_paid: parseFloat(amountPaid),
+          description
+        })
+      });
+
+      if (response.ok) {
+        onSave();
+      } else {
+        const data = await response.json();
+        setError(data.detail || 'Failed to save');
+      }
+    } catch (err) {
+      setError('Failed to save recipient');
+    }
+    setSaving(false);
+  };
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 99999 }}>
+      <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">
+            {recipient?.id ? 'Edit' : 'Add'} 1099-NEC Recipient
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Recipient Name *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+              placeholder="Full legal name"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Amount Paid *</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <input
+                type="number"
+                step="0.01"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+                className="w-full p-2 pl-7 border border-gray-300 rounded-lg"
+                placeholder="0.00"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+              placeholder="123 Main St"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+              <input
+                type="text"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+                maxLength={2}
+                placeholder="CA"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ZIP</label>
+              <input
+                type="text"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tax ID (SSN/EIN)</label>
+              <input
+                type="text"
+                value={tin}
+                onChange={(e) => setTin(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+                placeholder="XXX-XX-XXXX"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ID Type</label>
+              <select
+                value={tinType}
+                onChange={(e) => setTinType(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              >
+                <option value="SSN">SSN</option>
+                <option value="EIN">EIN</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+              placeholder="Services provided"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : (recipient?.id ? 'Update' : 'Add')} Recipient
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
   );
 };
 

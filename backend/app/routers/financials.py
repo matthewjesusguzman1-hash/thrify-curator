@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -1080,6 +1081,140 @@ async def update_recipient_tin(
     )
     
     return {"message": "TIN updated successfully", "email": email}
+
+
+# ============== MANUAL 1099-NEC RECIPIENTS ==============
+
+class Manual1099Recipient(BaseModel):
+    year: int
+    name: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    tin: Optional[str] = None  # SSN or EIN
+    tin_type: Optional[str] = "SSN"  # SSN or EIN
+    amount_paid: float
+    description: Optional[str] = None
+
+@router.get("/1099/manual/{year}")
+async def get_manual_1099_recipients(year: int):
+    """Get all manually entered 1099-NEC recipients for a year"""
+    recipients = await db.manual_1099_recipients.find(
+        {"year": year},
+        {"_id": 0}
+    ).to_list(length=None)
+    
+    return {
+        "year": year,
+        "recipients": recipients,
+        "count": len(recipients),
+        "total_amount": round(sum(r.get("amount_paid", 0) for r in recipients), 2)
+    }
+
+@router.post("/1099/manual")
+async def add_manual_1099_recipient(recipient: Manual1099Recipient):
+    """Add a manual 1099-NEC recipient"""
+    recipient_id = str(uuid.uuid4())
+    
+    doc = {
+        "id": recipient_id,
+        "year": recipient.year,
+        "name": recipient.name,
+        "address": recipient.address,
+        "city": recipient.city,
+        "state": recipient.state,
+        "zip_code": recipient.zip_code,
+        "tin": recipient.tin,
+        "tin_type": recipient.tin_type,
+        "amount_paid": recipient.amount_paid,
+        "description": recipient.description,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.manual_1099_recipients.insert_one(doc)
+    
+    return {"message": "1099-NEC recipient added", "id": recipient_id, "recipient": {k: v for k, v in doc.items() if k != '_id'}}
+
+@router.put("/1099/manual/{recipient_id}")
+async def update_manual_1099_recipient(recipient_id: str, recipient: Manual1099Recipient):
+    """Update a manual 1099-NEC recipient"""
+    update_doc = {
+        "name": recipient.name,
+        "address": recipient.address,
+        "city": recipient.city,
+        "state": recipient.state,
+        "zip_code": recipient.zip_code,
+        "tin": recipient.tin,
+        "tin_type": recipient.tin_type,
+        "amount_paid": recipient.amount_paid,
+        "description": recipient.description,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    result = await db.manual_1099_recipients.update_one(
+        {"id": recipient_id},
+        {"$set": update_doc}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    
+    return {"message": "1099-NEC recipient updated", "id": recipient_id}
+
+@router.delete("/1099/manual/{recipient_id}")
+async def delete_manual_1099_recipient(recipient_id: str):
+    """Delete a manual 1099-NEC recipient"""
+    result = await db.manual_1099_recipients.delete_one({"id": recipient_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    
+    return {"message": "1099-NEC recipient deleted"}
+
+@router.get("/1099/manual/{year}/{recipient_id}/download")
+async def download_manual_1099_pdf(year: int, recipient_id: str):
+    """Generate and download 1099-NEC PDF for a manually entered recipient"""
+    recipient = await db.manual_1099_recipients.find_one(
+        {"id": recipient_id, "year": year},
+        {"_id": 0}
+    )
+    
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    
+    # Payer info (your business)
+    payer = {
+        "name": "Thrifty Curator LLC",
+        "address": "Your Business Address",
+        "city_state_zip": "City, State ZIP",
+        "tin": "XX-XXXXXXX"
+    }
+    
+    # Generate PDF
+    buffer = io.BytesIO()
+    generate_1099_nec_pdf(
+        buffer=buffer,
+        year=year,
+        payer=payer,
+        recipient={
+            "name": recipient.get("name", ""),
+            "address": recipient.get("address", ""),
+            "city_state_zip": f"{recipient.get('city', '')}, {recipient.get('state', '')} {recipient.get('zip_code', '')}",
+            "tin": recipient.get("tin", "")
+        },
+        amount=recipient.get("amount_paid", 0)
+    )
+    
+    buffer.seek(0)
+    filename = f"1099-NEC_{year}_{recipient.get('name', 'recipient').replace(' ', '_')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 def generate_1099_nec_pdf(
