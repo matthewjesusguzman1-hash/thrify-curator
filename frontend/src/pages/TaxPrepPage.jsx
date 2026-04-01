@@ -9,7 +9,8 @@ import {
   DollarSign,
   Receipt,
   Upload,
-  Download
+  Download,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -25,6 +26,7 @@ const TaxPrepPage = () => {
   const [progress, setProgress] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(false);
   
   // Update URL when year changes
   useEffect(() => {
@@ -58,6 +60,32 @@ const TaxPrepPage = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleResetTaxPrep = async () => {
+    if (!window.confirm(`Are you sure you want to reset all tax prep data for ${selectedYear}? This will delete all income, COGS, expenses, and mileage entries for this year. This cannot be undone.`)) {
+      return;
+    }
+    
+    setResetting(true);
+    try {
+      const response = await fetch(`${API_URL}/api/financials/tax-prep/reset/${selectedYear}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Tax prep data for ${selectedYear} has been reset.\n\nDeleted:\n- ${result.deleted_counts.income} income entries\n- ${result.deleted_counts.cogs} COGS entries\n- ${result.deleted_counts.expenses} expense entries\n- ${result.deleted_counts.mileage} mileage entries`);
+        fetchData(); // Refresh data
+      } else {
+        alert('Failed to reset tax prep data');
+      }
+    } catch (error) {
+      console.error('Error resetting tax prep:', error);
+      alert('Error resetting tax prep data');
+    }
+    setResetting(false);
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -126,6 +154,15 @@ const TaxPrepPage = () => {
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
+            <button
+              onClick={handleResetTaxPrep}
+              disabled={resetting}
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+              title="Reset Tax Prep Data"
+              data-testid="reset-tax-prep-btn"
+            >
+              <RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
+            </button>
           </div>
           <p className="text-gray-500 mt-2">Prepare everything for your accountant</p>
         </div>

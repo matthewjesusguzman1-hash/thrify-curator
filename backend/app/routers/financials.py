@@ -103,6 +103,41 @@ async def delete_income(entry_id: str):
     
     return {"message": "Income entry deleted"}
 
+@router.delete("/tax-prep/reset/{year}")
+async def reset_tax_prep_year(year: int):
+    """Reset all tax prep data for a specific year (income, COGS, expenses, mileage)"""
+    deleted_counts = {
+        "income": 0,
+        "cogs": 0,
+        "expenses": 0,
+        "mileage": 0
+    }
+    
+    # Delete income entries for the year
+    result = await db.income_entries.delete_many({"year": year})
+    deleted_counts["income"] = result.deleted_count
+    
+    # Delete COGS entries for the year
+    result = await db.cogs_entries.delete_many({"year": year})
+    deleted_counts["cogs"] = result.deleted_count
+    
+    # Delete expense entries for the year
+    result = await db.expense_entries.delete_many({"year": year})
+    deleted_counts["expenses"] = result.deleted_count
+    
+    # Delete mileage entries for the year
+    result = await db.mileage_entries.delete_many({"year": year})
+    deleted_counts["mileage"] = result.deleted_count
+    
+    total_deleted = sum(deleted_counts.values())
+    
+    return {
+        "message": f"Tax prep data for {year} has been reset",
+        "year": year,
+        "deleted_counts": deleted_counts,
+        "total_deleted": total_deleted
+    }
+
 # ============== COGS ENDPOINTS ==============
 
 @router.get("/cogs/{year}")
