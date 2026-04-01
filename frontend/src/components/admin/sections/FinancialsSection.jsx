@@ -1744,7 +1744,6 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
       console.error('Screenshot analysis error:', err);
       setError(err.message || 'Failed to analyze image. Please try again.');
     }
-    }
     setAnalyzing(false);
   };
 
