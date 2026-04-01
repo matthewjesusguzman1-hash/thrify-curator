@@ -21,12 +21,12 @@ const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 // Platform options for 1099 and manual income entry
 const PLATFORMS = [
-  { value: 'ebay', label: 'eBay', icon: '🏷️' },
-  { value: 'poshmark', label: 'Poshmark', icon: '👗' },
-  { value: 'mercari', label: 'Mercari', icon: '📦' },
-  { value: 'depop', label: 'Depop', icon: '🛍️' },
-  { value: 'fb_marketplace', label: 'Facebook', icon: '📱' },
-  { value: 'in_person', label: 'In-Person', icon: '🤝' }
+  { value: 'ebay', label: 'eBay' },
+  { value: 'poshmark', label: 'Poshmark' },
+  { value: 'mercari', label: 'Mercari' },
+  { value: 'depop', label: 'Depop' },
+  { value: 'fb_marketplace', label: 'Facebook' },
+  { value: 'in_person', label: 'In-Person' }
 ];
 
 // Platforms that typically issue 1099s (online marketplaces)
@@ -249,14 +249,11 @@ const TaxPrepStepPage = () => {
                       const platform = PLATFORMS.find(p => p.value === entry.platform);
                       return (
                         <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl">{platform?.icon || '📄'}</span>
-                            <div>
-                              <div className="font-medium">{platform?.label || entry.platform}</div>
-                              {entry.date_received && (
-                                <div className="text-sm text-gray-500">Received: {entry.date_received}</div>
-                              )}
-                            </div>
+                          <div>
+                            <div className="font-medium">{platform?.label || entry.platform}</div>
+                            {entry.date_received && (
+                              <div className="text-sm text-gray-500">Received: {entry.date_received}</div>
+                            )}
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="font-semibold">{formatCurrency(entry.amount)}</span>
@@ -306,14 +303,11 @@ const TaxPrepStepPage = () => {
                       const platform = PLATFORMS.find(p => p.value === entry.platform);
                       return (
                         <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl">{platform?.icon || '📄'}</span>
-                            <div>
-                              <div className="font-medium">{platform?.label || entry.platform}</div>
-                              {entry.notes && (
-                                <div className="text-sm text-gray-500">{entry.notes}</div>
-                              )}
-                            </div>
+                          <div>
+                            <div className="font-medium">{platform?.label || entry.platform}</div>
+                            {entry.notes && (
+                              <div className="text-sm text-gray-500">{entry.notes}</div>
+                            )}
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="font-semibold">{formatCurrency(entry.amount)}</span>
@@ -810,14 +804,13 @@ const AddIncomeModal = ({ year, is1099, getAuthHeader, onClose, onSave }) => {
                   key={p.value}
                   type="button"
                   onClick={() => setPlatform(p.value)}
-                  className={`p-3 rounded-lg border-2 text-left flex items-center gap-2 transition-all ${
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
                     platform === p.value 
-                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
                   }`}
                 >
-                  <span className="text-lg">{p.icon}</span>
-                  <span className="text-sm font-medium">{p.label}</span>
+                  {p.label}
                 </button>
               ))}
             </div>
