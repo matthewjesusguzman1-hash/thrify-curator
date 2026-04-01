@@ -25,12 +25,8 @@ const PLATFORMS = [
   { value: 'poshmark', label: 'Poshmark', icon: '👗' },
   { value: 'mercari', label: 'Mercari', icon: '📦' },
   { value: 'depop', label: 'Depop', icon: '🛍️' },
-  { value: 'etsy', label: 'Etsy', icon: '🎨' },
-  { value: 'fb_marketplace', label: 'FB Marketplace', icon: '📱' },
-  { value: 'amazon', label: 'Amazon', icon: '📦' },
-  { value: 'whatnot', label: 'Whatnot', icon: '📺' },
-  { value: 'in_person', label: 'In-Person Sales', icon: '🤝' },
-  { value: 'other', label: 'Other', icon: '📋' }
+  { value: 'fb_marketplace', label: 'Facebook', icon: '📱' },
+  { value: 'in_person', label: 'In-Person', icon: '🤝' }
 ];
 
 // Platforms that typically issue 1099s (online marketplaces)
