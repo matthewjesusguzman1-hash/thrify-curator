@@ -958,9 +958,16 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
     setSaving(false);
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+  return ReactDOM.createPortal(
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 99999 }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-md w-full p-6 max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-lg font-semibold mb-4">Add Expense</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -969,7 +976,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base"
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base bg-white"
             >
               {Object.entries(CATEGORY_LABELS).map(([key, { label, icon }]) => (
                 <option key={key} value={key}>{icon} {label}</option>
@@ -1052,7 +1059,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
             </div>
           </div>
           
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-2 pb-4">
             <Button type="button" variant="outline" className="flex-1 min-h-[48px]" onClick={onClose}>
               Cancel
             </Button>
@@ -1062,7 +1069,8 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
