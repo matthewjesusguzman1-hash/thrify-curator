@@ -19,7 +19,7 @@ import { Button } from '../components/ui/button';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 
-// Platform options
+// Platform options for 1099 and manual income entry
 const PLATFORMS = [
   { value: 'ebay', label: 'eBay', icon: '🏷️' },
   { value: 'poshmark', label: 'Poshmark', icon: '👗' },
@@ -27,9 +27,22 @@ const PLATFORMS = [
   { value: 'depop', label: 'Depop', icon: '🛍️' },
   { value: 'etsy', label: 'Etsy', icon: '🎨' },
   { value: 'fb_marketplace', label: 'FB Marketplace', icon: '📱' },
+  { value: 'amazon', label: 'Amazon', icon: '📦' },
+  { value: 'whatnot', label: 'Whatnot', icon: '📺' },
   { value: 'in_person', label: 'In-Person Sales', icon: '🤝' },
   { value: 'other', label: 'Other', icon: '📋' }
 ];
+
+// Helper function to check if an income entry is manually entered (not from AI scan)
+const isManualIncomeEntry = (entry) => {
+  // Exclude "profit" platform entries (these are AI-scanned profit)
+  if (entry.platform === 'profit') return false;
+  // Exclude entries with "Scanned" in notes (AI screenshot imports)
+  if (entry.notes && entry.notes.includes('Scanned')) return false;
+  // Exclude Vendoo imports
+  if (entry.notes && entry.notes.includes('Vendoo import')) return false;
+  return true;
+};
 
 // Expense category labels
 const CATEGORY_LABELS = {
@@ -224,18 +237,18 @@ const TaxPrepStepPage = () => {
               </div>
               
               <div className="p-4">
-                {income.entries.filter(e => e.is_1099).length === 0 ? (
+                {income.entries.filter(e => e.is_1099 && isManualIncomeEntry(e)).length === 0 ? (
                   <p className="text-gray-500 text-center py-4">No 1099s added yet</p>
                 ) : (
                   <div className="space-y-2">
-                    {income.entries.filter(e => e.is_1099).map(entry => {
+                    {income.entries.filter(e => e.is_1099 && isManualIncomeEntry(e)).map(entry => {
                       const platform = PLATFORMS.find(p => p.value === entry.platform);
                       return (
                         <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
-                            <span className="text-xl">{platform?.icon}</span>
+                            <span className="text-xl">{platform?.icon || '📄'}</span>
                             <div>
-                              <div className="font-medium">{platform?.label}</div>
+                              <div className="font-medium">{platform?.label || entry.platform}</div>
                               {entry.date_received && (
                                 <div className="text-sm text-gray-500">Received: {entry.date_received}</div>
                               )}
@@ -255,7 +268,7 @@ const TaxPrepStepPage = () => {
                     })}
                     <div className="pt-2 border-t border-gray-200 flex justify-between font-semibold">
                       <span>1099 Total</span>
-                      <span>{formatCurrency(income.total_1099)}</span>
+                      <span>{formatCurrency(income.entries.filter(e => e.is_1099 && isManualIncomeEntry(e)).reduce((sum, e) => sum + e.amount, 0))}</span>
                     </div>
                   </div>
                 )}
@@ -281,18 +294,18 @@ const TaxPrepStepPage = () => {
               </div>
               
               <div className="p-4">
-                {income.entries.filter(e => !e.is_1099).length === 0 ? (
+                {income.entries.filter(e => !e.is_1099 && isManualIncomeEntry(e)).length === 0 ? (
                   <p className="text-gray-500 text-center py-4">No other income added</p>
                 ) : (
                   <div className="space-y-2">
-                    {income.entries.filter(e => !e.is_1099).map(entry => {
+                    {income.entries.filter(e => !e.is_1099 && isManualIncomeEntry(e)).map(entry => {
                       const platform = PLATFORMS.find(p => p.value === entry.platform);
                       return (
                         <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
-                            <span className="text-xl">{platform?.icon}</span>
+                            <span className="text-xl">{platform?.icon || '📄'}</span>
                             <div>
-                              <div className="font-medium">{platform?.label}</div>
+                              <div className="font-medium">{platform?.label || entry.platform}</div>
                               {entry.notes && (
                                 <div className="text-sm text-gray-500">{entry.notes}</div>
                               )}
@@ -312,19 +325,24 @@ const TaxPrepStepPage = () => {
                     })}
                     <div className="pt-2 border-t border-gray-200 flex justify-between font-semibold">
                       <span>Other Total</span>
-                      <span>{formatCurrency(income.total_other)}</span>
+                      <span>{formatCurrency(income.entries.filter(e => !e.is_1099 && isManualIncomeEntry(e)).reduce((sum, e) => sum + e.amount, 0))}</span>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Total */}
+            {/* Total - show only manual 1099 + other income */}
             <div className="bg-blue-50 rounded-lg border border-blue-200 p-4" data-testid="total-income-section">
               <div className="flex justify-between items-center text-lg font-bold">
-                <span className="text-blue-900">TOTAL INCOME</span>
-                <span className="text-blue-600" data-testid="total-income-amount">{formatCurrency(income.total)}</span>
+                <span className="text-blue-900">TOTAL REPORTED INCOME</span>
+                <span className="text-blue-600" data-testid="total-income-amount">
+                  {formatCurrency(income.entries.filter(e => isManualIncomeEntry(e)).reduce((sum, e) => sum + e.amount, 0))}
+                </span>
               </div>
+              <p className="text-sm text-blue-700 mt-1">
+                This is income you need to report from 1099s and non-1099 sources
+              </p>
             </div>
           </div>
         )}
