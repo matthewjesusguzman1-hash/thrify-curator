@@ -814,7 +814,7 @@ const AddIncomeModal = ({ year, is1099, getAuthHeader, onClose, onSave }) => {
                   key={p.value}
                   type="button"
                   onClick={() => setPlatform(p.value)}
-                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                  className={`p-3 h-12 rounded-lg border-2 text-center transition-all flex items-center justify-center ${
                     platform === p.value 
                       ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold' 
                       : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
@@ -1044,7 +1044,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
                   key={cat.value}
                   type="button"
                   onClick={() => setCategory(cat.value)}
-                  className={`p-2.5 rounded-lg border-2 text-center text-sm transition-all ${
+                  className={`p-3 h-12 rounded-lg border-2 text-center text-sm transition-all flex items-center justify-center ${
                     category === cat.value 
                       ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold' 
                       : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'

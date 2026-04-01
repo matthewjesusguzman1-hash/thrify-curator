@@ -144,20 +144,24 @@ const TaxPrepPage = () => {
         <div className="text-center mb-8">
           <span className="text-4xl mb-2 block">🧾</span>
           <h1 className="text-2xl font-bold text-gray-900">Tax Prep</h1>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
-            >
-              {[currentYear, currentYear - 1].map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+          <div className="flex items-center justify-center gap-2 mt-3">
+            {[currentYear, currentYear - 1].map(year => (
+              <button
+                key={year}
+                onClick={() => setSelectedYear(year)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  selectedYear === year
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {year}
+              </button>
+            ))}
             <button
               onClick={handleResetTaxPrep}
               disabled={resetting}
-              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors ml-1"
               title="Reset Tax Prep Data"
               data-testid="reset-tax-prep-btn"
             >
