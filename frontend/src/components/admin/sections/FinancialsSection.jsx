@@ -893,6 +893,7 @@ const AddIncomeModal = ({ year, getAuthHeader, onClose, onSave }) => {
 // Add Expense Modal Component
 const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
   const [category, setCategory] = useState('shipping_supplies');
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
@@ -958,6 +959,8 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
     setSaving(false);
   };
 
+  const selectedCategory = CATEGORY_LABELS[category];
+
   return ReactDOM.createPortal(
     <div 
       className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
@@ -971,17 +974,38 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
         <h3 className="text-lg font-semibold mb-4">Add Expense</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Category - Button Grid Picker */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base bg-white"
+            <button
+              type="button"
+              onClick={() => setShowCategoryPicker(!showCategoryPicker)}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base bg-white flex items-center justify-between"
             >
-              {Object.entries(CATEGORY_LABELS).map(([key, { label, icon }]) => (
-                <option key={key} value={key}>{icon} {label}</option>
-              ))}
-            </select>
+              <span>{selectedCategory?.icon} {selectedCategory?.label}</span>
+              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showCategoryPicker ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showCategoryPicker && (
+              <div className="mt-2 border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(CATEGORY_LABELS).map(([key, { label, icon }]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => { setCategory(key); setShowCategoryPicker(false); }}
+                      className={`p-2 text-left text-sm rounded-lg ${
+                        category === key 
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+                          : 'bg-white hover:bg-gray-100 border border-gray-200'
+                      }`}
+                    >
+                      {icon} {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           
           <div>
@@ -1028,25 +1052,25 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
             />
           </div>
           
-          {/* Receipt Image Upload */}
+          {/* Receipt Image Upload - Camera or File */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Receipt (optional)</label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-              {receiptPreview ? (
-                <div className="relative">
-                  <img src={receiptPreview} alt="Receipt" className="max-h-32 mx-auto rounded" />
-                  <button
-                    type="button"
-                    onClick={() => { setReceiptImage(null); setReceiptPreview(null); }}
-                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center cursor-pointer py-2">
-                  <Camera className="w-8 h-8 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500">Add receipt photo</span>
+            {receiptPreview ? (
+              <div className="relative border-2 border-gray-300 rounded-lg p-2">
+                <img src={receiptPreview} alt="Receipt" className="max-h-32 mx-auto rounded" />
+                <button
+                  type="button"
+                  onClick={() => { setReceiptImage(null); setReceiptPreview(null); }}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <label className="flex-1 flex flex-col items-center cursor-pointer py-4 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50">
+                  <Camera className="w-6 h-6 text-gray-400 mb-1" />
+                  <span className="text-xs text-gray-500">Take Photo</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -1055,8 +1079,18 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
                     className="hidden"
                   />
                 </label>
-              )}
-            </div>
+                <label className="flex-1 flex flex-col items-center cursor-pointer py-4 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50">
+                  <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                  <span className="text-xs text-gray-500">Choose File</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
           </div>
           
           <div className="flex gap-3 pt-2 pb-4">
