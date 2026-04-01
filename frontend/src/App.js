@@ -17,6 +17,7 @@ import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import TaxPrepPage from "@/pages/TaxPrepPage";
 import TaxPrepStepPage from "@/pages/TaxPrepStepPage";
+import Issued1099sPage from "@/pages/Issued1099sPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 // App version - increment this on each release to force cache clear
@@ -223,6 +224,11 @@ function AnimatedRoutes() {
         <Route path="/admin/tax-prep/step/:step" element={
           <PageTransition>
             <TaxPrepStepPage />
+          </PageTransition>
+        } />
+        <Route path="/admin/tax-prep/issued-1099s" element={
+          <PageTransition>
+            <Issued1099sPage />
           </PageTransition>
         } />
       </Routes>

@@ -12,7 +12,8 @@ import {
   Plus,
   FileText,
   Trash2,
-  Camera
+  Camera,
+  Pencil
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -1108,6 +1109,151 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
   );
 };
 
+// Edit Expense Modal Component
+const EditExpenseModal = ({ expense, year, getAuthHeader, onClose, onSave }) => {
+  const [category, setCategory] = useState(expense.category || 'shipping_supplies');
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [amount, setAmount] = useState(expense.amount?.toString() || '');
+  const [date, setDate] = useState(expense.date || new Date().toISOString().split('T')[0]);
+  const [description, setDescription] = useState(expense.description || '');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    
+    try {
+      const response = await fetch(`${API_URL}/api/financials/expenses/${expense.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({
+          category,
+          amount: parseFloat(amount),
+          date,
+          description
+        })
+      });
+      
+      if (response.ok) {
+        onSave();
+      } else {
+        alert('Failed to update expense');
+      }
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      alert('Error updating expense');
+    }
+    setSaving(false);
+  };
+
+  const selectedCategory = CATEGORY_LABELS[category];
+
+  return ReactDOM.createPortal(
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 99999 }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-md w-full p-6 max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-semibold mb-4">Edit Expense</h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Category - Button Grid Picker */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <button
+              type="button"
+              onClick={() => setShowCategoryPicker(!showCategoryPicker)}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base bg-white flex items-center justify-between"
+            >
+              <span>{selectedCategory?.icon} {selectedCategory?.label}</span>
+              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showCategoryPicker ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showCategoryPicker && (
+              <div className="mt-2 border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(CATEGORY_LABELS).map(([key, { label, icon }]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => { setCategory(key); setShowCategoryPicker(false); }}
+                      className={`p-2 text-left text-sm rounded-lg ${
+                        category === key 
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+                          : 'bg-white hover:bg-gray-100 border border-gray-200'
+                      }`}
+                    >
+                      {icon} {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+            <div className="relative">
+              <span className="absolute left-3 top-3 text-gray-500">$</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
+                value={amount}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                    setAmount(val);
+                  }
+                }}
+                className="w-full pl-7 pr-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base"
+                placeholder="0.00"
+                required
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base"
+              placeholder="e.g., Poly mailers - Amazon"
+            />
+          </div>
+          
+          <div className="flex gap-3 pt-2 pb-4">
+            <Button type="button" variant="outline" className="flex-1 min-h-[48px]" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1 min-h-[48px] bg-blue-600 hover:bg-blue-700 text-white" disabled={saving}>
+              {saving ? 'Saving...' : 'Update'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 // Add Mileage Modal Component
 const AddMileageModal = ({ year, getAuthHeader, onClose, onSave }) => {
   const [miles, setMiles] = useState('');
@@ -1487,6 +1633,7 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
   const [activeTab, setActiveTab] = useState('overview');
   const [deleting, setDeleting] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
   
   // Local data state for selected year
   const [income, setIncome] = useState(initialIncome);
@@ -1727,16 +1874,24 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
         return entries.map(e => (
           <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{e.category} - {formatCurrency(e.amount)}</p>
-              <p className="text-sm text-gray-500">{formatMonthYear(e.date)}</p>
+              <p className="font-medium truncate">{CATEGORY_LABELS[e.category]?.label || e.category} - {formatCurrency(e.amount)}</p>
+              <p className="text-sm text-gray-500">{formatMonthYear(e.date)}{e.description ? ` • ${e.description}` : ''}</p>
             </div>
-            <button
-              onClick={() => deleteEntry('expenses', e.id)}
-              disabled={deleting === e.id}
-              className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
-            >
-              {deleting === e.id ? '...' : <Trash2 className="w-4 h-4" />}
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setEditingExpense(e)}
+                className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => deleteEntry('expenses', e.id)}
+                disabled={deleting === e.id}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
+              >
+                {deleting === e.id ? '...' : <Trash2 className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
         ));
       case 'mileage':
@@ -1852,6 +2007,21 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
           )}
         </div>
       </div>
+      
+      {/* Edit Expense Modal */}
+      {editingExpense && (
+        <EditExpenseModal
+          expense={editingExpense}
+          year={selectedYear}
+          getAuthHeader={getAuthHeader}
+          onClose={() => setEditingExpense(null)}
+          onSave={() => {
+            setEditingExpense(null);
+            fetchYearData(selectedYear);
+            if (selectedYear === initialYear) onDataChanged();
+          }}
+        />
+      )}
     </div>,
     document.body
   );

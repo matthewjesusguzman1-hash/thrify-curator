@@ -10,7 +10,8 @@ import {
   Receipt,
   Upload,
   Download,
-  RotateCcw
+  RotateCcw,
+  Plus
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -274,6 +275,23 @@ const TaxPrepPage = () => {
               </div>
             );
           })}
+        </div>
+
+        {/* 1099s Issued Section */}
+        <div className="mt-8 bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-gray-900">1099s Issued to Contractors</h3>
+              <p className="text-sm text-gray-500">Track 1099-NECs you've issued to contractors</p>
+            </div>
+            <Button
+              onClick={() => navigate(`/admin/tax-prep/issued-1099s?year=${selectedYear}`)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Manage
+            </Button>
+          </div>
         </div>
 
         {/* Summary Preview (if all steps complete) */}

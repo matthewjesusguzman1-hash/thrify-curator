@@ -2077,3 +2077,152 @@ async def analyze_screenshot(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI analysis failed: {str(e)}")
 
+
+# ============== 1099s ISSUED (TO CONTRACTORS) ==============
+
+class Issued1099Entry(BaseModel):
+    id: str
+    year: int
+    contractor_name: str
+    contractor_tin: Optional[str] = None  # SSN or EIN
+    contractor_address: Optional[str] = None
+    amount_paid: float
+    w9_document_id: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+class CreateIssued1099Request(BaseModel):
+    year: int
+    contractor_name: str
+    contractor_tin: Optional[str] = None
+    contractor_address: Optional[str] = None
+    amount_paid: float
+    w9_document_id: Optional[str] = None
+    notes: Optional[str] = None
+
+@router.get("/issued-1099s/{year}")
+async def get_issued_1099s(year: int):
+    """Get all 1099s issued to contractors for a year"""
+    entries = await db.issued_1099s.find(
+        {"year": year},
+        {"_id": 0}
+    ).sort("contractor_name", 1).to_list(length=None)
+    
+    total_paid = sum(e["amount_paid"] for e in entries)
+    
+    return {
+        "entries": entries,
+        "total_paid": total_paid,
+        "count": len(entries)
+    }
+
+@router.post("/issued-1099s")
+async def create_issued_1099(request: CreateIssued1099Request):
+    """Create a new 1099 issued entry"""
+    entry = Issued1099Entry(
+        id=str(uuid.uuid4()),
+        year=request.year,
+        contractor_name=request.contractor_name,
+        contractor_tin=request.contractor_tin,
+        contractor_address=request.contractor_address,
+        amount_paid=request.amount_paid,
+        w9_document_id=request.w9_document_id,
+        notes=request.notes,
+        created_at=datetime.now(timezone.utc).isoformat(),
+        updated_at=datetime.now(timezone.utc).isoformat()
+    )
+    
+    await db.issued_1099s.insert_one(entry.model_dump())
+    return {"message": "1099 entry created", "entry": entry.model_dump()}
+
+@router.put("/issued-1099s/{entry_id}")
+async def update_issued_1099(entry_id: str, request: CreateIssued1099Request):
+    """Update an issued 1099 entry"""
+    update_data = request.model_dump()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.issued_1099s.update_one(
+        {"id": entry_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="1099 entry not found")
+    
+    return {"message": "1099 entry updated"}
+
+@router.delete("/issued-1099s/{entry_id}")
+async def delete_issued_1099(entry_id: str):
+    """Delete an issued 1099 entry"""
+    result = await db.issued_1099s.delete_one({"id": entry_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="1099 entry not found")
+    
+    return {"message": "1099 entry deleted"}
+
+
+# ============== W-9 AI EXTRACTION ==============
+
+@router.post("/w9/extract")
+async def extract_w9_data(file: UploadFile = File(...)):
+    """Extract data from a W-9 document image using AI"""
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Please upload an image file")
+    
+    contents = await file.read()
+    base64_image = base64.b64encode(contents).decode('utf-8')
+    
+    prompt = """Analyze this W-9 form image and extract the following information. Return ONLY a valid JSON object with these fields:
+{
+    "name": "Individual or business name from Line 1",
+    "business_name": "Business name from Line 2 (if different)",
+    "tax_classification": "Individual, C Corporation, S Corporation, Partnership, Trust/estate, LLC, or Other",
+    "address": "Full address (street, city, state, ZIP)",
+    "tin_type": "SSN or EIN",
+    "tin": "Social Security Number or Employer Identification Number (masked as XXX-XX-1234 for SSN or XX-1234567 for EIN)",
+    "signature_date": "Date signed (if visible)"
+}
+
+If any field is not clearly visible or readable, use null for that field.
+Return ONLY the JSON object, no additional text."""
+
+    try:
+        from emergentintegrations.llm.chat import chat, UserMessage, ImageContent, TextContent
+        
+        response = await chat(
+            api_key=EMERGENT_LLM_KEY,
+            model="gpt-4o",
+            messages=[
+                UserMessage(content=[
+                    ImageContent(image=f"data:image/jpeg;base64,{base64_image}"),
+                    TextContent(text=prompt)
+                ])
+            ]
+        )
+        
+        # Parse the response
+        response_text = response.strip()
+        if response_text.startswith('```'):
+            response_text = response_text.split('```')[1]
+            if response_text.startswith('json'):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+        
+        try:
+            extracted_data = json.loads(response_text)
+            return {
+                "success": True,
+                "data": extracted_data
+            }
+        except json.JSONDecodeError:
+            return {
+                "success": False,
+                "error": "Could not parse W-9 data",
+                "raw_response": response_text
+            }
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"W-9 extraction failed: {str(e)}")
+
