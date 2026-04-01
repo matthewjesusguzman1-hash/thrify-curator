@@ -326,13 +326,13 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
                           <div className="mb-4 p-3 bg-white rounded border border-gray-200">
                             <h4 className="text-sm font-medium text-gray-700 mb-2">Tax Summary</h4>
                             <div className="grid grid-cols-2 gap-3 text-sm">
-                              <div>
-                                <span className="text-gray-500">Gross Income:</span>
-                                <span className="ml-2 font-medium">{formatCurrency(data.summary.income?.total || 0)}</span>
+                              <div className="flex flex-col">
+                                <span className="text-gray-500 whitespace-nowrap">Gross Income</span>
+                                <span className="font-medium text-base">{formatCurrency(data.summary.income?.total || 0)}</span>
                               </div>
-                              <div>
-                                <span className="text-gray-500">Net Profit:</span>
-                                <span className={`ml-2 font-medium ${data.summary.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              <div className="flex flex-col">
+                                <span className="text-gray-500 whitespace-nowrap">Net Profit</span>
+                                <span className={`font-medium text-base ${data.summary.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {formatCurrency(data.summary.net_profit)}
                                 </span>
                               </div>
