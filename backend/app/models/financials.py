@@ -35,6 +35,7 @@ class Platform(str, Enum):
     WHATNOT = "whatnot"
     IN_PERSON = "in_person"
     OTHER = "other"
+    PROFIT = "profit"  # For tracking net profit separately
 
 # Income/Sales Models
 class IncomeEntry(BaseModel):
