@@ -1843,7 +1843,10 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
         style={{ touchAction: 'manipulation' }}
       >
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xl font-semibold">Scan Screenshot</h3>
+          <div>
+            <h3 className="text-xl font-semibold">Scan Screenshot</h3>
+            <p className="text-sm text-blue-600 font-medium">Saving to year: {year}</p>
+          </div>
           <button 
             type="button"
             onClick={onClose}
