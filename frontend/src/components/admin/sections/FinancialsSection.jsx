@@ -189,7 +189,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
           <DollarSign className="w-6 h-6 text-green-600" />
-          Financials
+          Finances
         </h2>
         <div className="relative">
           <select

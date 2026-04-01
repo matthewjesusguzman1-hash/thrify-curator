@@ -220,9 +220,13 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
       const formData = new FormData();
       formData.append('file', w9Image);
       
+      // Don't include Content-Type header for FormData - browser sets it automatically with boundary
+      const authHeader = getAuthHeader();
+      delete authHeader['Content-Type'];
+      
       const response = await fetch(`${API_URL}/api/financials/w9/extract`, {
         method: 'POST',
-        headers: getAuthHeader(),
+        headers: authHeader,
         body: formData
       });
       
@@ -238,11 +242,13 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
           alert('Could not extract W-9 data. Please enter manually.');
         }
       } else {
-        alert('Failed to extract W-9 data');
+        const errorText = await response.text();
+        console.error('W-9 extraction failed:', errorText);
+        alert('Failed to extract W-9 data. Please try again or enter manually.');
       }
     } catch (error) {
       console.error('Error extracting W-9:', error);
-      alert('Error extracting W-9 data');
+      alert('Error extracting W-9 data. Please try again.');
     }
     setExtracting(false);
   };

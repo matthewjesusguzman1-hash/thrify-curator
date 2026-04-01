@@ -2168,10 +2168,22 @@ async def delete_issued_1099(entry_id: str):
 @router.post("/w9/extract")
 async def extract_w9_data(file: UploadFile = File(...)):
     """Extract data from a W-9 document image using AI"""
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Please upload an image file")
+    # Check content type - be lenient for iOS uploads
+    content_type = file.content_type or ''
+    filename = file.filename or ''
+    
+    is_image = (
+        content_type.startswith('image/') or 
+        filename.lower().endswith(('.png', '.jpg', '.jpeg', '.heic', '.heif', '.webp'))
+    )
+    
+    if not is_image:
+        raise HTTPException(status_code=400, detail=f"Please upload an image file. Received: {content_type}")
     
     contents = await file.read()
+    if len(contents) == 0:
+        raise HTTPException(status_code=400, detail="Empty file received")
+        
     base64_image = base64.b64encode(contents).decode('utf-8')
     
     prompt = """Analyze this W-9 form image and extract the following information. Return ONLY a valid JSON object with these fields:
