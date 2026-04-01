@@ -20,9 +20,14 @@ const TaxPrepPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentYear = new Date().getFullYear();
-  // Get year from URL param, fallback to current year
+  
+  // Tax prep is for previous years only (e.g., in 2026, prepare taxes for 2025, 2024, 2023)
+  const availableTaxYears = [currentYear - 1, currentYear - 2, currentYear - 3];
+  
+  // Get year from URL param, fallback to most recent tax year (previous year)
   const urlYear = searchParams.get('year');
-  const [selectedYear, setSelectedYear] = useState(urlYear ? parseInt(urlYear) : currentYear);
+  const defaultYear = urlYear ? parseInt(urlYear) : currentYear - 1;
+  const [selectedYear, setSelectedYear] = useState(defaultYear);
   const [progress, setProgress] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -144,18 +149,18 @@ const TaxPrepPage = () => {
         <div className="text-center mb-8">
           <span className="text-4xl mb-2 block">🧾</span>
           <h1 className="text-2xl font-bold text-gray-900">Tax Prep</h1>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            {[currentYear, currentYear - 1].map(year => (
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+            {availableTaxYears.map(year => (
               <button
                 key={year}
                 onClick={() => setSelectedYear(year)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   selectedYear === year
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {year}
+                Tax Year {year}
               </button>
             ))}
             <button

@@ -92,9 +92,10 @@ const TaxPrepStepPage = () => {
   const [searchParams] = useSearchParams();
   const stepNum = parseInt(step);
   const currentYear = new Date().getFullYear();
-  // Get year from URL param, fallback to current year
+  // Tax prep is for previous years only
+  // Get year from URL param, fallback to previous year (most recent tax year)
   const urlYear = searchParams.get('year');
-  const [selectedYear] = useState(urlYear ? parseInt(urlYear) : currentYear);
+  const [selectedYear] = useState(urlYear ? parseInt(urlYear) : currentYear - 1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -230,9 +231,12 @@ const TaxPrepStepPage = () => {
 
       {/* Main Content */}
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 text-center mb-8">
-          Step {stepNum}: {stepTitles[stepNum]}
-        </h1>
+        <div className="text-center mb-8">
+          <span className="text-sm text-blue-600 font-medium">Tax Year {selectedYear}</span>
+          <h1 className="text-2xl font-bold text-gray-900 mt-1">
+            Step {stepNum}: {stepTitles[stepNum]}
+          </h1>
+        </div>
 
         {/* Step 1: Income */}
         {stepNum === 1 && (
@@ -596,7 +600,7 @@ const TaxPrepStepPage = () => {
           <div className="space-y-6">
             {/* Summary */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="font-semibold text-gray-900 text-lg mb-4">Tax Summary - {selectedYear}</h2>
+              <h2 className="font-semibold text-gray-900 text-lg mb-4">Tax Summary - Tax Year {selectedYear}</h2>
               
               <div className="space-y-3">
                 <div className="flex justify-between py-2">
