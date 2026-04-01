@@ -48,27 +48,42 @@ const isManualIncomeEntry = (entry) => {
   return true;
 };
 
-// Expense category labels
+// Expense categories - clean labels without icons
+const EXPENSE_CATEGORIES = [
+  { value: 'shipping_supplies', label: 'Shipping Supplies' },
+  { value: 'software_subscriptions', label: 'Software & Subscriptions' },
+  { value: 'equipment', label: 'Equipment' },
+  { value: 'home_office', label: 'Home Office' },
+  { value: 'phone_internet', label: 'Phone & Internet' },
+  { value: 'office_supplies', label: 'Office Supplies' },
+  { value: 'packaging_materials', label: 'Packaging Materials' },
+  { value: 'advertising_marketing', label: 'Advertising & Marketing' },
+  { value: 'professional_services', label: 'Professional Services' },
+  { value: 'insurance', label: 'Insurance' },
+  { value: 'other', label: 'Other' }
+];
+
+// Legacy category labels for display (keeping for backwards compatibility)
 const CATEGORY_LABELS = {
-  shipping_supplies: { label: 'Shipping Supplies', icon: '📦' },
-  software_subscriptions: { label: 'Software & Subscriptions', icon: '💻' },
-  equipment: { label: 'Equipment', icon: '📸' },
-  home_office: { label: 'Home Office', icon: '🏠' },
-  phone_internet: { label: 'Phone & Internet', icon: '📱' },
-  business_licenses: { label: 'Business Licenses', icon: '🏷️' },
-  education_training: { label: 'Education & Training', icon: '📚' },
-  bank_payment_fees: { label: 'Bank & Payment Fees', icon: '🏦' },
-  vehicle_non_mileage: { label: 'Vehicle (non-mileage)', icon: '🚙' },
-  office_supplies: { label: 'Office Supplies', icon: '📋' },
-  packaging_materials: { label: 'Packaging Materials', icon: '🎁' },
-  advertising_marketing: { label: 'Advertising & Marketing', icon: '📣' },
-  repairs_maintenance: { label: 'Repairs & Maintenance', icon: '🔧' },
-  professional_services: { label: 'Professional Services', icon: '💼' },
-  insurance: { label: 'Insurance', icon: '🛡️' },
-  travel: { label: 'Travel', icon: '✈️' },
-  meals: { label: 'Meals (business)', icon: '🍽️' },
-  storage_warehouse: { label: 'Storage/Warehouse', icon: '🏬' },
-  other: { label: 'Other', icon: '📁' }
+  shipping_supplies: { label: 'Shipping Supplies' },
+  software_subscriptions: { label: 'Software & Subscriptions' },
+  equipment: { label: 'Equipment' },
+  home_office: { label: 'Home Office' },
+  phone_internet: { label: 'Phone & Internet' },
+  business_licenses: { label: 'Business Licenses' },
+  education_training: { label: 'Education & Training' },
+  bank_payment_fees: { label: 'Bank & Payment Fees' },
+  vehicle_non_mileage: { label: 'Vehicle (non-mileage)' },
+  office_supplies: { label: 'Office Supplies' },
+  packaging_materials: { label: 'Packaging Materials' },
+  advertising_marketing: { label: 'Advertising & Marketing' },
+  repairs_maintenance: { label: 'Repairs & Maintenance' },
+  professional_services: { label: 'Professional Services' },
+  insurance: { label: 'Insurance' },
+  travel: { label: 'Travel' },
+  meals: { label: 'Meals (business)' },
+  storage_warehouse: { label: 'Storage/Warehouse' },
+  other: { label: 'Other' }
 };
 
 const TaxPrepStepPage = () => {
@@ -485,41 +500,36 @@ const TaxPrepStepPage = () => {
               </div>
               
               <div className="p-4">
-                <div className="space-y-2">
-                  {Object.entries(CATEGORY_LABELS).map(([key, { label, icon }]) => {
-                    const catData = expenses.by_category[key];
-                    const total = catData?.total || 0;
-                    const count = catData?.count || 0;
-                    
-                    if (total === 0) {
+                {expenses.entries && expenses.entries.length > 0 ? (
+                  <div className="space-y-2">
+                    {EXPENSE_CATEGORIES.map(({ value, label }) => {
+                      const catData = expenses.by_category[value];
+                      const total = catData?.total || 0;
+                      const count = catData?.count || 0;
+                      
+                      if (total === 0) return null;
+                      
                       return (
-                        <div key={key} className="flex items-center justify-between py-2 text-sm text-gray-400">
-                          <div className="flex items-center gap-2">
-                            <span>{icon}</span>
-                            <span>{label}</span>
+                        <div key={value} className="flex items-center justify-between py-2 text-sm border-b border-gray-100 last:border-0">
+                          <div>
+                            <span className="text-gray-900">{label}</span>
+                            <span className="text-gray-500 ml-2">({count})</span>
                           </div>
-                          <span>--</span>
+                          <span className="font-medium">{formatCurrency(total)}</span>
                         </div>
                       );
-                    }
-                    
-                    return (
-                      <div key={key} className="flex items-center justify-between py-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span>{icon}</span>
-                          <span className="text-gray-900">{label}</span>
-                          <span className="text-gray-500">({count})</span>
-                        </div>
-                        <span className="font-medium">{formatCurrency(total)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No expenses added yet</p>
+                )}
                 
-                <div className="pt-4 border-t border-gray-200 flex justify-between font-semibold">
-                  <span>Total Expenses</span>
-                  <span>{formatCurrency(expenses.total)}</span>
-                </div>
+                {expenses.total > 0 && (
+                  <div className="pt-4 border-t border-gray-200 flex justify-between font-semibold">
+                    <span>Total Expenses</span>
+                    <span>{formatCurrency(expenses.total)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -530,7 +540,7 @@ const TaxPrepStepPage = () => {
                 <span className="text-blue-600">{formatCurrency(expenses.total + mileage.deduction)}</span>
               </div>
               <div className="text-sm text-blue-700 mt-1">
-                (Mileage: {formatCurrency(mileage.deduction)} + Expenses: {formatCurrency(expenses.total)})
+                Mileage: {formatCurrency(mileage.deduction)} + Expenses: {formatCurrency(expenses.total)}
               </div>
             </div>
           </div>
@@ -985,7 +995,7 @@ const AddCOGSModal = ({ year, getAuthHeader, onClose, onSave }) => {
 };
 
 const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
-  const [category, setCategory] = useState('shipping_supplies');
+  const [category, setCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
@@ -993,6 +1003,10 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!category) {
+      alert('Please select a category');
+      return;
+    }
     setSaving(true);
     
     try {
@@ -1017,21 +1031,29 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
+      <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-semibold mb-4">Add Expense</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Category Selection - Button Grid */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-            >
-              {Object.entries(CATEGORY_LABELS).map(([key, { label, icon }]) => (
-                <option key={key} value={key}>{icon} {label}</option>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <div className="grid grid-cols-2 gap-2">
+              {EXPENSE_CATEGORIES.map(cat => (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => setCategory(cat.value)}
+                  className={`p-2.5 rounded-lg border-2 text-center text-sm transition-all ${
+                    category === cat.value 
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+                  }`}
+                >
+                  {cat.label}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           
           <div>
@@ -1044,6 +1066,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg"
+                placeholder="0.00"
                 required
               />
             </div>
@@ -1075,7 +1098,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={saving}>
+            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={saving || !category}>
               {saving ? 'Saving...' : 'Save'}
             </Button>
           </div>
