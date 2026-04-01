@@ -690,7 +690,7 @@ const TaxPrepStepPage = () => {
         )}
 
         {/* Navigation */}
-        <div className="flex gap-3 mt-8">
+        <div className="flex gap-3 mt-8 pb-24">
           <Button
             variant="outline"
             className="flex-1"
