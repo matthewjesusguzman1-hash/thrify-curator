@@ -45,6 +45,14 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - **Password Reset Email Fix (Mar 26, 2026)**:
   - Email now properly sending via background task with error logging
   - Verified working via backend logs
+- **Tax Returns Archive (Apr 1, 2026)**:
+  - Year-round section in Admin Dashboard under Operations & Reports
+  - Upload and store filed tax return PDFs by year
+  - View, download, and delete uploaded documents
+  - Organized by tax year (2025, 2024, 2023, 2022, 2021)
+  - Backend: `/api/financials/tax-returns/{year}` CRUD endpoints
+  - Files stored in `/app/uploads/tax-returns/{year}/`
+  - Testing: 100% pass (10/10 backend, 14/14 frontend)
 
 ### In Progress / Pending User Verification
 - **Consignor Picker Fix (Mar 25, 2026)**: Applied iOS-specific touch event handling and CSS to prevent text selection behavior. Needs TestFlight verification.
