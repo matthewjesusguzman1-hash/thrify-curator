@@ -1217,6 +1217,115 @@ async def download_manual_1099_pdf(year: int, recipient_id: str):
     )
 
 
+# ============== TAX RETURN DOCUMENTS ==============
+
+@router.post("/tax-returns/{year}/upload")
+async def upload_tax_return(year: int, file: UploadFile = File(...), description: str = Form(None)):
+    """Upload a completed tax return document"""
+    import os
+    
+    # Validate file type
+    allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic']
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only PDF and image files are allowed")
+    
+    # Create uploads directory if it doesn't exist
+    upload_dir = f"/app/uploads/tax-returns/{year}"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Generate unique filename
+    doc_id = str(uuid.uuid4())
+    file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'pdf'
+    filename = f"{doc_id}.{file_ext}"
+    filepath = f"{upload_dir}/{filename}"
+    
+    # Save file
+    content = await file.read()
+    with open(filepath, 'wb') as f:
+        f.write(content)
+    
+    # Store metadata in database
+    doc = {
+        "id": doc_id,
+        "year": year,
+        "original_filename": file.filename,
+        "stored_filename": filename,
+        "filepath": filepath,
+        "content_type": file.content_type,
+        "size": len(content),
+        "description": description or f"Tax Return {year}",
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.tax_return_documents.insert_one(doc)
+    
+    return {
+        "message": "Tax return uploaded successfully",
+        "document": {k: v for k, v in doc.items() if k != '_id'}
+    }
+
+@router.get("/tax-returns/{year}")
+async def get_tax_returns(year: int):
+    """Get all uploaded tax return documents for a year"""
+    documents = await db.tax_return_documents.find(
+        {"year": year},
+        {"_id": 0}
+    ).to_list(length=None)
+    
+    return {
+        "year": year,
+        "documents": documents,
+        "count": len(documents)
+    }
+
+@router.get("/tax-returns/{year}/{doc_id}/download")
+async def download_tax_return(year: int, doc_id: str):
+    """Download a tax return document"""
+    doc = await db.tax_return_documents.find_one(
+        {"id": doc_id, "year": year},
+        {"_id": 0}
+    )
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    import os
+    if not os.path.exists(doc["filepath"]):
+        raise HTTPException(status_code=404, detail="File not found on server")
+    
+    def file_iterator():
+        with open(doc["filepath"], 'rb') as f:
+            yield from f
+    
+    return StreamingResponse(
+        file_iterator(),
+        media_type=doc.get("content_type", "application/pdf"),
+        headers={"Content-Disposition": f"attachment; filename={doc['original_filename']}"}
+    )
+
+@router.delete("/tax-returns/{year}/{doc_id}")
+async def delete_tax_return(year: int, doc_id: str):
+    """Delete a tax return document"""
+    import os
+    
+    doc = await db.tax_return_documents.find_one(
+        {"id": doc_id, "year": year},
+        {"_id": 0}
+    )
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Delete file from filesystem
+    if os.path.exists(doc["filepath"]):
+        os.remove(doc["filepath"])
+    
+    # Delete from database
+    await db.tax_return_documents.delete_one({"id": doc_id})
+    
+    return {"message": "Tax return document deleted"}
+
+
 def generate_1099_nec_pdf(
     buffer: io.BytesIO,
     year: int,

@@ -653,6 +653,9 @@ const TaxPrepStepPage = () => {
 
             {/* 1099-NEC Section */}
             <Form1099Section year={selectedYear} getAuthHeader={getAuthHeader} />
+
+            {/* Tax Return Upload Section */}
+            <TaxReturnUploadSection year={selectedYear} getAuthHeader={getAuthHeader} />
           </div>
         )}
 
@@ -1129,6 +1132,196 @@ const AddMileageModal = ({ year, getAuthHeader, onClose, onSave }) => {
           </div>
         </form>
       </div>
+    </div>
+  );
+};
+
+// Tax Return Upload Section Component
+const TaxReturnUploadSection = ({ year, getAuthHeader }) => {
+  const [loading, setLoading] = useState(true);
+  const [documents, setDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const fileInputRef = React.useRef(null);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [year]);
+
+  const fetchDocuments = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/financials/tax-returns/${year}`, {
+        headers: { ...getAuthHeader() }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.documents || []);
+      }
+    } catch (err) {
+      console.error('Error fetching tax returns:', err);
+    }
+    setLoading(false);
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('description', `Tax Return ${year}`);
+
+      const response = await fetch(`${API_URL}/api/financials/tax-returns/${year}/upload`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+        body: formData
+      });
+
+      if (response.ok) {
+        fetchDocuments();
+      } else {
+        const data = await response.json();
+        setError(data.detail || 'Upload failed');
+      }
+    } catch (err) {
+      setError('Failed to upload file');
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const downloadDocument = (docId, filename) => {
+    window.open(`${API_URL}/api/financials/tax-returns/${year}/${docId}/download`, '_blank');
+  };
+
+  const deleteDocument = async (docId) => {
+    if (!window.confirm('Delete this tax return document?')) return;
+
+    try {
+      await fetch(`${API_URL}/api/financials/tax-returns/${year}/${docId}`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeader() }
+      });
+      fetchDocuments();
+    } catch (err) {
+      console.error('Error deleting document:', err);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6" data-testid="tax-return-upload-section">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="font-semibold text-gray-900">Filed Tax Return - {year}</h2>
+          <p className="text-sm text-gray-500">Upload a copy of your completed tax return for your records</p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded mb-4 text-sm">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <>
+          {/* Uploaded Documents */}
+          {documents.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {documents.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <FileText className="w-8 h-8 text-red-500 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm truncate">{doc.original_filename}</p>
+                      <p className="text-xs text-gray-500">
+                        {formatFileSize(doc.size)} • Uploaded {formatDate(doc.uploaded_at)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => downloadDocument(doc.id, doc.original_filename)}
+                      className="p-2"
+                    >
+                      <Download className="w-4 h-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteDocument(doc.id)}
+                      className="p-2"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Upload Button */}
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="tax-return-upload"
+            />
+            <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+            <p className="text-gray-600 mb-3">
+              {documents.length === 0 
+                ? 'Upload your filed tax return' 
+                : 'Upload additional documents'}
+            </p>
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {uploading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Choose File
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-gray-400 mt-2">PDF or images accepted</p>
+          </div>
+        </>
+      )}
     </div>
   );
 };
