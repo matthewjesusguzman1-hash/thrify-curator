@@ -1573,11 +1573,12 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
             <select
               value={selectedYear}
               onChange={(e) => handleYearChange(parseInt(e.target.value))}
-              className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium bg-white"
+              className="px-3 py-2 border-2 border-blue-500 rounded-lg text-base font-semibold bg-white"
             >
-              {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4].map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
+              <option value={2026}>2026</option>
+              <option value={2025}>2025</option>
+              <option value={2024}>2024</option>
+              <option value={2023}>2023</option>
             </select>
           </div>
           <button 
