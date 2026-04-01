@@ -76,7 +76,6 @@ import MessagesSection from "@/components/admin/sections/MessagesSection";
 import ConversationsSection from "@/components/admin/sections/ConversationsSection";
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
-import ReportsSection from "@/components/admin/sections/ReportsSection";
 import PasswordManagementSection from "@/components/admin/sections/PasswordManagementSection";
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
@@ -3386,7 +3385,7 @@ export default function AdminDashboard() {
               icon={TrendingUp}
               gradient="from-[#FFB800] to-[#F59E0B]"
               defaultOpen={false}
-              badge="Financials, W-9s & analytics"
+              badge="Sales, expenses & tax prep"
               testId="group-operations"
               forceOpen={forceOpenOperations}
               onOpenChange={(open) => {
@@ -3413,15 +3412,6 @@ export default function AdminDashboard() {
 
               {/* Tax Returns Archive - Store filed tax returns by year */}
               <TaxReturnsArchiveSection getAuthHeader={getAuthHeader} />
-
-              {/* Reports Section */}
-              <ReportsSection
-                employees={employees}
-                payPeriodStart={payrollSettings.pay_period_start_date}
-                getAuthHeader={getAuthHeader}
-                payrollSettings={payrollSettings}
-                lastDataUpdate={lastDataUpdate}
-              />
             </DashboardGroup>
 
           </div>
