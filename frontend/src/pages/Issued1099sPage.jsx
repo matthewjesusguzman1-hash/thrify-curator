@@ -234,21 +234,22 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
         const result = await response.json();
         if (result.success && result.data) {
           setExtractedData(result.data);
-          // Auto-fill form fields
+          // Auto-fill form fields from W-9 or 1099-NEC data
           if (result.data.name) setContractorName(result.data.name);
           if (result.data.address) setContractorAddress(result.data.address);
           if (result.data.tin) setContractorTin(result.data.tin);
+          if (result.data.amount_paid) setAmountPaid(result.data.amount_paid.toString());
         } else {
-          alert('Could not extract W-9 data. Please enter manually.');
+          alert('Could not extract data from document. Please enter manually.');
         }
       } else {
         const errorText = await response.text();
-        console.error('W-9 extraction failed:', errorText);
-        alert('Failed to extract W-9 data. Please try again or enter manually.');
+        console.error('Document extraction failed:', errorText);
+        alert('Failed to extract data. Please try again or enter manually.');
       }
     } catch (error) {
-      console.error('Error extracting W-9:', error);
-      alert('Error extracting W-9 data. Please try again.');
+      console.error('Error extracting document:', error);
+      alert('Error extracting data. Please try again.');
     }
     setExtracting(false);
   };
@@ -304,10 +305,10 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
           </button>
         </div>
 
-        {/* W-9 Upload & Extract */}
+        {/* Document Upload & Extract */}
         <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm font-medium text-blue-900 mb-2">Extract from W-9</p>
-          <p className="text-xs text-blue-700 mb-3">Upload a W-9 image to auto-fill contractor info</p>
+          <p className="text-sm font-medium text-blue-900 mb-2">Extract from Document</p>
+          <p className="text-xs text-blue-700 mb-3">Upload a W-9 or 1099-NEC to auto-fill contractor info</p>
           
           {w9Preview ? (
             <div className="relative mb-3">
@@ -361,7 +362,7 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
               ) : (
                 <>
                   <Scan className="w-4 h-4 mr-2" />
-                  Extract Data from W-9
+                  Extract Data
                 </>
               )}
             </Button>

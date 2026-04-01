@@ -2167,7 +2167,9 @@ async def delete_issued_1099(entry_id: str):
 
 @router.post("/w9/extract")
 async def extract_w9_data(file: UploadFile = File(...)):
-    """Extract data from a W-9 document image using AI"""
+    """Extract data from a W-9 or 1099-NEC document image using AI"""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    
     # Check content type - be lenient for iOS uploads
     content_type = file.content_type or ''
     filename = file.filename or ''
@@ -2186,37 +2188,47 @@ async def extract_w9_data(file: UploadFile = File(...)):
         
     base64_image = base64.b64encode(contents).decode('utf-8')
     
-    prompt = """Analyze this W-9 form image and extract the following information. Return ONLY a valid JSON object with these fields:
-{
-    "name": "Individual or business name from Line 1",
-    "business_name": "Business name from Line 2 (if different)",
-    "tax_classification": "Individual, C Corporation, S Corporation, Partnership, Trust/estate, LLC, or Other",
-    "address": "Full address (street, city, state, ZIP)",
-    "tin_type": "SSN or EIN",
-    "tin": "Social Security Number or Employer Identification Number (masked as XXX-XX-1234 for SSN or XX-1234567 for EIN)",
-    "signature_date": "Date signed (if visible)"
-}
-
-If any field is not clearly visible or readable, use null for that field.
-Return ONLY the JSON object, no additional text."""
+    # Get API key
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
 
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent, TextContent
+        # Initialize AI chat
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"w9-extract-{uuid.uuid4()}",
+            system_message="""You are a tax document data extraction assistant.
+            Extract data from W-9 forms or 1099-NEC forms.
+            Return the data as valid JSON only, no other text or markdown."""
+        ).with_model("openai", "gpt-4o")
         
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-        if not api_key:
-            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+        prompt = """Analyze this tax document and extract the following information.
         
-        llm = LlmChat(api_key=api_key)
-        response = await llm.chat(
-            model="gpt-4o",
-            messages=[
-                UserMessage(content=[
-                    ImageContent(image=f"data:image/jpeg;base64,{base64_image}"),
-                    TextContent(text=prompt)
-                ])
-            ]
+        If this is a W-9 form, extract:
+        - name: Individual or business name
+        - address: Full address
+        - tin: SSN or EIN (mask it as XXX-XX-1234)
+        
+        If this is a 1099-NEC form, extract:
+        - name: Recipient name (who was paid)
+        - address: Recipient address
+        - tin: Recipient's TIN/SSN (mask it as XXX-XX-1234)
+        - amount_paid: The nonemployee compensation amount (Box 1)
+        - payer_name: Who issued the 1099 (the payer)
+        - tax_year: The calendar year
+        
+        Return ONLY a valid JSON object with the extracted fields. Use null for any field not visible."""
+        
+        # Create message with image
+        image_content = ImageContent(image_base64=base64_image)
+        user_message = UserMessage(
+            text=prompt,
+            file_contents=[image_content]
         )
+        
+        # Get AI response
+        response = await chat.send_message(user_message)
         
         # Parse the response
         response_text = response.strip()
@@ -2235,10 +2247,10 @@ Return ONLY the JSON object, no additional text."""
         except json.JSONDecodeError:
             return {
                 "success": False,
-                "error": "Could not parse W-9 data",
+                "error": "Could not parse document data",
                 "raw_response": response_text
             }
             
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"W-9 extraction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Document extraction failed: {str(e)}")
 
