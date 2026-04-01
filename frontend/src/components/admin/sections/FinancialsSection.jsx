@@ -14,7 +14,7 @@ import {
   Camera
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -48,6 +48,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
   const [summary, setSummary] = useState(null);
   const [comparison, setComparison] = useState(null);
   const [income, setIncome] = useState({ entries: [], total_1099: 0, total_other: 0, total: 0 });
+  const [prevYearIncome, setPrevYearIncome] = useState({ entries: [] });
   const [cogs, setCogs] = useState({ entries: [], total: 0 });
   const [expenses, setExpenses] = useState({ entries: [], by_category: {}, total: 0, count: 0 });
   const [mileage, setMileage] = useState({ entries: [], total_miles: 0, deduction: 0 });
@@ -71,10 +72,11 @@ const FinancialsSection = ({ getAuthHeader }) => {
     try {
       const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
       
-      const [summaryRes, comparisonRes, incomeRes, cogsRes, expensesRes, mileageRes] = await Promise.all([
+      const [summaryRes, comparisonRes, incomeRes, prevIncomeRes, cogsRes, expensesRes, mileageRes] = await Promise.all([
         fetch(`${API_URL}/api/financials/summary/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/comparison/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/income/${selectedYear}`, { headers }),
+        fetch(`${API_URL}/api/financials/income/${selectedYear - 1}`, { headers }),
         fetch(`${API_URL}/api/financials/cogs/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/expenses/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/mileage/${selectedYear}`, { headers })
@@ -83,6 +85,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
       if (summaryRes.ok) setSummary(await summaryRes.json());
       if (comparisonRes.ok) setComparison(await comparisonRes.json());
       if (incomeRes.ok) setIncome(await incomeRes.json());
+      if (prevIncomeRes.ok) setPrevYearIncome(await prevIncomeRes.json());
       if (cogsRes.ok) setCogs(await cogsRes.json());
       if (expensesRes.ok) setExpenses(await expensesRes.json());
       if (mileageRes.ok) setMileage(await mileageRes.json());
@@ -113,17 +116,19 @@ const FinancialsSection = ({ getAuthHeader }) => {
     setExpandedSection(expandedSection === section ? null : section);
   };
 
-  // Get monthly chart data for the selected year
+  // Get monthly chart data for current year and previous year
   const getMonthlyChartData = () => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const data = months.map((month, index) => ({
       month,
       monthIndex: index + 1,
       grossRevenue: 0,
-      netProfit: 0
+      netProfit: 0,
+      prevGrossRevenue: 0,
+      prevNetProfit: 0
     }));
 
-    // Process income entries
+    // Process current year income entries
     (income.entries || []).forEach(entry => {
       const date = new Date(entry.date_received);
       const monthIndex = date.getMonth();
@@ -132,6 +137,18 @@ const FinancialsSection = ({ getAuthHeader }) => {
         data[monthIndex].netProfit += entry.amount;
       } else {
         data[monthIndex].grossRevenue += entry.amount;
+      }
+    });
+
+    // Process previous year income entries
+    (prevYearIncome.entries || []).forEach(entry => {
+      const date = new Date(entry.date_received);
+      const monthIndex = date.getMonth();
+      
+      if (entry.platform === 'profit' || entry.notes?.includes('Net Profit')) {
+        data[monthIndex].prevNetProfit += entry.amount;
+      } else {
+        data[monthIndex].prevGrossRevenue += entry.amount;
       }
     });
 
@@ -242,46 +259,91 @@ const FinancialsSection = ({ getAuthHeader }) => {
 
       {/* Monthly Chart */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <h3 className="font-medium text-gray-900 mb-4">Monthly Revenue & Profit - {selectedYear}</h3>
-        <div className="h-64">
+        <h3 className="font-medium text-gray-900 mb-2">{selectedYear} vs {selectedYear - 1} Monthly Comparison</h3>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs mb-3">
+          <span className="flex items-center gap-1">
+            <span className="w-4 h-0.5 bg-blue-600"></span> {selectedYear} Gross
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-4 h-0.5 bg-green-600"></span> {selectedYear} Profit
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-4 h-0.5 bg-blue-300" style={{borderBottom: '2px dashed'}}></span> {selectedYear - 1} Gross
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-4 h-0.5 bg-green-300" style={{borderBottom: '2px dashed'}}></span> {selectedYear - 1} Profit
+          </span>
+        </div>
+        <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={monthlyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <LineChart data={monthlyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis 
                 dataKey="month" 
-                tick={{ fontSize: 12, fill: '#666' }}
+                tick={{ fontSize: 11, fill: '#666' }}
                 axisLine={{ stroke: '#e0e0e0' }}
               />
               <YAxis 
-                tick={{ fontSize: 11, fill: '#666' }}
+                tick={{ fontSize: 10, fill: '#666' }}
                 axisLine={{ stroke: '#e0e0e0' }}
                 tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
               />
               <Tooltip 
-                formatter={(value) => [`$${value.toLocaleString()}`, '']}
+                formatter={(value, name) => {
+                  const labels = {
+                    grossRevenue: `${selectedYear} Gross`,
+                    netProfit: `${selectedYear} Profit`,
+                    prevGrossRevenue: `${selectedYear - 1} Gross`,
+                    prevNetProfit: `${selectedYear - 1} Profit`
+                  };
+                  return [`$${value.toLocaleString()}`, labels[name] || name];
+                }}
                 contentStyle={{ 
                   backgroundColor: '#fff', 
                   border: '1px solid #e0e0e0',
                   borderRadius: '8px',
-                  fontSize: '13px'
+                  fontSize: '12px'
                 }}
               />
-              <Legend 
-                wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
-              />
-              <Bar 
+              {/* Current Year - Solid thick lines */}
+              <Line 
+                type="monotone"
                 dataKey="grossRevenue" 
-                name="Gross Revenue" 
-                fill="#3b82f6" 
-                radius={[4, 4, 0, 0]}
+                name="grossRevenue"
+                stroke="#2563eb"
+                strokeWidth={3}
+                dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6 }}
               />
-              <Bar 
+              <Line 
+                type="monotone"
                 dataKey="netProfit" 
-                name="Net Profit" 
-                fill="#22c55e" 
-                radius={[4, 4, 0, 0]}
+                name="netProfit"
+                stroke="#16a34a"
+                strokeWidth={3}
+                dot={{ fill: '#16a34a', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6 }}
               />
-            </BarChart>
+              {/* Previous Year - Dashed lighter lines */}
+              <Line 
+                type="monotone"
+                dataKey="prevGrossRevenue" 
+                name="prevGrossRevenue"
+                stroke="#93c5fd"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={{ fill: '#93c5fd', strokeWidth: 1, r: 3 }}
+              />
+              <Line 
+                type="monotone"
+                dataKey="prevNetProfit" 
+                name="prevNetProfit"
+                stroke="#86efac"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={{ fill: '#86efac', strokeWidth: 1, r: 3 }}
+              />
+            </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
