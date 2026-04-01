@@ -79,6 +79,7 @@ import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeS
 import ReportsSection from "@/components/admin/sections/ReportsSection";
 import PasswordManagementSection from "@/components/admin/sections/PasswordManagementSection";
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
+import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
@@ -3409,6 +3410,9 @@ export default function AdminDashboard() {
 
               {/* Financials Section - Year-round tracking + Tax Prep */}
               <FinancialsSection getAuthHeader={getAuthHeader} />
+
+              {/* Tax Returns Archive - Store filed tax returns by year */}
+              <TaxReturnsArchiveSection getAuthHeader={getAuthHeader} />
 
               {/* Reports Section */}
               <ReportsSection

@@ -1177,3 +1177,250 @@ class TestScreenshotAnalyzeAPI:
                 assert "extracted_data" in data
             else:
                 assert "error" in data or "raw_response" in data
+
+
+class TestTaxReturnsArchiveAPI:
+    """Tests for Tax Returns Archive endpoints"""
+    
+    # Use a unique test year to avoid conflicts
+    TEST_YEAR = 2097
+    created_doc_ids = []
+    
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self):
+        """Setup and teardown for each test"""
+        yield
+        # Cleanup created documents
+        for doc_id in self.created_doc_ids:
+            try:
+                requests.delete(f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/{doc_id}")
+            except:
+                pass
+        self.created_doc_ids.clear()
+    
+    def test_get_tax_returns_empty_year(self):
+        """Test getting tax returns for a year with no documents"""
+        response = requests.get(f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["year"] == self.TEST_YEAR
+        assert "documents" in data
+        assert "count" in data
+        assert isinstance(data["documents"], list)
+    
+    def test_upload_tax_return_pdf(self):
+        """Test uploading a PDF tax return document"""
+        # Create a test PDF file
+        pdf_content = b"%PDF-1.4 Test Tax Return PDF content"
+        files = {
+            'file': ('test_tax_return.pdf', pdf_content, 'application/pdf')
+        }
+        data = {
+            'description': 'TEST_Tax Return 2097'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/upload",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["message"] == "Tax return uploaded successfully"
+        assert "document" in result
+        doc = result["document"]
+        assert doc["year"] == self.TEST_YEAR
+        assert doc["original_filename"] == "test_tax_return.pdf"
+        assert doc["content_type"] == "application/pdf"
+        assert doc["description"] == "TEST_Tax Return 2097"
+        assert "id" in doc
+        assert "uploaded_at" in doc
+        self.created_doc_ids.append(doc["id"])
+        
+        # Verify via GET
+        get_response = requests.get(f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}")
+        get_data = get_response.json()
+        assert get_data["count"] >= 1
+        uploaded_doc = next((d for d in get_data["documents"] if d["id"] == doc["id"]), None)
+        assert uploaded_doc is not None
+        assert uploaded_doc["original_filename"] == "test_tax_return.pdf"
+    
+    def test_upload_tax_return_image(self):
+        """Test uploading an image tax return document"""
+        # Create a minimal JPEG file
+        jpeg_content = bytes([
+            0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+            0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43,
+            0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07, 0x09,
+            0x09, 0x08, 0x0A, 0x0C, 0x14, 0x0D, 0x0C, 0x0B, 0x0B, 0x0C, 0x19, 0x12,
+            0x13, 0x0F, 0x14, 0x1D, 0x1A, 0x1F, 0x1E, 0x1D, 0x1A, 0x1C, 0x1C, 0x20,
+            0x24, 0x2E, 0x27, 0x20, 0x22, 0x2C, 0x23, 0x1C, 0x1C, 0x28, 0x37, 0x29,
+            0x2C, 0x30, 0x31, 0x34, 0x34, 0x34, 0x1F, 0x27, 0x39, 0x3D, 0x38, 0x32,
+            0x3C, 0x2E, 0x33, 0x34, 0x32, 0xFF, 0xD9
+        ])
+        files = {
+            'file': ('test_tax_return.jpg', jpeg_content, 'image/jpeg')
+        }
+        data = {
+            'description': 'TEST_Tax Return Image 2097'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/upload",
+            files=files,
+            data=data
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["message"] == "Tax return uploaded successfully"
+        doc = result["document"]
+        assert doc["content_type"] == "image/jpeg"
+        self.created_doc_ids.append(doc["id"])
+    
+    def test_upload_tax_return_invalid_file_type(self):
+        """Test that invalid file types are rejected"""
+        files = {
+            'file': ('test.txt', b'This is not a valid file', 'text/plain')
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/upload",
+            files=files
+        )
+        assert response.status_code == 400
+        assert "PDF" in response.json()["detail"] or "image" in response.json()["detail"]
+    
+    def test_download_tax_return(self):
+        """Test downloading a tax return document"""
+        # First upload a document
+        pdf_content = b"%PDF-1.4 Test Download Content"
+        files = {
+            'file': ('download_test.pdf', pdf_content, 'application/pdf')
+        }
+        
+        upload_response = requests.post(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/upload",
+            files=files
+        )
+        doc_id = upload_response.json()["document"]["id"]
+        self.created_doc_ids.append(doc_id)
+        
+        # Download the document
+        download_response = requests.get(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/{doc_id}/download"
+        )
+        assert download_response.status_code == 200
+        assert download_response.content == pdf_content
+        assert "application/pdf" in download_response.headers.get("content-type", "")
+    
+    def test_download_nonexistent_document(self):
+        """Test downloading a non-existent document returns 404"""
+        response = requests.get(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/nonexistent-id/download"
+        )
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+    
+    def test_delete_tax_return(self):
+        """Test deleting a tax return document"""
+        # First upload a document
+        pdf_content = b"%PDF-1.4 Test Delete Content"
+        files = {
+            'file': ('delete_test.pdf', pdf_content, 'application/pdf')
+        }
+        
+        upload_response = requests.post(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/upload",
+            files=files
+        )
+        doc_id = upload_response.json()["document"]["id"]
+        
+        # Delete the document
+        delete_response = requests.delete(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/{doc_id}"
+        )
+        assert delete_response.status_code == 200
+        assert delete_response.json()["message"] == "Tax return document deleted"
+        
+        # Verify it's deleted
+        get_response = requests.get(f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}")
+        get_data = get_response.json()
+        deleted_doc = next((d for d in get_data["documents"] if d["id"] == doc_id), None)
+        assert deleted_doc is None
+    
+    def test_delete_nonexistent_document(self):
+        """Test deleting a non-existent document returns 404"""
+        response = requests.delete(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/nonexistent-id"
+        )
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+    
+    def test_multiple_documents_per_year(self):
+        """Test uploading multiple documents for the same year"""
+        # Upload first document
+        files1 = {
+            'file': ('doc1.pdf', b'%PDF-1.4 Document 1', 'application/pdf')
+        }
+        response1 = requests.post(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/upload",
+            files=files1,
+            data={'description': 'TEST_Document 1'}
+        )
+        assert response1.status_code == 200
+        self.created_doc_ids.append(response1.json()["document"]["id"])
+        
+        # Upload second document
+        files2 = {
+            'file': ('doc2.pdf', b'%PDF-1.4 Document 2', 'application/pdf')
+        }
+        response2 = requests.post(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/upload",
+            files=files2,
+            data={'description': 'TEST_Document 2'}
+        )
+        assert response2.status_code == 200
+        self.created_doc_ids.append(response2.json()["document"]["id"])
+        
+        # Verify both documents are listed
+        get_response = requests.get(f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}")
+        get_data = get_response.json()
+        assert get_data["count"] >= 2
+        
+        # Check both documents exist
+        doc_ids = [d["id"] for d in get_data["documents"]]
+        assert self.created_doc_ids[0] in doc_ids
+        assert self.created_doc_ids[1] in doc_ids
+    
+    def test_document_metadata_structure(self):
+        """Test that document metadata has correct structure"""
+        files = {
+            'file': ('metadata_test.pdf', b'%PDF-1.4 Metadata Test', 'application/pdf')
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/upload",
+            files=files,
+            data={'description': 'TEST_Metadata Test'}
+        )
+        assert response.status_code == 200
+        doc = response.json()["document"]
+        self.created_doc_ids.append(doc["id"])
+        
+        # Verify all expected fields are present
+        assert "id" in doc
+        assert "year" in doc
+        assert "original_filename" in doc
+        assert "stored_filename" in doc
+        assert "filepath" in doc
+        assert "content_type" in doc
+        assert "size" in doc
+        assert "description" in doc
+        assert "uploaded_at" in doc
+        
+        # Verify field values
+        assert doc["year"] == self.TEST_YEAR
+        assert doc["original_filename"] == "metadata_test.pdf"
+        assert doc["content_type"] == "application/pdf"
+        assert doc["size"] > 0
+

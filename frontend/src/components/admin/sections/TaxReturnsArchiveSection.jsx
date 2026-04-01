@@ -137,13 +137,13 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" data-testid="tax-returns-archive-section">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-3">
           <Archive className="w-5 h-5 text-purple-600" />
           <div>
-            <h2 className="font-semibold text-gray-900">Tax Returns Archive</h2>
+            <h2 className="font-semibold text-gray-900" data-testid="tax-returns-archive-title">Tax Returns Archive</h2>
             <p className="text-xs text-gray-500">Filed returns and generated documents by year</p>
           </div>
         </div>
@@ -165,11 +165,12 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
           const has1099s = data?.manual1099?.length > 0;
 
           return (
-            <div key={year}>
+            <div key={year} data-testid={`tax-year-${year}`}>
               {/* Year Header */}
               <button
                 onClick={() => toggleYear(year)}
                 className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                data-testid={`tax-year-${year}-toggle`}
               >
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-gray-400" />
@@ -272,9 +273,9 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
                         </h3>
 
                         {data?.taxReturns?.length > 0 ? (
-                          <div className="space-y-2 mb-3">
+                          <div className="space-y-2 mb-3" data-testid={`tax-returns-list-${year}`}>
                             {data.taxReturns.map(doc => (
-                              <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                              <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded" data-testid={`tax-return-doc-${doc.id}`}>
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                   <FileText className="w-5 h-5 text-red-500 flex-shrink-0" />
                                   <div className="min-w-0">
@@ -290,6 +291,7 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
                                     variant="ghost"
                                     onClick={() => downloadDocument(year, doc.id)}
                                     className="p-1"
+                                    data-testid={`download-doc-${doc.id}`}
                                   >
                                     <Download className="w-4 h-4 text-blue-600" />
                                   </Button>
@@ -298,6 +300,7 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
                                     variant="ghost"
                                     onClick={() => deleteDocument(year, doc.id)}
                                     className="p-1"
+                                    data-testid={`delete-doc-${doc.id}`}
                                   >
                                     <Trash2 className="w-4 h-4 text-red-500" />
                                   </Button>
@@ -306,7 +309,7 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500 mb-3">No filed return uploaded yet.</p>
+                          <p className="text-sm text-gray-500 mb-3" data-testid={`no-returns-${year}`}>No filed return uploaded yet.</p>
                         )}
 
                         {/* Upload Button */}
@@ -320,6 +323,7 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
                               e.target.value = '';
                             }}
                             className="hidden"
+                            data-testid={`upload-input-${year}`}
                           />
                           <Button
                             as="span"
@@ -328,6 +332,7 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
                             disabled={uploading}
                             className="w-full cursor-pointer"
                             onClick={(e) => e.currentTarget.previousSibling.click()}
+                            data-testid={`upload-button-${year}`}
                           >
                             {uploading ? (
                               <>
