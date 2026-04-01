@@ -155,6 +155,7 @@ class CreateExpenseRequest(BaseModel):
     amount: float
     date: str
     description: Optional[str] = None
+    receipt_id: Optional[str] = None
 
 class CreateMileageRequest(BaseModel):
     year: int

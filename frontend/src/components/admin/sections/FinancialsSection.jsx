@@ -897,12 +897,45 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [receiptImage, setReceiptImage] = useState(null);
+  const [receiptPreview, setReceiptPreview] = useState(null);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReceiptImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setReceiptPreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     
     try {
+      let receiptUrl = null;
+      
+      // Upload receipt image if provided
+      if (receiptImage) {
+        const formData = new FormData();
+        formData.append('file', receiptImage);
+        formData.append('year', year.toString());
+        formData.append('type', 'expense_receipt');
+        
+        const uploadRes = await fetch(`${API_URL}/api/financials/documents/upload`, {
+          method: 'POST',
+          headers: getAuthHeader(),
+          body: formData
+        });
+        
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          receiptUrl = uploadData.id;
+        }
+      }
+      
       const response = await fetch(`${API_URL}/api/financials/expenses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
@@ -911,7 +944,8 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
           category,
           amount: parseFloat(amount),
           date,
-          description
+          description,
+          receipt_id: receiptUrl
         })
       });
       
@@ -926,7 +960,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
+      <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-semibold mb-4">Add Expense</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -935,7 +969,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base"
             >
               {Object.entries(CATEGORY_LABELS).map(([key, { label, icon }]) => (
                 <option key={key} value={key}>{icon} {label}</option>
@@ -946,13 +980,19 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
             <div className="relative">
-              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <span className="absolute left-3 top-3 text-gray-500">$</span>
               <input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                    setAmount(val);
+                  }
+                }}
+                className="w-full pl-7 pr-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base"
                 placeholder="0.00"
                 required
               />
@@ -965,7 +1005,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base"
               required
             />
           </div>
@@ -976,16 +1016,47 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg min-h-[48px] text-base"
               placeholder="e.g., Poly mailers - Amazon"
             />
           </div>
           
+          {/* Receipt Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Receipt (optional)</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              {receiptPreview ? (
+                <div className="relative">
+                  <img src={receiptPreview} alt="Receipt" className="max-h-32 mx-auto rounded" />
+                  <button
+                    type="button"
+                    onClick={() => { setReceiptImage(null); setReceiptPreview(null); }}
+                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center cursor-pointer py-2">
+                  <Camera className="w-8 h-8 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-500">Add receipt photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+          
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+            <Button type="button" variant="outline" className="flex-1 min-h-[48px]" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={saving}>
+            <Button type="submit" className="flex-1 min-h-[48px] bg-blue-600 hover:bg-blue-700 text-white" disabled={saving}>
               {saving ? 'Saving...' : 'Save'}
             </Button>
           </div>

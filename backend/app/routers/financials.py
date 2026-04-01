@@ -386,6 +386,7 @@ async def create_expense(request: CreateExpenseRequest):
         amount=request.amount,
         date=request.date,
         description=request.description,
+        receipt_url=request.receipt_id,
         created_at=datetime.now(timezone.utc).isoformat(),
         updated_at=datetime.now(timezone.utc).isoformat()
     )
