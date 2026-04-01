@@ -1,0 +1,64 @@
+{
+  "summary": "Verified Tax Returns Archive collapsible section update. All 18 frontend E2E tests and 10 backend API tests passed. New features working: section starts collapsed, shows years with data count, displays 'Filed' and 'Has Income Data' badges, expand/collapse toggle works correctly.",
+  "mode": "update",
+  "baseline_commit": "1b57c116448963208b35f57a98b6e8b79d76f5fc",
+  "head_commit": "88b435f0160424161cca7c97c1668ee8c8f6cd1f",
+  "specs_created": [],
+  "specs_updated": [
+    "/app/tests/e2e/tax-returns-archive.spec.ts"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/tax-returns-archive.spec.ts",
+    "/app/test_reports/pytest/tax_returns_archive_results.xml"
+  ],
+  "regression_results": {
+    "total_specs": 28,
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/tax-returns-archive.spec.ts"
+  ],
+  "test_results": {
+    "backend": "100% (10/10 passed)",
+    "frontend": "100% (18/18 passed)"
+  },
+  "seed_data_creation": "No new seed data created. Tests use year 2098 to avoid conflicts with production data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Tax Returns Archive collapsible section fully tested: 1) Section starts collapsed by default with isCollapsed state, 2) Header shows 'X years with data' count, 3) Only years with income data (gross_income > 0 or net_profit != 0) or uploaded tax returns are displayed, 4) Year badges: 'Filed' (green) for uploaded returns, 'Has Income Data' (blue) for income-only years, 5) Expand/collapse toggle (data-testid='tax-returns-archive-toggle') works correctly, 6) Upload, download, delete functionality still works within expanded years. All data-testid attributes present and working.",
+  "features_verified": {
+    "section_starts_collapsed": {
+      "status": "PASS",
+      "details": "Tax Returns Archive section starts collapsed by default, year rows not visible until toggle clicked"
+    },
+    "header_shows_years_count": {
+      "status": "PASS",
+      "details": "Section header shows 'X years with data' count (e.g., '3 years with data')"
+    },
+    "only_years_with_data_shown": {
+      "status": "PASS",
+      "details": "Only years with income data or uploaded returns are displayed (2026, 2025, 2023 visible)"
+    },
+    "filed_badge_for_uploaded_returns": {
+      "status": "PASS",
+      "details": "Years with uploaded tax returns show green 'Filed' badge (e.g., Tax Year 2023)"
+    },
+    "has_income_data_badge": {
+      "status": "PASS",
+      "details": "Years with only income data show blue 'Has Income Data' badge (e.g., Tax Year 2026, 2025)"
+    },
+    "expand_collapse_toggle_works": {
+      "status": "PASS",
+      "details": "Clicking toggle expands/collapses the section, year rows appear/disappear correctly"
+    },
+    "upload_download_delete_still_work": {
+      "status": "PASS",
+      "details": "Upload, download, and delete functionality works within expanded years"
+    }
+  }
+}

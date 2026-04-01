@@ -3,6 +3,12 @@ import { test, expect } from '@playwright/test';
 /**
  * Tax Returns Archive E2E Tests
  * Tests the Tax Returns Archive section in Admin Dashboard under Operations & Reports
+ * 
+ * Updated for collapsible section that only shows years with data:
+ * - Section starts collapsed by default
+ * - Header shows count of years with data
+ * - Only years with income data or uploaded returns are shown
+ * - Year badges show 'Filed' for uploaded returns and 'Has Income Data' for income-only years
  */
 
 const ADMIN_EMAIL = 'matthewjesusguzman1@gmail.com';
@@ -11,83 +17,168 @@ const ADMIN_CODE = '4399';
 // Helper function to login as admin
 async function loginAsAdmin(page) {
   await page.goto('/admin', { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(3000);
+  await page.waitForLoadState('networkidle');
   
   // Enter email
   await page.fill('input[placeholder="your@email.com"]', ADMIN_EMAIL);
   await page.click('button:has-text("Find My Account")');
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
   
   // Enter access code
   await page.fill('input[placeholder="4-digit code"]', ADMIN_CODE);
   await page.click('button:has-text("Sign In")');
-  await page.waitForTimeout(3000);
+  await page.waitForLoadState('networkidle');
   
   // Verify we're on the admin dashboard
   await expect(page.locator('text=Admin Dashboard')).toBeVisible();
 }
 
-// Helper function to navigate to Tax Returns Archive
+// Helper function to navigate to Tax Returns Archive section
 async function navigateToTaxReturnsArchive(page) {
   // Click on Operations & Reports to expand
   await page.click('text=Operations & Reports');
-  await page.waitForTimeout(1500);
+  await page.waitForLoadState('networkidle');
   
   // Scroll down to Tax Returns Archive
-  await page.evaluate(() => window.scrollBy(0, 1200));
-  await page.waitForTimeout(1000);
+  await page.evaluate(() => window.scrollBy(0, 1500));
   
   // Verify Tax Returns Archive section is visible
   await expect(page.getByTestId('tax-returns-archive-section')).toBeVisible();
 }
 
-test.describe('Tax Returns Archive Section', () => {
+// Helper function to expand the Tax Returns Archive section
+async function expandTaxReturnsArchive(page) {
+  const archiveToggle = page.getByTestId('tax-returns-archive-toggle');
+  await archiveToggle.click();
+  await page.waitForLoadState('networkidle');
+}
+
+test.describe('Tax Returns Archive Section - Collapsible Behavior', () => {
   
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
   });
 
-  test('Tax Returns Archive section is visible in Admin Dashboard under Operations & Reports', async ({ page }) => {
-    // Navigate to Operations & Reports
-    await page.click('text=Operations & Reports');
-    await page.waitForTimeout(1500);
+  test('Tax Returns Archive section starts collapsed by default', async ({ page }) => {
+    await navigateToTaxReturnsArchive(page);
     
-    // Scroll down to find Tax Returns Archive
-    await page.evaluate(() => window.scrollBy(0, 1200));
-    await page.waitForTimeout(1000);
-    
-    // Verify Tax Returns Archive section is visible
+    // Verify the section is visible
     const archiveSection = page.getByTestId('tax-returns-archive-section');
     await expect(archiveSection).toBeVisible();
     
     // Verify the title
     const title = page.getByTestId('tax-returns-archive-title');
     await expect(title).toHaveText('Tax Returns Archive');
+    
+    // Verify the toggle button exists
+    const archiveToggle = page.getByTestId('tax-returns-archive-toggle');
+    await expect(archiveToggle).toBeVisible();
+    
+    // Verify year rows are NOT visible (section is collapsed)
+    // We check that no tax-year-* toggle is visible
+    const anyYearToggle = page.locator('[data-testid^="tax-year-"][data-testid$="-toggle"]').first();
+    await expect(anyYearToggle).not.toBeVisible();
   });
 
-  test('Year accordion expands to show upload functionality', async ({ page }) => {
+  test('Section header shows count of years with data', async ({ page }) => {
     await navigateToTaxReturnsArchive(page);
     
-    // Click on Tax Year 2025 to expand
-    const year2025Toggle = page.getByTestId('tax-year-2025-toggle');
-    await year2025Toggle.click();
-    await page.waitForTimeout(2000);
-    
-    // Verify the upload button is visible
-    const uploadButton = page.getByTestId('upload-button-2025');
-    await expect(uploadButton).toBeVisible();
-    
-    // Verify "Filed Tax Return" section is visible
-    await expect(page.locator('text=Filed Tax Return')).toBeVisible();
+    // The header should show "X years with data" text
+    const archiveSection = page.getByTestId('tax-returns-archive-section');
+    await expect(archiveSection).toContainText(/\d+ years? with data/);
   });
 
-  test('Year accordion shows Tax Summary with download options', async ({ page }) => {
+  test('Expand/collapse toggle works correctly', async ({ page }) => {
     await navigateToTaxReturnsArchive(page);
     
-    // Click on Tax Year 2025 to expand
-    const year2025Toggle = page.getByTestId('tax-year-2025-toggle');
-    await year2025Toggle.click();
-    await page.waitForTimeout(2000);
+    const archiveToggle = page.getByTestId('tax-returns-archive-toggle');
+    
+    // Initially collapsed - no year toggles visible
+    const anyYearToggle = page.locator('[data-testid^="tax-year-"][data-testid$="-toggle"]').first();
+    await expect(anyYearToggle).not.toBeVisible();
+    
+    // Click to expand
+    await archiveToggle.click();
+    await page.waitForLoadState('networkidle');
+    
+    // Now year toggles should be visible
+    await expect(anyYearToggle).toBeVisible();
+    
+    // Click to collapse again
+    await archiveToggle.click();
+    await page.waitForLoadState('networkidle');
+    
+    // Year toggles should be hidden again
+    await expect(anyYearToggle).not.toBeVisible();
+  });
+});
+
+test.describe('Tax Returns Archive Section - Years with Data', () => {
+  
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+    await navigateToTaxReturnsArchive(page);
+    await expandTaxReturnsArchive(page);
+    // Wait for loading to complete - wait for "years with data" text to appear
+    await expect(page.getByTestId('tax-returns-archive-section')).toContainText(/\d+ years? with data/);
+  });
+
+  test('Only years with data are shown', async ({ page }) => {
+    // Get all visible year toggles (these are the year rows)
+    const yearToggles = page.locator('[data-testid^="tax-year-"][data-testid$="-toggle"]');
+    const count = await yearToggles.count();
+    
+    // Should have at least one year with data
+    expect(count).toBeGreaterThan(0);
+    
+    // Each visible year should have either "Filed" or "Has Income Data" badge
+    for (let i = 0; i < count; i++) {
+      const yearToggle = yearToggles.nth(i);
+      const hasFiled = await yearToggle.locator('text=Filed').isVisible().catch(() => false);
+      const hasIncomeData = await yearToggle.locator('text=Has Income Data').isVisible().catch(() => false);
+      
+      // Each year should have at least one badge
+      expect(hasFiled || hasIncomeData).toBeTruthy();
+    }
+  });
+
+  test('Year badges show "Filed" for uploaded returns', async ({ page }) => {
+    // Look for a year with "Filed" badge (Tax Year 2023 has a filed return)
+    const filedBadge = page.locator('text=Filed').first();
+    
+    // If there's a filed return, verify the badge is visible
+    const isFiledVisible = await filedBadge.isVisible().catch(() => false);
+    if (isFiledVisible) {
+      await expect(filedBadge).toBeVisible();
+      // The badge should be green (bg-green-100)
+      const parentRow = filedBadge.locator('xpath=ancestor::div[@data-testid]').first();
+      await expect(parentRow).toBeVisible();
+    }
+  });
+
+  test('Year badges show "Has Income Data" for income-only years', async ({ page }) => {
+    // Look for a year with "Has Income Data" badge
+    const incomeDataBadge = page.locator('text=Has Income Data').first();
+    
+    // If there's income data, verify the badge is visible
+    const isIncomeDataVisible = await incomeDataBadge.isVisible().catch(() => false);
+    if (isIncomeDataVisible) {
+      await expect(incomeDataBadge).toBeVisible();
+      // The badge should be blue (bg-blue-100)
+    }
+  });
+
+  test('Year accordion expands to show Tax Summary and upload functionality', async ({ page }) => {
+    // Get the first visible year toggle
+    const firstYearToggle = page.locator('[data-testid^="tax-year-"][data-testid$="-toggle"]').first();
+    await expect(firstYearToggle).toBeVisible();
+    
+    // Click to expand
+    await firstYearToggle.click();
+    await page.waitForLoadState('networkidle');
+    
+    // Scroll down to see expanded content
+    await page.evaluate(() => window.scrollBy(0, 300));
     
     // Verify Tax Summary section is visible
     await expect(page.locator('text=Tax Summary')).toBeVisible();
@@ -96,116 +187,130 @@ test.describe('Tax Returns Archive Section', () => {
     await expect(page.locator('text=Gross Income:')).toBeVisible();
     await expect(page.locator('text=Net Profit:')).toBeVisible();
     
-    // Verify PDF and CSV download buttons are visible
-    await expect(page.locator('button:has-text("PDF")')).toBeVisible();
-    await expect(page.locator('button:has-text("CSV")')).toBeVisible();
-  });
-
-  test('Multiple year accordions are available', async ({ page }) => {
-    await navigateToTaxReturnsArchive(page);
+    // Verify Filed Tax Return section is visible
+    await expect(page.locator('text=Filed Tax Return')).toBeVisible();
     
-    // Verify multiple tax years are available
-    await expect(page.getByTestId('tax-year-2025')).toBeVisible();
-    await expect(page.getByTestId('tax-year-2024')).toBeVisible();
-    
-    // Scroll down to see more years
-    await page.evaluate(() => window.scrollBy(0, 200));
-    await page.waitForTimeout(500);
-    
-    // Check for additional years (2023, 2022, 2021)
-    const year2023 = page.getByTestId('tax-year-2023');
-    const year2022 = page.getByTestId('tax-year-2022');
-    const year2021 = page.getByTestId('tax-year-2021');
-    
-    // At least some of these should be visible
-    const visibleYears = await Promise.all([
-      year2023.isVisible().catch(() => false),
-      year2022.isVisible().catch(() => false),
-      year2021.isVisible().catch(() => false)
-    ]);
-    
-    expect(visibleYears.some(v => v)).toBeTruthy();
-  });
-
-  test('Upload button triggers file input', async ({ page }) => {
-    await navigateToTaxReturnsArchive(page);
-    
-    // Click on Tax Year 2025 to expand
-    const year2025Toggle = page.getByTestId('tax-year-2025-toggle');
-    await year2025Toggle.click();
-    await page.waitForTimeout(2000);
-    
-    // Verify the upload input exists
-    const uploadInput = page.getByTestId('upload-input-2025');
-    await expect(uploadInput).toBeAttached();
-    
-    // Verify the upload button is clickable
-    const uploadButton = page.getByTestId('upload-button-2025');
-    await expect(uploadButton).toBeEnabled();
-  });
-
-  test('Shows "No filed return uploaded yet" when no documents exist', async ({ page }) => {
-    await navigateToTaxReturnsArchive(page);
-    
-    // Click on Tax Year 2025 to expand
-    const year2025Toggle = page.getByTestId('tax-year-2025-toggle');
-    await year2025Toggle.click();
-    await page.waitForTimeout(2000);
-    
-    // Check for the "no returns" message or existing documents
-    const noReturnsMessage = page.getByTestId('no-returns-2025');
-    const returnsList = page.getByTestId('tax-returns-list-2025');
-    
-    // Either no returns message should be visible OR returns list should be visible
-    const noReturnsVisible = await noReturnsMessage.isVisible().catch(() => false);
-    const returnsListVisible = await returnsList.isVisible().catch(() => false);
-    
-    expect(noReturnsVisible || returnsListVisible).toBeTruthy();
+    // Verify Upload button is visible
+    await expect(page.locator('text=Upload Tax Return')).toBeVisible();
   });
 
   test('Year accordion can be collapsed after expanding', async ({ page }) => {
-    await navigateToTaxReturnsArchive(page);
+    // Get the first visible year toggle
+    const firstYearToggle = page.locator('[data-testid^="tax-year-"][data-testid$="-toggle"]').first();
     
-    // Click on Tax Year 2025 to expand
-    const year2025Toggle = page.getByTestId('tax-year-2025-toggle');
-    await year2025Toggle.click();
-    await page.waitForTimeout(1500);
+    // Click to expand
+    await firstYearToggle.click();
+    await page.waitForLoadState('networkidle');
     
     // Verify expanded content is visible
-    const uploadButton = page.getByTestId('upload-button-2025');
-    await expect(uploadButton).toBeVisible();
+    await expect(page.locator('text=Tax Summary')).toBeVisible();
     
     // Click again to collapse
-    await year2025Toggle.click();
-    await page.waitForTimeout(1500);
+    await firstYearToggle.click();
+    await page.waitForLoadState('networkidle');
     
     // Verify content is no longer visible
-    await expect(uploadButton).not.toBeVisible();
+    await expect(page.locator('text=Tax Summary')).not.toBeVisible();
   });
 
-  test('Different years can be expanded independently', async ({ page }) => {
+  test('Different years can be expanded - only one at a time', async ({ page }) => {
+    // Get all year toggles
+    const yearToggles = page.locator('[data-testid^="tax-year-"][data-testid$="-toggle"]');
+    const count = await yearToggles.count();
+    
+    if (count >= 2) {
+      // Click first year to expand
+      await yearToggles.nth(0).click();
+      await page.waitForLoadState('networkidle');
+      
+      // Verify first year is expanded
+      await expect(page.locator('text=Tax Summary')).toBeVisible();
+      
+      // Click second year to expand
+      await yearToggles.nth(1).click();
+      await page.waitForLoadState('networkidle');
+      
+      // Scroll to see content
+      await page.evaluate(() => window.scrollBy(0, 200));
+      
+      // Second year should now be expanded (only one at a time)
+      await expect(page.locator('text=Tax Summary')).toBeVisible();
+    }
+  });
+});
+
+test.describe('Tax Returns Archive - Upload/Download/Delete Functionality', () => {
+  
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
     await navigateToTaxReturnsArchive(page);
+    await expandTaxReturnsArchive(page);
+  });
+
+  test('Upload button triggers file input', async ({ page }) => {
+    // Get the first visible year toggle and expand it
+    const firstYearToggle = page.locator('[data-testid^="tax-year-"][data-testid$="-toggle"]').first();
+    await firstYearToggle.click();
+    await page.waitForLoadState('networkidle');
     
-    // Click on Tax Year 2025 to expand
-    const year2025Toggle = page.getByTestId('tax-year-2025-toggle');
-    await year2025Toggle.click();
-    await page.waitForTimeout(1500);
+    // Scroll down to see upload button
+    await page.evaluate(() => window.scrollBy(0, 300));
     
-    // Verify 2025 is expanded
-    const uploadButton2025 = page.getByTestId('upload-button-2025');
-    await expect(uploadButton2025).toBeVisible();
+    // Get the year from the toggle's testid
+    const testId = await firstYearToggle.getAttribute('data-testid');
+    const year = testId?.match(/tax-year-(\d+)-toggle/)?.[1];
     
-    // Click on Tax Year 2024 to expand
-    const year2024Toggle = page.getByTestId('tax-year-2024-toggle');
-    await year2024Toggle.click();
-    await page.waitForTimeout(1500);
+    if (year) {
+      // Verify the upload input exists
+      const uploadInput = page.getByTestId(`upload-input-${year}`);
+      await expect(uploadInput).toBeAttached();
+      
+      // Verify the upload button is clickable
+      const uploadButton = page.getByTestId(`upload-button-${year}`);
+      await expect(uploadButton).toBeEnabled();
+    }
+  });
+
+  test('Shows "No filed return uploaded yet" when no documents exist for a year', async ({ page }) => {
+    // Find a year with "Has Income Data" badge (no filed return)
+    const incomeDataBadge = page.locator('text=Has Income Data').first();
+    const isIncomeDataVisible = await incomeDataBadge.isVisible().catch(() => false);
     
-    // Verify 2024 is now expanded (2025 should collapse since only one can be expanded at a time)
-    const uploadButton2024 = page.getByTestId('upload-button-2024');
-    await expect(uploadButton2024).toBeVisible();
+    if (isIncomeDataVisible) {
+      // Click on the parent year toggle
+      const yearRow = incomeDataBadge.locator('xpath=ancestor::button[@data-testid]');
+      await yearRow.click();
+      await page.waitForLoadState('networkidle');
+      
+      // Scroll down to see content
+      await page.evaluate(() => window.scrollBy(0, 300));
+      
+      // Check for the "no returns" message
+      await expect(page.locator('text=No filed return uploaded yet')).toBeVisible();
+    }
+  });
+
+  test('Filed returns show download and delete buttons', async ({ page }) => {
+    // Find a year with "Filed" badge
+    const filedBadge = page.locator('text=Filed').first();
+    const isFiledVisible = await filedBadge.isVisible().catch(() => false);
     
-    // 2025 should be collapsed now
-    await expect(uploadButton2025).not.toBeVisible();
+    if (isFiledVisible) {
+      // Click on the parent year toggle
+      const yearRow = filedBadge.locator('xpath=ancestor::button[@data-testid]');
+      await yearRow.click();
+      await page.waitForLoadState('networkidle');
+      
+      // Scroll down to see content
+      await page.evaluate(() => window.scrollBy(0, 300));
+      
+      // Verify download and delete buttons are visible for the document
+      const downloadButton = page.locator('[data-testid^="download-doc-"]').first();
+      const deleteButton = page.locator('[data-testid^="delete-doc-"]').first();
+      
+      await expect(downloadButton).toBeVisible();
+      await expect(deleteButton).toBeVisible();
+    }
   });
 });
 

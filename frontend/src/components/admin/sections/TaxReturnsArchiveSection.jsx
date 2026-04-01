@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import ReactDOM from 'react-dom';
 import { 
   FileText, 
   Download, 
@@ -7,6 +6,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Archive,
   Calendar,
   FolderOpen
@@ -17,31 +17,85 @@ const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
   const currentYear = new Date().getFullYear();
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [expandedYear, setExpandedYear] = useState(null);
   const [yearData, setYearData] = useState({});
+  const [yearsWithData, setYearsWithData] = useState([]);
   const [loading, setLoading] = useState({});
+  const [initialLoading, setInitialLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Years to show (current year and past 5 years)
-  const years = [currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4, currentYear - 5];
+  // Check all years for data on mount
+  const checkYearsForData = useCallback(async () => {
+    const yearsToCheck = [];
+    for (let y = currentYear; y >= currentYear - 10; y--) {
+      yearsToCheck.push(y);
+    }
+
+    const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
+    const yearsFound = [];
+
+    await Promise.all(yearsToCheck.map(async (year) => {
+      try {
+        const [taxReturnsRes, summaryRes] = await Promise.all([
+          fetch(`${API_URL}/api/financials/tax-returns/${year}`, { headers }),
+          fetch(`${API_URL}/api/financials/summary/${year}`, { headers })
+        ]);
+
+        const taxReturns = taxReturnsRes.ok ? await taxReturnsRes.json() : { documents: [] };
+        const summary = summaryRes.ok ? await summaryRes.json() : null;
+
+        // Check if year has any data
+        const hasFiledReturn = (taxReturns.documents || []).length > 0;
+        const hasIncome = summary && (summary.gross_income > 0 || summary.net_profit !== 0);
+
+        if (hasFiledReturn || hasIncome) {
+          yearsFound.push({
+            year,
+            hasFiledReturn,
+            hasIncome,
+            taxReturns: taxReturns.documents || [],
+            summary
+          });
+        }
+      } catch (err) {
+        console.error(`Error checking year ${year}:`, err);
+      }
+    }));
+
+    // Sort by year descending
+    yearsFound.sort((a, b) => b.year - a.year);
+    setYearsWithData(yearsFound);
+    
+    // Pre-populate yearData
+    const dataMap = {};
+    yearsFound.forEach(item => {
+      dataMap[item.year] = {
+        taxReturns: item.taxReturns,
+        summary: item.summary
+      };
+    });
+    setYearData(dataMap);
+    setInitialLoading(false);
+  }, [currentYear, getAuthHeader]);
+
+  useEffect(() => {
+    checkYearsForData();
+  }, [checkYearsForData]);
 
   const fetchYearData = useCallback(async (year) => {
-    if (yearData[year]) return; // Already loaded
-    
     setLoading(prev => ({ ...prev, [year]: true }));
     try {
       const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
       
-      const [taxReturnsRes, manual1099Res, summaryRes] = await Promise.all([
+      const [taxReturnsRes, summaryRes] = await Promise.all([
         fetch(`${API_URL}/api/financials/tax-returns/${year}`, { headers }),
-        fetch(`${API_URL}/api/financials/1099/manual/${year}`, { headers }),
         fetch(`${API_URL}/api/financials/summary/${year}`, { headers })
       ]);
 
       const data = {
         taxReturns: taxReturnsRes.ok ? (await taxReturnsRes.json()).documents || [] : [],
-        manual1099: manual1099Res.ok ? (await manual1099Res.json()).recipients || [] : [],
         summary: summaryRes.ok ? await summaryRes.json() : null
       };
 
@@ -50,7 +104,7 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
       console.error(`Error fetching ${year} data:`, err);
     }
     setLoading(prev => ({ ...prev, [year]: false }));
-  }, [getAuthHeader, yearData]);
+  }, [getAuthHeader]);
 
   const toggleYear = (year) => {
     if (expandedYear === year) {
@@ -77,49 +131,76 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
       });
 
       if (response.ok) {
-        // Refresh year data
-        setYearData(prev => ({ ...prev, [year]: null }));
-        fetchYearData(year);
+        // Refresh year data and years list
+        await fetchYearData(year);
+        await checkYearsForData();
       } else {
-        const data = await response.json();
-        setError(data.detail || 'Upload failed');
+        const errorData = await response.json();
+        setError(errorData.detail || 'Failed to upload file');
       }
     } catch (err) {
       setError('Failed to upload file');
+      console.error('Upload error:', err);
     }
     setUploading(false);
   };
 
-  const deleteDocument = async (year, docId) => {
-    if (!window.confirm('Delete this tax return document?')) return;
-
+  const downloadDocument = async (year, docId) => {
     try {
-      await fetch(`${API_URL}/api/financials/tax-returns/${year}/${docId}`, {
-        method: 'DELETE',
+      const response = await fetch(`${API_URL}/api/financials/tax-returns/${year}/${docId}/download`, {
         headers: { ...getAuthHeader() }
       });
-      // Refresh year data
-      setYearData(prev => ({ ...prev, [year]: null }));
-      fetchYearData(year);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `tax_return_${year}.pdf`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="(.+)"/);
+          if (match) filename = match[1];
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
     } catch (err) {
-      console.error('Error deleting document:', err);
+      console.error('Download error:', err);
+      setError('Failed to download document');
     }
   };
 
-  const downloadDocument = (year, docId) => {
-    window.open(`${API_URL}/api/financials/tax-returns/${year}/${docId}/download`, '_blank');
+  const deleteDocument = async (year, docId) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/financials/tax-returns/${year}/${docId}`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeader() }
+      });
+
+      if (response.ok) {
+        // Refresh year data and years list
+        await fetchYearData(year);
+        await checkYearsForData();
+      } else {
+        setError('Failed to delete document');
+      }
+    } catch (err) {
+      setError('Failed to delete document');
+      console.error('Delete error:', err);
+    }
   };
 
-  const download1099 = (year, recipientId) => {
-    window.open(`${API_URL}/api/financials/1099/manual/${year}/${recipientId}/download`, '_blank');
-  };
-
-  const downloadTaxSummary = (year, format) => {
-    window.open(`${API_URL}/api/financials/tax-summary/${year}/download?format=${format}`, '_blank');
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount || 0);
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   const formatDate = (dateStr) => {
@@ -130,232 +211,211 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
     });
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount || 0);
   };
+
+  // Don't render if no years have data
+  if (!initialLoading && yearsWithData.length === 0) {
+    return null;
+  }
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" data-testid="tax-returns-archive-section">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="w-full p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
+        data-testid="tax-returns-archive-toggle"
+      >
         <div className="flex items-center gap-3">
           <Archive className="w-5 h-5 text-purple-600" />
-          <div>
+          <div className="text-left">
             <h2 className="font-semibold text-gray-900" data-testid="tax-returns-archive-title">Tax Returns Archive</h2>
-            <p className="text-xs text-gray-500">Filed returns and generated documents by year</p>
+            <p className="text-xs text-gray-500">
+              {initialLoading 
+                ? 'Loading...' 
+                : `${yearsWithData.length} year${yearsWithData.length !== 1 ? 's' : ''} with data`}
+            </p>
           </div>
         </div>
-      </div>
+        {isCollapsed ? (
+          <ChevronRight className="w-5 h-5 text-gray-400" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-gray-400" />
+        )}
+      </button>
 
-      {error && (
-        <div className="mx-4 mt-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
-          {error}
-        </div>
-      )}
+      {/* Collapsible Content */}
+      {!isCollapsed && (
+        <>
+          {error && (
+            <div className="mx-4 mt-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+              {error}
+            </div>
+          )}
 
-      {/* Year List */}
-      <div className="divide-y divide-gray-100">
-        {years.map(year => {
-          const data = yearData[year];
-          const isExpanded = expandedYear === year;
-          const isLoading = loading[year];
-          const hasFiledReturn = data?.taxReturns?.length > 0;
-          const has1099s = data?.manual1099?.length > 0;
+          {initialLoading ? (
+            <div className="p-8 text-center text-gray-500">
+              <div className="animate-spin w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+              Checking tax years...
+            </div>
+          ) : yearsWithData.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              <FolderOpen className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>No tax years with data yet.</p>
+              <p className="text-sm mt-1">Enter income in the Financials section to see tax years here.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {yearsWithData.map(yearInfo => {
+                const year = yearInfo.year;
+                const data = yearData[year];
+                const isExpanded = expandedYear === year;
+                const isLoading = loading[year];
+                const hasFiledReturn = (data?.taxReturns?.length || 0) > 0;
 
-          return (
-            <div key={year} data-testid={`tax-year-${year}`}>
-              {/* Year Header */}
-              <button
-                onClick={() => toggleYear(year)}
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                data-testid={`tax-year-${year}-toggle`}
-              >
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-gray-400" />
-                  <span className="font-medium text-gray-900">Tax Year {year}</span>
-                  {hasFiledReturn && (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                      Filed
-                    </span>
-                  )}
-                </div>
-                {isExpanded ? (
-                  <ChevronUp className="w-5 h-5 text-gray-400" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-400" />
-                )}
-              </button>
-
-              {/* Expanded Content */}
-              {isExpanded && (
-                <div className="px-4 pb-4 bg-gray-50">
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-6">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Tax Summary */}
-                      {data?.summary && (
-                        <div className="bg-white rounded-lg border border-gray-200 p-4">
-                          <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-blue-600" />
-                            Tax Summary
-                          </h3>
-                          <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
-                            <div>
-                              <span className="text-gray-500">Gross Income:</span>
-                              <span className="ml-2 font-medium">{formatCurrency(data.summary.income?.total)}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Net Profit:</span>
-                              <span className="ml-2 font-medium text-green-600">{formatCurrency(data.summary.net_profit)}</span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadTaxSummary(year, 'pdf')}
-                              className="flex-1 text-xs"
-                            >
-                              <Download className="w-3 h-3 mr-1" />
-                              PDF
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadTaxSummary(year, 'csv')}
-                              className="flex-1 text-xs"
-                            >
-                              <Download className="w-3 h-3 mr-1" />
-                              CSV
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 1099-NECs */}
-                      {has1099s && (
-                        <div className="bg-white rounded-lg border border-gray-200 p-4">
-                          <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-orange-600" />
-                            1099-NEC Forms ({data.manual1099.length})
-                          </h3>
-                          <div className="space-y-2">
-                            {data.manual1099.map(recipient => (
-                              <div key={recipient.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                                <div>
-                                  <span className="font-medium">{recipient.name}</span>
-                                  <span className="ml-2 text-gray-500">{formatCurrency(recipient.amount_paid)}</span>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => download1099(year, recipient.id)}
-                                  className="p-1"
-                                >
-                                  <Download className="w-4 h-4 text-blue-600" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Filed Tax Returns */}
-                      <div className="bg-white rounded-lg border border-gray-200 p-4">
-                        <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                          <FolderOpen className="w-4 h-4 text-purple-600" />
-                          Filed Tax Return
-                        </h3>
-
-                        {data?.taxReturns?.length > 0 ? (
-                          <div className="space-y-2 mb-3" data-testid={`tax-returns-list-${year}`}>
-                            {data.taxReturns.map(doc => (
-                              <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded" data-testid={`tax-return-doc-${doc.id}`}>
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <FileText className="w-5 h-5 text-red-500 flex-shrink-0" />
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium truncate">{doc.original_filename}</p>
-                                    <p className="text-xs text-gray-500">
-                                      {formatFileSize(doc.size)} • {formatDate(doc.uploaded_at)}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex gap-1 flex-shrink-0">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => downloadDocument(year, doc.id)}
-                                    className="p-1"
-                                    data-testid={`download-doc-${doc.id}`}
-                                  >
-                                    <Download className="w-4 h-4 text-blue-600" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => deleteDocument(year, doc.id)}
-                                    className="p-1"
-                                    data-testid={`delete-doc-${doc.id}`}
-                                  >
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                return (
+                  <div key={year} data-testid={`tax-year-${year}`}>
+                    {/* Year Header */}
+                    <button
+                      onClick={() => toggleYear(year)}
+                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                      data-testid={`tax-year-${year}-toggle`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Calendar className="w-5 h-5 text-gray-400" />
+                        <span className="font-medium text-gray-900">Tax Year {year}</span>
+                        {hasFiledReturn && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                            Filed
+                          </span>
+                        )}
+                        {yearInfo.hasIncome && !hasFiledReturn && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                            Has Income Data
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isLoading && (
+                          <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                        )}
+                        {isExpanded ? (
+                          <ChevronUp className="w-5 h-5 text-gray-400" />
                         ) : (
-                          <p className="text-sm text-gray-500 mb-3" data-testid={`no-returns-${year}`}>No filed return uploaded yet.</p>
+                          <ChevronDown className="w-5 h-5 text-gray-400" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Expanded Content */}
+                    {isExpanded && (
+                      <div className="px-4 pb-4 bg-gray-50">
+                        {/* Tax Summary */}
+                        {data?.summary && (
+                          <div className="mb-4 p-3 bg-white rounded border border-gray-200">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Tax Summary</h4>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <span className="text-gray-500">Gross Income:</span>
+                                <span className="ml-2 font-medium">{formatCurrency(data.summary.gross_income)}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Net Profit:</span>
+                                <span className={`ml-2 font-medium ${data.summary.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {formatCurrency(data.summary.net_profit)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         )}
 
-                        {/* Upload Button */}
-                        <label className="block">
-                          <input
-                            type="file"
-                            accept=".pdf,image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleFileUpload(year, file);
-                              e.target.value = '';
-                            }}
-                            className="hidden"
-                            data-testid={`upload-input-${year}`}
-                          />
-                          <Button
-                            as="span"
-                            size="sm"
-                            variant="outline"
-                            disabled={uploading}
-                            className="w-full cursor-pointer"
-                            onClick={(e) => e.currentTarget.previousSibling.click()}
-                            data-testid={`upload-button-${year}`}
-                          >
-                            {uploading ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mr-2"></div>
-                                Uploading...
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Upload Filed Return
-                              </>
-                            )}
-                          </Button>
-                        </label>
+                        {/* Filed Tax Return */}
+                        <div className="p-3 bg-white rounded border border-gray-200">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Filed Tax Return</h4>
+                          
+                          {data?.taxReturns?.length > 0 ? (
+                            <div className="space-y-2 mb-3" data-testid={`tax-returns-list-${year}`}>
+                              {data.taxReturns.map(doc => (
+                                <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded" data-testid={`tax-return-doc-${doc.id}`}>
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <FileText className="w-5 h-5 text-red-500 flex-shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium truncate">{doc.original_filename}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {formatFileSize(doc.size)} • {formatDate(doc.uploaded_at)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-1 flex-shrink-0">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => downloadDocument(year, doc.id)}
+                                      className="p-1"
+                                      data-testid={`download-doc-${doc.id}`}
+                                    >
+                                      <Download className="w-4 h-4 text-blue-600" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => deleteDocument(year, doc.id)}
+                                      className="p-1"
+                                      data-testid={`delete-doc-${doc.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4 text-red-500" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500 mb-3" data-testid={`no-returns-${year}`}>No filed return uploaded yet.</p>
+                          )}
+
+                          {/* Upload Button */}
+                          <label className="block">
+                            <input
+                              type="file"
+                              accept=".pdf,image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(year, file);
+                                e.target.value = '';
+                              }}
+                              className="hidden"
+                              data-testid={`upload-input-${year}`}
+                            />
+                            <Button
+                              as="span"
+                              size="sm"
+                              variant="outline"
+                              disabled={uploading}
+                              className="w-full cursor-pointer"
+                              onClick={(e) => e.currentTarget.previousSibling.click()}
+                              data-testid={`upload-button-${year}`}
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              {uploading ? 'Uploading...' : 'Upload Tax Return'}
+                            </Button>
+                          </label>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
