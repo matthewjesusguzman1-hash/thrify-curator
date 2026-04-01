@@ -1713,6 +1713,11 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
         body: formData
       });
       
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Server error: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.success && data.extracted_data) {
@@ -1733,10 +1738,12 @@ const ScreenshotImportModal = ({ year, getAuthHeader, onClose, onSave }) => {
         
         setEditMode(true);
       } else {
-        setError(data.error || 'Could not extract data from image');
+        setError(data.error || 'Could not extract data from image. Please try again or enter data manually.');
       }
     } catch (err) {
-      setError('Failed to analyze image. Please try again.');
+      console.error('Screenshot analysis error:', err);
+      setError(err.message || 'Failed to analyze image. Please try again.');
+    }
     }
     setAnalyzing(false);
   };
