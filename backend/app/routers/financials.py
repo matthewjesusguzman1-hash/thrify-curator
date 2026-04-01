@@ -476,13 +476,23 @@ async def get_financial_summary(year: int):
     income_entries = await db.income_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
     
     # Filter out profit entries for gross sales calculation
+    # Also filter out 1099 entries (those are for Tax Prep only, not year-round financials)
     gross_revenue_entries = [e for e in income_entries if e.get("platform") != "profit"]
     profit_entries = [e for e in income_entries if e.get("platform") == "profit"]
     
-    gross_sales = sum(e["amount"] for e in gross_revenue_entries)
-    recorded_profit = sum(e["amount"] for e in profit_entries)
+    # For Financials section: only include scanned/imported data, not manual 1099s
+    # Scanned entries have "Scanned" in notes
+    scanned_revenue_entries = [e for e in gross_revenue_entries 
+                               if e.get("notes") and "Scanned" in e.get("notes", "")]
+    scanned_profit_entries = [e for e in profit_entries
+                              if e.get("notes") and "Scanned" in e.get("notes", "")]
+    
+    gross_sales = sum(e["amount"] for e in scanned_revenue_entries)
+    recorded_profit = sum(e["amount"] for e in scanned_profit_entries)
+    
+    # 1099 totals are for Tax Prep reference only
     income_1099 = sum(e["amount"] for e in gross_revenue_entries if e.get("is_1099"))
-    income_other = sum(e["amount"] for e in gross_revenue_entries if not e.get("is_1099"))
+    income_other = sum(e["amount"] for e in gross_revenue_entries if not e.get("is_1099") and not (e.get("notes") and "Scanned" in e.get("notes", "")))
     
     # Get COGS
     cogs_entries = await db.cogs_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
@@ -557,7 +567,7 @@ async def get_year_comparison(year: int):
                     try:
                         entry_month = datetime.fromisoformat(date_str.replace('Z', '+00:00')).month
                         return entry_month <= through_month
-                    except:
+                    except Exception:
                         return True
                 return True
             
@@ -567,8 +577,13 @@ async def get_year_comparison(year: int):
             mileage = [e for e in mileage if is_in_range(e, 'date')]
         
         # Separate gross revenue from profit entries
-        gross_revenue_entries = [e for e in income if e.get("platform") != "profit"]
-        profit_entries = [e for e in income if e.get("platform") == "profit"]
+        # Only include scanned data (entries with "Scanned" in notes) - NOT manual 1099s from Tax Prep
+        gross_revenue_entries = [e for e in income 
+                                 if e.get("platform") != "profit" 
+                                 and e.get("notes") and "Scanned" in e.get("notes", "")]
+        profit_entries = [e for e in income 
+                         if e.get("platform") == "profit"
+                         and e.get("notes") and "Scanned" in e.get("notes", "")]
         
         gross_sales = sum(e["amount"] for e in gross_revenue_entries)
         recorded_profit = sum(e["amount"] for e in profit_entries)
@@ -611,20 +626,35 @@ async def get_year_comparison(year: int):
 
 @router.get("/monthly/{year}")
 async def get_monthly_data(year: int):
-    """Get monthly breakdown for graphs"""
+    """Get monthly breakdown for graphs - only includes scanned data, not Tax Prep 1099s"""
     income_entries = await db.income_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
     cogs_entries = await db.cogs_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
     expense_entries = await db.expense_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
     
+    # Filter income to only include scanned data (not manual 1099s from Tax Prep)
+    scanned_income = [e for e in income_entries 
+                      if e.get("notes") and "Scanned" in e.get("notes", "")]
+    
     # Initialize monthly data
     months = {i: {"gross_sales": 0, "cogs": 0, "expenses": 0, "profit": 0} for i in range(1, 13)}
     
-    # Process income by month (use date_received if available, otherwise distribute evenly)
-    for entry in income_entries:
+    # Process income by month (use date_received if available)
+    for entry in scanned_income:
+        if entry.get("platform") == "profit":
+            continue  # Skip profit entries for gross sales
         if entry.get("date_received"):
             try:
                 month = int(entry["date_received"].split("-")[1])
                 months[month]["gross_sales"] += entry["amount"]
+            except (ValueError, IndexError):
+                pass
+    
+    # Process profit entries separately
+    for entry in scanned_income:
+        if entry.get("platform") == "profit" and entry.get("date_received"):
+            try:
+                month = int(entry["date_received"].split("-")[1])
+                months[month]["profit"] = entry["amount"]  # Use recorded profit
             except (ValueError, IndexError):
                 pass
     
@@ -644,9 +674,10 @@ async def get_monthly_data(year: int):
         except (ValueError, IndexError):
             pass
     
-    # Calculate profit per month
+    # Calculate profit per month if not already set from scanned data
     for m in months:
-        months[m]["profit"] = months[m]["gross_sales"] - months[m]["cogs"] - months[m]["expenses"]
+        if months[m]["profit"] == 0 and months[m]["gross_sales"] > 0:
+            months[m]["profit"] = months[m]["gross_sales"] - months[m]["cogs"] - months[m]["expenses"]
     
     # Convert to list format for charts
     month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
