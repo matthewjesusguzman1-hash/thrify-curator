@@ -347,12 +347,25 @@ const FinancialsSection = ({ getAuthHeader }) => {
                 <p className="text-lg font-semibold text-gray-700">
                   {formatCurrency(comparison.previous_ytd?.profit || 0)}
                 </p>
+                {comparison.previous_ytd?.profit > 0 && (
+                  <p className={`text-xs mt-1 ${
+                    (summary?.income?.recorded_profit || summary?.net_profit) >= comparison.previous_ytd.profit ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {(summary?.income?.recorded_profit || summary?.net_profit) >= comparison.previous_ytd.profit ? '↑' : '↓'} 
+                    {' '}{Math.abs(Math.round((((summary?.income?.recorded_profit || summary?.net_profit) - comparison.previous_ytd.profit) / comparison.previous_ytd.profit) * 100))}% vs YTD
+                  </p>
+                )}
               </div>
               <div className="bg-gray-50 rounded-lg p-3">
                 <p className="text-xs text-gray-500">Profit (Full Year {selectedYear - 1})</p>
                 <p className="text-lg font-semibold text-gray-700">
                   {formatCurrency(comparison.previous?.profit || 0)}
                 </p>
+                {comparison.previous?.profit > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {Math.round(((summary?.income?.recorded_profit || summary?.net_profit) / comparison.previous.profit) * 100)}% of full year
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -400,20 +413,16 @@ const FinancialsSection = ({ getAuthHeader }) => {
             <div className="border-t border-gray-200 p-4 bg-gray-50">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">1099 Income</span>
-                  <span className="font-medium">{formatCurrency(summary?.income?.from_1099)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Other Income</span>
-                  <span className="font-medium">{formatCurrency(summary?.income?.other)}</span>
+                  <span className="text-gray-600">Gross Revenue</span>
+                  <span className="font-medium">{formatCurrency(summary?.income?.total)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">COGS</span>
                   <span className="font-medium">-{formatCurrency(summary?.cogs)}</span>
                 </div>
                 <div className="border-t border-gray-300 pt-2 flex justify-between text-sm font-medium">
-                  <span>Total Income</span>
-                  <span>{formatCurrency(summary?.income?.total)}</span>
+                  <span>Gross Profit</span>
+                  <span>{formatCurrency(summary?.gross_profit)}</span>
                 </div>
               </div>
               <div className="mt-3 pt-3 border-t border-gray-200">
