@@ -2201,10 +2201,14 @@ If any field is not clearly visible or readable, use null for that field.
 Return ONLY the JSON object, no additional text."""
 
     try:
-        from emergentintegrations.llm.chat import chat, UserMessage, ImageContent, TextContent
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent, TextContent
         
-        response = await chat(
-            api_key=EMERGENT_LLM_KEY,
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+        
+        llm = LlmChat(api_key=api_key)
+        response = await llm.chat(
             model="gpt-4o",
             messages=[
                 UserMessage(content=[
