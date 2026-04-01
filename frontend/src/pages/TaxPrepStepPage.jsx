@@ -33,6 +33,14 @@ const PLATFORMS = [
   { value: 'other', label: 'Other', icon: '📋' }
 ];
 
+// Platforms that typically issue 1099s (online marketplaces)
+const PLATFORMS_1099 = PLATFORMS.filter(p => 
+  !['in_person'].includes(p.value)
+);
+
+// Platforms for "Other Income" - includes in-person sales
+const PLATFORMS_OTHER = PLATFORMS;
+
 // Helper function to check if an income entry is manually entered (not from AI scan)
 const isManualIncomeEntry = (entry) => {
   // Exclude "profit" platform entries (these are AI-scanned profit)
@@ -751,14 +759,21 @@ const TaxPrepStepPage = () => {
 
 // Modal Components
 const AddIncomeModal = ({ year, is1099, getAuthHeader, onClose, onSave }) => {
-  const [platform, setPlatform] = useState('ebay');
+  const [platform, setPlatform] = useState('');
   const [amount, setAmount] = useState('');
   const [dateReceived, setDateReceived] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  
+  // Use appropriate platform list based on income type
+  const platformList = is1099 ? PLATFORMS_1099 : PLATFORMS_OTHER;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!platform) {
+      alert('Please select a platform');
+      return;
+    }
     setSaving(true);
     
     try {
@@ -784,23 +799,32 @@ const AddIncomeModal = ({ year, is1099, getAuthHeader, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
+      <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-semibold mb-4">
           {is1099 ? 'Add 1099' : 'Add Other Income'}
         </h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Platform Selection - Button Grid */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
-            <select
-              value={platform}
-              onChange={(e) => setPlatform(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-            >
-              {PLATFORMS.map(p => (
-                <option key={p.value} value={p.value}>{p.icon} {p.label}</option>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Platform</label>
+            <div className="grid grid-cols-2 gap-2">
+              {platformList.map(p => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setPlatform(p.value)}
+                  className={`p-3 rounded-lg border-2 text-left flex items-center gap-2 transition-all ${
+                    platform === p.value 
+                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <span className="text-lg">{p.icon}</span>
+                  <span className="text-sm font-medium">{p.label}</span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           
           <div>
@@ -813,6 +837,7 @@ const AddIncomeModal = ({ year, is1099, getAuthHeader, onClose, onSave }) => {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg"
+                placeholder="0.00"
                 required
               />
             </div>
@@ -847,7 +872,7 @@ const AddIncomeModal = ({ year, is1099, getAuthHeader, onClose, onSave }) => {
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={saving}>
+            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={saving || !platform}>
               {saving ? 'Saving...' : 'Save'}
             </Button>
           </div>
