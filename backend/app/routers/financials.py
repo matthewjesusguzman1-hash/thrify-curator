@@ -436,11 +436,17 @@ async def update_tax_prep_progress(year: int, step: int, complete: bool):
 @router.get("/summary/{year}")
 async def get_financial_summary(year: int):
     """Get complete financial summary for a year"""
-    # Get income
+    # Get income - separate gross revenue from profit entries
     income_entries = await db.income_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
-    gross_sales = sum(e["amount"] for e in income_entries)
-    income_1099 = sum(e["amount"] for e in income_entries if e.get("is_1099"))
-    income_other = sum(e["amount"] for e in income_entries if not e.get("is_1099"))
+    
+    # Filter out profit entries for gross sales calculation
+    gross_revenue_entries = [e for e in income_entries if e.get("platform") != "profit"]
+    profit_entries = [e for e in income_entries if e.get("platform") == "profit"]
+    
+    gross_sales = sum(e["amount"] for e in gross_revenue_entries)
+    recorded_profit = sum(e["amount"] for e in profit_entries)
+    income_1099 = sum(e["amount"] for e in gross_revenue_entries if e.get("is_1099"))
+    income_other = sum(e["amount"] for e in gross_revenue_entries if not e.get("is_1099"))
     
     # Get COGS
     cogs_entries = await db.cogs_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
@@ -459,14 +465,20 @@ async def get_financial_summary(year: int):
     # Calculate totals
     gross_profit = gross_sales - total_cogs
     total_deductions = total_expenses + mileage_deduction
-    net_profit = gross_profit - total_deductions
+    
+    # Use recorded profit if available, otherwise calculate
+    if recorded_profit > 0:
+        net_profit = recorded_profit
+    else:
+        net_profit = gross_profit - total_deductions
     
     return {
         "year": year,
         "income": {
             "total": gross_sales,
             "from_1099": income_1099,
-            "other": income_other
+            "other": income_other,
+            "recorded_profit": recorded_profit
         },
         "cogs": total_cogs,
         "gross_profit": gross_profit,
@@ -482,37 +494,73 @@ async def get_financial_summary(year: int):
 
 @router.get("/comparison/{year}")
 async def get_year_comparison(year: int):
-    """Get comparison data between current year and previous year"""
+    """Get comparison data between current year and previous year, including YTD"""
+    from datetime import datetime
+    
     current_year = year
     previous_year = year - 1
+    current_month = datetime.now().month
     
-    async def get_year_data(y):
+    async def get_year_data(y, ytd_only=False):
         income = await db.income_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         cogs = await db.cogs_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         expenses = await db.expense_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         mileage = await db.mileage_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         
-        gross_sales = sum(e["amount"] for e in income)
+        # Filter for YTD if requested (same time period comparison)
+        if ytd_only:
+            def is_ytd(entry, date_field):
+                date_str = entry.get(date_field)
+                if date_str:
+                    try:
+                        entry_month = datetime.fromisoformat(date_str.replace('Z', '+00:00')).month
+                        return entry_month <= current_month
+                    except:
+                        return True
+                return True
+            
+            income = [e for e in income if is_ytd(e, 'date_received')]
+            cogs = [e for e in cogs if is_ytd(e, 'date')]
+            expenses = [e for e in expenses if is_ytd(e, 'date')]
+            mileage = [e for e in mileage if is_ytd(e, 'date')]
+        
+        # Separate gross revenue from profit entries
+        gross_revenue_entries = [e for e in income if e.get("platform") != "profit"]
+        profit_entries = [e for e in income if e.get("platform") == "profit"]
+        
+        gross_sales = sum(e["amount"] for e in gross_revenue_entries)
+        recorded_profit = sum(e["amount"] for e in profit_entries)
         total_cogs = sum(e["amount"] for e in cogs)
         total_expenses = sum(e["amount"] for e in expenses)
         total_miles = sum(e["miles"] for e in mileage)
         mileage_deduction = total_miles * get_irs_mileage_rate(y)
         
-        profit = gross_sales - total_cogs - total_expenses - mileage_deduction
+        # Use recorded profit if available
+        if recorded_profit > 0:
+            profit = recorded_profit
+        else:
+            profit = gross_sales - total_cogs - total_expenses - mileage_deduction
         
         return {
-            "gross_sales": gross_sales,
-            "profit": round(profit, 2)
+            "gross_sales": round(gross_sales, 2),
+            "profit": round(profit, 2),
+            "recorded_profit": round(recorded_profit, 2)
         }
     
+    # Get full year data
     current = await get_year_data(current_year)
-    previous = await get_year_data(previous_year)
+    previous_full = await get_year_data(previous_year)
+    
+    # Get YTD data for same-period comparison
+    previous_ytd = await get_year_data(previous_year, ytd_only=True)
     
     return {
         "current_year": current_year,
         "previous_year": previous_year,
+        "current_month": current_month,
         "current": current,
-        "previous": previous
+        "previous": previous_full,
+        "previous_ytd": previous_ytd
     }
 
 # ============== MONTHLY DATA FOR GRAPHS ==============

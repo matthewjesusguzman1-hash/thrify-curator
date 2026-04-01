@@ -285,35 +285,77 @@ const FinancialsSection = ({ getAuthHeader }) => {
         </div>
       </div>
 
-      {/* Year Summary Cards */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <h3 className="text-sm text-gray-500 mb-1">Total Gross Sales</h3>
-          <div className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.income?.total)}</div>
-          {comparison && comparison.previous.gross_sales > 0 && (
-            <div className={`text-xs flex items-center gap-1 mt-1 ${
-              summary?.income?.total >= comparison.previous.gross_sales ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {summary?.income?.total >= comparison.previous.gross_sales ? '↑' : '↓'}
-              vs {formatCurrency(comparison.previous.gross_sales)} in {selectedYear - 1}
-            </div>
-          )}
+      {/* Year Summary with 2025 Comparison */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <h3 className="font-medium text-gray-900 mb-4">{selectedYear} vs {selectedYear - 1} Comparison</h3>
+        
+        {/* Current Year Stats */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="bg-blue-50 rounded-lg p-3">
+            <p className="text-xs text-blue-600 font-medium">{selectedYear} Gross Sales</p>
+            <p className="text-xl font-bold text-blue-700">{formatCurrency(summary?.income?.total)}</p>
+          </div>
+          <div className="bg-green-50 rounded-lg p-3">
+            <p className="text-xs text-green-600 font-medium">{selectedYear} Net Profit</p>
+            <p className="text-xl font-bold text-green-700">
+              {formatCurrency(summary?.income?.recorded_profit || summary?.net_profit)}
+            </p>
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <h3 className="text-sm text-gray-500 mb-1">Total Net Profit</h3>
-          <div className="text-2xl font-bold text-green-600">
-            {formatCurrency(monthlyChartData.reduce((sum, m) => sum + m.netProfit, 0))}
-          </div>
-          {comparison && comparison.previous.profit !== 0 && (
-            <div className={`text-xs flex items-center gap-1 mt-1 ${
-              summary?.net_profit >= comparison.previous.profit ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {summary?.net_profit >= comparison.previous.profit ? '↑' : '↓'}
-              vs {formatCurrency(comparison.previous.profit)} in {selectedYear - 1}
+        {/* Previous Year Comparison */}
+        {comparison && (
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium text-gray-700 mb-3">{selectedYear - 1} Comparison</p>
+            
+            {/* YTD Comparison */}
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Same Period (Jan-Mar)</p>
+                <p className="text-lg font-semibold text-gray-700">
+                  {formatCurrency(comparison.previous_ytd?.gross_sales || 0)}
+                </p>
+                {comparison.previous_ytd?.gross_sales > 0 && (
+                  <p className={`text-xs mt-1 ${
+                    summary?.income?.total >= comparison.previous_ytd.gross_sales ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {summary?.income?.total >= comparison.previous_ytd.gross_sales ? '↑' : '↓'} 
+                    {' '}{Math.abs(Math.round(((summary?.income?.total - comparison.previous_ytd.gross_sales) / comparison.previous_ytd.gross_sales) * 100))}% vs YTD
+                  </p>
+                )}
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Full Year {selectedYear - 1}</p>
+                <p className="text-lg font-semibold text-gray-700">
+                  {formatCurrency(comparison.previous?.gross_sales || 0)}
+                </p>
+                {comparison.previous?.gross_sales > 0 && (
+                  <p className={`text-xs mt-1 ${
+                    summary?.income?.total >= comparison.previous.gross_sales ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {Math.round((summary?.income?.total / comparison.previous.gross_sales) * 100)}% of full year
+                  </p>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Profit Comparison */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Profit (Same Period)</p>
+                <p className="text-lg font-semibold text-gray-700">
+                  {formatCurrency(comparison.previous_ytd?.profit || 0)}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Profit (Full Year {selectedYear - 1})</p>
+                <p className="text-lg font-semibold text-gray-700">
+                  {formatCurrency(comparison.previous?.profit || 0)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Collapsible Sections */}
