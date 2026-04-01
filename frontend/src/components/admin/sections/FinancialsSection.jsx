@@ -1683,13 +1683,13 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b">
+        {/* Tabs - horizontally scrollable */}
+        <div className="flex border-b overflow-x-auto">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-2 py-3 text-sm font-medium whitespace-nowrap min-h-[48px] ${
+              className={`flex-shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap min-h-[48px] ${
                 activeTab === tab.id 
                   ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
                   : 'text-gray-500 hover:bg-gray-50'
