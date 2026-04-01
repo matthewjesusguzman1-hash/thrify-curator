@@ -1533,9 +1533,9 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
           </div>
         </div>
 
-        {/* Monthly Breakdown */}
+        {/* Monthly Breakdown - max height ~3 months, scroll for more */}
         <h4 className="font-semibold text-gray-700">Monthly Breakdown</h4>
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[240px] overflow-y-auto">
           {monthlyData.map(month => (
             <div key={month.monthKey} className="bg-gray-50 rounded-lg p-3">
               <div className="flex items-center justify-between">
@@ -1684,12 +1684,12 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b overflow-x-auto scrollbar-hide">
+        <div className="flex border-b">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-shrink-0 px-3 py-3 text-sm font-medium whitespace-nowrap min-h-[48px] ${
+              className={`flex-1 px-2 py-3 text-sm font-medium whitespace-nowrap min-h-[48px] ${
                 activeTab === tab.id 
                   ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
                   : 'text-gray-500 hover:bg-gray-50'
