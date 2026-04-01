@@ -103,31 +103,102 @@ async def delete_income(entry_id: str):
     
     return {"message": "Income entry deleted"}
 
-@router.delete("/tax-prep/reset/{year}")
-async def reset_tax_prep_year(year: int):
-    """Reset all tax prep data for a specific year (income, COGS, expenses, mileage)"""
-    deleted_counts = {
-        "income": 0,
-        "cogs": 0,
-        "expenses": 0,
-        "mileage": 0
+# ============== TAX PREP 1099 ENDPOINTS (Separate from Financials) ==============
+
+@router.get("/tax-prep/1099/{year}")
+async def get_tax_prep_1099s(year: int):
+    """Get all 1099 entries for Tax Prep - stored separately from Financials income"""
+    entries = await db.tax_prep_1099_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
+    total = sum(e["amount"] for e in entries)
+    return {
+        "entries": entries,
+        "total": total,
+        "year": year
+    }
+
+@router.post("/tax-prep/1099")
+async def create_tax_prep_1099(request: CreateIncomeRequest):
+    """Create a new 1099 entry for Tax Prep - stored separately from Financials"""
+    entry = {
+        "id": str(uuid.uuid4()),
+        "year": request.year,
+        "platform": request.platform,
+        "amount": request.amount,
+        "date_received": request.date_received,
+        "notes": request.notes,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
-    # Delete income entries for the year
-    result = await db.income_entries.delete_many({"year": year})
-    deleted_counts["income"] = result.deleted_count
+    await db.tax_prep_1099_entries.insert_one(entry)
+    entry_copy = {k: v for k, v in entry.items() if k != '_id'}
+    return {"message": "1099 entry created", "entry": entry_copy}
+
+@router.delete("/tax-prep/1099/{entry_id}")
+async def delete_tax_prep_1099(entry_id: str):
+    """Delete a 1099 entry from Tax Prep"""
+    result = await db.tax_prep_1099_entries.delete_one({"id": entry_id})
     
-    # Delete COGS entries for the year
-    result = await db.cogs_entries.delete_many({"year": year})
-    deleted_counts["cogs"] = result.deleted_count
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="1099 entry not found")
     
-    # Delete expense entries for the year
-    result = await db.expense_entries.delete_many({"year": year})
-    deleted_counts["expenses"] = result.deleted_count
+    return {"message": "1099 entry deleted"}
+
+# ============== TAX PREP OTHER INCOME ENDPOINTS (Separate from Financials) ==============
+
+@router.get("/tax-prep/other-income/{year}")
+async def get_tax_prep_other_income(year: int):
+    """Get all other income entries for Tax Prep - stored separately from Financials"""
+    entries = await db.tax_prep_other_income.find({"year": year}, {"_id": 0}).to_list(length=None)
+    total = sum(e["amount"] for e in entries)
+    return {
+        "entries": entries,
+        "total": total,
+        "year": year
+    }
+
+@router.post("/tax-prep/other-income")
+async def create_tax_prep_other_income(request: CreateIncomeRequest):
+    """Create other income entry for Tax Prep - stored separately from Financials"""
+    entry = {
+        "id": str(uuid.uuid4()),
+        "year": request.year,
+        "platform": request.platform,
+        "amount": request.amount,
+        "notes": request.notes,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
     
-    # Delete mileage entries for the year
-    result = await db.mileage_entries.delete_many({"year": year})
-    deleted_counts["mileage"] = result.deleted_count
+    await db.tax_prep_other_income.insert_one(entry)
+    entry_copy = {k: v for k, v in entry.items() if k != '_id'}
+    return {"message": "Other income entry created", "entry": entry_copy}
+
+@router.delete("/tax-prep/other-income/{entry_id}")
+async def delete_tax_prep_other_income(entry_id: str):
+    """Delete an other income entry from Tax Prep"""
+    result = await db.tax_prep_other_income.delete_one({"id": entry_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Other income entry not found")
+    
+    return {"message": "Other income entry deleted"}
+
+@router.delete("/tax-prep/reset/{year}")
+async def reset_tax_prep_year(year: int):
+    """Reset all tax prep data for a specific year"""
+    deleted_counts = {
+        "1099s": 0,
+        "other_income": 0
+    }
+    
+    # Delete Tax Prep 1099 entries (separate collection)
+    result = await db.tax_prep_1099_entries.delete_many({"year": year})
+    deleted_counts["1099s"] = result.deleted_count
+    
+    # Delete Tax Prep other income entries (separate collection)
+    result = await db.tax_prep_other_income.delete_many({"year": year})
+    deleted_counts["other_income"] = result.deleted_count
     
     total_deleted = sum(deleted_counts.values())
     
@@ -136,6 +207,51 @@ async def reset_tax_prep_year(year: int):
         "year": year,
         "deleted_counts": deleted_counts,
         "total_deleted": total_deleted
+    }
+
+@router.get("/tax-prep/summary/{year}")
+async def get_tax_prep_summary(year: int):
+    """Get Tax Prep summary - combines 1099s/other income with COGS/expenses/mileage from Financials"""
+    # Get Tax Prep income (from separate collections)
+    income_1099 = await db.tax_prep_1099_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
+    income_other = await db.tax_prep_other_income.find({"year": year}, {"_id": 0}).to_list(length=None)
+    
+    total_1099 = sum(e["amount"] for e in income_1099)
+    total_other = sum(e["amount"] for e in income_other)
+    total_income = total_1099 + total_other
+    
+    # Get COGS, expenses, mileage from Financials (shared data)
+    cogs_entries = await db.cogs_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
+    expense_entries = await db.expense_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
+    mileage_entries = await db.mileage_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
+    
+    total_cogs = sum(e["amount"] for e in cogs_entries)
+    total_expenses = sum(e["amount"] for e in expense_entries)
+    total_miles = sum(e["miles"] for e in mileage_entries)
+    mileage_rate = get_irs_mileage_rate(year)
+    mileage_deduction = total_miles * mileage_rate
+    
+    total_deductions = total_cogs + total_expenses + mileage_deduction
+    net_profit = total_income - total_deductions
+    
+    return {
+        "year": year,
+        "income": {
+            "from_1099": round(total_1099, 2),
+            "other": round(total_other, 2),
+            "total": round(total_income, 2),
+            "entries_1099": income_1099,
+            "entries_other": income_other
+        },
+        "cogs": round(total_cogs, 2),
+        "expenses": round(total_expenses, 2),
+        "mileage": {
+            "total_miles": round(total_miles, 2),
+            "rate": mileage_rate,
+            "deduction": round(mileage_deduction, 2)
+        },
+        "total_deductions": round(total_deductions, 2),
+        "net_profit": round(net_profit, 2)
     }
 
 # ============== COGS ENDPOINTS ==============

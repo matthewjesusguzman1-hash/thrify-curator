@@ -124,12 +124,14 @@ const TaxPrepStepPage = () => {
     try {
       const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
       
+      // Tax Prep uses SEPARATE collections for 1099s and other income
+      // COGS, expenses, mileage are pulled from Financials (Operations section)
       const endpoints = {
-        1: [`/api/financials/income/${selectedYear}`],
+        1: [`/api/financials/tax-prep/1099/${selectedYear}`, `/api/financials/tax-prep/other-income/${selectedYear}`],
         2: [`/api/financials/cogs/${selectedYear}`],
         3: [`/api/financials/expenses/${selectedYear}`, `/api/financials/mileage/${selectedYear}`],
         4: [`/api/financials/documents/${selectedYear}`],
-        5: [`/api/financials/summary/${selectedYear}`]
+        5: [`/api/financials/tax-prep/summary/${selectedYear}`]
       };
       
       const urls = endpoints[stepNum] || [];
@@ -137,7 +139,22 @@ const TaxPrepStepPage = () => {
         urls.map(url => fetch(`${API_URL}${url}`, { headers }))
       );
       
-      if (stepNum === 1 && responses[0]?.ok) setIncome(await responses[0].json());
+      if (stepNum === 1) {
+        // Combine 1099s and other income into a single income object
+        const income1099 = responses[0]?.ok ? await responses[0].json() : { entries: [], total: 0 };
+        const incomeOther = responses[1]?.ok ? await responses[1].json() : { entries: [], total: 0 };
+        
+        // Mark entries with their type for display
+        const entries1099 = (income1099.entries || []).map(e => ({ ...e, is_1099: true }));
+        const entriesOther = (incomeOther.entries || []).map(e => ({ ...e, is_1099: false }));
+        
+        setIncome({
+          entries: [...entries1099, ...entriesOther],
+          total_1099: income1099.total || 0,
+          total_other: incomeOther.total || 0,
+          total: (income1099.total || 0) + (incomeOther.total || 0)
+        });
+      }
       if (stepNum === 2 && responses[0]?.ok) setCogs(await responses[0].json());
       if (stepNum === 3) {
         if (responses[0]?.ok) setExpenses(await responses[0].json());
@@ -183,9 +200,20 @@ const TaxPrepStepPage = () => {
     setSaving(false);
   };
 
-  const deleteEntry = async (type, id) => {
+  const deleteEntry = async (type, id, is1099 = null) => {
     try {
-      await fetch(`${API_URL}/api/financials/${type}/${id}`, {
+      let endpoint;
+      if (type === 'income') {
+        // Use Tax Prep separate endpoints for income
+        endpoint = is1099 
+          ? `${API_URL}/api/financials/tax-prep/1099/${id}`
+          : `${API_URL}/api/financials/tax-prep/other-income/${id}`;
+      } else {
+        // COGS, expenses, mileage use the regular Financials endpoints
+        endpoint = `${API_URL}/api/financials/${type}/${id}`;
+      }
+      
+      await fetch(endpoint, {
         method: 'DELETE',
         headers: { ...getAuthHeader() }
       });
@@ -260,11 +288,11 @@ const TaxPrepStepPage = () => {
               </div>
               
               <div className="p-4">
-                {income.entries.filter(e => e.is_1099 && isManualIncomeEntry(e)).length === 0 ? (
+                {income.entries.filter(e => e.is_1099).length === 0 ? (
                   <p className="text-gray-500 text-center py-4">No 1099s added yet</p>
                 ) : (
                   <div className="space-y-2">
-                    {income.entries.filter(e => e.is_1099 && isManualIncomeEntry(e)).map(entry => {
+                    {income.entries.filter(e => e.is_1099).map(entry => {
                       const platform = PLATFORMS.find(p => p.value === entry.platform);
                       return (
                         <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -277,7 +305,7 @@ const TaxPrepStepPage = () => {
                           <div className="flex items-center gap-3">
                             <span className="font-semibold">{formatCurrency(entry.amount)}</span>
                             <button
-                              onClick={() => deleteEntry('income', entry.id)}
+                              onClick={() => deleteEntry('income', entry.id, true)}
                               className="text-red-500 hover:text-red-700"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -288,7 +316,7 @@ const TaxPrepStepPage = () => {
                     })}
                     <div className="pt-2 border-t border-gray-200 flex justify-between font-semibold">
                       <span>1099 Total</span>
-                      <span>{formatCurrency(income.entries.filter(e => e.is_1099 && isManualIncomeEntry(e)).reduce((sum, e) => sum + e.amount, 0))}</span>
+                      <span>{formatCurrency(income.total_1099 || 0)}</span>
                     </div>
                   </div>
                 )}
@@ -314,11 +342,11 @@ const TaxPrepStepPage = () => {
               </div>
               
               <div className="p-4">
-                {income.entries.filter(e => !e.is_1099 && isManualIncomeEntry(e)).length === 0 ? (
+                {income.entries.filter(e => !e.is_1099).length === 0 ? (
                   <p className="text-gray-500 text-center py-4">No other income added</p>
                 ) : (
                   <div className="space-y-2">
-                    {income.entries.filter(e => !e.is_1099 && isManualIncomeEntry(e)).map(entry => {
+                    {income.entries.filter(e => !e.is_1099).map(entry => {
                       const platform = PLATFORMS.find(p => p.value === entry.platform);
                       return (
                         <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -331,7 +359,7 @@ const TaxPrepStepPage = () => {
                           <div className="flex items-center gap-3">
                             <span className="font-semibold">{formatCurrency(entry.amount)}</span>
                             <button
-                              onClick={() => deleteEntry('income', entry.id)}
+                              onClick={() => deleteEntry('income', entry.id, false)}
                               className="text-red-500 hover:text-red-700"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -342,7 +370,7 @@ const TaxPrepStepPage = () => {
                     })}
                     <div className="pt-2 border-t border-gray-200 flex justify-between font-semibold">
                       <span>Other Total</span>
-                      <span>{formatCurrency(income.entries.filter(e => !e.is_1099 && isManualIncomeEntry(e)).reduce((sum, e) => sum + e.amount, 0))}</span>
+                      <span>{formatCurrency(income.total_other || 0)}</span>
                     </div>
                   </div>
                 )}
@@ -354,7 +382,7 @@ const TaxPrepStepPage = () => {
               <div className="flex justify-between items-center text-lg font-bold">
                 <span className="text-blue-900">TOTAL REPORTED INCOME</span>
                 <span className="text-blue-600" data-testid="total-income-amount">
-                  {formatCurrency(income.entries.filter(e => isManualIncomeEntry(e)).reduce((sum, e) => sum + e.amount, 0))}
+                  {formatCurrency(income.total || 0)}
                 </span>
               </div>
               <p className="text-sm text-blue-700 mt-1">
@@ -848,14 +876,18 @@ const AddIncomeModal = ({ year, is1099, getAuthHeader, onClose, onSave }) => {
     setSaving(true);
     
     try {
-      const response = await fetch(`${API_URL}/api/financials/income`, {
+      // Use separate Tax Prep endpoints (NOT the main income endpoint)
+      const endpoint = is1099 
+        ? `${API_URL}/api/financials/tax-prep/1099`
+        : `${API_URL}/api/financials/tax-prep/other-income`;
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify({
           year,
           platform,
           amount: parseFloat(amount),
-          is_1099: is1099,
           date_received: dateReceived || null,
           notes
         })
