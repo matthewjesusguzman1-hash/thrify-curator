@@ -7,6 +7,7 @@ import {
   Receipt,
   Car,
   ChevronRight,
+  ChevronDown,
   Upload,
   Plus,
   FileText,
@@ -189,20 +190,18 @@ const FinancialsSection = ({ getAuthHeader }) => {
           <DollarSign className="w-6 h-6 text-green-600" />
           Financials
         </h2>
-        <div className="flex gap-1">
-          {[2026, 2025, 2024, 2023].map(year => (
-            <button
-              key={year}
-              onClick={() => setSelectedYear(year)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                selectedYear === year
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {year}
-            </button>
-          ))}
+        <div className="relative">
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value={2026}>2026</option>
+            <option value={2025}>2025</option>
+            <option value={2024}>2024</option>
+            <option value={2023}>2023</option>
+          </select>
+          <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
         </div>
       </div>
 
