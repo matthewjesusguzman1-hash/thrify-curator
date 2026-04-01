@@ -312,7 +312,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
             {/* YTD Comparison */}
             <div className="grid grid-cols-2 gap-4 mb-3">
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Same Period (Jan-Mar)</p>
+                <p className="text-xs text-gray-500">Same Period ({comparison.ytd_label || 'YTD'})</p>
                 <p className="text-lg font-semibold text-gray-700">
                   {formatCurrency(comparison.previous_ytd?.gross_sales || 0)}
                 </p>
@@ -343,7 +343,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
             {/* Profit Comparison */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Profit (Same Period)</p>
+                <p className="text-xs text-gray-500">Profit ({comparison.ytd_label || 'YTD'})</p>
                 <p className="text-lg font-semibold text-gray-700">
                   {formatCurrency(comparison.previous_ytd?.profit || 0)}
                 </p>

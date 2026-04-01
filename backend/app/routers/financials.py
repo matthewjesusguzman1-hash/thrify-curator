@@ -500,29 +500,35 @@ async def get_year_comparison(year: int):
     current_year = year
     previous_year = year - 1
     current_month = datetime.now().month
+    # Use previous month for YTD comparison (compare completed months only)
+    ytd_through_month = current_month - 1 if current_month > 1 else 12
     
-    async def get_year_data(y, ytd_only=False):
+    # Month names for display
+    month_names = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    ytd_label = f"Jan-{month_names[ytd_through_month]}"
+    
+    async def get_year_data(y, ytd_only=False, through_month=None):
         income = await db.income_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         cogs = await db.cogs_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         expenses = await db.expense_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         mileage = await db.mileage_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         
-        # Filter for YTD if requested (same time period comparison)
-        if ytd_only:
-            def is_ytd(entry, date_field):
+        # Filter for YTD if requested (through specified month)
+        if ytd_only and through_month:
+            def is_in_range(entry, date_field):
                 date_str = entry.get(date_field)
                 if date_str:
                     try:
                         entry_month = datetime.fromisoformat(date_str.replace('Z', '+00:00')).month
-                        return entry_month <= current_month
+                        return entry_month <= through_month
                     except:
                         return True
                 return True
             
-            income = [e for e in income if is_ytd(e, 'date_received')]
-            cogs = [e for e in cogs if is_ytd(e, 'date')]
-            expenses = [e for e in expenses if is_ytd(e, 'date')]
-            mileage = [e for e in mileage if is_ytd(e, 'date')]
+            income = [e for e in income if is_in_range(e, 'date_received')]
+            cogs = [e for e in cogs if is_in_range(e, 'date')]
+            expenses = [e for e in expenses if is_in_range(e, 'date')]
+            mileage = [e for e in mileage if is_in_range(e, 'date')]
         
         # Separate gross revenue from profit entries
         gross_revenue_entries = [e for e in income if e.get("platform") != "profit"]
@@ -551,13 +557,15 @@ async def get_year_comparison(year: int):
     current = await get_year_data(current_year)
     previous_full = await get_year_data(previous_year)
     
-    # Get YTD data for same-period comparison
-    previous_ytd = await get_year_data(previous_year, ytd_only=True)
+    # Get YTD data for same-period comparison (through last completed month)
+    previous_ytd = await get_year_data(previous_year, ytd_only=True, through_month=ytd_through_month)
     
     return {
         "current_year": current_year,
         "previous_year": previous_year,
         "current_month": current_month,
+        "ytd_through_month": ytd_through_month,
+        "ytd_label": ytd_label,
         "current": current,
         "previous": previous_full,
         "previous_ytd": previous_ytd
