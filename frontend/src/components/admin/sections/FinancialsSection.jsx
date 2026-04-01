@@ -152,6 +152,22 @@ const FinancialsSection = ({ getAuthHeader }) => {
       }
     });
 
+    // For current year, set future months (no data) to null so lines don't show
+    // Find the last month with data for current year
+    let lastMonthWithData = -1;
+    for (let i = 11; i >= 0; i--) {
+      if (data[i].grossRevenue > 0 || data[i].netProfit > 0) {
+        lastMonthWithData = i;
+        break;
+      }
+    }
+    
+    // Set months after last data month to null (won't render on chart)
+    for (let i = lastMonthWithData + 1; i < 12; i++) {
+      data[i].grossRevenue = null;
+      data[i].netProfit = null;
+    }
+
     return data;
   };
 
@@ -314,6 +330,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
                 strokeWidth={3}
                 dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6 }}
+                connectNulls={false}
               />
               <Line 
                 type="monotone"
@@ -323,6 +340,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
                 strokeWidth={3}
                 dot={{ fill: '#16a34a', strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6 }}
+                connectNulls={false}
               />
               {/* Previous Year - Dashed lighter lines */}
               <Line 
