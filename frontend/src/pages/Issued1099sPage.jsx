@@ -54,8 +54,13 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched employees:', data);
         setEmployees(data || []);
         return data || [];
+      } else {
+        console.error('Failed to fetch employees:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -81,6 +86,8 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
   // Open portal dialog
   const handlePortalClick = async () => {
     setLoadingData(true);
+    setShowPortalConfirm(true); // Show modal first with loading state
+    
     const emps = await fetchEmployees();
     
     // Try to pre-select matching employee
@@ -89,7 +96,6 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
     );
     setSelectedEmployee(match?.id || '');
     setSelectedForm(entry.filed ? 'filed' : 'draft');
-    setShowPortalConfirm(true);
     setLoadingData(false);
   };
 
@@ -537,20 +543,31 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Select Employee Account
                 </label>
-                <select
-                  value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg bg-white"
-                >
-                  <option value="">-- Select Employee --</option>
-                  {employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.email})
-                    </option>
-                  ))}
-                </select>
-                {employees.length === 0 && (
-                  <p className="text-sm text-orange-500 mt-2">No employees found in the system</p>
+                {loadingData ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-sm text-gray-500">Loading employees...</span>
+                  </div>
+                ) : employees.length === 0 ? (
+                  <p className="text-sm text-orange-500 py-2">No employees found in the system</p>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg bg-white">
+                    {employees.map(emp => (
+                      <button
+                        key={emp.id}
+                        type="button"
+                        onClick={() => setSelectedEmployee(emp.id)}
+                        className={`w-full px-3 py-3 text-left border-b border-gray-100 last:border-b-0 ${
+                          selectedEmployee === emp.id 
+                            ? 'bg-blue-100 text-blue-700' 
+                            : 'bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <p className="font-medium">{emp.name}</p>
+                        <p className="text-xs text-gray-500">{emp.email}</p>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>

@@ -231,6 +231,11 @@ function AnimatedRoutes() {
             <Issued1099sPage />
           </PageTransition>
         } />
+        <Route path="/admin/issued-1099s" element={
+          <PageTransition>
+            <Issued1099sPage />
+          </PageTransition>
+        } />
       </Routes>
     </AnimatePresence>
   );
