@@ -277,3 +277,106 @@ async def reject_w9(employee_id: str, reject_data: dict, admin: dict = Depends(g
     )
     
     return {"message": "W-9 returned for corrections", "reason": reason}
+
+
+@router.get("/employees-with-w9")
+async def get_employees_with_w9(admin: dict = Depends(get_admin_user)):
+    """Get all employees/contractors who have W-9s on file for 1099 generation."""
+    # Find all users with W-9s
+    users_with_w9 = await db.users.find(
+        {"has_w9": True},
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "role": 1}
+    ).to_list(length=None)
+    
+    result = []
+    for user in users_with_w9:
+        # Get the latest W-9 document for each user
+        w9_doc = await db.w9_documents.find_one(
+            {"employee_id": user["id"]},
+            {"_id": 0, "id": 1, "filename": 1, "uploaded_at": 1, "content": 1, "content_type": 1},
+            sort=[("uploaded_at", -1)]
+        )
+        
+        if w9_doc:
+            result.append({
+                "user_id": user["id"],
+                "name": user.get("name", ""),
+                "email": user.get("email", ""),
+                "role": user.get("role", ""),
+                "w9_id": w9_doc.get("id"),
+                "w9_filename": w9_doc.get("filename"),
+                "w9_uploaded_at": w9_doc.get("uploaded_at"),
+                "has_w9_image": w9_doc.get("content_type", "").startswith("image/")
+            })
+    
+    return {"employees": result, "count": len(result)}
+
+
+@router.post("/employees/{employee_id}/w9/extract")
+async def extract_employee_w9_data(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Extract data from an employee's W-9 document using AI."""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    import json
+    
+    # Get the latest W-9 document
+    w9_doc = await db.w9_documents.find_one(
+        {"employee_id": employee_id},
+        {"_id": 0},
+        sort=[("uploaded_at", -1)]
+    )
+    
+    if not w9_doc:
+        raise HTTPException(status_code=404, detail="No W-9 document found for this employee")
+    
+    content_type = w9_doc.get("content_type", "")
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="W-9 must be an image file for AI extraction. PDF extraction not supported.")
+    
+    base64_image = w9_doc.get("content", "")
+    if not base64_image:
+        raise HTTPException(status_code=404, detail="W-9 document content not found")
+    
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    try:
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"w9-extract-{employee_id}",
+            system_message="""You are a tax document data extraction assistant.
+            Extract data from W-9 forms.
+            Return the data as valid JSON only, no other text or markdown."""
+        ).with_model("openai", "gpt-4o")
+        
+        prompt = """Extract the following from this W-9 form:
+        - name: Individual or business name
+        - address: Full address (street, city, state, ZIP)
+        - tin: SSN or EIN (show the FULL number, do NOT mask it)
+        - business_name: Business name if different from individual name
+        
+        Return ONLY a valid JSON object. Use null for any field not visible."""
+        
+        image_content = ImageContent(image_base64=base64_image)
+        user_message = UserMessage(
+            text=prompt,
+            file_contents=[image_content]
+        )
+        
+        response = await chat.send_message(user_message)
+        
+        response_text = response.strip()
+        if response_text.startswith('```'):
+            response_text = response_text.split('```')[1]
+            if response_text.startswith('json'):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+        
+        try:
+            extracted_data = json.loads(response_text)
+            return {"success": True, "data": extracted_data}
+        except json.JSONDecodeError:
+            return {"success": False, "error": "Could not parse W-9 data", "raw_response": response_text}
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"W-9 extraction failed: {str(e)}")

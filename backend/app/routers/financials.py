@@ -2208,13 +2208,13 @@ async def extract_w9_data(file: UploadFile = File(...)):
         If this is a W-9 form, extract:
         - name: Individual or business name
         - address: Full address
-        - tin: SSN or EIN (mask it as XXX-XX-1234)
+        - tin: SSN or EIN (show the FULL number, do NOT mask it)
         
         If this is a 1099-NEC form, extract:
         - name: Recipient name (who was paid)
         - address: Recipient address
-        - tin: Recipient's TIN/SSN (mask it as XXX-XX-1234)
-        - amount_paid: The nonemployee compensation amount (Box 1)
+        - tin: Recipient's TIN/SSN (show the FULL number, do NOT mask it)
+        - amount_paid: The nonemployee compensation amount (Box 1) as a number
         - payer_name: Who issued the 1099 (the payer)
         - tax_year: The calendar year
         

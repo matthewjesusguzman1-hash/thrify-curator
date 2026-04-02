@@ -11,7 +11,8 @@ import {
   FileText,
   Scan,
   X,
-  ChevronDown
+  ChevronDown,
+  Users
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -201,6 +202,60 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
   const [w9Preview, setW9Preview] = useState(null);
   const [extracting, setExtracting] = useState(false);
   const [extractedData, setExtractedData] = useState(null);
+  
+  // Employees with W-9s
+  const [employeesWithW9, setEmployeesWithW9] = useState([]);
+  const [showEmployeeList, setShowEmployeeList] = useState(false);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+
+  // Fetch employees with W-9s on mount
+  useEffect(() => {
+    const fetchEmployeesWithW9 = async () => {
+      setLoadingEmployees(true);
+      try {
+        const response = await fetch(`${API_URL}/api/admin/employees-with-w9`, {
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setEmployeesWithW9(data.employees || []);
+        }
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      }
+      setLoadingEmployees(false);
+    };
+    fetchEmployeesWithW9();
+  }, []);
+
+  const handleSelectEmployee = async (employee) => {
+    setShowEmployeeList(false);
+    setContractorName(employee.name);
+    
+    // If they have an image W-9, extract data from it
+    if (employee.has_w9_image) {
+      setExtracting(true);
+      try {
+        const response = await fetch(`${API_URL}/api/admin/employees/${employee.user_id}/w9/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setExtractedData(result.data);
+            if (result.data.name) setContractorName(result.data.name);
+            if (result.data.address) setContractorAddress(result.data.address);
+            if (result.data.tin) setContractorTin(result.data.tin);
+          }
+        }
+      } catch (error) {
+        console.error('Error extracting W-9:', error);
+      }
+      setExtracting(false);
+    }
+  };
 
   const handleW9Upload = (e) => {
     const file = e.target.files?.[0];
@@ -304,6 +359,46 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Select from Employees with W-9s */}
+        {!entry && employeesWithW9.length > 0 && (
+          <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+            <p className="text-sm font-medium text-green-900 mb-2">Quick Fill from Employee W-9</p>
+            <button
+              type="button"
+              onClick={() => setShowEmployeeList(!showEmployeeList)}
+              className="w-full px-3 py-3 bg-white border border-green-300 rounded-lg text-left flex items-center justify-between"
+            >
+              <span className="text-sm text-green-700">
+                {loadingEmployees ? 'Loading...' : `Select from ${employeesWithW9.length} employee(s) with W-9 on file`}
+              </span>
+              <ChevronDown className={`w-5 h-5 text-green-500 transition-transform ${showEmployeeList ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showEmployeeList && (
+              <div className="mt-2 max-h-40 overflow-y-auto border border-green-200 rounded-lg bg-white">
+                {employeesWithW9.map(emp => (
+                  <button
+                    key={emp.user_id}
+                    type="button"
+                    onClick={() => handleSelectEmployee(emp)}
+                    className="w-full px-3 py-2 text-left hover:bg-green-50 border-b border-green-100 last:border-b-0"
+                  >
+                    <p className="font-medium text-gray-900">{emp.name}</p>
+                    <p className="text-xs text-gray-500">{emp.email}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {extracting && (
+              <div className="mt-2 flex items-center gap-2 text-sm text-green-700">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                Extracting W-9 data...
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Document Upload & Extract */}
         <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
