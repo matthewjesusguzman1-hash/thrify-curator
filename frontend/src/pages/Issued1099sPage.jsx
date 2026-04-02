@@ -12,11 +12,310 @@ import {
   Scan,
   X,
   ChevronDown,
-  Users
+  Users,
+  Download,
+  Mail,
+  Share2,
+  CheckCircle
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || '';
+
+// Format currency helper
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount || 0);
+};
+
+// Entry Card Component with Actions
+const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) => {
+  const [showActions, setShowActions] = useState(false);
+  const [processing, setProcessing] = useState(null);
+  const [showUploadFiled, setShowUploadFiled] = useState(false);
+
+  const handleGeneratePDF = async () => {
+    setProcessing('pdf');
+    try {
+      const response = await fetch(`${API_URL}/api/financials/issued-1099s/${entry.id}/generate-pdf`, {
+        headers: getAuthHeader()
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        // Use Web Share API for iOS compatibility
+        if (navigator.share && navigator.canShare) {
+          const file = new File([blob], `1099_NEC_${entry.contractor_name.replace(/\s+/g, '_')}_${entry.year}.pdf`, { type: 'application/pdf' });
+          try {
+            await navigator.share({ files: [file], title: '1099-NEC Form' });
+          } catch (e) {
+            // Fallback to download
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `1099_NEC_${entry.contractor_name.replace(/\s+/g, '_')}_${entry.year}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `1099_NEC_${entry.contractor_name.replace(/\s+/g, '_')}_${entry.year}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } else {
+        alert('Failed to generate PDF');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error generating PDF');
+    }
+    setProcessing(null);
+  };
+
+  const handleSaveToPortal = async () => {
+    setProcessing('portal');
+    try {
+      const response = await fetch(`${API_URL}/api/financials/issued-1099s/${entry.id}/save-to-portal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.user_found 
+          ? `1099 saved to ${data.user_name}'s portal` 
+          : `1099 saved. Note: No user account found for "${data.user_name}"`
+        );
+        onRefresh();
+      } else {
+        alert('Failed to save to portal');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error saving to portal');
+    }
+    setProcessing(null);
+  };
+
+  const handleEmailContractor = async () => {
+    setProcessing('email');
+    try {
+      const response = await fetch(`${API_URL}/api/financials/issued-1099s/${entry.id}/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(`1099 emailed to ${data.email}`);
+        onRefresh();
+      } else {
+        const error = await response.json();
+        alert(error.detail || 'Failed to send email');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error sending email');
+    }
+    setProcessing(null);
+  };
+
+  const handleUploadFiled = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setProcessing('upload');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const authHeader = getAuthHeader();
+      delete authHeader['Content-Type'];
+      
+      const response = await fetch(`${API_URL}/api/financials/issued-1099s/${entry.id}/upload-filed`, {
+        method: 'POST',
+        headers: authHeader,
+        body: formData
+      });
+      
+      if (response.ok) {
+        alert('Filed 1099 uploaded successfully');
+        setShowUploadFiled(false);
+        onRefresh();
+      } else {
+        alert('Failed to upload filed document');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error uploading filed document');
+    }
+    setProcessing(null);
+  };
+
+  const handleViewFiled = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/financials/issued-1099s/${entry.id}/filed-document`, {
+        headers: getAuthHeader()
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } else {
+        alert('Failed to view filed document');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      {/* Header with basic info */}
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-gray-900">{entry.contractor_name}</p>
+            {entry.filed && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                <CheckCircle className="w-3 h-3" /> Filed
+              </span>
+            )}
+            {entry.emailed && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                <Mail className="w-3 h-3" /> Emailed
+              </span>
+            )}
+          </div>
+          {entry.contractor_tin && (
+            <p className="text-sm text-gray-500">TIN: {entry.contractor_tin}</p>
+          )}
+          <p className="text-lg font-bold text-green-600 mt-1">{formatCurrency(entry.amount_paid)}</p>
+        </div>
+        <div className="flex items-center gap-1 ml-2">
+          <button
+            onClick={onEdit}
+            className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="mt-4 pt-3 border-t border-gray-100">
+        <button
+          onClick={() => setShowActions(!showActions)}
+          className="w-full text-left text-sm text-blue-600 font-medium flex items-center justify-between"
+        >
+          Actions
+          <ChevronDown className={`w-4 h-4 transition-transform ${showActions ? 'rotate-180' : ''}`} />
+        </button>
+        
+        {showActions && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button
+              onClick={handleGeneratePDF}
+              disabled={!!processing}
+              variant="outline"
+              className="text-sm py-2 h-auto flex items-center justify-center gap-1"
+            >
+              {processing === 'pdf' ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Generate PDF
+                </>
+              )}
+            </Button>
+            
+            <Button
+              onClick={handleSaveToPortal}
+              disabled={!!processing || entry.saved_to_portal}
+              variant="outline"
+              className="text-sm py-2 h-auto flex items-center justify-center gap-1"
+            >
+              {processing === 'portal' ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4" />
+                  {entry.saved_to_portal ? 'Saved' : 'Save to Portal'}
+                </>
+              )}
+            </Button>
+            
+            <Button
+              onClick={handleEmailContractor}
+              disabled={!!processing}
+              variant="outline"
+              className="text-sm py-2 h-auto flex items-center justify-center gap-1"
+            >
+              {processing === 'email' ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+              ) : (
+                <>
+                  <Mail className="w-4 h-4" />
+                  Email Contractor
+                </>
+              )}
+            </Button>
+            
+            {entry.filed ? (
+              <Button
+                onClick={handleViewFiled}
+                variant="outline"
+                className="text-sm py-2 h-auto flex items-center justify-center gap-1 bg-green-50 border-green-200 text-green-700"
+              >
+                <FileText className="w-4 h-4" />
+                View Filed
+              </Button>
+            ) : (
+              <div className="relative">
+                <Button
+                  onClick={() => setShowUploadFiled(true)}
+                  disabled={!!processing}
+                  variant="outline"
+                  className="w-full text-sm py-2 h-auto flex items-center justify-center gap-1"
+                >
+                  {processing === 'upload' ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Upload Filed
+                    </>
+                  )}
+                </Button>
+                {showUploadFiled && (
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleUploadFiled}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const Issued1099sPage = () => {
   const navigate = useNavigate();
@@ -69,13 +368,6 @@ const Issued1099sPage = () => {
     } catch (error) {
       console.error('Error deleting:', error);
     }
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount || 0);
   };
 
   return (
@@ -134,34 +426,14 @@ const Issued1099sPage = () => {
         ) : (
           <div className="space-y-3">
             {entries.map(entry => (
-              <div key={entry.id} className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900">{entry.contractor_name}</p>
-                    {entry.contractor_address && (
-                      <p className="text-sm text-gray-500 truncate">{entry.contractor_address}</p>
-                    )}
-                    <p className="text-lg font-bold text-green-600 mt-1">{formatCurrency(entry.amount_paid)}</p>
-                    {entry.notes && (
-                      <p className="text-sm text-gray-400 mt-1">{entry.notes}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 ml-2">
-                    <button
-                      onClick={() => setEditingEntry(entry)}
-                      className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(entry.id)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <Entry1099Card 
+                key={entry.id} 
+                entry={entry} 
+                getAuthHeader={getAuthHeader}
+                onEdit={() => setEditingEntry(entry)}
+                onDelete={() => handleDelete(entry.id)}
+                onRefresh={fetchEntries}
+              />
             ))}
           </div>
         )}

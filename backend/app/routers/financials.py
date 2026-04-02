@@ -2163,7 +2163,277 @@ async def delete_issued_1099(entry_id: str):
     return {"message": "1099 entry deleted"}
 
 
-# ============== W-9 AI EXTRACTION ==============
+@router.get("/issued-1099s/{entry_id}/generate-pdf")
+async def generate_1099_nec_pdf(entry_id: str):
+    """Generate a 1099-NEC PDF form for IRS filing"""
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import inch
+    from io import BytesIO
+    
+    # Get the 1099 entry
+    entry = await db.issued_1099s.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="1099 entry not found")
+    
+    # Get payer info (business owner)
+    payer_info = {
+        "name": "Thrifty Curator",
+        "address": "",  # Would come from business settings
+        "tin": ""  # Would come from business settings
+    }
+    
+    # Create PDF
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    
+    # Title
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(1*inch, height - 1*inch, "1099-NEC")
+    c.setFont("Helvetica", 10)
+    c.drawString(1*inch, height - 1.3*inch, f"Nonemployee Compensation - Tax Year {entry['year']}")
+    
+    # Payer Info (Left side)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(1*inch, height - 2*inch, "PAYER'S Information")
+    c.setFont("Helvetica", 9)
+    c.drawString(1*inch, height - 2.3*inch, f"Name: {payer_info['name']}")
+    
+    # Recipient Info (Right side)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(4*inch, height - 2*inch, "RECIPIENT'S Information")
+    c.setFont("Helvetica", 9)
+    c.drawString(4*inch, height - 2.3*inch, f"Name: {entry.get('contractor_name', '')}")
+    c.drawString(4*inch, height - 2.5*inch, f"TIN: {entry.get('contractor_tin', '')}")
+    
+    # Address
+    address = entry.get('contractor_address', '')
+    if address:
+        lines = address.split('\n') if '\n' in address else [address]
+        y_pos = height - 2.7*inch
+        for line in lines[:3]:
+            c.drawString(4*inch, y_pos, line.strip())
+            y_pos -= 0.2*inch
+    
+    # Box 1 - Nonemployee Compensation
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(1*inch, height - 4*inch, "Box 1 - Nonemployee Compensation")
+    c.setFont("Helvetica", 14)
+    amount = entry.get('amount_paid', 0)
+    c.drawString(1*inch, height - 4.4*inch, f"${amount:,.2f}")
+    
+    # Notes
+    if entry.get('notes'):
+        c.setFont("Helvetica", 9)
+        c.drawString(1*inch, height - 5*inch, f"Notes: {entry['notes']}")
+    
+    # Footer
+    c.setFont("Helvetica", 8)
+    c.drawString(1*inch, 1*inch, "This is a draft 1099-NEC form. For official IRS filing, use IRS-approved forms.")
+    c.drawString(1*inch, 0.8*inch, f"Generated on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}")
+    
+    c.save()
+    buffer.seek(0)
+    
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=1099_NEC_{entry['contractor_name'].replace(' ', '_')}_{entry['year']}.pdf"
+        }
+    )
+
+
+@router.post("/issued-1099s/{entry_id}/save-to-portal")
+async def save_1099_to_employee_portal(entry_id: str):
+    """Save the 1099 to the employee/contractor's portal for them to view"""
+    # Get the 1099 entry
+    entry = await db.issued_1099s.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="1099 entry not found")
+    
+    # Find the employee by name or create a document record
+    contractor_name = entry.get('contractor_name', '')
+    
+    # Look for a user with this name
+    user = await db.users.find_one(
+        {"name": {"$regex": f"^{contractor_name}$", "$options": "i"}},
+        {"_id": 0, "id": 1, "email": 1, "name": 1}
+    )
+    
+    # Create a tax document record
+    doc_record = {
+        "id": str(uuid.uuid4()),
+        "type": "1099_nec",
+        "year": entry["year"],
+        "contractor_name": contractor_name,
+        "contractor_tin": entry.get("contractor_tin"),
+        "amount_paid": entry.get("amount_paid"),
+        "issued_1099_id": entry_id,
+        "user_id": user["id"] if user else None,
+        "status": "issued",
+        "filed_document_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.tax_documents.insert_one(doc_record)
+    
+    # Update the 1099 entry to mark it as saved to portal
+    await db.issued_1099s.update_one(
+        {"id": entry_id},
+        {"$set": {"saved_to_portal": True, "portal_doc_id": doc_record["id"]}}
+    )
+    
+    return {
+        "message": "1099 saved to employee portal",
+        "user_found": user is not None,
+        "user_name": user["name"] if user else contractor_name,
+        "doc_id": doc_record["id"]
+    }
+
+
+@router.post("/issued-1099s/{entry_id}/email")
+async def email_1099_to_contractor(entry_id: str):
+    """Email the 1099-NEC to the contractor"""
+    from app.services.email_service import send_email
+    
+    # Get the 1099 entry
+    entry = await db.issued_1099s.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="1099 entry not found")
+    
+    contractor_name = entry.get('contractor_name', '')
+    
+    # Find the user to get their email
+    user = await db.users.find_one(
+        {"name": {"$regex": f"^{contractor_name}$", "$options": "i"}},
+        {"_id": 0, "email": 1, "name": 1}
+    )
+    
+    if not user or not user.get("email"):
+        raise HTTPException(status_code=400, detail="No email found for this contractor. Please add their email to their employee record.")
+    
+    email = user["email"]
+    amount = entry.get("amount_paid", 0)
+    year = entry.get("year")
+    
+    # Send email
+    subject = f"Your 1099-NEC for Tax Year {year}"
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>1099-NEC Tax Document</h2>
+        <p>Dear {contractor_name},</p>
+        <p>Your 1099-NEC form for tax year {year} is now available.</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Nonemployee Compensation (Box 1):</strong> ${amount:,.2f}</p>
+            <p><strong>Tax Year:</strong> {year}</p>
+        </div>
+        <p>You can view and download your 1099-NEC form by logging into your employee portal.</p>
+        <p>Please retain this document for your tax records.</p>
+        <br>
+        <p>Best regards,<br>Thrifty Curator</p>
+    </div>
+    """
+    
+    try:
+        await send_email(
+            to_email=email,
+            subject=subject,
+            html_content=html_content
+        )
+        
+        # Update entry to mark as emailed
+        await db.issued_1099s.update_one(
+            {"id": entry_id},
+            {"$set": {"emailed": True, "emailed_at": datetime.now(timezone.utc).isoformat(), "emailed_to": email}}
+        )
+        
+        return {"message": f"1099-NEC emailed to {email}", "email": email}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
+@router.post("/issued-1099s/{entry_id}/upload-filed")
+async def upload_filed_1099(entry_id: str, file: UploadFile = File(...)):
+    """Upload the official filed 1099 document"""
+    # Get the 1099 entry
+    entry = await db.issued_1099s.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="1099 entry not found")
+    
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+    
+    doc_id = str(uuid.uuid4())
+    
+    # Store the filed document
+    filed_doc = {
+        "id": doc_id,
+        "issued_1099_id": entry_id,
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "content": base64.b64encode(content).decode('utf-8'),
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "type": "filed_1099_nec",
+        "year": entry["year"],
+        "contractor_name": entry.get("contractor_name")
+    }
+    
+    await db.filed_tax_documents.insert_one(filed_doc)
+    
+    # Update the 1099 entry
+    await db.issued_1099s.update_one(
+        {"id": entry_id},
+        {"$set": {
+            "filed": True,
+            "filed_at": datetime.now(timezone.utc).isoformat(),
+            "filed_document_id": doc_id
+        }}
+    )
+    
+    # Also update the tax document record if it exists
+    await db.tax_documents.update_one(
+        {"issued_1099_id": entry_id},
+        {"$set": {
+            "status": "filed",
+            "filed_document_id": doc_id,
+            "filed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "message": "Filed 1099 uploaded successfully",
+        "doc_id": doc_id,
+        "filename": file.filename
+    }
+
+
+@router.get("/issued-1099s/{entry_id}/filed-document")
+async def download_filed_1099(entry_id: str):
+    """Download the filed 1099 document"""
+    entry = await db.issued_1099s.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="1099 entry not found")
+    
+    filed_doc_id = entry.get("filed_document_id")
+    if not filed_doc_id:
+        raise HTTPException(status_code=404, detail="No filed document found for this 1099")
+    
+    doc = await db.filed_tax_documents.find_one({"id": filed_doc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Filed document not found")
+    
+    content = base64.b64decode(doc["content"])
+    
+    return Response(
+        content=content,
+        media_type=doc.get("content_type", "application/pdf"),
+        headers={
+            "Content-Disposition": f"inline; filename={doc.get('filename', '1099_filed.pdf')}"
+        }
+    )
 
 @router.post("/w9/extract")
 async def extract_w9_data(file: UploadFile = File(...)):
