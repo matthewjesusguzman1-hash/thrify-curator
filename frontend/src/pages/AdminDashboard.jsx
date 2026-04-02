@@ -2898,8 +2898,7 @@ export default function AdminDashboard() {
                     <span className="hidden sm:inline">Remove</span>
                   </Button>
                 </div>
-                {/* GPS Trip Controls Row - HIDDEN until GPS plugin is fixed */}
-                {false && (
+                {/* GPS Trip Controls Row - Enabled for testing */}
                 <div className="flex gap-1 items-center">
                   {gpsTrackingStatus === "idle" ? (
                     <Button
@@ -2991,7 +2990,6 @@ export default function AdminDashboard() {
                     </div>
                   ) : null}
                 </div>
-                )}
               </div>
             </div>
           </div>
@@ -3414,8 +3412,7 @@ export default function AdminDashboard() {
               }}
             >
               {/* GPS Mileage Tracker - New real-time tracking */}
-              {/* FEATURE FLAG: Set to true to enable GPS tracking (disabled for App Store submission) */}
-              {false && (
+              {/* FEATURE FLAG: GPS tracking enabled for testing */}
               <GPSMileageTracker 
                 ref={gpsTrackerRef}
                 getAuthHeader={getAuthHeader}
@@ -3426,7 +3423,6 @@ export default function AdminDashboard() {
                 setExternalTrackingStatus={setGpsTrackingStatus}
                 gpsTracker={gpsTracker}
               />
-              )}
 
               {/* Financials Section - Year-round tracking + Tax Prep */}
               <FinancialsSection getAuthHeader={getAuthHeader} />
