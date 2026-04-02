@@ -240,7 +240,7 @@ const TaxReturnsArchiveSection = ({ getAuthHeader }) => {
         <div className="flex items-center gap-3">
           <Archive className="w-5 h-5 text-purple-600" />
           <div className="text-left">
-            <h2 className="font-semibold text-white" data-testid="tax-returns-archive-title">Tax Returns Archive</h2>
+            <h2 className="font-semibold text-gray-900" data-testid="tax-returns-archive-title">Tax Returns Archive</h2>
             <p className="text-xs text-gray-500">
               {initialLoading 
                 ? 'Loading...' 

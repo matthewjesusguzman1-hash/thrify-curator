@@ -320,7 +320,7 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
               variant="outline"
               className="text-sm py-2 h-auto flex items-center justify-center gap-1"
             >
-              {processing === 'portal' || loadingEmployees ? (
+              {processing === 'portal' || loadingData ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
               ) : (
                 <>
