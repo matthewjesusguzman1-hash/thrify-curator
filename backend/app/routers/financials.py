@@ -2245,22 +2245,32 @@ async def generate_1099_nec_pdf(entry_id: str):
     )
 
 
+class SaveToPortalRequest(BaseModel):
+    user_id: Optional[str] = None
+
 @router.post("/issued-1099s/{entry_id}/save-to-portal")
-async def save_1099_to_employee_portal(entry_id: str):
+async def save_1099_to_employee_portal(entry_id: str, request: SaveToPortalRequest = None):
     """Save the 1099 to the employee/contractor's portal for them to view"""
     # Get the 1099 entry
     entry = await db.issued_1099s.find_one({"id": entry_id}, {"_id": 0})
     if not entry:
         raise HTTPException(status_code=404, detail="1099 entry not found")
     
-    # Find the employee by name or create a document record
     contractor_name = entry.get('contractor_name', '')
     
-    # Look for a user with this name
-    user = await db.users.find_one(
-        {"name": {"$regex": f"^{contractor_name}$", "$options": "i"}},
-        {"_id": 0, "id": 1, "email": 1, "name": 1}
-    )
+    # If user_id provided, use that; otherwise try to find by name
+    user = None
+    if request and request.user_id:
+        user = await db.users.find_one(
+            {"id": request.user_id},
+            {"_id": 0, "id": 1, "email": 1, "name": 1}
+        )
+    else:
+        # Fallback: Look for a user with this name
+        user = await db.users.find_one(
+            {"name": {"$regex": f"^{contractor_name}$", "$options": "i"}},
+            {"_id": 0, "id": 1, "email": 1, "name": 1}
+        )
     
     # Create a tax document record
     doc_record = {

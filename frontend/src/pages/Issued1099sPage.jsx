@@ -35,6 +35,77 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
   const [showActions, setShowActions] = useState(false);
   const [processing, setProcessing] = useState(null);
   const [showUploadFiled, setShowUploadFiled] = useState(false);
+  
+  // Confirmation dialogs
+  const [showEmailConfirm, setShowEmailConfirm] = useState(false);
+  const [showPortalConfirm, setShowPortalConfirm] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+
+  // Fetch email for confirmation
+  const handleEmailClick = async () => {
+    setProcessing('checking');
+    try {
+      // Look up the user's email
+      const response = await fetch(`${API_URL}/api/admin/employees-with-w9`, {
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const employee = data.employees?.find(e => 
+          e.name.toLowerCase() === entry.contractor_name.toLowerCase()
+        );
+        
+        if (employee) {
+          setEmailRecipient({ name: employee.name, email: employee.email });
+        } else {
+          // Try to find by partial match
+          const partialMatch = data.employees?.find(e => 
+            e.name.toLowerCase().includes(entry.contractor_name.toLowerCase()) ||
+            entry.contractor_name.toLowerCase().includes(e.name.toLowerCase())
+          );
+          if (partialMatch) {
+            setEmailRecipient({ name: partialMatch.name, email: partialMatch.email });
+          } else {
+            setEmailRecipient({ name: entry.contractor_name, email: null });
+          }
+        }
+        setShowEmailConfirm(true);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error looking up email');
+    }
+    setProcessing(null);
+  };
+
+  // Fetch employees for portal selection
+  const handlePortalClick = async () => {
+    setLoadingEmployees(true);
+    try {
+      const response = await fetch(`${API_URL}/api/admin/employees-with-w9`, {
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data.employees || []);
+        
+        // Pre-select if name matches
+        const match = data.employees?.find(e => 
+          e.name.toLowerCase() === entry.contractor_name.toLowerCase()
+        );
+        setSelectedEmployee(match?.user_id || null);
+      }
+      setShowPortalConfirm(true);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+    setLoadingEmployees(false);
+  };
 
   const handleGeneratePDF = async () => {
     setProcessing('pdf');
@@ -45,13 +116,11 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
       
       if (response.ok) {
         const blob = await response.blob();
-        // Use Web Share API for iOS compatibility
         if (navigator.share && navigator.canShare) {
           const file = new File([blob], `1099_NEC_${entry.contractor_name.replace(/\s+/g, '_')}_${entry.year}.pdf`, { type: 'application/pdf' });
           try {
             await navigator.share({ files: [file], title: '1099-NEC Form' });
           } catch (e) {
-            // Fallback to download
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -77,20 +146,25 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
     setProcessing(null);
   };
 
-  const handleSaveToPortal = async () => {
+  const confirmSaveToPortal = async () => {
+    if (!selectedEmployee) {
+      alert('Please select an employee');
+      return;
+    }
+    
     setProcessing('portal');
+    setShowPortalConfirm(false);
+    
     try {
       const response = await fetch(`${API_URL}/api/financials/issued-1099s/${entry.id}/save-to-portal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ user_id: selectedEmployee })
       });
       
       if (response.ok) {
         const data = await response.json();
-        alert(data.user_found 
-          ? `1099 saved to ${data.user_name}'s portal` 
-          : `1099 saved. Note: No user account found for "${data.user_name}"`
-        );
+        alert(`1099 saved to employee portal`);
         onRefresh();
       } else {
         alert('Failed to save to portal');
@@ -102,8 +176,15 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
     setProcessing(null);
   };
 
-  const handleEmailContractor = async () => {
+  const confirmEmail = async () => {
+    if (!emailRecipient?.email) {
+      alert('No email address found for this contractor');
+      return;
+    }
+    
     setProcessing('email');
+    setShowEmailConfirm(false);
+    
     try {
       const response = await fetch(`${API_URL}/api/financials/issued-1099s/${entry.id}/email`, {
         method: 'POST',
@@ -243,12 +324,12 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
             </Button>
             
             <Button
-              onClick={handleSaveToPortal}
-              disabled={!!processing || entry.saved_to_portal}
+              onClick={handlePortalClick}
+              disabled={!!processing || loadingEmployees}
               variant="outline"
               className="text-sm py-2 h-auto flex items-center justify-center gap-1"
             >
-              {processing === 'portal' ? (
+              {processing === 'portal' || loadingEmployees ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
               ) : (
                 <>
@@ -259,17 +340,17 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
             </Button>
             
             <Button
-              onClick={handleEmailContractor}
+              onClick={handleEmailClick}
               disabled={!!processing}
               variant="outline"
               className="text-sm py-2 h-auto flex items-center justify-center gap-1"
             >
-              {processing === 'email' ? (
+              {processing === 'email' || processing === 'checking' ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
               ) : (
                 <>
                   <Mail className="w-4 h-4" />
-                  Email Contractor
+                  Email
                 </>
               )}
             </Button>
@@ -310,9 +391,152 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
                 )}
               </div>
             )}
+            
+            {/* Additional actions for filed documents */}
+            {entry.filed && (
+              <>
+                <Button
+                  onClick={handleEmailClick}
+                  disabled={!!processing}
+                  variant="outline"
+                  className="text-sm py-2 h-auto flex items-center justify-center gap-1"
+                >
+                  <Mail className="w-4 h-4" />
+                  Email Filed
+                </Button>
+                <Button
+                  onClick={handlePortalClick}
+                  disabled={!!processing}
+                  variant="outline"
+                  className="text-sm py-2 h-auto flex items-center justify-center gap-1"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Send to Portal
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>
+
+      {/* Email Confirmation Modal */}
+      {showEmailConfirm && ReactDOM.createPortal(
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+          style={{ zIndex: 99999 }}
+          onClick={() => setShowEmailConfirm(false)}
+        >
+          <div 
+            className="bg-white rounded-lg max-w-sm w-full p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="font-semibold text-lg mb-4">Confirm Email</h3>
+            
+            <div className="space-y-3 mb-6">
+              <div>
+                <p className="text-sm text-gray-500">Contractor</p>
+                <p className="font-medium">{entry.contractor_name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Email will be sent to</p>
+                {emailRecipient?.email ? (
+                  <p className="font-medium text-blue-600">{emailRecipient.email}</p>
+                ) : (
+                  <p className="text-red-500">No email found for this contractor</p>
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Amount</p>
+                <p className="font-medium">{formatCurrency(entry.amount_paid)}</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="flex-1" 
+                onClick={() => setShowEmailConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={confirmEmail}
+                disabled={!emailRecipient?.email}
+              >
+                Send Email
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Portal Selection Modal */}
+      {showPortalConfirm && ReactDOM.createPortal(
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+          style={{ zIndex: 99999 }}
+          onClick={() => setShowPortalConfirm(false)}
+        >
+          <div 
+            className="bg-white rounded-lg max-w-sm w-full p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="font-semibold text-lg mb-4">Save to Employee Portal</h3>
+            
+            <div className="space-y-3 mb-4">
+              <div>
+                <p className="text-sm text-gray-500">1099-NEC for</p>
+                <p className="font-medium">{entry.contractor_name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Amount</p>
+                <p className="font-medium">{formatCurrency(entry.amount_paid)}</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Employee Account
+              </label>
+              <select
+                value={selectedEmployee || ''}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg bg-white"
+              >
+                <option value="">-- Select Employee --</option>
+                {employees.map(emp => (
+                  <option key={emp.user_id} value={emp.user_id}>
+                    {emp.name} ({emp.email})
+                  </option>
+                ))}
+              </select>
+              {employees.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">No employees with W-9s found</p>
+              )}
+            </div>
+            
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="flex-1" 
+                onClick={() => setShowPortalConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={confirmSaveToPortal}
+                disabled={!selectedEmployee}
+              >
+                Save to Portal
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
