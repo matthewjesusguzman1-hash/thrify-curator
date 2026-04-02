@@ -39,72 +39,58 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
   // Confirmation dialogs
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
   const [showPortalConfirm, setShowPortalConfirm] = useState(false);
-  const [emailRecipient, setEmailRecipient] = useState(null);
+  const [editableEmail, setEditableEmail] = useState('');
+  const [selectedForm, setSelectedForm] = useState('draft'); // 'draft' or 'filed'
   const [employees, setEmployees] = useState([]);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [loadingData, setLoadingData] = useState(false);
 
-  // Fetch email for confirmation
-  const handleEmailClick = async () => {
-    setProcessing('checking');
+  // Fetch all employees for dropdowns
+  const fetchEmployees = async () => {
     try {
-      // Look up the user's email
-      const response = await fetch(`${API_URL}/api/admin/employees-with-w9`, {
+      const response = await fetch(`${API_URL}/api/admin/employees`, {
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
       });
       
       if (response.ok) {
         const data = await response.json();
-        const employee = data.employees?.find(e => 
-          e.name.toLowerCase() === entry.contractor_name.toLowerCase()
-        );
-        
-        if (employee) {
-          setEmailRecipient({ name: employee.name, email: employee.email });
-        } else {
-          // Try to find by partial match
-          const partialMatch = data.employees?.find(e => 
-            e.name.toLowerCase().includes(entry.contractor_name.toLowerCase()) ||
-            entry.contractor_name.toLowerCase().includes(e.name.toLowerCase())
-          );
-          if (partialMatch) {
-            setEmailRecipient({ name: partialMatch.name, email: partialMatch.email });
-          } else {
-            setEmailRecipient({ name: entry.contractor_name, email: null });
-          }
-        }
-        setShowEmailConfirm(true);
+        setEmployees(data || []);
+        return data || [];
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error looking up email');
+      console.error('Error fetching employees:', error);
     }
-    setProcessing(null);
+    return [];
   };
 
-  // Fetch employees for portal selection
+  // Open email dialog
+  const handleEmailClick = async () => {
+    setLoadingData(true);
+    const emps = await fetchEmployees();
+    
+    // Try to find matching employee email
+    const match = emps.find(e => 
+      e.name?.toLowerCase() === entry.contractor_name?.toLowerCase()
+    );
+    setEditableEmail(match?.email || '');
+    setSelectedForm(entry.filed ? 'filed' : 'draft');
+    setShowEmailConfirm(true);
+    setLoadingData(false);
+  };
+
+  // Open portal dialog
   const handlePortalClick = async () => {
-    setLoadingEmployees(true);
-    try {
-      const response = await fetch(`${API_URL}/api/admin/employees-with-w9`, {
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data.employees || []);
-        
-        // Pre-select if name matches
-        const match = data.employees?.find(e => 
-          e.name.toLowerCase() === entry.contractor_name.toLowerCase()
-        );
-        setSelectedEmployee(match?.user_id || null);
-      }
-      setShowPortalConfirm(true);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-    setLoadingEmployees(false);
+    setLoadingData(true);
+    const emps = await fetchEmployees();
+    
+    // Try to pre-select matching employee
+    const match = emps.find(e => 
+      e.name?.toLowerCase() === entry.contractor_name?.toLowerCase()
+    );
+    setSelectedEmployee(match?.id || '');
+    setSelectedForm(entry.filed ? 'filed' : 'draft');
+    setShowPortalConfirm(true);
+    setLoadingData(false);
   };
 
   const handleGeneratePDF = async () => {
@@ -159,12 +145,14 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
       const response = await fetch(`${API_URL}/api/financials/issued-1099s/${entry.id}/save-to-portal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ user_id: selectedEmployee })
+        body: JSON.stringify({ 
+          user_id: selectedEmployee,
+          form_type: selectedForm
+        })
       });
       
       if (response.ok) {
-        const data = await response.json();
-        alert(`1099 saved to employee portal`);
+        alert('1099 saved to employee portal');
         onRefresh();
       } else {
         alert('Failed to save to portal');
@@ -177,8 +165,8 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
   };
 
   const confirmEmail = async () => {
-    if (!emailRecipient?.email) {
-      alert('No email address found for this contractor');
+    if (!editableEmail) {
+      alert('Please enter an email address');
       return;
     }
     
@@ -188,12 +176,15 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
     try {
       const response = await fetch(`${API_URL}/api/financials/issued-1099s/${entry.id}/email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({
+          email: editableEmail,
+          form_type: selectedForm
+        })
       });
       
       if (response.ok) {
-        const data = await response.json();
-        alert(`1099 emailed to ${data.email}`);
+        alert(`1099 emailed to ${editableEmail}`);
         onRefresh();
       } else {
         const error = await response.json();
@@ -325,7 +316,7 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
             
             <Button
               onClick={handlePortalClick}
-              disabled={!!processing || loadingEmployees}
+              disabled={!!processing || loadingData}
               variant="outline"
               className="text-sm py-2 h-auto flex items-center justify-center gap-1"
             >
@@ -430,24 +421,62 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
             className="bg-white rounded-lg max-w-sm w-full p-6"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="font-semibold text-lg mb-4">Confirm Email</h3>
+            <h3 className="font-semibold text-lg mb-4">Email 1099-NEC</h3>
             
-            <div className="space-y-3 mb-6">
+            <div className="space-y-4 mb-6">
               <div>
                 <p className="text-sm text-gray-500">Contractor</p>
                 <p className="font-medium">{entry.contractor_name}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Email will be sent to</p>
-                {emailRecipient?.email ? (
-                  <p className="font-medium text-blue-600">{emailRecipient.email}</p>
-                ) : (
-                  <p className="text-red-500">No email found for this contractor</p>
-                )}
-              </div>
+              
               <div>
                 <p className="text-sm text-gray-500">Amount</p>
                 <p className="font-medium">{formatCurrency(entry.amount_paid)}</p>
+              </div>
+              
+              {entry.filed && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Which form to send?
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedForm('draft')}
+                      className={`flex-1 py-2 px-3 rounded-lg border text-sm ${
+                        selectedForm === 'draft' 
+                          ? 'bg-blue-100 border-blue-300 text-blue-700' 
+                          : 'bg-white border-gray-200 text-gray-600'
+                      }`}
+                    >
+                      Draft 1099
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedForm('filed')}
+                      className={`flex-1 py-2 px-3 rounded-lg border text-sm ${
+                        selectedForm === 'filed' 
+                          ? 'bg-green-100 border-green-300 text-green-700' 
+                          : 'bg-white border-gray-200 text-gray-600'
+                      }`}
+                    >
+                      Filed 1099
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={editableEmail}
+                  onChange={(e) => setEditableEmail(e.target.value)}
+                  placeholder="Enter email address"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
               </div>
             </div>
             
@@ -462,7 +491,7 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
               <Button 
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={confirmEmail}
-                disabled={!emailRecipient?.email}
+                disabled={!editableEmail}
               >
                 Send Email
               </Button>
@@ -485,36 +514,69 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
           >
             <h3 className="font-semibold text-lg mb-4">Save to Employee Portal</h3>
             
-            <div className="space-y-3 mb-4">
+            <div className="space-y-4 mb-6">
               <div>
                 <p className="text-sm text-gray-500">1099-NEC for</p>
                 <p className="font-medium">{entry.contractor_name}</p>
               </div>
+              
               <div>
                 <p className="text-sm text-gray-500">Amount</p>
                 <p className="font-medium">{formatCurrency(entry.amount_paid)}</p>
               </div>
-            </div>
-            
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Employee Account
-              </label>
-              <select
-                value={selectedEmployee || ''}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg bg-white"
-              >
-                <option value="">-- Select Employee --</option>
-                {employees.map(emp => (
-                  <option key={emp.user_id} value={emp.user_id}>
-                    {emp.name} ({emp.email})
-                  </option>
-                ))}
-              </select>
-              {employees.length === 0 && (
-                <p className="text-sm text-gray-500 mt-2">No employees with W-9s found</p>
+              
+              {entry.filed && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Which form to save?
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedForm('draft')}
+                      className={`flex-1 py-2 px-3 rounded-lg border text-sm ${
+                        selectedForm === 'draft' 
+                          ? 'bg-blue-100 border-blue-300 text-blue-700' 
+                          : 'bg-white border-gray-200 text-gray-600'
+                      }`}
+                    >
+                      Draft 1099
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedForm('filed')}
+                      className={`flex-1 py-2 px-3 rounded-lg border text-sm ${
+                        selectedForm === 'filed' 
+                          ? 'bg-green-100 border-green-300 text-green-700' 
+                          : 'bg-white border-gray-200 text-gray-600'
+                      }`}
+                    >
+                      Filed 1099
+                    </button>
+                  </div>
+                </div>
               )}
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Select Employee Account
+                </label>
+                <select
+                  value={selectedEmployee}
+                  onChange={(e) => setSelectedEmployee(e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg bg-white"
+                >
+                  <option value="">-- Select Employee --</option>
+                  {employees.map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.email})
+                    </option>
+                  ))}
+                </select>
+                {employees.length === 0 && (
+                  <p className="text-sm text-orange-500 mt-2">No employees found in the system</p>
+                )}
+              </div>
             </div>
             
             <div className="flex gap-3">

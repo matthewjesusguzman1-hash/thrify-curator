@@ -2247,6 +2247,7 @@ async def generate_1099_nec_pdf(entry_id: str):
 
 class SaveToPortalRequest(BaseModel):
     user_id: Optional[str] = None
+    form_type: Optional[str] = "draft"  # 'draft' or 'filed'
 
 @router.post("/issued-1099s/{entry_id}/save-to-portal")
 async def save_1099_to_employee_portal(entry_id: str, request: SaveToPortalRequest = None):
@@ -2303,8 +2304,12 @@ async def save_1099_to_employee_portal(entry_id: str, request: SaveToPortalReque
     }
 
 
+class EmailRequest(BaseModel):
+    email: str
+    form_type: Optional[str] = "draft"  # 'draft' or 'filed'
+
 @router.post("/issued-1099s/{entry_id}/email")
-async def email_1099_to_contractor(entry_id: str):
+async def email_1099_to_contractor(entry_id: str, request: EmailRequest):
     """Email the 1099-NEC to the contractor"""
     from app.services.email_service import send_email
     
@@ -2314,30 +2319,23 @@ async def email_1099_to_contractor(entry_id: str):
         raise HTTPException(status_code=404, detail="1099 entry not found")
     
     contractor_name = entry.get('contractor_name', '')
-    
-    # Find the user to get their email
-    user = await db.users.find_one(
-        {"name": {"$regex": f"^{contractor_name}$", "$options": "i"}},
-        {"_id": 0, "email": 1, "name": 1}
-    )
-    
-    if not user or not user.get("email"):
-        raise HTTPException(status_code=400, detail="No email found for this contractor. Please add their email to their employee record.")
-    
-    email = user["email"]
+    email = request.email
     amount = entry.get("amount_paid", 0)
     year = entry.get("year")
+    form_type = request.form_type
     
     # Send email
+    form_label = "Official Filed" if form_type == "filed" else "Draft"
     subject = f"Your 1099-NEC for Tax Year {year}"
     html_content = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>1099-NEC Tax Document</h2>
         <p>Dear {contractor_name},</p>
-        <p>Your 1099-NEC form for tax year {year} is now available.</p>
+        <p>Your {form_label} 1099-NEC form for tax year {year} is now available.</p>
         <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p><strong>Nonemployee Compensation (Box 1):</strong> ${amount:,.2f}</p>
             <p><strong>Tax Year:</strong> {year}</p>
+            <p><strong>Form Type:</strong> {form_label}</p>
         </div>
         <p>You can view and download your 1099-NEC form by logging into your employee portal.</p>
         <p>Please retain this document for your tax records.</p>
