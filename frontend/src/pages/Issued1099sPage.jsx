@@ -382,30 +382,6 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
                 )}
               </div>
             )}
-            
-            {/* Additional actions for filed documents */}
-            {entry.filed && (
-              <>
-                <Button
-                  onClick={handleEmailClick}
-                  disabled={!!processing}
-                  variant="outline"
-                  className="text-sm py-2 h-auto flex items-center justify-center gap-1"
-                >
-                  <Mail className="w-4 h-4" />
-                  Email Filed
-                </Button>
-                <Button
-                  onClick={handlePortalClick}
-                  disabled={!!processing}
-                  variant="outline"
-                  className="text-sm py-2 h-auto flex items-center justify-center gap-1"
-                >
-                  <Share2 className="w-4 h-4" />
-                  Send to Portal
-                </Button>
-              </>
-            )}
           </div>
         )}
       </div>
