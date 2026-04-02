@@ -59,11 +59,14 @@ const getLocation = async (options = {}) => {
         throw { code: 1, message: 'Location permission denied' };
       }
       
+      // ALWAYS use high accuracy for clock-in location checks
       const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: options.enableHighAccuracy ?? false,
-        timeout: options.timeout ?? 10000,
-        maximumAge: options.maximumAge ?? 60000
+        enableHighAccuracy: true,
+        timeout: options.timeout ?? 15000,
+        maximumAge: 0 // Always get fresh location
       });
+      
+      console.log('[ClockIn GPS] Got position:', position.coords.latitude, position.coords.longitude, 'accuracy:', position.coords.accuracy);
       
       return {
         coords: {
@@ -88,7 +91,11 @@ const getLocation = async (options = {}) => {
       reject({ code: 0, message: 'Geolocation not supported' });
       return;
     }
-    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    });
   });
 };
 
@@ -98,7 +105,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const WORK_LOCATION = {
   lat: 41.13056,
   lng: -95.99029,
-  radiusMiles: 0.5
+  radiusMiles: 1.0 // Increased from 0.5 to account for GPS variance
 };
 
 // Calculate distance between two coordinates in miles using Haversine formula
