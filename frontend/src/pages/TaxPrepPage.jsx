@@ -322,7 +322,46 @@ const TaxPrepPage = () => {
             </div>
             
             <div className="flex gap-3 mt-6">
-              <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+              <Button 
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=pdf`, {
+                      headers: { ...getAuthHeader() }
+                    });
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const file = new File([blob], `tax_package_${selectedYear}.pdf`, { type: 'application/pdf' });
+                      
+                      // Try native share if available (iOS/mobile)
+                      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                          files: [file],
+                          title: `Tax Package ${selectedYear}`,
+                        });
+                      } else {
+                        // Fallback for desktop/web
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `tax_package_${selectedYear}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                      }
+                    } else {
+                      alert('Failed to download package');
+                    }
+                  } catch (error) {
+                    console.error('Download error:', error);
+                    if (error.name !== 'AbortError') {
+                      alert('Failed to download package');
+                    }
+                  }
+                }}
+                data-testid="download-tax-package-btn"
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Download Package
               </Button>

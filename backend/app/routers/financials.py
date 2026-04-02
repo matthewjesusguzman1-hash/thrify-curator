@@ -2086,6 +2086,7 @@ class Issued1099Entry(BaseModel):
     contractor_name: str
     contractor_tin: Optional[str] = None  # SSN or EIN
     contractor_address: Optional[str] = None
+    contractor_email: Optional[str] = None  # Contractor's email for sending forms
     amount_paid: float
     w9_document_id: Optional[str] = None
     notes: Optional[str] = None
@@ -2097,6 +2098,7 @@ class CreateIssued1099Request(BaseModel):
     contractor_name: str
     contractor_tin: Optional[str] = None
     contractor_address: Optional[str] = None
+    contractor_email: Optional[str] = None
     amount_paid: float
     w9_document_id: Optional[str] = None
     notes: Optional[str] = None
@@ -2126,6 +2128,7 @@ async def create_issued_1099(request: CreateIssued1099Request):
         contractor_name=request.contractor_name,
         contractor_tin=request.contractor_tin,
         contractor_address=request.contractor_address,
+        contractor_email=request.contractor_email,
         amount_paid=request.amount_paid,
         w9_document_id=request.w9_document_id,
         notes=request.notes,
@@ -2164,7 +2167,7 @@ async def delete_issued_1099(entry_id: str):
 
 
 @router.get("/issued-1099s/{entry_id}/generate-pdf")
-async def generate_1099_nec_pdf(entry_id: str):
+async def download_1099_nec_pdf(entry_id: str):
     """Generate a 1099-NEC PDF form for IRS filing"""
     from reportlab.lib.pagesizes import letter
     from reportlab.pdfgen import canvas

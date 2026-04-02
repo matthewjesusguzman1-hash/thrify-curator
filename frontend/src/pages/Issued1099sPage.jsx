@@ -70,6 +70,15 @@ const Entry1099Card = ({ entry, getAuthHeader, onEdit, onDelete, onRefresh }) =>
 
   // Open email dialog
   const handleEmailClick = async () => {
+    // First try to use email stored on the 1099 entry itself
+    if (entry.contractor_email) {
+      setEditableEmail(entry.contractor_email);
+      setSelectedForm(entry.filed ? 'filed' : 'draft');
+      setShowEmailConfirm(true);
+      return;
+    }
+    
+    // Fall back to looking up from employees
     setLoadingData(true);
     const emps = await fetchEmployees();
     
@@ -744,6 +753,7 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
   const [contractorName, setContractorName] = useState(entry?.contractor_name || '');
   const [contractorTin, setContractorTin] = useState(entry?.contractor_tin || '');
   const [contractorAddress, setContractorAddress] = useState(entry?.contractor_address || '');
+  const [contractorEmail, setContractorEmail] = useState(entry?.contractor_email || '');
   const [amountPaid, setAmountPaid] = useState(entry?.amount_paid?.toString() || '');
   const [notes, setNotes] = useState(entry?.notes || '');
   const [saving, setSaving] = useState(false);
@@ -782,6 +792,10 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
   const handleSelectEmployee = async (employee) => {
     setShowEmployeeList(false);
     setContractorName(employee.name);
+    // Pre-fill email from employee record
+    if (employee.email) {
+      setContractorEmail(employee.email);
+    }
     
     // If they have an image W-9, extract data from it
     if (employee.has_w9_image) {
@@ -877,6 +891,7 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
           contractor_name: contractorName,
           contractor_tin: contractorTin,
           contractor_address: contractorAddress,
+          contractor_email: contractorEmail,
           amount_paid: parseFloat(amountPaid),
           notes
         })
@@ -1053,6 +1068,17 @@ const Add1099Modal = ({ entry, year, getAuthHeader, onClose, onSave }) => {
               className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base resize-none"
               rows={2}
               placeholder="Street, City, State ZIP"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email (for sending 1099)</label>
+            <input
+              type="email"
+              value={contractorEmail}
+              onChange={(e) => setContractorEmail(e.target.value)}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
+              placeholder="contractor@email.com"
             />
           </div>
           

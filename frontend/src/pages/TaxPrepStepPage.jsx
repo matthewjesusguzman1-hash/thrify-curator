@@ -607,11 +607,31 @@ const TaxPrepStepPage = () => {
                         <div className="flex items-center gap-3">
                           <FileText className="w-5 h-5 text-gray-500" />
                           <div>
-                            <div className="font-medium">{doc.filename}</div>
-                            <div className="text-sm text-gray-500">{doc.document_type}</div>
+                            <div className="font-medium">
+                              {doc.filename || doc.original_filename || 
+                               (doc.type === '1099_nec' ? `1099-NEC: ${doc.contractor_name}` : 'Unknown file')}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {doc.document_type || doc.type || 'Document'}
+                              {doc.amount_paid && ` - $${doc.amount_paid.toLocaleString()}`}
+                            </div>
                           </div>
                         </div>
-                        <button className="text-red-500 hover:text-red-700">
+                        <button 
+                          className="text-red-500 hover:text-red-700"
+                          onClick={async () => {
+                            if (!window.confirm('Delete this document?')) return;
+                            try {
+                              await fetch(`${API_URL}/api/financials/documents/${doc.id}`, {
+                                method: 'DELETE',
+                                headers: { ...getAuthHeader() }
+                              });
+                              fetchData();
+                            } catch (error) {
+                              console.error('Error deleting document:', error);
+                            }
+                          }}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
