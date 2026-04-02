@@ -2259,12 +2259,14 @@ async def download_my_1099(doc_id: str, user_id: str = None):
             {"_id": 0}
         )
         if filed_doc and filed_doc.get("content"):
-            # Decode and return the filed PDF
-            pdf_content = base64.b64decode(filed_doc["content"])
+            # Decode and return the filed document
+            file_content = base64.b64decode(filed_doc["content"])
+            content_type = filed_doc.get("content_type", "application/pdf")
+            filename = filed_doc.get("filename", f"1099_NEC_{doc.get('year', 'unknown')}.pdf")
             return Response(
-                content=pdf_content,
-                media_type="application/pdf",
-                headers={"Content-Disposition": f"attachment; filename=1099_NEC_{doc.get('year', 'unknown')}.pdf"}
+                content=file_content,
+                media_type=content_type,
+                headers={"Content-Disposition": f"inline; filename={filename}"}
             )
     
     # Otherwise generate a draft PDF

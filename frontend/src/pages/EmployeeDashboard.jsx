@@ -1533,59 +1533,55 @@ export default function EmployeeDashboard() {
                           ? 'bg-green-500/20 text-green-400' 
                           : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
                       }`}>
-                        {doc.status === 'filed' ? 'Filed' : 'Issued'}
+                        {doc.status === 'filed' ? 'Filed' : 'Draft'}
                       </span>
                     </div>
                     
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-white/60">
-                        <span>Amount: </span>
-                        <span className="text-[#00D4FF] font-semibold">
-                          ${(doc.amount_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-                            const response = await axios.get(
-                              `${API}/financials/my-1099s/${doc.id}/download?user_id=${storedUser.id}`,
-                              { ...getAuthHeader(), responseType: 'blob' }
-                            );
-                            const contentType = response.headers['content-type'] || 'application/pdf';
-                            const blob = new Blob([response.data], { type: contentType });
-                            const url = window.URL.createObjectURL(blob);
-                            setViewing1099({
-                              url,
-                              contentType,
-                              docId: doc.id,
-                              filename: `1099_NEC_${doc.year}.${contentType.includes('pdf') ? 'pdf' : contentType.includes('image') ? 'jpg' : 'file'}`,
-                              year: doc.year,
-                              amount: doc.amount_paid,
-                              status: doc.status
-                            });
-                          } catch (error) {
-                            console.error('Error loading 1099:', error);
-                            toast.error("Failed to load 1099 document");
-                          }
-                        }}
-                        className={`${doc.filed_document_id 
-                          ? 'text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10' 
-                          : 'text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10'
-                        } bg-transparent`}
-                        data-testid={`view-1099-${doc.id}`}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        {doc.filed_document_id ? 'View Filed' : 'View Draft'}
-                      </Button>
+                    <div className="text-sm text-white/60 mb-3">
+                      <span>Amount: </span>
+                      <span className="text-[#00D4FF] font-semibold">
+                        ${(doc.amount_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
                     </div>
                     
-                    <div className="mt-2 text-xs text-white/40">
+                    <div className="text-xs text-white/40 mb-3">
                       From: {doc.contractor_name || 'Thrifty Curator'}
                       {doc.created_at && ` • Issued ${new Date(doc.created_at).toLocaleDateString()}`}
                     </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+                          const response = await axios.get(
+                            `${API}/financials/my-1099s/${doc.id}/download?user_id=${storedUser.id}`,
+                            { ...getAuthHeader(), responseType: 'blob' }
+                          );
+                          const contentType = response.headers['content-type'] || 'application/pdf';
+                          const blob = new Blob([response.data], { type: contentType });
+                          const url = window.URL.createObjectURL(blob);
+                          setViewing1099({
+                            url,
+                            contentType,
+                            docId: doc.id,
+                            filename: `1099_NEC_${doc.year}.${contentType.includes('pdf') ? 'pdf' : contentType.includes('image') ? 'jpg' : 'file'}`,
+                            year: doc.year,
+                            amount: doc.amount_paid,
+                            status: doc.status
+                          });
+                        } catch (error) {
+                          console.error('Error loading 1099:', error);
+                          toast.error("Failed to load 1099 document");
+                        }
+                      }}
+                      className="w-full text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
+                      data-testid={`view-1099-${doc.id}`}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Preview
+                    </Button>
                   </div>
                 ))}
               </div>
