@@ -2468,6 +2468,7 @@ async def save_1099_to_employee_portal(entry_id: str, request: SaveToPortalReque
         raise HTTPException(status_code=404, detail="1099 entry not found")
     
     contractor_name = entry.get('contractor_name', '')
+    form_type = request.form_type if request else "draft"
     
     # If user_id provided, use that; otherwise try to find by name
     user = None
@@ -2483,6 +2484,13 @@ async def save_1099_to_employee_portal(entry_id: str, request: SaveToPortalReque
             {"_id": 0, "id": 1, "email": 1, "name": 1}
         )
     
+    # Determine filed_document_id based on form_type
+    filed_document_id = None
+    status = "issued"
+    if form_type == "filed" and entry.get("filed_document_id"):
+        filed_document_id = entry["filed_document_id"]
+        status = "filed"
+    
     # Create a tax document record
     doc_record = {
         "id": str(uuid.uuid4()),
@@ -2493,8 +2501,8 @@ async def save_1099_to_employee_portal(entry_id: str, request: SaveToPortalReque
         "amount_paid": entry.get("amount_paid"),
         "issued_1099_id": entry_id,
         "user_id": user["id"] if user else None,
-        "status": "issued",
-        "filed_document_id": None,
+        "status": status,
+        "filed_document_id": filed_document_id,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -2510,7 +2518,9 @@ async def save_1099_to_employee_portal(entry_id: str, request: SaveToPortalReque
         "message": "1099 saved to employee portal",
         "user_found": user is not None,
         "user_name": user["name"] if user else contractor_name,
-        "doc_id": doc_record["id"]
+        "doc_id": doc_record["id"],
+        "form_type": form_type,
+        "has_filed_document": filed_document_id is not None
     }
 
 
