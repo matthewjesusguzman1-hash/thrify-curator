@@ -54,6 +54,11 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Backend: `/api/financials/tax-returns/{year}` CRUD endpoints
   - Files stored in `/app/uploads/tax-returns/{year}/`
   - Testing: 100% pass (10/10 backend, 18/18 frontend)
+- **1099-NEC Email PDF Attachment (Apr 2, 2026)**:
+  - Contractors now receive the actual 1099-NEC PDF attached to emails
+  - Supports both draft PDFs (auto-generated via reportlab) and filed documents (user-uploaded)
+  - Email service updated to support Resend attachments
+  - Testing: 100% pass (13/13 backend tests)
 
 ### In Progress / Pending User Verification
 - **Consignor Picker Fix (Mar 25, 2026)**: Applied iOS-specific touch event handling and CSS to prevent text selection behavior. Needs TestFlight verification.
