@@ -1027,7 +1027,7 @@ export default function EmployeeDashboard() {
               ) : locationStatus.withinRange === false && !locationStatus.denied ? (
                 <div className="flex items-center justify-center gap-2 mb-4 text-sm">
                   <MapPin className="w-4 h-4 text-red-500" />
-                  <span className="text-red-600">Too far</span>
+                  <span className="text-red-600">Too far ({locationStatus.distance} miles away)</span>
                 </div>
               ) : null}
 
