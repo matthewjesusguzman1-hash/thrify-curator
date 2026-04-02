@@ -443,6 +443,58 @@ export default function EmployeePortalViewModal({
                       Get Form
                     </Button>
                   </div>
+                  
+                  {/* 1099s Received Section */}
+                  {portalData?.my1099s?.count > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-[#333] flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-green-600" />
+                          1099-NEC Forms Received
+                        </h4>
+                        <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                          {portalData.my1099s.count} form(s)
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {portalData.my1099s.documents.map((doc) => (
+                          <div 
+                            key={doc.id}
+                            className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-xl"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-green-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#333]">
+                                  1099-NEC - Tax Year {doc.year}
+                                </p>
+                                <p className="text-xs text-[#888]">
+                                  Amount: ${(doc.amount_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                  {doc.status === 'filed' && ' • Filed'}
+                                </p>
+                              </div>
+                            </div>
+                            {doc.filed_document_id && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const API = process.env.REACT_APP_BACKEND_URL || '';
+                                  window.open(`${API}/api/financials/issued-1099s/${doc.issued_1099_id}/filed-document`, '_blank');
+                                }}
+                                className="text-green-600 border-green-300 hover:bg-green-50"
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

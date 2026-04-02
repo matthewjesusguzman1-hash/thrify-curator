@@ -148,6 +148,10 @@ export default function EmployeeDashboard() {
   const [showW9SubmitForm, setShowW9SubmitForm] = useState(false);
   const [w9FormData, setW9FormData] = useState({ file: null, notes: '' });
   const w9InputRef = useRef(null);
+  
+  // 1099 documents state
+  const [my1099s, setMy1099s] = useState({ documents: [], count: 0 });
+  const [loading1099s, setLoading1099s] = useState(false);
 
   // Password management state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -440,12 +444,35 @@ export default function EmployeeDashboard() {
 
   const fetchData = async () => {
     try {
+      // Get user info for 1099 fetch
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      
       const [statusRes, entriesRes, summaryRes, w9Res] = await Promise.all([
         axios.get(`${API}/time/status`, getAuthHeader()),
         axios.get(`${API}/time/entries`, getAuthHeader()),
         axios.get(`${API}/time/summary`, getAuthHeader()),
         axios.get(`${API}/time/w9/status`, getAuthHeader())
       ]);
+      
+      // Fetch 1099s separately (for current and previous tax years)
+      const currentYear = new Date().getFullYear();
+      try {
+        const [current1099s, previous1099s] = await Promise.all([
+          axios.get(`${API}/financials/my-1099s/${currentYear - 1}?user_id=${storedUser.id}`, getAuthHeader()),
+          axios.get(`${API}/financials/my-1099s/${currentYear - 2}?user_id=${storedUser.id}`, getAuthHeader())
+        ]);
+        const allDocs = [
+          ...(current1099s.data.documents || []),
+          ...(previous1099s.data.documents || [])
+        ];
+        setMy1099s({
+          documents: allDocs,
+          count: allDocs.length,
+          total_amount: allDocs.reduce((sum, d) => sum + (d.amount_paid || 0), 0)
+        });
+      } catch (err) {
+        console.log('No 1099s found or error fetching:', err);
+      }
 
       const isNowClocked = statusRes.data.clocked_in;
       
@@ -1469,6 +1496,82 @@ export default function EmployeeDashboard() {
               </div>
             </div>
           </div>
+          
+          {/* 1099s Received Section */}
+          {my1099s.count > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-2xl p-6 shadow-xl border border-[#00D4FF]/20"
+              data-testid="my-1099s-section"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-playfair font-bold text-white flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-[#00D4FF]" />
+                  1099-NEC Forms
+                </h2>
+                <span className="bg-[#00D4FF]/20 text-[#00D4FF] px-3 py-1 rounded-full text-sm font-medium">
+                  {my1099s.count} form(s)
+                </span>
+              </div>
+              
+              <div className="space-y-3">
+                {my1099s.documents.map((doc) => (
+                  <div 
+                    key={doc.id}
+                    className="p-4 rounded-xl bg-[#00D4FF]/10 border border-[#00D4FF]/30"
+                    data-testid={`1099-doc-${doc.id}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#00D4FF]" />
+                        <span className="font-medium text-white">1099-NEC - Tax Year {doc.year}</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        doc.status === 'filed' 
+                          ? 'bg-green-500/20 text-green-400' 
+                          : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
+                      }`}>
+                        {doc.status === 'filed' ? 'Filed' : 'Issued'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-white/60">
+                        <span>Amount: </span>
+                        <span className="text-[#00D4FF] font-semibold">
+                          ${(doc.amount_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      {doc.filed_document_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              window.open(`${API}/financials/issued-1099s/${doc.issued_1099_id}/filed-document`, '_blank');
+                            } catch (error) {
+                              toast.error("Failed to download document");
+                            }
+                          }}
+                          className="text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
+                          data-testid={`download-1099-${doc.id}`}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Download
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="mt-2 text-xs text-white/40">
+                      From: {doc.contractor_name || 'Thrifty Curator'}
+                      {doc.created_at && ` • Issued ${new Date(doc.created_at).toLocaleDateString()}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </main>
 

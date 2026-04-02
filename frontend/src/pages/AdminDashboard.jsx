@@ -1439,10 +1439,31 @@ export default function AdminDashboard() {
         axios.get(`${API}/admin/employee/${employee.id}/clock-status`, getAuthHeader()).catch(() => ({ data: { is_clocked_in: false } }))
       ]);
       
+      // Fetch 1099s for this employee
+      const currentYear = new Date().getFullYear();
+      let employee1099s = { documents: [], count: 0 };
+      try {
+        const [current1099s, previous1099s] = await Promise.all([
+          axios.get(`${API}/financials/my-1099s/${currentYear - 1}?user_id=${employee.id}`, getAuthHeader()),
+          axios.get(`${API}/financials/my-1099s/${currentYear - 2}?user_id=${employee.id}`, getAuthHeader())
+        ]);
+        const allDocs = [
+          ...(current1099s.data.documents || []),
+          ...(previous1099s.data.documents || [])
+        ];
+        employee1099s = {
+          documents: allDocs,
+          count: allDocs.length
+        };
+      } catch (err) {
+        console.log('No 1099s for employee:', err);
+      }
+      
       setEmployeePortalData({
         entries: entriesRes.data,
         summary: summaryRes.data,
-        w9Status: w9Res.data
+        w9Status: w9Res.data,
+        my1099s: employee1099s
       });
       setEmployeeClockStatus(clockRes.data);
     } catch (error) {
