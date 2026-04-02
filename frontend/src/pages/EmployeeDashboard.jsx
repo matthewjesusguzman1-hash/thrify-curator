@@ -152,6 +152,7 @@ export default function EmployeeDashboard() {
   // 1099 documents state
   const [my1099s, setMy1099s] = useState({ documents: [], count: 0 });
   const [loading1099s, setLoading1099s] = useState(false);
+  const [viewing1099, setViewing1099] = useState(null);
 
   // Password management state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -1543,43 +1544,42 @@ export default function EmployeeDashboard() {
                           ${(doc.amount_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
-                      {doc.filed_document_id ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-                              window.open(`${API}/financials/my-1099s/${doc.id}/download?user_id=${storedUser.id}`, '_blank');
-                            } catch (error) {
-                              toast.error("Failed to download document");
-                            }
-                          }}
-                          className="text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10 bg-transparent"
-                          data-testid={`download-1099-${doc.id}`}
-                        >
-                          <Download className="w-4 h-4 mr-1" />
-                          Download
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-                              window.open(`${API}/financials/my-1099s/${doc.id}/download?user_id=${storedUser.id}`, '_blank');
-                            } catch (error) {
-                              toast.error("Failed to download document");
-                            }
-                          }}
-                          className="text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent"
-                          data-testid={`view-1099-${doc.id}`}
-                        >
-                          <FileText className="w-4 h-4 mr-1" />
-                          View Draft
-                        </Button>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+                            const response = await axios.get(
+                              `${API}/financials/my-1099s/${doc.id}/download?user_id=${storedUser.id}`,
+                              { ...getAuthHeader(), responseType: 'blob' }
+                            );
+                            const contentType = response.headers['content-type'] || 'application/pdf';
+                            const blob = new Blob([response.data], { type: contentType });
+                            const url = window.URL.createObjectURL(blob);
+                            setViewing1099({
+                              url,
+                              contentType,
+                              docId: doc.id,
+                              filename: `1099_NEC_${doc.year}.${contentType.includes('pdf') ? 'pdf' : contentType.includes('image') ? 'jpg' : 'file'}`,
+                              year: doc.year,
+                              amount: doc.amount_paid,
+                              status: doc.status
+                            });
+                          } catch (error) {
+                            console.error('Error loading 1099:', error);
+                            toast.error("Failed to load 1099 document");
+                          }
+                        }}
+                        className={`${doc.filed_document_id 
+                          ? 'text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10' 
+                          : 'text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10'
+                        } bg-transparent`}
+                        data-testid={`view-1099-${doc.id}`}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        {doc.filed_document_id ? 'View Filed' : 'View Draft'}
+                      </Button>
                     </div>
                     
                     <div className="mt-2 text-xs text-white/40">
@@ -1593,6 +1593,112 @@ export default function EmployeeDashboard() {
           )}
         </motion.div>
       </main>
+
+      {/* 1099 Viewer Modal */}
+      {viewing1099 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            if (viewing1099.url) window.URL.revokeObjectURL(viewing1099.url);
+            setViewing1099(null);
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-[#1A1A2E] to-[#16213E]">
+              <div>
+                <h3 className="font-semibold text-white">1099-NEC Tax Document</h3>
+                <p className="text-sm text-gray-300">
+                  Tax Year {viewing1099.year} • ${(viewing1099.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {viewing1099.status === 'filed' && <span className="ml-2 px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs">Filed</span>}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (viewing1099.url) window.URL.revokeObjectURL(viewing1099.url);
+                  setViewing1099(null);
+                }}
+                className="text-white hover:bg-white/20"
+              >
+                ✕
+              </Button>
+            </div>
+
+            {/* Document Viewer */}
+            <div className="flex-1 overflow-auto p-4 bg-gray-100">
+              {viewing1099.contentType?.includes('pdf') ? (
+                <iframe
+                  src={viewing1099.url}
+                  className="w-full h-full min-h-[500px] rounded-lg border border-gray-200"
+                  title="1099-NEC Document"
+                />
+              ) : viewing1099.contentType?.includes('image') ? (
+                <div className="flex items-center justify-center">
+                  <img
+                    src={viewing1099.url}
+                    alt="1099-NEC Document"
+                    className="max-w-full max-h-[600px] rounded-lg shadow-lg"
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">Preview not available</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 flex justify-between items-center bg-white">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (viewing1099.url) window.URL.revokeObjectURL(viewing1099.url);
+                  setViewing1099(null);
+                }}
+              >
+                Close
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+                    const response = await axios.get(
+                      `${API}/financials/my-1099s/${viewing1099.docId}/download?user_id=${storedUser.id}`,
+                      { ...getAuthHeader(), responseType: 'blob' }
+                    );
+                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', viewing1099.filename || '1099_NEC.pdf');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                    toast.success("1099-NEC downloaded!");
+                  } catch (error) {
+                    toast.error("Failed to download 1099-NEC");
+                  }
+                }}
+                className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* W-9 Viewer Modal */}
       {viewingW9 && (

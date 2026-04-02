@@ -476,33 +476,22 @@ export default function EmployeePortalViewModal({
                                 </p>
                               </div>
                             </div>
-                            {doc.filed_document_id ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const API = process.env.REACT_APP_BACKEND_URL || '';
-                                  window.open(`${API}/api/financials/my-1099s/${doc.id}/download?user_id=${doc.user_id}`, '_blank');
-                                }}
-                                className="text-green-600 border-green-300 hover:bg-green-50"
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const API = process.env.REACT_APP_BACKEND_URL || '';
-                                  window.open(`${API}/api/financials/my-1099s/${doc.id}/download?user_id=${doc.user_id}`, '_blank');
-                                }}
-                                className="text-purple-600 border-purple-300 hover:bg-purple-50"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const API = process.env.REACT_APP_BACKEND_URL || '';
+                                window.open(`${API}/api/financials/my-1099s/${doc.id}/download?user_id=${doc.user_id}`, '_blank');
+                              }}
+                              className={doc.filed_document_id 
+                                ? "text-green-600 border-green-300 hover:bg-green-50"
+                                : "text-purple-600 border-purple-300 hover:bg-purple-50"
+                              }
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              {doc.filed_document_id ? 'View' : 'Draft'}
+                            </Button>
                           </div>
                         ))}
                       </div>
