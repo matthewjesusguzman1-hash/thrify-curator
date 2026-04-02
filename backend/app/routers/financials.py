@@ -2310,8 +2310,12 @@ class EmailRequest(BaseModel):
 
 @router.post("/issued-1099s/{entry_id}/email")
 async def email_1099_to_contractor(entry_id: str, request: EmailRequest):
-    """Email the 1099-NEC to the contractor"""
+    """Email the 1099-NEC to the contractor with PDF attachment"""
     from app.services.email_service import send_email
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas as pdf_canvas
+    from reportlab.lib.units import inch
+    from io import BytesIO
     
     # Get the 1099 entry
     entry = await db.issued_1099s.find_one({"id": entry_id}, {"_id": 0})
@@ -2324,32 +2328,107 @@ async def email_1099_to_contractor(entry_id: str, request: EmailRequest):
     year = entry.get("year")
     form_type = request.form_type
     
-    # Send email
+    # Prepare PDF attachment
+    pdf_content = None
+    pdf_filename = f"1099_NEC_{contractor_name.replace(' ', '_')}_{year}.pdf"
+    
+    if form_type == "filed" and entry.get("filed_document_id"):
+        # Use the uploaded filed document
+        filed_doc = await db.filed_tax_documents.find_one(
+            {"id": entry["filed_document_id"]}, 
+            {"_id": 0}
+        )
+        if filed_doc and filed_doc.get("content"):
+            pdf_content = filed_doc["content"]  # Already base64 encoded
+            pdf_filename = filed_doc.get("filename", pdf_filename)
+    
+    if not pdf_content:
+        # Generate draft PDF
+        buffer = BytesIO()
+        c = pdf_canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+        
+        # Title
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(1*inch, height - 1*inch, "1099-NEC")
+        c.setFont("Helvetica", 10)
+        c.drawString(1*inch, height - 1.3*inch, f"Nonemployee Compensation - Tax Year {year}")
+        
+        # Payer Info (Left side)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(1*inch, height - 2*inch, "PAYER'S Information")
+        c.setFont("Helvetica", 9)
+        c.drawString(1*inch, height - 2.3*inch, "Name: Thrifty Curator")
+        
+        # Recipient Info (Right side)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(4*inch, height - 2*inch, "RECIPIENT'S Information")
+        c.setFont("Helvetica", 9)
+        c.drawString(4*inch, height - 2.3*inch, f"Name: {contractor_name}")
+        c.drawString(4*inch, height - 2.5*inch, f"TIN: {entry.get('contractor_tin', '')}")
+        
+        # Address
+        address = entry.get('contractor_address', '')
+        if address:
+            lines = address.split('\n') if '\n' in address else [address]
+            y_pos = height - 2.7*inch
+            for line in lines[:3]:
+                c.drawString(4*inch, y_pos, line.strip())
+                y_pos -= 0.2*inch
+        
+        # Box 1 - Nonemployee Compensation
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(1*inch, height - 4*inch, "Box 1 - Nonemployee Compensation")
+        c.setFont("Helvetica", 14)
+        c.drawString(1*inch, height - 4.4*inch, f"${amount:,.2f}")
+        
+        # Footer
+        c.setFont("Helvetica", 8)
+        c.drawString(1*inch, 1*inch, "This is a draft 1099-NEC form. For official IRS filing, use IRS-approved forms.")
+        c.drawString(1*inch, 0.8*inch, f"Generated on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}")
+        
+        c.save()
+        buffer.seek(0)
+        pdf_content = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    
+    # Build email content
     form_label = "Official Filed" if form_type == "filed" else "Draft"
     subject = f"Your 1099-NEC for Tax Year {year}"
     html_content = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>1099-NEC Tax Document</h2>
         <p>Dear {contractor_name},</p>
-        <p>Your {form_label} 1099-NEC form for tax year {year} is now available.</p>
+        <p>Your {form_label} 1099-NEC form for tax year {year} is attached to this email.</p>
         <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p><strong>Nonemployee Compensation (Box 1):</strong> ${amount:,.2f}</p>
             <p><strong>Tax Year:</strong> {year}</p>
             <p><strong>Form Type:</strong> {form_label}</p>
         </div>
-        <p>You can view and download your 1099-NEC form by logging into your employee portal.</p>
-        <p>Please retain this document for your tax records.</p>
+        <p><strong>Attached:</strong> {pdf_filename}</p>
+        <p>Please retain this document for your tax records. You can also view and download your 1099-NEC form by logging into your employee portal.</p>
         <br>
         <p>Best regards,<br>Thrifty Curator</p>
     </div>
     """
     
+    # Prepare attachment for Resend API
+    attachments = [
+        {
+            "filename": pdf_filename,
+            "content": pdf_content
+        }
+    ]
+    
     try:
-        await send_email(
+        result = await send_email(
             to_email=email,
             subject=subject,
-            html_content=html_content
+            html_content=html_content,
+            attachments=attachments
         )
+        
+        if result.get("status") == "error":
+            raise HTTPException(status_code=500, detail=result.get("message", "Failed to send email"))
         
         # Update entry to mark as emailed
         await db.issued_1099s.update_one(
@@ -2357,7 +2436,9 @@ async def email_1099_to_contractor(entry_id: str, request: EmailRequest):
             {"$set": {"emailed": True, "emailed_at": datetime.now(timezone.utc).isoformat(), "emailed_to": email}}
         )
         
-        return {"message": f"1099-NEC emailed to {email}", "email": email}
+        return {"message": f"1099-NEC with attachment emailed to {email}", "email": email}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 

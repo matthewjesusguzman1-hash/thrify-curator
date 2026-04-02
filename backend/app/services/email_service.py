@@ -100,9 +100,17 @@ def build_email_template(title: str, content: str) -> str:
     """
 
 
-async def send_email(to_email: str, subject: str, html_content: str) -> dict:
+async def send_email(to_email: str, subject: str, html_content: str, attachments: list = None) -> dict:
     """
     Send an email using Resend API or log to console if not configured.
+    
+    Args:
+        to_email: Recipient email address
+        subject: Email subject
+        html_content: HTML body content
+        attachments: Optional list of attachments. Each attachment should be a dict with:
+            - filename: Name of the file
+            - content: Base64 encoded content or raw bytes
     
     Returns:
         dict with status and message
@@ -117,6 +125,12 @@ async def send_email(to_email: str, subject: str, html_content: str) -> dict:
                 "subject": subject,
                 "html": html_content
             }
+            
+            # Add attachments if provided
+            if attachments:
+                params["attachments"] = attachments
+                logger.info(f"📎 Email includes {len(attachments)} attachment(s)")
+            
             # Run sync SDK in thread to keep FastAPI non-blocking
             email = await asyncio.to_thread(resend.Emails.send, params)
             logger.info(f"✅ Email sent to {to_email}: {subject}")
@@ -126,10 +140,11 @@ async def send_email(to_email: str, subject: str, html_content: str) -> dict:
             return {"status": "error", "message": str(e)}
     else:
         # MOCK MODE - Log to console
+        attachment_info = f" with {len(attachments)} attachment(s)" if attachments else ""
         logger.info(f"""
 ========== MOCKED EMAIL ==========
 To: {to_email}
-Subject: {subject}
+Subject: {subject}{attachment_info}
 ----------------------------------
 [HTML content logged - {len(html_content)} characters]
 ==================================
