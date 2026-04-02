@@ -105,14 +105,17 @@ export default function useGPSTracking() {
         point.longitude
       );
 
-      // Filter out extreme GPS jumps (> 5 miles in one reading)
-      // Also filter tiny movements < 0.001 miles (about 5 feet) to reduce noise
-      if (distance > 0.001 && distance < 5.0) {
+      // Filter out extreme GPS jumps (> 2 miles in one reading)
+      // Also filter tiny movements < 0.01 miles (~50 feet) to reduce GPS jitter/noise
+      // GPS accuracy indoors or with obstructions can cause phantom movements
+      if (distance > 0.01 && distance < 2.0) {
         totalDistanceRef.current += distance;
         setTotalMiles(totalDistanceRef.current);
         console.log('Added distance:', distance.toFixed(4), 'Total:', totalDistanceRef.current.toFixed(4));
-      } else if (distance >= 5.0) {
+      } else if (distance >= 2.0) {
         console.log('Skipping extreme GPS jump:', distance.toFixed(4), 'miles');
+      } else {
+        console.log('Skipping tiny movement (GPS jitter):', distance.toFixed(4), 'miles');
       }
     }
 
@@ -150,11 +153,23 @@ export default function useGPSTracking() {
   }, []);
 
   // Initialize Transistorsoft Background Geolocation
-  const initBackgroundGeolocation = useCallback(async () => {
-    if (!isNative() || bgGeoReadyRef.current) return null;
+  const initBackgroundGeolocation = useCallback(async (forceReinit = false) => {
+    if (!isNative()) return null;
+    
+    // If already initialized and not forcing reinit, just return the plugin
+    if (bgGeoReadyRef.current && !forceReinit) {
+      const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
+      return BackgroundGeolocation;
+    }
 
     try {
       const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
+      
+      // Remove any existing listeners before re-adding
+      if (bgGeoReadyRef.current) {
+        await BackgroundGeolocation.removeListeners();
+        console.log('[BackgroundGeolocation] Removed old listeners');
+      }
       
       // Configure the plugin - MOTION DETECTION DISABLED for continuous tracking
       // Note: License is read from Info.plist (iOS) and AndroidManifest.xml (Android)
@@ -255,7 +270,8 @@ export default function useGPSTracking() {
       // Try to use Transistorsoft Background Geolocation on native platforms
       if (isNative()) {
         try {
-          const BackgroundGeolocation = await initBackgroundGeolocation();
+          // Force reinitialize listeners to ensure fresh callbacks
+          const BackgroundGeolocation = await initBackgroundGeolocation(true);
           
           if (BackgroundGeolocation) {
             // Start tracking
