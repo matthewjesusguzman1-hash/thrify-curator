@@ -1859,10 +1859,22 @@ def generate_1099_page(c: canvas.Canvas, year: int, payer: dict, recipient: dict
 async def download_tax_summary(year: int, format: str = "pdf"):
     """
     Download a complete tax summary for the year.
-    Includes income, COGS, deductions, and net profit calculations.
+    format=pdf: Just the summary PDF
+    format=csv: CSV export
+    format=zip: Complete package with summary + all filed 1099 PDFs
     """
+    import zipfile
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas as pdf_canvas
+    from reportlab.lib.units import inch
+    
     # Get financial summary
     summary = await get_financial_summary(year)
+    
+    if format == "csv":
+        # Generate CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
     
     if format == "csv":
         # Generate CSV
@@ -1897,9 +1909,9 @@ async def download_tax_summary(year: int, format: str = "pdf"):
             headers={"Content-Disposition": f"attachment; filename=tax_summary_{year}.csv"}
         )
     
-    else:  # PDF
-        buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=letter)
+    else:  # PDF or ZIP
+        summary_buffer = io.BytesIO()
+        c = canvas.Canvas(summary_buffer, pagesize=letter)
         width, height = letter
         
         # Title
@@ -2002,10 +2014,70 @@ async def download_tax_summary(year: int, format: str = "pdf"):
         c.drawCentredString(width/2, 0.75*inch, "This summary is for reference. Consult a tax professional for official filings.")
         
         c.save()
-        buffer.seek(0)
+        summary_buffer.seek(0)
+        
+        if format == "zip":
+            # Create a ZIP file with summary + all 1099 PDFs
+            zip_buffer = io.BytesIO()
+            
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                # Add the summary PDF
+                zf.writestr(f"Tax_Summary_{year}.pdf", summary_buffer.getvalue())
+                
+                # Get all issued 1099s for this year
+                issued_1099s = await db.issued_1099s.find({"year": year}, {"_id": 0}).to_list(length=None)
+                
+                for entry in issued_1099s:
+                    contractor_name = entry.get('contractor_name', 'Unknown').replace(' ', '_').replace('/', '_')
+                    
+                    # Check if there's a filed document
+                    if entry.get('filed_document_id'):
+                        filed_doc = await db.filed_tax_documents.find_one(
+                            {"id": entry['filed_document_id']}, 
+                            {"_id": 0}
+                        )
+                        if filed_doc and filed_doc.get('content'):
+                            # Add the filed PDF
+                            pdf_content = base64.b64decode(filed_doc['content'])
+                            zf.writestr(f"1099_NEC_{contractor_name}_{year}_FILED.pdf", pdf_content)
+                            continue
+                    
+                    # Generate draft PDF if no filed document
+                    draft_buffer = io.BytesIO()
+                    c2 = pdf_canvas.Canvas(draft_buffer, pagesize=letter)
+                    w, h = letter
+                    
+                    c2.setFont("Helvetica-Bold", 16)
+                    c2.drawString(1*inch, h - 1*inch, "1099-NEC (DRAFT)")
+                    c2.setFont("Helvetica", 10)
+                    c2.drawString(1*inch, h - 1.3*inch, f"Nonemployee Compensation - Tax Year {year}")
+                    
+                    c2.setFont("Helvetica-Bold", 10)
+                    c2.drawString(1*inch, h - 2*inch, "PAYER: Thrifty Curator")
+                    c2.drawString(1*inch, h - 2.4*inch, f"RECIPIENT: {entry.get('contractor_name', '')}")
+                    c2.drawString(1*inch, h - 2.7*inch, f"TIN: {entry.get('contractor_tin', '')}")
+                    
+                    c2.setFont("Helvetica-Bold", 12)
+                    c2.drawString(1*inch, h - 3.5*inch, "Box 1 - Nonemployee Compensation")
+                    c2.setFont("Helvetica", 14)
+                    c2.drawString(1*inch, h - 3.9*inch, f"${entry.get('amount_paid', 0):,.2f}")
+                    
+                    c2.setFont("Helvetica", 8)
+                    c2.drawString(1*inch, 1*inch, "DRAFT - Not for official filing")
+                    
+                    c2.save()
+                    draft_buffer.seek(0)
+                    zf.writestr(f"1099_NEC_{contractor_name}_{year}_DRAFT.pdf", draft_buffer.getvalue())
+            
+            zip_buffer.seek(0)
+            return StreamingResponse(
+                zip_buffer,
+                media_type="application/zip",
+                headers={"Content-Disposition": f"attachment; filename=Tax_Package_{year}.zip"}
+            )
         
         return StreamingResponse(
-            buffer,
+            summary_buffer,
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename=tax_summary_{year}.pdf"}
         )
@@ -2163,6 +2235,93 @@ async def get_my_1099s(year: int, user_id: str = None):
         "total_amount": sum(d.get("amount_paid", 0) for d in docs)
     }
 
+@router.get("/my-1099s/{doc_id}/download")
+async def download_my_1099(doc_id: str, user_id: str = None):
+    """Download a 1099 PDF for the employee - generates draft if no filed doc exists"""
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas as pdf_canvas
+    from reportlab.lib.units import inch
+    from io import BytesIO
+    
+    # Get the tax document
+    doc = await db.tax_documents.find_one({"id": doc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="1099 document not found")
+    
+    # Verify ownership if user_id provided
+    if user_id and doc.get("user_id") != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # If there's a filed document, try to return it
+    if doc.get("filed_document_id"):
+        filed_doc = await db.filed_tax_documents.find_one(
+            {"id": doc["filed_document_id"]}, 
+            {"_id": 0}
+        )
+        if filed_doc and filed_doc.get("content"):
+            # Decode and return the filed PDF
+            pdf_content = base64.b64decode(filed_doc["content"])
+            return Response(
+                content=pdf_content,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename=1099_NEC_{doc.get('year', 'unknown')}.pdf"}
+            )
+    
+    # Otherwise generate a draft PDF
+    issued_1099_id = doc.get("issued_1099_id")
+    entry = await db.issued_1099s.find_one({"id": issued_1099_id}, {"_id": 0}) if issued_1099_id else None
+    
+    if not entry:
+        # Use data from the tax_document itself
+        entry = doc
+    
+    buffer = BytesIO()
+    c = pdf_canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    
+    year = entry.get("year", doc.get("year", ""))
+    contractor_name = entry.get("contractor_name", doc.get("contractor_name", ""))
+    amount = entry.get("amount_paid", doc.get("amount_paid", 0))
+    
+    # Title
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(1*inch, height - 1*inch, "1099-NEC")
+    c.setFont("Helvetica", 10)
+    c.drawString(1*inch, height - 1.3*inch, f"Nonemployee Compensation - Tax Year {year}")
+    
+    # Payer Info
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(1*inch, height - 2*inch, "PAYER'S Information")
+    c.setFont("Helvetica", 9)
+    c.drawString(1*inch, height - 2.3*inch, "Name: Thrifty Curator")
+    
+    # Recipient Info
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(4*inch, height - 2*inch, "RECIPIENT'S Information")
+    c.setFont("Helvetica", 9)
+    c.drawString(4*inch, height - 2.3*inch, f"Name: {contractor_name}")
+    c.drawString(4*inch, height - 2.5*inch, f"TIN: {entry.get('contractor_tin', '***-**-****')}")
+    
+    # Box 1
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(1*inch, height - 4*inch, "Box 1 - Nonemployee Compensation")
+    c.setFont("Helvetica", 14)
+    c.drawString(1*inch, height - 4.4*inch, f"${amount:,.2f}")
+    
+    # Footer
+    c.setFont("Helvetica", 8)
+    c.drawString(1*inch, 1*inch, "This is a draft 1099-NEC form. For official IRS filing, use IRS-approved forms.")
+    c.drawString(1*inch, 0.8*inch, f"Generated on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}")
+    
+    c.save()
+    buffer.seek(0)
+    
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=1099_NEC_{year}_{contractor_name.replace(' ', '_')}.pdf"}
+    )
+
 @router.post("/issued-1099s")
 async def create_issued_1099(request: CreateIssued1099Request):
     """Create a new 1099 issued entry"""
@@ -2201,13 +2360,17 @@ async def update_issued_1099(entry_id: str, request: CreateIssued1099Request):
 
 @router.delete("/issued-1099s/{entry_id}")
 async def delete_issued_1099(entry_id: str):
-    """Delete an issued 1099 entry"""
+    """Delete an issued 1099 entry and cascade to employee portal"""
+    # First delete from tax_documents (employee portal)
+    await db.tax_documents.delete_many({"issued_1099_id": entry_id})
+    
+    # Then delete the main entry
     result = await db.issued_1099s.delete_one({"id": entry_id})
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="1099 entry not found")
     
-    return {"message": "1099 entry deleted"}
+    return {"message": "1099 entry deleted from all locations"}
 
 
 @router.get("/issued-1099s/{entry_id}/generate-pdf")

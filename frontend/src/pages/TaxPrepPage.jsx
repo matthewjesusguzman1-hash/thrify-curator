@@ -326,12 +326,12 @@ const TaxPrepPage = () => {
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                 onClick={async () => {
                   try {
-                    const response = await fetch(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=pdf`, {
+                    const response = await fetch(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=zip`, {
                       headers: { ...getAuthHeader() }
                     });
                     if (response.ok) {
                       const blob = await response.blob();
-                      const file = new File([blob], `tax_package_${selectedYear}.pdf`, { type: 'application/pdf' });
+                      const file = new File([blob], `Tax_Package_${selectedYear}.zip`, { type: 'application/zip' });
                       
                       // Try native share if available (iOS/mobile)
                       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -344,7 +344,7 @@ const TaxPrepPage = () => {
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `tax_package_${selectedYear}.pdf`;
+                        a.download = `Tax_Package_${selectedYear}.zip`;
                         document.body.appendChild(a);
                         a.click();
                         window.URL.revokeObjectURL(url);

@@ -1543,13 +1543,14 @@ export default function EmployeeDashboard() {
                           ${(doc.amount_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
-                      {doc.filed_document_id && (
+                      {doc.filed_document_id ? (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={async () => {
                             try {
-                              window.open(`${API}/financials/issued-1099s/${doc.issued_1099_id}/filed-document`, '_blank');
+                              const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+                              window.open(`${API}/financials/my-1099s/${doc.id}/download?user_id=${storedUser.id}`, '_blank');
                             } catch (error) {
                               toast.error("Failed to download document");
                             }
@@ -1559,6 +1560,24 @@ export default function EmployeeDashboard() {
                         >
                           <Download className="w-4 h-4 mr-1" />
                           Download
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+                              window.open(`${API}/financials/my-1099s/${doc.id}/download?user_id=${storedUser.id}`, '_blank');
+                            } catch (error) {
+                              toast.error("Failed to download document");
+                            }
+                          }}
+                          className="text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent"
+                          data-testid={`view-1099-${doc.id}`}
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          View Draft
                         </Button>
                       )}
                     </div>
