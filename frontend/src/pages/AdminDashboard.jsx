@@ -80,7 +80,7 @@ import PasswordManagementSection from "@/components/admin/sections/PasswordManag
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
-import LiveEmployeeTracker from "@/components/admin/LiveEmployeeTracker";
+import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
 import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
@@ -2717,7 +2717,14 @@ export default function AdminDashboard() {
 
       <main className="dashboard-content min-h-screen">
         {/* Bold Gradient Accent Bar */}
-        <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493] -mx-8 -mt-8 mb-6 rounded-b-lg" />
+        <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493] -mx-8 -mt-8 mb-4 rounded-b-lg" />
+        
+        {/* Compact Live Employee Tracker Bar */}
+        <CompactEmployeeTracker 
+          employees={employees}
+          employeeClockStatuses={employeeClockStatuses}
+          getAuthHeader={getAuthHeader}
+        />
         
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4">
@@ -3230,13 +3237,6 @@ export default function AdminDashboard() {
             formatDate={formatDate}
           />
 
-
-          {/* ====== LIVE EMPLOYEE TRACKER ====== */}
-          <LiveEmployeeTracker 
-            employees={employees}
-            employeeClockStatuses={employeeClockStatuses}
-            getAuthHeader={getAuthHeader}
-          />
 
           {/* ====== GROUPED DASHBOARD SECTIONS ====== */}
           <div className="space-y-6">
