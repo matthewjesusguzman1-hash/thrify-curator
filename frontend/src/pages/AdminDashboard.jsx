@@ -80,6 +80,7 @@ import PasswordManagementSection from "@/components/admin/sections/PasswordManag
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
+import LiveEmployeeTracker from "@/components/admin/LiveEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
 import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
@@ -3229,6 +3230,13 @@ export default function AdminDashboard() {
             formatDate={formatDate}
           />
 
+
+          {/* ====== LIVE EMPLOYEE TRACKER ====== */}
+          <LiveEmployeeTracker 
+            employees={employees}
+            employeeClockStatuses={employeeClockStatuses}
+            getAuthHeader={getAuthHeader}
+          />
 
           {/* ====== GROUPED DASHBOARD SECTIONS ====== */}
           <div className="space-y-6">
