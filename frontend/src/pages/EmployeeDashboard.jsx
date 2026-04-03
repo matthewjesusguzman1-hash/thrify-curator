@@ -103,9 +103,9 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Work location coordinates (Omaha, NE area)
 const WORK_LOCATION = {
-  lat: 41.13056,
-  lng: -95.99029,
-  radiusMiles: 1.0 // Increased from 0.5 to account for GPS variance
+  lat: 41.13063,
+  lng: -95.99024,
+  radiusMiles: 2.0 // Increased for GPS variance
 };
 
 // Calculate distance between two coordinates in miles using Haversine formula
@@ -593,12 +593,19 @@ export default function EmployeeDashboard() {
 
     try {
       const position = await getLocation({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+      
+      console.log('[ClockIn] Got GPS position:', position.coords.latitude, position.coords.longitude);
+      console.log('[ClockIn] Work location:', WORK_LOCATION.lat, WORK_LOCATION.lng);
+      
       const distance = calculateDistance(
         position.coords.latitude,
         position.coords.longitude,
         WORK_LOCATION.lat,
         WORK_LOCATION.lng
       );
+      
+      console.log('[ClockIn] Calculated distance:', distance, 'miles, radius:', WORK_LOCATION.radiusMiles);
+      
       const withinRange = distance <= WORK_LOCATION.radiusMiles;
       setLocationStatus({ checking: false, withinRange, distance: distance.toFixed(2), denied: false });
       return { withinRange, distance: distance.toFixed(2) };
@@ -606,16 +613,16 @@ export default function EmployeeDashboard() {
       console.log('checkLocation error:', error);
       if (error.code === 1) {
         // PERMISSION_DENIED
-        setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
+        setLocationStatus({ checking: false, withinRange: false, distance: 'denied', denied: true });
         return { withinRange: false, denied: true };
       } else if (error.code === 2) {
         // POSITION_UNAVAILABLE
         toast.error("GPS is turned off. Please enable Location Services in your device settings.");
-        setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+        setLocationStatus({ checking: false, withinRange: false, distance: 'unavailable', denied: false });
         return { withinRange: false, error: "GPS unavailable" };
       } else if (error.code === 0) {
         toast.error("Geolocation is not supported");
-        setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+        setLocationStatus({ checking: false, withinRange: false, distance: 'unsupported', denied: false });
         return { withinRange: false, error: "Geolocation not supported" };
       } else {
         // TIMEOUT or other error
