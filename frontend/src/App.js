@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import { Toaster, toast } from "@/components/ui/sonner";
 import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
+import ShortcutBiometricHandler from "@/components/ShortcutBiometricHandler";
 import LandingPage from "@/pages/LandingPage";
 import JobApplicationForm from "@/pages/JobApplicationForm";
 import ConsignmentInquiryForm from "@/pages/ConsignmentInquiryForm";
@@ -252,61 +253,10 @@ function App() {
   const { resetSession } = useSessionManager();
 
   // Initialize iOS Quick Actions (long-press shortcuts) handler
+  // The ShortcutBiometricHandler component handles the actual Face ID + routing logic
   useEffect(() => {
     initShortcutHandler();
-    
-    // Check for pending shortcut action on mount (set by native code before JS loaded)
-    const checkPendingShortcut = () => {
-      const pendingAction = localStorage.getItem('pendingShortcutAction');
-      if (pendingAction) {
-        console.log('[App] Found pending shortcut action on mount:', pendingAction);
-        // Don't clear it yet - let AdminDashboard handle it
-        // Just make sure we're on the admin page
-        if (window.location.pathname !== '/admin') {
-          console.log('[App] Navigating to /admin for pending action');
-          window.location.href = '/admin';
-        }
-      }
-    };
-    
-    // Check after a short delay to ensure app is ready
-    setTimeout(checkPendingShortcut, 500);
-    
-    // Listen for shortcut actions via custom event
-    const handleShortcut = (event) => {
-      const { action } = event.detail;
-      console.log('[App] Shortcut action received:', action);
-      
-      // Handle the shortcut based on action type
-      switch (action) {
-        case 'StartTrip':
-          // Navigate to admin dashboard with GPS tracker open
-          toast.info('Opening GPS Tracker...');
-          localStorage.setItem('pendingShortcutAction', 'StartTrip');
-          window.location.href = '/admin';
-          break;
-        case 'LogMiles':
-          // Navigate to admin dashboard with manual entry open
-          toast.info('Opening Manual Trip Entry...');
-          localStorage.setItem('pendingShortcutAction', 'LogMiles');
-          window.location.href = '/admin';
-          break;
-        case 'ClockIn':
-          // Navigate to employee dashboard for clock in
-          toast.info('Opening Clock In...');
-          localStorage.setItem('pendingShortcutAction', 'ClockIn');
-          window.location.href = '/admin';
-          break;
-        default:
-          console.warn('[App] Unknown shortcut action:', action);
-      }
-    };
-    
-    window.addEventListener('shortcutAction', handleShortcut);
-    
-    return () => {
-      window.removeEventListener('shortcutAction', handleShortcut);
-    };
+    console.log('[App] Shortcut handler initialized');
   }, []);
 
   // Reset session timer on user activity (clicks, key presses, touches)
@@ -434,6 +384,7 @@ function App() {
     >
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       <BrowserRouter>
+        <ShortcutBiometricHandler />
         <AnimatedRoutes />
       </BrowserRouter>
       <Toaster 

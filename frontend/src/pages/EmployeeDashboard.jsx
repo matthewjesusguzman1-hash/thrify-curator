@@ -322,6 +322,37 @@ export default function EmployeeDashboard() {
     };
   }, [navigate]);
 
+  // Handle pending shortcut actions (from iOS Quick Actions)
+  useEffect(() => {
+    const handlePendingShortcut = async () => {
+      const pendingAction = localStorage.getItem('pendingShortcutAction');
+      if (pendingAction === 'ClockIn') {
+        console.log('[EmployeeDashboard] Handling ClockIn shortcut');
+        localStorage.removeItem('pendingShortcutAction');
+        
+        // Wait for data to load
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // If not already clocked in, trigger clock in
+        if (!clockedIn) {
+          toast.info('Clocking you in...');
+          // Scroll to the clock button area
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          // Auto-trigger clock in after a brief delay
+          setTimeout(() => {
+            handleClock('in');
+          }, 500);
+        } else {
+          toast.info('You are already clocked in');
+        }
+      }
+    };
+    
+    // Small delay to ensure component is fully mounted
+    const timer = setTimeout(handlePendingShortcut, 500);
+    return () => clearTimeout(timer);
+  }, [clockedIn]);
+
   // Check if employee has a password set
   const checkPasswordStatus = async (email) => {
     try {
