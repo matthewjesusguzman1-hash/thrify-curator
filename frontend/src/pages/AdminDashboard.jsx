@@ -1078,6 +1078,86 @@ export default function AdminDashboard() {
     fetchActiveGpsTrip();
   }, [fetchActiveGpsTrip]);
 
+  // Handle iOS Quick Actions (long-press shortcuts)
+  // Checks for pending action in localStorage when the dashboard mounts
+  useEffect(() => {
+    const handlePendingShortcut = () => {
+      const pendingAction = localStorage.getItem('pendingShortcutAction');
+      if (!pendingAction) return;
+      
+      // Clear the pending action immediately to prevent re-triggering
+      localStorage.removeItem('pendingShortcutAction');
+      console.log('[AdminDashboard] Handling pending shortcut action:', pendingAction);
+      
+      // Small delay to ensure the dashboard is fully mounted
+      setTimeout(() => {
+        switch (pendingAction) {
+          case 'StartTrip':
+            // Start GPS tracking
+            if (gpsTrackingStatus === 'idle') {
+              toast.info('Starting GPS trip...', { duration: 2000 });
+              handleStartGpsTrip();
+            } else {
+              toast.info('GPS trip already active', { duration: 2000 });
+              // Scroll to the GPS tracker section
+              if (gpsTrackerRef.current) {
+                setForceOpenOperations(true);
+                gpsTrackerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }
+            break;
+            
+          case 'LogMiles':
+            // Open manual trip entry form
+            setForceOpenOperations(true);
+            setTimeout(() => {
+              if (gpsTrackerRef.current?.openManualEntry) {
+                gpsTrackerRef.current.openManualEntry();
+                toast.success('Manual trip entry opened', { duration: 2000 });
+              }
+              if (gpsTrackerRef.current?.scrollIntoView) {
+                gpsTrackerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }, 400); // Allow time for the Operations group to expand
+            break;
+            
+          case 'ClockIn':
+            // Navigate to payroll section for clock-in (employee portal view)
+            // For admin, we'll open the "Hours by Employee" section
+            setShowHoursByEmployee(true);
+            toast.info('Opening employee hours section...', { duration: 2000 });
+            setTimeout(() => {
+              const hoursSection = document.querySelector('[data-testid="hours-section"]');
+              if (hoursSection) {
+                hoursSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }, 300);
+            break;
+            
+          default:
+            console.warn('[AdminDashboard] Unknown shortcut action:', pendingAction);
+        }
+      }, 500);
+    };
+    
+    // Check on mount
+    handlePendingShortcut();
+    
+    // Also listen for the shortcutAction event (in case it's dispatched while on this page)
+    const handleShortcutEvent = (event) => {
+      const { action } = event.detail;
+      console.log('[AdminDashboard] Received shortcut event:', action);
+      localStorage.setItem('pendingShortcutAction', action);
+      handlePendingShortcut();
+    };
+    
+    window.addEventListener('shortcutAction', handleShortcutEvent);
+    
+    return () => {
+      window.removeEventListener('shortcutAction', handleShortcutEvent);
+    };
+  }, [gpsTrackingStatus]);
+
   // Email configuration functions
   const fetchEmailStatus = useCallback(async () => {
     try {

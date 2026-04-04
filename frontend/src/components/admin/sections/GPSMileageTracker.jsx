@@ -169,13 +169,20 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const backgroundGeoRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Expose scrollIntoView via ref
+  // Expose methods via ref for external control (e.g., iOS Quick Actions)
   useImperativeHandle(ref, () => ({
     scrollIntoView: (options) => {
       if (containerRef.current) {
         containerRef.current.scrollIntoView(options);
       }
-    }
+    },
+    // Open the manual trip entry form
+    openManualEntry: () => {
+      setIsExpanded(true);
+      setShowManualEntry(true);
+    },
+    // Check if manual entry form is open
+    isManualEntryOpen: () => showManualEntry
   }));
 
   // Auto-expand when tracking is active or completing

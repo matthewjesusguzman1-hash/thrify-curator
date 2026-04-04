@@ -7,9 +7,6 @@
  * - ClockIn: Navigate to clock in/out
  */
 
-import { App } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
-
 // Store callbacks for different shortcut actions
 let shortcutCallbacks = {
   StartTrip: null,
@@ -17,48 +14,80 @@ let shortcutCallbacks = {
   ClockIn: null
 };
 
+// Track initialization state
+let isInitialized = false;
+
+/**
+ * Check if we're running on a native platform
+ */
+const isNativePlatform = () => {
+  try {
+    return window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative || false;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Initialize the shortcut handler
  * Call this once when the app starts (in App.js or main component)
  */
-export const initShortcutHandler = () => {
-  if (!Capacitor.isNativePlatform()) {
+export const initShortcutHandler = async () => {
+  if (isInitialized) {
+    console.log('[Shortcuts] Already initialized');
+    return;
+  }
+  
+  if (!isNativePlatform()) {
     console.log('[Shortcuts] Not on native platform, skipping initialization');
+    isInitialized = true;
     return;
   }
 
-  // Listen for app state changes to check for pending shortcuts
-  App.addListener('appStateChange', async ({ isActive }) => {
-    if (isActive) {
-      checkPendingShortcut();
-    }
-  });
-
-  // Listen for app URL open (backup method)
-  App.addListener('appUrlOpen', ({ url }) => {
-    console.log('[Shortcuts] App opened with URL:', url);
-    if (url.includes('shortcut')) {
-      const action = new URL(url).searchParams.get('action');
-      if (action) {
-        handleShortcutAction(action);
+  try {
+    // Dynamic import to avoid build errors when Capacitor isn't available
+    const { App } = await import('@capacitor/app');
+    
+    // Listen for app state changes to check for pending shortcuts
+    App.addListener('appStateChange', async ({ isActive }) => {
+      if (isActive) {
+        checkPendingShortcut();
       }
-    }
-  });
+    });
 
-  // Check immediately in case app was launched via shortcut
-  setTimeout(() => {
-    checkPendingShortcut();
-  }, 500);
+    // Listen for app URL open (backup method)
+    App.addListener('appUrlOpen', ({ url }) => {
+      console.log('[Shortcuts] App opened with URL:', url);
+      if (url.includes('shortcut')) {
+        try {
+          const action = new URL(url).searchParams.get('action');
+          if (action) {
+            handleShortcutAction(action);
+          }
+        } catch (e) {
+          console.error('[Shortcuts] Error parsing URL:', e);
+        }
+      }
+    });
 
-  console.log('[Shortcuts] Handler initialized');
+    // Check immediately in case app was launched via shortcut
+    setTimeout(() => {
+      checkPendingShortcut();
+    }, 500);
+
+    console.log('[Shortcuts] Handler initialized');
+  } catch (error) {
+    console.log('[Shortcuts] Capacitor App plugin not available:', error.message);
+  }
+  
+  isInitialized = true;
 };
 
 /**
- * Check for pending shortcut action stored in UserDefaults
+ * Check for pending shortcut action stored in localStorage
  */
-const checkPendingShortcut = async () => {
+const checkPendingShortcut = () => {
   try {
-    // This requires a small native plugin or we use localStorage as fallback
     const pendingAction = localStorage.getItem('pendingShortcutAction');
     if (pendingAction) {
       console.log('[Shortcuts] Found pending action:', pendingAction);
@@ -95,7 +124,7 @@ const handleShortcutAction = (action) => {
  * @param {function} callback - Function to call when shortcut is triggered
  */
 export const registerShortcutCallback = (action, callback) => {
-  if (shortcutCallbacks.hasOwnProperty(action)) {
+  if (Object.prototype.hasOwnProperty.call(shortcutCallbacks, action)) {
     shortcutCallbacks[action] = callback;
     console.log('[Shortcuts] Registered callback for:', action);
   } else {
@@ -109,7 +138,7 @@ export const registerShortcutCallback = (action, callback) => {
  * @param {string} action - The shortcut type to unregister
  */
 export const unregisterShortcutCallback = (action) => {
-  if (shortcutCallbacks.hasOwnProperty(action)) {
+  if (Object.prototype.hasOwnProperty.call(shortcutCallbacks, action)) {
     shortcutCallbacks[action] = null;
     console.log('[Shortcuts] Unregistered callback for:', action);
   }

@@ -6,6 +6,13 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 ## Core Features
 
 ### Completed
+- **iOS Quick Actions - JavaScript Implementation (Apr 4, 2026)**:
+  - Completed frontend listener logic for iOS Home Screen long-press shortcuts
+  - `shortcutHandler.js` updated to use dynamic imports (handles web preview gracefully)
+  - `AdminDashboard.jsx` now listens for `shortcutAction` custom events and `pendingShortcutAction` localStorage
+  - Three shortcuts implemented: `StartTrip` (GPS tracking), `LogMiles` (manual trip entry), `ClockIn` (hours section)
+  - `GPSMileageTracker` exposes `openManualEntry()` via `useImperativeHandle` for external control
+  - User must add native `Info.plist` and `AppDelegate.swift` code locally for full iOS functionality
 - **Web Application**: Full-stack React/FastAPI/MongoDB application
 - **Consignment Portal**: View submissions, payment history, manage account, add items with custom commission splits
 - **Employee Portal**: Clock-in/out with geolocation verification, view time entries
