@@ -688,9 +688,28 @@ async def get_financial_summary(year: int):
     expense_entries = await db.expense_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
     total_expenses = sum(e["amount"] for e in expense_entries)
     
-    # Get mileage
-    mileage_entries = await db.mileage_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
-    total_miles = sum(e["miles"] for e in mileage_entries)
+    # Get mileage from gps_trips (single source of truth)
+    start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
+    end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    
+    gps_trips = await db.gps_trips.find(
+        {
+            "status": "completed",
+            "is_hidden": {"$ne": True},
+            "start_time": {
+                "$gte": start_date.isoformat(),
+                "$lt": end_date.isoformat()
+            }
+        },
+        {"_id": 0, "total_miles": 1}
+    ).to_list(length=None)
+    
+    # Also include legacy mileage_entries for backwards compatibility
+    legacy_mileage = await db.mileage_entries.find({"year": year}, {"_id": 0, "miles": 1}).to_list(length=None)
+    
+    total_miles_gps = sum(t.get("total_miles", 0) for t in gps_trips)
+    total_miles_legacy = sum(e.get("miles", 0) for e in legacy_mileage)
+    total_miles = total_miles_gps + total_miles_legacy
     irs_rate = get_irs_mileage_rate(year)
     mileage_deduction = round(total_miles * irs_rate, 2)
     
@@ -743,7 +762,24 @@ async def get_year_comparison(year: int):
         income = await db.income_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         cogs = await db.cogs_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         expenses = await db.expense_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
-        mileage = await db.mileage_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
+        
+        # Get mileage from gps_trips (primary) and legacy mileage_entries
+        start_date = datetime(y, 1, 1, tzinfo=timezone.utc)
+        end_date = datetime(y + 1, 1, 1, tzinfo=timezone.utc)
+        
+        gps_trips = await db.gps_trips.find(
+            {
+                "status": "completed",
+                "is_hidden": {"$ne": True},
+                "start_time": {
+                    "$gte": start_date.isoformat(),
+                    "$lt": end_date.isoformat()
+                }
+            },
+            {"_id": 0, "total_miles": 1, "start_time": 1}
+        ).to_list(length=None)
+        
+        legacy_mileage = await db.mileage_entries.find({"year": y}, {"_id": 0}).to_list(length=None)
         
         # Filter for YTD if requested (through specified month)
         if ytd_only and through_month:
@@ -760,7 +796,13 @@ async def get_year_comparison(year: int):
             income = [e for e in income if is_in_range(e, 'date_received')]
             cogs = [e for e in cogs if is_in_range(e, 'date')]
             expenses = [e for e in expenses if is_in_range(e, 'date')]
-            mileage = [e for e in mileage if is_in_range(e, 'date')]
+            legacy_mileage = [e for e in legacy_mileage if is_in_range(e, 'date')]
+            gps_trips = [t for t in gps_trips if is_in_range(t, 'start_time')]
+        
+        # Calculate total miles from both sources
+        total_miles_gps = sum(t.get("total_miles", 0) for t in gps_trips)
+        total_miles_legacy = sum(e.get("miles", 0) for e in legacy_mileage)
+        total_miles = total_miles_gps + total_miles_legacy
         
         # Separate gross revenue from profit entries
         # Only include scanned data (entries with "Scanned" in notes) - NOT manual 1099s from Tax Prep
@@ -775,7 +817,6 @@ async def get_year_comparison(year: int):
         recorded_profit = sum(e["amount"] for e in profit_entries)
         total_cogs = sum(e["amount"] for e in cogs)
         total_expenses = sum(e["amount"] for e in expenses)
-        total_miles = sum(e["miles"] for e in mileage)
         mileage_deduction = total_miles * get_irs_mileage_rate(y)
         
         # Use recorded profit if available
