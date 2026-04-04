@@ -116,6 +116,8 @@ def calculate_trip_distance(locations: List[dict]) -> float:
         return 0.0
     
     total_distance = 0.0
+    MAX_REALISTIC_SPEED_MPH = 85  # Max realistic driving speed
+    
     for i in range(1, len(locations)):
         prev = locations[i - 1]
         curr = locations[i]
@@ -130,13 +132,33 @@ def calculate_trip_distance(locations: List[dict]) -> float:
             prev["latitude"], prev["longitude"],
             curr["latitude"], curr["longitude"]
         )
-        # Filter out extreme GPS jumps (unrealistic distances between consecutive points)
-        # Allow up to 2 miles between points (car at 60mph = 1 mile/min, so ~2 min gap allowed)
+        
         # Filter out tiny noise < 0.001 miles (about 5 feet)
-        if distance > 0.001 and distance < 2.0:
+        if distance < 0.001:
+            continue
+        
+        # Calculate time difference to determine if speed is realistic
+        try:
+            prev_time = datetime.fromisoformat(prev["timestamp"].replace("Z", "+00:00"))
+            curr_time = datetime.fromisoformat(curr["timestamp"].replace("Z", "+00:00"))
+            time_diff_hours = (curr_time - prev_time).total_seconds() / 3600
+            
+            if time_diff_hours > 0:
+                implied_speed = distance / time_diff_hours
+                
+                # If implied speed is unrealistic, it's a GPS error - skip it
+                if implied_speed > MAX_REALISTIC_SPEED_MPH:
+                    print(f"Skipping unrealistic speed: {implied_speed:.1f}mph ({distance:.4f}mi in {time_diff_hours*3600:.1f}s)")
+                    continue
+            
             total_distance += distance
-        elif distance >= 2.0:
-            print(f"Skipping large GPS jump: {distance:.4f} miles")
+            
+        except (ValueError, KeyError):
+            # If we can't parse timestamps, use distance-only filter (fallback)
+            if distance < 0.5:  # Allow up to 0.5 miles without time check
+                total_distance += distance
+            else:
+                print(f"Skipping large jump (no timestamp): {distance:.4f} miles")
     
     return round(total_distance, 2)
 
