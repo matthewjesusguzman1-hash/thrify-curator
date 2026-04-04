@@ -164,7 +164,6 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   // Map viewing state (used by TripMapModal)
   const [viewingTripMap, setViewingTripMap] = useState(null);
   const [loadingMap, setLoadingMap] = useState(false);
-  const [showLiveMap, setShowLiveMap] = useState(false);
   
   // Background geolocation (native only)
   const backgroundGeoRef = useRef(null);
@@ -1080,68 +1079,6 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                         </p>
                         <p className="text-xs text-green-600">Deduction</p>
                       </div>
-                    </div>
-                  )}
-                  
-                  {/* Collapsible Live Map - View Route in Real-Time */}
-                  {!showCompletionForm && (trackingStatus === "tracking" || trackingStatus === "paused") && (
-                    <div className="mb-4">
-                      <button
-                        onClick={() => setShowLiveMap(!showLiveMap)}
-                        className="w-full flex items-center justify-between p-2 bg-white/40 hover:bg-white/60 rounded-lg transition-colors text-sm"
-                        data-testid="toggle-live-map-btn"
-                      >
-                        <span className="flex items-center gap-2 text-green-700 font-medium">
-                          <Map className="w-4 h-4" />
-                          {showLiveMap ? "Hide Route Map" : "View Route Map"}
-                        </span>
-                        {showLiveMap ? (
-                          <ChevronUp className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-green-600" />
-                        )}
-                      </button>
-                      
-                      <AnimatePresence>
-                        {showLiveMap && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="mt-2 rounded-lg overflow-hidden border border-green-200">
-                              {gpsTracker?.getLocations && gpsTracker.getLocations().length > 0 ? (
-                                <Suspense fallback={
-                                  <div className="h-[200px] bg-gray-100 flex items-center justify-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                                  </div>
-                                }>
-                                  <TripMap 
-                                    locations={gpsTracker.getLocations()} 
-                                    height="200px"
-                                    showCurrentPosition={true}
-                                  />
-                                </Suspense>
-                              ) : (
-                                <div className="h-[200px] bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
-                                  <div className="text-center">
-                                    <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                                    <p>Waiting for GPS points...</p>
-                                    <p className="text-xs mt-1">Start moving to see your route</p>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            {gpsTracker?.getLocations && gpsTracker.getLocations().length > 0 && (
-                              <p className="text-xs text-green-600 mt-1 text-center">
-                                {gpsTracker.getLocations().length} points tracked • Map updates as you move
-                              </p>
-                            )}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
                     </div>
                   )}
                   
