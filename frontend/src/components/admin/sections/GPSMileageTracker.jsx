@@ -5,6 +5,7 @@
  * Refactored: Mar 28, 2026 - Extracted sub-components to gps-tracker/ folder
  */
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle, lazy, Suspense } from "react";
+import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Navigation,
@@ -1955,35 +1956,54 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         )}
       </AnimatePresence>
       
-      {/* Edit Trip Modal */}
-      <AnimatePresence>
-        {editingTrip && (
+      {/* Edit Trip Modal - Using Portal to render at body level */}
+      {editingTrip && ReactDOM.createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 999999,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: '16px',
+            paddingTop: '60px',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch'
+          }}
+          onClick={handleCancelEdit}
+        >
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={handleCancelEdit}
+            initial={{ scale: 0.95, opacity: 0, y: -10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              maxWidth: '400px',
+              width: '100%',
+              maxHeight: 'calc(100vh - 100px)',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch'
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <Pencil className="w-5 h-5 text-blue-600" />
-                  Edit Trip
-                </h3>
-                <button
-                  onClick={handleCancelEdit}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-blue-600" />
+                Edit Trip
+              </h3>
+              <button
+                onClick={handleCancelEdit}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
               
               <div className="p-4 space-y-4">
                 {/* Date */}
@@ -2098,9 +2118,9 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 </div>
               </div>
             </motion.div>
-          </motion.div>
+          </div>,
+          document.body
         )}
-      </AnimatePresence>
       
       {/* Trip Map Modal */}
       <AnimatePresence>
