@@ -724,7 +724,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     // Use passed formData or fall back to internal state
     const data = formData || manualTripData;
     
-    if (!data.miles || parseFloat(data.miles) <= 0) {
+    // Robust validation - handle both string and number types
+    const milesValue = data.miles ? parseFloat(String(data.miles).trim()) : 0;
+    
+    if (!milesValue || milesValue <= 0 || isNaN(milesValue)) {
       toast.error("Please enter the miles driven");
       return;
     }
@@ -740,7 +743,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         `${API}/admin/gps-trips/manual`,
         {
           date: data.date,
-          total_miles: parseFloat(data.miles),
+          total_miles: milesValue, // Use the validated numeric value
           purpose: data.purpose,
           notes: data.purpose === "other" ? data.notes : null
         },
@@ -1349,6 +1352,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     <div className="relative mt-1">
                       <Input
                         type="number"
+                        inputMode="decimal"
                         step="0.1"
                         min="0.1"
                         max="1000"
@@ -1444,7 +1448,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       Cancel
                     </Button>
                     <Button
-                      onClick={handleSaveManualTrip}
+                      onClick={() => handleSaveManualTrip()}
                       disabled={savingManualTrip || !manualTripData.miles || !manualTripData.purpose}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                       data-testid="save-manual-trip-btn"

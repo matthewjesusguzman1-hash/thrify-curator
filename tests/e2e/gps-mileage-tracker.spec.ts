@@ -254,3 +254,55 @@ test.describe('Admin Login Flow', () => {
     await expect(page.getByTestId('admin-dashboard')).toBeVisible();
   });
 });
+
+test.describe('Manual Trip Entry Bug Fix (BUG-FIX-001)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+    await removeEmergentBadge(page);
+  });
+
+  test('Manual trip entry saves correctly without "Please enter the miles driven" error', async ({ page }) => {
+    // This test verifies the bug fix where onClick={handleSaveManualTrip} was passing
+    // the click event as formData parameter, causing validation to fail because event.miles is undefined.
+    // The fix changed to onClick={() => handleSaveManualTrip()} to ensure null is passed
+    // and the internal state (manualTripData) is used correctly.
+    
+    await expandGPSMileageTracker(page);
+    
+    // Click manual entry button
+    const manualEntryBtn = page.getByTestId('manual-entry-btn');
+    await expect(manualEntryBtn).toBeVisible();
+    await manualEntryBtn.click();
+    
+    // Fill in the form with test data
+    const today = new Date().toISOString().split('T')[0];
+    await page.getByTestId('manual-trip-date').fill(today);
+    
+    // Enter miles - this is the key test for the bug fix
+    await page.getByTestId('manual-trip-miles').fill('2.5');
+    
+    // Verify tax deduction is calculated (2.5 * 0.725 = $1.81)
+    await expect(page.getByText('Tax Deduction: $1.81')).toBeVisible();
+    
+    // Select purpose
+    await page.getByTestId('manual-trip-purpose').click();
+    await page.getByRole('option', { name: /Post Office/i }).click();
+    
+    // Save button should be enabled
+    const saveBtn = page.getByTestId('save-manual-trip-btn');
+    await expect(saveBtn).toBeEnabled();
+    
+    // Click save - this is where the bug was occurring
+    await saveBtn.click();
+    
+    // Wait for success toast - the bug would show "Please enter the miles driven" error instead
+    await expect(page.getByText(/Trip logged!/i)).toBeVisible();
+    await expect(page.getByText(/2.5 miles/i)).toBeVisible();
+    
+    // Verify the form closes after successful save
+    await expect(page.getByTestId('manual-trip-miles')).not.toBeVisible();
+    
+    // Verify manual entry button is visible again
+    await expect(manualEntryBtn).toBeVisible();
+  });
+});
