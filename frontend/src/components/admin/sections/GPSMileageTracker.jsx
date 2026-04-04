@@ -129,6 +129,16 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     receipt: null
   });
   const [savingManualTrip, setSavingManualTrip] = useState(false);
+  const manualEntryRef = useRef(null);
+  
+  // Scroll to manual entry form when it opens
+  useEffect(() => {
+    if (showManualEntry && manualEntryRef.current) {
+      setTimeout(() => {
+        manualEntryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [showManualEntry]);
   
   // Edit trip state (used by EditTripModal)
   const [editingTrip, setEditingTrip] = useState(null);
@@ -1306,7 +1316,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
               
               {/* Manual Trip Entry Form */}
               {!activeTrip && !showCompletionForm && showManualEntry && (
-                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 space-y-4">
+                <div ref={manualEntryRef} className="p-4 bg-blue-50 rounded-xl border border-blue-200 space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-blue-800 flex items-center gap-2">
                       <FileText className="w-5 h-5" />
