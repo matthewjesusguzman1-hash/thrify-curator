@@ -59,6 +59,14 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Supports both draft PDFs (auto-generated via reportlab) and filed documents (user-uploaded)
   - Email service updated to support Resend attachments
   - Testing: 100% pass (13/13 backend tests)
+- **Mileage Tracking Consolidation (Apr 4, 2026)**:
+  - **Unified data source**: GPS Mileage Tracker and Financials/Tax Prep sections now pull from same `gps_trips` collection
+  - **Fixed $0 deduction bug**: YTD summary now correctly displays mileage deduction (field name mismatch fixed)
+  - **IRS Rate updated**: 2026 mileage rate set to $0.725/mile
+  - **Manual Trip Entry**: Works via "Log Trip Manually" button in GPS Mileage Tracker
+  - **Backwards compatible**: Legacy `mileage_entries` still included for historical data
+  - Backend endpoints updated: `get_mileage()`, `get_financial_summary()`, `get_tax_prep_summary()`, `get_year_comparison()`
+  - Testing: 100% pass (9/9 backend tests)
 
 ### In Progress / Pending User Verification
 - **Consignor Picker Fix (Mar 25, 2026)**: Applied iOS-specific touch event handling and CSS to prevent text selection behavior. Needs TestFlight verification.
