@@ -105,7 +105,6 @@ export default function AdminDashboard() {
   const [user, setUser] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [employeeClockStatuses, setEmployeeClockStatuses] = useState({}); // Track which employees are clocked in
-  const [adminMonitoringActive, setAdminMonitoringActive] = useState(false); // Live Activity monitoring state
   const [timeEntries, setTimeEntries] = useState([]);
   const [summary, setSummary] = useState({ 
     total_employees: 0, 
@@ -2840,108 +2839,6 @@ export default function AdminDashboard() {
               </Button>
             </div>
             <div className="flex gap-2 items-start">
-              {/* Live Activity Toggle */}
-              <Button
-                onClick={async () => {
-                  buttonPress();
-                  if (adminMonitoringActive) {
-                    await LiveActivityService.endAdminActivity(user?.id);
-                    setAdminMonitoringActive(false);
-                    successFeedback();
-                    toast.success("Live monitoring stopped");
-                  } else {
-                    // Verify we have a valid auth token
-                    const token = localStorage.getItem("token");
-                    if (!token) {
-                      toast.error("Session expired. Please log in again.");
-                      return;
-                    }
-                    
-                    // Try to register for push notifications (don't block if fails)
-                    try {
-                      await LiveActivityService.registerForPushNotifications(user?.id, "admin");
-                    } catch (e) {
-                      console.log('Push registration skipped:', e);
-                    }
-                    
-                    // Fetch actual clocked-in employees with their clock-in times
-                    let clockedInData = [];
-                    let fetchError = null;
-                    try {
-                      console.log('Fetching clocked-in employees with token:', token.substring(0, 20) + '...');
-                      const response = await axios.get(`${API}/admin/clocked-in-employees`, getAuthHeader());
-                      const clockedEmployees = response.data.employees || [];
-                      
-                      // Format as "Name|TimeStr|Timestamp" for Swift
-                      clockedInData = clockedEmployees.map(emp => {
-                        const name = emp.name || 'Unknown';
-                        let timeStr = '--';
-                        let timestamp = 0;
-                        
-                        if (emp.clock_in_time) {
-                          try {
-                            const dt = new Date(emp.clock_in_time);
-                            timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                            timestamp = Math.floor(dt.getTime() / 1000);
-                          } catch (e) {
-                            console.log('Failed to parse clock-in time:', e);
-                          }
-                        }
-                        
-                        return `${name}|${timeStr}|${timestamp}`;
-                      });
-                      console.log('Fetched', clockedInData.length, 'clocked-in employees');
-                    } catch (e) {
-                      console.log('Failed to fetch clocked-in employees:', e);
-                      fetchError = e;
-                      
-                      // If 401, the session might be invalid
-                      if (e.response?.status === 401) {
-                        console.log('Auth error - using local employee status fallback');
-                      }
-                      
-                      // Fallback to local state (employees we know are clocked in from the UI)
-                      clockedInData = employees
-                        .filter(emp => employeeClockStatuses[emp.id])
-                        .map(emp => `${emp.name || emp.email}|--|0`);
-                      console.log('Using fallback with', clockedInData.length, 'employees from local state');
-                    }
-                    
-                    await LiveActivityService.startAdminActivity({
-                      adminName: user?.name || 'Admin',
-                      userId: user?.id,
-                      employeeCount: clockedInData.length,
-                      employeeNames: clockedInData
-                    });
-                    setAdminMonitoringActive(true);
-                    successFeedback();
-                    
-                    if (fetchError) {
-                      toast.info(`Live monitoring started with ${clockedInData.length} employees (using cached data)`);
-                    } else {
-                      toast.success(`Live monitoring started - ${clockedInData.length} employees tracked`);
-                    }
-                  }
-                }}
-                size="sm"
-                className={`flex items-center gap-1 ${adminMonitoringActive 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600'
-                } text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9`}
-                data-testid="live-activity-toggle-btn"
-              >
-                {adminMonitoringActive ? (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    <span className="hidden sm:inline">Monitoring</span>
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    <span className="hidden sm:inline">Live Monitor</span>
-                  </>
-                )}
-              </Button>
               {/* Employee Management + Start Trip */}
               <div className="flex flex-col gap-1">
                 {/* Add, Edit, Remove row */}
