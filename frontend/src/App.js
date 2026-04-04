@@ -382,8 +382,8 @@ function App() {
         minHeight: '100vh'
       }}
     >
-      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       <BrowserRouter>
+        {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
         <ShortcutBiometricHandler />
         <AnimatedRoutes />
       </BrowserRouter>

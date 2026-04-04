@@ -1,10 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
+import axios from 'axios';
+import useBiometricAuth from '@/hooks/useBiometricAuth';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_f87e31a4-f19a-4a3f-9c26-c5ad57e131e1/artifacts/vh1p37dl_IMG_0092.png";
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function SplashScreen({ onComplete }) {
   const [isVisible, setIsVisible] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
+  const navigate = useNavigate();
+  const hasProcessedShortcut = useRef(false);
+  
+  const { isNative, isAvailable, biometricLogin } = useBiometricAuth();
 
   const handleComplete = useCallback(() => {
     setIsVisible(false);
@@ -14,10 +24,156 @@ export default function SplashScreen({ onComplete }) {
     }
   }, [onComplete]);
 
+  // Process shortcut with Face ID
+  const processShortcutWithBiometric = useCallback(async (action) => {
+    if (hasProcessedShortcut.current) return false;
+    hasProcessedShortcut.current = true;
+    
+    console.log('[Splash] Processing shortcut with biometric:', action);
+    setStatusMessage('Verifying identity...');
+    
+    // Check if already logged in with valid token
+    const existingToken = localStorage.getItem('token');
+    const existingUser = localStorage.getItem('user');
+    
+    if (existingToken && existingUser) {
+      try {
+        await axios.get(`${API}/auth/me`, {
+          headers: { Authorization: `Bearer ${existingToken}` }
+        });
+        
+        // Token valid - go straight to destination
+        const user = JSON.parse(existingUser);
+        console.log('[Splash] Already logged in as:', user.role);
+        setStatusMessage('Welcome back!');
+        
+        // Clear the action since we're handling it
+        localStorage.removeItem('pendingShortcutAction');
+        
+        // Navigate based on role and action
+        setTimeout(() => {
+          if (user.role === 'admin') {
+            localStorage.setItem('pendingShortcutAction', action);
+            navigate('/admin');
+          } else if (user.role === 'employee') {
+            localStorage.setItem('pendingShortcutAction', action);
+            navigate('/dashboard');
+          }
+          handleComplete();
+        }, 500);
+        
+        return true;
+      } catch (error) {
+        console.log('[Splash] Token invalid, need biometric auth');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+    
+    // Need to authenticate
+    if (!isAvailable || !isNative) {
+      console.log('[Splash] Biometric not available');
+      return false;
+    }
+    
+    setStatusMessage('Scan Face ID to continue...');
+    
+    // Try employee credentials first
+    let result = await biometricLogin('employee_portal', {
+      reason: 'Verify your identity',
+      title: 'Quick Action',
+      description: getActionDescription(action)
+    });
+    
+    let userType = 'employee';
+    
+    // If no employee credentials, try consignor (unlikely for these shortcuts)
+    if (!result.success && result.needsPassword) {
+      result = await biometricLogin('consignment_portal', {
+        reason: 'Verify your identity',
+        title: 'Quick Action',
+        description: getActionDescription(action)
+      });
+      userType = 'consignor';
+    }
+    
+    if (!result.success) {
+      console.log('[Splash] Biometric failed:', result);
+      return false;
+    }
+    
+    // Login with credentials
+    setStatusMessage('Logging in...');
+    
+    try {
+      const { username, password } = result.credentials;
+      let payload;
+      
+      if (password === 'EMAIL_ONLY_LOGIN') {
+        payload = { email: username };
+      } else if (password && password.length === 4 && /^\d+$/.test(password)) {
+        payload = { email: username, admin_code: password };
+      } else {
+        payload = { email: username, password: password };
+      }
+      
+      const response = await axios.post(`${API}/auth/login`, payload);
+      const { access_token, user } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('sessionStart', Date.now().toString());
+      
+      // Clear the pending action
+      localStorage.removeItem('pendingShortcutAction');
+      
+      setStatusMessage('Success!');
+      
+      // Navigate to destination
+      setTimeout(() => {
+        if (user.role === 'admin') {
+          localStorage.setItem('pendingShortcutAction', action);
+          navigate('/admin');
+        } else {
+          localStorage.setItem('pendingShortcutAction', action);
+          navigate('/dashboard');
+        }
+        handleComplete();
+      }, 300);
+      
+      return true;
+    } catch (error) {
+      console.error('[Splash] Login failed:', error);
+      setStatusMessage('Login failed');
+      return false;
+    }
+  }, [isAvailable, isNative, biometricLogin, navigate, handleComplete]);
+
   useEffect(() => {
-    // Check if we should show splash (only on mobile or first visit)
     const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
     
+    // Check for pending shortcut action FIRST
+    const pendingAction = localStorage.getItem('pendingShortcutAction');
+    
+    if (pendingAction && !hasProcessedShortcut.current) {
+      console.log('[Splash] Found pending shortcut:', pendingAction);
+      
+      // Process the shortcut with biometric
+      processShortcutWithBiometric(pendingAction).then(success => {
+        if (!success) {
+          // Biometric failed or not available - continue normal flow
+          console.log('[Splash] Biometric flow failed, continuing normal splash');
+          const timer = setTimeout(() => {
+            handleComplete();
+          }, 2000);
+          return () => clearTimeout(timer);
+        }
+      });
+      
+      return;
+    }
+    
+    // No shortcut - normal splash flow
     if (hasSeenSplash) {
       setIsVisible(false);
       if (onComplete) {
@@ -26,12 +182,10 @@ export default function SplashScreen({ onComplete }) {
       return;
     }
 
-    // Show splash for 3 seconds (reduced from 4 for better UX)
     const timer = setTimeout(() => {
       handleComplete();
     }, 3000);
 
-    // Fallback: ensure splash dismisses even if timer fails
     const fallbackTimer = setTimeout(() => {
       handleComplete();
     }, 5000);
@@ -40,7 +194,7 @@ export default function SplashScreen({ onComplete }) {
       clearTimeout(timer);
       clearTimeout(fallbackTimer);
     };
-  }, [onComplete, handleComplete]);
+  }, [onComplete, handleComplete, processShortcutWithBiometric]);
 
   return (
     <AnimatePresence>
@@ -52,9 +206,8 @@ export default function SplashScreen({ onComplete }) {
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]"
           data-testid="splash-screen"
         >
-          {/* Animated smoke/cloud background elements - GPU optimized */}
+          {/* Animated smoke/cloud background elements */}
           <div className="absolute inset-0 overflow-hidden" style={{ willChange: 'transform' }}>
-            {/* Large cyan smoke - moves and pulses */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ 
@@ -78,7 +231,6 @@ export default function SplashScreen({ onComplete }) {
               }}
             />
             
-            {/* Large pink/magenta smoke - moves and pulses */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ 
@@ -103,7 +255,6 @@ export default function SplashScreen({ onComplete }) {
               }}
             />
             
-            {/* Purple smoke in center - pulses */}
             <motion.div
               initial={{ opacity: 0, scale: 0.6 }}
               animate={{ 
@@ -126,7 +277,6 @@ export default function SplashScreen({ onComplete }) {
               }}
             />
             
-            {/* Additional small cyan accent */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ 
@@ -150,7 +300,6 @@ export default function SplashScreen({ onComplete }) {
               }}
             />
             
-            {/* Additional small pink accent */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ 
@@ -178,7 +327,6 @@ export default function SplashScreen({ onComplete }) {
 
           {/* Logo and text */}
           <div className="relative z-10 flex flex-col items-center">
-            {/* Logo */}
             <motion.div
               initial={{ opacity: 0, scale: 0.5, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -192,7 +340,6 @@ export default function SplashScreen({ onComplete }) {
               />
             </motion.div>
 
-            {/* Brand name */}
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -202,17 +349,15 @@ export default function SplashScreen({ onComplete }) {
               Thrifty Curator
             </motion.h1>
 
-            {/* Tagline */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
               className="text-white/60 text-sm sm:text-base tracking-widest uppercase"
             >
-              Curated Resale Finds
+              {statusMessage || 'Curated Resale Finds'}
             </motion.p>
 
-            {/* Loading indicator */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -242,4 +387,17 @@ export default function SplashScreen({ onComplete }) {
       )}
     </AnimatePresence>
   );
+}
+
+function getActionDescription(action) {
+  switch (action) {
+    case 'StartTrip':
+      return 'Start GPS tracking';
+    case 'LogMiles':
+      return 'Log a trip';
+    case 'ClockIn':
+      return 'Clock in';
+    default:
+      return 'Continue';
+  }
 }
