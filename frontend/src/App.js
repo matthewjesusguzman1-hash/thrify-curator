@@ -255,6 +255,23 @@ function App() {
   useEffect(() => {
     initShortcutHandler();
     
+    // Check for pending shortcut action on mount (set by native code before JS loaded)
+    const checkPendingShortcut = () => {
+      const pendingAction = localStorage.getItem('pendingShortcutAction');
+      if (pendingAction) {
+        console.log('[App] Found pending shortcut action on mount:', pendingAction);
+        // Don't clear it yet - let AdminDashboard handle it
+        // Just make sure we're on the admin page
+        if (window.location.pathname !== '/admin') {
+          console.log('[App] Navigating to /admin for pending action');
+          window.location.href = '/admin';
+        }
+      }
+    };
+    
+    // Check after a short delay to ensure app is ready
+    setTimeout(checkPendingShortcut, 500);
+    
     // Listen for shortcut actions via custom event
     const handleShortcut = (event) => {
       const { action } = event.detail;
