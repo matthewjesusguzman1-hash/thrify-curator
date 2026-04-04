@@ -80,16 +80,9 @@ export default function CompactEmployeeTracker({ employees, employeeClockStatuse
     return sum + parseFloat(calculatePay(emp.clock_in_time, emp.hourly_rate || 15));
   }, 0);
 
-  // No employees clocked in - minimal view
+  // No employees clocked in - hide completely
   if (!loading && clockedInEmployees.length === 0) {
-    return (
-      <div className="bg-slate-800/50 rounded-xl px-4 py-2 mb-4 flex items-center gap-3 border border-slate-700/50">
-        <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
-          <Users className="w-4 h-4 text-slate-400" />
-        </div>
-        <span className="text-slate-400 text-sm">No employees clocked in</span>
-      </div>
-    );
+    return null;
   }
 
   return (
