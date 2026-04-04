@@ -244,9 +244,18 @@ function AnimatedRoutes() {
 }
 
 function App() {
-  // Check sessionStorage synchronously on initial render to prevent flicker
+  // Check for pending shortcut - skip splash if there's one
   const [showSplash, setShowSplash] = useState(() => {
-    return !sessionStorage.getItem('hasSeenSplash');
+    const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
+    const hasPendingShortcut = localStorage.getItem('pendingShortcutAction');
+    
+    // Skip splash if there's a pending shortcut action
+    if (hasPendingShortcut) {
+      console.log('[App] Pending shortcut detected, skipping splash');
+      return false;
+    }
+    
+    return !hasSeenSplash;
   });
 
   // Initialize session manager
