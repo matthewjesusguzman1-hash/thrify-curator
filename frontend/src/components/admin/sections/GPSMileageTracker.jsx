@@ -1574,7 +1574,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                             <p className="text-xs text-blue-600">Miles</p>
                           </div>
                           <div className="bg-white/60 rounded-lg p-3">
-                            <p className="text-2xl font-bold text-blue-700">${summary.tax_deduction?.toFixed(0) || "0"}</p>
+                            <p className="text-2xl font-bold text-blue-700">${summary.total_deduction?.toFixed(0) || "0"}</p>
                             <p className="text-xs text-blue-600">Deduction</p>
                           </div>
                         </div>

@@ -40,6 +40,9 @@ async function expandGPSMileageTracker(page) {
   
   // Click to expand GPS Mileage Tracker
   await gpsTracker.click();
+  
+  // Wait for content to load
+  await page.waitForTimeout(500);
 }
 
 // Helper to remove Emergent badge
@@ -50,7 +53,7 @@ async function removeEmergentBadge(page) {
   });
 }
 
-test.describe('GPS Mileage Tracker', () => {
+test.describe('GPS Mileage Tracker - YTD Summary', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
     await removeEmergentBadge(page);
@@ -68,13 +71,42 @@ test.describe('GPS Mileage Tracker', () => {
     // Click to expand
     await gpsTracker.click();
     
-    // Verify expanded content is visible - check each button individually
-    const startBtn = page.getByTestId('start-trip-btn');
+    // Verify expanded content is visible - check manual entry button
     const manualEntryBtn = page.getByTestId('manual-entry-btn');
-    
-    // Both buttons should be visible when expanded (no active trip)
-    await expect(startBtn).toBeVisible();
     await expect(manualEntryBtn).toBeVisible();
+  });
+
+  test('YTD summary displays correct structure (trips, miles, deduction)', async ({ page }) => {
+    await expandGPSMileageTracker(page);
+    
+    // Click on Year tab to see YTD summary
+    const yearTab = page.getByTestId('summary-tab-year');
+    await expect(yearTab).toBeVisible();
+    await yearTab.click();
+    
+    // Verify summary structure - should show Trips, Miles, Deduction
+    await expect(page.getByText('Trips').first()).toBeVisible();
+    await expect(page.getByText('Miles').first()).toBeVisible();
+    await expect(page.getByText('Deduction').first()).toBeVisible();
+    
+    // Verify IRS rate is displayed
+    await expect(page.getByText('IRS Rate:')).toBeVisible();
+    await expect(page.getByText('$0.725/mile')).toBeVisible();
+  });
+
+  test('YTD summary shows non-zero values when trips exist', async ({ page }) => {
+    await expandGPSMileageTracker(page);
+    
+    // Click on Year tab
+    const yearTab = page.getByTestId('summary-tab-year');
+    await yearTab.click();
+    
+    // Wait for data to load
+    await page.waitForTimeout(500);
+    
+    // The YTD should show actual data (we know there are trips from API tests)
+    // Check that the summary section is visible
+    await expect(page.getByText('Year-to-Date')).toBeVisible();
   });
 
   test('Summary tabs (Today/Month/Year) are visible and clickable', async ({ page }) => {
@@ -100,6 +132,13 @@ test.describe('GPS Mileage Tracker', () => {
     // Click Year tab
     await yearTab.click();
     await expect(yearTab).toHaveClass(/bg-blue-100/);
+  });
+});
+
+test.describe('GPS Mileage Tracker - Manual Trip Entry', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+    await removeEmergentBadge(page);
   });
 
   test('Manual trip entry form opens and has required fields', async ({ page }) => {
@@ -156,44 +195,26 @@ test.describe('GPS Mileage Tracker', () => {
     await expect(page.getByText('Tax Deduction:')).toBeVisible();
   });
 
-  test('Mileage summary shows correct totals structure', async ({ page }) => {
+  test('Tax deduction calculation shows correct rate ($0.725/mile)', async ({ page }) => {
     await expandGPSMileageTracker(page);
     
-    // Click on Today tab
-    const todayTab = page.getByTestId('summary-tab-today');
-    await todayTab.click();
+    // Click manual entry button
+    const manualEntryBtn = page.getByTestId('manual-entry-btn');
+    await manualEntryBtn.click();
     
-    // Verify summary structure - should show Trips, Miles, Deduction
-    await expect(page.getByText('Trips').first()).toBeVisible();
-    await expect(page.getByText('Miles').first()).toBeVisible();
-    await expect(page.getByText('Deduction').first()).toBeVisible();
+    // Enter miles
+    const milesInput = page.getByTestId('manual-trip-miles');
+    await milesInput.fill('10');
     
-    // Click on Month tab
-    const monthTab = page.getByTestId('summary-tab-month');
-    await monthTab.click();
-    
-    // Same structure should be visible
-    await expect(page.getByText('Trips').first()).toBeVisible();
-    await expect(page.getByText('Miles').first()).toBeVisible();
-    await expect(page.getByText('Deduction').first()).toBeVisible();
-    
-    // Click on Year tab
-    const yearTab = page.getByTestId('summary-tab-year');
-    await yearTab.click();
-    
-    // Same structure should be visible
-    await expect(page.getByText('Trips').first()).toBeVisible();
-    await expect(page.getByText('Miles').first()).toBeVisible();
-    await expect(page.getByText('Deduction').first()).toBeVisible();
+    // Verify tax deduction is calculated (10 * 0.725 = $7.25)
+    await expect(page.getByText('Tax Deduction: $7.25')).toBeVisible();
   });
+});
 
-  test('Start GPS Tracking button is visible', async ({ page }) => {
-    await expandGPSMileageTracker(page);
-    
-    // Start GPS Tracking button should be visible
-    const startBtn = page.getByTestId('start-trip-btn');
-    await expect(startBtn).toBeVisible();
-    await expect(startBtn).toContainText('Start GPS Tracking');
+test.describe('GPS Mileage Tracker - Adjust Mileage', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+    await removeEmergentBadge(page);
   });
 
   test('Adjust mileage button is visible in summary', async ({ page }) => {

@@ -1,0 +1,73 @@
+{
+  "summary": "Tested GPS Mileage Tracker and Financials Mileage consolidation. Found 1 critical bug: /api/financials/summary/{year} endpoint still reads from legacy mileage_entries collection instead of gps_trips. 9 frontend E2E tests passed, 8/9 backend tests passed.",
+  "mode": "generate",
+  "baseline_commit": "4aab34ce926193ed2c97311290ac3628f37a6aad",
+  "head_commit": "3811e8853ad4b587a54303a0581218bb94cd1322",
+  "specs_created": [
+    "/app/backend/tests/test_mileage_consolidation.py"
+  ],
+  "specs_updated": [
+    "/app/tests/e2e/gps-mileage-tracker.spec.ts"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_mileage_consolidation.py",
+    "/app/test_reports/pytest/mileage_consolidation_results.xml",
+    "/app/tests/e2e/gps-mileage-tracker.spec.ts"
+  ],
+  "regression_results": {
+    "total_specs": 18,
+    "passed": 17,
+    "failed": 1,
+    "skipped": 0
+  },
+  "issues": [
+    {
+      "id": "BUG-001",
+      "issue_type": "bug",
+      "severity": "HIGH",
+      "description": "Financial summary endpoint /api/financials/summary/{year} still reads mileage from legacy mileage_entries collection instead of gps_trips collection. This causes inconsistent mileage data between GPS Mileage Tracker (shows 12.51 miles) and Financials summary (shows 5.0 miles).",
+      "endpoint_or_component": "/app/backend/app/routers/financials.py - get_financial_summary() function at line 692",
+      "surfaces": ["backend"],
+      "reproduction": "1. Call GET /api/financials/mileage/2026 - returns 12.51 miles\n2. Call GET /api/financials/summary/2026 - returns 5.0 miles in deductions.mileage_miles\n3. The values should match but don't because get_financial_summary() reads from db.mileage_entries instead of db.gps_trips",
+      "affected_test": "test_mileage_consolidation.py::TestMileageConsolidation::test_financial_summary_mileage_matches_mileage_endpoint"
+    }
+  ],
+  "action_items": [
+    "Fix /app/backend/app/routers/financials.py line 692-695: Change get_financial_summary() to read mileage from gps_trips collection instead of mileage_entries, similar to how get_mileage() and get_tax_prep_summary() already do it"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mileage_consolidation.py",
+    "/app/tests/e2e/gps-mileage-tracker.spec.ts"
+  ],
+  "test_results": {
+    "backend": "89% (8/9 passed)",
+    "frontend": "100% (9/9 passed)"
+  },
+  "seed_data_creation": "No new seed data created. Tests use existing production data.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "GPS Mileage Tracker UI is working correctly - YTD summary shows trips, miles, deduction with correct IRS rate ($0.725/mile for 2026). Manual trip entry form works. The bug is in the backend: get_financial_summary() at line 692 in financials.py reads from mileage_entries instead of gps_trips. The fix should mirror how get_mileage() (line 449-508) and get_tax_prep_summary() (line 227-252) already correctly read from gps_trips collection.",
+  "features_verified": {
+    "gps_mileage_tracker_ytd_summary": {
+      "status": "PASS",
+      "details": "YTD summary displays trips (4), miles (12.5), deduction ($9) correctly"
+    },
+    "manual_trip_entry_form": {
+      "status": "PASS",
+      "details": "Form opens, has date/miles/purpose fields, save button enables when filled"
+    },
+    "tax_deduction_calculation": {
+      "status": "PASS",
+      "details": "IRS rate $0.725/mile for 2026 is correct, deduction calculated properly"
+    },
+    "financials_mileage_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/financials/mileage/2026 returns correct data from gps_trips"
+    },
+    "financials_summary_mileage": {
+      "status": "FAIL",
+      "details": "GET /api/financials/summary/2026 returns wrong mileage (5.0 instead of 12.51) - reads from legacy mileage_entries instead of gps_trips"
+    }
+  }
+}

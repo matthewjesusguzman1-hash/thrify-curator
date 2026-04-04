@@ -35,9 +35,9 @@ def get_irs_mileage_rate(year: int) -> float:
     rates = {
         2024: 0.67,
         2025: 0.70,
-        2026: 0.70,  # Placeholder
+        2026: 0.725,  # Updated IRS rate
     }
-    return rates.get(year, 0.70)
+    return rates.get(year, 0.725)
 
 # ============== INCOME ENDPOINTS ==============
 
@@ -220,14 +220,37 @@ async def get_tax_prep_summary(year: int):
     total_other = sum(e["amount"] for e in income_other)
     total_income = total_1099 + total_other
     
-    # Get COGS, expenses, mileage from Financials (shared data)
+    # Get COGS, expenses from Financials (shared data)
     cogs_entries = await db.cogs_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
     expense_entries = await db.expense_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
-    mileage_entries = await db.mileage_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
+    
+    # Get mileage from gps_trips (single source of truth)
+    start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
+    end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    
+    gps_trips = await db.gps_trips.find(
+        {
+            "status": "completed",
+            "is_hidden": {"$ne": True},
+            "start_time": {
+                "$gte": start_date.isoformat(),
+                "$lt": end_date.isoformat()
+            }
+        },
+        {"_id": 0, "total_miles": 1}
+    ).to_list(length=None)
+    
+    # Also include any legacy mileage_entries
+    legacy_mileage = await db.mileage_entries.find({"year": year}, {"_id": 0, "miles": 1}).to_list(length=None)
     
     total_cogs = sum(e["amount"] for e in cogs_entries)
     total_expenses = sum(e["amount"] for e in expense_entries)
-    total_miles = sum(e["miles"] for e in mileage_entries)
+    
+    # Total miles from both sources
+    total_miles_gps = sum(t.get("total_miles", 0) for t in gps_trips)
+    total_miles_legacy = sum(e.get("miles", 0) for e in legacy_mileage)
+    total_miles = total_miles_gps + total_miles_legacy
+    
     mileage_rate = get_irs_mileage_rate(year)
     mileage_deduction = total_miles * mileage_rate
     
@@ -424,19 +447,62 @@ async def delete_expense(entry_id: str):
 
 @router.get("/mileage/{year}")
 async def get_mileage(year: int):
-    """Get all mileage entries for a year"""
-    entries = await db.mileage_entries.find(
+    """Get all mileage entries for a year - pulls from GPS trips (single source of truth)"""
+    # Define date range for the year
+    start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
+    end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    
+    # Get completed trips from gps_trips collection (both GPS-tracked and manual)
+    gps_trips = await db.gps_trips.find(
+        {
+            "status": "completed",
+            "is_hidden": {"$ne": True},  # Exclude hidden adjustments
+            "start_time": {
+                "$gte": start_date.isoformat(),
+                "$lt": end_date.isoformat()
+            }
+        },
+        {"_id": 0, "locations": 0}  # Exclude large location arrays
+    ).sort("start_time", -1).to_list(length=None)
+    
+    # Also get any legacy mileage_entries
+    legacy_entries = await db.mileage_entries.find(
         {"year": year},
         {"_id": 0}
     ).sort("date", -1).to_list(length=None)
     
+    # Combine and format entries
+    entries = []
+    
+    # Format GPS trips
+    for trip in gps_trips:
+        entries.append({
+            "id": trip["id"],
+            "year": year,
+            "date": trip["start_time"][:10],  # Extract date part
+            "miles": trip.get("total_miles", 0),
+            "purpose": trip.get("purpose", "other"),
+            "notes": trip.get("notes"),
+            "source": "gps" if trip.get("is_manual") != True else "manual",
+            "logged_by": trip.get("user_name", "Unknown"),
+            "created_at": trip.get("created_at")
+        })
+    
+    # Add legacy entries (for backwards compatibility)
+    for entry in legacy_entries:
+        entries.append({
+            **entry,
+            "source": "legacy"
+        })
+    
+    # Calculate totals
     total_miles = sum(e["miles"] for e in entries)
     irs_rate = get_irs_mileage_rate(year)
     deduction = total_miles * irs_rate
     
     return {
         "entries": entries,
-        "total_miles": total_miles,
+        "total_miles": round(total_miles, 2),
         "irs_rate": irs_rate,
         "deduction": round(deduction, 2)
     }
