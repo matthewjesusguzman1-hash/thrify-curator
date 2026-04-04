@@ -60,14 +60,14 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Email service updated to support Resend attachments
   - Testing: 100% pass (13/13 backend tests)
 - **Mileage Tracking Consolidation (Apr 4, 2026)**:
-  - **Unified data source**: GPS Mileage Tracker and Financials/Tax Prep sections now pull from same `gps_trips` collection
-  - **Fixed $0 deduction bug**: YTD summary now correctly displays mileage deduction (field name mismatch fixed)
-  - **Fixed manual trip entry bug**: Save button was passing click event as formData, breaking validation
-  - **IRS Rate updated**: 2026 mileage rate set to $0.725/mile
-  - **Manual Trip Entry**: Works via "Log Trip Manually" button in GPS Mileage Tracker
-  - **Backwards compatible**: Legacy `mileage_entries` still included for historical data
-  - Backend endpoints updated: `get_mileage()`, `get_financial_summary()`, `get_tax_prep_summary()`, `get_year_comparison()`
-  - Testing: 100% pass (19/19 tests - 9 backend, 10 frontend)
+  - **Single source of truth**: GPS Mileage Tracker is the ONLY place to enter/view mileage
+  - **Removed duplicate Mileage section** from Financials (was redundant)
+  - **Automatic Tax Prep flow**: All trips from GPS Mileage Tracker automatically flow to Tax Prep deductions
+  - **Fixed manual trip entry bug**: Save button was passing click event, breaking validation
+  - **Fixed $0 deduction bug**: YTD summary field name mismatch corrected
+  - **IRS Rate**: 2026 mileage rate set to $0.725/mile
+  - Backend updated: Tax Prep summary pulls mileage from `gps_trips` collection
+  - Testing: 100% pass (19/19 tests)
 
 ### In Progress / Pending User Verification
 - **Consignor Picker Fix (Mar 25, 2026)**: Applied iOS-specific touch event handling and CSS to prevent text selection behavior. Needs TestFlight verification.

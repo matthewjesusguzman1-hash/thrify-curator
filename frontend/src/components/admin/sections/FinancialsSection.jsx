@@ -5,7 +5,6 @@ import {
   TrendingDown,
   DollarSign,
   Receipt,
-  Car,
   ChevronRight,
   ChevronDown,
   Upload,
@@ -53,7 +52,6 @@ const FinancialsSection = ({ getAuthHeader }) => {
   const [prevYearIncome, setPrevYearIncome] = useState({ entries: [] });
   const [cogs, setCogs] = useState({ entries: [], total: 0 });
   const [expenses, setExpenses] = useState({ entries: [], by_category: {}, total: 0, count: 0 });
-  const [mileage, setMileage] = useState({ entries: [], total_miles: 0, deduction: 0 });
   const [loading, setLoading] = useState(true);
   
   // Expanded sections
@@ -61,7 +59,6 @@ const FinancialsSection = ({ getAuthHeader }) => {
   
   // Modals
   const [showAddExpense, setShowAddExpense] = useState(false);
-  const [showAddMileage, setShowAddMileage] = useState(false);
   const [showVendooImport, setShowVendooImport] = useState(false);
   const [showManageData, setShowManageData] = useState(false);
   const [showScreenshotImport, setShowScreenshotImport] = useState(false);
@@ -74,14 +71,13 @@ const FinancialsSection = ({ getAuthHeader }) => {
     try {
       const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
       
-      const [summaryRes, comparisonRes, incomeRes, prevIncomeRes, cogsRes, expensesRes, mileageRes] = await Promise.all([
+      const [summaryRes, comparisonRes, incomeRes, prevIncomeRes, cogsRes, expensesRes] = await Promise.all([
         fetch(`${API_URL}/api/financials/summary/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/comparison/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/income/${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/financials/income/${selectedYear - 1}`, { headers }),
         fetch(`${API_URL}/api/financials/cogs/${selectedYear}`, { headers }),
-        fetch(`${API_URL}/api/financials/expenses/${selectedYear}`, { headers }),
-        fetch(`${API_URL}/api/financials/mileage/${selectedYear}`, { headers })
+        fetch(`${API_URL}/api/financials/expenses/${selectedYear}`, { headers })
       ]);
       
       if (summaryRes.ok) setSummary(await summaryRes.json());
@@ -90,7 +86,6 @@ const FinancialsSection = ({ getAuthHeader }) => {
       if (prevIncomeRes.ok) setPrevYearIncome(await prevIncomeRes.json());
       if (cogsRes.ok) setCogs(await cogsRes.json());
       if (expensesRes.ok) setExpenses(await expensesRes.json());
-      if (mileageRes.ok) setMileage(await mileageRes.json());
     } catch (error) {
       console.error('Error fetching financial data:', error);
     }
@@ -584,69 +579,7 @@ const FinancialsSection = ({ getAuthHeader }) => {
           )}
         </div>
 
-        {/* Mileage Section */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <button
-            onClick={() => toggleSection('mileage')}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${expandedSection === 'mileage' ? 'rotate-90' : ''}`} />
-              <Car className="w-5 h-5 text-gray-500" />
-              <span className="font-medium text-gray-900">Mileage</span>
-              <span className="text-sm text-gray-500">
-                ({formatNumber(mileage.total_miles)} mi - {formatCurrency(mileage.deduction)} deduction)
-              </span>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center gap-1"
-              onClick={(e) => { e.stopPropagation(); setShowAddMileage(true); }}
-            >
-              <Plus className="w-4 h-4" />
-              Add Trip
-            </Button>
-          </button>
-          
-          {expandedSection === 'mileage' && (
-            <div className="border-t border-gray-200 p-4 bg-gray-50">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total Miles</span>
-                  <span className="font-medium">{formatNumber(mileage.total_miles)} mi</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">IRS Rate ({selectedYear})</span>
-                  <span className="font-medium">${mileage.irs_rate}/mi</span>
-                </div>
-                <div className="border-t border-gray-300 pt-2 flex justify-between text-sm font-medium">
-                  <span>Deduction</span>
-                  <span>{formatCurrency(mileage.deduction)}</span>
-                </div>
-              </div>
-              
-              {mileage.entries.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Trips</h4>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {mileage.entries.slice(0, 5).map(entry => (
-                      <div key={entry.id} className="flex justify-between text-sm bg-white p-2 rounded">
-                        <span className="text-gray-600">{entry.date} - {entry.purpose || 'Business'}</span>
-                        <span className="font-medium">{entry.miles} mi</span>
-                      </div>
-                    ))}
-                  </div>
-                  {mileage.entries.length > 5 && (
-                    <button className="text-sm text-blue-600 hover:text-blue-700 mt-2">
-                      View all {mileage.entries.length} trips
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Mileage is tracked in GPS Mileage Tracker and flows to Tax Prep automatically */}
       </div>
 
       {/* Add Expense Modal */}
@@ -656,16 +589,6 @@ const FinancialsSection = ({ getAuthHeader }) => {
           getAuthHeader={getAuthHeader}
           onClose={() => setShowAddExpense(false)}
           onSave={() => { setShowAddExpense(false); fetchData(); }}
-        />
-      )}
-
-      {/* Add Mileage Modal */}
-      {showAddMileage && (
-        <AddMileageModal
-          year={selectedYear}
-          getAuthHeader={getAuthHeader}
-          onClose={() => setShowAddMileage(false)}
-          onSave={() => { setShowAddMileage(false); fetchData(); }}
         />
       )}
 
@@ -686,7 +609,6 @@ const FinancialsSection = ({ getAuthHeader }) => {
           income={income}
           cogs={cogs}
           expenses={expenses}
-          mileage={mileage}
           getAuthHeader={getAuthHeader}
           onClose={() => setShowManageData(false)}
           onDataChanged={() => { fetchData(); }}
@@ -1254,93 +1176,6 @@ const EditExpenseModal = ({ expense, year, getAuthHeader, onClose, onSave }) => 
   );
 };
 
-// Add Mileage Modal Component
-const AddMileageModal = ({ year, getAuthHeader, onClose, onSave }) => {
-  const [miles, setMiles] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [purpose, setPurpose] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    
-    try {
-      const response = await fetch(`${API_URL}/api/financials/mileage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({
-          year,
-          date,
-          miles: parseFloat(miles),
-          purpose
-        })
-      });
-      
-      if (response.ok) {
-        onSave();
-      }
-    } catch (error) {
-      console.error('Error saving mileage:', error);
-    }
-    setSaving(false);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <h3 className="text-lg font-semibold mb-4">Add Mileage</h3>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Miles</label>
-            <input
-              type="number"
-              step="0.1"
-              value={miles}
-              onChange={(e) => setMiles(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              placeholder="0.0"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Purpose (optional)</label>
-            <input
-              type="text"
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              placeholder="e.g., Sourcing trip, Post office"
-            />
-          </div>
-          
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
 // Vendoo Import Modal Component
 const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
   const [file, setFile] = useState(null);
@@ -1627,7 +1462,7 @@ const VendooImportModal = ({ year, getAuthHeader, onClose, onSuccess }) => {
 };
 
 // Manage Data Modal Component - for viewing/deleting imported data by year
-const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initialCogs, expenses: initialExpenses, mileage: initialMileage, getAuthHeader, onClose, onDataChanged }) => {
+const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initialCogs, expenses: initialExpenses, getAuthHeader, onClose, onDataChanged }) => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(initialYear);
   const [activeTab, setActiveTab] = useState('overview');
@@ -1639,24 +1474,21 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
   const [income, setIncome] = useState(initialIncome);
   const [cogs, setCogs] = useState(initialCogs);
   const [expenses, setExpenses] = useState(initialExpenses);
-  const [mileage, setMileage] = useState(initialMileage);
 
   // Fetch data when year changes
   const fetchYearData = async (year) => {
     setLoading(true);
     try {
       const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
-      const [incomeRes, cogsRes, expensesRes, mileageRes] = await Promise.all([
+      const [incomeRes, cogsRes, expensesRes] = await Promise.all([
         fetch(`${API_URL}/api/financials/income/${year}`, { headers }),
         fetch(`${API_URL}/api/financials/cogs/${year}`, { headers }),
-        fetch(`${API_URL}/api/financials/expenses/${year}`, { headers }),
-        fetch(`${API_URL}/api/financials/mileage/${year}`, { headers })
+        fetch(`${API_URL}/api/financials/expenses/${year}`, { headers })
       ]);
       
       if (incomeRes.ok) setIncome(await incomeRes.json());
       if (cogsRes.ok) setCogs(await cogsRes.json());
       if (expensesRes.ok) setExpenses(await expensesRes.json());
-      if (mileageRes.ok) setMileage(await mileageRes.json());
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -1693,7 +1525,7 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
     try {
       const entries = type === 'income' ? income.entries : 
                       type === 'cogs' ? cogs.entries :
-                      type === 'expenses' ? expenses.entries : mileage.entries;
+                      type === 'expenses' ? expenses.entries : [];
       
       for (const entry of entries) {
         await fetch(`${API_URL}/api/financials/${type}/${entry.id}`, {
@@ -1757,8 +1589,7 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
     { id: 'overview', label: 'Overview', count: null },
     { id: 'income', label: 'Income', count: income.entries?.length || 0 },
     { id: 'cogs', label: 'COGS', count: cogs.entries?.length || 0 },
-    { id: 'expenses', label: 'Expenses', count: expenses.entries?.length || 0 },
-    { id: 'mileage', label: 'Mileage', count: mileage.entries?.length || 0 }
+    { id: 'expenses', label: 'Expenses', count: expenses.entries?.length || 0 }
   ];
 
   const monthlyData = getMonthlyData();
@@ -1892,23 +1723,6 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
                 {deleting === e.id ? '...' : <Trash2 className="w-4 h-4" />}
               </button>
             </div>
-          </div>
-        ));
-      case 'mileage':
-        entries = mileage.entries || [];
-        return entries.map(e => (
-          <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{e.miles} miles - {formatCurrency(e.miles * 0.70)}</p>
-              <p className="text-sm text-gray-500">{formatMonthYear(e.date)} • {e.purpose || 'Business'}</p>
-            </div>
-            <button
-              onClick={() => deleteEntry('mileage', e.id)}
-              disabled={deleting === e.id}
-              className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
-            >
-              {deleting === e.id ? '...' : <Trash2 className="w-4 h-4" />}
-            </button>
           </div>
         ));
       default:
