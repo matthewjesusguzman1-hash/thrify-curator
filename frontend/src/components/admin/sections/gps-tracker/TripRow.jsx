@@ -46,15 +46,18 @@ const TripRow = ({
         </div>
       </div>
       <div className="flex items-center gap-0.5 flex-shrink-0">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => onViewMap(trip.id)}
-          className="text-green-600 hover:text-green-700 h-7 w-7 p-0"
-          data-testid={`view-map-btn-${trip.id}`}
-        >
-          <Map className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} />
-        </Button>
+        {/* Only show map button for GPS-tracked trips (not manual entries) */}
+        {!trip.is_manual && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onViewMap(trip.id)}
+            className="text-green-600 hover:text-green-700 h-7 w-7 p-0"
+            data-testid={`view-map-btn-${trip.id}`}
+          >
+            <Map className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} />
+          </Button>
+        )}
         <Button
           size="sm"
           variant="ghost"
