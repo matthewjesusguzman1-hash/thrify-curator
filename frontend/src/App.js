@@ -1,8 +1,8 @@
 import "@/App.css";
 import { useState, useEffect, useCallback } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster, toast } from "@/components/ui/sonner";
 import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
 import LandingPage from "@/pages/LandingPage";
@@ -19,6 +19,7 @@ import TaxPrepPage from "@/pages/TaxPrepPage";
 import TaxPrepStepPage from "@/pages/TaxPrepStepPage";
 import Issued1099sPage from "@/pages/Issued1099sPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { initShortcutHandler } from "@/utils/shortcutHandler";
 
 // App version - increment this on each release to force cache clear
 const APP_VERSION = "1.0.5";
@@ -249,6 +250,47 @@ function App() {
 
   // Initialize session manager
   const { resetSession } = useSessionManager();
+
+  // Initialize iOS Quick Actions (long-press shortcuts) handler
+  useEffect(() => {
+    initShortcutHandler();
+    
+    // Listen for shortcut actions via custom event
+    const handleShortcut = (event) => {
+      const { action } = event.detail;
+      console.log('[App] Shortcut action received:', action);
+      
+      // Handle the shortcut based on action type
+      switch (action) {
+        case 'StartTrip':
+          // Navigate to admin dashboard with GPS tracker open
+          toast.info('Opening GPS Tracker...');
+          localStorage.setItem('pendingShortcutAction', 'StartTrip');
+          window.location.href = '/admin';
+          break;
+        case 'LogMiles':
+          // Navigate to admin dashboard with manual entry open
+          toast.info('Opening Manual Trip Entry...');
+          localStorage.setItem('pendingShortcutAction', 'LogMiles');
+          window.location.href = '/admin';
+          break;
+        case 'ClockIn':
+          // Navigate to employee dashboard for clock in
+          toast.info('Opening Clock In...');
+          localStorage.setItem('pendingShortcutAction', 'ClockIn');
+          window.location.href = '/admin';
+          break;
+        default:
+          console.warn('[App] Unknown shortcut action:', action);
+      }
+    };
+    
+    window.addEventListener('shortcutAction', handleShortcut);
+    
+    return () => {
+      window.removeEventListener('shortcutAction', handleShortcut);
+    };
+  }, []);
 
   // Reset session timer on user activity (clicks, key presses, touches)
   useEffect(() => {
