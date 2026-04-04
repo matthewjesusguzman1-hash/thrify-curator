@@ -1,8 +1,10 @@
 /**
  * TripMapModal Component
  * Modal for viewing trip route on a map
+ * Uses React Portal to ensure proper positioning on iOS/mobile
  */
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import ReactDOM from "react-dom";
 import { motion } from "framer-motion";
 import { Map, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,23 +18,57 @@ const TripMapModal = ({
   formatDate,
   getPurposeLabel
 }) => {
+  // Lock body scroll when modal opens
+  useEffect(() => {
+    if (tripData) {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [tripData]);
+  
   if (!tripData) return null;
 
   const { trip, locations } = tripData;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+  // Use React Portal to render at document body level
+  return ReactDOM.createPortal(
+    <div
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 999999,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        WebkitOverflowScrolling: 'touch'
+      }}
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden"
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          maxWidth: '500px',
+          width: '100%',
+          maxHeight: '85vh',
+          overflow: 'hidden',
+          WebkitOverflowScrolling: 'touch'
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -115,7 +151,8 @@ const TripMapModal = ({
           )}
         </div>
       </motion.div>
-    </motion.div>
+    </div>,
+    document.body
   );
 };
 

@@ -1,7 +1,10 @@
 /**
  * EditTripModal Component
  * Modal for editing existing trip details
+ * Uses React Portal to ensure proper positioning on iOS/mobile
  */
+import { useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import { motion } from "framer-motion";
 import { Pencil, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,21 +30,59 @@ const EditTripModal = ({
   saving = false,
   purposeIcons
 }) => {
+  const modalRef = useRef(null);
+  
+  // Lock body scroll when modal opens
+  useEffect(() => {
+    if (trip) {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [trip]);
+  
   if (!trip) return null;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+  // Use React Portal to render at document body level
+  return ReactDOM.createPortal(
+    <div
+      className="edit-trip-modal-overlay"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 999999,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        WebkitOverflowScrolling: 'touch'
+      }}
       onClick={onCancel}
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
+        ref={modalRef}
+        initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          maxWidth: '400px',
+          width: '100%',
+          maxHeight: '85vh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch'
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -78,6 +119,7 @@ const EditTripModal = ({
             <div className="relative mt-1">
               <Input
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 min="0.1"
                 max="1000"
@@ -170,7 +212,8 @@ const EditTripModal = ({
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </div>,
+    document.body
   );
 };
 
