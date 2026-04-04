@@ -60,18 +60,20 @@ const EditTripModal = ({
         zIndex: 999999,
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
         padding: '16px',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+        overflowY: 'auto',
         WebkitOverflowScrolling: 'touch'
       }}
       onClick={onCancel}
     >
       <motion.div
         ref={modalRef}
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
+        initial={{ scale: 0.95, opacity: 0, y: -10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: -10 }}
         transition={{ duration: 0.15 }}
         style={{
           backgroundColor: 'white',
@@ -79,7 +81,7 @@ const EditTripModal = ({
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           maxWidth: '400px',
           width: '100%',
-          maxHeight: '85vh',
+          maxHeight: 'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 40px)',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch'
         }}
