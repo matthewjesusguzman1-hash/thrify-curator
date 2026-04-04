@@ -1139,8 +1139,11 @@ export default function AdminDashboard() {
       }, 500);
     };
     
-    // Check on mount
-    handlePendingShortcut();
+    // Check on mount with a delay to ensure localStorage is ready
+    const mountTimer = setTimeout(handlePendingShortcut, 300);
+    
+    // Also check again after a longer delay in case of race conditions
+    const retryTimer = setTimeout(handlePendingShortcut, 1000);
     
     // Also listen for the shortcutAction event (in case it's dispatched while on this page)
     const handleShortcutEvent = (event) => {
@@ -1153,6 +1156,8 @@ export default function AdminDashboard() {
     window.addEventListener('shortcutAction', handleShortcutEvent);
     
     return () => {
+      clearTimeout(mountTimer);
+      clearTimeout(retryTimer);
       window.removeEventListener('shortcutAction', handleShortcutEvent);
     };
   }, [gpsTrackingStatus]);
