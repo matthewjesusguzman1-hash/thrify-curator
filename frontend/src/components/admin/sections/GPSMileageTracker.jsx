@@ -314,6 +314,12 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
               }
               
               if (location) {
+                // Filter out inaccurate readings (> 30 meters accuracy is unreliable)
+                if (location.accuracy && location.accuracy > 30) {
+                  console.log("Skipping inaccurate GPS reading:", location.accuracy, "m");
+                  return;
+                }
+                
                 const point = {
                   latitude: location.latitude,
                   longitude: location.longitude,
@@ -360,6 +366,12 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
+        // Filter out inaccurate readings (> 30 meters is unreliable)
+        if (position.coords.accuracy && position.coords.accuracy > 30) {
+          console.log("Skipping inaccurate GPS reading:", position.coords.accuracy, "m");
+          return;
+        }
+        
         const point = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -379,7 +391,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       {
         enableHighAccuracy: true,
         timeout: 15000,
-        maximumAge: 5000
+        maximumAge: 0  // Don't use cached positions
       }
     );
   };

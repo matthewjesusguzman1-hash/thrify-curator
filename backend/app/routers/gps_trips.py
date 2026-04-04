@@ -119,16 +119,23 @@ def calculate_trip_distance(locations: List[dict]) -> float:
     for i in range(1, len(locations)):
         prev = locations[i - 1]
         curr = locations[i]
+        
+        # Skip points with poor accuracy (> 50 meters is unreliable)
+        curr_accuracy = curr.get("accuracy")
+        if curr_accuracy and curr_accuracy > 50:
+            print(f"Skipping low accuracy point: {curr_accuracy}m")
+            continue
+        
         distance = haversine_distance(
             prev["latitude"], prev["longitude"],
             curr["latitude"], curr["longitude"]
         )
         # Filter out extreme GPS jumps (unrealistic distances between consecutive points)
-        # Allow up to 5 miles between points (car at 60mph = 1 mile/min, so 5 min gap allowed)
+        # Allow up to 2 miles between points (car at 60mph = 1 mile/min, so ~2 min gap allowed)
         # Filter out tiny noise < 0.001 miles (about 5 feet)
-        if distance > 0.001 and distance < 5.0:
+        if distance > 0.001 and distance < 2.0:
             total_distance += distance
-        elif distance >= 5.0:
+        elif distance >= 2.0:
             print(f"Skipping large GPS jump: {distance:.4f} miles")
     
     return round(total_distance, 2)
