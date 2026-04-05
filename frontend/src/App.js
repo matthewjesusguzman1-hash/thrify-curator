@@ -23,7 +23,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
 // App version - increment this on each release to force cache clear
-const APP_VERSION = "1.0.8";
+const APP_VERSION = "1.1.0";
 
 // Session timeout in milliseconds (1 hour)
 const SESSION_TIMEOUT = 60 * 60 * 1000;
@@ -297,8 +297,7 @@ function App() {
         return;
       }
       
-      // EARLY DEBUG TOAST - confirms new code is running
-      toast.info(`Push setup starting (v${APP_VERSION})`, { duration: 2000 });
+      toast.info('Push: Starting...', { duration: 2000 });
       
       try {
         // Only request notifications if user is logged in
@@ -308,6 +307,7 @@ function App() {
         // Skip if no user is logged in (casual visitors don't need notifications)
         if (!user.id && !consignorEmail) {
           console.log('[Push] Skipping - no logged in user');
+          toast.error('Push: No user logged in', { duration: 3000 });
           return;
         }
         
@@ -316,20 +316,25 @@ function App() {
         const userType = user.role === 'admin' ? 'admin' : (user.id ? 'employee' : 'consignor');
         
         console.log(`[Push] Starting registration for ${userType}: ${userId}`);
+        toast.info(`Push: User=${userType}`, { duration: 2000 });
         
         // Dynamic import to avoid issues on web
         const { PushNotifications } = await import('@capacitor/push-notifications');
         const axios = (await import('axios')).default;
         const API = process.env.REACT_APP_BACKEND_URL;
         
+        toast.info('Push: Imports OK', { duration: 2000 });
+        
         // Helper function to register token with backend
         const registerTokenWithBackend = async (token) => {
           if (!token) {
             console.log('[Push] No token to register');
+            toast.error('Push: No token!', { duration: 3000 });
             return false;
           }
           
           console.log(`[Push] Registering token with backend: ${token.substring(0, 20)}...`);
+          toast.info(`Push: Registering ${token.substring(0, 10)}...`, { duration: 2000 });
           
           try {
             // Use the typed endpoint for proper user type tracking
@@ -341,13 +346,11 @@ function App() {
             console.log('[Push] Token registered successfully:', response.data);
             localStorage.setItem('pushTokenRegistered', 'true');
             localStorage.setItem('pushTokenRegisteredAt', new Date().toISOString());
-            // Show success toast for debugging
-            toast.success('Push notifications enabled!', { duration: 3000 });
+            toast.success('Push: REGISTERED!', { duration: 4000 });
             return true;
           } catch (err) {
             console.error('[Push] Failed to register token with backend:', err.response?.data || err.message);
-            // Show error toast for debugging
-            toast.error(`Push setup failed: ${err.message}`, { duration: 5000 });
+            toast.error(`Push: Backend error - ${err.message}`, { duration: 5000 });
             return false;
           }
         };
@@ -355,25 +358,29 @@ function App() {
         // Check permissions first
         const permStatus = await PushNotifications.checkPermissions();
         console.log('[Push] Current permission status:', permStatus);
-        toast.info(`Permission: ${permStatus.receive}`, { duration: 2000 });
+        toast.info(`Push: Perm=${permStatus.receive}`, { duration: 2000 });
         
         if (permStatus.receive === 'denied') {
           console.log('[Push] Permission denied - user must enable in Settings');
-          toast.error('Notifications denied in Settings', { duration: 3000 });
+          toast.error('Push: Denied in Settings!', { duration: 4000 });
           return;
         }
         
         // Request permissions if not granted
         if (permStatus.receive !== 'granted') {
           console.log('[Push] Requesting permissions...');
+          toast.info('Push: Requesting perm...', { duration: 2000 });
           const permResult = await PushNotifications.requestPermissions();
           console.log('[Push] Permission result:', permResult);
           
           if (permResult.receive !== 'granted') {
             console.log('[Push] Permission denied by user');
+            toast.error('Push: User denied', { duration: 3000 });
             return;
           }
         }
+        
+        toast.info('Push: Setting up listeners...', { duration: 2000 });
         
         // Remove any existing listeners to avoid duplicates
         await PushNotifications.removeAllListeners();
@@ -382,11 +389,14 @@ function App() {
         const registrationPromise = new Promise((resolve) => {
           const timeout = setTimeout(() => {
             console.log('[Push] Registration timeout - checking localStorage for cached token');
+            toast.warning('Push: Timeout, checking cache...', { duration: 3000 });
             const cachedToken = localStorage.getItem('devicePushToken');
             if (cachedToken) {
               console.log('[Push] Found cached token, using it');
+              toast.info('Push: Using cached token', { duration: 2000 });
               resolve(cachedToken);
             } else {
+              toast.error('Push: No cached token!', { duration: 3000 });
               resolve(null);
             }
           }, 10000); // 10 second timeout
@@ -394,6 +404,7 @@ function App() {
           PushNotifications.addListener('registration', (tokenData) => {
             clearTimeout(timeout);
             console.log('[Push] Registration event received!');
+            toast.success('Push: Got token from iOS!', { duration: 3000 });
             console.log('[Push] Token value:', tokenData.value ? `${tokenData.value.substring(0, 30)}...` : 'EMPTY');
             
             if (tokenData.value) {
@@ -401,6 +412,7 @@ function App() {
               localStorage.setItem('devicePushToken', tokenData.value);
               resolve(tokenData.value);
             } else {
+              toast.error('Push: Token was empty!', { duration: 3000 });
               resolve(null);
             }
           });
@@ -408,14 +420,17 @@ function App() {
           PushNotifications.addListener('registrationError', (error) => {
             clearTimeout(timeout);
             console.error('[Push] Registration ERROR:', error);
+            toast.error(`Push: Reg error - ${JSON.stringify(error)}`, { duration: 5000 });
             resolve(null);
           });
         });
         
         // Call register() to trigger the registration event
         console.log('[Push] Calling PushNotifications.register()...');
+        toast.info('Push: Calling register()...', { duration: 2000 });
         await PushNotifications.register();
         console.log('[Push] register() completed, waiting for token...');
+        toast.info('Push: Waiting for token...', { duration: 2000 });
         
         // Wait for the token
         const token = await registrationPromise;
@@ -434,7 +449,6 @@ function App() {
             await registerTokenWithBackend(cachedToken);
           } else {
             console.log('[Push] No token available - push notifications will not work');
-            toast.error('No push token available. Try restarting the app.', { duration: 5000 });
           }
         }
         
