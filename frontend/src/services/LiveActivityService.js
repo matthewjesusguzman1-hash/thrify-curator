@@ -62,67 +62,94 @@ export const LiveActivityService = {
   registerForPushNotifications: async (userId, userType = "admin") => {
     try {
       if (!window.Capacitor?.isNativePlatform?.()) {
-        console.log('Not native platform, skipping push registration');
+        console.log('[LiveActivity] Not native platform, skipping push registration');
         return null;
       }
 
-      // First try to get token from our LiveActivity plugin (more reliable)
+      console.log(`[LiveActivity] Starting push registration for ${userType}: ${userId}`);
+
+      // First try to get token from our LiveActivity plugin (more reliable for iOS)
       try {
         const nativeToken = await LiveActivityService.getDevicePushToken();
         if (nativeToken && userId) {
-          console.log(`Registering device token for ${userType} from LiveActivity plugin...`);
+          console.log(`[LiveActivity] Got token from native plugin, registering...`);
           await axios.post(`${API}/api/live-activity/register-device-token-typed`, {
             user_id: userId,
             device_token: nativeToken,
             user_type: userType
           });
-          console.log(`Device push token registered successfully for ${userType}!`);
+          console.log(`[LiveActivity] Device push token registered successfully for ${userType}!`);
+          localStorage.setItem('devicePushToken', nativeToken);
           return nativeToken;
         }
       } catch (nativeErr) {
-        console.log('LiveActivity getDevicePushToken not available:', nativeErr);
+        console.log('[LiveActivity] Native plugin not available, using Capacitor fallback');
+      }
+
+      // Check for cached token first - iOS only fires registration event once
+      const cachedToken = localStorage.getItem('devicePushToken');
+      if (cachedToken && userId) {
+        console.log(`[LiveActivity] Using cached token for ${userType}`);
+        try {
+          await axios.post(`${API}/api/live-activity/register-device-token-typed`, {
+            user_id: userId,
+            device_token: cachedToken,
+            user_type: userType
+          });
+          console.log(`[LiveActivity] Cached token registered successfully for ${userType}!`);
+          return cachedToken;
+        } catch (cacheErr) {
+          console.error('[LiveActivity] Failed to register cached token:', cacheErr);
+        }
       }
 
       // Fallback to Capacitor PushNotifications
-      // Check current permission status first - don't prompt if already granted
       const currentStatus = await PushNotifications.checkPermissions();
+      console.log('[LiveActivity] Permission status:', currentStatus);
       
-      if (currentStatus.receive === 'granted') {
-        // Already have permission, just register without prompting
-        console.log('Push permission already granted, registering...');
-      } else if (currentStatus.receive === 'denied') {
-        // User denied, don't prompt again
-        console.log('Push notification permission was denied');
+      if (currentStatus.receive === 'denied') {
+        console.log('[LiveActivity] Push notification permission was denied');
         return null;
-      } else {
-        // Permission not yet requested, ask for it
+      }
+      
+      if (currentStatus.receive !== 'granted') {
         const permStatus = await PushNotifications.requestPermissions();
         if (permStatus.receive !== 'granted') {
-          console.log('Push notification permission denied');
+          console.log('[LiveActivity] Push notification permission denied');
           return null;
         }
       }
 
-      // Check if we already have a delivery token (from previous registration)
-      try {
-        const deliveryStatus = await PushNotifications.getDeliveredNotifications();
-        console.log('Push delivery status check:', deliveryStatus);
-      } catch (e) {
-        // Ignore - just for debugging
-      }
-
       // Return a promise that resolves when we get the token
       return new Promise((resolve) => {
-        // Set a timeout in case token never arrives
+        // Longer timeout for iOS registration
         const timeout = setTimeout(() => {
-          console.log('Push token registration timed out - trying fallback');
-          resolve(null);
-        }, 5000); // 5 second timeout
+          console.log('[LiveActivity] Registration timeout - using cached token if available');
+          const fallbackToken = localStorage.getItem('devicePushToken');
+          if (fallbackToken && userId) {
+            // Try to register the cached token
+            axios.post(`${API}/api/live-activity/register-device-token-typed`, {
+              user_id: userId,
+              device_token: fallbackToken,
+              user_type: userType
+            }).then(() => {
+              console.log('[LiveActivity] Fallback token registered');
+              resolve(fallbackToken);
+            }).catch(() => {
+              resolve(null);
+            });
+          } else {
+            resolve(null);
+          }
+        }, 15000); // 15 second timeout
 
         // Helper function to send token to backend
         const sendTokenToBackend = async (tokenValue) => {
           clearTimeout(timeout);
-          console.log('Device push token received:', tokenValue);
+          console.log('[LiveActivity] Device push token received:', tokenValue?.substring(0, 30) + '...');
+          
+          // Always cache the token
+          localStorage.setItem('devicePushToken', tokenValue);
           
           try {
             await axios.post(`${API}/api/live-activity/register-device-token-typed`, {
@@ -130,11 +157,11 @@ export const LiveActivityService = {
               device_token: tokenValue,
               user_type: userType
             });
-            console.log(`Device push token registered with backend for ${userType}`);
-            resolve(true);
+            console.log(`[LiveActivity] Device push token registered with backend for ${userType}`);
+            resolve(tokenValue);
           } catch (error) {
-            console.error('Failed to register device token:', error);
-            resolve(false);
+            console.error('[LiveActivity] Failed to register device token:', error);
+            resolve(null);
           }
         };
 
@@ -143,30 +170,31 @@ export const LiveActivityService = {
 
         // Set up listeners BEFORE registering
         PushNotifications.addListener('registration', (token) => {
-          sendTokenToBackend(token.value);
+          if (token?.value) {
+            sendTokenToBackend(token.value);
+          } else {
+            console.log('[LiveActivity] Registration event received but no token value');
+          }
         });
 
         PushNotifications.addListener('registrationError', (error) => {
           clearTimeout(timeout);
-          console.error('Push registration error:', error);
-          resolve(false);
-        });
-
-        // Listen for incoming notifications
-        PushNotifications.addListener('pushNotificationReceived', (notification) => {
-          console.log('Push notification received:', notification);
+          console.error('[LiveActivity] Push registration error:', error);
+          resolve(null);
         });
 
         // Register with APNs - this should trigger 'registration' event
-        // Even if already registered, calling register() should return the cached token
+        console.log('[LiveActivity] Calling PushNotifications.register()...');
         PushNotifications.register().then(() => {
-          console.log('PushNotifications.register() completed');
+          console.log('[LiveActivity] PushNotifications.register() completed');
         }).catch(err => {
-          console.error('PushNotifications.register() error:', err);
+          console.error('[LiveActivity] PushNotifications.register() error:', err);
+          clearTimeout(timeout);
+          resolve(null);
         });
       });
     } catch (error) {
-      console.error('Failed to register for push notifications:', error);
+      console.error('[LiveActivity] Failed to register for push notifications:', error);
       return null;
     }
   },

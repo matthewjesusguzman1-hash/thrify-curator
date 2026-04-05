@@ -23,7 +23,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
 // App version - increment this on each release to force cache clear
-const APP_VERSION = "1.0.5";
+const APP_VERSION = "1.0.6";
 
 // Session timeout in milliseconds (1 hour)
 const SESSION_TIMEOUT = 60 * 60 * 1000;
@@ -291,6 +291,12 @@ function App() {
   // Request push notifications only for logged-in users (employees/consignors/admins)
   useEffect(() => {
     const requestPushNotifications = async () => {
+      // Check if we're on a native platform first
+      if (!window.Capacitor?.isNativePlatform?.()) {
+        console.log('[Push] Not on native platform, skipping');
+        return;
+      }
+      
       try {
         // Only request notifications if user is logged in
         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -298,87 +304,146 @@ function App() {
         
         // Skip if no user is logged in (casual visitors don't need notifications)
         if (!user.id && !consignorEmail) {
-          console.log('Skipping push notifications - no logged in user');
+          console.log('[Push] Skipping - no logged in user');
           return;
         }
+        
+        // Determine user type and ID
+        const userId = user.id || consignorEmail;
+        const userType = user.role === 'admin' ? 'admin' : (user.id ? 'employee' : 'consignor');
+        
+        console.log(`[Push] Starting registration for ${userType}: ${userId}`);
         
         // Dynamic import to avoid issues on web
         const { PushNotifications } = await import('@capacitor/push-notifications');
         const axios = (await import('axios')).default;
+        const API = process.env.REACT_APP_BACKEND_URL;
         
-        console.log('Requesting push notification permissions for logged-in user...');
-        
-        // Request permissions
-        const permResult = await PushNotifications.requestPermissions();
-        console.log('Permission result:', permResult);
-        
-        if (permResult.receive === 'granted') {
-          // First, try to get existing token directly (works on iOS even if registration event doesn't fire)
-          try {
-            const existingToken = await PushNotifications.getToken();
-            if (existingToken?.value) {
-              console.log('Got existing device push token via getToken():', existingToken.value);
-              localStorage.setItem('devicePushToken', existingToken.value);
-              localStorage.setItem('pendingPushToken', existingToken.value);
-              
-              // Try to register immediately if user is logged in
-              if (user.id) {
-                try {
-                  const API = process.env.REACT_APP_BACKEND_URL;
-                  await axios.post(`${API}/api/live-activity/register-device-token`, {
-                    user_id: user.id,
-                    device_token: existingToken.value
-                  });
-                  console.log('Device push token registered for notifications!');
-                } catch (err) {
-                  console.error('Failed to register device token:', err);
-                }
-              }
-              return; // Got token, we're done
-            }
-          } catch (getTokenErr) {
-            console.log('getToken() not available, falling back to registration event...');
+        // Helper function to register token with backend
+        const registerTokenWithBackend = async (token) => {
+          if (!token) {
+            console.log('[Push] No token to register');
+            return false;
           }
           
-          // Fallback: Set up listener BEFORE registering to capture the token
-          PushNotifications.addListener('registration', async (tokenData) => {
-            console.log('DEVICE PUSH TOKEN received via registration event:', tokenData.value);
+          console.log(`[Push] Registering token with backend: ${token.substring(0, 20)}...`);
+          
+          try {
+            // Use the typed endpoint for proper user type tracking
+            const response = await axios.post(`${API}/api/live-activity/register-device-token-typed`, {
+              user_id: userId,
+              device_token: token,
+              user_type: userType
+            });
+            console.log('[Push] Token registered successfully:', response.data);
+            localStorage.setItem('pushTokenRegistered', 'true');
+            localStorage.setItem('pushTokenRegisteredAt', new Date().toISOString());
+            return true;
+          } catch (err) {
+            console.error('[Push] Failed to register token with backend:', err.response?.data || err.message);
+            return false;
+          }
+        };
+        
+        // Check permissions first
+        const permStatus = await PushNotifications.checkPermissions();
+        console.log('[Push] Current permission status:', permStatus);
+        
+        if (permStatus.receive === 'denied') {
+          console.log('[Push] Permission denied - user must enable in Settings');
+          return;
+        }
+        
+        // Request permissions if not granted
+        if (permStatus.receive !== 'granted') {
+          console.log('[Push] Requesting permissions...');
+          const permResult = await PushNotifications.requestPermissions();
+          console.log('[Push] Permission result:', permResult);
+          
+          if (permResult.receive !== 'granted') {
+            console.log('[Push] Permission denied by user');
+            return;
+          }
+        }
+        
+        // Remove any existing listeners to avoid duplicates
+        await PushNotifications.removeAllListeners();
+        
+        // Set up registration listener BEFORE calling register()
+        const registrationPromise = new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            console.log('[Push] Registration timeout - checking localStorage for cached token');
+            const cachedToken = localStorage.getItem('devicePushToken');
+            if (cachedToken) {
+              console.log('[Push] Found cached token, using it');
+              resolve(cachedToken);
+            } else {
+              resolve(null);
+            }
+          }, 10000); // 10 second timeout
+          
+          PushNotifications.addListener('registration', (tokenData) => {
+            clearTimeout(timeout);
+            console.log('[Push] Registration event received!');
+            console.log('[Push] Token value:', tokenData.value ? `${tokenData.value.substring(0, 30)}...` : 'EMPTY');
             
-            // ALWAYS save to localStorage - iOS only fires this once!
-            localStorage.setItem('devicePushToken', tokenData.value);
-            localStorage.setItem('pendingPushToken', tokenData.value);
-            console.log('Device push token saved to localStorage');
-            
-            // Try to register immediately if user is logged in
-            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-            if (currentUser.id) {
-              try {
-                const API = process.env.REACT_APP_BACKEND_URL;
-                await axios.post(`${API}/api/live-activity/register-device-token`, {
-                  user_id: currentUser.id,
-                  device_token: tokenData.value
-                });
-                console.log('Device token registered for push notifications!');
-              } catch (err) {
-                console.error('Failed to register device token:', err);
-              }
+            if (tokenData.value) {
+              // Cache the token for future use
+              localStorage.setItem('devicePushToken', tokenData.value);
+              resolve(tokenData.value);
+            } else {
+              resolve(null);
             }
           });
           
-          // Register for push notifications (may trigger registration event on first time)
-          await PushNotifications.register();
-          console.log('PushNotifications.register() called');
+          PushNotifications.addListener('registrationError', (error) => {
+            clearTimeout(timeout);
+            console.error('[Push] Registration ERROR:', error);
+            resolve(null);
+          });
+        });
+        
+        // Call register() to trigger the registration event
+        console.log('[Push] Calling PushNotifications.register()...');
+        await PushNotifications.register();
+        console.log('[Push] register() completed, waiting for token...');
+        
+        // Wait for the token
+        const token = await registrationPromise;
+        
+        if (token) {
+          // Register with backend
+          const success = await registerTokenWithBackend(token);
+          if (success) {
+            console.log('[Push] Push notification setup complete!');
+          }
         } else {
-          console.log('Push notification permission denied');
+          // Last resort: try cached token
+          const cachedToken = localStorage.getItem('devicePushToken');
+          if (cachedToken) {
+            console.log('[Push] Using cached token as fallback');
+            await registerTokenWithBackend(cachedToken);
+          } else {
+            console.log('[Push] No token available - push notifications will not work');
+          }
         }
+        
+        // Set up notification received listener
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('[Push] Notification received:', notification);
+        });
+        
+        PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+          console.log('[Push] Notification action performed:', notification);
+        });
+        
       } catch (error) {
-        // Expected to fail on web - that's okay
-        console.log('Push notification setup skipped (web or error):', error.message);
+        console.error('[Push] Setup error:', error.message || error);
       }
     };
 
     // Wait for app to fully load, then request permissions (only if logged in)
-    const timer = setTimeout(requestPushNotifications, 1500);
+    const timer = setTimeout(requestPushNotifications, 2000);
     return () => clearTimeout(timer);
   }, []);
 
