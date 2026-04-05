@@ -23,7 +23,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
 // App version - increment this on each release to force cache clear
-const APP_VERSION = "1.0.6";
+const APP_VERSION = "1.0.7";
 
 // Session timeout in milliseconds (1 hour)
 const SESSION_TIMEOUT = 60 * 60 * 1000;
@@ -338,9 +338,13 @@ function App() {
             console.log('[Push] Token registered successfully:', response.data);
             localStorage.setItem('pushTokenRegistered', 'true');
             localStorage.setItem('pushTokenRegisteredAt', new Date().toISOString());
+            // Show success toast for debugging
+            toast.success('Push notifications enabled!', { duration: 3000 });
             return true;
           } catch (err) {
             console.error('[Push] Failed to register token with backend:', err.response?.data || err.message);
+            // Show error toast for debugging
+            toast.error(`Push setup failed: ${err.message}`, { duration: 5000 });
             return false;
           }
         };
@@ -425,6 +429,7 @@ function App() {
             await registerTokenWithBackend(cachedToken);
           } else {
             console.log('[Push] No token available - push notifications will not work');
+            toast.error('No push token available. Try restarting the app.', { duration: 5000 });
           }
         }
         
