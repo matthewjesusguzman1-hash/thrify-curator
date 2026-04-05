@@ -330,26 +330,39 @@ export default function EmployeeDashboard() {
         console.log('[EmployeeDashboard] Handling ClockIn shortcut');
         localStorage.removeItem('pendingShortcutAction');
         
-        // Wait for data to load
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait for data to load and component to be ready
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // If not already clocked in, trigger clock in
-        if (!clockedIn) {
-          toast.info('Clocking you in...');
-          // Scroll to the clock button area
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          // Auto-trigger clock in after a brief delay
+        // Check current clock status from the UI
+        const clockButton = document.querySelector('[data-testid="clock-action-btn"]');
+        const clockStatus = document.querySelector('[data-testid="clock-status"]');
+        const isCurrentlyNotClockedIn = clockStatus?.textContent?.includes('Not Clocked In');
+        
+        console.log('[EmployeeDashboard] Clock status check:', { clockedIn, isCurrentlyNotClockedIn });
+        
+        // Scroll to the clock section first
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // If not clocked in, click the clock button
+        if (isCurrentlyNotClockedIn && clockButton) {
+          toast.success('Clocking you in...');
           setTimeout(() => {
-            handleClock('in');
-          }, 500);
+            clockButton.click();
+          }, 300);
+        } else if (!clockedIn && clockButton) {
+          // Fallback: click the button anyway
+          toast.success('Clocking you in...');
+          setTimeout(() => {
+            clockButton.click();
+          }, 300);
         } else {
           toast.info('You are already clocked in');
         }
       }
     };
     
-    // Small delay to ensure component is fully mounted
-    const timer = setTimeout(handlePendingShortcut, 500);
+    // Longer delay to ensure component and data are fully loaded
+    const timer = setTimeout(handlePendingShortcut, 800);
     return () => clearTimeout(timer);
   }, [clockedIn]);
 
