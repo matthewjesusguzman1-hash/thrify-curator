@@ -23,7 +23,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
 // App version - increment this on each release to force cache clear
-const APP_VERSION = "1.0.7";
+const APP_VERSION = "1.0.8";
 
 // Session timeout in milliseconds (1 hour)
 const SESSION_TIMEOUT = 60 * 60 * 1000;
@@ -297,6 +297,9 @@ function App() {
         return;
       }
       
+      // EARLY DEBUG TOAST - confirms new code is running
+      toast.info(`Push setup starting (v${APP_VERSION})`, { duration: 2000 });
+      
       try {
         // Only request notifications if user is logged in
         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -352,9 +355,11 @@ function App() {
         // Check permissions first
         const permStatus = await PushNotifications.checkPermissions();
         console.log('[Push] Current permission status:', permStatus);
+        toast.info(`Permission: ${permStatus.receive}`, { duration: 2000 });
         
         if (permStatus.receive === 'denied') {
           console.log('[Push] Permission denied - user must enable in Settings');
+          toast.error('Notifications denied in Settings', { duration: 3000 });
           return;
         }
         
