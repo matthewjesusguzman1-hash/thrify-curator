@@ -23,7 +23,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
 // App version - increment this on each release to force cache clear
-const APP_VERSION = "1.1.1";
+const APP_VERSION = "1.1.2";
 
 // Session timeout in milliseconds (1 hour)
 const SESSION_TIMEOUT = 60 * 60 * 1000;

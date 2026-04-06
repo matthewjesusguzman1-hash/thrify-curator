@@ -169,15 +169,21 @@ export const LiveActivityService = {
         PushNotifications.removeAllListeners();
 
         // Set up listeners BEFORE registering
+        console.log('[LiveActivity] Setting up registration listener...');
         PushNotifications.addListener('registration', (token) => {
+          console.log('[LiveActivity] *** REGISTRATION EVENT FIRED ***');
+          console.log('[LiveActivity] Token object:', JSON.stringify(token));
           if (token?.value) {
             sendTokenToBackend(token.value);
           } else {
             console.log('[LiveActivity] Registration event received but no token value');
+            resolve(null);
           }
         });
 
         PushNotifications.addListener('registrationError', (error) => {
+          console.log('[LiveActivity] *** REGISTRATION ERROR EVENT ***');
+          console.log('[LiveActivity] Error:', JSON.stringify(error));
           clearTimeout(timeout);
           console.error('[LiveActivity] Push registration error:', error);
           resolve(null);
@@ -186,9 +192,9 @@ export const LiveActivityService = {
         // Register with APNs - this should trigger 'registration' event
         console.log('[LiveActivity] Calling PushNotifications.register()...');
         PushNotifications.register().then(() => {
-          console.log('[LiveActivity] PushNotifications.register() completed');
-        }).catch(err => {
-          console.error('[LiveActivity] PushNotifications.register() error:', err);
+          console.log('[LiveActivity] PushNotifications.register() completed - waiting for registration event...');
+        }).catch((regErr) => {
+          console.error('[LiveActivity] PushNotifications.register() FAILED:', regErr);
           clearTimeout(timeout);
           resolve(null);
         });
