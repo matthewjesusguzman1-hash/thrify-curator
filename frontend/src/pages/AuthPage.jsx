@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, LogIn, Fingerprint, Eye, EyeOff, Lock, HelpCircle, Mail, X, AlertCircle, Loader2, CheckCircle } from "lucide-react";
@@ -13,7 +13,10 @@ import { LiveActivityService } from "@/services/LiveActivityService";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
-const APP_VERSION = "1.0.5"; // Keep in sync with App.js
+const APP_VERSION = "1.1.4"; // Keep in sync with App.js
+
+// Request timeout (15 seconds)
+const REQUEST_TIMEOUT = 15000;
 
 // Log version on load for debugging
 console.log(`[AuthPage] App Version: ${APP_VERSION} | Build: ${new Date().toISOString()}`);
@@ -35,6 +38,9 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [loginMode, setLoginMode] = useState("normal"); // "normal", "password"
+  
+  // Ref to prevent duplicate login attempts
+  const loginInProgressRef = useRef(false);
   
   // Forgot password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -104,10 +110,25 @@ export default function AuthPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    
+    // Prevent duplicate login attempts
+    if (loginInProgressRef.current || loading) {
+      console.log('[Auth] Login already in progress, ignoring');
+      return;
+    }
+    
+    loginInProgressRef.current = true;
     setLoading(true);
 
     try {
       const trimmedInput = email.trim();
+      
+      if (!trimmedInput) {
+        toast.error("Please enter your email");
+        setLoading(false);
+        loginInProgressRef.current = false;
+        return;
+      }
       
       // Check if it's a business owner code (4-digit code that maps to owner email)
       const isOwnerCode = OWNER_CODES[trimmedInput] !== undefined;
@@ -135,7 +156,10 @@ export default function AuthPage() {
       } else {
         // Check if employee has a password set first
         try {
-          const checkRes = await axios.get(`${API}/auth/employee/has-password/${encodeURIComponent(trimmedInput)}`);
+          const checkRes = await axios.get(
+            `${API}/auth/employee/has-password/${encodeURIComponent(trimmedInput)}`,
+            { timeout: REQUEST_TIMEOUT }
+          );
           
           if (checkRes.data.is_admin) {
             // Admin user - need admin code
@@ -143,6 +167,7 @@ export default function AuthPage() {
             setShowPasswordField(false);
             toast.info("Admin login requires access code");
             setLoading(false);
+            loginInProgressRef.current = false;
             return;
           }
           
@@ -152,17 +177,19 @@ export default function AuthPage() {
             setShowAdminCode(false);
             toast.info("Enter your password to continue");
             setLoading(false);
+            loginInProgressRef.current = false;
             return;
           }
         } catch (checkError) {
           // Continue with email-only login if check fails
+          console.log('[Auth] Password check failed, continuing:', checkError.message);
         }
         
         // Employee login without password (no password set)
         payload = { email: trimmedInput };
       }
       
-      const response = await axios.post(`${API}/auth/login`, payload);
+      const response = await axios.post(`${API}/auth/login`, payload, { timeout: REQUEST_TIMEOUT });
       const { access_token, user } = response.data;
       
       localStorage.setItem("token", access_token);
@@ -332,9 +359,18 @@ export default function AuthPage() {
           errorMessage = detail.msg || detail.message || JSON.stringify(detail);
         }
       }
+      
+      // Check for network/timeout errors
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        errorMessage = "Connection timed out. Please check your internet and try again.";
+      } else if (!error.response && error.message?.includes('Network')) {
+        errorMessage = "Network error. Please check your connection.";
+      }
+      
       toast.error(errorMessage);
     } finally {
       setLoading(false);
+      loginInProgressRef.current = false;
     }
   };
 
@@ -516,21 +552,21 @@ export default function AuthPage() {
                       if (bioResult.credentials.password === 'EMAIL_ONLY_LOGIN') {
                         response = await axios.post(`${API}/auth/login`, {
                           email: bioResult.credentials.username
-                        });
+                        }, { timeout: REQUEST_TIMEOUT });
                       } else {
                         // Try password login first
                         try {
                           response = await axios.post(`${API}/auth/login`, {
                             email: bioResult.credentials.username,
                             password: bioResult.credentials.password
-                          });
+                          }, { timeout: REQUEST_TIMEOUT });
                         } catch (pwdError) {
                           // If password login fails, try as admin code
                           console.log('Password login failed, trying admin code...');
                           response = await axios.post(`${API}/auth/login`, {
                             email: bioResult.credentials.username,
                             admin_code: bioResult.credentials.password
-                          });
+                          }, { timeout: REQUEST_TIMEOUT });
                         }
                       }
                       
@@ -547,7 +583,11 @@ export default function AuthPage() {
                       }
                     } catch (error) {
                       console.log('Login error:', error);
-                      toast.error("Saved login is outdated. Please login with email.");
+                      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+                        toast.error("Connection timed out. Please try again.");
+                      } else {
+                        toast.error("Login failed. Please try again or login with email.");
+                      }
                     }
                   } else if (bioResult.needsPassword) {
                     toast.info("No saved login found. Please login with email first.");
