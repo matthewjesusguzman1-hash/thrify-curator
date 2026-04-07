@@ -314,6 +314,10 @@ export default function AdminDashboard() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   
+  // GPS button loading states
+  const [gpsPauseLoading, setGpsPauseLoading] = useState(false);
+  const [gpsStopLoading, setGpsStopLoading] = useState(false);
+  
   // GPS Trip tracking state (for header buttons)
   const [gpsTrip, setGpsTrip] = useState(null); // { id, status, total_miles, start_time }
   const [gpsTripLoading, setGpsTripLoading] = useState(false);
@@ -930,7 +934,8 @@ export default function AdminDashboard() {
 
   // Pause GPS trip
   const handlePauseGpsTrip = async () => {
-    if (!gpsTrip) return;
+    if (!gpsTrip || gpsPauseLoading) return;
+    setGpsPauseLoading(true);
     buttonPress();
     
     // IMMEDIATELY update UI state
@@ -964,6 +969,8 @@ export default function AdminDashboard() {
       } catch (error) {
         console.log("API pause error (non-fatal):", error);
       }
+      
+      setGpsPauseLoading(false);
     })();
   };
 
@@ -995,7 +1002,8 @@ export default function AdminDashboard() {
 
   // Stop GPS trip and scroll to completion form
   const handleStopGpsTrip = async () => {
-    if (!gpsTrip) return;
+    if (!gpsTrip || gpsStopLoading) return;
+    setGpsStopLoading(true);
     heavyPress();
     
     // CRITICAL: Set the ref FIRST to prevent any fetchActiveGpsTrip from running
@@ -1012,6 +1020,7 @@ export default function AdminDashboard() {
       if (gpsTrackerRef.current) {
         gpsTrackerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
       }
+      setGpsStopLoading(false);
     }, 400);
     
     toast.info("Complete your trip details below", { duration: 3000 });
@@ -2921,11 +2930,12 @@ export default function AdminDashboard() {
                         <Button
                           onClick={handlePauseGpsTrip}
                           size="sm"
-                          className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                          disabled={gpsPauseLoading}
+                          className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 disabled:opacity-50"
                           data-testid="pause-trip-header-btn"
                         >
                           <Pause className="w-4 h-4" />
-                          <span className="hidden sm:inline">Pause</span>
+                          <span className="hidden sm:inline">{gpsPauseLoading ? "..." : "Pause"}</span>
                         </Button>
                       ) : (
                         <Button
@@ -2942,11 +2952,12 @@ export default function AdminDashboard() {
                       <Button
                         onClick={handleStopGpsTrip}
                         size="sm"
-                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                        disabled={gpsStopLoading}
+                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 disabled:opacity-50"
                         data-testid="stop-trip-header-btn"
                       >
                         <Square className="w-4 h-4" />
-                        <span className="hidden sm:inline">Stop</span>
+                        <span className="hidden sm:inline">{gpsStopLoading ? "..." : "Stop"}</span>
                       </Button>
                       
                       {/* Cancel/Discard Button */}

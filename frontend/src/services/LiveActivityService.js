@@ -125,7 +125,6 @@ export const LiveActivityService = {
         // Longer timeout for iOS registration
         const timeout = setTimeout(() => {
           console.log('[LiveActivity] Registration timeout - using cached token if available');
-          alert('Push Registration TIMEOUT after 15 seconds - no token received from iOS');
           const fallbackToken = localStorage.getItem('devicePushToken');
           if (fallbackToken && userId) {
             // Try to register the cached token
@@ -174,8 +173,6 @@ export const LiveActivityService = {
         PushNotifications.addListener('registration', (token) => {
           console.log('[LiveActivity] *** REGISTRATION EVENT FIRED ***');
           console.log('[LiveActivity] Token object:', JSON.stringify(token));
-          // Show visible alert for debugging
-          alert('Push Token Received! Token: ' + (token?.value ? token.value.substring(0, 20) + '...' : 'EMPTY'));
           if (token?.value) {
             sendTokenToBackend(token.value);
           } else {
@@ -187,8 +184,6 @@ export const LiveActivityService = {
         PushNotifications.addListener('registrationError', (error) => {
           console.log('[LiveActivity] *** REGISTRATION ERROR EVENT ***');
           console.log('[LiveActivity] Error:', JSON.stringify(error));
-          // Show visible alert for debugging
-          alert('Push Registration ERROR: ' + JSON.stringify(error));
           clearTimeout(timeout);
           console.error('[LiveActivity] Push registration error:', error);
           resolve(null);
