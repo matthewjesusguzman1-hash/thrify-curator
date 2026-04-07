@@ -21,19 +21,33 @@ async def get_all_time_entries(admin: dict = Depends(get_admin_user)):
 
 @router.get("/clocked-in-employees")
 async def get_clocked_in_employees(admin: dict = Depends(get_admin_user)):
-    """Get all currently clocked-in employees with their clock-in times."""
+    """Get all currently clocked-in employees with their clock-in times and hourly rates."""
     clocked_in = await db.time_entries.find(
         {"clock_out": None},
         {"user_id": 1, "user_name": 1, "clock_in": 1, "last_clock_in": 1, "_id": 0}
     ).to_list(100)
     
+    # Get payroll settings for default rate
+    payroll_settings = await db.payroll_settings.find_one({}, {"_id": 0})
+    default_rate = payroll_settings.get("default_hourly_rate", 15) if payroll_settings else 15
+    
     employees = []
     for entry in clocked_in:
         clock_in_time = entry.get("last_clock_in") or entry.get("clock_in")
+        user_id = entry.get("user_id")
+        
+        # Fetch the employee's hourly rate from users collection
+        hourly_rate = default_rate
+        if user_id:
+            user = await db.users.find_one({"id": user_id}, {"hourly_rate": 1, "_id": 0})
+            if user and user.get("hourly_rate"):
+                hourly_rate = user.get("hourly_rate")
+        
         employees.append({
-            "user_id": entry.get("user_id"),
+            "user_id": user_id,
             "name": entry.get("user_name", "Unknown"),
-            "clock_in_time": clock_in_time
+            "clock_in_time": clock_in_time,
+            "hourly_rate": hourly_rate
         })
     
     return {"employees": employees, "count": len(employees)}
