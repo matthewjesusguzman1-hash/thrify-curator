@@ -1135,27 +1135,68 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   
                   {/* Live Stats */}
                   {!showCompletionForm && (
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                      <div className="bg-white/60 rounded-lg p-3 text-center">
-                        <Car className={`w-5 h-5 text-green-600 mx-auto mb-1 ${trackingStatus === "tracking" ? "animate-pulse" : ""}`} />
-                        <p className="text-xl font-bold text-green-700">
-                          {gpsTracker?.totalMiles?.toFixed(2) || activeTrip?.total_miles?.toFixed(2) || "0.00"}
-                        </p>
-                        <p className="text-xs text-green-600">Miles</p>
+                    <>
+                      <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div className="bg-white/60 rounded-lg p-3 text-center">
+                          <Car className={`w-5 h-5 text-green-600 mx-auto mb-1 ${trackingStatus === "tracking" ? "animate-pulse" : ""}`} />
+                          <p className="text-xl font-bold text-green-700">
+                            {gpsTracker?.totalMiles?.toFixed(2) || activeTrip?.total_miles?.toFixed(2) || "0.00"}
+                          </p>
+                          <p className="text-xs text-green-600">Miles</p>
+                        </div>
+                        <div className="bg-white/60 rounded-lg p-3 text-center">
+                          <MapPin className="w-5 h-5 text-green-600 mx-auto mb-1" />
+                          <p className="text-xl font-bold text-green-700">{gpsTracker?.locationCount || locationCount || 0}</p>
+                          <p className="text-xs text-green-600">Points</p>
+                        </div>
+                        <div className="bg-white/60 rounded-lg p-3 text-center">
+                          <DollarSign className="w-5 h-5 text-green-600 mx-auto mb-1" />
+                          <p className="text-xl font-bold text-green-700">
+                            ${((gpsTracker?.totalMiles || activeTrip?.total_miles || 0) * IRS_RATE_2026).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-green-600">Deduction</p>
+                        </div>
                       </div>
-                      <div className="bg-white/60 rounded-lg p-3 text-center">
-                        <MapPin className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                        <p className="text-xl font-bold text-green-700">{gpsTracker?.locationCount || locationCount || 0}</p>
-                        <p className="text-xs text-green-600">Points</p>
-                      </div>
-                      <div className="bg-white/60 rounded-lg p-3 text-center">
-                        <DollarSign className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                        <p className="text-xl font-bold text-green-700">
-                          ${((gpsTracker?.totalMiles || activeTrip?.total_miles || 0) * IRS_RATE_2026).toFixed(2)}
-                        </p>
-                        <p className="text-xs text-green-600">Deduction</p>
-                      </div>
-                    </div>
+                      
+                      {/* Live Map During Tracking */}
+                      {(trackingStatus === "tracking" || trackingStatus === "paused") && (
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-sm font-medium text-green-700 flex items-center gap-1">
+                              <Map className="w-4 h-4" />
+                              Live Route
+                            </Label>
+                            <span className="text-xs text-green-600 flex items-center gap-1">
+                              <span className={`w-2 h-2 rounded-full ${trackingStatus === "tracking" ? "bg-green-500 animate-pulse" : "bg-amber-500"}`} />
+                              {trackingStatus === "tracking" ? "Tracking" : "Paused"}
+                            </span>
+                          </div>
+                          <Suspense fallback={
+                            <div className="h-[200px] bg-gray-100 rounded-lg flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                            </div>
+                          }>
+                            {/* Show map if we have locations from GPS tracker or from internal recordedLocations */}
+                            {((gpsTracker?.getLocations && gpsTracker.getLocations().length > 0) || recordedLocations.length > 0) ? (
+                              <TripMap 
+                                locations={gpsTracker?.getLocations ? gpsTracker.getLocations() : recordedLocations} 
+                                height="200px"
+                                showCurrentPosition={true}
+                                showMarkers={true}
+                              />
+                            ) : (
+                              <div className="h-[200px] bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
+                                <div className="text-center text-gray-500">
+                                  <Navigation className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                  <p className="text-sm">Waiting for GPS signal...</p>
+                                  <p className="text-xs text-gray-400 mt-1">Map will appear as you move</p>
+                                </div>
+                              </div>
+                            )}
+                          </Suspense>
+                        </div>
+                      )}
+                    </>
                   )}
                   
                   {/* Completion Form */}

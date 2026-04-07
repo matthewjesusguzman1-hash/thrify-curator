@@ -77,6 +77,7 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Testing: 100% pass (19/19 tests)
 
 ### In Progress / Pending User Verification
+- **Live Map During GPS Tracking (Apr 7, 2026)**: IMPLEMENTED - Added real-time map view that shows during active GPS trips. The map displays the route as you drive, with a pulsing current-location marker. Shows "Waiting for GPS signal..." placeholder when no points recorded yet.
 - **Consignor Picker Fix (Mar 25, 2026)**: Applied iOS-specific touch event handling and CSS to prevent text selection behavior. Needs TestFlight verification.
 - **Live Activity Cleanup (Mar 25, 2026)**: Enhanced cleanup logic with multiple retry attempts and visibility change listener. Needs TestFlight verification.
 - **Clock-Out Notification Timezone Fix**: Fixed to show correct local time and duration. Needs TestFlight verification.
