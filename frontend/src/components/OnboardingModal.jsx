@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
-  MapPin, 
   Bell, 
   ChevronRight, 
   ChevronLeft, 
@@ -17,25 +16,25 @@ const EMPLOYEE_STEPS = [
   {
     icon: Clock,
     title: "Clock In & Out",
-    description: "Tap the clock button to start and end your shift. Your hours are automatically tracked.",
+    description: "Tap the clock button to start and end your shift. Your hours are automatically tracked and saved.",
     color: "#10B981"
   },
   {
-    icon: MapPin,
-    title: "GPS Mileage Tracking",
-    description: "Track your business trips for tax deductions. Start a trip before you drive, stop when you arrive.",
+    icon: Calendar,
+    title: "View Your Hours",
+    description: "See your weekly hours, pay period summary, and complete work history all in one place.",
     color: "#00D4FF"
   },
   {
     icon: Fingerprint,
     title: "Quick Login with Face ID",
-    description: "After your first login, you can use Face ID or Touch ID for faster access.",
+    description: "After your first login, you can use Face ID or Touch ID for faster, secure access.",
     color: "#8B5CF6"
   },
   {
     icon: Bell,
     title: "Stay Notified",
-    description: "Receive important updates and reminders from your manager.",
+    description: "Receive important updates, schedule changes, and messages from your manager.",
     color: "#F59E0B"
   }
 ];

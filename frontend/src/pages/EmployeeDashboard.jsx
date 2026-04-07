@@ -41,6 +41,7 @@ import useBiometricAuth from "@/hooks/useBiometricAuth";
 import LiveActivityService from "@/services/LiveActivityService";
 import MessagingSection from "@/components/MessagingSection";
 import OnboardingModal from "@/components/OnboardingModal";
+import PullToRefresh from "@/components/PullToRefresh";
 
 // Check if running in Capacitor native app
 const isNativePlatform = () => {
@@ -938,10 +939,10 @@ export default function EmployeeDashboard() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard">
       {/* Header */}
       <header 
-        className="bg-white/10 backdrop-blur-md border-b border-white/10 px-4 pb-3" 
+        className="bg-white/10 backdrop-blur-md border-b border-white/10 px-4 pb-3 flex-shrink-0" 
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
         <div className="max-w-2xl mx-auto">
@@ -1008,12 +1009,13 @@ export default function EmployeeDashboard() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
+      <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-auto">
+        <main className="max-w-2xl mx-auto px-4 py-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
           {/* Clock In/Out Card */}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6]" />
@@ -1675,6 +1677,7 @@ export default function EmployeeDashboard() {
           )}
         </motion.div>
       </main>
+      </PullToRefresh>
 
       {/* 1099 Viewer Modal */}
       {viewing1099 && (
