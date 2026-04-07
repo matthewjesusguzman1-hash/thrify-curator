@@ -90,6 +90,52 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 // Max reasonable speed in mph (85 mph - highway speed + buffer)
 const MAX_REASONABLE_SPEED_MPH = 85;
 
+// Check if a new point is a "bounce-back" to an earlier location
+// This happens when GPS reports stale/cached coordinates
+const isBounceBackInternal = (newPoint, recentPoints, startPoint) => {
+  if (!startPoint || recentPoints.length < 3) return false;
+  
+  const distFromStart = calculateDistance(
+    startPoint.latitude, startPoint.longitude,
+    newPoint.latitude, newPoint.longitude
+  );
+  
+  // Get the furthest point from start in recent history
+  let maxDistFromStart = 0;
+  for (const pt of recentPoints.slice(-10)) { // Check last 10 points
+    const dist = calculateDistance(
+      startPoint.latitude, startPoint.longitude,
+      pt.latitude, pt.longitude
+    );
+    if (dist > maxDistFromStart) {
+      maxDistFromStart = dist;
+    }
+  }
+  
+  // If we've traveled at least 0.1 miles from start, and new point
+  // is significantly closer to start (jumped back more than 50% of progress)
+  if (maxDistFromStart > 0.1 && distFromStart < maxDistFromStart * 0.5) {
+    console.log(`[GPS Internal] BOUNCE-BACK detected! New point is ${distFromStart.toFixed(3)}mi from start, but we reached ${maxDistFromStart.toFixed(3)}mi`);
+    return true;
+  }
+  
+  // Also check if point is very close to any of the last 5-10 points (excluding last 2)
+  const pointsToCheck = recentPoints.slice(-10, -2);
+  for (const oldPoint of pointsToCheck) {
+    const distToOld = calculateDistance(
+      oldPoint.latitude, oldPoint.longitude,
+      newPoint.latitude, newPoint.longitude
+    );
+    // If new point is within 0.02 miles (100 feet) of an old point, likely a bounce
+    if (distToOld < 0.02) {
+      console.log(`[GPS Internal] BOUNCE-BACK to old point detected! Distance to old point: ${(distToOld * 5280).toFixed(0)} feet`);
+      return true;
+    }
+  }
+  
+  return false;
+};
+
 const GPSMileageTracker = forwardRef(function GPSMileageTracker({ 
   getAuthHeader,
   externalTrip,
@@ -178,6 +224,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const completionFormRef = useRef(null);
   const isCompletingRef = useRef(false); // Ref to prevent stale closure issues
   const lastValidLocationRef = useRef(null); // Track last valid location for jump detection
+  const startPointInternalRef = useRef(null); // Track start point for bounce-back detection
   
   // Map viewing state (used by TripMapModal)
   const [viewingTripMap, setViewingTripMap] = useState(null);
@@ -346,6 +393,18 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   speed: location.speed
                 };
                 
+                // Track start point for bounce-back detection
+                if (!startPointInternalRef.current) {
+                  startPointInternalRef.current = point;
+                  console.log("[GPS Internal] Start point set:", point.latitude, point.longitude);
+                }
+                
+                // Check for bounce-back to earlier position
+                if (isBounceBackInternal(point, locationBufferRef.current, startPointInternalRef.current)) {
+                  console.log("[GPS Internal] REJECTED bounce-back point");
+                  return;
+                }
+                
                 // Check for impossible speed jumps
                 if (lastValidLocationRef.current) {
                   const lastLoc = lastValidLocationRef.current;
@@ -414,6 +473,18 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
           accuracy: position.coords.accuracy,
           speed: position.coords.speed
         };
+        
+        // Track start point for bounce-back detection
+        if (!startPointInternalRef.current) {
+          startPointInternalRef.current = point;
+          console.log("[GPS Standard] Start point set:", point.latitude, point.longitude);
+        }
+        
+        // Check for bounce-back to earlier position
+        if (isBounceBackInternal(point, locationBufferRef.current, startPointInternalRef.current)) {
+          console.log("[GPS Standard] REJECTED bounce-back point");
+          return;
+        }
         
         // Check for impossible speed jumps
         if (lastValidLocationRef.current) {
@@ -511,6 +582,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     
     // Reset tracking state for new trip
     lastValidLocationRef.current = null;
+    startPointInternalRef.current = null; // Reset start point for bounce-back detection
     setRecordedLocations([]);
     locationBufferRef.current = [];
     

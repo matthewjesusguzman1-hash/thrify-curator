@@ -24,6 +24,53 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
+// Check if a new point is a "bounce-back" to an earlier location
+// This happens when GPS reports stale/cached coordinates
+const isBounceBack = (newPoint, recentPoints, startPoint) => {
+  if (!startPoint || recentPoints.length < 3) return false;
+  
+  const distFromStart = calculateDistance(
+    startPoint.latitude, startPoint.longitude,
+    newPoint.latitude, newPoint.longitude
+  );
+  
+  // Get the furthest point from start in recent history
+  let maxDistFromStart = 0;
+  for (const pt of recentPoints.slice(-10)) { // Check last 10 points
+    const dist = calculateDistance(
+      startPoint.latitude, startPoint.longitude,
+      pt.latitude, pt.longitude
+    );
+    if (dist > maxDistFromStart) {
+      maxDistFromStart = dist;
+    }
+  }
+  
+  // If we've traveled at least 0.1 miles from start, and new point
+  // is significantly closer to start (jumped back more than 50% of progress)
+  if (maxDistFromStart > 0.1 && distFromStart < maxDistFromStart * 0.5) {
+    console.log(`[GPS] BOUNCE-BACK detected! New point is ${distFromStart.toFixed(3)}mi from start, but we reached ${maxDistFromStart.toFixed(3)}mi`);
+    return true;
+  }
+  
+  // Also check if point is very close to any of the last 5-10 points (excluding last 2)
+  // This catches the case where GPS jumps back to a recent position
+  const pointsToCheck = recentPoints.slice(-10, -2);
+  for (const oldPoint of pointsToCheck) {
+    const distToOld = calculateDistance(
+      oldPoint.latitude, oldPoint.longitude,
+      newPoint.latitude, newPoint.longitude
+    );
+    // If new point is within 0.02 miles (100 feet) of an old point, likely a bounce
+    if (distToOld < 0.02) {
+      console.log(`[GPS] BOUNCE-BACK to old point detected! Distance to old point: ${(distToOld * 5280).toFixed(0)} feet`);
+      return true;
+    }
+  }
+  
+  return false;
+};
+
 // Note: iOS license key is configured in Info.plist (TSLocationManagerLicense)
 // Note: Android license key is configured in AndroidManifest.xml
 
@@ -38,6 +85,7 @@ export default function useGPSTracking() {
   // Use refs to track state that shouldn't trigger re-renders
   const locationsRef = useRef([]);
   const lastLocationRef = useRef(null);
+  const startPointRef = useRef(null); // Track the starting point for bounce-back detection
   const totalDistanceRef = useRef(0);
   const isTrackingRef = useRef(false);
   const isPausedRef = useRef(false);
@@ -85,9 +133,21 @@ export default function useGPSTracking() {
       return;
     }
 
-    // Skip low accuracy readings (> 100 meters)
-    if (point.accuracy && point.accuracy > 100) {
-      console.log('[GPS] Skipping low accuracy reading:', point.accuracy, 'meters');
+    // Skip low accuracy readings (> 50 meters) - tighter threshold for better quality
+    if (point.accuracy && point.accuracy > 50) {
+      console.log('[GPS] Skipping low accuracy reading:', point.accuracy, 'meters (threshold: 50m)');
+      return;
+    }
+
+    // Store first point as start point for bounce-back detection
+    if (!startPointRef.current && locationsRef.current.length === 0) {
+      startPointRef.current = point;
+      console.log('[GPS] Start point recorded:', point.latitude, point.longitude);
+    }
+
+    // Check for bounce-back to earlier position
+    if (isBounceBack(point, locationsRef.current, startPointRef.current)) {
+      console.log('[GPS] REJECTED - bounce-back detected, not adding to route');
       return;
     }
 
@@ -261,6 +321,7 @@ export default function useGPSTracking() {
       // Reset state
       locationsRef.current = [];
       lastLocationRef.current = null;
+      startPointRef.current = null; // Reset start point for bounce-back detection
       totalDistanceRef.current = 0;
       setTotalMiles(0);
       setLocationCount(0);
@@ -428,6 +489,7 @@ export default function useGPSTracking() {
   const reset = useCallback(() => {
     locationsRef.current = [];
     lastLocationRef.current = null;
+    startPointRef.current = null; // Reset start point for bounce-back detection
     totalDistanceRef.current = 0;
     setTotalMiles(0);
     setLocationCount(0);
