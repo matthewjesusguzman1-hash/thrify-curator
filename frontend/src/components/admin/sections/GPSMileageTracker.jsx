@@ -74,6 +74,22 @@ const TRIP_PURPOSES = [
 // IRS rate for display
 const IRS_RATE_2026 = 0.725;
 
+// Calculate distance between two GPS points in miles (Haversine formula)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+// Max reasonable speed in mph (85 mph - highway speed + buffer)
+const MAX_REASONABLE_SPEED_MPH = 85;
+
 const GPSMileageTracker = forwardRef(function GPSMileageTracker({ 
   getAuthHeader,
   externalTrip,
@@ -155,11 +171,13 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
   const [locationCount, setLocationCount] = useState(0);
+  const [recordedLocations, setRecordedLocations] = useState([]); // For live map display
   const watchIdRef = useRef(null);
   const locationBufferRef = useRef([]);
   const syncIntervalRef = useRef(null);
   const completionFormRef = useRef(null);
   const isCompletingRef = useRef(false); // Ref to prevent stale closure issues
+  const lastValidLocationRef = useRef(null); // Track last valid location for jump detection
   
   // Map viewing state (used by TripMapModal)
   const [viewingTripMap, setViewingTripMap] = useState(null);
@@ -314,8 +332,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
               }
               
               if (location) {
-                // Filter out inaccurate readings (> 30 meters accuracy is unreliable)
-                if (location.accuracy && location.accuracy > 30) {
+                // Filter out inaccurate readings (> 20 meters accuracy is unreliable)
+                if (location.accuracy && location.accuracy > 20) {
                   console.log("Skipping inaccurate GPS reading:", location.accuracy, "m");
                   return;
                 }
@@ -328,7 +346,24 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   speed: location.speed
                 };
                 
+                // Check for impossible speed jumps
+                if (lastValidLocationRef.current) {
+                  const lastLoc = lastValidLocationRef.current;
+                  const timeDiffHours = (new Date(point.timestamp) - new Date(lastLoc.timestamp)) / (1000 * 60 * 60);
+                  if (timeDiffHours > 0) {
+                    const distance = calculateDistance(lastLoc.latitude, lastLoc.longitude, point.latitude, point.longitude);
+                    const impliedSpeed = distance / timeDiffHours;
+                    
+                    if (impliedSpeed > MAX_REASONABLE_SPEED_MPH) {
+                      console.log(`Skipping GPS jump: ${impliedSpeed.toFixed(0)} mph implied (${distance.toFixed(2)} mi in ${(timeDiffHours * 60).toFixed(1)} min)`);
+                      return;
+                    }
+                  }
+                }
+                
+                lastValidLocationRef.current = point;
                 setCurrentLocation(point);
+                setRecordedLocations(prev => [...prev, point]);
                 locationBufferRef.current.push(point);
                 setLocationCount(prev => prev + 1);
               }
@@ -366,8 +401,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        // Filter out inaccurate readings (> 30 meters is unreliable)
-        if (position.coords.accuracy && position.coords.accuracy > 30) {
+        // Filter out inaccurate readings (> 20 meters is unreliable)
+        if (position.coords.accuracy && position.coords.accuracy > 20) {
           console.log("Skipping inaccurate GPS reading:", position.coords.accuracy, "m");
           return;
         }
@@ -380,7 +415,24 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
           speed: position.coords.speed
         };
         
+        // Check for impossible speed jumps
+        if (lastValidLocationRef.current) {
+          const lastLoc = lastValidLocationRef.current;
+          const timeDiffHours = (new Date(point.timestamp) - new Date(lastLoc.timestamp)) / (1000 * 60 * 60);
+          if (timeDiffHours > 0) {
+            const distance = calculateDistance(lastLoc.latitude, lastLoc.longitude, point.latitude, point.longitude);
+            const impliedSpeed = distance / timeDiffHours;
+            
+            if (impliedSpeed > MAX_REASONABLE_SPEED_MPH) {
+              console.log(`Skipping GPS jump: ${impliedSpeed.toFixed(0)} mph implied (${distance.toFixed(2)} mi in ${(timeDiffHours * 60).toFixed(1)} min)`);
+              return;
+            }
+          }
+        }
+        
+        lastValidLocationRef.current = point;
         setCurrentLocation(point);
+        setRecordedLocations(prev => [...prev, point]);
         locationBufferRef.current.push(point);
         setLocationCount(prev => prev + 1);
       },
@@ -456,6 +508,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const handleStartTrip = async () => {
     setLoading(true);
     setLocationError(null);
+    
+    // Reset tracking state for new trip
+    lastValidLocationRef.current = null;
+    setRecordedLocations([]);
+    locationBufferRef.current = [];
     
     try {
       // Get current location first
