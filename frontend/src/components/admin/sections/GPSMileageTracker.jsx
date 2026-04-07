@@ -370,7 +370,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
               backgroundTitle: "Thrifty Curator",
               requestPermissions: true,
               stale: false,
-              distanceFilter: 10 // meters
+              distanceFilter: 1 // 1 meter - update on ANY movement for maximum accuracy
             },
             (location, error) => {
               if (error) {

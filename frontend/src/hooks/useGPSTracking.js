@@ -133,9 +133,9 @@ export default function useGPSTracking() {
       return;
     }
 
-    // Skip low accuracy readings (> 50 meters) - tighter threshold for better quality
-    if (point.accuracy && point.accuracy > 50) {
-      console.log('[GPS] Skipping low accuracy reading:', point.accuracy, 'meters (threshold: 50m)');
+    // Skip low accuracy readings (> 20 meters is unreliable for navigation)
+    if (point.accuracy && point.accuracy > 20) {
+      console.log('[GPS] Skipping low accuracy reading:', point.accuracy, 'meters (threshold: 20m)');
       return;
     }
 
@@ -234,9 +234,9 @@ export default function useGPSTracking() {
       // Configure the plugin - MOTION DETECTION DISABLED for continuous tracking
       // Note: License is read from Info.plist (iOS) and AndroidManifest.xml (Android)
       const state = await BackgroundGeolocation.ready({
-        // Geolocation Config
-        desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
-        distanceFilter: 5, // meters - smaller for more frequent updates
+        // Geolocation Config - MAXIMUM ACCURACY
+        desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_NAVIGATION, // Best for navigation (kCLLocationAccuracyBestForNavigation)
+        distanceFilter: 1, // 1 meter - update on ANY movement
         stationaryRadius: 1, // meters - minimum possible
         
         // FORCE CONTINUOUS TRACKING - Disable ALL motion/stop detection
@@ -246,23 +246,23 @@ export default function useGPSTracking() {
         stopTimeout: 525600, // 1 year in minutes
         isMoving: true, // FORCE moving state on start
         
-        // iOS specific - Maximum background persistence
+        // iOS specific - Maximum background persistence & accuracy
         preventSuspend: true,
         showsBackgroundLocationIndicator: true,
         pausesLocationUpdatesAutomatically: false,
         locationAuthorizationRequest: 'Always',
         activityType: BackgroundGeolocation.ACTIVITY_TYPE_AUTOMOTIVE_NAVIGATION,
         
-        // Aggressive location updates
-        locationUpdateInterval: 3000, // Every 3 seconds
-        fastestLocationUpdateInterval: 1000, // Accept every 1 second
+        // AGGRESSIVE location updates - faster polling
+        locationUpdateInterval: 1000, // Every 1 second
+        fastestLocationUpdateInterval: 500, // Accept every 0.5 seconds
         
-        // Heartbeat keeps plugin alive in background
-        heartbeatInterval: 15, // Every 15 seconds (more frequent)
+        // Heartbeat keeps plugin alive in background - more frequent
+        heartbeatInterval: 5, // Every 5 seconds
         
         // Enable debug temporarily to see what's happening
-        debug: true, // Enable debug sounds to hear when tracking
-        logLevel: BackgroundGeolocation.LOG_LEVEL_VERBOSE,
+        debug: false, // Disable debug sounds for production
+        logLevel: BackgroundGeolocation.LOG_LEVEL_WARNING,
         
         // Notification (Android)
         notification: {
@@ -355,7 +355,7 @@ export default function useGPSTracking() {
             console.log('[GPS] Initial position:', location.coords?.latitude, location.coords?.longitude);
             processLocation(location);
             
-            // Set up a polling fallback every 5 seconds to catch locations
+            // Set up a polling fallback every 2 seconds to catch locations
             // This helps when onLocation events don't fire reliably
             const pollInterval = setInterval(async () => {
               if (!isTrackingRef.current) {
@@ -365,14 +365,16 @@ export default function useGPSTracking() {
               try {
                 const currentLoc = await BackgroundGeolocation.getCurrentPosition({
                   samples: 1,
-                  persist: false
+                  persist: false,
+                  desiredAccuracy: 10, // Request high accuracy for polling too
+                  maximumAge: 1000 // Don't use cached positions older than 1 second
                 });
                 console.log('[GPS] Poll location:', currentLoc.coords?.latitude, currentLoc.coords?.longitude);
                 processLocation(currentLoc);
               } catch (pollErr) {
                 console.log('[GPS] Poll error:', pollErr);
               }
-            }, 5000);
+            }, 2000); // Poll every 2 seconds for more responsive tracking
             
             // Store interval ID for cleanup
             window._gpsPollingInterval = pollInterval;
@@ -397,7 +399,7 @@ export default function useGPSTracking() {
           timestamp: initialPosition.timestamp
         });
 
-        // Start web watch
+        // Start web watch with maximum accuracy
         const watchId = navigator.geolocation.watchPosition(
           (position) => {
             processLocation({
@@ -417,7 +419,7 @@ export default function useGPSTracking() {
           {
             enableHighAccuracy: true,
             timeout: 10000,
-            maximumAge: 5000
+            maximumAge: 0 // Never use cached positions - always get fresh GPS
           }
         );
         console.log('Web GPS watch started, ID:', watchId);
