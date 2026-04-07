@@ -40,6 +40,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import useBiometricAuth from "@/hooks/useBiometricAuth";
 import LiveActivityService from "@/services/LiveActivityService";
 import MessagingSection from "@/components/MessagingSection";
+import OnboardingModal from "@/components/OnboardingModal";
 
 // Check if running in Capacitor native app
 const isNativePlatform = () => {
@@ -139,6 +140,7 @@ export default function EmployeeDashboard() {
     period_end: null
   });
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [locationStatus, setLocationStatus] = useState({ checking: false, withinRange: null, distance: null, denied: false });
   
@@ -493,6 +495,21 @@ export default function EmployeeDashboard() {
   const getAuthHeader = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   });
+
+  // Pull-to-refresh handler
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    lightTap();
+    try {
+      await fetchData();
+      toast.success("Data refreshed", { duration: 1500 });
+    } catch (error) {
+      toast.error("Failed to refresh");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -950,6 +967,17 @@ export default function EmployeeDashboard() {
                 </Button>
               </Link>
             )}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="text-white/70 hover:text-white hover:bg-white/10 px-2"
+              data-testid="refresh-btn"
+            >
+              <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? '...' : 'Refresh'}
+            </Button>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -2065,6 +2093,9 @@ export default function EmployeeDashboard() {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Onboarding Modal for first-time employees */}
+      <OnboardingModal userType="employee" />
     </div>
   );
 }

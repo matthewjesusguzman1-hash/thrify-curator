@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-ro
 import { AnimatePresence } from "framer-motion";
 import { Toaster, toast } from "@/components/ui/sonner";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import OfflineIndicator from "@/components/OfflineIndicator";
 import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
 import ShortcutBiometricHandler from "@/components/ShortcutBiometricHandler";
@@ -477,6 +478,7 @@ function App() {
           top: 'env(safe-area-inset-top, 50px)',
         }}
       />
+      <OfflineIndicator />
     </div>
   );
 }

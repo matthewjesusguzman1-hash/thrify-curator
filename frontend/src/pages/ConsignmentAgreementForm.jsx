@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import axios from "axios";
+import OnboardingModal from "@/components/OnboardingModal";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_f87e31a4-f19a-4a3f-9c26-c5ad57e131e1/artifacts/vh1p37dl_IMG_0092.png";
@@ -3840,6 +3841,9 @@ export default function ConsignmentAgreementForm() {
           </div>
         </div>
       )}
+      
+      {/* Onboarding Modal for first-time consignors */}
+      {isLoggedIn && <OnboardingModal userType="consignor" />}
     </div>
   );
 }
