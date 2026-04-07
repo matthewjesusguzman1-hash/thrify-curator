@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Toaster, toast } from "@/components/ui/sonner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
 import ShortcutBiometricHandler from "@/components/ShortcutBiometricHandler";
@@ -23,7 +24,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
 // App version - increment this on each release to force cache clear
-const APP_VERSION = "1.1.3";
+const APP_VERSION = "1.1.4";
 
 // Session timeout in milliseconds (1 hour)
 const SESSION_TIMEOUT = 60 * 60 * 1000;
@@ -166,13 +167,14 @@ function AnimatedRoutes() {
   const location = useLocation();
   
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={
-          <PageTransition>
-            <LandingPage />
-          </PageTransition>
-        } />
+    <ErrorBoundary>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={
+            <PageTransition>
+              <LandingPage />
+            </PageTransition>
+          } />
         <Route path="/job-application" element={
           <PageTransition>
             <JobApplicationForm />
@@ -238,8 +240,9 @@ function AnimatedRoutes() {
             <Issued1099sPage />
           </PageTransition>
         } />
-      </Routes>
-    </AnimatePresence>
+        </Routes>
+      </AnimatePresence>
+    </ErrorBoundary>
   );
 }
 

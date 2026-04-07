@@ -4,6 +4,13 @@ import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import "@/index.css";
 import App from "@/App";
 
+// Disable console logs in production for better performance
+if (process.env.NODE_ENV === 'production') {
+  console.log = () => {};
+  console.debug = () => {};
+  // Keep console.error and console.warn for debugging critical issues
+}
+
 // Check if running in Capacitor (mobile app) or as a standalone PWA
 const isCapacitor = window.Capacitor !== undefined;
 const isStandalonePWA = window.matchMedia('(display-mode: standalone)').matches || 
