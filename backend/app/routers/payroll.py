@@ -52,7 +52,7 @@ async def get_payroll_settings(admin: dict = Depends(get_admin_user)):
 
 @router.get("/summary")
 async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
-    """Get payroll summary - pulls exact same numbers shown in Employee Portal"""
+    """Get payroll summary - sums the EXACT values shown in each Employee Portal"""
     from app.services.helpers import get_biweekly_period
     
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
@@ -67,7 +67,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
         period_end = period_end.replace(tzinfo=timezone.utc)
     
     # Get all employees
-    employees = await db.users.find({}, {"_id": 0, "id": 1, "hourly_rate": 1}).to_list(100)
+    employees = await db.users.find({}, {"_id": 0}).to_list(100)
     
     current_period_amount = 0
     current_period_hours = 0
@@ -75,58 +75,70 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     year_total = 0
     
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_end = (now.replace(day=1) + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if now.month == 12:
+        month_end = now.replace(year=now.year + 1, month=1, day=1)
+    else:
+        month_end = now.replace(month=now.month + 1, day=1)
+    month_end = month_end.replace(hour=0, minute=0, second=0, microsecond=0)
+    
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     year_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    # For each employee, get their entries and calculate EXACTLY like Employee Portal does
     for emp in employees:
-        emp_id = emp["id"]
+        emp_id = emp.get("id")
+        if not emp_id:
+            continue
+            
         hourly_rate = emp.get("hourly_rate") or default_rate
         
-        # Get this employee's time entries
+        # Get employee's time entries - EXACT same query as Employee Portal
         entries = await db.time_entries.find({"user_id": emp_id}, {"_id": 0}).to_list(1000)
         
-        # Calculate period_hours exactly like Employee Portal backend does
+        # Calculate period_hours - EXACT same logic as /api/time-tracking/summary
         emp_period_hours = 0
         emp_month_hours = 0
         emp_year_hours = 0
         
-        for entry in entries:
-            hours = entry.get("total_hours", 0) or 0
-            clock_in_str = entry.get("clock_in", "")
-            
+        for e in entries:
+            hours = e.get("total_hours", 0) or 0
+            clock_in_str = e.get("clock_in", "")
+            if not clock_in_str:
+                continue
+                
             try:
                 clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
                 
-                # Current pay period
+                # EXACT same condition as time_tracking.py line 293
                 if period_start <= clock_in_dt <= period_end:
                     emp_period_hours += hours
                 
-                # Current month
                 if month_start <= clock_in_dt < month_end:
                     emp_month_hours += hours
-                
-                # Current year
+                    
                 if year_start <= clock_in_dt < year_end:
                     emp_year_hours += hours
             except:
-                pass
+                continue
         
-        # Now calculate pay EXACTLY like Employee Portal frontend does:
-        # formatCurrency(roundHoursToMinute(summary.period_hours) * summary.hourly_rate)
+        # Calculate pay - EXACT same as Employee Portal frontend:
+        # roundHoursToMinute(summary.period_hours) * summary.hourly_rate
         if emp_period_hours > 0:
-            rounded = round_hours_to_minute(emp_period_hours)
-            current_period_amount += rounded * hourly_rate
+            # Round to nearest minute, then multiply
+            total_minutes = round(emp_period_hours * 60)
+            rounded_hours = total_minutes / 60
+            emp_pay = rounded_hours * hourly_rate
+            current_period_amount += emp_pay
             current_period_hours += emp_period_hours
         
         if emp_month_hours > 0:
-            rounded = round_hours_to_minute(emp_month_hours)
-            month_total += rounded * hourly_rate
+            total_minutes = round(emp_month_hours * 60)
+            rounded_hours = total_minutes / 60
+            month_total += rounded_hours * hourly_rate
         
         if emp_year_hours > 0:
-            rounded = round_hours_to_minute(emp_year_hours)
-            year_total += rounded * hourly_rate
+            total_minutes = round(emp_year_hours * 60)
+            rounded_hours = total_minutes / 60
+            year_total += rounded_hours * hourly_rate
     
     return {
         "current_period": {
