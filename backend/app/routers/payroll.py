@@ -52,7 +52,7 @@ async def get_payroll_settings(admin: dict = Depends(get_admin_user)):
 
 @router.get("/summary")
 async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
-    """Get payroll summary for dashboard - uses same calculation as Employee Portal"""
+    """Get payroll summary - pulls exact same numbers shown in Employee Portal"""
     from app.services.helpers import get_biweekly_period
     
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
@@ -61,87 +61,72 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     now = datetime.now(timezone.utc)
     period_start, period_end = get_biweekly_period(period_index=0)
     
-    # Get all employees with their hourly rates
+    if period_start.tzinfo is None:
+        period_start = period_start.replace(tzinfo=timezone.utc)
+    if period_end.tzinfo is None:
+        period_end = period_end.replace(tzinfo=timezone.utc)
+    
+    # Get all employees
     employees = await db.users.find({}, {"_id": 0, "id": 1, "hourly_rate": 1}).to_list(100)
-    employee_rates = {emp["id"]: emp.get("hourly_rate") or default_rate for emp in employees}
     
-    # Get all time entries
-    all_entries = await db.time_entries.find({}, {"_id": 0}).to_list(1000)
-    
-    def parse_clock_in(entry):
-        clock_in = entry.get("clock_in")
-        if isinstance(clock_in, str):
-            try:
-                return datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
-            except:
-                return None
-        return clock_in
-    
-    # Calculate period dates
-    period_start_dt = period_start.replace(tzinfo=timezone.utc) if period_start.tzinfo is None else period_start
-    period_end_dt = period_end.replace(tzinfo=timezone.utc) if period_end.tzinfo is None else period_end
-    
-    # For each employee, calculate their period hours the EXACT same way Employee Portal does
-    # Then apply the EXACT same frontend calculation: roundHoursToMinute(period_hours) * hourly_rate
     current_period_amount = 0
     current_period_hours = 0
-    
-    for emp_id, emp_rate in employee_rates.items():
-        # Get this employee's entries for the period
-        emp_period_hours = 0
-        for entry in all_entries:
-            if entry.get("user_id") != emp_id:
-                continue
-            clock_in_dt = parse_clock_in(entry)
-            if clock_in_dt and period_start_dt <= clock_in_dt <= period_end_dt:
-                emp_period_hours += entry.get("total_hours", 0) or 0
-        
-        if emp_period_hours > 0:
-            # Apply the EXACT same calculation as Employee Portal frontend:
-            # roundHoursToMinute(period_hours) * hourly_rate
-            rounded_hours = round_hours_to_minute(emp_period_hours)
-            emp_pay = round(rounded_hours * emp_rate, 2)
-            current_period_amount += emp_pay
-            current_period_hours += emp_period_hours
-    
-    # Month calculation - same approach
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    if now.month == 12:
-        month_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    else:
-        month_end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    
     month_total = 0
-    for emp_id, emp_rate in employee_rates.items():
-        emp_month_hours = 0
-        for entry in all_entries:
-            if entry.get("user_id") != emp_id:
-                continue
-            clock_in_dt = parse_clock_in(entry)
-            if clock_in_dt and month_start <= clock_in_dt < month_end:
-                emp_month_hours += entry.get("total_hours", 0) or 0
-        
-        if emp_month_hours > 0:
-            rounded_hours = round_hours_to_minute(emp_month_hours)
-            month_total += round(rounded_hours * emp_rate, 2)
+    year_total = 0
     
-    # Year calculation - same approach
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_end = (now.replace(day=1) + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     year_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    year_total = 0
-    for emp_id, emp_rate in employee_rates.items():
+    # For each employee, get their entries and calculate EXACTLY like Employee Portal does
+    for emp in employees:
+        emp_id = emp["id"]
+        hourly_rate = emp.get("hourly_rate") or default_rate
+        
+        # Get this employee's time entries
+        entries = await db.time_entries.find({"user_id": emp_id}, {"_id": 0}).to_list(1000)
+        
+        # Calculate period_hours exactly like Employee Portal backend does
+        emp_period_hours = 0
+        emp_month_hours = 0
         emp_year_hours = 0
-        for entry in all_entries:
-            if entry.get("user_id") != emp_id:
-                continue
-            clock_in_dt = parse_clock_in(entry)
-            if clock_in_dt and year_start <= clock_in_dt < year_end:
-                emp_year_hours += entry.get("total_hours", 0) or 0
+        
+        for entry in entries:
+            hours = entry.get("total_hours", 0) or 0
+            clock_in_str = entry.get("clock_in", "")
+            
+            try:
+                clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
+                
+                # Current pay period
+                if period_start <= clock_in_dt <= period_end:
+                    emp_period_hours += hours
+                
+                # Current month
+                if month_start <= clock_in_dt < month_end:
+                    emp_month_hours += hours
+                
+                # Current year
+                if year_start <= clock_in_dt < year_end:
+                    emp_year_hours += hours
+            except:
+                pass
+        
+        # Now calculate pay EXACTLY like Employee Portal frontend does:
+        # formatCurrency(roundHoursToMinute(summary.period_hours) * summary.hourly_rate)
+        if emp_period_hours > 0:
+            rounded = round_hours_to_minute(emp_period_hours)
+            current_period_amount += rounded * hourly_rate
+            current_period_hours += emp_period_hours
+        
+        if emp_month_hours > 0:
+            rounded = round_hours_to_minute(emp_month_hours)
+            month_total += rounded * hourly_rate
         
         if emp_year_hours > 0:
-            rounded_hours = round_hours_to_minute(emp_year_hours)
-            year_total += round(rounded_hours * emp_rate, 2)
+            rounded = round_hours_to_minute(emp_year_hours)
+            year_total += rounded * hourly_rate
     
     return {
         "current_period": {
