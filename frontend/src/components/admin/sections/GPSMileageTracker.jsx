@@ -808,12 +808,16 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
           { description: `Tax deduction: $${response.data.tax_deduction}` }
         );
         
-        // Reset state
-        isCompletingRef.current = false; // Reset the completing flag
+        // Reset ALL state including start point refs for next trip
+        isCompletingRef.current = false;
+        startPointInternalRef.current = null; // CRITICAL: Reset for next trip
+        lastValidLocationRef.current = null;
+        locationBufferRef.current = [];
         setActiveTrip(null);
         setTrackingStatus("idle");
         setCompletionData({ purpose: "", notes: "", receipt: null });
         setLocationCount(0);
+        setRecordedLocations([]);
         
         // Notify parent
         if (onTripCompleted) {
@@ -854,12 +858,16 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       
       await axios.delete(`${API}/admin/gps-trips/${activeTrip.id}`, getAuthHeader());
       
-      // Reset state
-      isCompletingRef.current = false; // Reset the completing flag
+      // Reset ALL state including start point refs
+      isCompletingRef.current = false;
+      startPointInternalRef.current = null; // CRITICAL: Reset start point for next trip
+      lastValidLocationRef.current = null;
+      locationBufferRef.current = [];
       setActiveTrip(null);
       setTrackingStatus("idle");
       setCompletionData({ purpose: "", notes: "", receipt: null });
       setLocationCount(0);
+      setRecordedLocations([]);
       
       // Notify parent
       if (onTripCompleted) {
