@@ -96,11 +96,13 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
                 employee_period_hours[user_id] = employee_period_hours.get(user_id, 0) + hours
     
     # Calculate pay by rounding each employee's total hours, then multiplying by rate
+    # Round the final amount to 2 decimal places to match frontend display
     current_period_amount = 0
     for user_id, total_hours in employee_period_hours.items():
         emp_rate = employee_rates.get(user_id, default_rate)
         rounded_hours = round_hours_to_minute(total_hours)
-        current_period_amount += rounded_hours * emp_rate
+        employee_pay = round(rounded_hours * emp_rate, 2)  # Round each employee's pay
+        current_period_amount += employee_pay
     
     # Filter entries for current month - track per employee then round totals
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
