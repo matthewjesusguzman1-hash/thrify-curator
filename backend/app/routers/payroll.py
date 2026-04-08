@@ -81,49 +81,67 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     period_start_dt = datetime.combine(period_start, datetime.min.time()).replace(tzinfo=timezone.utc)
     period_end_dt = datetime.combine(period_end + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
     
+    # Track hours per employee, then calculate pay from rounded totals
+    # This matches how Employee Dashboard calculates pay
+    employee_period_hours = {}
     current_period_hours = 0
-    current_period_amount = 0
+    
     for entry in all_entries:
         clock_in_dt = parse_clock_in(entry)
         if clock_in_dt and period_start_dt <= clock_in_dt < period_end_dt:
             hours = entry.get("total_hours") or 0
             current_period_hours += hours
-            # Use user_id (not employee_id) to match time_entries schema
-            emp_rate = employee_rates.get(entry.get("user_id"), default_rate)
-            # Use rounded hours for pay calculation
-            rounded_hours = round_hours_to_minute(hours)
-            current_period_amount += rounded_hours * emp_rate
+            user_id = entry.get("user_id")
+            if user_id:
+                employee_period_hours[user_id] = employee_period_hours.get(user_id, 0) + hours
     
-    # Filter entries for current month
+    # Calculate pay by rounding each employee's total hours, then multiplying by rate
+    current_period_amount = 0
+    for user_id, total_hours in employee_period_hours.items():
+        emp_rate = employee_rates.get(user_id, default_rate)
+        rounded_hours = round_hours_to_minute(total_hours)
+        current_period_amount += rounded_hours * emp_rate
+    
+    # Filter entries for current month - track per employee then round totals
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     if now.month == 12:
         month_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     else:
         month_end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    month_total = 0
+    employee_month_hours = {}
     for entry in all_entries:
         clock_in_dt = parse_clock_in(entry)
         if clock_in_dt and month_start <= clock_in_dt < month_end:
             hours = entry.get("total_hours") or 0
-            emp_rate = employee_rates.get(entry.get("user_id"), default_rate)
-            rounded_hours = round_hours_to_minute(hours)
-            month_total += rounded_hours * emp_rate
+            user_id = entry.get("user_id")
+            if user_id:
+                employee_month_hours[user_id] = employee_month_hours.get(user_id, 0) + hours
     
-    # Filter entries for current year
+    month_total = 0
+    for user_id, total_hours in employee_month_hours.items():
+        emp_rate = employee_rates.get(user_id, default_rate)
+        rounded_hours = round_hours_to_minute(total_hours)
+        month_total += rounded_hours * emp_rate
+    
+    # Filter entries for current year - track per employee then round totals
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     year_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    year_total = 0
+    employee_year_hours = {}
     for entry in all_entries:
         clock_in_dt = parse_clock_in(entry)
         if clock_in_dt and year_start <= clock_in_dt < year_end:
             hours = entry.get("total_hours") or 0
-            # Use user_id (not employee_id) to match time_entries schema
-            emp_rate = employee_rates.get(entry.get("user_id"), default_rate)
-            # Use rounded hours for pay calculation
-            rounded_hours = round_hours_to_minute(hours)
-            year_total += rounded_hours * emp_rate
+            user_id = entry.get("user_id")
+            if user_id:
+                employee_year_hours[user_id] = employee_year_hours.get(user_id, 0) + hours
+    
+    year_total = 0
+    for user_id, total_hours in employee_year_hours.items():
+        emp_rate = employee_rates.get(user_id, default_rate)
+        rounded_hours = round_hours_to_minute(total_hours)
+        year_total += rounded_hours * emp_rate
     
     return {
         "current_period": {

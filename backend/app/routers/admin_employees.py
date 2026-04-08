@@ -256,24 +256,22 @@ async def get_employee_entries(employee_id: str, admin: dict = Depends(get_admin
 @router.get("/employee/{employee_id}/summary")
 async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get_admin_user)):
     """Get summary statistics for a specific employee."""
+    from app.services.helpers import get_biweekly_period
+    
     employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
-    now = datetime.now(timezone.utc)
+    # Use the consistent biweekly period helper
+    period_start, period_end = get_biweekly_period(period_index=0)
+    
+    # Ensure timezone awareness
+    if period_start.tzinfo is None:
+        period_start = period_start.replace(tzinfo=timezone.utc)
+    if period_end.tzinfo is None:
+        period_end = period_end.replace(tzinfo=timezone.utc)
     
     settings = await db.payroll_settings.find_one({}, {"_id": 0})
-    if settings and settings.get("pay_period_start_date"):
-        start_str = settings["pay_period_start_date"]
-        period_start = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
-        if period_start.tzinfo is None:
-            period_start = period_start.replace(tzinfo=timezone.utc)
-        while period_start + timedelta(days=14) < now:
-            period_start += timedelta(days=14)
-    else:
-        period_start = now - timedelta(days=14)
-    
-    period_end = period_start + timedelta(days=14)
     
     entries = await db.time_entries.find({
         "user_id": employee_id
@@ -294,7 +292,7 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
                 entry_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
                 if entry_time.tzinfo is None:
                     entry_time = entry_time.replace(tzinfo=timezone.utc)
-                if period_start <= entry_time < period_end:
+                if period_start <= entry_time <= period_end:
                     period_hours += hours
                     period_shifts += 1
             except (ValueError, TypeError):
@@ -305,12 +303,12 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
         hourly_rate = settings.get("default_hourly_rate", 15.0) if settings else 15.0
     
     return {
-        "period_hours": period_hours,
+        "period_hours": round(period_hours, 2),
         "period_shifts": period_shifts,
-        "total_hours": total_hours,
+        "total_hours": round(total_hours, 2),
         "total_shifts": total_shifts,
         "hourly_rate": hourly_rate,
-        "estimated_pay": period_hours * hourly_rate,
+        "estimated_pay": round(period_hours * hourly_rate, 2),
         "period_start": period_start.isoformat(),
         "period_end": period_end.isoformat()
     }
