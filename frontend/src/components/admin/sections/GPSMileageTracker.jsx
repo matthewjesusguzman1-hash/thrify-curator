@@ -93,7 +93,7 @@ const MAX_REASONABLE_SPEED_MPH = 85;
 // Check if a new point is a "bounce-back" to an earlier location
 // This happens when GPS reports stale/cached coordinates
 const isBounceBackInternal = (newPoint, recentPoints, startPoint) => {
-  if (!startPoint || recentPoints.length < 3) return false;
+  if (!startPoint || recentPoints.length < 5) return false; // Need more points before filtering
   
   const distFromStart = calculateDistance(
     startPoint.latitude, startPoint.longitude,
@@ -102,7 +102,7 @@ const isBounceBackInternal = (newPoint, recentPoints, startPoint) => {
   
   // Get the furthest point from start in recent history
   let maxDistFromStart = 0;
-  for (const pt of recentPoints.slice(-10)) { // Check last 10 points
+  for (const pt of recentPoints.slice(-15)) { // Check last 15 points
     const dist = calculateDistance(
       startPoint.latitude, startPoint.longitude,
       pt.latitude, pt.longitude
@@ -112,24 +112,35 @@ const isBounceBackInternal = (newPoint, recentPoints, startPoint) => {
     }
   }
   
-  // If we've traveled at least 0.1 miles from start, and new point
-  // is significantly closer to start (jumped back more than 50% of progress)
-  if (maxDistFromStart > 0.1 && distFromStart < maxDistFromStart * 0.5) {
+  // If we've traveled at least 0.2 miles from start, and new point
+  // is significantly closer to start (jumped back more than 70% of progress)
+  // Made more lenient: 0.2 mile threshold and 30% (0.3) instead of 50%
+  if (maxDistFromStart > 0.2 && distFromStart < maxDistFromStart * 0.3) {
     console.log(`[GPS Internal] BOUNCE-BACK detected! New point is ${distFromStart.toFixed(3)}mi from start, but we reached ${maxDistFromStart.toFixed(3)}mi`);
     return true;
   }
   
-  // Also check if point is very close to any of the last 5-10 points (excluding last 2)
-  const pointsToCheck = recentPoints.slice(-10, -2);
+  // Check if point is very close to any of the last 8-15 points (excluding last 3)
+  // Reduced threshold to be less aggressive
+  const pointsToCheck = recentPoints.slice(-15, -3);
   for (const oldPoint of pointsToCheck) {
     const distToOld = calculateDistance(
       oldPoint.latitude, oldPoint.longitude,
       newPoint.latitude, newPoint.longitude
     );
-    // If new point is within 0.02 miles (100 feet) of an old point, likely a bounce
-    if (distToOld < 0.02) {
-      console.log(`[GPS Internal] BOUNCE-BACK to old point detected! Distance to old point: ${(distToOld * 5280).toFixed(0)} feet`);
-      return true;
+    // If new point is within 0.01 miles (50 feet) of an old point AND
+    // that old point is far from current position (actual bounce-back)
+    if (distToOld < 0.01) {
+      const lastPoint = recentPoints[recentPoints.length - 1];
+      const distOldToLast = calculateDistance(
+        oldPoint.latitude, oldPoint.longitude,
+        lastPoint.latitude, lastPoint.longitude
+      );
+      // Only reject if the old point is far from where we are now
+      if (distOldToLast > 0.05) { // Old point is more than 250 feet from current position
+        console.log(`[GPS Internal] BOUNCE-BACK to old point detected! Distance to old point: ${(distToOld * 5280).toFixed(0)} feet`);
+        return true;
+      }
     }
   }
   

@@ -27,7 +27,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 // Check if a new point is a "bounce-back" to an earlier location
 // This happens when GPS reports stale/cached coordinates
 const isBounceBack = (newPoint, recentPoints, startPoint) => {
-  if (!startPoint || recentPoints.length < 3) return false;
+  if (!startPoint || recentPoints.length < 5) return false; // Need more points before filtering
   
   const distFromStart = calculateDistance(
     startPoint.latitude, startPoint.longitude,
@@ -36,7 +36,7 @@ const isBounceBack = (newPoint, recentPoints, startPoint) => {
   
   // Get the furthest point from start in recent history
   let maxDistFromStart = 0;
-  for (const pt of recentPoints.slice(-10)) { // Check last 10 points
+  for (const pt of recentPoints.slice(-15)) { // Check last 15 points
     const dist = calculateDistance(
       startPoint.latitude, startPoint.longitude,
       pt.latitude, pt.longitude
@@ -46,25 +46,36 @@ const isBounceBack = (newPoint, recentPoints, startPoint) => {
     }
   }
   
-  // If we've traveled at least 0.1 miles from start, and new point
-  // is significantly closer to start (jumped back more than 50% of progress)
-  if (maxDistFromStart > 0.1 && distFromStart < maxDistFromStart * 0.5) {
+  // If we've traveled at least 0.2 miles from start, and new point
+  // is significantly closer to start (jumped back more than 70% of progress)
+  // Made more lenient: 0.2 mile threshold and 30% (0.3) instead of 50%
+  if (maxDistFromStart > 0.2 && distFromStart < maxDistFromStart * 0.3) {
     console.log(`[GPS] BOUNCE-BACK detected! New point is ${distFromStart.toFixed(3)}mi from start, but we reached ${maxDistFromStart.toFixed(3)}mi`);
     return true;
   }
   
-  // Also check if point is very close to any of the last 5-10 points (excluding last 2)
+  // Check if point is very close to any of the last 8-15 points (excluding last 3)
   // This catches the case where GPS jumps back to a recent position
-  const pointsToCheck = recentPoints.slice(-10, -2);
+  // Reduced threshold to 0.01 miles (50 feet) to be less aggressive
+  const pointsToCheck = recentPoints.slice(-15, -3);
   for (const oldPoint of pointsToCheck) {
     const distToOld = calculateDistance(
       oldPoint.latitude, oldPoint.longitude,
       newPoint.latitude, newPoint.longitude
     );
-    // If new point is within 0.02 miles (100 feet) of an old point, likely a bounce
-    if (distToOld < 0.02) {
-      console.log(`[GPS] BOUNCE-BACK to old point detected! Distance to old point: ${(distToOld * 5280).toFixed(0)} feet`);
-      return true;
+    // If new point is within 0.01 miles (50 feet) of an old point AND
+    // that old point is NOT close to the last point (to allow normal driving)
+    if (distToOld < 0.01) {
+      const lastPoint = recentPoints[recentPoints.length - 1];
+      const distOldToLast = calculateDistance(
+        oldPoint.latitude, oldPoint.longitude,
+        lastPoint.latitude, lastPoint.longitude
+      );
+      // Only reject if the old point is far from current position (actual bounce-back)
+      if (distOldToLast > 0.05) { // Old point is more than 250 feet from where we are now
+        console.log(`[GPS] BOUNCE-BACK to old point detected! Distance to old point: ${(distToOld * 5280).toFixed(0)} feet`);
+        return true;
+      }
     }
   }
   
@@ -166,9 +177,9 @@ export default function useGPSTracking() {
       );
 
       // Filter out extreme GPS jumps (> 2 miles in one reading)
-      // Also filter tiny movements < 0.01 miles (~50 feet) to reduce GPS jitter/noise
-      // GPS accuracy indoors or with obstructions can cause phantom movements
-      if (distance > 0.01 && distance < 2.0) {
+      // Reduced minimum from 0.01 to 0.002 miles (~10 feet) to capture more road curves
+      // Only filter truly tiny jitter movements
+      if (distance > 0.002 && distance < 2.0) {
         totalDistanceRef.current += distance;
         setTotalMiles(totalDistanceRef.current);
         console.log('Added distance:', distance.toFixed(4), 'Total:', totalDistanceRef.current.toFixed(4));
