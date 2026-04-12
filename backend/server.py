@@ -303,8 +303,7 @@ async def search_violations(
     if violation_category:
         query["violation_category"] = violation_category
     if reg_base:
-        escaped_base = re.escape(reg_base)
-        query["regulatory_reference"] = {"$regex": f"^{escaped_base}", "$options": "i"}
+        query["regulatory_reference"] = reg_base
     if oos:
         query["oos_value"] = oos.upper()
     if hazmat == "Y":
@@ -390,7 +389,7 @@ async def get_violation_tree():
                 label = label[:32] + "..."
             reg_labels[base] = label
 
-    # Main tree aggregation
+    # Main tree aggregation — use full regulatory_reference for each violation
     pipeline = [
         {"$addFields": {
             "reg_base": {"$arrayElemAt": [{"$split": ["$regulatory_reference", "("]}, 0]}
@@ -399,19 +398,21 @@ async def get_violation_tree():
             "_id": {
                 "violation_class": "$violation_class",
                 "violation_category": "$violation_category",
+                "reg_ref": "$regulatory_reference",
                 "reg_base": "$reg_base",
             },
             "count": {"$sum": 1}
         }},
-        {"$sort": {"_id.violation_class": 1, "_id.violation_category": 1, "_id.reg_base": 1}}
+        {"$sort": {"_id.violation_class": 1, "_id.violation_category": 1, "_id.reg_ref": 1}}
     ]
-    results = await db.violations.aggregate(pipeline).to_list(2000)
+    results = await db.violations.aggregate(pipeline).to_list(5000)
 
     tree = {}
     for r in results:
         cls = r["_id"]["violation_class"]
         cat = r["_id"]["violation_category"]
-        reg = (r["_id"].get("reg_base") or "").strip()
+        reg_ref = (r["_id"].get("reg_ref") or "").strip()
+        reg_base = (r["_id"].get("reg_base") or "").strip()
         if not cls:
             continue
 
@@ -425,10 +426,10 @@ async def get_violation_tree():
         if cat not in tree[cls]["categories"]:
             tree[cls]["categories"][cat] = {"count": 0, "sections": []}
         tree[cls]["categories"][cat]["count"] += r["count"]
-        if reg:
-            label = reg_labels.get(reg, "")
+        if reg_ref:
+            label = reg_labels.get(reg_base, "")
             tree[cls]["categories"][cat]["sections"].append({
-                "ref": reg, "count": r["count"], "label": label
+                "ref": reg_ref, "count": r["count"], "label": label
             })
 
     # Merge duplicate sections within a category (from class merging)
@@ -553,8 +554,7 @@ Example output: ["brake", "air brake system", "393.40", "393.48", "pushrod", "br
     if request.violation_category:
         mongo_query["violation_category"] = request.violation_category
     if request.reg_base:
-        escaped_base = re.escape(request.reg_base)
-        mongo_query["regulatory_reference"] = {"$regex": f"^{escaped_base}", "$options": "i"}
+        mongo_query["regulatory_reference"] = request.reg_base
     if request.hazmat == "Y":
         mongo_query["violation_class"] = "Hazardous Materials"
     elif request.hazmat == "N":
