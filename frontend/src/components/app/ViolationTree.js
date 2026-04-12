@@ -214,31 +214,31 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
 export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCategory, activeRegBase, onSelect }) {
   return (
     <>
-      {open && <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => onOpenChange(false)} />}
-      <div
-        className={`fixed inset-0 z-50 bg-white transform transition-transform duration-250 lg:hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
-        data-testid="tree-drawer"
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-[#002855]">
-          <div>
-            <span className="text-base font-semibold text-white block" style={{ fontFamily: "Outfit, sans-serif" }}>Violation Tree</span>
-            <span className="text-[10px] text-white/50">Browse and select violation types</span>
+      {/* Top panel tree for mobile — takes upper portion, violations visible below */}
+      {open && (
+        <div className="fixed inset-x-0 top-0 z-40 lg:hidden" style={{ height: "50vh" }}>
+          <div className="h-full bg-white border-b-2 border-[#D4AF37] shadow-lg flex flex-col">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b bg-[#002855] flex-shrink-0">
+              <div>
+                <span className="text-sm font-semibold text-white block" style={{ fontFamily: "Outfit, sans-serif" }}>Violation Tree</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 px-3 text-white/70 hover:text-white hover:bg-white/10 text-xs font-medium" data-testid="tree-drawer-close">
+                Done
+              </Button>
+            </div>
+            <ScrollArea className="flex-1">
+              <ViolationTree
+                activeClass={activeClass}
+                activeCategory={activeCategory}
+                activeRegBase={activeRegBase}
+                onSelect={onSelect}
+                className="py-2"
+                mobile
+              />
+            </ScrollArea>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-9 px-3 text-white/70 hover:text-white hover:bg-white/10 text-xs font-medium" data-testid="tree-drawer-close">
-            Done
-          </Button>
         </div>
-        <ScrollArea className="h-[calc(100vh-58px)]">
-          <ViolationTree
-            activeClass={activeClass}
-            activeCategory={activeCategory}
-            activeRegBase={activeRegBase}
-            onSelect={onSelect}
-            className="py-3"
-            mobile
-          />
-        </ScrollArea>
-      </div>
+      )}
     </>
   );
 }

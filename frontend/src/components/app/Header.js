@@ -1,4 +1,4 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, ClipboardList } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -25,6 +25,18 @@ const CVSA_LINKS = [
     url: "https://cvsa.org",
     description: "Training & resources",
     icon: GraduationCap,
+  },
+  {
+    label: "NSP Truck Guide",
+    url: "https://statepatrol.nebraska.gov/sites/default/files/2025-2026-Truck-Guide.pdf",
+    description: "NE State Patrol 2025-2026",
+    icon: Smartphone,
+  },
+  {
+    label: "FMCSA Portal",
+    url: "https://portal.fmcsa.gov",
+    description: "State user portal",
+    icon: Globe,
   },
 ];
 

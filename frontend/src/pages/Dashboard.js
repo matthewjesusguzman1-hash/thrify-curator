@@ -215,7 +215,7 @@ export default function Dashboard() {
           </ScrollArea>
         </aside>
 
-        <main className="flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 pb-20 space-y-3 sm:space-y-5">
+        <main className={`flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 pb-20 space-y-3 sm:space-y-5 ${treeDrawerOpen ? "lg:pt-4 pt-[calc(50vh+8px)]" : ""}`}>
           {/* Mobile tree button + Search */}
           <div className="flex gap-2 items-stretch">
             <button
