@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { FolderTree } from "lucide-react";
 import { Header } from "../components/app/Header";
 import { SearchBar } from "../components/app/SearchBar";
 import { FilterBar } from "../components/app/FilterBar";
@@ -7,12 +8,15 @@ import { ActiveFilters } from "../components/app/ActiveFilters";
 import { ViolationTable, ALL_COLUMNS } from "../components/app/ViolationTable";
 import { UploadDialog } from "../components/app/UploadDialog";
 import { SimilarViolationsSheet } from "../components/app/SimilarViolationsSheet";
+import { ViolationTree, ViolationTreeDrawer } from "../components/app/ViolationTree";
+import { ScrollArea } from "../components/ui/scroll-area";
 import { Toaster, toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const INITIAL_FILTERS = {
   violation_class: "",
+  violation_category: "",
   oos: "",
   hazmat: "",
   level_iii: "",
@@ -46,6 +50,7 @@ export default function Dashboard() {
   const [columnOrder, setColumnOrder] = useState(
     ALL_COLUMNS.map((c) => c.key)
   );
+  const [treeDrawerOpen, setTreeDrawerOpen] = useState(false);
 
   // Load filter options and stats on mount
   useEffect(() => {
@@ -176,6 +181,16 @@ export default function Dashboard() {
     setSheetOpen(true);
   };
 
+  const handleTreeSelect = (cls, cat) => {
+    setPage(1);
+    setFilters((prev) => ({
+      ...prev,
+      violation_class: cls,
+      violation_category: cat,
+      hazmat: "", // Clear hazmat when using tree
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-[#EFF2F7]" data-testid="dashboard">
       <Toaster position="top-right" richColors />
@@ -184,16 +199,41 @@ export default function Dashboard() {
         stats={stats}
       />
 
-      <main className="max-w-[1440px] mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-20 space-y-3 sm:space-y-5">
-        {/* Search */}
-        <SearchBar
-          keyword={keyword}
-          onKeywordChange={setKeyword}
-          onSearch={handleSearch}
-          aiMode={aiMode}
-          onAiModeChange={setAiMode}
-          isSearching={isSearching}
-        />
+      <div className="max-w-[1600px] mx-auto flex">
+        {/* Desktop tree sidebar */}
+        <aside className="hidden lg:block w-[260px] flex-shrink-0 border-r bg-white sticky top-[52px] h-[calc(100vh-52px)]">
+          <ScrollArea className="h-full">
+            <ViolationTree
+              activeClass={filters.violation_class}
+              activeCategory={filters.violation_category}
+              onSelect={handleTreeSelect}
+              className="py-3"
+            />
+          </ScrollArea>
+        </aside>
+
+        <main className="flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 pb-20 space-y-3 sm:space-y-5">
+          {/* Mobile tree button + Search */}
+          <div className="flex gap-2 items-stretch">
+            <button
+              onClick={() => setTreeDrawerOpen(true)}
+              className="lg:hidden flex items-center justify-center w-10 h-10 border border-[#CBD5E1] rounded-lg bg-white text-[#64748B] hover:text-[#002855] hover:border-[#002855] transition-colors flex-shrink-0"
+              data-testid="tree-drawer-btn"
+              title="Browse by type"
+            >
+              <FolderTree className="w-4 h-4" />
+            </button>
+            <div className="flex-1">
+              <SearchBar
+                keyword={keyword}
+                onKeywordChange={setKeyword}
+                onSearch={handleSearch}
+                aiMode={aiMode}
+                onAiModeChange={setAiMode}
+                isSearching={isSearching}
+              />
+            </div>
+          </div>
 
         {/* Filters */}
         <FilterBar
@@ -227,6 +267,16 @@ export default function Dashboard() {
           onColumnOrderChange={setColumnOrder}
         />
       </main>
+      </div>
+
+      {/* Mobile tree drawer */}
+      <ViolationTreeDrawer
+        open={treeDrawerOpen}
+        onOpenChange={setTreeDrawerOpen}
+        activeClass={filters.violation_class}
+        activeCategory={filters.violation_category}
+        onSelect={handleTreeSelect}
+      />
 
       {/* Upload Dialog */}
       <UploadDialog

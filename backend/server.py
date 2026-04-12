@@ -272,6 +272,7 @@ async def _load_dataframe(df):
 async def search_violations(
     keyword: str = Query("", description="Keyword search in violation text, regulatory reference, violation code"),
     violation_class: str = Query("", description="Filter by violation class"),
+    violation_category: str = Query("", description="Filter by violation category"),
     oos: str = Query("", description="Filter by OOS value (Y/N)"),
     hazmat: str = Query("", description="Filter hazmat only (Y=only hazmat, N=exclude hazmat)"),
     level_iii: str = Query("", description="Filter by Level III (Y/N)"),
@@ -296,6 +297,8 @@ async def search_violations(
 
     if violation_class:
         query["violation_class"] = violation_class
+    if violation_category:
+        query["violation_category"] = violation_category
     if oos:
         query["oos_value"] = oos.upper()
     if hazmat == "Y":
@@ -354,6 +357,36 @@ async def get_filter_options():
         cfr_parts=sorted([v for v in cfr_parts if v]),
         oos_values=sorted([v for v in oos_values if v]),
     )
+
+
+@api_router.get("/violations/tree")
+async def get_violation_tree():
+    pipeline = [
+        {"$group": {
+            "_id": {"violation_class": "$violation_class", "violation_category": "$violation_category"},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id.violation_class": 1, "_id.violation_category": 1}}
+    ]
+    results = await db.violations.aggregate(pipeline).to_list(200)
+
+    tree = {}
+    for r in results:
+        cls = r["_id"]["violation_class"]
+        cat = r["_id"]["violation_category"]
+        if not cls:
+            continue
+        if cls not in tree:
+            tree[cls] = {"count": 0, "categories": []}
+        tree[cls]["count"] += r["count"]
+        tree[cls]["categories"].append({"name": cat, "count": r["count"]})
+
+    # Sort categories within each class
+    for cls in tree:
+        tree[cls]["categories"].sort(key=lambda x: x["name"])
+
+    return {"tree": tree}
+
 
 
 @api_router.post("/violations/smart-search", response_model=SmartSearchResponse)
