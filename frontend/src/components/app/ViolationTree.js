@@ -33,11 +33,6 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
     finally { setLoading(false); }
   };
 
-  // Toggle expand - ONLY called by chevron clicks
-  const toggleExp = (key) => setExp((p) => ({ ...p, [key]: !p[key] }));
-  // Ensure expanded - called when selecting to auto-open without toggling
-  const ensureExp = (key) => setExp((p) => ({ ...p, [key]: true }));
-
   const hasFilter = activeClass || activeCategory || activeRegBase;
 
   if (loading) {
@@ -79,25 +74,32 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
 
           return (
             <div key={section.key}>
-              {/* Section header */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-md mx-1 transition-colors ${isActive ? "bg-[#002855] text-white" : "hover:bg-[#F1F5F9]"}`}>
-                <button onClick={() => toggleExp(sKey)} className={`flex-shrink-0 ${isActive ? "text-white/70" : "text-[#94A3B8]"}`}>
+              {/* Section header - entire row is clickable, sets filter + always expands */}
+              <div
+                onClick={() => {
+                  if (section.key !== "_other") {
+                    onSelect(isActive ? "" : section.key, "", "");
+                  }
+                  // Always expand, never collapse from row click
+                  setExp((p) => ({ ...p, [sKey]: true }));
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md mx-1 cursor-pointer transition-colors ${isActive ? "bg-[#002855] text-white" : "hover:bg-[#F1F5F9]"}`}
+              >
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExp((p) => ({ ...p, [sKey]: !p[sKey] }));
+                  }}
+                  className={`flex-shrink-0 cursor-pointer ${isActive ? "text-white/70" : "text-[#94A3B8]"}`}
+                >
                   {isExp ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                </button>
+                </span>
                 <div className={`flex items-center justify-center w-5 h-5 rounded flex-shrink-0 ${isActive ? "bg-white/20" : section.color}`}>
                   <Icon className="w-3 h-3" />
                 </div>
-                <button
-                  onClick={() => {
-                    if (section.key !== "_other") {
-                      onSelect(isActive ? "" : section.key, "", "");
-                    }
-                    ensureExp(sKey);
-                  }}
-                  className={`flex-1 text-left text-xs font-semibold ${isActive ? "text-white" : "text-[#334155]"}`}
-                >
+                <span className={`flex-1 text-left text-xs font-semibold ${isActive ? "text-white" : "text-[#334155]"}`}>
                   {section.label}
-                </button>
+                </span>
                 <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>{data.count}</span>
               </div>
 
@@ -112,21 +114,31 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
 
                     return (
                       <div key={`${catClass}-${cat.name}`}>
-                        <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-colors ${isCatActive ? "bg-[#002855]/10" : "hover:bg-[#F8FAFC]"}`}>
+                        {/* Category row - entire row clickable, sets filter + always expands sub-sections */}
+                        <div
+                          onClick={() => {
+                            onSelect(catClass, isCatActive ? "" : cat.name, "");
+                            // Always expand, never collapse from row click
+                            if (cat.sections?.length) {
+                              setExp((p) => ({ ...p, [cKey]: true }));
+                            }
+                          }}
+                          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${isCatActive ? "bg-[#002855]/10" : "hover:bg-[#F8FAFC]"}`}
+                        >
                           {cat.sections?.length > 0 ? (
-                            <button onClick={() => toggleExp(cKey)} className="text-[#CBD5E1] flex-shrink-0">
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExp((p) => ({ ...p, [cKey]: !p[cKey] }));
+                              }}
+                              className="text-[#CBD5E1] flex-shrink-0 cursor-pointer"
+                            >
                               {isCatExp ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                            </button>
+                            </span>
                           ) : <span className="w-3" />}
-                          <button
-                            onClick={() => {
-                              onSelect(catClass, isCatActive ? "" : cat.name, "");
-                              ensureExp(cKey);
-                            }}
-                            className={`flex-1 text-left text-[11px] truncate ${isCatActive ? "font-semibold text-[#002855]" : "text-[#64748B]"}`}
-                          >
+                          <span className={`flex-1 text-left text-[11px] truncate ${isCatActive ? "font-semibold text-[#002855]" : "text-[#64748B]"}`}>
                             {cat.name}
-                          </button>
+                          </span>
                           <span className={`text-[9px] flex-shrink-0 ${isCatActive ? "text-[#002855]" : "text-[#CBD5E1]"}`}>{cat.count}</span>
                         </div>
 
@@ -136,12 +148,10 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                             {cat.sections.map((sec) => {
                               const isSecActive = activeClass === catClass && activeCategory === cat.name && activeRegBase === sec.ref;
                               return (
-                                <button
+                                <div
                                   key={sec.ref}
                                   onClick={() => onSelect(catClass, cat.name, isSecActive ? "" : sec.ref)}
-                                  className={`w-full text-left px-2 py-1 rounded transition-colors ${
-                                    isSecActive ? "bg-[#D4AF37]/15" : "hover:bg-[#F8FAFC]"
-                                  }`}
+                                  className={`px-2 py-1 rounded cursor-pointer transition-colors ${isSecActive ? "bg-[#D4AF37]/15" : "hover:bg-[#F8FAFC]"}`}
                                 >
                                   <div className="flex items-center justify-between">
                                     <span className={`text-[10px] font-mono ${isSecActive ? "text-[#002855] font-semibold" : "text-[#64748B]"}`}>
@@ -154,7 +164,7 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                                       {sec.label}
                                     </p>
                                   )}
-                                </button>
+                                </div>
                               );
                             })}
                           </div>
@@ -199,5 +209,3 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
     </>
   );
 }
-
-// Need X icon for drawer close - already imported above
