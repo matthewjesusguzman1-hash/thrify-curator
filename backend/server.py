@@ -269,14 +269,44 @@ async def smart_search(request: SmartSearchRequest):
 
     api_key = os.environ.get('EMERGENT_LLM_KEY', '')
 
+    # Gather context: unique violation categories and sample violation texts
+    categories = await db.violations.distinct("violation_category")
+    cat_list = ", ".join(sorted([c for c in categories if c])[:30])
+
+    # Get a sample of violation texts for context
+    sample_pipeline = [{"$sample": {"size": 30}}, {"$project": {"_id": 0, "regulatory_reference": 1, "violation_text": 1, "cfr_part": 1}}]
+    samples = await db.violations.aggregate(sample_pipeline).to_list(30)
+    sample_text = "\n".join([f"- {s.get('regulatory_reference','')} (CFR {s.get('cfr_part','')}): {s.get('violation_text','')[:120]}" for s in samples])
+
     try:
         chat = LlmChat(
             api_key=api_key,
             session_id=f"smart-search-{uuid.uuid4()}",
-            system_message="""You are a search query expansion assistant for FMCSA commercial vehicle violations.
-Given a user's search query, generate a list of 5-10 specific keywords and phrases that would help find relevant violations in a database.
-Include regulatory terms, synonyms, related concepts, and common abbreviations used in DOT/FMCSA regulations.
-Return ONLY a JSON array of strings, nothing else. Example: ["brake", "air brake", "stopping distance", "393.48"]"""
+            system_message=f"""You are an expert search assistant for FMCSA roadside inspection violations under 49 CFR (Code of Federal Regulations, Title 49 - Transportation).
+
+Your job: given a user's search query, generate 8-15 specific keywords, phrases, CFR section numbers, and regulatory terms that would match relevant violations in a database.
+
+USE YOUR KNOWLEDGE OF 49 CFR TO EXPAND SEARCHES:
+- If someone searches "brakes", include specific CFR sections like "393.40", "393.42", "393.45", "393.47", "393.48" and terms like "air brake", "hydraulic brake", "parking brake", "brake hose", "brake drum", "brake adjustment", "pushrod"
+- If someone searches "tires", include "393.75", "tread depth", "flat tire", "tire inflation", "sidewall", "recap"
+- If someone searches "lights", include "393.9", "393.11", "393.17", "393.24", "393.25", "turn signal", "clearance lamp", "reflector", "headlamp"
+- If someone searches "hours of service" or "fatigue", include "395.3", "395.8", "driving time", "logbook", "ELD", "record of duty"
+- If someone searches "hazmat" or "dangerous goods", include "171", "172", "173", "177", "178", "placarding", "shipping papers", "markings", "packaging"
+- If someone searches "weight" or "overweight", include "392.2", "gross weight", "axle weight", "bridge formula"
+- If someone searches "CDL" or "license", include "383", "endorsement", "restriction", "medical certificate"
+
+VIOLATION CATEGORIES IN THE DATABASE: {cat_list}
+
+SAMPLE VIOLATIONS FOR CONTEXT:
+{sample_text}
+
+Return ONLY a JSON array of strings. Include a mix of:
+1. Plain English terms and synonyms
+2. Specific CFR section numbers (e.g., "393.48", "395.8")  
+3. Regulatory phrases from the actual CFR text
+4. Common abbreviations (e.g., "CMV", "HM", "OOS", "ELD")
+
+Example output: ["brake", "air brake system", "393.40", "393.48", "pushrod", "brake adjustment", "stopping distance", "hydraulic"]"""
         ).with_model("openai", "gpt-4.1-mini")
 
         user_msg = UserMessage(text=f"Search query: {query_text}")
