@@ -1,0 +1,262 @@
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
+import { Header } from "../components/app/Header";
+import { Plus, Trash2, ChevronLeft, Camera, FileText, Mail, Pencil, Check, X, Image, ExternalLink } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Badge } from "../components/ui/badge";
+import { Toaster, toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+} from "../components/ui/dialog";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+export default function InspectionDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [inspection, setInspection] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [editingItemNotes, setEditingItemNotes] = useState(null);
+  const [itemNotesDraft, setItemNotesDraft] = useState("");
+  const [previewPhoto, setPreviewPhoto] = useState(null);
+
+  const fetchInspection = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/inspections/${id}`);
+      setInspection(res.data);
+    } catch {
+      toast.error("Failed to load inspection");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => { fetchInspection(); }, [fetchInspection]);
+
+  const saveTitle = async () => {
+    await axios.put(`${API}/inspections/${id}`, { title: titleDraft });
+    setEditingTitle(false);
+    fetchInspection();
+  };
+
+  const saveNotes = async () => {
+    await axios.put(`${API}/inspections/${id}`, { notes: notesDraft });
+    setEditingNotes(false);
+    fetchInspection();
+  };
+
+  const saveItemNotes = async (itemId) => {
+    await axios.put(`${API}/inspections/${id}/violations/${itemId}/notes`, { notes: itemNotesDraft });
+    setEditingItemNotes(null);
+    fetchInspection();
+  };
+
+  const removeItem = async (itemId) => {
+    await axios.delete(`${API}/inspections/${id}/violations/${itemId}`);
+    fetchInspection();
+    toast.success("Violation removed");
+  };
+
+  const handlePhotoUpload = async (itemId, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await axios.post(`${API}/inspections/${id}/violations/${itemId}/photos`, formData);
+      fetchInspection();
+      toast.success("Photo added");
+    } catch {
+      toast.error("Photo upload failed");
+    }
+  };
+
+  const removePhoto = async (itemId, photoId) => {
+    await axios.delete(`${API}/inspections/${id}/violations/${itemId}/photos/${photoId}`);
+    fetchInspection();
+  };
+
+  const handleExport = (includePhotos) => {
+    const url = `${API}/inspections/${id}/export?include_photos=${includePhotos ? "Y" : "N"}`;
+    window.open(url, "_blank");
+  };
+
+  const handleEmail = () => {
+    const exportUrl = `${API}/inspections/${id}/export?include_photos=Y`;
+    const subject = encodeURIComponent(inspection?.title || "Inspection Report");
+    const body = encodeURIComponent(`Inspection Report: ${inspection?.title}\n\nView the full report here:\n${exportUrl}\n\nViolations: ${inspection?.items?.length || 0}`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#EFF2F7]">
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-[#002855] border-t-transparent rounded-full loading-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!inspection) return null;
+
+  return (
+    <div className="min-h-screen bg-[#EFF2F7]" data-testid="inspection-detail">
+      <Toaster position="top-right" richColors />
+      {/* Compact header */}
+      <div className="sticky top-0 z-50 bg-[#002855] border-b border-[#001a3a]">
+        <div className="max-w-[800px] mx-auto px-3 sm:px-6 py-2 flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/inspections")} className="text-white/70 hover:text-white hover:bg-white/10 h-8 px-2" data-testid="back-btn">
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          {editingTitle ? (
+            <div className="flex items-center gap-2 flex-1">
+              <Input value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} className="h-8 text-sm bg-white/10 border-white/20 text-white" autoFocus onKeyDown={(e) => e.key === "Enter" && saveTitle()} />
+              <Button size="sm" onClick={saveTitle} className="h-8 w-8 p-0 bg-[#D4AF37] text-[#002855]"><Check className="w-3.5 h-3.5" /></Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditingTitle(false)} className="h-8 w-8 p-0 text-white/60"><X className="w-3.5 h-3.5" /></Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <h1 className="text-sm sm:text-base font-semibold text-white truncate" style={{ fontFamily: "Outfit, sans-serif" }}>{inspection.title}</h1>
+              <button onClick={() => { setTitleDraft(inspection.title); setEditingTitle(true); }} className="text-white/40 hover:text-white/80"><Pencil className="w-3 h-3" /></button>
+            </div>
+          )}
+        </div>
+        <div className="gold-accent h-[2px]" />
+      </div>
+
+      <main className="max-w-[800px] mx-auto px-3 sm:px-6 py-4 pb-20 space-y-4">
+        {/* Actions bar */}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => handleExport(false)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs" data-testid="export-btn">
+            <FileText className="w-3.5 h-3.5 mr-1" /> Export
+          </Button>
+          <Button size="sm" onClick={() => handleExport(true)} variant="outline" className="h-8 text-xs" data-testid="export-photos-btn">
+            <Image className="w-3.5 h-3.5 mr-1" /> Export with Photos
+          </Button>
+          <Button size="sm" onClick={handleEmail} variant="outline" className="h-8 text-xs" data-testid="email-btn">
+            <Mail className="w-3.5 h-3.5 mr-1" /> Email
+          </Button>
+        </div>
+
+        {/* Notes */}
+        <div className="bg-white rounded-lg border p-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Inspection Notes</span>
+            {!editingNotes && (
+              <button onClick={() => { setNotesDraft(inspection.notes || ""); setEditingNotes(true); }} className="text-[#94A3B8] hover:text-[#002855]"><Pencil className="w-3 h-3" /></button>
+            )}
+          </div>
+          {editingNotes ? (
+            <div className="flex flex-col gap-2">
+              <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} className="w-full border rounded-md p-2 text-sm min-h-[60px] resize-none" placeholder="Add inspection notes..." autoFocus />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={saveNotes} className="h-7 text-xs bg-[#002855] text-white">Save</Button>
+                <Button size="sm" variant="outline" onClick={() => setEditingNotes(false)} className="h-7 text-xs">Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-[#334155]">{inspection.notes || <span className="text-[#94A3B8] italic">No notes yet. Tap pencil to add.</span>}</p>
+          )}
+        </div>
+
+        {/* Violations list */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Violations ({inspection.items.length})</span>
+            <Button size="sm" variant="outline" onClick={() => navigate("/")} className="h-7 text-xs" data-testid="add-violation-btn">
+              <Plus className="w-3 h-3 mr-1" /> Add from Search
+            </Button>
+          </div>
+
+          {inspection.items.length === 0 ? (
+            <div className="bg-white rounded-lg border p-8 text-center">
+              <p className="text-sm text-[#64748B]">No violations saved yet.</p>
+              <Button size="sm" onClick={() => navigate("/")} className="mt-3 bg-[#002855] text-white h-8 text-xs">
+                <Plus className="w-3 h-3 mr-1" /> Search & Add Violations
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {inspection.items.map((item) => (
+                <div key={item.item_id} className="bg-white rounded-lg border p-3" data-testid={`inspection-item-${item.item_id}`}>
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="flex items-center flex-wrap gap-1.5">
+                      <span className="text-sm font-bold text-[#002855]">{item.regulatory_reference}</span>
+                      {item.oos_value === "Y" && <Badge variant="destructive" className="text-[9px] px-1.5 py-0 font-bold bg-[#DC2626] text-white">OOS</Badge>}
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0">{item.violation_class}</Badge>
+                    </div>
+                    <button onClick={() => removeItem(item.item_id)} className="text-[#CBD5E1] hover:text-[#DC2626] transition-colors flex-shrink-0" data-testid={`remove-item-${item.item_id}`}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-[#475569] leading-relaxed mb-2">{item.violation_text}</p>
+
+                  {/* Item notes */}
+                  {editingItemNotes === item.item_id ? (
+                    <div className="flex flex-col gap-1.5 mb-2">
+                      <textarea value={itemNotesDraft} onChange={(e) => setItemNotesDraft(e.target.value)} className="w-full border rounded-md p-2 text-xs min-h-[40px] resize-none" placeholder="Notes for this violation..." autoFocus />
+                      <div className="flex gap-1.5">
+                        <Button size="sm" onClick={() => saveItemNotes(item.item_id)} className="h-6 text-[10px] bg-[#002855] text-white px-2">Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingItemNotes(null)} className="h-6 text-[10px] px-2">Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setItemNotesDraft(item.notes || ""); setEditingItemNotes(item.item_id); }} className="text-xs text-[#94A3B8] hover:text-[#002855] mb-2 block">
+                      {item.notes ? <span className="text-[#64748B]">{item.notes}</span> : <span className="italic">+ Add notes</span>}
+                    </button>
+                  )}
+
+                  {/* Photos */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {item.photos?.map((photo) => (
+                      <div key={photo.photo_id} className="relative group">
+                        <img
+                          src={`${API}/files/${photo.storage_path}`}
+                          alt={photo.original_filename}
+                          className="w-16 h-16 object-cover rounded-md border cursor-pointer"
+                          onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
+                        />
+                        <button
+                          onClick={() => removePhoto(item.item_id, photo.photo_id)}
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] text-white rounded-full flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 sm:opacity-100"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add photo button */}
+                  <label className="inline-flex items-center gap-1 text-xs text-[#94A3B8] hover:text-[#002855] cursor-pointer transition-colors">
+                    <Camera className="w-3 h-3" />
+                    <span>Add photo</span>
+                    <input type="file" accept="image/*" capture="environment" onChange={(e) => handlePhotoUpload(item.item_id, e)} className="hidden" />
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Photo preview */}
+      {previewPhoto && (
+        <Dialog open={!!previewPhoto} onOpenChange={() => setPreviewPhoto(null)}>
+          <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+            <img src={previewPhoto} alt="Photo" className="w-full h-auto max-h-[80vh] object-contain rounded" />
+            <Button onClick={() => setPreviewPhoto(null)} className="w-full mt-2 bg-[#002855] text-white">Close</Button>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, ArrowRight, ExternalLink, X } from "lucide-react";
 import { Badge } from "../ui/badge";
+import { SaveToInspection } from "./SaveToInspection";
 import {
   Dialog,
   DialogContent,
@@ -98,11 +99,14 @@ export function SimilarViolationsSheet({ violation, open, onOpenChange }) {
                 <Badge variant="outline" className="text-[10px] px-2 py-0.5">{violation.violation_class}</Badge>
               </div>
               <p className="text-sm text-[#334155] leading-relaxed">{violation.violation_text}</p>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-[#64748B]">
-                <span><strong>Code:</strong> {violation.violation_code}</span>
-                <span><strong>CFR:</strong> {violation.cfr_part}</span>
-                <span><strong>Level III:</strong> {violation.level_iii}</span>
-                <span><strong>Critical:</strong> {violation.critical}</span>
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#64748B]">
+                  <span><strong>Code:</strong> {violation.violation_code}</span>
+                  <span><strong>CFR:</strong> {violation.cfr_part}</span>
+                  <span><strong>Level III:</strong> {violation.level_iii}</span>
+                  <span><strong>Critical:</strong> {violation.critical}</span>
+                </div>
+                <SaveToInspection violation={violation} className="flex-shrink-0" />
               </div>
             </div>
           </div>

@@ -1,10 +1,12 @@
-from fastapi import FastAPI, APIRouter, UploadFile, File, Query
+from fastapi import FastAPI, APIRouter, UploadFile, File, Query, HTTPException
+from fastapi.responses import Response, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import re
+import requests as http_requests
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
@@ -74,6 +76,90 @@ class SmartSearchResponse(BaseModel):
     original_query: str
 
 
+# Object Storage
+STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
+APP_NAME = "violation-navigator"
+storage_key = None
+
+def init_storage():
+    global storage_key
+    if storage_key:
+        return storage_key
+    key = os.environ.get("EMERGENT_LLM_KEY", "")
+    resp = http_requests.post(f"{STORAGE_URL}/init", json={"emergent_key": key}, timeout=30)
+    resp.raise_for_status()
+    storage_key = resp.json()["storage_key"]
+    return storage_key
+
+def put_object(path, data, content_type):
+    key = init_storage()
+    resp = http_requests.put(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key, "Content-Type": content_type},
+        data=data, timeout=120
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+def get_object(path):
+    key = init_storage()
+    resp = http_requests.get(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key}, timeout=60
+    )
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+
+# Inspection Models
+class InspectionPhoto(BaseModel):
+    photo_id: str = ""
+    storage_path: str = ""
+    original_filename: str = ""
+    content_type: str = ""
+    uploaded_at: str = ""
+
+class InspectionItem(BaseModel):
+    item_id: str = ""
+    violation_id: str = ""
+    regulatory_reference: str = ""
+    violation_text: str = ""
+    violation_class: str = ""
+    violation_code: str = ""
+    cfr_part: str = ""
+    oos_value: str = "N"
+    notes: str = ""
+    photos: List[InspectionPhoto] = []
+
+class InspectionModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = ""
+    title: str = ""
+    notes: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    items: List[InspectionItem] = []
+
+class CreateInspectionRequest(BaseModel):
+    title: str = ""
+
+class AddViolationRequest(BaseModel):
+    violation_id: str = ""
+    regulatory_reference: str = ""
+    violation_text: str = ""
+    violation_class: str = ""
+    violation_code: str = ""
+    cfr_part: str = ""
+    oos_value: str = "N"
+
+class UpdateInspectionRequest(BaseModel):
+    title: Optional[str] = None
+    notes: Optional[str] = None
+
+class UpdateItemNotesRequest(BaseModel):
+    notes: str = ""
+
+
 # Seed data on startup
 @app.on_event("startup")
 async def startup_event():
@@ -90,6 +176,12 @@ async def startup_event():
         ("violation_code", "text"),
         ("violation_category", "text"),
     ])
+    # Init object storage
+    try:
+        init_storage()
+        logger.info("Object storage initialized")
+    except Exception as e:
+        logger.error(f"Storage init failed: {e}")
 
 
 async def seed_data_from_url():
@@ -459,6 +551,212 @@ async def get_similar_violations(violation_id: str):
         "total": total,
         "source": Violation(**source),
     }
+
+
+
+# ========== INSPECTION ENDPOINTS ==========
+
+@api_router.post("/inspections")
+async def create_inspection(req: CreateInspectionRequest):
+    now = datetime.now(timezone.utc).isoformat()
+    inspection = {
+        "id": str(uuid.uuid4()),
+        "title": req.title or f"Inspection {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}",
+        "notes": "",
+        "created_at": now,
+        "updated_at": now,
+        "items": [],
+    }
+    await db.inspections.insert_one(inspection)
+    inspection.pop("_id", None)
+    return inspection
+
+
+@api_router.get("/inspections")
+async def list_inspections():
+    results = await db.inspections.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"inspections": results}
+
+
+@api_router.get("/inspections/{inspection_id}")
+async def get_inspection(inspection_id: str):
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    return doc
+
+
+@api_router.put("/inspections/{inspection_id}")
+async def update_inspection(inspection_id: str, req: UpdateInspectionRequest):
+    updates = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if req.title is not None:
+        updates["title"] = req.title
+    if req.notes is not None:
+        updates["notes"] = req.notes
+    result = await db.inspections.update_one({"id": inspection_id}, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    return doc
+
+
+@api_router.delete("/inspections/{inspection_id}")
+async def delete_inspection(inspection_id: str):
+    result = await db.inspections.delete_one({"id": inspection_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    return {"message": "Inspection deleted"}
+
+
+@api_router.post("/inspections/{inspection_id}/violations")
+async def add_violation_to_inspection(inspection_id: str, req: AddViolationRequest):
+    item = {
+        "item_id": str(uuid.uuid4()),
+        "violation_id": req.violation_id,
+        "regulatory_reference": req.regulatory_reference,
+        "violation_text": req.violation_text,
+        "violation_class": req.violation_class,
+        "violation_code": req.violation_code,
+        "cfr_part": req.cfr_part,
+        "oos_value": req.oos_value,
+        "notes": "",
+        "photos": [],
+    }
+    result = await db.inspections.update_one(
+        {"id": inspection_id},
+        {"$push": {"items": item}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    return item
+
+
+@api_router.delete("/inspections/{inspection_id}/violations/{item_id}")
+async def remove_violation_from_inspection(inspection_id: str, item_id: str):
+    result = await db.inspections.update_one(
+        {"id": inspection_id},
+        {"$pull": {"items": {"item_id": item_id}}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    return {"message": "Violation removed"}
+
+
+@api_router.put("/inspections/{inspection_id}/violations/{item_id}/notes")
+async def update_item_notes(inspection_id: str, item_id: str, req: UpdateItemNotesRequest):
+    result = await db.inspections.update_one(
+        {"id": inspection_id, "items.item_id": item_id},
+        {"$set": {"items.$.notes": req.notes, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"message": "Notes updated"}
+
+
+@api_router.post("/inspections/{inspection_id}/violations/{item_id}/photos")
+async def upload_photo(inspection_id: str, item_id: str, file: UploadFile = File(...)):
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files allowed")
+
+    data = await file.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    storage_path = f"{APP_NAME}/inspections/{inspection_id}/{item_id}/{uuid.uuid4()}.{ext}"
+
+    try:
+        result = put_object(storage_path, data, file.content_type)
+    except Exception as e:
+        logger.error(f"Photo upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Photo upload failed")
+
+    photo = {
+        "photo_id": str(uuid.uuid4()),
+        "storage_path": result["path"],
+        "original_filename": file.filename,
+        "content_type": file.content_type,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await db.inspections.update_one(
+        {"id": inspection_id, "items.item_id": item_id},
+        {"$push": {"items.$.photos": photo}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return photo
+
+
+@api_router.delete("/inspections/{inspection_id}/violations/{item_id}/photos/{photo_id}")
+async def delete_photo(inspection_id: str, item_id: str, photo_id: str):
+    await db.inspections.update_one(
+        {"id": inspection_id, "items.item_id": item_id},
+        {"$pull": {"items.$.photos": {"photo_id": photo_id}}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Photo removed"}
+
+
+@api_router.get("/files/{path:path}")
+async def serve_file(path: str):
+    try:
+        data, content_type = get_object(path)
+        return Response(content=data, media_type=content_type)
+    except Exception:
+        raise HTTPException(status_code=404, detail="File not found")
+
+
+@api_router.get("/inspections/{inspection_id}/export", response_class=HTMLResponse)
+async def export_inspection(inspection_id: str, include_photos: str = Query("N")):
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+
+    items_html = ""
+    for item in doc.get("items", []):
+        oos_badge = '<span style="background:#DC2626;color:white;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold;">OOS</span>' if item.get("oos_value") == "Y" else ""
+        photos_html = ""
+        if include_photos.upper() == "Y":
+            for photo in item.get("photos", []):
+                try:
+                    photo_data, ct = get_object(photo["storage_path"])
+                    import base64
+                    b64 = base64.b64encode(photo_data).decode()
+                    photos_html += f'<img src="data:{ct};base64,{b64}" style="max-width:300px;max-height:200px;margin:8px 4px;border-radius:4px;border:1px solid #ddd;" />'
+                except Exception:
+                    photos_html += f'<p style="color:#999;font-size:12px;">[Photo unavailable: {photo.get("original_filename", "")}]</p>'
+
+        notes_html = f'<p style="color:#64748B;font-size:13px;margin-top:6px;"><strong>Notes:</strong> {item.get("notes", "")}</p>' if item.get("notes") else ""
+
+        items_html += f'''
+        <div style="border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px;">
+            <div style="margin-bottom:8px;">
+                <strong style="color:#002855;font-size:15px;">{item.get("regulatory_reference", "")}</strong>
+                {oos_badge}
+                <span style="background:#f1f5f9;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:4px;">{item.get("violation_class", "")}</span>
+            </div>
+            <p style="font-size:14px;color:#334155;margin:4px 0;">{item.get("violation_text", "")}</p>
+            <p style="font-size:12px;color:#94A3B8;margin:2px 0;">Code: {item.get("violation_code", "")} | CFR: {item.get("cfr_part", "")}</p>
+            {notes_html}
+            {f'<div style="margin-top:8px;">{photos_html}</div>' if photos_html else ""}
+        </div>'''
+
+    html = f'''<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{doc.get("title", "Inspection Report")}</title>
+<style>body{{font-family:'IBM Plex Sans',Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#0F172A;}}
+@media print{{body{{padding:0;}}button{{display:none!important;}}}}</style></head>
+<body>
+<div style="background:#002855;color:white;padding:16px 20px;border-radius:8px;margin-bottom:20px;">
+    <h1 style="margin:0;font-size:20px;">{doc.get("title", "Inspection Report")}</h1>
+    <p style="margin:4px 0 0;font-size:12px;opacity:0.7;">Created: {doc.get("created_at", "")[:16].replace("T", " ")} | Violations: {len(doc.get("items", []))}</p>
+</div>
+{f'<div style="background:#f8fafc;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;color:#334155;"><strong>Notes:</strong> {doc.get("notes", "")}</div>' if doc.get("notes") else ""}
+{items_html}
+<div style="text-align:center;margin-top:24px;padding:16px;">
+    <button onclick="window.print()" style="background:#002855;color:white;border:none;padding:10px 24px;border-radius:6px;font-size:14px;cursor:pointer;">Print / Save as PDF</button>
+</div>
+</body></html>'''
+
+    return HTMLResponse(content=html)
 
 
 @api_router.get("/")

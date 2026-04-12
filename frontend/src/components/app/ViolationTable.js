@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, FileSearch, ArrowUp, ArrowDown, ArrowUpDown, GripVertical, ArrowLeftToLine, Settings2 } from "lucide-react";
 import { Badge } from "../ui/badge";
+import { SaveToInspection } from "./SaveToInspection";
 import {
   Table,
   TableBody,
@@ -166,10 +167,13 @@ export function ViolationTable({
             <p className="text-xs text-[#475569] leading-relaxed mb-2" data-testid={`vio-text-${idx}`}>
               {v.violation_text}
             </p>
-            <div className="flex items-center gap-2 text-[10px] text-[#94A3B8]">
-              <ClassBadge value={v.violation_class} />
-              <span className="font-mono">{v.violation_code}</span>
-              <span>CFR {v.cfr_part}</span>
+            <div className="flex items-center justify-between text-[10px] text-[#94A3B8]">
+              <div className="flex items-center gap-2">
+                <ClassBadge value={v.violation_class} />
+                <span className="font-mono">{v.violation_code}</span>
+                <span>CFR {v.cfr_part}</span>
+              </div>
+              <SaveToInspection violation={v} />
             </div>
           </div>
         ))}

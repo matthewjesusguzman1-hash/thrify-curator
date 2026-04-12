@@ -1,5 +1,6 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, ClipboardList } from "lucide-react";
 import { Button } from "../ui/button";
+import { useNavigate } from "react-router-dom";
 import {
   Popover,
   PopoverContent,
@@ -28,6 +29,7 @@ const CVSA_LINKS = [
 ];
 
 export function Header({ onUploadClick, stats }) {
+  const navigate = useNavigate();
   return (
     <header
       data-testid="app-header"
@@ -64,6 +66,18 @@ export function Header({ onUploadClick, stats }) {
               </span>
             </div>
           )}
+
+          {/* Inspections */}
+          <Button
+            data-testid="inspections-nav-btn"
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/inspections")}
+            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs"
+          >
+            <ClipboardList className="w-3.5 h-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Inspections</span>
+          </Button>
 
           {/* CVSA Links */}
           <Popover>
