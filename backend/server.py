@@ -166,6 +166,17 @@ class UpdateInspectionRequest(BaseModel):
 class UpdateItemNotesRequest(BaseModel):
     notes: str = ""
 
+class TieDownItemData(BaseModel):
+    type: str = ""
+    wll: float = 0
+    method: str = "direct"
+    defective: bool = False
+
+class SaveTieDownRequest(BaseModel):
+    cargo_weight: float = 0
+    cargo_length: float = 0
+    tiedowns: List[TieDownItemData] = []
+
 
 # Seed data on startup
 @app.on_event("startup")
@@ -890,6 +901,86 @@ async def delete_photo(inspection_id: str, item_id: str, photo_id: str):
     return {"message": "Photo removed"}
 
 
+# ========== TIE-DOWN ASSESSMENT ENDPOINTS ==========
+
+def _compute_tiedown_assessment(cargo_weight, cargo_length, tiedowns_raw):
+    """Compute derived values for a tie-down assessment."""
+    weight = cargo_weight or 0
+    length = cargo_length or 0
+    required_wll = weight * 0.5
+
+    if length <= 0:
+        min_tiedowns = 0
+    elif length < 5 and weight <= 1100:
+        min_tiedowns = 1
+    elif length <= 10:
+        min_tiedowns = 2
+    else:
+        import math
+        min_tiedowns = 2 + math.ceil((length - 10) / 10)
+
+    computed = []
+    total_eff = 0
+    active_count = 0
+    defective_count = 0
+    for td in tiedowns_raw:
+        wll = td.get("wll", 0) if isinstance(td, dict) else td.wll
+        method = td.get("method", "direct") if isinstance(td, dict) else td.method
+        defective = td.get("defective", False) if isinstance(td, dict) else td.defective
+        td_type = td.get("type", "") if isinstance(td, dict) else td.type
+        eff = 0 if defective else (wll * 0.5 if method == "indirect" else wll)
+        computed.append({
+            "type": td_type, "wll": wll, "method": method,
+            "defective": defective, "effective_wll": eff,
+        })
+        total_eff += eff
+        if defective:
+            defective_count += 1
+        else:
+            active_count += 1
+
+    compliant = weight > 0 and total_eff >= required_wll and active_count >= min_tiedowns
+    return {
+        "cargo_weight": weight, "cargo_length": length,
+        "required_wll": required_wll, "min_tiedowns": min_tiedowns,
+        "tiedowns": computed, "total_effective_wll": total_eff,
+        "active_count": active_count, "defective_count": defective_count,
+        "compliant": compliant,
+    }
+
+
+@api_router.post("/inspections/{inspection_id}/tiedown")
+async def save_tiedown_to_inspection(inspection_id: str, req: SaveTieDownRequest):
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+
+    assessment = _compute_tiedown_assessment(req.cargo_weight, req.cargo_length, req.tiedowns)
+    assessment["assessment_id"] = str(uuid.uuid4())
+    assessment["created_at"] = datetime.now(timezone.utc).isoformat()
+
+    await db.inspections.update_one(
+        {"id": inspection_id},
+        {
+            "$push": {"tiedown_assessments": assessment},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    return assessment
+
+
+@api_router.delete("/inspections/{inspection_id}/tiedown/{assessment_id}")
+async def delete_tiedown_from_inspection(inspection_id: str, assessment_id: str):
+    await db.inspections.update_one(
+        {"id": inspection_id},
+        {
+            "$pull": {"tiedown_assessments": {"assessment_id": assessment_id}},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    return {"message": "Tie-down assessment removed"}
+
+
 @api_router.get("/files/{path:path}")
 async def serve_file(path: str):
     try:
@@ -897,6 +988,84 @@ async def serve_file(path: str):
         return Response(content=data, media_type=content_type)
     except Exception:
         raise HTTPException(status_code=404, detail="File not found")
+
+
+
+def _build_tiedown_html(assessments):
+    """Generate HTML for tie-down assessments in export."""
+    if not assessments:
+        return ""
+    sections = ""
+    for a in assessments:
+        status_color = "#10B981" if a.get("compliant") else "#DC2626"
+        status_text = "COMPLIANT" if a.get("compliant") else "NOT COMPLIANT"
+        rows = ""
+        for i, td in enumerate(a.get("tiedowns", [])):
+            method_badge = '<span style="background:#D4AF37;color:#002855;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">INDIRECT 50%</span>' if td.get("method") == "indirect" else '<span style="background:#002855;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">DIRECT</span>'
+            def_style = "text-decoration:line-through;color:#999;" if td.get("defective") else ""
+            def_badge = ' <span style="background:#DC2626;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">DEFECTIVE</span>' if td.get("defective") else ""
+            eff = td.get("effective_wll", 0)
+            rows += f'<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;{def_style}">{i+1}. {td.get("type","")}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center;">{method_badge}{def_badge}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;{def_style}">{td.get("wll",0):,.0f}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;color:{"#DC2626" if td.get("defective") else "#002855"}">{eff:,.0f}</td></tr>'
+
+        pct = round(a.get("total_effective_wll", 0) / a.get("required_wll", 1) * 100) if a.get("required_wll", 0) > 0 else 0
+        bar_color = "#10B981" if pct >= 100 else "#F59E0B" if pct >= 60 else "#EF4444"
+        created = a.get("created_at", "")[:16].replace("T", " ")
+
+        sections += f'''
+        <div style="border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <div>
+                    <strong style="color:#002855;font-size:15px;">Tie-Down Assessment</strong>
+                    <span style="font-size:11px;color:#94A3B8;margin-left:8px;">{created}</span>
+                </div>
+                <span style="background:{status_color};color:white;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:bold;">{status_text}</span>
+            </div>
+            <div style="display:flex;gap:16px;margin-bottom:12px;">
+                <div style="background:#f8fafc;padding:8px 12px;border-radius:6px;flex:1;text-align:center;">
+                    <div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Cargo Weight</div>
+                    <div style="font-size:18px;font-weight:bold;color:#002855;">{a.get("cargo_weight",0):,.0f} lbs</div>
+                </div>
+                <div style="background:#f8fafc;padding:8px 12px;border-radius:6px;flex:1;text-align:center;">
+                    <div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Cargo Length</div>
+                    <div style="font-size:18px;font-weight:bold;color:#002855;">{a.get("cargo_length",0):,.1f} ft</div>
+                </div>
+            </div>
+            <div style="display:flex;gap:16px;margin-bottom:12px;">
+                <div style="background:#f8fafc;padding:8px 12px;border-radius:6px;flex:1;text-align:center;">
+                    <div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Required WLL</div>
+                    <div style="font-size:16px;font-weight:bold;color:#002855;">{a.get("required_wll",0):,.0f} lbs</div>
+                </div>
+                <div style="background:#f8fafc;padding:8px 12px;border-radius:6px;flex:1;text-align:center;">
+                    <div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Min Tie-Downs</div>
+                    <div style="font-size:16px;font-weight:bold;color:#002855;">{a.get("min_tiedowns",0)}</div>
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+                    <span>Aggregate WLL</span>
+                    <strong style="color:{"#10B981" if pct>=100 else "#EF4444"}">{a.get("total_effective_wll",0):,.0f} / {a.get("required_wll",0):,.0f} lbs ({pct}%)</strong>
+                </div>
+                <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;width:{min(pct,100)}%;background:{bar_color};border-radius:4px;"></div>
+                </div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead><tr style="background:#f8fafc;">
+                    <th style="padding:6px 8px;text-align:left;font-size:11px;color:#64748B;">Tie-Down</th>
+                    <th style="padding:6px 8px;text-align:center;font-size:11px;color:#64748B;">Method</th>
+                    <th style="padding:6px 8px;text-align:right;font-size:11px;color:#64748B;">Rated WLL</th>
+                    <th style="padding:6px 8px;text-align:right;font-size:11px;color:#64748B;">Effective</th>
+                </tr></thead>
+                <tbody>{rows}</tbody>
+                <tfoot><tr style="border-top:2px solid #002855;">
+                    <td colspan="3" style="padding:8px;font-weight:bold;color:#002855;">Total Effective WLL</td>
+                    <td style="padding:8px;text-align:right;font-weight:bold;font-size:15px;color:{"#10B981" if pct>=100 else "#EF4444"}">{a.get("total_effective_wll",0):,.0f} lbs</td>
+                </tr></tfoot>
+            </table>
+            <p style="font-size:10px;color:#94A3B8;margin-top:8px;font-style:italic;">Per 49 CFR 393.104/.106 — Direct: 100% WLL, Indirect: 50% WLL, Required aggregate WLL: 50% of cargo weight</p>
+        </div>'''
+
+    return f'<div style="margin-top:20px;"><h2 style="font-size:16px;color:#002855;margin-bottom:12px;border-bottom:2px solid #D4AF37;padding-bottom:6px;">Tie-Down Assessments</h2>{sections}</div>'
 
 
 @api_router.get("/inspections/{inspection_id}/export", response_class=HTMLResponse)
@@ -946,6 +1115,7 @@ async def export_inspection(inspection_id: str, include_photos: str = Query("N")
 </div>
 {f'<div style="background:#f8fafc;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;color:#334155;"><strong>Notes:</strong> {doc.get("notes", "")}</div>' if doc.get("notes") else ""}
 {items_html}
+{_build_tiedown_html(doc.get("tiedown_assessments", []))}
 <div style="text-align:center;margin-top:24px;padding:16px;">
     <button onclick="window.print()" style="background:#002855;color:white;border:none;padding:10px 24px;border-radius:6px;font-size:14px;cursor:pointer;">Print / Save as PDF</button>
 </div>

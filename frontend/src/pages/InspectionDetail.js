@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Header } from "../components/app/Header";
-import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -81,6 +81,12 @@ export default function InspectionDetail() {
   const removePhoto = async (itemId, photoId) => {
     await axios.delete(`${API}/inspections/${id}/violations/${itemId}/photos/${photoId}`);
     fetchInspection();
+  };
+
+  const removeTiedown = async (assessmentId) => {
+    await axios.delete(`${API}/inspections/${id}/tiedown/${assessmentId}`);
+    fetchInspection();
+    toast.success("Tie-down assessment removed");
   };
 
   const handleExport = (includePhotos) => {
@@ -243,6 +249,76 @@ export default function InspectionDetail() {
             </div>
           )}
         </div>
+
+        {/* Tie-Down Assessments */}
+        {inspection.tiedown_assessments?.length > 0 && (
+          <div data-testid="tiedown-assessments-section">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                Tie-Down Assessments ({inspection.tiedown_assessments.length})
+              </span>
+            </div>
+            <div className="space-y-3">
+              {inspection.tiedown_assessments.map((a) => {
+                const pct = a.required_wll > 0 ? Math.round((a.total_effective_wll / a.required_wll) * 100) : 0;
+                return (
+                  <div key={a.assessment_id} className="bg-white rounded-lg border p-3" data-testid={`tiedown-assessment-${a.assessment_id}`}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-[#002855]" />
+                        <span className="text-sm font-bold text-[#002855]">Tie-Down Assessment</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${a.compliant ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                          {a.compliant ? "COMPLIANT" : "NOT COMPLIANT"}
+                        </span>
+                      </div>
+                      <button onClick={() => removeTiedown(a.assessment_id)} className="text-[#CBD5E1] hover:text-[#DC2626] transition-colors flex-shrink-0" data-testid={`remove-tiedown-${a.assessment_id}`}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 mb-2 text-center">
+                      <div className="bg-[#F8FAFC] rounded p-1.5">
+                        <p className="text-[9px] text-[#94A3B8] uppercase">Weight</p>
+                        <p className="text-xs font-bold text-[#002855]">{a.cargo_weight?.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-[#F8FAFC] rounded p-1.5">
+                        <p className="text-[9px] text-[#94A3B8] uppercase">Length</p>
+                        <p className="text-xs font-bold text-[#002855]">{a.cargo_length} ft</p>
+                      </div>
+                      <div className="bg-[#F8FAFC] rounded p-1.5">
+                        <p className="text-[9px] text-[#94A3B8] uppercase">Eff. WLL</p>
+                        <p className={`text-xs font-bold ${pct >= 100 ? "text-emerald-600" : "text-[#EF4444]"}`}>{a.total_effective_wll?.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-[#F8FAFC] rounded p-1.5">
+                        <p className="text-[9px] text-[#94A3B8] uppercase">WLL %</p>
+                        <p className={`text-xs font-bold ${pct >= 100 ? "text-emerald-600" : "text-[#EF4444]"}`}>{pct}%</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      {a.tiedowns?.map((td, i) => (
+                        <div key={i} className={`flex items-center justify-between text-[11px] px-2 py-1 rounded ${td.defective ? "bg-red-50 text-red-400 line-through" : "bg-[#FAFBFC]"}`}>
+                          <span className="font-medium">{i + 1}. {td.type}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${td.method === "indirect" ? "bg-[#D4AF37]/20 text-[#8B7518]" : "bg-[#002855]/10 text-[#002855]"}`}>
+                              {td.method === "indirect" ? "INDIRECT" : "DIRECT"}
+                            </span>
+                            {td.defective && <span className="text-[9px] font-bold text-red-500">DEF</span>}
+                            <span className="font-bold w-14 text-right">{td.effective_wll?.toLocaleString()} lbs</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-[9px] text-[#94A3B8] mt-2">
+                      {a.created_at?.slice(0, 16).replace("T", " ")} | {a.active_count} active, {a.defective_count} defective | Min: {a.min_tiedowns} | Req: {a.required_wll?.toLocaleString()} lbs
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Photo preview */}

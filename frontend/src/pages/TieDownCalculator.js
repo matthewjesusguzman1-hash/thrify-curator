@@ -1,14 +1,21 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   ChevronLeft, Plus, Trash2, AlertTriangle, CheckCircle2, XCircle,
-  Info, ChevronDown, Link2, ShieldAlert, RotateCcw
+  Info, ChevronDown, Link2, ShieldAlert, RotateCcw, Download, Save, ClipboardList
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+} from "../components/ui/dialog";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 /* ================================================================
    CONSTANTS
@@ -172,6 +179,159 @@ export default function TieDownCalculator() {
     setTiedowns([]);
   };
 
+  /* ── Save to inspection state ── */
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [inspections, setInspections] = useState([]);
+  const [loadingInspections, setLoadingInspections] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const fetchInspections = async () => {
+    setLoadingInspections(true);
+    try {
+      const res = await axios.get(`${API}/inspections`);
+      setInspections(res.data.inspections || []);
+    } catch {
+      toast.error("Failed to load inspections");
+    } finally {
+      setLoadingInspections(false);
+    }
+  };
+
+  const openSaveModal = () => {
+    fetchInspections();
+    setShowSaveModal(true);
+  };
+
+  const saveToInspection = async (inspectionId) => {
+    setSaving(true);
+    try {
+      await axios.post(`${API}/inspections/${inspectionId}/tiedown`, {
+        cargo_weight: weight,
+        cargo_length: length,
+        tiedowns: tiedowns.map((td) => ({
+          type: td.type,
+          wll: td.wll,
+          method: td.method,
+          defective: td.defective,
+        })),
+      });
+      toast.success("Tie-down assessment saved to inspection");
+      setShowSaveModal(false);
+    } catch {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ── Standalone HTML export ── */
+  const exportStandalone = () => {
+    const tds = tiedowns.map((td) => {
+      const eff = effectiveWll(td);
+      return { ...td, effective_wll: eff };
+    });
+    const pct = requiredWLL > 0 ? Math.round((totalWLL / requiredWLL) * 100) : 0;
+    const barColor = pct >= 100 ? "#10B981" : pct >= 60 ? "#F59E0B" : "#EF4444";
+    const statusColor = allOk ? "#10B981" : "#DC2626";
+    const statusText = allOk ? "COMPLIANT" : "NOT COMPLIANT";
+    const now = new Date().toLocaleString();
+
+    const rows = tds
+      .map((td, i) => {
+        const methodBadge =
+          td.method === "indirect"
+            ? '<span style="background:#D4AF37;color:#002855;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">INDIRECT 50%</span>'
+            : '<span style="background:#002855;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">DIRECT</span>';
+        const defBadge = td.defective
+          ? ' <span style="background:#DC2626;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">DEFECTIVE</span>'
+          : "";
+        const defStyle = td.defective ? "text-decoration:line-through;color:#999;" : "";
+        const effColor = td.defective ? "#DC2626" : "#002855";
+        return `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;${defStyle}">${i + 1}. ${td.type}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center;">${methodBadge}${defBadge}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;${defStyle}">${td.wll.toLocaleString()}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;color:${effColor}">${td.effective_wll.toLocaleString()}</td></tr>`;
+      })
+      .join("");
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tie-Down Assessment Report</title>
+<style>body{font-family:'IBM Plex Sans',Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#0F172A;}
+@media print{body{padding:0;}button{display:none!important;}}</style></head>
+<body>
+<div style="background:#002855;color:white;padding:16px 20px;border-radius:8px;margin-bottom:20px;">
+<h1 style="margin:0;font-size:20px;">Tie-Down Assessment Report</h1>
+<p style="margin:4px 0 0;font-size:12px;opacity:0.7;">${now} | 49 CFR 393 Subpart I</p>
+</div>
+<div style="display:flex;gap:12px;margin-bottom:16px;">
+<div style="background:#f8fafc;padding:10px 14px;border-radius:6px;flex:1;text-align:center;">
+<div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Cargo Weight</div>
+<div style="font-size:20px;font-weight:bold;color:#002855;">${weight.toLocaleString()} lbs</div>
+</div>
+<div style="background:#f8fafc;padding:10px 14px;border-radius:6px;flex:1;text-align:center;">
+<div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Cargo Length</div>
+<div style="font-size:20px;font-weight:bold;color:#002855;">${length} ft</div>
+</div>
+</div>
+<div style="display:flex;gap:12px;margin-bottom:16px;">
+<div style="background:#f8fafc;padding:10px 14px;border-radius:6px;flex:1;text-align:center;">
+<div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Required Agg. WLL</div>
+<div style="font-size:18px;font-weight:bold;color:#002855;">${requiredWLL.toLocaleString()} lbs</div>
+<div style="font-size:10px;color:#94A3B8;">50% of cargo weight &middot; 393.104</div>
+</div>
+<div style="background:#f8fafc;padding:10px 14px;border-radius:6px;flex:1;text-align:center;">
+<div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Min Tie-Downs</div>
+<div style="font-size:18px;font-weight:bold;color:#002855;">${minByLength}</div>
+<div style="font-size:10px;color:#94A3B8;">Based on ${length} ft &middot; 393.106</div>
+</div>
+</div>
+<div style="margin-bottom:16px;">
+<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+<span>Aggregate WLL</span>
+<strong style="color:${pct >= 100 ? "#10B981" : "#EF4444"}">${totalWLL.toLocaleString()} / ${requiredWLL.toLocaleString()} lbs (${pct}%)</strong>
+</div>
+<div style="height:10px;background:#f1f5f9;border-radius:5px;overflow:hidden;">
+<div style="height:100%;width:${Math.min(pct, 100)}%;background:${barColor};border-radius:5px;"></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:8px;margin-bottom:16px;background:${allOk ? "#ecfdf5" : "#fef2f2"};border:1px solid ${allOk ? "#a7f3d0" : "#fecaca"};">
+<span style="font-size:20px;">${allOk ? "&#10003;" : "&#10007;"}</span>
+<div>
+<div style="font-weight:bold;color:${statusColor};">${statusText}</div>
+<div style="font-size:11px;color:${statusColor};opacity:0.8;">Active: ${activeTiedowns}/${minByLength} min | WLL: ${pct}% of required</div>
+</div>
+</div>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
+<thead><tr style="background:#f8fafc;">
+<th style="padding:8px;text-align:left;font-size:11px;color:#64748B;">Tie-Down</th>
+<th style="padding:8px;text-align:center;font-size:11px;color:#64748B;">Method</th>
+<th style="padding:8px;text-align:right;font-size:11px;color:#64748B;">Rated WLL</th>
+<th style="padding:8px;text-align:right;font-size:11px;color:#64748B;">Effective</th>
+</tr></thead>
+<tbody>${rows}</tbody>
+<tfoot><tr style="border-top:2px solid #002855;">
+<td colspan="3" style="padding:8px;font-weight:bold;color:#002855;">Total Effective WLL</td>
+<td style="padding:8px;text-align:right;font-weight:bold;font-size:15px;color:${pct >= 100 ? "#10B981" : "#EF4444"}">${totalWLL.toLocaleString()} lbs</td>
+</tr></tfoot>
+</table>
+<p style="font-size:10px;color:#94A3B8;font-style:italic;">Per 49 CFR 393.104/.106 &mdash; Direct: 100% WLL, Indirect: 50% WLL, Required aggregate WLL: 50% of cargo weight</p>
+<div style="text-align:center;margin-top:24px;padding:16px;">
+<button onclick="window.print()" style="background:#002855;color:white;border:none;padding:10px 24px;border-radius:6px;font-size:14px;cursor:pointer;">Print / Save as PDF</button>
+</div>
+</body></html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tiedown-assessment-${new Date().toISOString().slice(0, 10)}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Report exported");
+  };
+
+  const hasData = weight > 0 && tiedowns.length > 0;
+
   /* ================================================================
      RENDER
      ================================================================ */
@@ -210,6 +370,31 @@ export default function TieDownCalculator() {
         </div>
         <div className="gold-accent h-[2px]" />
       </div>
+
+      {/* ─── FLOATING ACTION BAR ─── */}
+      {hasData && (
+        <div className="sticky top-[45px] z-40 bg-white/95 backdrop-blur border-b shadow-sm">
+          <div className="max-w-[800px] mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={exportStandalone}
+              className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1 sm:flex-none"
+              data-testid="export-standalone-btn"
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" /> Export Report
+            </Button>
+            <Button
+              size="sm"
+              onClick={openSaveModal}
+              variant="outline"
+              className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1 sm:flex-none"
+              data-testid="save-to-inspection-btn"
+            >
+              <Save className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection
+            </Button>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-[800px] mx-auto px-3 sm:px-6 py-4 pb-24 space-y-4">
 
@@ -709,6 +894,47 @@ export default function TieDownCalculator() {
           )}
         </div>
       </main>
+
+      {/* ─── SAVE TO INSPECTION MODAL ─── */}
+      <Dialog open={showSaveModal} onOpenChange={setShowSaveModal}>
+        <DialogContent className="max-w-[400px] p-0 overflow-hidden" data-testid="save-modal">
+          <div className="bg-[#002855] px-4 py-3">
+            <h3 className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>
+              Save to Inspection
+            </h3>
+            <p className="text-[10px] text-white/50">Attach this tie-down assessment</p>
+          </div>
+          <div className="p-4 max-h-[50vh] overflow-y-auto space-y-2">
+            {loadingInspections ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-[#002855] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : inspections.length === 0 ? (
+              <div className="text-center py-6">
+                <ClipboardList className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" />
+                <p className="text-sm text-[#64748B]">No inspections found</p>
+                <p className="text-xs text-[#94A3B8] mt-1">Create one from the Inspections page first</p>
+              </div>
+            ) : (
+              inspections.map((insp) => (
+                <button
+                  key={insp.id}
+                  onClick={() => saveToInspection(insp.id)}
+                  disabled={saving}
+                  className="w-full text-left px-3 py-2.5 rounded-lg border border-[#E2E8F0] hover:border-[#002855]/30 hover:bg-[#F8FAFC] active:bg-[#F1F5F9] transition-colors disabled:opacity-50"
+                  data-testid={`save-to-${insp.id}`}
+                >
+                  <p className="text-sm font-semibold text-[#002855] truncate">{insp.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#94A3B8]">
+                    <span>{insp.items?.length || 0} violations</span>
+                    <span>{insp.created_at?.slice(0, 10)}</span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

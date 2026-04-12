@@ -94,13 +94,12 @@ export function Header({ onUploadClick, stats }) {
           {/* Tie-Down Calculator */}
           <Button
             data-testid="calculator-nav-btn"
-            variant="outline"
             size="sm"
             onClick={() => navigate("/calculator")}
-            className="border-[#D4AF37]/40 text-[#D4AF37] bg-transparent hover:bg-[#D4AF37] hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs font-bold"
+            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm"
           >
             <Calculator className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Tie-Downs</span>
+            <span className="hidden sm:inline">Tie-Down Calc</span>
           </Button>
 
           {/* Inspections */}
