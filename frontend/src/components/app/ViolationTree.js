@@ -120,7 +120,13 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                     return (
                       <div key={`${catClass}-${cat.name}`}>
                         <div
-                          onClick={() => onSelect(catClass, isCatActive ? "" : cat.name, "")}
+                          onClick={() => {
+                            onSelect(catClass, isCatActive ? "" : cat.name, "");
+                            // Always expand reg sections when clicking category text
+                            if (cat.sections?.length > 0) {
+                              setRegOpen((p) => ({ ...p, [rKey]: true }));
+                            }
+                          }}
                           className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer transition-colors ${isCatActive ? "bg-[#002855]/10" : "hover:bg-[#F8FAFC]"}`}
                         >
                           {cat.sections?.length > 0 ? (
