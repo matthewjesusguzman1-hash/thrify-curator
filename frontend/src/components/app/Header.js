@@ -21,6 +21,18 @@ const CVSA_LINKS = [
     icon: Smartphone,
   },
   {
+    label: "Operational Policies",
+    url: "https://www.cvsa.org/wp-content/uploads/Roadside-Inspection-Operational-Policies.pdf",
+    description: "Roadside inspection policies (PDF)",
+    icon: Globe,
+  },
+  {
+    label: "Inspection Bulletins",
+    url: "https://cvsa.org/inspections/inspection-bulletins/",
+    description: "Current CVSA bulletins",
+    icon: Globe,
+  },
+  {
     label: "CVSA Training",
     url: "https://cvsa.org",
     description: "Training & resources",
@@ -100,7 +112,7 @@ export function Header({ onUploadClick, stats }) {
                 size="sm"
                 className="border-[#D4AF37]/40 text-[#D4AF37] bg-transparent hover:bg-[#D4AF37] hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs font-bold"
               >
-                CVSA
+                Resources
               </Button>
             </PopoverTrigger>
             <PopoverContent
