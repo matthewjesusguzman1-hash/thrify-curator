@@ -91,3 +91,8 @@
     background-color: rgba(0, 40, 85, 0.1);
     color: #002855;
 }
+
+/* Hide default dialog close in detail modal */
+[data-testid="similar-violations-sheet"] > button[class*="absolute"] {
+    display: none;
+}
