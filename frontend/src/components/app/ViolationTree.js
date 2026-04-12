@@ -18,7 +18,7 @@ function sortCatNum(name) {
   return m ? parseInt(m[1], 10) : 9999;
 }
 
-export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSelect, className = "" }) {
+export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSelect, className = "", mobile = false }) {
   const [tree, setTree] = useState({});
   const [loading, setLoading] = useState(true);
   // Section expand state (Driver, Vehicle, HazMat, Other) — start collapsed
@@ -53,8 +53,8 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
   return (
     <div className={className} data-testid="violation-tree">
       <div className="flex items-center gap-2 px-3 py-2 mb-1">
-        <FolderTree className="w-3.5 h-3.5 text-[#64748B]" />
-        <span className="text-[10px] font-bold tracking-widest uppercase text-[#64748B]">Violation Types</span>
+        <FolderTree className={`${mobile ? "w-4 h-4" : "w-3.5 h-3.5"} text-[#64748B]`} />
+        <span className={`font-bold tracking-widest uppercase text-[#64748B] ${mobile ? "text-xs" : "text-[10px]"}`}>Violation Types</span>
       </div>
 
       {hasFilter && (
@@ -87,7 +87,7 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                     onSelect(isActive ? "" : sKey, "", "");
                   }
                 }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md mx-1 cursor-pointer transition-colors ${isActive ? "bg-[#002855] text-white" : "hover:bg-[#F1F5F9]"}`}
+                className={`flex items-center gap-2.5 px-4 ${mobile ? "py-3" : "py-2"} rounded-md mx-1 cursor-pointer transition-colors ${isActive ? "bg-[#002855] text-white" : "hover:bg-[#F1F5F9]"}`}
               >
                 {/* Chevron — ONLY this toggles open/close */}
                 <span
@@ -97,20 +97,20 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                   }}
                   className={`flex-shrink-0 cursor-pointer ${isActive ? "text-white/70" : "text-[#94A3B8]"}`}
                 >
-                  {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  {isOpen ? <ChevronDown className={`${mobile ? "w-5 h-5" : "w-4 h-4"}`} /> : <ChevronRight className={`${mobile ? "w-5 h-5" : "w-4 h-4"}`} />}
                 </span>
-                <div className={`flex items-center justify-center w-5 h-5 rounded flex-shrink-0 ${isActive ? "bg-white/20" : section.color}`}>
-                  <Icon className="w-3 h-3" />
+                <div className={`flex items-center justify-center ${mobile ? "w-7 h-7" : "w-5 h-5"} rounded flex-shrink-0 ${isActive ? "bg-white/20" : section.color}`}>
+                  <Icon className={`${mobile ? "w-4 h-4" : "w-3 h-3"}`} />
                 </div>
-                <span className={`flex-1 text-left text-xs font-semibold ${isActive ? "text-white" : "text-[#334155]"}`}>
+                <span className={`flex-1 text-left font-semibold ${mobile ? "text-sm" : "text-xs"} ${isActive ? "text-white" : "text-[#334155]"}`}>
                   {section.label}
                 </span>
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>{data.count}</span>
+                <span className={`${mobile ? "text-xs" : "text-[9px]"} px-2 py-0.5 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>{data.count}</span>
               </div>
 
               {/* Categories — visible when section is open */}
               {isOpen && (
-                <div className="ml-5 pl-3 border-l border-[#E2E8F0] space-y-0.5 mt-0.5 mb-2">
+                <div className={`${mobile ? "ml-6 pl-4" : "ml-5 pl-3"} border-l border-[#E2E8F0] space-y-0.5 mt-0.5 mb-2`}>
                   {sortedCats.map((cat) => {
                     const catClass = cat.parentClass || sKey;
                     const rKey = `${catClass}|${cat.name}`;
@@ -122,29 +122,28 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                         <div
                           onClick={() => {
                             onSelect(catClass, isCatActive ? "" : cat.name, "");
-                            // Always expand reg sections when clicking category text
                             if (cat.sections?.length > 0) {
                               setRegOpen((p) => ({ ...p, [rKey]: true }));
                             }
                           }}
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer transition-colors ${isCatActive ? "bg-[#002855]/10" : "hover:bg-[#F8FAFC]"}`}
+                          className={`flex items-center gap-1.5 px-2 ${mobile ? "py-2.5" : "py-1"} rounded-md cursor-pointer transition-colors ${isCatActive ? "bg-[#002855]/10" : "hover:bg-[#F8FAFC]"}`}
                         >
                           {cat.sections?.length > 0 ? (
                             <span
                               onClick={(e) => { e.stopPropagation(); setRegOpen((p) => ({ ...p, [rKey]: !p[rKey] })); }}
                               className="text-[#CBD5E1] flex-shrink-0 cursor-pointer hover:text-[#64748B]"
                             >
-                              {isRegsOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                              {isRegsOpen ? <ChevronDown className={`${mobile ? "w-4 h-4" : "w-3 h-3"}`} /> : <ChevronRight className={`${mobile ? "w-4 h-4" : "w-3 h-3"}`} />}
                             </span>
-                          ) : <span className="w-3" />}
-                          <span className={`flex-1 text-left text-[11px] truncate ${isCatActive ? "font-semibold text-[#002855]" : "text-[#64748B]"}`}>
+                          ) : <span className={`${mobile ? "w-4" : "w-3"}`} />}
+                          <span className={`flex-1 text-left truncate ${mobile ? "text-[13px]" : "text-[11px]"} ${isCatActive ? "font-semibold text-[#002855]" : "text-[#64748B]"}`}>
                             {cat.name}
                           </span>
-                          <span className={`text-[9px] flex-shrink-0 ${isCatActive ? "text-[#002855]" : "text-[#CBD5E1]"}`}>{cat.count}</span>
+                          <span className={`${mobile ? "text-[11px]" : "text-[9px]"} flex-shrink-0 ${isCatActive ? "text-[#002855]" : "text-[#CBD5E1]"}`}>{cat.count}</span>
                         </div>
 
                         {isRegsOpen && cat.sections?.length > 0 && (
-                          <div className="ml-4 pl-3 border-l border-[#F1F5F9] space-y-0.5 my-0.5">
+                          <div className={`${mobile ? "ml-5 pl-4" : "ml-4 pl-3"} border-l border-[#F1F5F9] space-y-0.5 my-0.5`}>
                             {cat.sections.map((sec) => {
                               const isSecActive = activeClass === catClass && activeCategory === cat.name && activeRegBase === sec.ref;
                               const vioKey = `v-${catClass}|${cat.name}|${sec.ref}`;
@@ -158,7 +157,7 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                                       onSelect(catClass, cat.name, isSecActive ? "" : sec.ref);
                                       if (hasVios) setRegOpen((p) => ({ ...p, [vioKey]: true }));
                                     }}
-                                    className={`px-2 py-1 rounded cursor-pointer transition-colors ${isSecActive ? "bg-[#D4AF37]/15" : "hover:bg-[#F8FAFC]"}`}
+                                    className={`px-2 ${mobile ? "py-2" : "py-1"} rounded cursor-pointer transition-colors ${isSecActive ? "bg-[#D4AF37]/15" : "hover:bg-[#F8FAFC]"}`}
                                   >
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-1">
@@ -167,28 +166,27 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                                             onClick={(e) => { e.stopPropagation(); setRegOpen((p) => ({ ...p, [vioKey]: !p[vioKey] })); }}
                                             className="text-[#CBD5E1] flex-shrink-0 cursor-pointer"
                                           >
-                                            {isViosOpen ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
+                                            {isViosOpen ? <ChevronDown className={`${mobile ? "w-3.5 h-3.5" : "w-2.5 h-2.5"}`} /> : <ChevronRight className={`${mobile ? "w-3.5 h-3.5" : "w-2.5 h-2.5"}`} />}
                                           </span>
                                         )}
-                                        <span className={`text-[10px] font-mono ${isSecActive ? "text-[#002855] font-semibold" : "text-[#64748B]"}`}>{sec.ref}</span>
+                                        <span className={`${mobile ? "text-xs" : "text-[10px]"} font-mono ${isSecActive ? "text-[#002855] font-semibold" : "text-[#64748B]"}`}>{sec.ref}</span>
                                       </div>
-                                      <span className={`text-[9px] ${isSecActive ? "text-[#D4AF37]" : "text-[#E2E8F0]"}`}>{sec.count}</span>
+                                      <span className={`${mobile ? "text-[11px]" : "text-[9px]"} ${isSecActive ? "text-[#D4AF37]" : "text-[#E2E8F0]"}`}>{sec.count}</span>
                                     </div>
                                     {sec.label && (
-                                      <p className={`text-[9px] leading-tight mt-0.5 ${hasVios ? "ml-3.5" : ""} ${isSecActive ? "text-[#002855]/70" : "text-[#B0BEC5]"}`}>{sec.label}</p>
+                                      <p className={`${mobile ? "text-[11px]" : "text-[9px]"} leading-tight mt-0.5 ${hasVios ? "ml-4" : ""} ${isSecActive ? "text-[#002855]/70" : "text-[#B0BEC5]"}`}>{sec.label}</p>
                                     )}
                                   </div>
 
-                                  {/* Individual violations under this reg reference */}
                                   {isViosOpen && hasVios && (
-                                    <div className="ml-5 pl-2 border-l border-[#F8FAFC] space-y-0.5 my-0.5">
+                                    <div className={`${mobile ? "ml-6 pl-3" : "ml-5 pl-2"} border-l border-[#F8FAFC] space-y-0.5 my-0.5`}>
                                       {sec.violations.map((vio, idx) => (
                                         <div
                                           key={vio.id || idx}
-                                          className="px-2 py-0.5 rounded text-[9px] leading-tight text-[#94A3B8] hover:bg-[#F8FAFC] hover:text-[#64748B] cursor-default flex items-start gap-1"
+                                          className={`px-2 ${mobile ? "py-1.5" : "py-0.5"} rounded ${mobile ? "text-[11px]" : "text-[9px]"} leading-tight text-[#94A3B8] hover:bg-[#F8FAFC] hover:text-[#64748B] cursor-default flex items-start gap-1.5`}
                                         >
                                           {vio.oos === "Y" && (
-                                            <span className="text-[7px] px-1 py-0 bg-[#DC2626] text-white rounded font-bold flex-shrink-0 mt-0.5">OOS</span>
+                                            <span className={`${mobile ? "text-[8px]" : "text-[7px]"} px-1 py-0 bg-[#DC2626] text-white rounded font-bold flex-shrink-0 mt-0.5`}>OOS</span>
                                           )}
                                           <span>{vio.short}</span>
                                         </div>
@@ -216,25 +214,28 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
 export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCategory, activeRegBase, onSelect }) {
   return (
     <>
-      {open && <div className="fixed inset-0 bg-black/30 z-40 lg:hidden" onClick={() => onOpenChange(false)} />}
+      {open && <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => onOpenChange(false)} />}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-white border-r shadow-lg transform transition-transform duration-200 lg:hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-0 z-50 bg-white transform transition-transform duration-250 lg:hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
         data-testid="tree-drawer"
       >
-        <div className="flex items-center justify-between px-3 py-3 border-b bg-[#002855]">
-          <span className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>Browse by Type</span>
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-7 w-7 p-0 text-white/70 hover:text-white hover:bg-white/10" data-testid="tree-drawer-close">
-            <X className="w-4 h-4" />
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-[#002855]">
+          <div>
+            <span className="text-base font-semibold text-white block" style={{ fontFamily: "Outfit, sans-serif" }}>Violation Tree</span>
+            <span className="text-[10px] text-white/50">Browse and select violation types</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-9 px-3 text-white/70 hover:text-white hover:bg-white/10 text-xs font-medium" data-testid="tree-drawer-close">
+            Done
           </Button>
         </div>
-        <ScrollArea className="h-[calc(100vh-50px)]">
-          {/* Selections do NOT close the drawer — user closes it manually */}
+        <ScrollArea className="h-[calc(100vh-58px)]">
           <ViolationTree
             activeClass={activeClass}
             activeCategory={activeCategory}
             activeRegBase={activeRegBase}
             onSelect={onSelect}
-            className="py-2"
+            className="py-3"
+            mobile
           />
         </ScrollArea>
       </div>
