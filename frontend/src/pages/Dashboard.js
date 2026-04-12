@@ -225,7 +225,7 @@ export default function Dashboard() {
               title="Browse by type"
             >
               <FolderTree className="w-4 h-4" />
-              <span className="text-xs font-medium">Types</span>
+              <span className="text-xs font-medium">Tree</span>
             </button>
             <div className="flex-1">
               <SearchBar

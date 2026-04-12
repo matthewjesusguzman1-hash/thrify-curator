@@ -10,28 +10,40 @@ import { toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export function SaveToInspection({ violation, className = "" }) {
+export function SaveToInspection({ violation, currentInspectionId, className = "" }) {
   const [inspections, setInspections] = useState([]);
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [savedInspId, setSavedInspId] = useState(null);
   const [savedItemId, setSavedItemId] = useState(null);
   const [showAll, setShowAll] = useState(false);
 
+  // Check if saved in the CURRENT inspection only
   const checkSavedStatus = useCallback((inspList) => {
-    for (const insp of inspList) {
-      const item = insp.items?.find((i) => i.violation_id === violation.id);
-      if (item) {
-        setSaved(true);
-        setSavedInspId(insp.id);
-        setSavedItemId(item.item_id);
-        return;
+    if (!currentInspectionId) {
+      // Use most recent inspection
+      const recent = inspList[0];
+      if (recent) {
+        const item = recent.items?.find((i) => i.violation_id === violation.id);
+        if (item) {
+          setSaved(true);
+          setSavedItemId(item.item_id);
+          return;
+        }
+      }
+    } else {
+      const insp = inspList.find((i) => i.id === currentInspectionId);
+      if (insp) {
+        const item = insp.items?.find((i) => i.violation_id === violation.id);
+        if (item) {
+          setSaved(true);
+          setSavedItemId(item.item_id);
+          return;
+        }
       }
     }
     setSaved(false);
-    setSavedInspId(null);
     setSavedItemId(null);
-  }, [violation.id]);
+  }, [violation.id, currentInspectionId]);
 
   useEffect(() => {
     if (open) {
@@ -59,6 +71,11 @@ export function SaveToInspection({ violation, className = "" }) {
     } catch { /* ignore */ }
   };
 
+  const getActiveInspectionId = () => {
+    if (currentInspectionId) return currentInspectionId;
+    return inspections[0]?.id || null;
+  };
+
   const addToInspection = async (inspectionId) => {
     try {
       await axios.post(`${API}/inspections/${inspectionId}/violations`, {
@@ -70,8 +87,6 @@ export function SaveToInspection({ violation, className = "" }) {
         cfr_part: violation.cfr_part,
         oos_value: violation.oos_value,
       });
-      setSaved(true);
-      setSavedInspId(inspectionId);
       toast.success("Saved to inspection");
       setOpen(false);
       fetchInspections();
@@ -81,11 +96,11 @@ export function SaveToInspection({ violation, className = "" }) {
   };
 
   const removeFromInspection = async () => {
-    if (!savedInspId || !savedItemId) return;
+    const activeId = getActiveInspectionId();
+    if (!activeId || !savedItemId) return;
     try {
-      await axios.delete(`${API}/inspections/${savedInspId}/violations/${savedItemId}`);
+      await axios.delete(`${API}/inspections/${activeId}/violations/${savedItemId}`);
       setSaved(false);
-      setSavedInspId(null);
       setSavedItemId(null);
       toast.success("Removed from inspection");
       setOpen(false);
@@ -103,7 +118,6 @@ export function SaveToInspection({ violation, className = "" }) {
     }
   };
 
-  // Most recent inspection (first in list, sorted by created_at desc)
   const mostRecent = inspections.length > 0 ? inspections[0] : null;
   const mostRecentAlreadyIn = mostRecent?.items?.some((i) => i.violation_id === violation.id);
 
@@ -130,7 +144,6 @@ export function SaveToInspection({ violation, className = "" }) {
         align="end"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* If already saved, show remove option */}
         {saved && (
           <div className="mb-3 pb-3 border-b">
             <p className="text-[10px] font-bold tracking-widest uppercase text-[#D4AF37] mb-2">Saved</p>
@@ -149,14 +162,13 @@ export function SaveToInspection({ violation, className = "" }) {
           {saved ? "Move to another" : "Save to inspection"}
         </p>
 
-        {/* Show most recent inspection by default */}
         {mostRecent && !showAll && (
           <div className="space-y-1.5">
             <button
               onClick={() => !mostRecentAlreadyIn && addToInspection(mostRecent.id)}
               disabled={mostRecentAlreadyIn}
               className={`w-full text-left px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${mostRecentAlreadyIn ? "bg-[#D4AF37]/10 cursor-default" : "bg-[#F8FAFC] hover:bg-[#F1F5F9]"}`}
-              data-testid={`save-to-recent`}
+              data-testid="save-to-recent"
             >
               {mostRecentAlreadyIn ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#D4AF37" stroke="#D4AF37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
@@ -182,7 +194,6 @@ export function SaveToInspection({ violation, className = "" }) {
           </div>
         )}
 
-        {/* Show all inspections */}
         {showAll && (
           <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
             {inspections.map((insp) => {
@@ -208,7 +219,6 @@ export function SaveToInspection({ violation, className = "" }) {
           </div>
         )}
 
-        {/* No inspections */}
         {inspections.length === 0 && (
           <p className="text-xs text-[#94A3B8] py-2">No inspections yet</p>
         )}
