@@ -119,29 +119,25 @@ function Gauge({ percent, size = 128, stroke = 11 }) {
 /* ================================================================
    COUNT DOTS  (visual minimum-vs-actual indicator)
    ================================================================ */
-function CountDots({ active, required, defective }) {
-  /* Show defective (red), then active (green), then still-needed (empty dashed).
-     A defective tie-down does NOT count toward the minimum, so "missing"
-     is based purely on active vs required. */
+function CountDots({ tiedowns, required }) {
+  /* Dots match tie-down order: green if active, red if defective.
+     Then dashed empty dots for any still-needed to meet minimum. */
+  const active = tiedowns.filter((t) => !t.defective).length;
   const missing = Math.max(0, required - active);
-  const dots = [];
-  for (let i = 0; i < defective; i++) {
-    dots.push(
-      <div key={`d${i}`} className="w-[22px] h-[22px] rounded-full bg-red-100 border-2 border-red-400 flex items-center justify-center">
+  const dots = tiedowns.map((td, i) =>
+    td.defective ? (
+      <div key={`t${i}`} className="w-[22px] h-[22px] rounded-full bg-red-100 border-2 border-red-400 flex items-center justify-center">
         <XCircle className="w-3 h-3 text-red-500" />
       </div>
-    );
-  }
-  for (let i = 0; i < active; i++) {
-    dots.push(
-      <div key={`a${i}`} className="w-[22px] h-[22px] rounded-full bg-emerald-500 border-2 border-emerald-600 flex items-center justify-center">
+    ) : (
+      <div key={`t${i}`} className="w-[22px] h-[22px] rounded-full bg-emerald-500 border-2 border-emerald-600 flex items-center justify-center">
         <CheckCircle2 className="w-3 h-3 text-white" />
       </div>
-    );
-  }
+    ),
+  );
   for (let i = 0; i < missing; i++) {
     dots.push(
-      <div key={`m${i}`} className="w-[22px] h-[22px] rounded-full border-2 border-dashed border-[#CBD5E1]" />
+      <div key={`m${i}`} className="w-[22px] h-[22px] rounded-full border-2 border-dashed border-[#CBD5E1]" />,
     );
   }
   return <div className="flex flex-wrap gap-1.5">{dots}</div>;
@@ -720,11 +716,11 @@ export default function TieDownCalculator() {
               </div>
               <div className={`rounded-xl p-3 border ${hasBlocking ? "bg-emerald-50 border-emerald-200" : "bg-[#002855]/5 border-[#002855]/10"}`}>
                 <p className="text-[10px] text-[#94A3B8] uppercase tracking-wide font-medium">
-                  Min Tie-Downs
+                  Min Tie-Downs by Length
                 </p>
                 <p className="text-xl font-black text-[#002855]">{minByLength}</p>
                 <p className="text-[9px] text-[#94A3B8]">
-                  {hasBlocking ? "with blocking" : "no blocking"} &middot; 393.110{hasBlocking ? "(c)" : "(b)"}
+                  for {length} ft {hasBlocking ? "w/ blocking" : ""} &middot; 393.110{hasBlocking ? "(c)" : "(b)"}
                 </p>
               </div>
             </div>
@@ -781,9 +777,8 @@ export default function TieDownCalculator() {
                     </span>
                   </div>
                   <CountDots
-                    active={activeTiedowns}
+                    tiedowns={tiedowns}
                     required={minByLength}
-                    defective={defectiveCount}
                   />
                 </div>
               </div>
