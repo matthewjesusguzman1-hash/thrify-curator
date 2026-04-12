@@ -20,8 +20,9 @@ function sortCatNum(name) {
 
 export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSelect, className = "" }) {
   const [tree, setTree] = useState({});
-  const [exp, setExp] = useState({});
   const [loading, setLoading] = useState(true);
+  // Only track expand state for the deepest level (reg sections under a category)
+  const [regExpanded, setRegExpanded] = useState({});
 
   useEffect(() => { fetchTree(); }, []);
 
@@ -32,6 +33,8 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
     } catch { /* ignore */ }
     finally { setLoading(false); }
   };
+
+  const toggleRegs = (key) => setRegExpanded((p) => ({ ...p, [key]: !p[key] }));
 
   const hasFilter = activeClass || activeCategory || activeRegBase;
 
@@ -57,43 +60,30 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
       {hasFilter && (
         <div className="px-3 mb-2">
           <button onClick={() => onSelect("", "", "")} className="text-[10px] text-[#DC2626] hover:text-[#B91C1C] font-medium" data-testid="tree-clear-filter">
-            Clear tree filter
+            Clear filter
           </button>
         </div>
       )}
 
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         {SECTIONS.map((section) => {
           const data = getData(section.key);
           if (!data || data.count === 0) return null;
-          const sKey = `s-${section.key}`;
-          const isExp = exp[sKey];
           const isActive = section.key !== "_other" && activeClass === section.key && !activeCategory && !activeRegBase;
           const Icon = section.icon;
           const sortedCats = [...data.categories].sort((a, b) => sortCatNum(a.name) - sortCatNum(b.name));
 
           return (
             <div key={section.key}>
-              {/* Section header - entire row is clickable, sets filter + always expands */}
+              {/* Section header — ALWAYS expanded, click only sets filter */}
               <div
                 onClick={() => {
                   if (section.key !== "_other") {
                     onSelect(isActive ? "" : section.key, "", "");
                   }
-                  // Always expand, never collapse from row click
-                  setExp((p) => ({ ...p, [sKey]: true }));
                 }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md mx-1 cursor-pointer transition-colors ${isActive ? "bg-[#002855] text-white" : "hover:bg-[#F1F5F9]"}`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md mx-1 cursor-pointer transition-colors ${isActive ? "bg-[#002855] text-white" : "hover:bg-[#F1F5F9]"}`}
               >
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExp((p) => ({ ...p, [sKey]: !p[sKey] }));
-                  }}
-                  className={`flex-shrink-0 cursor-pointer ${isActive ? "text-white/70" : "text-[#94A3B8]"}`}
-                >
-                  {isExp ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                </span>
                 <div className={`flex items-center justify-center w-5 h-5 rounded flex-shrink-0 ${isActive ? "bg-white/20" : section.color}`}>
                   <Icon className="w-3 h-3" />
                 </div>
@@ -103,77 +93,62 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                 <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>{data.count}</span>
               </div>
 
-              {/* Categories */}
-              {isExp && (
-                <div className="ml-5 pl-3 border-l border-[#E2E8F0] space-y-0.5 my-0.5">
-                  {sortedCats.map((cat) => {
-                    const catClass = cat.parentClass || section.key;
-                    const cKey = `c-${catClass}|${cat.name}`;
-                    const isCatExp = exp[cKey];
-                    const isCatActive = activeClass === catClass && activeCategory === cat.name && !activeRegBase;
+              {/* Categories — ALWAYS visible, no collapse */}
+              <div className="ml-4 pl-3 border-l border-[#E2E8F0] space-y-0.5 mt-0.5 mb-2">
+                {sortedCats.map((cat) => {
+                  const catClass = cat.parentClass || section.key;
+                  const regKey = `${catClass}|${cat.name}`;
+                  const isRegsOpen = regExpanded[regKey];
+                  const isCatActive = activeClass === catClass && activeCategory === cat.name && !activeRegBase;
 
-                    return (
-                      <div key={`${catClass}-${cat.name}`}>
-                        {/* Category row - entire row clickable, sets filter + always expands sub-sections */}
-                        <div
-                          onClick={() => {
-                            onSelect(catClass, isCatActive ? "" : cat.name, "");
-                            // Always expand, never collapse from row click
-                            if (cat.sections?.length) {
-                              setExp((p) => ({ ...p, [cKey]: true }));
-                            }
-                          }}
-                          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${isCatActive ? "bg-[#002855]/10" : "hover:bg-[#F8FAFC]"}`}
-                        >
-                          {cat.sections?.length > 0 ? (
-                            <span
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExp((p) => ({ ...p, [cKey]: !p[cKey] }));
-                              }}
-                              className="text-[#CBD5E1] flex-shrink-0 cursor-pointer"
-                            >
-                              {isCatExp ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                            </span>
-                          ) : <span className="w-3" />}
-                          <span className={`flex-1 text-left text-[11px] truncate ${isCatActive ? "font-semibold text-[#002855]" : "text-[#64748B]"}`}>
-                            {cat.name}
+                  return (
+                    <div key={`${catClass}-${cat.name}`}>
+                      {/* Category row — click sets filter, chevron toggles reg sections */}
+                      <div
+                        onClick={() => onSelect(catClass, isCatActive ? "" : cat.name, "")}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer transition-colors ${isCatActive ? "bg-[#002855]/10" : "hover:bg-[#F8FAFC]"}`}
+                      >
+                        {cat.sections?.length > 0 ? (
+                          <span
+                            onClick={(e) => { e.stopPropagation(); toggleRegs(regKey); }}
+                            className="text-[#CBD5E1] flex-shrink-0 cursor-pointer hover:text-[#64748B]"
+                          >
+                            {isRegsOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                           </span>
-                          <span className={`text-[9px] flex-shrink-0 ${isCatActive ? "text-[#002855]" : "text-[#CBD5E1]"}`}>{cat.count}</span>
-                        </div>
-
-                        {/* Regulation sections with labels */}
-                        {isCatExp && cat.sections?.length > 0 && (
-                          <div className="ml-4 pl-3 border-l border-[#F1F5F9] space-y-0.5 my-0.5">
-                            {cat.sections.map((sec) => {
-                              const isSecActive = activeClass === catClass && activeCategory === cat.name && activeRegBase === sec.ref;
-                              return (
-                                <div
-                                  key={sec.ref}
-                                  onClick={() => onSelect(catClass, cat.name, isSecActive ? "" : sec.ref)}
-                                  className={`px-2 py-1 rounded cursor-pointer transition-colors ${isSecActive ? "bg-[#D4AF37]/15" : "hover:bg-[#F8FAFC]"}`}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <span className={`text-[10px] font-mono ${isSecActive ? "text-[#002855] font-semibold" : "text-[#64748B]"}`}>
-                                      {sec.ref}
-                                    </span>
-                                    <span className={`text-[9px] ${isSecActive ? "text-[#D4AF37]" : "text-[#E2E8F0]"}`}>{sec.count}</span>
-                                  </div>
-                                  {sec.label && (
-                                    <p className={`text-[9px] leading-tight mt-0.5 ${isSecActive ? "text-[#002855]/70" : "text-[#B0BEC5]"}`}>
-                                      {sec.label}
-                                    </p>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                        ) : <span className="w-3" />}
+                        <span className={`flex-1 text-left text-[11px] truncate ${isCatActive ? "font-semibold text-[#002855]" : "text-[#64748B]"}`}>
+                          {cat.name}
+                        </span>
+                        <span className={`text-[9px] flex-shrink-0 ${isCatActive ? "text-[#002855]" : "text-[#CBD5E1]"}`}>{cat.count}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+
+                      {/* Reg sections — only level that expands/collapses */}
+                      {isRegsOpen && cat.sections?.length > 0 && (
+                        <div className="ml-4 pl-3 border-l border-[#F1F5F9] space-y-0.5 my-0.5">
+                          {cat.sections.map((sec) => {
+                            const isSecActive = activeClass === catClass && activeCategory === cat.name && activeRegBase === sec.ref;
+                            return (
+                              <div
+                                key={sec.ref}
+                                onClick={() => onSelect(catClass, cat.name, isSecActive ? "" : sec.ref)}
+                                className={`px-2 py-1 rounded cursor-pointer transition-colors ${isSecActive ? "bg-[#D4AF37]/15" : "hover:bg-[#F8FAFC]"}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className={`text-[10px] font-mono ${isSecActive ? "text-[#002855] font-semibold" : "text-[#64748B]"}`}>{sec.ref}</span>
+                                  <span className={`text-[9px] ${isSecActive ? "text-[#D4AF37]" : "text-[#E2E8F0]"}`}>{sec.count}</span>
+                                </div>
+                                {sec.label && (
+                                  <p className={`text-[9px] leading-tight mt-0.5 ${isSecActive ? "text-[#002855]/70" : "text-[#B0BEC5]"}`}>{sec.label}</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })}
