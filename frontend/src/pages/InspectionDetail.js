@@ -319,8 +319,8 @@ export default function InspectionDetail() {
                         <div key={i} className={`flex items-center justify-between text-[11px] px-2 py-1 rounded ${td.defective ? "bg-red-50 text-red-400 line-through" : "bg-[#FAFBFC]"}`}>
                           <span className="font-medium">{i + 1}. {td.type}</span>
                           <div className="flex items-center gap-2">
-                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${td.method === "indirect" ? "bg-[#D4AF37]/20 text-[#8B7518]" : "bg-[#002855]/10 text-[#002855]"}`}>
-                              {td.method === "indirect" ? "INDIRECT" : "DIRECT"}
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${td.method === "indirect" ? "bg-emerald-100 text-emerald-700" : "bg-[#002855]/10 text-[#002855]"}`}>
+                              {td.method === "indirect" ? "INDIRECT 100%" : "DIRECT 50%"}
                             </span>
                             {td.defective && <span className="text-[9px] font-bold text-red-500">DEF</span>}
                             <span className="font-bold w-14 text-right">{td.effective_wll?.toLocaleString()} lbs</span>

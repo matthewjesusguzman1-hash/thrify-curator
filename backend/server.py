@@ -929,7 +929,7 @@ def _compute_tiedown_assessment(cargo_weight, cargo_length, tiedowns_raw):
         method = td.get("method", "direct") if isinstance(td, dict) else td.method
         defective = td.get("defective", False) if isinstance(td, dict) else td.defective
         td_type = td.get("type", "") if isinstance(td, dict) else td.type
-        eff = 0 if defective else (wll * 0.5 if method == "indirect" else wll)
+        eff = 0 if defective else (wll * 0.5 if method == "direct" else wll)
         computed.append({
             "type": td_type, "wll": wll, "method": method,
             "defective": defective, "effective_wll": eff,
@@ -1098,7 +1098,7 @@ def _build_tiedown_html(assessments, include_photos=False):
         status_text = "COMPLIANT" if a.get("compliant") else "NOT COMPLIANT"
         rows = ""
         for i, td in enumerate(a.get("tiedowns", [])):
-            method_badge = '<span style="background:#D4AF37;color:#002855;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">INDIRECT 50%</span>' if td.get("method") == "indirect" else '<span style="background:#002855;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">DIRECT</span>'
+            method_badge = '<span style="background:#10B981;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">INDIRECT 100%</span>' if td.get("method") == "indirect" else '<span style="background:#002855;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">DIRECT 50%</span>'
             def_style = "text-decoration:line-through;color:#999;" if td.get("defective") else ""
             def_badge = ' <span style="background:#DC2626;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">DEFECTIVE</span>' if td.get("defective") else ""
             eff = td.get("effective_wll", 0)
@@ -1159,7 +1159,7 @@ def _build_tiedown_html(assessments, include_photos=False):
                     <td style="padding:8px;text-align:right;font-weight:bold;font-size:15px;color:{"#10B981" if pct>=100 else "#EF4444"}">{a.get("total_effective_wll",0):,.0f} lbs</td>
                 </tr></tfoot>
             </table>
-            <p style="font-size:10px;color:#94A3B8;margin-top:8px;font-style:italic;">Per 49 CFR 393.104/.106 — Direct: 100% WLL, Indirect: 50% WLL, Required aggregate WLL: 50% of cargo weight</p>
+            <p style="font-size:10px;color:#94A3B8;margin-top:8px;font-style:italic;">Per 49 CFR 393.102/104/106 — Direct: 50% WLL, Indirect: 100% WLL, Required aggregate WLL: 50% of cargo weight</p>
             {_build_assessment_photos_html(a.get("photos", []), include_photos)}
         </div>'''
 
