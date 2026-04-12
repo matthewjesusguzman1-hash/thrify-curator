@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Header } from "../components/app/Header";
-import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert, XCircle } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert, XCircle, Eye } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -11,6 +11,8 @@ import {
   Dialog,
   DialogContent,
 } from "../components/ui/dialog";
+import { PDFPreview } from "../components/app/PDFPreview";
+import { InspectionReportContent } from "../components/app/ReportContent";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -26,6 +28,7 @@ export default function InspectionDetail() {
   const [editingItemNotes, setEditingItemNotes] = useState(null);
   const [itemNotesDraft, setItemNotesDraft] = useState("");
   const [previewPhoto, setPreviewPhoto] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const fetchInspection = useCallback(async () => {
     try {
@@ -160,11 +163,8 @@ export default function InspectionDetail() {
       <main className="max-w-[800px] mx-auto px-3 sm:px-6 py-4 pb-20 space-y-4">
         {/* Actions bar */}
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => handleExport(false)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs" data-testid="export-btn">
-            <FileText className="w-3.5 h-3.5 mr-1" /> Export
-          </Button>
-          <Button size="sm" onClick={() => handleExport(true)} variant="outline" className="h-8 text-xs" data-testid="export-photos-btn">
-            <Image className="w-3.5 h-3.5 mr-1" /> Export with Photos
+          <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs" data-testid="export-btn">
+            <Eye className="w-3.5 h-3.5 mr-1" /> Preview &amp; Export
           </Button>
         </div>
 
@@ -366,6 +366,16 @@ export default function InspectionDetail() {
       </main>
 
       {/* Photo preview */}
+      {/* PDF PREVIEW */}
+      <PDFPreview
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        title={inspection?.title || "Inspection Report"}
+        filename={`inspection-${inspection?.title?.replace(/\s+/g, "-").toLowerCase() || id}-${new Date().toISOString().slice(0, 10)}`}
+      >
+        <InspectionReportContent inspection={inspection} />
+      </PDFPreview>
+
       {previewPhoto && (
         <Dialog open={!!previewPhoto} onOpenChange={() => setPreviewPhoto(null)}>
           <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">

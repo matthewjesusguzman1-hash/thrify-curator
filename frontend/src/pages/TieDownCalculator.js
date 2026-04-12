@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   ChevronLeft, Plus, Trash2, AlertTriangle, CheckCircle2, XCircle,
-  Info, ChevronDown, Link2, ShieldAlert, RotateCcw, Download, Save,
-  ClipboardList, GripVertical, Package
+  Info, ChevronDown, Link2, ShieldAlert, RotateCcw, Save,
+  ClipboardList, GripVertical, Package, Eye
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -12,6 +12,8 @@ import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
 import { Toaster, toast } from "sonner";
 import { Dialog, DialogContent } from "../components/ui/dialog";
+import { PDFPreview } from "../components/app/PDFPreview";
+import { TieDownReportContent } from "../components/app/ReportContent";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -219,6 +221,7 @@ export default function TieDownCalculator() {
   const [showWllInfo, setShowWllInfo] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [inspections, setInspections] = useState([]);
   const [loadingInspections, setLoadingInspections] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -305,54 +308,6 @@ export default function TieDownCalculator() {
     finally { setSaving(false); }
   };
 
-  /* ── Standalone export (all articles) ── */
-  const exportStandalone = () => {
-    const now = new Date().toLocaleString();
-    let articlesHtml = "";
-    articles.forEach((a, ai) => {
-      const c = calcArticle(a);
-      if (c.w <= 0 && a.tiedowns.length === 0) return;
-      const pct = Math.round(c.pct);
-      const barColor = pct >= 100 ? "#10B981" : pct >= 60 ? "#F59E0B" : "#EF4444";
-      const rows = a.tiedowns.map((td, i) => {
-        const eff = effectiveWll(td);
-        const mb = td.method === "indirect" ? '<span style="background:#10B981;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">INDIRECT 100%</span>' : '<span style="background:#002855;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">DIRECT 50%</span>';
-        const db = td.defective ? ' <span style="background:#DC2626;color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;">DEFECTIVE</span>' : "";
-        const ds = td.defective ? "text-decoration:line-through;color:#999;" : "";
-        return `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;${ds}">${i + 1}. ${td.type}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center;">${mb}${db}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;${ds}">${td.wll.toLocaleString()}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;color:${td.defective ? "#DC2626" : "#002855"}">${eff.toLocaleString()}</td></tr>`;
-      }).join("");
-      articlesHtml += `
-<div style="border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:16px;">
-<h2 style="font-size:15px;font-weight:bold;color:#002855;margin:0 0 12px;">Article ${ai + 1}: ${a.label}</h2>
-<div style="display:flex;gap:12px;margin-bottom:12px;">
-<div style="background:#f8fafc;padding:8px 12px;border-radius:6px;flex:1;text-align:center;"><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Weight</div><div style="font-size:18px;font-weight:bold;color:#002855;">${c.w.toLocaleString()} lbs</div></div>
-<div style="background:#f8fafc;padding:8px 12px;border-radius:6px;flex:1;text-align:center;"><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Length</div><div style="font-size:18px;font-weight:bold;color:#002855;">${c.l} ft</div></div>
-<div style="background:#f8fafc;padding:8px 12px;border-radius:6px;flex:1;text-align:center;"><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Req WLL</div><div style="font-size:16px;font-weight:bold;color:#002855;">${c.reqWLL.toLocaleString()}</div></div>
-<div style="background:#f8fafc;padding:8px 12px;border-radius:6px;flex:1;text-align:center;"><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;">Min by Length</div><div style="font-size:16px;font-weight:bold;color:#002855;">${c.min}</div></div>
-</div>
-<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>Aggregate WLL</span><strong style="color:${pct >= 100 ? "#10B981" : "#EF4444"}">${c.totWLL.toLocaleString()} / ${c.reqWLL.toLocaleString()} (${pct}%)</strong></div><div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;"><div style="height:100%;width:${Math.min(pct, 100)}%;background:${barColor};border-radius:4px;"></div></div></div>
-<div style="padding:10px 14px;border-radius:8px;margin-bottom:12px;background:${c.allOk ? "#ecfdf5" : "#fef2f2"};border:1px solid ${c.allOk ? "#a7f3d0" : "#fecaca"};font-weight:bold;color:${c.allOk ? "#10B981" : "#DC2626"};">${c.allOk ? "COMPLIANT" : "NOT COMPLIANT"} — Active: ${c.active}/${c.min} min | WLL: ${pct}%</div>
-<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f8fafc;"><th style="padding:6px 8px;text-align:left;font-size:11px;color:#64748B;">Tie-Down</th><th style="padding:6px 8px;text-align:center;font-size:11px;color:#64748B;">Method</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:#64748B;">Rated WLL</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:#64748B;">Effective</th></tr></thead><tbody>${rows}</tbody><tfoot><tr style="border-top:2px solid #002855;"><td colspan="3" style="padding:8px;font-weight:bold;color:#002855;">Total Effective WLL</td><td style="padding:8px;text-align:right;font-weight:bold;font-size:15px;color:${pct >= 100 ? "#10B981" : "#EF4444"}">${c.totWLL.toLocaleString()} lbs</td></tr></tfoot></table>
-</div>`;
-    });
-
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tie-Down Assessment Report</title><style>body{font-family:'IBM Plex Sans',Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#0F172A;}</style></head><body>
-<div style="background:#002855;color:white;padding:16px 20px;border-radius:8px;margin-bottom:20px;"><h1 style="margin:0;font-size:20px;">Tie-Down Assessment Report</h1><p style="margin:4px 0 0;font-size:12px;opacity:0.7;">${now} | ${articles.length} article(s) | 49 CFR 393 Subpart I</p></div>
-${articlesHtml}
-<p style="font-size:10px;color:#94A3B8;font-style:italic;">Per 49 CFR 393.102/104/110 — Direct: 50% WLL, Indirect: 100% WLL, Required aggregate WLL: 50% of cargo weight</p>
-</body></html>`;
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const el = document.createElement("a");
-    el.href = url;
-    el.download = `tiedown-assessment-${new Date().toISOString().slice(0, 10)}.html`;
-    document.body.appendChild(el);
-    el.click();
-    document.body.removeChild(el);
-    URL.revokeObjectURL(url);
-    toast.success("Report exported");
-  };
-
   /* ================================================================
      RENDER
      ================================================================ */
@@ -377,7 +332,7 @@ ${articlesHtml}
       {hasData && (
         <div className="sticky top-[45px] z-40 bg-white/95 backdrop-blur border-b shadow-sm">
           <div className="max-w-[800px] mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
-            <Button size="sm" onClick={exportStandalone} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1 sm:flex-none" data-testid="export-standalone-btn"><Download className="w-3.5 h-3.5 mr-1.5" /> Export Report</Button>
+            <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1 sm:flex-none" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export</Button>
             <Button size="sm" onClick={openSaveModal} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1 sm:flex-none" data-testid="save-to-inspection-btn"><Save className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection</Button>
           </div>
         </div>
@@ -632,6 +587,16 @@ ${articlesHtml}
           )}
         </div>
       </main>
+
+      {/* PDF PREVIEW */}
+      <PDFPreview
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        title="Tie-Down Assessment Report"
+        filename={`tiedown-assessment-${new Date().toISOString().slice(0, 10)}`}
+      >
+        <TieDownReportContent articles={articles} />
+      </PDFPreview>
 
       {/* SAVE MODAL */}
       <Dialog open={showSaveModal} onOpenChange={setShowSaveModal}>
