@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { FolderTree } from "lucide-react";
+import { FolderTree, ClipboardCheck } from "lucide-react";
 import { Header } from "../components/app/Header";
 import { SearchBar } from "../components/app/SearchBar";
 import { FilterBar } from "../components/app/FilterBar";
@@ -9,6 +9,7 @@ import { ViolationTable, ALL_COLUMNS } from "../components/app/ViolationTable";
 import { UploadDialog } from "../components/app/UploadDialog";
 import { SimilarViolationsSheet } from "../components/app/SimilarViolationsSheet";
 import { ViolationTree, ViolationTreeDrawer } from "../components/app/ViolationTree";
+import { InspectionProcedures } from "../components/app/InspectionProcedures";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Toaster, toast } from "sonner";
 
@@ -52,6 +53,7 @@ export default function Dashboard() {
     ALL_COLUMNS.map((c) => c.key)
   );
   const [treeDrawerOpen, setTreeDrawerOpen] = useState(false);
+  const [proceduresOpen, setProceduresOpen] = useState(false);
 
   // Load filter options and stats on mount
   useEffect(() => {
@@ -215,17 +217,26 @@ export default function Dashboard() {
           </ScrollArea>
         </aside>
 
-        <main className={`flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 pb-20 space-y-3 sm:space-y-5 ${treeDrawerOpen ? "lg:pt-4 pt-[calc(50vh+8px)]" : ""}`}>
-          {/* Mobile tree button + Search */}
+        <main className={`flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 pb-20 space-y-3 sm:space-y-5 transition-all ${treeDrawerOpen ? "lg:pt-4 pt-[52vh]" : ""}`}>
+          {/* Mobile tree and procedures buttons + Search */}
           <div className="flex gap-2 items-stretch">
             <button
-              onClick={() => setTreeDrawerOpen(true)}
-              className="lg:hidden flex items-center justify-center gap-1.5 h-10 px-3 border border-[#002855] rounded-lg bg-[#002855] text-white hover:bg-[#001a3a] transition-colors flex-shrink-0"
+              onClick={() => setTreeDrawerOpen(!treeDrawerOpen)}
+              className={`lg:hidden flex items-center justify-center gap-1.5 h-10 px-3 border rounded-lg transition-colors flex-shrink-0 ${treeDrawerOpen ? "bg-[#001a3a] border-[#001a3a] text-white" : "bg-[#002855] border-[#002855] text-white hover:bg-[#001a3a]"}`}
               data-testid="tree-drawer-btn"
               title="Browse by type"
             >
               <FolderTree className="w-4 h-4" />
               <span className="text-xs font-medium">Tree</span>
+            </button>
+            <button
+              onClick={() => setProceduresOpen(true)}
+              className="lg:hidden flex items-center justify-center gap-1.5 h-10 px-3 border border-[#CBD5E1] rounded-lg bg-white text-[#64748B] hover:text-[#002855] hover:border-[#002855] transition-colors flex-shrink-0"
+              data-testid="procedures-btn"
+              title="Inspection procedures"
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              <span className="text-xs font-medium">Steps</span>
             </button>
             <div className="flex-1">
               <SearchBar
@@ -295,6 +306,12 @@ export default function Dashboard() {
         violation={selectedViolation}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      {/* Inspection Procedures */}
+      <InspectionProcedures
+        open={proceduresOpen}
+        onOpenChange={setProceduresOpen}
       />
     </div>
   );

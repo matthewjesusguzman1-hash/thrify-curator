@@ -212,16 +212,40 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
 }
 
 export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCategory, activeRegBase, onSelect }) {
+  const [splitPct, setSplitPct] = useState(50);
+  const dragRef = { current: null };
+
+  const handleDragStart = (e) => {
+    e.preventDefault();
+    const startY = e.touches ? e.touches[0].clientY : e.clientY;
+    const startPct = splitPct;
+    const vh = window.innerHeight;
+
+    const onMove = (ev) => {
+      const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      const delta = y - startY;
+      const newPct = Math.min(75, Math.max(25, startPct + (delta / vh) * 100));
+      setSplitPct(Math.round(newPct));
+    };
+    const onEnd = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onEnd);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onEnd);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onEnd);
+    document.addEventListener("touchmove", onMove, { passive: false });
+    document.addEventListener("touchend", onEnd);
+  };
+
   return (
     <>
-      {/* Top panel tree for mobile — takes upper portion, violations visible below */}
       {open && (
-        <div className="fixed inset-x-0 top-0 z-40 lg:hidden" style={{ height: "50vh" }}>
-          <div className="h-full bg-white border-b-2 border-[#D4AF37] shadow-lg flex flex-col">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b bg-[#002855] flex-shrink-0">
-              <div>
-                <span className="text-sm font-semibold text-white block" style={{ fontFamily: "Outfit, sans-serif" }}>Violation Tree</span>
-              </div>
+        <div className="fixed inset-x-0 top-0 z-40 lg:hidden" style={{ height: `${splitPct}vh` }}>
+          <div className="h-full bg-white flex flex-col shadow-lg">
+            <div className="flex items-center justify-between px-4 py-2 border-b bg-[#002855] flex-shrink-0">
+              <span className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>Violation Tree</span>
               <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 px-3 text-white/70 hover:text-white hover:bg-white/10 text-xs font-medium" data-testid="tree-drawer-close">
                 Done
               </Button>
@@ -236,6 +260,15 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
                 mobile
               />
             </ScrollArea>
+            {/* Drag handle to resize */}
+            <div
+              onMouseDown={handleDragStart}
+              onTouchStart={handleDragStart}
+              className="h-6 flex items-center justify-center cursor-row-resize bg-[#F1F5F9] border-t border-b-2 border-[#D4AF37] flex-shrink-0 active:bg-[#E2E8F0]"
+              data-testid="split-drag-handle"
+            >
+              <div className="w-10 h-1 rounded-full bg-[#94A3B8]" />
+            </div>
           </div>
         </div>
       )}
