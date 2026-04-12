@@ -11,7 +11,7 @@ const FILTER_LABELS = {
   critical: "Critical",
 };
 
-export function ActiveFilters({ filters, onClearFilter, onClearAll, expandedTerms }) {
+export function ActiveFilters({ filters, onClearFilter, onClearAll, expandedTerms, onTermClick }) {
   const activeFilters = Object.entries(filters).filter(
     ([, value]) => value && value !== ""
   );
@@ -50,13 +50,14 @@ export function ActiveFilters({ filters, onClearFilter, onClearAll, expandedTerm
 
       {expandedTerms && expandedTerms.length > 0 && (
         <div className="flex items-center gap-1 ml-2">
-          <span className="text-xs text-[#B8960E] font-medium">AI terms:</span>
+          <span className="text-xs text-[#B8960E] font-medium">AI terms <span className="text-[10px] text-[#94A3B8] font-normal">(tap to search)</span>:</span>
           {expandedTerms.slice(0, 5).map((term, idx) => (
             <Badge
               key={idx}
               variant="outline"
-              className="text-xs px-2 py-0.5 border-[#D4AF37]/30 text-[#B8960E] bg-[#D4AF37]/5"
+              className="text-xs px-2 py-0.5 border-[#D4AF37]/30 text-[#B8960E] bg-[#D4AF37]/5 cursor-pointer hover:bg-[#D4AF37]/20 hover:border-[#D4AF37]/60 active:scale-95 transition-all"
               data-testid={`ai-term-${idx}`}
+              onClick={() => onTermClick && onTermClick(term)}
             >
               {term}
             </Badge>

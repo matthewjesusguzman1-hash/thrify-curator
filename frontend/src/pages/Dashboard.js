@@ -264,6 +264,13 @@ export default function Dashboard() {
           onClearFilter={handleClearFilter}
           onClearAll={handleClearAllFilters}
           expandedTerms={expandedTerms}
+          onTermClick={(term) => {
+            setKeyword(term);
+            setAiMode(false);
+            setExpandedTerms([]);
+            setPage(1);
+            fetchViolations(term);
+          }}
         />
 
         {/* Results Table */}
