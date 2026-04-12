@@ -10,11 +10,7 @@ A simple, intuitive application to search and filter FMCSA roadside violation da
 - 4-level interactive Violation Tree for hierarchical navigation
 - CVSA and NSP resource links
 - PWA support (Save to Home Screen)
-- Tie-Down Calculator: cargo weight, length, WLL, direct/indirect usage rules, defective tie-downs
-- Tie-Down export (standalone HTML) and save-to-inspection with combined export
-- 393.108 WLL Chart with all chain grades, wire rope, webbing, steel strapping
-- Direct vs Indirect infographic with SVG diagrams
-- Photo upload for tie-down assessments (both calculator and inspection)
+- Tie-Down Calculator with 393.108 WLL table, direct/indirect infographic, favorites, photos
 
 ## Architecture
 - **Frontend**: React + Tailwind CSS + Shadcn UI (port 3000)
@@ -33,43 +29,24 @@ A simple, intuitive application to search and filter FMCSA roadside violation da
 | Inspection Documentation (CRUD, photos, HTML export) | DONE | Session 1 |
 | CVSA Procedures Viewer | DONE | Session 1 |
 | PWA with NSP badge | DONE | Session 1 |
-| Resources dropdown (NSP Truck Guide, FMCSA, Ops Policies) | DONE | Session 1 |
-| Tie-Down Calculator (49 CFR 393 compliant) | DONE | Session 2 |
-| Direct/Indirect method toggle per tie-down | DONE | Session 2 |
-| Calculator nav button (filled gold, prominent) | DONE | Session 2 |
-| Standalone export (HTML download from calculator) | DONE | Session 2 |
-| Save tie-down assessment to inspection | DONE | Session 2 |
-| Tie-down assessments displayed in InspectionDetail | DONE | Session 2 |
-| Inspection HTML export includes tie-down assessments | DONE | Session 2 |
-| Delete tie-down assessment from inspection | DONE | Session 2 |
-| **393.108 WLL Chart (7 categories, collapsible)** | **DONE** | Session 2 |
-| **Direct vs Indirect SVG infographic** | **DONE** | Session 2 |
-| **Photo upload in calculator (standalone)** | **DONE** | Session 2 |
-| **Photo upload on inspection assessments** | **DONE** | Session 2 |
-| **Photos carry over when saving calculator to inspection** | **DONE** | Session 2 |
-| **Photos in inspection export (include_photos=Y)** | **DONE** | Session 2 |
+| Resources dropdown | DONE | Session 1 |
+| Tie-Down Calculator (49 CFR 393) | DONE | Session 2 |
+| Calculator export & save-to-inspection | DONE | Session 2 |
+| Photo upload (calculator + inspection) | DONE | Session 2 |
+| **Direct=50%, Indirect=100% (corrected per 393.102)** | **DONE** | Session 2 |
+| **393.108 WLL values corrected to regulation** | **DONE** | Session 2 |
+| **Favorites system (localStorage)** | **DONE** | Session 2 |
+| **3-diagram infographic (matching CVSA cert material)** | **DONE** | Session 2 |
+| **Collapsible accordion categories (Grade 30→80 order)** | **DONE** | Session 2 |
 
-## Key API Endpoints
-- `GET /api/violations` — Search & filter
-- `POST /api/violations/smart-search` — AI search
-- `GET /api/violations/similar/{id}` — Similar violations
-- `GET /api/violations/tree` — 4-level tree data
-- `GET /api/inspections`, `POST`, `PUT /api/inspections/{id}` — CRUD
-- `POST /api/inspections/{id}/tiedown` — Save tie-down assessment (with photos)
-- `DELETE /api/inspections/{id}/tiedown/{assessment_id}` — Remove assessment
-- `POST /api/tiedown-photos` — Upload photo from calculator (standalone)
-- `POST /api/inspections/{id}/tiedown/{assessment_id}/photos` — Add photo to assessment
-- `DELETE /api/inspections/{id}/tiedown/{assessment_id}/photos/{photo_id}` — Remove photo
-- `GET /api/inspections/{id}/export` — HTML export (includes tie-downs + photos)
-
-## DB Schema
-- `violations`: master_key, violation_class, violation_category, cfr_part, regulatory_reference, violation_text, oos_value, hazmat_value, inspection_level_3
-- `inspections`: id, title, notes, created_at, updated_at, items[], tiedown_assessments[]
-  - Each tiedown_assessment: assessment_id, cargo_weight, cargo_length, required_wll, min_tiedowns, tiedowns[], total_effective_wll, active_count, defective_count, compliant, photos[], created_at
+## Key WLL Rules (393.102)
+- **DIRECT** = 50% of WLL (vehicle anchor → cargo, OR same side)
+- **INDIRECT** = 100% of WLL (vehicle anchor → over cargo → OTHER side)
+- Required aggregate WLL = 50% of cargo weight
 
 ## Backlog (Prioritized)
 | Priority | Task |
 |----------|------|
-| P1 | Dedicated mobile resources page (consolidate links, procedures, guides) |
+| P1 | Dedicated mobile resources page |
 | P1 | Offline/cached mode for field use |
-| P2 | Refactor server.py (~1200+ lines) into modular route files |
+| P2 | Refactor server.py into modular routes |
