@@ -1222,10 +1222,6 @@ async def export_inspection(inspection_id: str, include_photos: str = Query("N")
 {f'<div style="background:#f8fafc;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;color:#334155;"><strong>Notes:</strong> {doc.get("notes", "")}</div>' if doc.get("notes") else ""}
 {items_html}
 {_build_tiedown_html(doc.get("tiedown_assessments", []), include_photos=include_photos.upper() == "Y")}
-<div class="no-print" style="text-align:center;margin-top:24px;padding:16px;">
-    <button id="printBtn" style="background:#002855;color:white;border:none;padding:12px 32px;border-radius:6px;font-size:14px;cursor:pointer;">Print / Save as PDF</button>
-</div>
-<script>document.getElementById('printBtn').addEventListener('click',function(){{window.print();}});</script>
 </body></html>'''
 
     return HTMLResponse(content=html)
