@@ -404,23 +404,52 @@ async def get_stats():
 
 @api_router.get("/violations/{violation_id}/similar")
 async def get_similar_violations(violation_id: str):
-    # Find the source violation
     source = await db.violations.find_one({"id": violation_id}, {"_id": 0})
     if not source:
         return {"violations": [], "total": 0}
 
-    # Find similar by same violation_category, cfr_part, or violation_class, excluding self
-    similar_query = {
-        "id": {"$ne": violation_id},
-        "$or": [
-            {"violation_category": source.get("violation_category", "")},
-            {"cfr_part": source.get("cfr_part", "")},
-        ]
-    }
+    reg_ref = source.get("regulatory_reference", "")
+    # Extract base section: 393.75(a)(1) → 393.75
+    base_section = re.sub(r'\(.*$', '', reg_ref).strip()
 
-    cursor = db.violations.find(similar_query, {"_id": 0}).limit(20)
-    results = await cursor.to_list(20)
-    total = await db.violations.count_documents(similar_query)
+    # Extract key words from violation text (3+ char words, skip common ones)
+    stop_words = {'the', 'and', 'for', 'not', 'with', 'that', 'this', 'from', 'are', 'was', 'has', 'have', 'been',
+                  'being', 'any', 'all', 'each', 'every', 'other', 'than', 'more', 'which', 'when', 'where', 'who'}
+    vio_text = source.get("violation_text", "")
+    words = re.findall(r'[a-zA-Z]{3,}', vio_text.lower())
+    keywords = [w for w in words if w not in stop_words][:8]
+
+    results = []
+    seen_ids = {violation_id}
+
+    # 1st pass: same base section (most similar - e.g., all 393.75 violations)
+    if base_section and '.' in base_section:
+        escaped_section = re.escape(base_section)
+        section_query = {
+            "id": {"$ne": violation_id},
+            "regulatory_reference": {"$regex": f"^{escaped_section}", "$options": "i"},
+        }
+        section_results = await db.violations.find(section_query, {"_id": 0}).limit(15).to_list(15)
+        for r in section_results:
+            if r["id"] not in seen_ids:
+                results.append(r)
+                seen_ids.add(r["id"])
+
+    # 2nd pass: same CFR part + keyword match from violation text
+    if len(results) < 20 and keywords:
+        keyword_regex = "|".join(re.escape(k) for k in keywords[:5])
+        keyword_query = {
+            "id": {"$nin": list(seen_ids)},
+            "cfr_part": source.get("cfr_part", ""),
+            "violation_text": {"$regex": keyword_regex, "$options": "i"},
+        }
+        keyword_results = await db.violations.find(keyword_query, {"_id": 0}).limit(20 - len(results)).to_list(20 - len(results))
+        for r in keyword_results:
+            if r["id"] not in seen_ids:
+                results.append(r)
+                seen_ids.add(r["id"])
+
+    total = len(results)
 
     return {
         "violations": [Violation(**r) for r in results],

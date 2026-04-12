@@ -145,7 +145,7 @@ export function ViolationTable({
             key={v.id || idx}
             className="border border-[#CBD5E1] rounded-lg bg-white p-3 active:bg-[#F8FAFC] transition-colors"
             onClick={() => onViolationClick?.(v)}
-            data-testid={`violation-row-${idx}`}
+            data-testid={`mobile-violation-row-${idx}`}
           >
             <div className="flex items-start justify-between gap-2 mb-1.5">
               <span className="text-sm font-bold text-[#002855]" data-testid={`reg-ref-${idx}`}>
