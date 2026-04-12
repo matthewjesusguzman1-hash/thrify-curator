@@ -512,7 +512,7 @@ export default function TieDownCalculator() {
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tie-Down Assessment Report</title>
 <style>body{font-family:'IBM Plex Sans',Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#0F172A;}
-@media print{body{padding:0;}button{display:none!important;}}</style></head>
+@media print{body{padding:0;}.no-print{display:none!important;}}</style></head>
 <body>
 <div style="background:#002855;color:white;padding:16px 20px;border-radius:8px;margin-bottom:20px;">
 <h1 style="margin:0;font-size:20px;">Tie-Down Assessment Report</h1>
@@ -570,9 +570,12 @@ export default function TieDownCalculator() {
 </tr></tfoot>
 </table>
 <p style="font-size:10px;color:#94A3B8;font-style:italic;">Per 49 CFR 393.102/104/106 &mdash; Direct: 50% WLL, Indirect: 100% WLL, Required aggregate WLL: 50% of cargo weight</p>
-<div style="text-align:center;margin-top:24px;padding:16px;">
-<button onclick="window.print()" style="background:#002855;color:white;border:none;padding:10px 24px;border-radius:6px;font-size:14px;cursor:pointer;">Print / Save as PDF</button>
+<div class="no-print" style="text-align:center;margin-top:24px;padding:16px;">
+<button id="printBtn" style="background:#002855;color:white;border:none;padding:12px 32px;border-radius:6px;font-size:14px;cursor:pointer;margin:4px;">Print / Save as PDF</button>
 </div>
+<script>
+document.getElementById('printBtn').addEventListener('click',function(){window.print();});
+</script>
 </body></html>`;
 
     const blob = new Blob([html], { type: "text/html" });
