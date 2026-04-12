@@ -4,6 +4,7 @@ import { Badge } from "../ui/badge";
 const FILTER_LABELS = {
   violation_class: "Class",
   violation_category: "Category",
+  reg_base: "Section",
   oos: "OOS",
   hazmat: "HazMat",
   level_iii: "Level III",

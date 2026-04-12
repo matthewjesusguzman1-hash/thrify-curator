@@ -17,6 +17,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const INITIAL_FILTERS = {
   violation_class: "",
   violation_category: "",
+  reg_base: "",
   oos: "",
   hazmat: "",
   level_iii: "",
@@ -181,13 +182,14 @@ export default function Dashboard() {
     setSheetOpen(true);
   };
 
-  const handleTreeSelect = (cls, cat) => {
+  const handleTreeSelect = (cls, cat, regBase) => {
     setPage(1);
     setFilters((prev) => ({
       ...prev,
       violation_class: cls,
       violation_category: cat,
-      hazmat: "", // Clear hazmat when using tree
+      reg_base: regBase || "",
+      hazmat: "",
     }));
   };
 
@@ -206,6 +208,7 @@ export default function Dashboard() {
             <ViolationTree
               activeClass={filters.violation_class}
               activeCategory={filters.violation_category}
+              activeRegBase={filters.reg_base}
               onSelect={handleTreeSelect}
               className="py-3"
             />
@@ -275,6 +278,7 @@ export default function Dashboard() {
         onOpenChange={setTreeDrawerOpen}
         activeClass={filters.violation_class}
         activeCategory={filters.violation_category}
+        activeRegBase={filters.reg_base}
         onSelect={handleTreeSelect}
       />
 

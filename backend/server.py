@@ -72,6 +72,8 @@ class SmartSearchRequest(BaseModel):
     level_iii: str = ""
     critical: str = ""
     violation_class: str = ""
+    violation_category: str = ""
+    reg_base: str = ""
 
 
 class SmartSearchResponse(BaseModel):
@@ -273,6 +275,7 @@ async def search_violations(
     keyword: str = Query("", description="Keyword search in violation text, regulatory reference, violation code"),
     violation_class: str = Query("", description="Filter by violation class"),
     violation_category: str = Query("", description="Filter by violation category"),
+    reg_base: str = Query("", description="Filter by regulation base section"),
     oos: str = Query("", description="Filter by OOS value (Y/N)"),
     hazmat: str = Query("", description="Filter hazmat only (Y=only hazmat, N=exclude hazmat)"),
     level_iii: str = Query("", description="Filter by Level III (Y/N)"),
@@ -299,6 +302,9 @@ async def search_violations(
         query["violation_class"] = violation_class
     if violation_category:
         query["violation_category"] = violation_category
+    if reg_base:
+        escaped_base = re.escape(reg_base)
+        query["regulatory_reference"] = {"$regex": f"^{escaped_base}", "$options": "i"}
     if oos:
         query["oos_value"] = oos.upper()
     if hazmat == "Y":
@@ -361,31 +367,50 @@ async def get_filter_options():
 
 @api_router.get("/violations/tree")
 async def get_violation_tree():
+    # 3-level tree: class → category → regulation section (base number)
     pipeline = [
+        {"$addFields": {
+            "reg_base": {"$arrayElemAt": [{"$split": ["$regulatory_reference", "("]}, 0]}
+        }},
         {"$group": {
-            "_id": {"violation_class": "$violation_class", "violation_category": "$violation_category"},
+            "_id": {
+                "violation_class": "$violation_class",
+                "violation_category": "$violation_category",
+                "reg_base": "$reg_base",
+            },
             "count": {"$sum": 1}
         }},
-        {"$sort": {"_id.violation_class": 1, "_id.violation_category": 1}}
+        {"$sort": {"_id.violation_class": 1, "_id.violation_category": 1, "_id.reg_base": 1}}
     ]
-    results = await db.violations.aggregate(pipeline).to_list(200)
+    results = await db.violations.aggregate(pipeline).to_list(2000)
 
     tree = {}
     for r in results:
         cls = r["_id"]["violation_class"]
         cat = r["_id"]["violation_category"]
+        reg = (r["_id"].get("reg_base") or "").strip()
         if not cls:
             continue
         if cls not in tree:
-            tree[cls] = {"count": 0, "categories": []}
+            tree[cls] = {"count": 0, "categories": {}}
         tree[cls]["count"] += r["count"]
-        tree[cls]["categories"].append({"name": cat, "count": r["count"]})
+        if cat not in tree[cls]["categories"]:
+            tree[cls]["categories"][cat] = {"count": 0, "sections": []}
+        tree[cls]["categories"][cat]["count"] += r["count"]
+        if reg:
+            tree[cls]["categories"][cat]["sections"].append({"ref": reg, "count": r["count"]})
 
-    # Sort categories within each class
+    # Convert categories dict to sorted list, sort sections by ref
+    result = {}
     for cls in tree:
-        tree[cls]["categories"].sort(key=lambda x: x["name"])
+        cats = []
+        for cat_name in sorted(tree[cls]["categories"].keys()):
+            cat_data = tree[cls]["categories"][cat_name]
+            cat_data["sections"].sort(key=lambda x: x["ref"])
+            cats.append({"name": cat_name, "count": cat_data["count"], "sections": cat_data["sections"]})
+        result[cls] = {"count": tree[cls]["count"], "categories": cats}
 
-    return {"tree": tree}
+    return {"tree": result}
 
 
 
@@ -482,6 +507,11 @@ Example output: ["brake", "air brake system", "393.40", "393.48", "pushrod", "br
     # Apply filters on top of AI search
     if request.violation_class:
         mongo_query["violation_class"] = request.violation_class
+    if request.violation_category:
+        mongo_query["violation_category"] = request.violation_category
+    if request.reg_base:
+        escaped_base = re.escape(request.reg_base)
+        mongo_query["regulatory_reference"] = {"$regex": f"^{escaped_base}", "$options": "i"}
     if request.hazmat == "Y":
         mongo_query["violation_class"] = "Hazardous Materials"
     elif request.hazmat == "N":
