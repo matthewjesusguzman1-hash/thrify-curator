@@ -1,0 +1,92 @@
+{
+  "theme_and_archetype": {
+    "theme": "light",
+    "archetype": "Archetype 4: Swiss & High-Contrast",
+    "rationale": "Authority, clarity, and function-first focus for a law enforcement dashboard. High contrast ensures readability in the field."
+  },
+  "design_system": {
+    "colors": {
+      "background": "#F9FAFB",
+      "foreground": "#0A0A0A",
+      "primary": "#002855",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#D4AF37",
+      "secondary_foreground": "#0A0A0A",
+      "muted": "#F3F4F6",
+      "muted_foreground": "#6B7280",
+      "border": "#E5E7EB",
+      "accent": "#F2A900",
+      "accent_foreground": "#0A0A0A",
+      "destructive": "#DC2626",
+      "destructive_foreground": "#FFFFFF"
+    },
+    "typography": {
+      "fonts_to_import": [
+        "Outfit",
+        "IBM Plex Sans"
+      ],
+      "font_family_headings": "Outfit, sans-serif",
+      "font_family_body": "'IBM Plex Sans', sans-serif",
+      "scale": {
+        "h1": "text-4xl sm:text-5xl tracking-tight font-semibold",
+        "h2": "text-2xl sm:text-3xl tracking-tight font-semibold",
+        "h3": "text-xl sm:text-2xl tracking-tight font-medium",
+        "h4": "text-lg sm:text-xl tracking-tight font-medium",
+        "body": "text-sm",
+        "labels": "text-xs tracking-[0.2em] uppercase font-bold"
+      }
+    },
+    "layout": {
+      "strategy": "The Control Room Grid (For Dashboards / Analytics). Base Grid: grid-cols-1 lg:grid-cols-4. Gap Strategy: Tight (gap-4 or gap-6).",
+      "spacing_scale": "Tailwind standard, but utilize generous internal padding (p-6) for bordered containers to avoid collision."
+    },
+    "surfaces": {
+      "header": "Solid Background (bg-white) with a hard bottom border (border-border), no shadows, sticky positioning (z-50).",
+      "cards": "Flat background (bg-card), sharp 1px border (border-border), max 8px border-radius, no drop shadows by default. Hover: slight lift (-translate-y-1) and shadow-sm.",
+      "table": "Grid Borders style. Expose the skeleton, subtle borders on right and bottom of cells. No unnecessary styling."
+    }
+  },
+  "components_instructions": {
+    "Search_Bar": "Large input field using Shadcn Input. Use a Search icon from Lucide. Focus state must use a 2px ring in primary color.",
+    "AI_Smart_Search_Toggle": "Customized Shadcn Switch. When active, it should highlight in the secondary color (Gold) to indicate 'AI mode' is on.",
+    "Filters": {
+      "Violation_Class": "Shadcn Select component.",
+      "OOS_Filter": "Shadcn Select or RadioGroup.",
+      "HazMat_and_Level_III": "Shadcn Checkbox or Switch toggles."
+    },
+    "Results_Table": "Use Shadcn Table. CRITICAL: Emphasize 'Regulatory Reference' using bold text and primary color. 'Violation Text' needs sufficient width to prevent excessive wrapping. 'OOS' (Out of Service) column must visually pop using Badges (e.g., Destructive Red for 'Yes', Neutral for 'No').",
+    "Filter_Summary": "Render active filters as dismissible Shadcn Badges below the search/filter area.",
+    "Data_Upload": "A distinct button opening a modal (Shadcn Dialog) with a drag-and-drop zone."
+  },
+  "media": {
+    "image_urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1772960198768-8a71783ac00b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTJ8MHwxfHNlYXJjaHwyfHxoaWdod2F5JTIwcGF0cm9sJTIwY2FyJTIwZGF5bGlnaHR8ZW58MHx8fHwxNzc1OTU4Mzk2fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Highway patrol car context",
+        "category": "empty_state_background"
+      }
+    ],
+    "instructions": "Since a precise Nebraska State Patrol logo cannot be sourced dynamically, use the Lucide 'Shield' or 'ShieldAlert' icon colored in Gold/Navy combined with typographic text ('NSP Carrier Enforcement') in the header."
+  },
+  "icons": {
+    "library": "lucide-react",
+    "usage": "Use Phosphor Icons or Lucide. Since Lucide is already installed, prefer it. Ensure stroke-width is consistent (e.g., 2)."
+  },
+  "accessibility": {
+    "contrast": "Always ensure text contrast against background. Gold text on white is forbidden if contrast is < 4.5:1. Use Gold as an accent (e.g., background with dark text, or borders).",
+    "testing": "All interactive and key informational elements MUST include a data-testid attribute (e.g., data-testid='search-input', data-testid='ai-toggle')."
+  },
+  "motion": {
+    "hover_states": "ALWAYS explicitly set text color on hover alongside background changes. Hover state color must be a lighter hue of ACTIVE state.",
+    "micro_interactions": "Use fast, subtle transitions for toggles and table row hovers."
+  },
+  "instructions_to_main_agent": [
+    "Load 'Outfit' and 'IBM Plex Sans' via Google Fonts in index.html or layout wrapper.",
+    "Map the provided colors directly into tailwind.config.js variables (e.g., --primary, --secondary).",
+    "Build the dashboard using pure HTML/Tailwind for the grid layout, but strictly use Shadcn for all interactive elements (Table, Select, Input, Switch, Badge, Dialog).",
+    "The layout should consist of a sticky top Header, a Search/Filter control bar, an Active Filters summary row, and the Data Table.",
+    "For the data table, the 'Regulatory Reference' should be highly legible (e.g., text-primary, font-medium) as per user requirement.",
+    "Apply `data-testid` to all actionable components.",
+    "Do NOT use 'Inter' font anywhere. Enforce 'IBM Plex Sans' for the body."
+  ]
+}
