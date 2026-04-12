@@ -51,7 +51,7 @@ export function ActiveFilters({ filters, onClearFilter, onClearAll, expandedTerm
       })}
 
       {expandedTerms && expandedTerms.length > 0 && (
-        <div className="flex items-center gap-1 ml-2">
+        <div className="flex flex-wrap items-center gap-1 ml-2">
           <span className="text-xs text-[#B8960E] font-medium">AI terms <span className="text-[10px] text-[#94A3B8] font-normal">(tap to search)</span>:</span>
           {(showAllTerms ? expandedTerms : expandedTerms.slice(0, 5)).map((term, idx) => (
             <Badge
