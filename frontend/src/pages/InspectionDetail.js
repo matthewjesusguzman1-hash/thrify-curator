@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Header } from "../components/app/Header";
-import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert, XCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -87,6 +87,25 @@ export default function InspectionDetail() {
     await axios.delete(`${API}/inspections/${id}/tiedown/${assessmentId}`);
     fetchInspection();
     toast.success("Tie-down assessment removed");
+  };
+
+  const handleAssessmentPhotoUpload = async (assessmentId, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await axios.post(`${API}/inspections/${id}/tiedown/${assessmentId}/photos`, formData);
+      fetchInspection();
+      toast.success("Photo added to assessment");
+    } catch {
+      toast.error("Photo upload failed");
+    }
+  };
+
+  const removeAssessmentPhoto = async (assessmentId, photoId) => {
+    await axios.delete(`${API}/inspections/${id}/tiedown/${assessmentId}/photos/${photoId}`);
+    fetchInspection();
   };
 
   const handleExport = (includePhotos) => {
@@ -313,6 +332,31 @@ export default function InspectionDetail() {
                     <p className="text-[9px] text-[#94A3B8] mt-2">
                       {a.created_at?.slice(0, 16).replace("T", " ")} | {a.active_count} active, {a.defective_count} defective | Min: {a.min_tiedowns} | Req: {a.required_wll?.toLocaleString()} lbs
                     </p>
+
+                    {/* Assessment photos */}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {a.photos?.map((photo) => (
+                        <div key={photo.photo_id} className="relative group">
+                          <img
+                            src={`${API}/files/${photo.storage_path}`}
+                            alt={photo.original_filename}
+                            className="w-16 h-16 object-cover rounded-md border cursor-pointer"
+                            onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
+                          />
+                          <button
+                            onClick={() => removeAssessmentPhoto(a.assessment_id, photo.photo_id)}
+                            className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity"
+                          >
+                            <XCircle className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <label className="inline-flex items-center gap-1 text-xs text-[#94A3B8] hover:text-[#002855] cursor-pointer transition-colors mt-1">
+                      <Camera className="w-3 h-3" />
+                      <span>Add photo</span>
+                      <input type="file" accept="image/*" capture="environment" onChange={(e) => handleAssessmentPhotoUpload(a.assessment_id, e)} className="hidden" />
+                    </label>
                   </div>
                 );
               })}

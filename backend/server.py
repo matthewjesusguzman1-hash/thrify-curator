@@ -176,6 +176,7 @@ class SaveTieDownRequest(BaseModel):
     cargo_weight: float = 0
     cargo_length: float = 0
     tiedowns: List[TieDownItemData] = []
+    photos: List[dict] = []
 
 
 # Seed data on startup
@@ -958,6 +959,7 @@ async def save_tiedown_to_inspection(inspection_id: str, req: SaveTieDownRequest
     assessment = _compute_tiedown_assessment(req.cargo_weight, req.cargo_length, req.tiedowns)
     assessment["assessment_id"] = str(uuid.uuid4())
     assessment["created_at"] = datetime.now(timezone.utc).isoformat()
+    assessment["photos"] = req.photos or []
 
     await db.inspections.update_one(
         {"id": inspection_id},
@@ -981,6 +983,86 @@ async def delete_tiedown_from_inspection(inspection_id: str, assessment_id: str)
     return {"message": "Tie-down assessment removed"}
 
 
+@api_router.post("/tiedown-photos")
+async def upload_tiedown_photo(file: UploadFile = File(...)):
+    """Upload a photo from the calculator (standalone, before saving to inspection)."""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files allowed")
+    data = await file.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    storage_path = f"{APP_NAME}/tiedown-photos/{uuid.uuid4()}.{ext}"
+    try:
+        result = put_object(storage_path, data, file.content_type)
+    except Exception as e:
+        logger.error(f"Tiedown photo upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Photo upload failed")
+    photo = {
+        "photo_id": str(uuid.uuid4()),
+        "storage_path": result["path"],
+        "original_filename": file.filename,
+        "content_type": file.content_type,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return photo
+
+
+@api_router.post("/inspections/{inspection_id}/tiedown/{assessment_id}/photos")
+async def upload_assessment_photo(inspection_id: str, assessment_id: str, file: UploadFile = File(...)):
+    """Add a photo to a tie-down assessment attached to an inspection."""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files allowed")
+    data = await file.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    storage_path = f"{APP_NAME}/tiedown-photos/{inspection_id}/{assessment_id}/{uuid.uuid4()}.{ext}"
+    try:
+        result = put_object(storage_path, data, file.content_type)
+    except Exception as e:
+        logger.error(f"Assessment photo upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Photo upload failed")
+    photo = {
+        "photo_id": str(uuid.uuid4()),
+        "storage_path": result["path"],
+        "original_filename": file.filename,
+        "content_type": file.content_type,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+    }
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    assessments = doc.get("tiedown_assessments", [])
+    for i, a in enumerate(assessments):
+        if a.get("assessment_id") == assessment_id:
+            photos = a.get("photos", [])
+            photos.append(photo)
+            await db.inspections.update_one(
+                {"id": inspection_id},
+                {"$set": {f"tiedown_assessments.{i}.photos": photos, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            return photo
+    raise HTTPException(status_code=404, detail="Assessment not found")
+
+
+@api_router.delete("/inspections/{inspection_id}/tiedown/{assessment_id}/photos/{photo_id}")
+async def delete_assessment_photo(inspection_id: str, assessment_id: str, photo_id: str):
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    assessments = doc.get("tiedown_assessments", [])
+    for i, a in enumerate(assessments):
+        if a.get("assessment_id") == assessment_id:
+            photos = [p for p in a.get("photos", []) if p.get("photo_id") != photo_id]
+            await db.inspections.update_one(
+                {"id": inspection_id},
+                {"$set": {f"tiedown_assessments.{i}.photos": photos, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            return {"message": "Photo removed"}
+    raise HTTPException(status_code=404, detail="Assessment not found")
+
+
 @api_router.get("/files/{path:path}")
 async def serve_file(path: str):
     try:
@@ -991,7 +1073,22 @@ async def serve_file(path: str):
 
 
 
-def _build_tiedown_html(assessments):
+def _build_assessment_photos_html(photos, include_photos):
+    if not photos or not include_photos:
+        return ""
+    import base64
+    imgs = ""
+    for photo in photos:
+        try:
+            photo_data, ct = get_object(photo["storage_path"])
+            b64 = base64.b64encode(photo_data).decode()
+            imgs += f'<img src="data:{ct};base64,{b64}" style="max-width:280px;max-height:200px;margin:6px 4px;border-radius:6px;border:1px solid #ddd;" />'
+        except Exception:
+            imgs += f'<p style="color:#999;font-size:11px;">[Photo unavailable: {photo.get("original_filename", "")}]</p>'
+    return f'<div style="margin-top:10px;"><p style="font-size:11px;font-weight:bold;color:#64748B;margin-bottom:4px;">Photos</p>{imgs}</div>' if imgs else ""
+
+
+def _build_tiedown_html(assessments, include_photos=False):
     """Generate HTML for tie-down assessments in export."""
     if not assessments:
         return ""
@@ -1063,6 +1160,7 @@ def _build_tiedown_html(assessments):
                 </tr></tfoot>
             </table>
             <p style="font-size:10px;color:#94A3B8;margin-top:8px;font-style:italic;">Per 49 CFR 393.104/.106 — Direct: 100% WLL, Indirect: 50% WLL, Required aggregate WLL: 50% of cargo weight</p>
+            {_build_assessment_photos_html(a.get("photos", []), include_photos)}
         </div>'''
 
     return f'<div style="margin-top:20px;"><h2 style="font-size:16px;color:#002855;margin-bottom:12px;border-bottom:2px solid #D4AF37;padding-bottom:6px;">Tie-Down Assessments</h2>{sections}</div>'
@@ -1115,7 +1213,7 @@ async def export_inspection(inspection_id: str, include_photos: str = Query("N")
 </div>
 {f'<div style="background:#f8fafc;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;color:#334155;"><strong>Notes:</strong> {doc.get("notes", "")}</div>' if doc.get("notes") else ""}
 {items_html}
-{_build_tiedown_html(doc.get("tiedown_assessments", []))}
+{_build_tiedown_html(doc.get("tiedown_assessments", []), include_photos=include_photos.upper() == "Y")}
 <div style="text-align:center;margin-top:24px;padding:16px;">
     <button onclick="window.print()" style="background:#002855;color:white;border:none;padding:10px 24px;border-radius:6px;font-size:14px;cursor:pointer;">Print / Save as PDF</button>
 </div>

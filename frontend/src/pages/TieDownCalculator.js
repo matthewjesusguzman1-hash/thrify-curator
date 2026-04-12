@@ -18,15 +18,66 @@ import {
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 /* ================================================================
-   CONSTANTS
+   CONSTANTS — 49 CFR 393.108 WLL CHART
    ================================================================ */
-const PRESETS = [
-  { label: '1" Ratchet Strap', wll: 3300 },
+const QUICK_PRESETS = [
   { label: '2" Ratchet Strap', wll: 3300 },
   { label: '4" Ratchet Strap', wll: 5400 },
   { label: '3/8" Gr70 Chain', wll: 6600 },
   { label: '1/2" Gr70 Chain', wll: 11300 },
 ];
+
+const WLL_CHART = {
+  "Chain — Grade 70": [
+    { label: '1/4" Gr70', wll: 3880 },
+    { label: '5/16" Gr70', wll: 6600 },
+    { label: '3/8" Gr70', wll: 9200 },
+    { label: '7/16" Gr70', wll: 10950 },
+    { label: '1/2" Gr70', wll: 14800 },
+    { label: '5/8" Gr70', wll: 15800 },
+  ],
+  "Chain — Grade 43": [
+    { label: '1/4" Gr43', wll: 3100 },
+    { label: '5/16" Gr43', wll: 5400 },
+    { label: '3/8" Gr43', wll: 7600 },
+    { label: '7/16" Gr43', wll: 9000 },
+    { label: '1/2" Gr43', wll: 12200 },
+    { label: '5/8" Gr43', wll: 13000 },
+  ],
+  "Chain — Grade 80": [
+    { label: '1/4" Gr80', wll: 4400 },
+    { label: '5/16" Gr80', wll: 7100 },
+    { label: '3/8" Gr80', wll: 10000 },
+    { label: '1/2" Gr80', wll: 16000 },
+    { label: '5/8" Gr80', wll: 18100 },
+  ],
+  "Chain — Grade 30": [
+    { label: '1/4" Gr30', wll: 1560 },
+    { label: '5/16" Gr30', wll: 2470 },
+    { label: '3/8" Gr30', wll: 3880 },
+    { label: '1/2" Gr30', wll: 6000 },
+    { label: '5/8" Gr30', wll: 6900 },
+  ],
+  "Webbing / Straps": [
+    { label: '1" Ratchet Strap', wll: 3300 },
+    { label: '2" Ratchet Strap', wll: 3300 },
+    { label: '4" Ratchet Strap', wll: 5400 },
+    { label: '1-3/4" Webbing', wll: 1750 },
+    { label: '2" Webbing', wll: 2000 },
+  ],
+  "Wire Rope (6x37)": [
+    { label: '1/4" Wire Rope', wll: 1400 },
+    { label: '5/16" Wire Rope', wll: 2100 },
+    { label: '3/8" Wire Rope', wll: 3000 },
+    { label: '7/16" Wire Rope', wll: 4100 },
+    { label: '1/2" Wire Rope', wll: 5300 },
+    { label: '5/8" Wire Rope', wll: 8300 },
+    { label: '3/4" Wire Rope', wll: 10900 },
+  ],
+  "Steel Strapping": [
+    { label: '2"x.050 Steel Strap', wll: 2650 },
+  ],
+};
 
 /** Effective WLL accounting for method: direct = 100%, indirect = 50% */
 function effectiveWll(td) {
@@ -102,6 +153,143 @@ function CountDots({ active, required, defective }) {
 }
 
 /* ================================================================
+   DIRECT vs INDIRECT INFOGRAPHIC
+   ================================================================ */
+function DirectIndirectGraphic() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* DIRECT */}
+      <div className="rounded-xl border-2 border-[#002855]/20 bg-[#002855]/[0.03] p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#002855] text-white tracking-wider">DIRECT</span>
+          <span className="text-[10px] text-[#002855] font-semibold">100% WLL</span>
+        </div>
+        <svg viewBox="0 0 240 100" className="w-full" style={{ maxHeight: 90 }}>
+          {/* Trailer bed */}
+          <rect x="20" y="60" width="200" height="12" rx="2" fill="#94A3B8" />
+          {/* Anchor points */}
+          <circle cx="55" cy="66" r="5" fill="#002855" />
+          <circle cx="185" cy="66" r="5" fill="#002855" />
+          {/* Cargo block */}
+          <rect x="80" y="22" width="80" height="38" rx="4" fill="#D4AF37" opacity="0.3" stroke="#D4AF37" strokeWidth="2" />
+          <text x="120" y="46" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#8B7518">CARGO</text>
+          {/* Tie-down lines — direct from anchor to cargo */}
+          <line x1="55" y1="66" x2="84" y2="50" stroke="#002855" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="185" y1="66" x2="156" y2="50" stroke="#002855" strokeWidth="2.5" strokeLinecap="round" />
+          {/* Arrows */}
+          <polygon points="82,51 88,54 86,47" fill="#002855" />
+          <polygon points="158,51 152,54 154,47" fill="#002855" />
+          {/* Anchor labels */}
+          <text x="55" y="86" textAnchor="middle" fontSize="8" fill="#64748B">Anchor</text>
+          <text x="185" y="86" textAnchor="middle" fontSize="8" fill="#64748B">Anchor</text>
+        </svg>
+        <p className="text-[10px] text-[#475569] leading-snug">
+          Attached from <strong>cargo anchor</strong> directly to <strong>vehicle anchor</strong>. Chain binders, direct-attach straps. Full rated WLL applies.
+        </p>
+      </div>
+
+      {/* INDIRECT */}
+      <div className="rounded-xl border-2 border-[#D4AF37]/30 bg-[#D4AF37]/[0.04] p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#D4AF37] text-[#002855] tracking-wider">INDIRECT</span>
+          <span className="text-[10px] text-[#8B7518] font-semibold">50% WLL</span>
+        </div>
+        <svg viewBox="0 0 240 100" className="w-full" style={{ maxHeight: 90 }}>
+          {/* Trailer bed */}
+          <rect x="20" y="60" width="200" height="12" rx="2" fill="#94A3B8" />
+          {/* Anchor points on sides */}
+          <circle cx="55" cy="66" r="5" fill="#D4AF37" />
+          <circle cx="185" cy="66" r="5" fill="#D4AF37" />
+          {/* Cargo block */}
+          <rect x="80" y="22" width="80" height="38" rx="4" fill="#D4AF37" opacity="0.3" stroke="#D4AF37" strokeWidth="2" />
+          <text x="120" y="46" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#8B7518">CARGO</text>
+          {/* Tie-down going OVER cargo */}
+          <path d="M55,66 Q55,20 120,12 Q185,20 185,66" fill="none" stroke="#D4AF37" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="6,3" />
+          {/* Arrow tips on both anchor ends */}
+          <polygon points="57,60 50,65 60,68" fill="#D4AF37" />
+          <polygon points="183,60 190,65 180,68" fill="#D4AF37" />
+          {/* Over label */}
+          <text x="120" y="9" textAnchor="middle" fontSize="8" fill="#8B7518" fontWeight="bold">OVER TOP</text>
+          {/* Anchor labels */}
+          <text x="55" y="86" textAnchor="middle" fontSize="8" fill="#64748B">Anchor</text>
+          <text x="185" y="86" textAnchor="middle" fontSize="8" fill="#64748B">Anchor</text>
+        </svg>
+        <p className="text-[10px] text-[#475569] leading-snug">
+          Goes <strong>over or around</strong> cargo, secured to vehicle on <strong>both sides</strong>. Belly straps, over-the-top. Only <strong>50%</strong> of rated WLL counts.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   393.108 WLL CHART PICKER (collapsible)
+   ================================================================ */
+function WLLChartPicker({ onAdd }) {
+  const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(Object.keys(WLL_CHART)[0]);
+  const categories = Object.keys(WLL_CHART);
+
+  return (
+    <div className="border border-[#002855]/15 rounded-xl overflow-hidden" data-testid="wll-chart-picker">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-[#002855]/[0.04] hover:bg-[#002855]/[0.07] transition-colors"
+        data-testid="toggle-wll-chart"
+      >
+        <span className="text-[11px] font-bold text-[#002855] tracking-wide">
+          393.108 WLL Chart — More Types
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 text-[#002855] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="p-3 space-y-2 bg-white">
+          {/* Tab bar */}
+          <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveTab(cat)}
+                className={`flex-shrink-0 px-2.5 py-1 rounded-md text-[10px] font-bold transition-colors ${
+                  activeTab === cat
+                    ? "bg-[#002855] text-white"
+                    : "bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]"
+                }`}
+                data-testid={`chart-tab-${cat.replace(/[\s/—]/g, "-")}`}
+              >
+                {cat.split("—")[0].trim()}
+                {cat.includes("—") && <span className="opacity-60 ml-0.5">{cat.split("—")[1]?.trim()}</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Items grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {WLL_CHART[activeTab]?.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => { onAdd(item); }}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-[#E2E8F0] hover:bg-[#002855] hover:text-white hover:border-[#002855] active:scale-[0.97] transition-all text-left group"
+                data-testid={`chart-add-${item.label.replace(/[\s/"]/g, "-")}`}
+              >
+                <Plus className="w-3 h-3 flex-shrink-0 text-[#94A3B8] group-hover:text-white" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium truncate">{item.label}</p>
+                  <p className="text-[9px] opacity-60">{item.wll.toLocaleString()} lbs</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <p className="text-[9px] text-[#94A3B8] italic">Per 49 CFR 393.108. Use manufacturer WLL when marked.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
    MAIN COMPONENT
    ================================================================ */
 export default function TieDownCalculator() {
@@ -111,6 +299,9 @@ export default function TieDownCalculator() {
   const [cargoLength, setCargoLength] = useState("");
   const [tiedowns, setTiedowns] = useState([]);
   const [showRef, setShowRef] = useState(false);
+  const [photos, setPhotos] = useState([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState(null);
 
   const weight = parseFloat(cargoWeight) || 0;
   const length = parseFloat(cargoLength) || 0;
@@ -177,6 +368,30 @@ export default function TieDownCalculator() {
     setCargoWeight("");
     setCargoLength("");
     setTiedowns([]);
+    setPhotos([]);
+  };
+
+  /* ── Photo handlers ── */
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await axios.post(`${API}/tiedown-photos`, formData);
+      setPhotos((p) => [...p, res.data]);
+      toast.success("Photo added");
+    } catch {
+      toast.error("Photo upload failed");
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
+  };
+
+  const removePhoto = (photoId) => {
+    setPhotos((p) => p.filter((ph) => ph.photo_id !== photoId));
   };
 
   /* ── Save to inspection state ── */
@@ -214,6 +429,7 @@ export default function TieDownCalculator() {
           method: td.method,
           defective: td.defective,
         })),
+        photos: photos,
       });
       toast.success("Tie-down assessment saved to inspection");
       setShowSaveModal(false);
@@ -578,8 +794,8 @@ export default function TieDownCalculator() {
           </div>
 
           {/* Quick-add preset grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" data-testid="preset-grid">
-            {PRESETS.map((p) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" data-testid="preset-grid">
+            {QUICK_PRESETS.map((p) => (
               <button
                 key={p.label}
                 onClick={() => addTiedown(p)}
@@ -588,8 +804,8 @@ export default function TieDownCalculator() {
               >
                 <Plus className="w-3.5 h-3.5 flex-shrink-0 text-[#94A3B8] group-hover:text-white" />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium truncate">{p.label}</p>
-                  <p className="text-[10px] opacity-60">{p.wll.toLocaleString()} lbs</p>
+                  <p className="text-[10px] font-medium truncate">{p.label}</p>
+                  <p className="text-[9px] opacity-60">{p.wll.toLocaleString()} lbs</p>
                 </div>
               </button>
             ))}
@@ -600,11 +816,17 @@ export default function TieDownCalculator() {
             >
               <Plus className="w-3.5 h-3.5 text-[#94A3B8]" />
               <div>
-                <p className="text-xs font-medium text-[#64748B]">Custom</p>
-                <p className="text-[10px] text-[#94A3B8]">Enter WLL</p>
+                <p className="text-[10px] font-medium text-[#64748B]">Custom</p>
+                <p className="text-[9px] text-[#94A3B8]">Enter WLL</p>
               </div>
             </button>
           </div>
+
+          {/* 393.108 full chart picker (collapsible) */}
+          <WLLChartPicker onAdd={addTiedown} />
+
+          {/* Direct vs Indirect infographic */}
+          <DirectIndirectGraphic />
 
           {/* Tie-down cards */}
           {tiedowns.length === 0 ? (
@@ -752,6 +974,52 @@ export default function TieDownCalculator() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+
+        {/* ═══════════════════════════════════════════
+            SECTION 3B — PHOTOS
+            ═══════════════════════════════════════════ */}
+        <div className="bg-white rounded-xl border p-4 space-y-3" data-testid="photos-section">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[11px] font-bold tracking-widest uppercase text-[#64748B]">
+              Photos ({photos.length})
+            </h2>
+            <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] hover:bg-[#002855] hover:text-white hover:border-[#002855] transition-all cursor-pointer text-xs text-[#334155] ${uploadingPhoto ? "opacity-50 pointer-events-none" : ""}`} data-testid="add-photo-btn">
+              {uploadingPhoto ? (
+                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Plus className="w-3.5 h-3.5" />
+              )}
+              <span>{uploadingPhoto ? "Uploading..." : "Add Photo"}</span>
+              <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" disabled={uploadingPhoto} />
+            </label>
+          </div>
+
+          {photos.length === 0 ? (
+            <p className="text-xs text-[#94A3B8] text-center py-2">
+              No photos. Tap "Add Photo" to document cargo and tie-downs.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {photos.map((ph) => (
+                <div key={ph.photo_id} className="relative group" data-testid={`photo-${ph.photo_id}`}>
+                  <img
+                    src={`${API}/files/${ph.storage_path}`}
+                    alt={ph.original_filename}
+                    className="w-20 h-20 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setPreviewPhoto(`${API}/files/${ph.storage_path}`)}
+                  />
+                  <button
+                    onClick={() => removePhoto(ph.photo_id)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#DC2626] text-white rounded-full flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity shadow-sm"
+                    data-testid={`remove-photo-${ph.photo_id}`}
+                  >
+                    <XCircle className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -935,6 +1203,16 @@ export default function TieDownCalculator() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ─── PHOTO PREVIEW ─── */}
+      {previewPhoto && (
+        <Dialog open={!!previewPhoto} onOpenChange={() => setPreviewPhoto(null)}>
+          <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+            <img src={previewPhoto} alt="Photo" className="w-full h-auto max-h-[80vh] object-contain rounded" />
+            <Button onClick={() => setPreviewPhoto(null)} className="w-full mt-2 bg-[#002855] text-white">Close</Button>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
