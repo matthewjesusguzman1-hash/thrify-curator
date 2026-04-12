@@ -301,14 +301,25 @@ async def search_violations(
     query = {}
 
     # Keyword search - use regex for partial matching
+    # Split multi-word queries, stem common suffixes for broader matching
     if keyword.strip():
-        escaped = re.escape(keyword.strip())
+        words = keyword.strip().split()
+        parts = []
+        for w in words:
+            if len(w) <= 2:
+                continue
+            # Simple stemming: strip common English suffixes for broader regex matching
+            stem = re.sub(r'(ing|tion|ed|ly|er|est|ment|ness|ous|ive|able|ible|ful|less|ated|ting)$', '', w, flags=re.I)
+            if len(stem) < 3:
+                stem = w  # Don't over-stem short words
+            parts.append(re.escape(stem))
+        word_regex = "|".join(parts) if parts else re.escape(keyword.strip())
         query["$or"] = [
-            {"violation_text": {"$regex": escaped, "$options": "i"}},
-            {"regulatory_reference": {"$regex": escaped, "$options": "i"}},
-            {"violation_code": {"$regex": escaped, "$options": "i"}},
-            {"violation_category": {"$regex": escaped, "$options": "i"}},
-            {"cfr_part": {"$regex": escaped, "$options": "i"}},
+            {"violation_text": {"$regex": word_regex, "$options": "i"}},
+            {"regulatory_reference": {"$regex": word_regex, "$options": "i"}},
+            {"violation_code": {"$regex": word_regex, "$options": "i"}},
+            {"violation_category": {"$regex": word_regex, "$options": "i"}},
+            {"cfr_part": {"$regex": word_regex, "$options": "i"}},
         ]
 
     if violation_class:
