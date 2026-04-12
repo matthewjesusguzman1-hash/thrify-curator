@@ -368,6 +368,7 @@ async def get_filter_options():
 async def get_violation_tree():
     # 3-level tree: class → category → regulation section with labels
     # Get descriptive labels per (category + regulatory_reference) pair
+    # For multi-violation refs, prefer the shortest/most general description
     label_pipeline = [
         {"$addFields": {
             "desc": {
@@ -385,23 +386,53 @@ async def get_violation_tree():
                 }
             }
         }},
+        {"$sort": {"desc": 1}},
         {"$group": {
             "_id": {"cat": "$violation_category", "reg_ref": "$regulatory_reference"},
-            "label": {"$first": "$desc"},
-            "subject": {"$first": "$subject"},
+            "all_descs": {"$push": "$desc"},
+            "all_subjects": {"$addToSet": "$subject"},
+            "first_desc": {"$first": "$desc"},
             "count": {"$sum": 1},
         }}
     ]
     label_results = await db.violations.aggregate(label_pipeline).to_list(5000)
-    # Key: "category|reg_ref" → label
     ref_labels = {}
     for lr in label_results:
         cat = lr["_id"].get("cat", "")
         ref = (lr["_id"].get("reg_ref") or "").strip()
         count = lr.get("count", 1)
-        label = (lr.get("label") or "").strip()
-        subject = (lr.get("subject") or "").strip()
-        if ref and label:
+        descs = lr.get("all_descs", [])
+        subjects = lr.get("all_subjects", [])
+
+        if not ref:
+            continue
+
+        if count == 1:
+            # Single violation — use its description
+            label = lr.get("first_desc", "")
+        else:
+            # Multiple violations — find the best general label
+            # Prefer descriptions containing "State/Local", "law", or generic terms
+            best = None
+            for d in descs:
+                dl = d.lower()
+                if "state/local" in dl or "local law" in dl or "state law" in dl:
+                    best = d
+                    break
+            if not best:
+                # Use the subject prefix if it's descriptive (not just "Driver", "HM", etc.)
+                generic_subjects = {"driver", "hm", "vehicle", "motor carrier", "intoxicating"}
+                useful_subjects = [s for s in subjects if s.lower().strip() not in generic_subjects and len(s) > 3]
+                if useful_subjects:
+                    best = useful_subjects[0]
+                else:
+                    # Use shortest description as most general
+                    best = min(descs, key=len) if descs else ""
+
+            label = best
+
+        if label:
+            label = label.rstrip(" -")
             if len(label) > 55:
                 label = label[:52] + "..."
             ref_labels[f"{cat}|{ref}"] = label
