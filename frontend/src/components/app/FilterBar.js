@@ -15,12 +15,11 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
       data-testid="filter-bar"
       className="flex flex-wrap items-center gap-3"
     >
-      <div className="flex items-center gap-1.5 text-xs font-bold tracking-[0.15em] uppercase text-[#7B8FA3]">
+      <div className="flex items-center gap-1.5 text-xs font-bold tracking-[0.15em] uppercase text-[#64748B]">
         <Filter className="w-3.5 h-3.5" />
         Filters
       </div>
 
-      {/* Violation Class */}
       <Select
         value={filters.violation_class || "all"}
         onValueChange={(val) =>
@@ -29,21 +28,18 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
       >
         <SelectTrigger
           data-testid="filter-violation-class"
-          className="w-[180px] h-9 text-xs bg-[#001f45] border-[#0a3d6b] text-[#F9FAFB]"
+          className="w-[180px] h-9 text-xs bg-white border-[#CBD5E1] text-[#0F172A]"
         >
           <SelectValue placeholder="Violation Class" />
         </SelectTrigger>
-        <SelectContent className="bg-[#001f45] border-[#0a3d6b]">
+        <SelectContent>
           <SelectItem value="all">All Classes</SelectItem>
           {filterOptions.violation_classes?.map((vc) => (
-            <SelectItem key={vc} value={vc}>
-              {vc}
-            </SelectItem>
+            <SelectItem key={vc} value={vc}>{vc}</SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      {/* OOS Filter */}
       <Select
         value={filters.oos || "all"}
         onValueChange={(val) =>
@@ -52,60 +48,45 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
       >
         <SelectTrigger
           data-testid="filter-oos"
-          className="w-[160px] h-9 text-xs bg-[#001f45] border-[#0a3d6b] text-[#F9FAFB]"
+          className="w-[160px] h-9 text-xs bg-white border-[#CBD5E1] text-[#0F172A]"
         >
           <SelectValue placeholder="OOS Status" />
         </SelectTrigger>
-        <SelectContent className="bg-[#001f45] border-[#0a3d6b]">
+        <SelectContent>
           <SelectItem value="all">All OOS</SelectItem>
           <SelectItem value="Y">Out of Service (Y)</SelectItem>
           <SelectItem value="N">Not OOS (N)</SelectItem>
         </SelectContent>
       </Select>
 
-      {/* HazMat Toggle */}
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#0a3d6b] bg-[#001f45]">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#CBD5E1] bg-white">
         <Switch
           data-testid="filter-hazmat"
           checked={filters.hazmat === "Y"}
-          onCheckedChange={(checked) =>
-            onFilterChange("hazmat", checked ? "Y" : "")
-          }
+          onCheckedChange={(checked) => onFilterChange("hazmat", checked ? "Y" : "")}
           className="scale-90"
         />
-        <Label className="text-xs font-medium text-[#C8D6E0] cursor-pointer whitespace-nowrap">
-          HazMat Only
-        </Label>
+        <Label className="text-xs font-medium text-[#334155] cursor-pointer whitespace-nowrap">HazMat Only</Label>
       </div>
 
-      {/* Level III Toggle */}
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#0a3d6b] bg-[#001f45]">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#CBD5E1] bg-white">
         <Switch
           data-testid="filter-level-iii"
           checked={filters.level_iii === "Y"}
-          onCheckedChange={(checked) =>
-            onFilterChange("level_iii", checked ? "Y" : "")
-          }
+          onCheckedChange={(checked) => onFilterChange("level_iii", checked ? "Y" : "")}
           className="scale-90"
         />
-        <Label className="text-xs font-medium text-[#C8D6E0] cursor-pointer whitespace-nowrap">
-          Level III
-        </Label>
+        <Label className="text-xs font-medium text-[#334155] cursor-pointer whitespace-nowrap">Level III</Label>
       </div>
 
-      {/* Critical Toggle */}
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#0a3d6b] bg-[#001f45]">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#CBD5E1] bg-white">
         <Switch
           data-testid="filter-critical"
           checked={filters.critical === "Y"}
-          onCheckedChange={(checked) =>
-            onFilterChange("critical", checked ? "Y" : "")
-          }
+          onCheckedChange={(checked) => onFilterChange("critical", checked ? "Y" : "")}
           className="scale-90"
         />
-        <Label className="text-xs font-medium text-[#C8D6E0] cursor-pointer whitespace-nowrap">
-          Critical
-        </Label>
+        <Label className="text-xs font-medium text-[#334155] cursor-pointer whitespace-nowrap">Critical</Label>
       </div>
     </div>
   );

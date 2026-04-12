@@ -34,13 +34,13 @@ function renderCell(v, colKey, idx) {
   switch (colKey) {
     case "regulatory_reference":
       return (
-        <TableCell key={colKey} className="font-medium text-[#D4AF37] text-sm" data-testid={`reg-ref-${idx}`}>
+        <TableCell key={colKey} className="font-semibold text-[#002855] text-sm" data-testid={`reg-ref-${idx}`}>
           {v.regulatory_reference}
         </TableCell>
       );
     case "violation_text":
       return (
-        <TableCell key={colKey} className="text-sm text-[#C8D6E0] leading-snug" data-testid={`vio-text-${idx}`}>
+        <TableCell key={colKey} className="text-sm text-[#334155] leading-snug" data-testid={`vio-text-${idx}`}>
           {v.violation_text}
         </TableCell>
       );
@@ -53,9 +53,9 @@ function renderCell(v, colKey, idx) {
     case "critical":
       return <TableCell key={colKey} className="text-center"><YnIndicator value={v.critical} /></TableCell>;
     case "violation_code":
-      return <TableCell key={colKey} className="text-xs text-[#7B8FA3] font-mono">{v.violation_code}</TableCell>;
+      return <TableCell key={colKey} className="text-xs text-[#64748B] font-mono">{v.violation_code}</TableCell>;
     case "cfr_part":
-      return <TableCell key={colKey} className="text-xs text-[#7B8FA3]">{v.cfr_part}</TableCell>;
+      return <TableCell key={colKey} className="text-xs text-[#64748B]">{v.cfr_part}</TableCell>;
     default:
       return <TableCell key={colKey} />;
   }
@@ -82,8 +82,8 @@ export function ViolationTable({
     return (
       <div data-testid="loading-state" className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#D4AF37] border-t-transparent rounded-full loading-spin" />
-          <p className="text-sm text-[#7B8FA3]">Loading violations...</p>
+          <div className="w-8 h-8 border-2 border-[#002855] border-t-transparent rounded-full loading-spin" />
+          <p className="text-sm text-[#64748B]">Loading violations...</p>
         </div>
       </div>
     );
@@ -93,9 +93,9 @@ export function ViolationTable({
     return (
       <div data-testid="empty-state" className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3 text-center">
-          <FileSearch className="w-12 h-12 text-[#0a3d6b]" />
-          <p className="text-sm font-medium text-[#C8D6E0]">No violations found</p>
-          <p className="text-xs text-[#546A7F] mt-1">Try adjusting your search or filters</p>
+          <FileSearch className="w-12 h-12 text-[#CBD5E1]" />
+          <p className="text-sm font-medium text-[#334155]">No violations found</p>
+          <p className="text-xs text-[#64748B] mt-1">Try adjusting your search or filters</p>
         </div>
       </div>
     );
@@ -127,12 +127,12 @@ export function ViolationTable({
   return (
     <div data-testid="violation-table-container">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-[#7B8FA3]" data-testid="results-count">
-          Showing <strong className="text-[#F9FAFB]">{startItem}-{endItem}</strong> of{" "}
-          <strong className="text-[#F9FAFB]">{total.toLocaleString()}</strong> results
+        <p className="text-xs text-[#64748B]" data-testid="results-count">
+          Showing <strong className="text-[#0F172A]">{startItem}-{endItem}</strong> of{" "}
+          <strong className="text-[#0F172A]">{total.toLocaleString()}</strong> results
         </p>
         <div className="flex items-center gap-3">
-          <p className="text-xs text-[#546A7F]">Click a row to see similar violations</p>
+          <p className="text-xs text-[#94A3B8]">Click a row to see similar violations</p>
           <ColumnOrderPopover
             columnOrder={columnOrder}
             onMoveToFront={moveToFront}
@@ -140,17 +140,17 @@ export function ViolationTable({
         </div>
       </div>
 
-      <div className="border border-[#0a3d6b] rounded-lg overflow-hidden bg-[#001229]">
+      <div className="border border-[#CBD5E1] rounded-lg overflow-hidden bg-white shadow-sm">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-[#001f45] border-b border-[#0a3d6b]">
+              <TableRow className="bg-[#002855]">
                 {orderedColumns.map((col) => (
                   <TableHead
                     key={col.key}
                     data-testid={`sort-header-${col.key}`}
                     onClick={() => handleSort(col.key)}
-                    className={`text-xs font-bold tracking-wide uppercase text-[#7B8FA3] ${col.width} ${col.center ? "text-center" : ""} cursor-pointer select-none hover:text-[#D4AF37] hover:bg-[#002855] transition-colors`}
+                    className={`text-xs font-bold tracking-wide uppercase text-white/80 ${col.width} ${col.center ? "text-center" : ""} cursor-pointer select-none hover:text-[#D4AF37] hover:bg-[#001a3a] transition-colors border-b-0`}
                   >
                     <span className="inline-flex items-center gap-1">
                       {col.label}
@@ -164,7 +164,7 @@ export function ViolationTable({
               {violations.map((v, idx) => (
                 <TableRow
                   key={v.id || idx}
-                  className="violation-row cursor-pointer border-b border-[#0a3d6b]/50"
+                  className="violation-row cursor-pointer"
                   data-testid={`violation-row-${idx}`}
                   onClick={() => onViolationClick?.(v)}
                 >
@@ -178,12 +178,12 @@ export function ViolationTable({
 
       {totalPages > 1 && (
         <div data-testid="pagination" className="flex items-center justify-between mt-4">
-          <p className="text-xs text-[#7B8FA3]">Page {page} of {totalPages}</p>
+          <p className="text-xs text-[#64748B]">Page {page} of {totalPages}</p>
           <div className="flex items-center gap-2">
-            <Button data-testid="prev-page-btn" variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="pagination-btn h-8 text-xs border-[#0a3d6b] text-[#C8D6E0] bg-transparent hover:bg-[#D4AF37] hover:text-[#001229] hover:border-[#D4AF37]">
+            <Button data-testid="prev-page-btn" variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="pagination-btn h-8 text-xs">
               <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Previous
             </Button>
-            <Button data-testid="next-page-btn" variant="outline" size="sm" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} className="pagination-btn h-8 text-xs border-[#0a3d6b] text-[#C8D6E0] bg-transparent hover:bg-[#D4AF37] hover:text-[#001229] hover:border-[#D4AF37]">
+            <Button data-testid="next-page-btn" variant="outline" size="sm" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} className="pagination-btn h-8 text-xs">
               Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
             </Button>
           </div>
@@ -200,19 +200,15 @@ function ColumnOrderPopover({ columnOrder, onMoveToFront }) {
         <Button
           variant="outline"
           size="sm"
-          className="h-7 px-2 text-xs border-[#0a3d6b] text-[#7B8FA3] bg-transparent hover:bg-[#001f45] hover:text-[#D4AF37]"
+          className="h-7 px-2 text-xs border-[#CBD5E1] text-[#64748B] bg-white hover:bg-[#002855] hover:text-white hover:border-[#002855]"
           data-testid="column-order-btn"
         >
           <Settings2 className="w-3.5 h-3.5 mr-1" />
           Columns
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        className="w-[220px] p-2 bg-[#001f45] border-[#0a3d6b]"
-        align="end"
-        data-testid="column-order-popover"
-      >
-        <p className="text-[10px] font-bold tracking-widest uppercase text-[#546A7F] px-2 pb-2">
+      <PopoverContent className="w-[220px] p-2" align="end" data-testid="column-order-popover">
+        <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">
           Reorder columns
         </p>
         {columnOrder.map((key, idx) => {
@@ -220,17 +216,17 @@ function ColumnOrderPopover({ columnOrder, onMoveToFront }) {
           return (
             <div
               key={key}
-              className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-[#002855] transition-colors group"
+              className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-[#F1F5F9] transition-colors group"
               data-testid={`column-item-${key}`}
             >
-              <span className="text-xs text-[#C8D6E0] flex items-center gap-2">
-                <GripVertical className="w-3 h-3 text-[#546A7F]" />
+              <span className="text-xs text-[#334155] flex items-center gap-2">
+                <GripVertical className="w-3 h-3 text-[#CBD5E1]" />
                 {col.label}
               </span>
               {idx > 0 && (
                 <button
                   onClick={() => onMoveToFront(key)}
-                  className="col-move-btn p-0.5 rounded text-[#546A7F] opacity-0 group-hover:opacity-100"
+                  className="col-move-btn p-0.5 rounded text-[#94A3B8] opacity-0 group-hover:opacity-100"
                   title="Move to front"
                   data-testid={`move-front-${key}`}
                 >
@@ -247,28 +243,28 @@ function ColumnOrderPopover({ columnOrder, onMoveToFront }) {
 
 function OosBadge({ value }) {
   if (value === "Y") {
-    return <Badge variant="destructive" className="text-[10px] px-2 py-0.5 font-bold bg-[#EF4444] text-white" data-testid="oos-badge-yes">OOS</Badge>;
+    return <Badge variant="destructive" className="text-[10px] px-2 py-0.5 font-bold bg-[#DC2626] text-white" data-testid="oos-badge-yes">OOS</Badge>;
   }
-  return <span className="text-xs text-[#546A7F]" data-testid="oos-badge-no">--</span>;
+  return <span className="text-xs text-[#CBD5E1]" data-testid="oos-badge-no">--</span>;
 }
 
 function YnIndicator({ value }) {
   if (value === "Y") {
-    return <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-[#D4AF37]/15 text-[#D4AF37] text-[10px] font-bold">Y</span>;
+    return <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-[#002855]/10 text-[#002855] text-[10px] font-bold">Y</span>;
   }
-  return <span className="text-xs text-[#0a3d6b]">--</span>;
+  return <span className="text-xs text-[#CBD5E1]">--</span>;
 }
 
 function ClassBadge({ value }) {
   const colorMap = {
-    "Hazardous Materials": "bg-amber-900/30 text-amber-300 border-amber-700/40",
-    "Driver": "bg-sky-900/30 text-sky-300 border-sky-700/40",
-    "Vehicle": "bg-emerald-900/30 text-emerald-300 border-emerald-700/40",
-    "Motor Carrier": "bg-purple-900/30 text-purple-300 border-purple-700/40",
-    "Intermodal Equip Provider": "bg-slate-800/30 text-slate-300 border-slate-600/40",
+    "Hazardous Materials": "bg-amber-50 text-amber-800 border-amber-200",
+    "Driver": "bg-blue-50 text-blue-800 border-blue-200",
+    "Vehicle": "bg-emerald-50 text-emerald-800 border-emerald-200",
+    "Motor Carrier": "bg-purple-50 text-purple-800 border-purple-200",
+    "Intermodal Equip Provider": "bg-slate-50 text-slate-700 border-slate-200",
   };
   return (
-    <Badge variant="outline" className={`text-[10px] px-2 py-0.5 font-medium whitespace-nowrap ${colorMap[value] || "bg-gray-800/30 text-gray-300 border-gray-600/40"}`} data-testid="class-badge">
+    <Badge variant="outline" className={`text-[10px] px-2 py-0.5 font-medium whitespace-nowrap ${colorMap[value] || "bg-gray-50 text-gray-700 border-gray-200"}`} data-testid="class-badge">
       {value}
     </Badge>
   );

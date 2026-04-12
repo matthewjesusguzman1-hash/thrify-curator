@@ -174,7 +174,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#001229]" data-testid="dashboard">
+    <div className="min-h-screen bg-[#EFF2F7]" data-testid="dashboard">
       <Toaster position="top-right" richColors />
       <Header
         onUploadClick={() => setUploadOpen(true)}
