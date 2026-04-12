@@ -171,8 +171,8 @@ function DirectIndirectGraphic({ open, onToggle }) {
               <img src="/tiedown-direct2.png" alt="Direct tie-down: over cargo, same side" className="rounded-lg border w-[55%] object-contain" />
             </div>
             <div className="text-[10px] text-[#475569] space-y-1">
-              <p><strong>Left:</strong> Vehicle anchor <strong>&rarr;</strong> attachment point on cargo</p>
-              <p><strong>Right:</strong> Vehicle anchor <strong>&rarr;</strong> over/around cargo <strong>&rarr;</strong> back to <strong>same side</strong></p>
+              <p><strong>Left:</strong> Vehicle anchor <strong>&rarr;</strong> over/around cargo <strong>&rarr;</strong> back to <strong>same side</strong></p>
+              <p><strong>Right:</strong> Vehicle anchor <strong>&rarr;</strong> attachment point on cargo</p>
               <p className="text-[#DC2626] font-semibold">Both count as only 50% of the tie-down's WLL</p>
             </div>
           </div>
