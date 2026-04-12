@@ -86,7 +86,7 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[700px] w-[95vw] h-[92vh] p-0 gap-0 overflow-hidden flex flex-col rounded-xl" data-testid="pdf-preview-modal">
+      <DialogContent className="max-w-[700px] w-[95vw] h-[85vh] p-0 gap-0 overflow-hidden flex flex-col rounded-xl" data-testid="pdf-preview-modal">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-[#002855] rounded-t-xl flex-shrink-0">
           <h2 className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>{title || "Report Preview"}</h2>
@@ -103,7 +103,7 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
         </div>
 
         {/* Action buttons */}
-        <div className="flex-shrink-0 border-t px-4 py-3 bg-white flex gap-2">
+        <div className="flex-shrink-0 border-t px-4 py-3 pb-6 bg-white flex gap-2 mb-[env(safe-area-inset-bottom,0px)]">
           <Button onClick={handleDownload} disabled={generating} className="flex-1 bg-[#002855] text-white hover:bg-[#001a3a] h-10 text-sm" data-testid="pdf-download-btn">
             {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             Save PDF
