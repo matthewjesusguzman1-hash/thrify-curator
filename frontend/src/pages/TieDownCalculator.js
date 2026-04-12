@@ -62,6 +62,8 @@ const WLL_CHART = [
   { category: "Synthetic Webbing", items: [
     { label: '1-3/4" Web', wll: 1750 },
     { label: '2" Web', wll: 2000 },
+    { label: '3" Web', wll: 3000 },
+    { label: '4" Web', wll: 4000 },
   ]},
   { category: "Wire Rope (6x37 Fiber Core)", items: [
     { label: '1/4" Wire Rope', wll: 1400 },
@@ -155,107 +157,126 @@ function CountDots({ active, required, defective }) {
 /* ================================================================
    DIRECT vs INDIRECT INFOGRAPHIC
    ================================================================ */
-function DirectIndirectGraphic() {
+function DirectIndirectGraphic({ open, onToggle }) {
   return (
-    <div className="space-y-3">
-      <p className="text-[10px] font-bold text-[#002855] uppercase tracking-wider">How WLL Is Counted (393.102)</p>
+    <div className="bg-white rounded-xl border overflow-hidden">
+      <button onClick={onToggle} className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F8FAFC] transition-colors" data-testid="toggle-wll-info">
+        <span className="text-[11px] font-bold tracking-widest uppercase text-[#64748B]">How WLL Is Counted (393.102)</span>
+        <ChevronDown className={`w-4 h-4 text-[#64748B] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-3 border-t border-[#F1F5F9]">
 
-      {/* DIRECT — Method 1: Vehicle anchor → Cargo anchor (50%) */}
-      <div className="rounded-xl border border-[#002855]/20 bg-[#002855]/[0.02] p-3 space-y-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#002855] text-white tracking-wider">DIRECT</span>
-          <span className="text-[10px] text-[#DC2626] font-bold">50% WLL</span>
-          <span className="text-[9px] text-[#64748B]">Method 1</span>
+          {/* DIRECT — Method 1: Vehicle anchor → Cargo anchor (50%) */}
+          <div className="rounded-lg border border-[#002855]/15 bg-[#002855]/[0.02] p-3 space-y-2 mt-3">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#002855] text-white">DIRECT</span>
+              <span className="text-[10px] text-[#DC2626] font-bold">50% WLL</span>
+            </div>
+            {/* Rectangular cargo with tie-downs from vehicle corners to cargo corners */}
+            <svg viewBox="0 0 300 120" className="w-full" style={{ maxHeight: 95 }}>
+              {/* Flatbed trailer */}
+              <rect x="40" y="70" width="220" height="8" rx="2" fill="#B0BEC5" />
+              <rect x="35" y="78" width="230" height="4" rx="1" fill="#90A4AE" />
+              <circle cx="70" cy="88" r="5" fill="#607D8B" /><circle cx="230" cy="88" r="5" fill="#607D8B" />
+              {/* Large rectangular cargo */}
+              <rect x="80" y="25" width="140" height="45" rx="3" fill="#E0E0E0" stroke="#BDBDBD" strokeWidth="1.5" />
+              <text x="150" y="52" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#757575">CARGO</text>
+              {/* Vehicle anchor points (bottom corners of trailer) */}
+              <circle cx="50" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="250" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="50" cy="75" r="0" /><circle cx="250" cy="75" r="0" />
+              {/* Cargo attachment points */}
+              <circle cx="88" cy="35" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="212" cy="35" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="88" cy="60" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="212" cy="60" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              {/* Tie-down lines — vehicle to cargo (red, curved slightly) */}
+              <line x1="50" y1="70" x2="88" y2="60" stroke="#E53935" strokeWidth="1.5" />
+              <line x1="50" y1="70" x2="88" y2="35" stroke="#E53935" strokeWidth="1.5" />
+              <line x1="250" y1="70" x2="212" y2="60" stroke="#E53935" strokeWidth="1.5" />
+              <line x1="250" y1="70" x2="212" y2="35" stroke="#E53935" strokeWidth="1.5" />
+              {/* Labels */}
+              <text x="50" y="108" textAnchor="middle" fontSize="7" fill="#78909C">Vehicle Anchor</text>
+              <text x="250" y="108" textAnchor="middle" fontSize="7" fill="#78909C">Vehicle Anchor</text>
+            </svg>
+            <p className="text-[10px] text-[#475569]">Vehicle anchor <strong>&rarr;</strong> attachment point on cargo. Only <span className="text-[#DC2626] font-bold">50%</span> of WLL counts.</p>
+          </div>
+
+          {/* DIRECT — Method 2: Over/around cargo → SAME side (50%) — Cylinder */}
+          <div className="rounded-lg border border-[#002855]/15 bg-[#002855]/[0.02] p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#002855] text-white">DIRECT</span>
+              <span className="text-[10px] text-[#DC2626] font-bold">50% WLL</span>
+              <span className="text-[9px] text-[#94A3B8]">same side</span>
+            </div>
+            {/* Cylindrical cargo with tie-downs going over, returning to same side */}
+            <svg viewBox="0 0 300 120" className="w-full" style={{ maxHeight: 95 }}>
+              {/* Flatbed */}
+              <rect x="40" y="70" width="220" height="8" rx="2" fill="#B0BEC5" />
+              <rect x="35" y="78" width="230" height="4" rx="1" fill="#90A4AE" />
+              <circle cx="70" cy="88" r="5" fill="#607D8B" /><circle cx="230" cy="88" r="5" fill="#607D8B" />
+              {/* Cylinder cargo */}
+              <ellipse cx="150" cy="45" rx="60" ry="25" fill="#E0E0E0" stroke="#BDBDBD" strokeWidth="1.5" />
+              <text x="150" y="49" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#757575">CARGO</text>
+              {/* Vehicle anchors — left side only (same side) */}
+              <circle cx="55" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="95" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              {/* Cargo anchor points on top */}
+              <circle cx="120" cy="23" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="180" cy="23" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              {/* Tie-down — from vehicle anchor, over cargo, back to same side */}
+              <path d="M55,70 Q55,30 120,23" fill="none" stroke="#E53935" strokeWidth="1.5" />
+              <path d="M120,23 Q185,15 180,23" fill="none" stroke="#E53935" strokeWidth="1.5" opacity="0.6" />
+              <path d="M180,23 Q245,30 245,70" fill="none" stroke="#E53935" strokeWidth="1.5" />
+              <path d="M95,70 Q95,35 150,20" fill="none" stroke="#E53935" strokeWidth="1.5" />
+              {/* Same-side indicator arrow */}
+              <text x="55" y="108" textAnchor="middle" fontSize="7" fill="#78909C">Vehicle Anchor</text>
+              <text x="150" y="10" textAnchor="middle" fontSize="7" fill="#B8960C" fontWeight="bold">Anchor Points on Cargo</text>
+              <text x="245" y="108" textAnchor="middle" fontSize="7" fill="#002855" fontWeight="bold">Same Side</text>
+            </svg>
+            <p className="text-[10px] text-[#475569]">Vehicle anchor <strong>&rarr;</strong> over/around cargo <strong>&rarr;</strong> back to <strong>same side</strong>. Still only <span className="text-[#DC2626] font-bold">50%</span> of WLL.</p>
+          </div>
+
+          {/* INDIRECT — Over cargo → OTHER side (100%) — Smaller rectangle */}
+          <div className="rounded-lg border border-emerald-400/30 bg-emerald-50/40 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white">INDIRECT</span>
+              <span className="text-[10px] text-emerald-700 font-bold">100% WLL</span>
+              <span className="text-[9px] text-[#94A3B8]">other side</span>
+            </div>
+            {/* Smaller rectangular cargo with tie-downs to other side */}
+            <svg viewBox="0 0 300 120" className="w-full" style={{ maxHeight: 95 }}>
+              {/* Flatbed */}
+              <rect x="40" y="70" width="220" height="8" rx="2" fill="#B0BEC5" />
+              <rect x="35" y="78" width="230" height="4" rx="1" fill="#90A4AE" />
+              <circle cx="70" cy="88" r="5" fill="#607D8B" /><circle cx="230" cy="88" r="5" fill="#607D8B" />
+              {/* Smaller rectangular cargo */}
+              <rect x="100" y="28" width="100" height="42" rx="3" fill="#E0E0E0" stroke="#BDBDBD" strokeWidth="1.5" />
+              <text x="150" y="53" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#757575">CARGO</text>
+              {/* Vehicle anchors — opposite sides */}
+              <circle cx="55" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="245" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              {/* Cargo anchor points */}
+              <circle cx="110" cy="35" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="190" cy="35" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="110" cy="62" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <circle cx="190" cy="62" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              {/* Tie-down — from left vehicle to over cargo to RIGHT side */}
+              <path d="M55,70 Q55,30 110,28 Q150,15 190,28 Q245,30 245,70" fill="none" stroke="#10B981" strokeWidth="2" />
+              <path d="M55,70 Q80,50 110,62" fill="none" stroke="#10B981" strokeWidth="1.5" opacity="0.5" />
+              <path d="M245,70 Q220,50 190,62" fill="none" stroke="#10B981" strokeWidth="1.5" opacity="0.5" />
+              {/* Labels */}
+              <text x="45" y="108" textAnchor="middle" fontSize="7" fill="#78909C">Vehicle Anchor</text>
+              <text x="255" y="108" textAnchor="middle" fontSize="7" fill="#059669" fontWeight="bold">OTHER Side</text>
+              <text x="150" y="10" textAnchor="middle" fontSize="7" fill="#B8960C" fontWeight="bold">Anchor Points on Cargo</text>
+            </svg>
+            <p className="text-[10px] text-[#475569]">Vehicle anchor <strong>&rarr;</strong> over/around cargo <strong>&rarr;</strong> anchor on <strong>other side</strong>. Full <span className="text-emerald-700 font-bold">100%</span> of WLL counts.</p>
+          </div>
+
+          <p className="text-[9px] text-[#94A3B8] italic">Always use the WLL marked on the tie-down. If not marked, use <a href="https://www.ecfr.gov/current/title-49/subtitle-B/chapter-III/subchapter-B/part-393/subpart-I/section-393.108" target="_blank" rel="noopener noreferrer" className="text-[#002855] underline">393.108(b) table</a>.</p>
         </div>
-        <svg viewBox="0 0 280 105" className="w-full" style={{ maxHeight: 90 }}>
-          {/* Trailer bed */}
-          <rect x="30" y="62" width="220" height="8" rx="2" fill="#94A3B8" />
-          <rect x="25" y="70" width="230" height="5" rx="1" fill="#78909C" />
-          {/* Wheels */}
-          <circle cx="60" cy="80" r="5" fill="#546E7A" /><circle cx="220" cy="80" r="5" fill="#546E7A" />
-          {/* Vehicle anchor points */}
-          <circle cx="50" cy="62" r="3.5" fill="#002855" /><circle cx="230" cy="62" r="3.5" fill="#002855" />
-          {/* Cargo — large rectangle */}
-          <rect x="85" y="20" width="110" height="42" rx="3" fill="#D4AF37" opacity="0.2" stroke="#D4AF37" strokeWidth="1.5" />
-          <text x="140" y="45" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#8B7518">CARGO</text>
-          {/* Cargo anchor points */}
-          <circle cx="92" cy="40" r="2.5" fill="#DC2626" /><circle cx="188" cy="40" r="2.5" fill="#DC2626" />
-          {/* Tie-down lines — vehicle to cargo */}
-          <line x1="50" y1="62" x2="90" y2="42" stroke="#DC2626" strokeWidth="1.8" />
-          <line x1="230" y1="62" x2="190" y2="42" stroke="#DC2626" strokeWidth="1.8" />
-          {/* Labels */}
-          <text x="35" y="95" textAnchor="middle" fontSize="7" fill="#64748B">Vehicle Anchor</text>
-          <text x="245" y="95" textAnchor="middle" fontSize="7" fill="#64748B">Vehicle Anchor</text>
-          <text x="92" y="15" fontSize="7" fill="#DC2626" fontWeight="bold">Cargo Anchor</text>
-        </svg>
-        <p className="text-[10px] text-[#475569] leading-snug">
-          From <strong>vehicle anchor</strong> to an <strong>attachment point on the cargo</strong>. Only <span className="text-[#DC2626] font-bold">50%</span> of WLL counts.
-        </p>
-      </div>
-
-      {/* DIRECT — Method 2: Vehicle anchor → over cargo → SAME side (50%) */}
-      <div className="rounded-xl border border-[#002855]/20 bg-[#002855]/[0.02] p-3 space-y-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#002855] text-white tracking-wider">DIRECT</span>
-          <span className="text-[10px] text-[#DC2626] font-bold">50% WLL</span>
-          <span className="text-[9px] text-[#64748B]">Method 2</span>
-        </div>
-        <svg viewBox="0 0 280 105" className="w-full" style={{ maxHeight: 90 }}>
-          {/* Trailer bed */}
-          <rect x="30" y="62" width="220" height="8" rx="2" fill="#94A3B8" />
-          <rect x="25" y="70" width="230" height="5" rx="1" fill="#78909C" />
-          {/* Wheels */}
-          <circle cx="60" cy="80" r="5" fill="#546E7A" /><circle cx="220" cy="80" r="5" fill="#546E7A" />
-          {/* Vehicle anchor points — SAME side */}
-          <circle cx="65" cy="62" r="3.5" fill="#002855" /><circle cx="105" cy="62" r="3.5" fill="#002855" />
-          {/* Cargo — cylinder */}
-          <ellipse cx="140" cy="35" rx="45" ry="22" fill="#D4AF37" opacity="0.15" stroke="#D4AF37" strokeWidth="1.5" />
-          <text x="140" y="39" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#8B7518">CARGO</text>
-          {/* Tie-down — over cargo, returns to SAME side */}
-          <path d="M65,62 Q65,25 140,12 Q215,25 215,62" fill="none" stroke="#DC2626" strokeWidth="1.8" strokeDasharray="5,3" />
-          {/* Same-side return */}
-          <line x1="215" y1="62" x2="105" y2="62" stroke="#DC2626" strokeWidth="1.8" strokeDasharray="3,3" opacity="0.4" />
-          <circle cx="215" cy="62" r="2" fill="#DC2626" opacity="0.5" />
-          {/* Same side label */}
-          <text x="140" y="8" textAnchor="middle" fontSize="7" fill="#DC2626" fontWeight="bold">OVER CARGO</text>
-          <text x="65" y="95" textAnchor="middle" fontSize="7" fill="#64748B">Vehicle Anchor</text>
-          <text x="160" y="95" textAnchor="middle" fontSize="7" fill="#002855" fontWeight="bold">Back to SAME side</text>
-        </svg>
-        <p className="text-[10px] text-[#475569] leading-snug">
-          From <strong>vehicle anchor</strong>, over or around cargo, back to <strong>same side</strong> of vehicle. Still only <span className="text-[#DC2626] font-bold">50%</span> of WLL.
-        </p>
-      </div>
-
-      {/* INDIRECT — Vehicle anchor → over cargo → OTHER side (100%) */}
-      <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white tracking-wider">INDIRECT</span>
-          <span className="text-[10px] text-emerald-700 font-bold">100% WLL</span>
-        </div>
-        <svg viewBox="0 0 280 105" className="w-full" style={{ maxHeight: 90 }}>
-          {/* Trailer bed */}
-          <rect x="30" y="62" width="220" height="8" rx="2" fill="#94A3B8" />
-          <rect x="25" y="70" width="230" height="5" rx="1" fill="#78909C" />
-          {/* Wheels */}
-          <circle cx="60" cy="80" r="5" fill="#546E7A" /><circle cx="220" cy="80" r="5" fill="#546E7A" />
-          {/* Vehicle anchor points — OPPOSITE sides */}
-          <circle cx="50" cy="62" r="3.5" fill="#10B981" /><circle cx="230" cy="62" r="3.5" fill="#10B981" />
-          {/* Cargo — smaller rectangle */}
-          <rect x="95" y="22" width="90" height="40" rx="3" fill="#D4AF37" opacity="0.2" stroke="#D4AF37" strokeWidth="1.5" />
-          <text x="140" y="46" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#8B7518">CARGO</text>
-          {/* Tie-down — over cargo to OTHER side */}
-          <path d="M50,62 L80,35 Q140,8 200,35 L230,62" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" />
-          {/* Labels */}
-          <text x="140" y="8" textAnchor="middle" fontSize="7" fill="#059669" fontWeight="bold">OVER / AROUND CARGO</text>
-          <text x="35" y="95" textAnchor="middle" fontSize="7" fill="#64748B">Vehicle Anchor</text>
-          <text x="245" y="95" textAnchor="middle" fontSize="7" fill="#059669" fontWeight="bold">OTHER Side</text>
-        </svg>
-        <p className="text-[10px] text-[#475569] leading-snug">
-          From <strong>vehicle anchor</strong>, over or around cargo, to anchor on <strong>other side</strong> of vehicle. Full <span className="text-emerald-700 font-bold">100%</span> of WLL counts.
-        </p>
-      </div>
-
-      <p className="text-[9px] text-[#94A3B8] italic">Always use the WLL marked on the tie-down. If not marked, use 393.108(b) table.</p>
+      )}
     </div>
   );
 }
@@ -342,6 +363,7 @@ export default function TieDownCalculator() {
   const [photos, setPhotos] = useState([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState(null);
+  const [sections, setSections] = useState({ tiedowns: true, wllInfo: false, photos: true, breakdown: true });
 
   /* ── Favorites (persisted in localStorage) ── */
   const [favorites, setFavorites] = useState(() => {
@@ -835,17 +857,23 @@ export default function TieDownCalculator() {
         {/* ═══════════════════════════════════════════
             SECTION 3 — TIE-DOWNS
             ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-xl border p-4 space-y-3" data-testid="tiedowns-section">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-xl border overflow-hidden" data-testid="tiedowns-section">
+          <button
+            onClick={() => setSections((s) => ({ ...s, tiedowns: !s.tiedowns }))}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F8FAFC] transition-colors"
+          >
             <h2 className="text-[11px] font-bold tracking-widest uppercase text-[#64748B]">
               Tie-Downs ({tiedowns.length})
+              {tiedowns.length > 0 && (
+                <span className="text-[10px] text-[#94A3B8] font-normal ml-2 normal-case tracking-normal">
+                  {activeTiedowns} active &middot; {defectiveCount} defective
+                </span>
+              )}
             </h2>
-            {tiedowns.length > 0 && (
-              <span className="text-[10px] text-[#94A3B8]">
-                {activeTiedowns} active &middot; {defectiveCount} defective
-              </span>
-            )}
-          </div>
+            <ChevronDown className={`w-4 h-4 text-[#64748B] transition-transform duration-200 ${sections.tiedowns ? "rotate-180" : ""}`} />
+          </button>
+          {sections.tiedowns && (
+          <div className="px-4 pb-4 space-y-3 border-t border-[#F1F5F9]">
 
           {/* Favorites section */}
           {favorites.length > 0 && (
@@ -910,8 +938,7 @@ export default function TieDownCalculator() {
           {/* 393.108 full chart picker (collapsible) */}
           <WLLChartPicker onAdd={addTiedown} favorites={favorites} toggleFavorite={toggleFavorite} />
 
-          {/* Direct vs Indirect infographic */}
-          <DirectIndirectGraphic />
+          {/* Direct vs Indirect infographic — now its own collapsible section */}
 
           {/* Tie-down cards */}
           {tiedowns.length === 0 ? (
@@ -1061,26 +1088,52 @@ export default function TieDownCalculator() {
               })}
             </div>
           )}
+          </div>
+          )}
         </div>
+
+        {/* ═══════════════════════════════════════════
+            SECTION — DIRECT vs INDIRECT INFO
+            ═══════════════════════════════════════════ */}
+        <DirectIndirectGraphic
+          open={sections.wllInfo}
+          onToggle={() => setSections((s) => ({ ...s, wllInfo: !s.wllInfo }))}
+        />
 
         {/* ═══════════════════════════════════════════
             SECTION 3B — PHOTOS
             ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-xl border p-4 space-y-3" data-testid="photos-section">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-xl border overflow-hidden" data-testid="photos-section">
+          <button
+            onClick={() => setSections((s) => ({ ...s, photos: !s.photos }))}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F8FAFC] transition-colors"
+          >
             <h2 className="text-[11px] font-bold tracking-widest uppercase text-[#64748B]">
               Photos ({photos.length})
             </h2>
-            <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] hover:bg-[#002855] hover:text-white hover:border-[#002855] transition-all cursor-pointer text-xs text-[#334155] ${uploadingPhoto ? "opacity-50 pointer-events-none" : ""}`} data-testid="add-photo-btn">
-              {uploadingPhoto ? (
-                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Plus className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2">
+              {!sections.photos && (
+                <label className="inline-flex items-center gap-1 px-2 py-1 rounded border border-[#CBD5E1] bg-[#F8FAFC] text-[10px] text-[#334155] cursor-pointer hover:bg-[#002855] hover:text-white hover:border-[#002855] transition-all" onClick={(e) => e.stopPropagation()} data-testid="add-photo-btn-collapsed">
+                  <Plus className="w-3 h-3" /> Add
+                  <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" disabled={uploadingPhoto} />
+                </label>
               )}
-              <span>{uploadingPhoto ? "Uploading..." : "Add Photo"}</span>
-              <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" disabled={uploadingPhoto} />
-            </label>
-          </div>
+              <ChevronDown className={`w-4 h-4 text-[#64748B] transition-transform duration-200 ${sections.photos ? "rotate-180" : ""}`} />
+            </div>
+          </button>
+          {sections.photos && (
+          <div className="px-4 pb-4 space-y-3 border-t border-[#F1F5F9]">
+            <div className="flex justify-end mt-2">
+              <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] hover:bg-[#002855] hover:text-white hover:border-[#002855] transition-all cursor-pointer text-xs text-[#334155] ${uploadingPhoto ? "opacity-50 pointer-events-none" : ""}`} data-testid="add-photo-btn">
+                {uploadingPhoto ? (
+                  <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5" />
+                )}
+                <span>{uploadingPhoto ? "Uploading..." : "Add Photo"}</span>
+                <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" disabled={uploadingPhoto} />
+              </label>
+            </div>
 
           {photos.length === 0 ? (
             <p className="text-xs text-[#94A3B8] text-center py-2">
@@ -1107,16 +1160,26 @@ export default function TieDownCalculator() {
               ))}
             </div>
           )}
+          </div>
+          )}
         </div>
 
         {/* ═══════════════════════════════════════════
             SECTION 4 — WLL BREAKDOWN
             ═══════════════════════════════════════════ */}
         {tiedowns.length > 0 && weight > 0 && (
-          <div className="bg-white rounded-xl border p-4 space-y-3" data-testid="wll-breakdown">
-            <h2 className="text-[11px] font-bold tracking-widest uppercase text-[#64748B]">
-              WLL Contribution Breakdown
-            </h2>
+          <div className="bg-white rounded-xl border overflow-hidden" data-testid="wll-breakdown">
+            <button
+              onClick={() => setSections((s) => ({ ...s, breakdown: !s.breakdown }))}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F8FAFC] transition-colors"
+            >
+              <h2 className="text-[11px] font-bold tracking-widest uppercase text-[#64748B]">
+                WLL Contribution Breakdown
+              </h2>
+              <ChevronDown className={`w-4 h-4 text-[#64748B] transition-transform duration-200 ${sections.breakdown ? "rotate-180" : ""}`} />
+            </button>
+            {sections.breakdown && (
+            <div className="px-4 pb-4 space-y-3 border-t border-[#F1F5F9]">
 
             <div className="space-y-1.5">
               {tiedowns.map((td, idx) => {
@@ -1179,6 +1242,8 @@ export default function TieDownCalculator() {
                 <span className="text-[10px] text-[#64748B]">Defective (0 lbs)</span>
               </div>
             </div>
+            </div>
+            )}
           </div>
         )}
 
@@ -1240,9 +1305,11 @@ export default function TieDownCalculator() {
               </div>
 
               <p className="text-[9px] text-[#94A3B8] italic px-1">
-                This calculator provides estimates. Always verify with current FMCSA regulations and
-                inspection standards.
+                This calculator provides estimates. Always verify with current regulations.
               </p>
+              <a href="https://www.ecfr.gov/current/title-49/subtitle-B/chapter-III/subchapter-B/part-393/subpart-I/section-393.108" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-[#002855] font-semibold underline hover:text-[#D4AF37] px-1">
+                View 393.108 WLL Table on eCFR.gov
+              </a>
             </div>
           )}
         </div>
