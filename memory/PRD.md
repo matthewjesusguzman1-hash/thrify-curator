@@ -3,36 +3,22 @@
 ## Problem Statement
 FMCSA roadside violation search/filter app with AI-powered search, NSP blue/gold theme.
 
-## Key WLL Rules (393.102)
-- **DIRECT** = 50% of WLL (vehicle anchor → cargo, OR same side)
-- **INDIRECT** = 100% of WLL (vehicle anchor → over cargo → OTHER side)
-- Required aggregate WLL = 50% of cargo weight
+## Key Rules
+- **DIRECT** = 50% WLL (393.102)
+- **INDIRECT** = 100% WLL (393.102)
+- Required aggregate WLL = 50% of cargo weight (393.104)
+- **Without blocking** (393.110b): 1 for ≤5ft/≤1100lbs, 2 for ≤10ft, 2+1 per 10ft beyond
+- **With blocking** (393.110c): 1 per 10ft (headerboard/bulkhead prevents forward movement)
 
 ## What's Implemented
-| Feature | Status |
-|---------|--------|
-| Excel parsing & MongoDB ingestion | DONE |
-| NSP Blue/Gold Theme | DONE |
-| AI Smart Search (emergentintegrations) | DONE |
-| 4-Level Violation Tree (resizable split-screen) | DONE |
-| Inspection Documentation (CRUD, photos, HTML export) | DONE |
-| CVSA Procedures Viewer | DONE |
-| PWA with NSP badge | DONE |
-| Resources dropdown | DONE |
-| Tie-Down Calculator (49 CFR 393) | DONE |
-| Calculator export & save-to-inspection | DONE |
-| Photo upload (calculator + inspection) | DONE |
-| Direct=50%, Indirect=100% (corrected per 393.102) | DONE |
-| 393.108 WLL values (all 4 webbing sizes, all chain grades) | DONE |
-| Favorites system (localStorage) | DONE |
-| 3-diagram infographic (matching CVSA cert material) | DONE |
-| Collapsible accordion categories (Grade 30→80 order) | DONE |
-| All sections collapsible (tie-downs, WLL info, photos, breakdown) | DONE |
-| eCFR 393.108 table link | DONE |
+All features from previous sessions plus:
+- Headerboard/Blocking toggle (393.110b vs 393.110c)
+- 3D isometric-style infographic diagrams matching CVSA cert material
+- Favorites-only quick access (no common presets)
+- All 393.108 WLL values including 4 webbing sizes
+- Collapsible sections throughout
 
 ## Backlog
-| Priority | Task |
-|----------|------|
 | P1 | Dedicated mobile resources page |
 | P1 | Offline/cached mode for field use |
 | P2 | Refactor server.py into modular routes |

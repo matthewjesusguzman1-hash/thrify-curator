@@ -175,6 +175,7 @@ class TieDownItemData(BaseModel):
 class SaveTieDownRequest(BaseModel):
     cargo_weight: float = 0
     cargo_length: float = 0
+    has_blocking: bool = False
     tiedowns: List[TieDownItemData] = []
     photos: List[dict] = []
 
@@ -904,7 +905,7 @@ async def delete_photo(inspection_id: str, item_id: str, photo_id: str):
 
 # ========== TIE-DOWN ASSESSMENT ENDPOINTS ==========
 
-def _compute_tiedown_assessment(cargo_weight, cargo_length, tiedowns_raw):
+def _compute_tiedown_assessment(cargo_weight, cargo_length, tiedowns_raw, has_blocking=False):
     """Compute derived values for a tie-down assessment."""
     weight = cargo_weight or 0
     length = cargo_length or 0
@@ -912,13 +913,19 @@ def _compute_tiedown_assessment(cargo_weight, cargo_length, tiedowns_raw):
 
     if length <= 0:
         min_tiedowns = 0
-    elif length < 5 and weight <= 1100:
-        min_tiedowns = 1
-    elif length <= 10:
-        min_tiedowns = 2
-    else:
+    elif has_blocking:
+        # 393.110(c): 1 per 10 ft when blocked
         import math
-        min_tiedowns = 2 + math.ceil((length - 10) / 10)
+        min_tiedowns = math.ceil(length / 10)
+    else:
+        # 393.110(b): without blocking
+        if length <= 5 and weight <= 1100:
+            min_tiedowns = 1
+        elif length <= 10:
+            min_tiedowns = 2
+        else:
+            import math
+            min_tiedowns = 2 + math.ceil((length - 10) / 10)
 
     computed = []
     total_eff = 0
@@ -943,6 +950,7 @@ def _compute_tiedown_assessment(cargo_weight, cargo_length, tiedowns_raw):
     compliant = weight > 0 and total_eff >= required_wll and active_count >= min_tiedowns
     return {
         "cargo_weight": weight, "cargo_length": length,
+        "has_blocking": has_blocking,
         "required_wll": required_wll, "min_tiedowns": min_tiedowns,
         "tiedowns": computed, "total_effective_wll": total_eff,
         "active_count": active_count, "defective_count": defective_count,
@@ -956,7 +964,7 @@ async def save_tiedown_to_inspection(inspection_id: str, req: SaveTieDownRequest
     if not doc:
         raise HTTPException(status_code=404, detail="Inspection not found")
 
-    assessment = _compute_tiedown_assessment(req.cargo_weight, req.cargo_length, req.tiedowns)
+    assessment = _compute_tiedown_assessment(req.cargo_weight, req.cargo_length, req.tiedowns, req.has_blocking)
     assessment["assessment_id"] = str(uuid.uuid4())
     assessment["created_at"] = datetime.now(timezone.utc).isoformat()
     assessment["photos"] = req.photos or []
