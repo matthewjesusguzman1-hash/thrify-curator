@@ -149,6 +149,9 @@ export function SimilarViolationsSheet({ violation, open, onOpenChange }) {
                           )}
                         </div>
                         <p className="text-xs text-[#475569] leading-snug">{v.violation_text}</p>
+                        <div className="flex justify-end mt-1.5">
+                          <SaveToInspection violation={v} className="flex-shrink-0" />
+                        </div>
                       </div>
                     );
                   })}
