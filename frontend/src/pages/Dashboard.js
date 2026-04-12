@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { FolderTree, ClipboardCheck } from "lucide-react";
+import { FolderTree, ClipboardCheck, Calculator } from "lucide-react";
 import { Header } from "../components/app/Header";
 import { SearchBar } from "../components/app/SearchBar";
 import { FilterBar } from "../components/app/FilterBar";
@@ -11,6 +11,7 @@ import { SimilarViolationsSheet } from "../components/app/SimilarViolationsSheet
 import { ViolationTree, ViolationTreeDrawer } from "../components/app/ViolationTree";
 import { InspectionProcedures } from "../components/app/InspectionProcedures";
 import { ScrollArea } from "../components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
