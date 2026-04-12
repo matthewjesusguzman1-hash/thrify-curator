@@ -181,7 +181,7 @@ export default function Dashboard() {
         stats={stats}
       />
 
-      <main className="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 pb-20 space-y-5">
+      <main className="max-w-[1440px] mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-20 space-y-3 sm:space-y-5">
         {/* Search */}
         <SearchBar
           keyword={keyword}

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, FileSearch, ArrowUp, ArrowDown, ArrowUpDown, GripVertical, ArrowLeftToLine, Settings2, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileSearch, ArrowUp, ArrowDown, ArrowUpDown, GripVertical, ArrowLeftToLine, Settings2 } from "lucide-react";
 import { Badge } from "../ui/badge";
 import {
   Table,
@@ -28,14 +28,6 @@ const ALL_COLUMNS = [
 
 function getColumnDef(key) {
   return ALL_COLUMNS.find((c) => c.key === key) || ALL_COLUMNS[0];
-}
-
-function buildEcfrUrl(regRef) {
-  if (!regRef) return null;
-  // Strip parenthetical subsections: 393.40(a) → 393.40, 107.608(b) → 107.608
-  const baseSection = regRef.replace(/\(.*$/, '').trim();
-  if (!baseSection || !baseSection.includes('.')) return null;
-  return `https://www.ecfr.gov/current/title-49/section-${baseSection}`;
 }
 
 function renderCell(v, colKey, idx) {
@@ -134,21 +126,57 @@ export function ViolationTable({
 
   return (
     <div data-testid="violation-table-container">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-[#64748B]" data-testid="results-count">
-          Showing <strong className="text-[#0F172A]">{startItem}-{endItem}</strong> of{" "}
-          <strong className="text-[#0F172A]">{total.toLocaleString()}</strong> results
+      {/* Results bar */}
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <p className="text-xs text-[#64748B] flex-shrink-0" data-testid="results-count">
+          <strong className="text-[#0F172A]">{startItem}-{endItem}</strong> of{" "}
+          <strong className="text-[#0F172A]">{total.toLocaleString()}</strong>
         </p>
-        <div className="flex items-center gap-3">
-          <p className="text-xs text-[#94A3B8]">Click a row to see similar violations</p>
-          <ColumnOrderPopover
-            columnOrder={columnOrder}
-            onMoveToFront={moveToFront}
-          />
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-[#94A3B8] hidden sm:block">Tap a row for details</p>
+          <ColumnOrderPopover columnOrder={columnOrder} onMoveToFront={moveToFront} />
         </div>
       </div>
 
-      <div className="border border-[#CBD5E1] rounded-lg overflow-hidden bg-white shadow-sm">
+      {/* Mobile card view */}
+      <div className="sm:hidden space-y-2" data-testid="mobile-card-view">
+        {violations.map((v, idx) => (
+          <div
+            key={v.id || idx}
+            className="border border-[#CBD5E1] rounded-lg bg-white p-3 active:bg-[#F8FAFC] transition-colors"
+            onClick={() => onViolationClick?.(v)}
+            data-testid={`violation-row-${idx}`}
+          >
+            <div className="flex items-start justify-between gap-2 mb-1.5">
+              <span className="text-sm font-bold text-[#002855]" data-testid={`reg-ref-${idx}`}>
+                {v.regulatory_reference}
+              </span>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {v.oos_value === "Y" && (
+                  <Badge variant="destructive" className="text-[9px] px-1.5 py-0 font-bold bg-[#DC2626] text-white">OOS</Badge>
+                )}
+                {v.level_iii === "Y" && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#002855]/10 text-[#002855] font-bold">L3</span>
+                )}
+                {v.critical === "Y" && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">CRIT</span>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-[#475569] leading-relaxed mb-2" data-testid={`vio-text-${idx}`}>
+              {v.violation_text}
+            </p>
+            <div className="flex items-center gap-2 text-[10px] text-[#94A3B8]">
+              <ClassBadge value={v.violation_class} />
+              <span className="font-mono">{v.violation_code}</span>
+              <span>CFR {v.cfr_part}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden sm:block border border-[#CBD5E1] rounded-lg overflow-hidden bg-white shadow-sm">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -184,12 +212,13 @@ export function ViolationTable({
         </div>
       </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div data-testid="pagination" className="flex items-center justify-between mt-4">
           <p className="text-xs text-[#64748B]">Page {page} of {totalPages}</p>
           <div className="flex items-center gap-2">
             <Button data-testid="prev-page-btn" variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="pagination-btn h-8 text-xs">
-              <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Previous
+              <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Prev
             </Button>
             <Button data-testid="next-page-btn" variant="outline" size="sm" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} className="pagination-btn h-8 text-xs">
               Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
@@ -211,8 +240,8 @@ function ColumnOrderPopover({ columnOrder, onMoveToFront }) {
           className="h-7 px-2 text-xs border-[#CBD5E1] text-[#64748B] bg-white hover:bg-[#002855] hover:text-white hover:border-[#002855]"
           data-testid="column-order-btn"
         >
-          <Settings2 className="w-3.5 h-3.5 mr-1" />
-          Columns
+          <Settings2 className="w-3.5 h-3.5 sm:mr-1" />
+          <span className="hidden sm:inline">Columns</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[220px] p-2" align="end" data-testid="column-order-popover">
