@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Search, Sparkles, Loader2 } from "lucide-react";
+import { Search, Sparkles, Loader2, X } from "lucide-react";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
@@ -29,6 +29,12 @@ export function SearchBar({
     onSearch(localKeyword);
   };
 
+  const handleClear = () => {
+    setLocalKeyword("");
+    onKeywordChange("");
+    onSearch("");
+  };
+
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
       <div
@@ -55,6 +61,16 @@ export function SearchBar({
           onKeyDown={handleKeyDown}
           className="border-0 focus-visible:ring-0 text-sm h-10"
         />
+        {localKeyword && (
+          <button
+            data-testid="search-clear-btn"
+            onClick={handleClear}
+            className="px-2 text-[#9CA3AF] hover:text-[#374151] transition-colors"
+            title="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
         <button
           data-testid="search-btn"
           onClick={handleSearchClick}

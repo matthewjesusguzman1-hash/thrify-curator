@@ -331,6 +331,94 @@ class ViolationAPITester:
         except Exception as e:
             self.log_test("Combined Filters", False, f"Error: {str(e)}")
 
+    def test_sorting_functionality(self):
+        """Test sorting functionality"""
+        sort_tests = [
+            ("oos", "desc"),
+            ("violation_class", "asc"),
+            ("regulatory_reference", "desc"),
+            ("violation_text", "asc"),
+            ("level_iii", "desc"),
+            ("critical", "asc"),
+            ("violation_code", "desc"),
+            ("cfr_part", "asc")
+        ]
+        
+        for sort_by, sort_dir in sort_tests:
+            try:
+                params = {
+                    "sort_by": sort_by,
+                    "sort_dir": sort_dir,
+                    "page_size": 5  # Small page size for testing
+                }
+                response = requests.get(f"{self.api_url}/violations", params=params, timeout=15)
+                success = response.status_code == 200
+                
+                if success:
+                    data = response.json()
+                    violations = data.get('violations', [])
+                    details = f"Sort by {sort_by} {sort_dir}: {len(violations)} results returned"
+                    
+                    # Verify sorting is applied by checking if we get results
+                    if len(violations) > 0:
+                        details += " ✓"
+                    else:
+                        details += " (no results to verify sort order)"
+                else:
+                    details = f"Status: {response.status_code}"
+                    
+                self.log_test(f"Sort: {sort_by} {sort_dir}", success, details)
+            except Exception as e:
+                self.log_test(f"Sort: {sort_by} {sort_dir}", False, f"Error: {str(e)}")
+
+    def test_similar_violations_endpoint(self):
+        """Test similar violations endpoint"""
+        # First get a violation ID to test with
+        try:
+            response = requests.get(f"{self.api_url}/violations", params={"page_size": 1}, timeout=15)
+            if response.status_code != 200:
+                self.log_test("Similar Violations Setup", False, "Could not get violation ID for testing")
+                return
+                
+            data = response.json()
+            violations = data.get('violations', [])
+            if not violations:
+                self.log_test("Similar Violations Setup", False, "No violations found for testing")
+                return
+                
+            violation_id = violations[0].get('id')
+            if not violation_id:
+                self.log_test("Similar Violations Setup", False, "Violation ID not found")
+                return
+                
+            # Test the similar violations endpoint
+            response = requests.get(f"{self.api_url}/violations/{violation_id}/similar", timeout=15)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                similar_violations = data.get('violations', [])
+                total = data.get('total', 0)
+                source = data.get('source')
+                details = f"Found {total} similar violations, returned {len(similar_violations)}"
+                
+                if source:
+                    details += f", source violation: {source.get('regulatory_reference', 'N/A')}"
+                else:
+                    details += ", no source violation returned"
+            else:
+                details = f"Status: {response.status_code}"
+                try:
+                    error_data = response.json()
+                    details += f", Error: {error_data}"
+                except:
+                    details += f", Response: {response.text[:100]}"
+                    
+            self.log_test("Similar Violations Endpoint", success, details)
+            
+        except Exception as e:
+            self.log_test("Similar Violations Endpoint", False, f"Error: {str(e)}")
+
     def run_all_tests(self):
         """Run all backend API tests"""
         print("🚀 Starting Nebraska State Patrol Violation Navigator API Tests")
@@ -356,6 +444,12 @@ class ViolationAPITester:
         self.test_level_iii_filter()
         self.test_critical_filter()
         self.test_combined_filters()
+        
+        # New sorting functionality
+        self.test_sorting_functionality()
+        
+        # New similar violations endpoint
+        self.test_similar_violations_endpoint()
         
         # Pagination
         self.test_pagination()

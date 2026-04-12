@@ -179,6 +179,8 @@ async def search_violations(
     hazmat: str = Query("", description="Filter hazmat only (Y=only hazmat, N=exclude hazmat)"),
     level_iii: str = Query("", description="Filter by Level III (Y/N)"),
     critical: str = Query("", description="Filter by Critical (Y/N)"),
+    sort_by: str = Query("", description="Sort by field name"),
+    sort_dir: str = Query("asc", description="Sort direction: asc or desc"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ):
@@ -212,7 +214,25 @@ async def search_violations(
     skip = (page - 1) * page_size
     total_pages = max(1, (total + page_size - 1) // page_size)
 
+    # Sorting
+    sort_field_map = {
+        "regulatory_reference": "regulatory_reference",
+        "violation_text": "violation_text",
+        "violation_class": "violation_class",
+        "oos": "oos_value",
+        "level_iii": "level_iii",
+        "critical": "critical",
+        "violation_code": "violation_code",
+        "cfr_part": "cfr_part",
+    }
+    sort_options = []
+    if sort_by and sort_by in sort_field_map:
+        direction = -1 if sort_dir == "desc" else 1
+        sort_options.append((sort_field_map[sort_by], direction))
+
     cursor = db.violations.find(query, {"_id": 0}).skip(skip).limit(page_size)
+    if sort_options:
+        cursor = cursor.sort(sort_options)
     results = await cursor.to_list(page_size)
 
     return ViolationSearchResponse(
@@ -349,6 +369,33 @@ async def get_stats():
         "hazmat_count": hazmat_count,
         "level_iii_count": level_iii_count,
         "by_class": {item["_id"]: item["count"] for item in class_counts if item["_id"]},
+    }
+
+
+@api_router.get("/violations/{violation_id}/similar")
+async def get_similar_violations(violation_id: str):
+    # Find the source violation
+    source = await db.violations.find_one({"id": violation_id}, {"_id": 0})
+    if not source:
+        return {"violations": [], "total": 0}
+
+    # Find similar by same violation_category, cfr_part, or violation_class, excluding self
+    similar_query = {
+        "id": {"$ne": violation_id},
+        "$or": [
+            {"violation_category": source.get("violation_category", "")},
+            {"cfr_part": source.get("cfr_part", "")},
+        ]
+    }
+
+    cursor = db.violations.find(similar_query, {"_id": 0}).limit(20)
+    results = await cursor.to_list(20)
+    total = await db.violations.count_documents(similar_query)
+
+    return {
+        "violations": [Violation(**r) for r in results],
+        "total": total,
+        "source": Violation(**source),
     }
 
 

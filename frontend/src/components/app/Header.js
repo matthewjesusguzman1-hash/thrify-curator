@@ -1,4 +1,4 @@
-import { Shield, Upload } from "lucide-react";
+import { ShieldCheck, Upload } from "lucide-react";
 import { Button } from "../ui/button";
 
 export function Header({ onUploadClick, stats }) {
@@ -10,7 +10,7 @@ export function Header({ onUploadClick, stats }) {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#002855]">
-            <Shield className="w-5 h-5 text-[#D4AF37]" strokeWidth={2} />
+            <ShieldCheck className="w-5 h-5 text-[#D4AF37]" strokeWidth={2} />
           </div>
           <div>
             <h1
@@ -18,10 +18,10 @@ export function Header({ onUploadClick, stats }) {
               className="text-lg sm:text-xl font-semibold tracking-tight text-[#002855] leading-tight"
               style={{ fontFamily: "Outfit, sans-serif" }}
             >
-              NSP Carrier Enforcement
+              SafeSpect Violation Navigator
             </h1>
             <p className="text-xs text-[#6B7280] tracking-wide">
-              SafeSpect Violation Navigator
+              FMCSA Current Violations Database
             </p>
           </div>
         </div>

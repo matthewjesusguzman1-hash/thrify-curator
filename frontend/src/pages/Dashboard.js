@@ -6,6 +6,7 @@ import { FilterBar } from "../components/app/FilterBar";
 import { ActiveFilters } from "../components/app/ActiveFilters";
 import { ViolationTable } from "../components/app/ViolationTable";
 import { UploadDialog } from "../components/app/UploadDialog";
+import { SimilarViolationsSheet } from "../components/app/SimilarViolationsSheet";
 import { Toaster, toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -38,6 +39,10 @@ export default function Dashboard() {
   const [expandedTerms, setExpandedTerms] = useState([]);
   const [stats, setStats] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [sortBy, setSortBy] = useState("");
+  const [sortDir, setSortDir] = useState("asc");
+  const [selectedViolation, setSelectedViolation] = useState(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Load filter options and stats on mount
   useEffect(() => {
@@ -45,13 +50,13 @@ export default function Dashboard() {
     fetchStats();
   }, []);
 
-  // Fetch violations when filters or page change
+  // Fetch violations when filters, page, or sort change
   useEffect(() => {
     if (!aiMode) {
       fetchViolations();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, page]);
+  }, [filters, page, sortBy, sortDir]);
 
   // Initial load
   useEffect(() => {
@@ -89,6 +94,10 @@ export default function Dashboard() {
           Object.entries(filters).filter(([, v]) => v !== "")
         ),
       };
+      if (sortBy) {
+        params.sort_by = sortBy;
+        params.sort_dir = sortDir;
+      }
       const res = await axios.get(`${API}/violations`, { params });
       setViolations(res.data.violations);
       setTotal(res.data.total);
@@ -99,7 +108,7 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [keyword, page, pageSize, filters]);
+  }, [keyword, page, pageSize, filters, sortBy, sortDir]);
 
   const handleSearch = async (searchKeyword) => {
     setPage(1);
@@ -150,6 +159,17 @@ export default function Dashboard() {
     toast.success("Data refreshed successfully");
   };
 
+  const handleSort = (field, dir) => {
+    setSortBy(field);
+    setSortDir(dir);
+    setPage(1);
+  };
+
+  const handleViolationClick = (violation) => {
+    setSelectedViolation(violation);
+    setSheetOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-[#F9FAFB]" data-testid="dashboard">
       <Toaster position="top-right" richColors />
@@ -193,6 +213,10 @@ export default function Dashboard() {
           totalPages={totalPages}
           onPageChange={setPage}
           isLoading={isLoading}
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onSort={handleSort}
+          onViolationClick={handleViolationClick}
         />
       </main>
 
@@ -201,6 +225,13 @@ export default function Dashboard() {
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         onUploadSuccess={handleUploadSuccess}
+      />
+
+      {/* Similar Violations Sheet */}
+      <SimilarViolationsSheet
+        violation={selectedViolation}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
       />
     </div>
   );
