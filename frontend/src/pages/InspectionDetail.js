@@ -161,10 +161,13 @@ export default function InspectionDetail() {
       </div>
 
       <main className="max-w-[800px] mx-auto px-3 sm:px-6 py-4 pb-20 space-y-4">
-        {/* Actions bar */}
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs" data-testid="export-btn">
-            <Eye className="w-3.5 h-3.5 mr-1" /> Preview &amp; Export
+        {/* Actions bar — sticky like calculator */}
+        <div className="sticky top-[45px] z-40 bg-white/95 backdrop-blur border rounded-xl shadow-sm -mx-1 px-3 py-2 flex items-center gap-2">
+          <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1 sm:flex-none" data-testid="export-btn">
+            <Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export
+          </Button>
+          <Button size="sm" onClick={handleEmail} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1 sm:flex-none" data-testid="email-btn">
+            <FileText className="w-3.5 h-3.5 mr-1.5" /> Email
           </Button>
         </div>
 
