@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Header } from "../components/app/Header";
-import { Plus, Trash2, ChevronLeft, Camera, FileText, Mail, Pencil, Check, X, Image, ExternalLink } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -140,9 +140,6 @@ export default function InspectionDetail() {
           </Button>
           <Button size="sm" onClick={() => handleExport(true)} variant="outline" className="h-8 text-xs" data-testid="export-photos-btn">
             <Image className="w-3.5 h-3.5 mr-1" /> Export with Photos
-          </Button>
-          <Button size="sm" onClick={handleEmail} variant="outline" className="h-8 text-xs" data-testid="email-btn">
-            <Mail className="w-3.5 h-3.5 mr-1" /> Email
           </Button>
         </div>
 

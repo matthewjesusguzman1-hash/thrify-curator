@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { Bookmark, Plus, Check } from "lucide-react";
-import { Button } from "../ui/button";
+import { useState, useEffect, useCallback } from "react";
+import { Bookmark, Plus } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -14,16 +13,38 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export function SaveToInspection({ violation, className = "" }) {
   const [inspections, setInspections] = useState([]);
   const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const checkIfSaved = useCallback((inspList) => {
+    return inspList.some((insp) =>
+      insp.items?.some((item) => item.violation_id === violation.id)
+    );
+  }, [violation.id]);
 
   useEffect(() => {
     if (open) fetchInspections();
   }, [open]);
 
+  // Check saved status on mount
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await axios.get(`${API}/inspections`);
+        const list = res.data.inspections || [];
+        setSaved(checkIfSaved(list));
+      } catch {
+        // ignore
+      }
+    };
+    check();
+  }, [checkIfSaved]);
+
   const fetchInspections = async () => {
     try {
       const res = await axios.get(`${API}/inspections`);
-      setInspections(res.data.inspections || []);
+      const list = res.data.inspections || [];
+      setInspections(list);
+      setSaved(checkIfSaved(list));
     } catch {
       // ignore
     }
@@ -40,6 +61,7 @@ export function SaveToInspection({ violation, className = "" }) {
         cfr_part: violation.cfr_part,
         oos_value: violation.oos_value,
       });
+      setSaved(true);
       toast.success("Violation saved to inspection");
       setOpen(false);
     } catch {
@@ -51,7 +73,6 @@ export function SaveToInspection({ violation, className = "" }) {
     try {
       const res = await axios.post(`${API}/inspections`, {});
       await addToInspection(res.data.id);
-      setCreating(false);
     } catch {
       toast.error("Failed to create inspection");
     }
@@ -62,11 +83,17 @@ export function SaveToInspection({ violation, className = "" }) {
       <PopoverTrigger asChild>
         <button
           onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-          className={`text-[#94A3B8] hover:text-[#D4AF37] transition-colors ${className}`}
-          title="Save to inspection"
+          className={`transition-colors ${saved ? "text-[#D4AF37]" : "text-[#94A3B8] hover:text-[#D4AF37]"} ${className}`}
+          title={saved ? "Saved to inspection" : "Save to inspection"}
           data-testid="save-violation-btn"
         >
-          <Bookmark className="w-4 h-4" />
+          {saved ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+            </svg>
+          ) : (
+            <Bookmark className="w-4 h-4" />
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -79,17 +106,28 @@ export function SaveToInspection({ violation, className = "" }) {
         </p>
         {inspections.length > 0 ? (
           <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
-            {inspections.map((insp) => (
-              <button
-                key={insp.id}
-                onClick={() => addToInspection(insp.id)}
-                className="w-full text-left px-2 py-1.5 rounded hover:bg-[#F1F5F9] transition-colors flex items-center gap-2"
-                data-testid={`save-to-${insp.id}`}
-              >
-                <span className="text-xs text-[#334155] truncate flex-1">{insp.title}</span>
-                <span className="text-[10px] text-[#94A3B8]">{insp.items?.length || 0}</span>
-              </button>
-            ))}
+            {inspections.map((insp) => {
+              const alreadyIn = insp.items?.some((item) => item.violation_id === violation.id);
+              return (
+                <button
+                  key={insp.id}
+                  onClick={() => !alreadyIn && addToInspection(insp.id)}
+                  disabled={alreadyIn}
+                  className={`w-full text-left px-2 py-1.5 rounded transition-colors flex items-center gap-2 ${alreadyIn ? "opacity-60 cursor-default" : "hover:bg-[#F1F5F9]"}`}
+                  data-testid={`save-to-${insp.id}`}
+                >
+                  {alreadyIn ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#D4AF37" stroke="#D4AF37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+                    </svg>
+                  ) : (
+                    <Bookmark className="w-3 h-3 text-[#CBD5E1] flex-shrink-0" />
+                  )}
+                  <span className="text-xs text-[#334155] truncate flex-1">{insp.title}</span>
+                  <span className="text-[10px] text-[#94A3B8]">{insp.items?.length || 0}</span>
+                </button>
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs text-[#94A3B8] px-2 py-2">No inspections yet</p>
