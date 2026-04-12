@@ -69,11 +69,16 @@ export function TieDownReportContent({ articles }) {
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 8, marginBottom: 14, background: allOk ? "#ecfdf5" : "#fef2f2", border: `1px solid ${allOk ? "#a7f3d0" : "#fecaca"}` }}>
-              {allOk ? <CheckCircle2 style={{ width: 18, height: 18, color: "#10B981", flexShrink: 0 }} /> : <XCircle style={{ width: 18, height: 18, color: "#DC2626", flexShrink: 0 }} />}
-              <span style={{ fontWeight: "bold", fontSize: 13, color: allOk ? "#10B981" : "#DC2626" }}>
-                {allOk ? "COMPLIANT" : "NOT COMPLIANT"} — Active: {active}/{min} min | WLL: {pct}%
-              </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 8, marginBottom: 14, background: allOk ? "#ecfdf5" : "#fef2f2", border: `1px solid ${allOk ? "#a7f3d0" : "#fecaca"}` }}>
+              {allOk ? <CheckCircle2 style={{ width: 20, height: 20, color: "#10B981", flexShrink: 0 }} /> : <XCircle style={{ width: 20, height: 20, color: "#DC2626", flexShrink: 0 }} />}
+              <div>
+                <div style={{ fontWeight: "bold", fontSize: 14, color: allOk ? "#10B981" : "#DC2626" }}>
+                  {allOk ? "COMPLIANT" : "NOT COMPLIANT"}
+                </div>
+                <div style={{ fontSize: 12, color: allOk ? "#059669" : "#B91C1C", marginTop: 2 }}>
+                  Active: {active}/{min} min | WLL: {pct}%
+                </div>
+              </div>
             </div>
 
             {defective > 0 && (
@@ -100,7 +105,7 @@ export function TieDownReportContent({ articles }) {
                       <td style={{ padding: "8px", color: td.defective ? "#DC2626" : "#334155", fontWeight: "bold" }}>{i + 1}</td>
                       <td style={{ padding: "8px", textDecoration: td.defective ? "line-through" : "none", color: td.defective ? "#999" : "#334155" }}>{td.type}</td>
                       <td style={{ padding: "8px", textAlign: "center" }}>
-                        <span style={{ background: td.defective ? "#DC2626" : td.method === "indirect" ? "#10B981" : "#002855", color: "white", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: "bold", whiteSpace: "nowrap" }}>
+                        <span style={{ background: td.defective ? "#DC2626" : td.method === "indirect" ? "#10B981" : "#002855", color: "white", padding: "3px 10px", borderRadius: 4, fontSize: 10, fontWeight: "bold", display: "inline-block", lineHeight: "1.4" }}>
                           {td.defective ? "DEF" : td.method === "indirect" ? "IND 100%" : "DIR 50%"}
                         </span>
                       </td>
@@ -192,7 +197,7 @@ export function InspectionReportContent({ inspection }) {
               <div key={a.assessment_id || ai} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 14, marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                   <strong style={{ fontSize: 14, color: "#002855" }}>Assessment {ai + 1}</strong>
-                  <span style={{ background: a.compliant ? "#ecfdf5" : "#fef2f2", border: `1px solid ${a.compliant ? "#a7f3d0" : "#fecaca"}`, color: a.compliant ? "#10B981" : "#DC2626", padding: "3px 10px", borderRadius: 4, fontSize: 11, fontWeight: "bold" }}>
+                  <span style={{ background: a.compliant ? "#ecfdf5" : "#fef2f2", border: `1px solid ${a.compliant ? "#a7f3d0" : "#fecaca"}`, color: a.compliant ? "#10B981" : "#DC2626", padding: "4px 12px", borderRadius: 4, fontSize: 11, fontWeight: "bold", display: "inline-block", lineHeight: "1.4" }}>
                     {a.compliant ? "COMPLIANT" : "NOT COMPLIANT"}
                   </span>
                 </div>
@@ -216,7 +221,7 @@ export function InspectionReportContent({ inspection }) {
                       <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
                         <td style={{ padding: "8px", textDecoration: td.defective ? "line-through" : "none", color: td.defective ? "#999" : "#334155" }}>{i + 1}. {td.type}</td>
                         <td style={{ padding: "8px", textAlign: "center" }}>
-                          <span style={{ background: td.defective ? "#DC2626" : td.method === "indirect" ? "#10B981" : "#002855", color: "white", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: "bold", whiteSpace: "nowrap" }}>
+                          <span style={{ background: td.defective ? "#DC2626" : td.method === "indirect" ? "#10B981" : "#002855", color: "white", padding: "3px 10px", borderRadius: 4, fontSize: 10, fontWeight: "bold", display: "inline-block", lineHeight: "1.4" }}>
                             {td.defective ? "DEF" : td.method === "indirect" ? "IND 100%" : "DIR 50%"}
                           </span>
                         </td>

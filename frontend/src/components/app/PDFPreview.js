@@ -19,7 +19,9 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-        windowWidth: 800,
+        windowWidth: 900,
+        width: contentRef.current.scrollWidth,
+        height: contentRef.current.scrollHeight,
       });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
