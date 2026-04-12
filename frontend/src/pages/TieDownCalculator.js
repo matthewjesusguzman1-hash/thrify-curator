@@ -591,7 +591,7 @@ ${articlesHtml}
         {/* ADD ANOTHER ARTICLE */}
         <button onClick={addArticle} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#D4AF37]/5 hover:bg-[#D4AF37]/10 hover:border-[#D4AF37]/60 active:scale-[0.99] transition-all" data-testid="add-article-btn">
           <Plus className="w-4 h-4 text-[#D4AF37]" />
-          <span className="text-sm font-bold text-[#002855]">Add Another Article on Trailer</span>
+          <span className="text-sm font-bold text-[#002855]">Add Article</span>
         </button>
 
         {/* DIRECT vs INDIRECT INFO */}
