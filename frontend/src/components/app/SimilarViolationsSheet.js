@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, ExternalLink } from "lucide-react";
 import { Badge } from "../ui/badge";
 import {
   Sheet,
@@ -41,6 +41,15 @@ export function SimilarViolationsSheet({ violation, open, onOpenChange }) {
 
   if (!violation) return null;
 
+  const buildEcfrUrl = (ref) => {
+    if (!ref) return null;
+    const base = ref.replace(/\(.*$/, '').trim();
+    if (!base || !base.includes('.')) return null;
+    return `https://www.ecfr.gov/current/title-49/section-${base}`;
+  };
+
+  const ecfrUrl = buildEcfrUrl(violation.regulatory_reference);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -63,7 +72,14 @@ export function SimilarViolationsSheet({ violation, open, onOpenChange }) {
 
           <div className="mt-4 p-4 rounded-lg border bg-[#F8FAFC]" data-testid="selected-violation-detail">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-bold text-[#002855]">{violation.regulatory_reference}</span>
+              {ecfrUrl ? (
+                <a href={ecfrUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-[#002855] hover:text-[#D4AF37] transition-colors inline-flex items-center gap-1" data-testid="detail-ecfr-link">
+                  {violation.regulatory_reference}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : (
+                <span className="text-sm font-bold text-[#002855]">{violation.regulatory_reference}</span>
+              )}
               {violation.oos_value === "Y" && (
                 <Badge variant="destructive" className="text-[10px] px-2 py-0.5 font-bold bg-[#DC2626] text-white">OOS</Badge>
               )}
