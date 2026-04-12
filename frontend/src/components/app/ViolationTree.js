@@ -147,18 +147,53 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                           <div className="ml-4 pl-3 border-l border-[#F1F5F9] space-y-0.5 my-0.5">
                             {cat.sections.map((sec) => {
                               const isSecActive = activeClass === catClass && activeCategory === cat.name && activeRegBase === sec.ref;
+                              const vioKey = `v-${catClass}|${cat.name}|${sec.ref}`;
+                              const isViosOpen = regOpen[vioKey];
+                              const hasVios = sec.violations && sec.violations.length > 0;
+
                               return (
-                                <div
-                                  key={sec.ref}
-                                  onClick={() => onSelect(catClass, cat.name, isSecActive ? "" : sec.ref)}
-                                  className={`px-2 py-1 rounded cursor-pointer transition-colors ${isSecActive ? "bg-[#D4AF37]/15" : "hover:bg-[#F8FAFC]"}`}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <span className={`text-[10px] font-mono ${isSecActive ? "text-[#002855] font-semibold" : "text-[#64748B]"}`}>{sec.ref}</span>
-                                    <span className={`text-[9px] ${isSecActive ? "text-[#D4AF37]" : "text-[#E2E8F0]"}`}>{sec.count}</span>
+                                <div key={sec.ref}>
+                                  <div
+                                    onClick={() => {
+                                      onSelect(catClass, cat.name, isSecActive ? "" : sec.ref);
+                                      if (hasVios) setRegOpen((p) => ({ ...p, [vioKey]: true }));
+                                    }}
+                                    className={`px-2 py-1 rounded cursor-pointer transition-colors ${isSecActive ? "bg-[#D4AF37]/15" : "hover:bg-[#F8FAFC]"}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1">
+                                        {hasVios && (
+                                          <span
+                                            onClick={(e) => { e.stopPropagation(); setRegOpen((p) => ({ ...p, [vioKey]: !p[vioKey] })); }}
+                                            className="text-[#CBD5E1] flex-shrink-0 cursor-pointer"
+                                          >
+                                            {isViosOpen ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
+                                          </span>
+                                        )}
+                                        <span className={`text-[10px] font-mono ${isSecActive ? "text-[#002855] font-semibold" : "text-[#64748B]"}`}>{sec.ref}</span>
+                                      </div>
+                                      <span className={`text-[9px] ${isSecActive ? "text-[#D4AF37]" : "text-[#E2E8F0]"}`}>{sec.count}</span>
+                                    </div>
+                                    {sec.label && (
+                                      <p className={`text-[9px] leading-tight mt-0.5 ${hasVios ? "ml-3.5" : ""} ${isSecActive ? "text-[#002855]/70" : "text-[#B0BEC5]"}`}>{sec.label}</p>
+                                    )}
                                   </div>
-                                  {sec.label && (
-                                    <p className={`text-[9px] leading-tight mt-0.5 ${isSecActive ? "text-[#002855]/70" : "text-[#B0BEC5]"}`}>{sec.label}</p>
+
+                                  {/* Individual violations under this reg reference */}
+                                  {isViosOpen && hasVios && (
+                                    <div className="ml-5 pl-2 border-l border-[#F8FAFC] space-y-0.5 my-0.5">
+                                      {sec.violations.map((vio, idx) => (
+                                        <div
+                                          key={vio.id || idx}
+                                          className="px-2 py-0.5 rounded text-[9px] leading-tight text-[#94A3B8] hover:bg-[#F8FAFC] hover:text-[#64748B] cursor-default flex items-start gap-1"
+                                        >
+                                          {vio.oos === "Y" && (
+                                            <span className="text-[7px] px-1 py-0 bg-[#DC2626] text-white rounded font-bold flex-shrink-0 mt-0.5">OOS</span>
+                                          )}
+                                          <span>{vio.short}</span>
+                                        </div>
+                                      ))}
+                                    </div>
                                   )}
                                 </div>
                               );

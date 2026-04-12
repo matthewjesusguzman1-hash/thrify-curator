@@ -454,6 +454,28 @@ async def get_violation_tree():
             cats.append({"name": cat_name, "count": cat_data["count"], "sections": cat_data["sections"]})
         result[cls] = {"count": tree[cls]["count"], "categories": cats}
 
+    # For sections with count > 1, fetch individual violations
+    for cls_data in result.values():
+        for cat in cls_data["categories"]:
+            for sec in cat["sections"]:
+                if sec["count"] > 1:
+                    vios = await db.violations.find(
+                        {"regulatory_reference": sec["ref"], "violation_category": cat["name"]},
+                        {"_id": 0, "id": 1, "violation_text": 1, "violation_code": 1, "oos_value": 1}
+                    ).sort("violation_code", 1).to_list(50)
+                    sec["violations"] = []
+                    for v in vios:
+                        text = v.get("violation_text", "")
+                        # Short summary: take text after "- " prefix, truncate
+                        short = text.split(" - ", 1)[1] if " - " in text else text
+                        if len(short) > 60:
+                            short = short[:57] + "..."
+                        sec["violations"].append({
+                            "id": v.get("id", ""),
+                            "short": short,
+                            "oos": v.get("oos_value", "N"),
+                        })
+
     return {"tree": result}
 
 
