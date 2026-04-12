@@ -99,7 +99,7 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
               <SelectValue placeholder="Level III" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Level III</SelectItem>
+              <SelectItem value="all">All Violations</SelectItem>
               <SelectItem value="Y">Level III Only</SelectItem>
               <SelectItem value="N">Exclude Level III</SelectItem>
             </SelectContent>
