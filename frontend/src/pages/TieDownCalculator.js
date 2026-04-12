@@ -1195,11 +1195,15 @@ export default function TieDownCalculator() {
             <div className="px-4 pb-4 space-y-2">
               <div className="bg-white rounded-lg p-3 border text-[11px] text-[#475569] space-y-0.5">
                 <p className="font-bold text-[#002855] text-[10px] uppercase tracking-wider mb-1.5">
-                  393.106 &mdash; Minimum Number of Tie-Downs
+                  393.110 &mdash; Minimum Number of Tie-Downs
                 </p>
+                <p className="font-semibold text-[#002855] mt-1">393.110(b) &mdash; Without Blocking:</p>
                 <p>Under 5 ft &amp; under 1,100 lbs: <strong>1</strong> tie-down</p>
                 <p>5 ft to 10 ft: <strong>2</strong> tie-downs</p>
                 <p>Over 10 ft: <strong>2 + 1</strong> for each additional 10 ft or fraction</p>
+                <p className="font-semibold text-[#002855] mt-2">393.110(c) &mdash; With Blocking (headerboard, bulkhead, end structure):</p>
+                <p><strong>1</strong> tie-down for every 10 ft of cargo length or fraction</p>
+                <p className="text-[10px] text-[#94A3B8] italic mt-1">Blocking prevents forward movement of cargo. When present, fewer tie-downs are required because the structure absorbs forward force.</p>
               </div>
 
               <div className="bg-white rounded-lg p-3 border text-[11px] text-[#475569] space-y-0.5">
