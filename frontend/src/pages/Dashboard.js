@@ -220,11 +220,12 @@ export default function Dashboard() {
           <div className="flex gap-2 items-stretch">
             <button
               onClick={() => setTreeDrawerOpen(true)}
-              className="lg:hidden flex items-center justify-center w-10 h-10 border border-[#CBD5E1] rounded-lg bg-white text-[#64748B] hover:text-[#002855] hover:border-[#002855] transition-colors flex-shrink-0"
+              className="lg:hidden flex items-center justify-center gap-1.5 h-10 px-3 border border-[#002855] rounded-lg bg-[#002855] text-white hover:bg-[#001a3a] transition-colors flex-shrink-0"
               data-testid="tree-drawer-btn"
               title="Browse by type"
             >
               <FolderTree className="w-4 h-4" />
+              <span className="text-xs font-medium">Types</span>
             </button>
             <div className="flex-1">
               <SearchBar
