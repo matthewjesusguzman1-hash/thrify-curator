@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { X } from "lucide-react";
 import { Badge } from "../ui/badge";
 
@@ -12,6 +13,7 @@ const FILTER_LABELS = {
 };
 
 export function ActiveFilters({ filters, onClearFilter, onClearAll, expandedTerms, onTermClick }) {
+  const [showAllTerms, setShowAllTerms] = useState(false);
   const activeFilters = Object.entries(filters).filter(
     ([, value]) => value && value !== ""
   );
@@ -51,7 +53,7 @@ export function ActiveFilters({ filters, onClearFilter, onClearAll, expandedTerm
       {expandedTerms && expandedTerms.length > 0 && (
         <div className="flex items-center gap-1 ml-2">
           <span className="text-xs text-[#B8960E] font-medium">AI terms <span className="text-[10px] text-[#94A3B8] font-normal">(tap to search)</span>:</span>
-          {expandedTerms.slice(0, 5).map((term, idx) => (
+          {(showAllTerms ? expandedTerms : expandedTerms.slice(0, 5)).map((term, idx) => (
             <Badge
               key={idx}
               variant="outline"
@@ -63,7 +65,13 @@ export function ActiveFilters({ filters, onClearFilter, onClearAll, expandedTerm
             </Badge>
           ))}
           {expandedTerms.length > 5 && (
-            <span className="text-xs text-[#94A3B8]">+{expandedTerms.length - 5} more</span>
+            <button
+              onClick={() => setShowAllTerms(!showAllTerms)}
+              className="text-xs text-[#D4AF37] hover:text-[#B8960E] font-semibold transition-colors"
+              data-testid="show-more-terms"
+            >
+              {showAllTerms ? "Show less" : `+${expandedTerms.length - 5} more`}
+            </button>
           )}
         </div>
       )}
