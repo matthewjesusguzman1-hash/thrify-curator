@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   ChevronLeft, Plus, Trash2, AlertTriangle, CheckCircle2, XCircle,
-  Info, ChevronDown, Link2, ShieldAlert, RotateCcw, Download, Save, ClipboardList
+  Info, ChevronDown, Link2, ShieldAlert, RotateCcw, Download, Save, ClipboardList, GripVertical
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -362,6 +362,50 @@ export default function TieDownCalculator() {
     setTiedowns((p) =>
       p.map((t) => (t.id === id ? { ...t, wll: parseFloat(val) || 0 } : t)),
     );
+
+  /* ── Drag-and-drop reorder ── */
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+
+  const handleDragStart = (idx) => (e) => {
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDragOver = (idx) => (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (idx !== dragOverIdx) setDragOverIdx(idx);
+  };
+  const handleDrop = (idx) => (e) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+    setTiedowns((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIdx, 1);
+      next.splice(idx, 0, moved);
+      return next;
+    });
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+  const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
+
+  const moveUp = (idx) => {
+    if (idx <= 0) return;
+    setTiedowns((prev) => {
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      return next;
+    });
+  };
+  const moveDown = (idx) => {
+    if (idx >= tiedowns.length - 1) return;
+    setTiedowns((prev) => {
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next;
+    });
+  };
 
   const resetAll = () => {
     setCargoWeight("");
@@ -874,18 +918,50 @@ export default function TieDownCalculator() {
             <div className="space-y-2">
               {tiedowns.map((td, idx) => {
                 const eff = effectiveWll(td);
+                const isDragging = dragIdx === idx;
+                const isDragOver = dragOverIdx === idx && dragIdx !== idx;
                 return (
                   <div
                     key={td.id}
+                    draggable
+                    onDragStart={handleDragStart(idx)}
+                    onDragOver={handleDragOver(idx)}
+                    onDrop={handleDrop(idx)}
+                    onDragEnd={handleDragEnd}
                     className={`rounded-xl border overflow-hidden transition-all duration-200 ${
-                      td.defective
-                        ? "bg-red-50/60 border-red-200"
-                        : "bg-white border-[#E2E8F0] hover:border-[#002855]/30"
+                      isDragging
+                        ? "opacity-40 scale-[0.97]"
+                        : isDragOver
+                          ? "border-[#D4AF37] shadow-md"
+                          : td.defective
+                            ? "bg-red-50/60 border-red-200"
+                            : "bg-white border-[#E2E8F0] hover:border-[#002855]/30"
                     }`}
                     data-testid={`tiedown-${idx}`}
                   >
-                    {/* ── top row: index, label, WLL, remove ── */}
-                    <div className="flex items-center gap-3 px-3 py-2.5">
+                    {/* ── top row: drag handle, index, label, WLL, remove ── */}
+                    <div className="flex items-center gap-2 px-2 py-2.5">
+                      <div className="flex flex-col items-center flex-shrink-0" data-testid={`reorder-${idx}`}>
+                        <button
+                          onClick={() => moveUp(idx)}
+                          disabled={idx === 0}
+                          className={`p-0.5 ${idx === 0 ? "text-[#E2E8F0]" : "text-[#94A3B8] hover:text-[#002855] active:scale-90"} transition-all`}
+                          data-testid={`move-up-${idx}`}
+                        >
+                          <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                        </button>
+                        <div className="cursor-grab active:cursor-grabbing text-[#CBD5E1] hover:text-[#94A3B8] touch-none" data-testid={`drag-handle-${idx}`}>
+                          <GripVertical className="w-4 h-4" />
+                        </div>
+                        <button
+                          onClick={() => moveDown(idx)}
+                          disabled={idx === tiedowns.length - 1}
+                          className={`p-0.5 ${idx === tiedowns.length - 1 ? "text-[#E2E8F0]" : "text-[#94A3B8] hover:text-[#002855] active:scale-90"} transition-all`}
+                          data-testid={`move-down-${idx}`}
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                       <span
                         className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold flex-shrink-0 ${
                           td.defective
