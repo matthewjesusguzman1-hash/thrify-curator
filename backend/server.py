@@ -745,45 +745,56 @@ async def get_similar_violations(violation_id: str):
         return {"violations": [], "total": 0}
 
     vio_text = source.get("violation_text", "")
-
-    # Extract the subject/topic from the violation text
-    # Patterns: "Tires - ...", "Brake - ...", "Coupling - ...", "HM (General Packaging) - ..."
-    subject = ""
-    if " - " in vio_text:
-        subject = vio_text.split(" - ", 1)[0].strip()
+    reg_ref = source.get("regulatory_reference", "")
+    cfr_part = source.get("cfr_part", "")
 
     results = []
     seen_ids = {violation_id}
 
-    # 1st pass: same subject prefix (e.g., all "Tires" or all "Brake" violations)
-    if subject:
-        escaped_subject = re.escape(subject)
-        subject_query = {
+    # Extract base regulation number (e.g., "393.104(b)" -> "393.104", "390.21" -> "390.21")
+    reg_base = ""
+    if reg_ref:
+        m = re.match(r'(\d+\.\d+)', reg_ref)
+        if m:
+            reg_base = m.group(1)
+
+    # 1st priority: Same base regulation (e.g., all 390.21 variants)
+    if reg_base:
+        reg_query = {
             "id": {"$ne": violation_id},
-            "violation_text": {"$regex": f"^{escaped_subject}\\s*-", "$options": "i"},
+            "regulatory_reference": {"$regex": f"^{re.escape(reg_base)}", "$options": "i"},
         }
-        subject_results = await db.violations.find(subject_query, {"_id": 0}).limit(20).to_list(20)
-        for r in subject_results:
+        reg_results = await db.violations.find(reg_query, {"_id": 0}).limit(25).to_list(25)
+        for r in reg_results:
             if r["id"] not in seen_ids:
                 results.append(r)
                 seen_ids.add(r["id"])
 
-    # 2nd pass: keyword match from violation text across all violations
-    if len(results) < 20:
-        stop_words = {'the', 'and', 'for', 'not', 'with', 'that', 'this', 'from', 'are', 'was',
-                      'has', 'have', 'been', 'being', 'any', 'all', 'each', 'every', 'other',
-                      'than', 'more', 'which', 'when', 'where', 'who', 'failing', 'failure',
-                      'operating', 'required', 'vehicle', 'driver', 'motor', 'carrier'}
-        words = re.findall(r'[a-zA-Z]{4,}', vio_text.lower())
-        keywords = list(dict.fromkeys(w for w in words if w not in stop_words))[:6]
-        if keywords:
-            keyword_regex = "|".join(re.escape(k) for k in keywords)
-            keyword_query = {
+    # 2nd priority: Same CFR part (e.g., all Part 390 violations)
+    if len(results) < 25 and cfr_part:
+        cfr_query = {
+            "id": {"$nin": list(seen_ids)},
+            "cfr_part": cfr_part,
+        }
+        cfr_results = await db.violations.find(cfr_query, {"_id": 0}).limit(25 - len(results)).to_list(25 - len(results))
+        for r in cfr_results:
+            if r["id"] not in seen_ids:
+                results.append(r)
+                seen_ids.add(r["id"])
+
+    # 3rd priority: Same subject prefix from violation text
+    if len(results) < 25:
+        subject = ""
+        if " - " in vio_text:
+            subject = vio_text.split(" - ", 1)[0].strip()
+        if subject:
+            escaped_subject = re.escape(subject)
+            subject_query = {
                 "id": {"$nin": list(seen_ids)},
-                "violation_text": {"$regex": keyword_regex, "$options": "i"},
+                "violation_text": {"$regex": f"^{escaped_subject}\\s*-", "$options": "i"},
             }
-            keyword_results = await db.violations.find(keyword_query, {"_id": 0}).limit(20 - len(results)).to_list(20 - len(results))
-            for r in keyword_results:
+            subject_results = await db.violations.find(subject_query, {"_id": 0}).limit(25 - len(results)).to_list(25 - len(results))
+            for r in subject_results:
                 if r["id"] not in seen_ids:
                     results.append(r)
                     seen_ids.add(r["id"])
