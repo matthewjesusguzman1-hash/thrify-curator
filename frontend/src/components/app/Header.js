@@ -1,4 +1,4 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, Globe, GraduationCap } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Popover,
@@ -7,12 +7,6 @@ import {
 } from "../ui/popover";
 
 const CVSA_LINKS = [
-  {
-    label: "CVSA OOS Criteria",
-    url: "https://cvsa.org/inspections/out-of-service-criteria/",
-    description: "Official out-of-service criteria",
-    icon: Globe,
-  },
   {
     label: "OOS App (iOS)",
     url: "https://apps.apple.com/us/app/cvsa-out-of-service-criteria/id1424204784",
