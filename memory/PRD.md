@@ -34,3 +34,9 @@ Build a simple, intuitive app to search FMCSA violation data for Nebraska State 
 - P2: Mobile-optimized view for field use
 - P2: Offline mode for areas with poor connectivity
 - P3: Violation change history tracking between data updates
+
+## Future Features (User Requested)
+- P1: Tie-down calculator (calculate required number/type of tie-downs based on cargo weight, dimensions, and securement method per 49 CFR 393 Subpart I)
+- P1: Dedicated mobile resources page
+- P2: Offline/cached mode for field use
+- P2: Batch-save multiple violations to an inspection
