@@ -1,5 +1,37 @@
-import { ShieldCheck, Upload } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, Globe, GraduationCap } from "lucide-react";
 import { Button } from "../ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../ui/popover";
+
+const CVSA_LINKS = [
+  {
+    label: "CVSA OOS Criteria",
+    url: "https://cvsa.org/inspections/out-of-service-criteria/",
+    description: "Official out-of-service criteria",
+    icon: Globe,
+  },
+  {
+    label: "OOS App (iOS)",
+    url: "https://apps.apple.com/us/app/cvsa-out-of-service-criteria/id1424204784",
+    description: "Download for iPhone/iPad",
+    icon: Smartphone,
+  },
+  {
+    label: "OOS App (Android)",
+    url: "https://play.google.com/store/apps/details?id=com.cvsa&hl=en_US",
+    description: "Download for Android",
+    icon: Smartphone,
+  },
+  {
+    label: "CVSA Training",
+    url: "https://cvsa.org",
+    description: "Training & resources",
+    icon: GraduationCap,
+  },
+];
 
 export function Header({ onUploadClick, stats }) {
   return (
@@ -26,7 +58,7 @@ export function Header({ onUploadClick, stats }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {stats && (
             <div className="hidden md:flex items-center gap-4 text-xs text-[#8FAEC5]">
               <span data-testid="stat-total">
@@ -38,6 +70,51 @@ export function Header({ onUploadClick, stats }) {
               </span>
             </div>
           )}
+
+          {/* CVSA Links */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                data-testid="cvsa-btn"
+                variant="outline"
+                size="sm"
+                className="border-[#D4AF37]/40 text-[#D4AF37] bg-transparent hover:bg-[#D4AF37] hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs font-bold"
+              >
+                CVSA
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[260px] p-2"
+              align="end"
+              data-testid="cvsa-popover"
+            >
+              <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">
+                CVSA Resources
+              </p>
+              {CVSA_LINKS.map((link) => (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
+                  data-testid={`cvsa-link-${link.label.replace(/\s/g, '-').toLowerCase()}`}
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#002855]/10 flex-shrink-0">
+                    <link.icon className="w-4 h-4 text-[#002855]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                      {link.label}
+                      <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
+                    </p>
+                    <p className="text-[10px] text-[#64748B]">{link.description}</p>
+                  </div>
+                </a>
+              ))}
+            </PopoverContent>
+          </Popover>
+
           <Button
             data-testid="upload-btn"
             variant="outline"
