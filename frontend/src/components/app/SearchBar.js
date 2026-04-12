@@ -38,10 +38,10 @@ export function SearchBar({
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
       <div
-        className="search-glow flex-1 flex items-center border rounded-lg bg-white overflow-hidden transition-all"
+        className="search-glow flex-1 flex items-center border border-[#0a3d6b] rounded-lg bg-[#001f45] overflow-hidden transition-all"
         data-testid="search-container"
       >
-        <div className="pl-3 text-[#6B7280]">
+        <div className="pl-3 text-[#7B8FA3]">
           {isSearching ? (
             <Loader2 className="w-4 h-4 loading-spin" />
           ) : (
@@ -59,13 +59,13 @@ export function SearchBar({
           value={localKeyword}
           onChange={(e) => setLocalKeyword(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="border-0 focus-visible:ring-0 text-sm h-10"
+          className="border-0 focus-visible:ring-0 text-sm h-10 bg-transparent text-[#F9FAFB] placeholder:text-[#546A7F]"
         />
         {localKeyword && (
           <button
             data-testid="search-clear-btn"
             onClick={handleClear}
-            className="px-2 text-[#9CA3AF] hover:text-[#374151] transition-colors"
+            className="px-2 text-[#546A7F] hover:text-[#F9FAFB] transition-colors"
             title="Clear search"
           >
             <X className="w-4 h-4" />
@@ -75,19 +75,19 @@ export function SearchBar({
           data-testid="search-btn"
           onClick={handleSearchClick}
           disabled={isSearching}
-          className="px-4 h-10 bg-[#002855] text-white text-sm font-medium hover:bg-[#001a3a] transition-colors disabled:opacity-50"
+          className="px-4 h-10 bg-[#D4AF37] text-[#001229] text-sm font-medium hover:bg-[#c9a22f] transition-colors disabled:opacity-50"
         >
           Search
         </button>
       </div>
 
       <div
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-white"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#0a3d6b] bg-[#001f45]"
         data-testid="ai-toggle-container"
       >
         <Sparkles
           className={`w-4 h-4 transition-colors ${
-            aiMode ? "text-[#D4AF37]" : "text-[#6B7280]"
+            aiMode ? "text-[#D4AF37]" : "text-[#546A7F]"
           }`}
         />
         <Switch
@@ -98,7 +98,7 @@ export function SearchBar({
         />
         <Label
           className="text-xs font-medium cursor-pointer whitespace-nowrap"
-          style={{ color: aiMode ? "#D4AF37" : "#6B7280" }}
+          style={{ color: aiMode ? "#D4AF37" : "#7B8FA3" }}
         >
           AI Search
         </Label>

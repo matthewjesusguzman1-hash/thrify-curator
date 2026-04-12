@@ -1,0 +1,183 @@
+{
+  "timestamp": "20260412_022743",
+  "total_tests": 35,
+  "passed_tests": 35,
+  "success_rate": 100.0,
+  "test_results": [
+    {
+      "test": "API Root Endpoint",
+      "status": "PASS",
+      "details": "Status: 200, Message: SafeSpect Violation Navigator API"
+    },
+    {
+      "test": "GET /violations",
+      "status": "PASS",
+      "details": "Status: 200, Total: 1597, Returned: 50 (Expected count \u2713)"
+    },
+    {
+      "test": "Keyword Search: brake",
+      "status": "PASS",
+      "details": "Keyword 'brake': 132 results"
+    },
+    {
+      "test": "Keyword Search: tire",
+      "status": "PASS",
+      "details": "Keyword 'tire': 36 results"
+    },
+    {
+      "test": "Keyword Search: driver",
+      "status": "PASS",
+      "details": "Keyword 'driver': 193 results"
+    },
+    {
+      "test": "Keyword Search: hazmat",
+      "status": "PASS",
+      "details": "Keyword 'hazmat': 5 results"
+    },
+    {
+      "test": "Violation Class Filter: Driver",
+      "status": "PASS",
+      "details": "Class 'Driver': 270 results"
+    },
+    {
+      "test": "Violation Class Filter: Vehicle",
+      "status": "PASS",
+      "details": "Class 'Vehicle': 687 results"
+    },
+    {
+      "test": "Violation Class Filter: Hazardous Materials",
+      "status": "PASS",
+      "details": "Class 'Hazardous Materials': 569 results"
+    },
+    {
+      "test": "OOS Filter: Y",
+      "status": "PASS",
+      "details": "OOS 'Y': 513 results"
+    },
+    {
+      "test": "OOS Filter: N",
+      "status": "PASS",
+      "details": "OOS 'N': 1084 results"
+    },
+    {
+      "test": "HazMat Filter: Y",
+      "status": "PASS",
+      "details": "HazMat 'Y': 569 results"
+    },
+    {
+      "test": "HazMat Filter: N",
+      "status": "PASS",
+      "details": "HazMat 'N': 1028 results"
+    },
+    {
+      "test": "Level III Filter: Y",
+      "status": "PASS",
+      "details": "Level III 'Y': 346 results"
+    },
+    {
+      "test": "Level III Filter: N",
+      "status": "PASS",
+      "details": "Level III 'N': 1251 results"
+    },
+    {
+      "test": "Critical Filter: Y",
+      "status": "PASS",
+      "details": "Critical 'Y': 576 results"
+    },
+    {
+      "test": "Critical Filter: N",
+      "status": "PASS",
+      "details": "Critical 'N': 1021 results"
+    },
+    {
+      "test": "Combined Filters",
+      "status": "PASS",
+      "details": "Combined filters: 66 results"
+    },
+    {
+      "test": "Sort: oos desc",
+      "status": "PASS",
+      "details": "Sort by oos desc: 5 results returned \u2713"
+    },
+    {
+      "test": "Sort: violation_class asc",
+      "status": "PASS",
+      "details": "Sort by violation_class asc: 5 results returned \u2713"
+    },
+    {
+      "test": "Sort: regulatory_reference desc",
+      "status": "PASS",
+      "details": "Sort by regulatory_reference desc: 5 results returned \u2713"
+    },
+    {
+      "test": "Sort: violation_text asc",
+      "status": "PASS",
+      "details": "Sort by violation_text asc: 5 results returned \u2713"
+    },
+    {
+      "test": "Sort: level_iii desc",
+      "status": "PASS",
+      "details": "Sort by level_iii desc: 5 results returned \u2713"
+    },
+    {
+      "test": "Sort: critical asc",
+      "status": "PASS",
+      "details": "Sort by critical asc: 5 results returned \u2713"
+    },
+    {
+      "test": "Sort: violation_code desc",
+      "status": "PASS",
+      "details": "Sort by violation_code desc: 5 results returned \u2713"
+    },
+    {
+      "test": "Sort: cfr_part asc",
+      "status": "PASS",
+      "details": "Sort by cfr_part asc: 5 results returned \u2713"
+    },
+    {
+      "test": "Similar Violations Endpoint",
+      "status": "PASS",
+      "details": "Found 60 similar violations, returned 20, source violation: 107.608(b)"
+    },
+    {
+      "test": "Pagination",
+      "status": "PASS",
+      "details": "Page 1, Size 10, Total Pages 160, Returned 10"
+    },
+    {
+      "test": "Pagination Page 2",
+      "status": "PASS",
+      "details": "Status: 200"
+    },
+    {
+      "test": "GET /violations/filters",
+      "status": "PASS",
+      "details": "Classes: 5, OOS Values: 2"
+    },
+    {
+      "test": "GET /violations/stats",
+      "status": "PASS",
+      "details": "Total: 1597, OOS: 513, HazMat: 569 (Expected total \u2713)"
+    },
+    {
+      "test": "Smart Search: brake problems",
+      "status": "PASS",
+      "details": "Query 'brake problems': 132 results, 10 expanded terms"
+    },
+    {
+      "test": "Smart Search: tire safety",
+      "status": "PASS",
+      "details": "Query 'tire safety': 0 results, 10 expanded terms"
+    },
+    {
+      "test": "Smart Search: driver fatigue",
+      "status": "PASS",
+      "details": "Query 'driver fatigue': 142 results, 10 expanded terms"
+    },
+    {
+      "test": "Smart Search: hazardous materials",
+      "status": "PASS",
+      "details": "Query 'hazardous materials': 111 results, 10 expanded terms"
+    }
+  ]
+}

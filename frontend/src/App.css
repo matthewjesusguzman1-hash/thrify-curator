@@ -4,14 +4,14 @@
     height: 6px;
 }
 ::-webkit-scrollbar-track {
-    background: #F3F4F6;
+    background: #001229;
 }
 ::-webkit-scrollbar-thumb {
-    background: #D1D5DB;
+    background: #0a3d6b;
     border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #9CA3AF;
+    background: #1a5a8e;
 }
 
 /* Table row hover */
@@ -19,7 +19,7 @@
     transition: background-color 0.15s ease;
 }
 .violation-row:hover {
-    background-color: rgba(0, 40, 85, 0.04);
+    background-color: rgba(212, 175, 55, 0.06);
 }
 
 /* Badge animations */
@@ -32,8 +32,8 @@
 
 /* Search focus glow */
 .search-glow:focus-within {
-    box-shadow: 0 0 0 2px rgba(0, 40, 85, 0.2);
-    border-color: #002855;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
+    border-color: #D4AF37;
 }
 
 /* AI toggle custom style */
@@ -74,6 +74,15 @@
     transition: all 0.15s ease;
 }
 .pagination-btn:hover:not(:disabled) {
-    background-color: #002855;
-    color: white;
+    background-color: #D4AF37;
+    color: #001229;
+}
+
+/* Column move button */
+.col-move-btn {
+    transition: all 0.15s ease;
+}
+.col-move-btn:hover {
+    background-color: rgba(212, 175, 55, 0.15);
+    color: #D4AF37;
 }

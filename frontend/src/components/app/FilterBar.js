@@ -15,7 +15,7 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
       data-testid="filter-bar"
       className="flex flex-wrap items-center gap-3"
     >
-      <div className="flex items-center gap-1.5 text-xs font-bold tracking-[0.15em] uppercase text-[#6B7280]">
+      <div className="flex items-center gap-1.5 text-xs font-bold tracking-[0.15em] uppercase text-[#7B8FA3]">
         <Filter className="w-3.5 h-3.5" />
         Filters
       </div>
@@ -29,11 +29,11 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
       >
         <SelectTrigger
           data-testid="filter-violation-class"
-          className="w-[180px] h-9 text-xs bg-white"
+          className="w-[180px] h-9 text-xs bg-[#001f45] border-[#0a3d6b] text-[#F9FAFB]"
         >
           <SelectValue placeholder="Violation Class" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-[#001f45] border-[#0a3d6b]">
           <SelectItem value="all">All Classes</SelectItem>
           {filterOptions.violation_classes?.map((vc) => (
             <SelectItem key={vc} value={vc}>
@@ -52,11 +52,11 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
       >
         <SelectTrigger
           data-testid="filter-oos"
-          className="w-[160px] h-9 text-xs bg-white"
+          className="w-[160px] h-9 text-xs bg-[#001f45] border-[#0a3d6b] text-[#F9FAFB]"
         >
           <SelectValue placeholder="OOS Status" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-[#001f45] border-[#0a3d6b]">
           <SelectItem value="all">All OOS</SelectItem>
           <SelectItem value="Y">Out of Service (Y)</SelectItem>
           <SelectItem value="N">Not OOS (N)</SelectItem>
@@ -64,7 +64,7 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
       </Select>
 
       {/* HazMat Toggle */}
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-white">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#0a3d6b] bg-[#001f45]">
         <Switch
           data-testid="filter-hazmat"
           checked={filters.hazmat === "Y"}
@@ -73,13 +73,13 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
           }
           className="scale-90"
         />
-        <Label className="text-xs font-medium text-[#0A0A0A] cursor-pointer whitespace-nowrap">
+        <Label className="text-xs font-medium text-[#C8D6E0] cursor-pointer whitespace-nowrap">
           HazMat Only
         </Label>
       </div>
 
       {/* Level III Toggle */}
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-white">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#0a3d6b] bg-[#001f45]">
         <Switch
           data-testid="filter-level-iii"
           checked={filters.level_iii === "Y"}
@@ -88,13 +88,13 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
           }
           className="scale-90"
         />
-        <Label className="text-xs font-medium text-[#0A0A0A] cursor-pointer whitespace-nowrap">
+        <Label className="text-xs font-medium text-[#C8D6E0] cursor-pointer whitespace-nowrap">
           Level III
         </Label>
       </div>
 
       {/* Critical Toggle */}
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-white">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#0a3d6b] bg-[#001f45]">
         <Switch
           data-testid="filter-critical"
           checked={filters.critical === "Y"}
@@ -103,7 +103,7 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
           }
           className="scale-90"
         />
-        <Label className="text-xs font-medium text-[#0A0A0A] cursor-pointer whitespace-nowrap">
+        <Label className="text-xs font-medium text-[#C8D6E0] cursor-pointer whitespace-nowrap">
           Critical
         </Label>
       </div>

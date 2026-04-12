@@ -4,7 +4,7 @@ import { Header } from "../components/app/Header";
 import { SearchBar } from "../components/app/SearchBar";
 import { FilterBar } from "../components/app/FilterBar";
 import { ActiveFilters } from "../components/app/ActiveFilters";
-import { ViolationTable } from "../components/app/ViolationTable";
+import { ViolationTable, ALL_COLUMNS } from "../components/app/ViolationTable";
 import { UploadDialog } from "../components/app/UploadDialog";
 import { SimilarViolationsSheet } from "../components/app/SimilarViolationsSheet";
 import { Toaster, toast } from "sonner";
@@ -43,6 +43,9 @@ export default function Dashboard() {
   const [sortDir, setSortDir] = useState("asc");
   const [selectedViolation, setSelectedViolation] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [columnOrder, setColumnOrder] = useState(
+    ALL_COLUMNS.map((c) => c.key)
+  );
 
   // Load filter options and stats on mount
   useEffect(() => {
@@ -171,7 +174,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]" data-testid="dashboard">
+    <div className="min-h-screen bg-[#001229]" data-testid="dashboard">
       <Toaster position="top-right" richColors />
       <Header
         onUploadClick={() => setUploadOpen(true)}
@@ -217,6 +220,8 @@ export default function Dashboard() {
           sortDir={sortDir}
           onSort={handleSort}
           onViolationClick={handleViolationClick}
+          columnOrder={columnOrder}
+          onColumnOrderChange={setColumnOrder}
         />
       </main>
 
