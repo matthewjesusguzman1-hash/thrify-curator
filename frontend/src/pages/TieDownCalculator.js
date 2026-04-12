@@ -336,7 +336,7 @@ export default function TieDownCalculator() {
         id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
         type: preset.label,
         wll: preset.wll,
-        method: "direct",
+        method: "indirect",
         defective: false,
       },
     ]);
