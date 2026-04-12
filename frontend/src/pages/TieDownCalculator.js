@@ -20,13 +20,6 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 /* ================================================================
    CONSTANTS — 49 CFR 393.108 WLL CHART
    ================================================================ */
-const QUICK_PRESETS = [
-  { label: '2" Synthetic Web', wll: 2000 },
-  { label: '5/16" Gr70 Chain', wll: 6600 },
-  { label: '3/8" Gr70 Chain', wll: 9200 },
-  { label: '1/2" Gr70 Chain', wll: 14800 },
-];
-
 const WLL_CHART = [
   { category: "Chain — Grade 30 (Proof Coil)", items: [
     { label: '1/4" Gr30', wll: 1560 },
@@ -168,108 +161,105 @@ function DirectIndirectGraphic({ open, onToggle }) {
         <div className="px-4 pb-4 space-y-3 border-t border-[#F1F5F9]">
 
           {/* DIRECT — Method 1: Vehicle anchor → Cargo anchor (50%) */}
-          <div className="rounded-lg border border-[#002855]/15 bg-[#002855]/[0.02] p-3 space-y-2 mt-3">
+          <div className="rounded-lg border border-[#002855]/15 p-3 space-y-2 mt-3">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#002855] text-white">DIRECT</span>
               <span className="text-[10px] text-[#DC2626] font-bold">50% WLL</span>
             </div>
-            {/* Rectangular cargo with tie-downs from vehicle corners to cargo corners */}
-            <svg viewBox="0 0 300 120" className="w-full" style={{ maxHeight: 95 }}>
+            <svg viewBox="0 0 320 130" className="w-full" style={{ maxHeight: 110 }}>
+              <defs>
+                <filter id="glow"><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+              </defs>
               {/* Flatbed trailer */}
-              <rect x="40" y="70" width="220" height="8" rx="2" fill="#B0BEC5" />
-              <rect x="35" y="78" width="230" height="4" rx="1" fill="#90A4AE" />
-              <circle cx="70" cy="88" r="5" fill="#607D8B" /><circle cx="230" cy="88" r="5" fill="#607D8B" />
-              {/* Large rectangular cargo */}
-              <rect x="80" y="25" width="140" height="45" rx="3" fill="#E0E0E0" stroke="#BDBDBD" strokeWidth="1.5" />
-              <text x="150" y="52" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#757575">CARGO</text>
-              {/* Vehicle anchor points (bottom corners of trailer) */}
-              <circle cx="50" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="250" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="50" cy="75" r="0" /><circle cx="250" cy="75" r="0" />
-              {/* Cargo attachment points */}
-              <circle cx="88" cy="35" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="212" cy="35" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="88" cy="60" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="212" cy="60" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              {/* Tie-down lines — vehicle to cargo (red, curved slightly) */}
-              <line x1="50" y1="70" x2="88" y2="60" stroke="#E53935" strokeWidth="1.5" />
-              <line x1="50" y1="70" x2="88" y2="35" stroke="#E53935" strokeWidth="1.5" />
-              <line x1="250" y1="70" x2="212" y2="60" stroke="#E53935" strokeWidth="1.5" />
-              <line x1="250" y1="70" x2="212" y2="35" stroke="#E53935" strokeWidth="1.5" />
+              <rect x="40" y="78" width="240" height="6" rx="2" fill="#78909C" />
+              <rect x="35" y="84" width="250" height="4" rx="1" fill="#607D8B" />
+              <circle cx="75" cy="95" r="5" fill="#455A64" /><circle cx="245" cy="95" r="5" fill="#455A64" />
+              {/* Dark gray rectangular cargo */}
+              <rect x="85" y="28" width="150" height="50" rx="4" fill="#505050" stroke="#404040" strokeWidth="1" />
+              {/* Vehicle anchor points — gold glowing */}
+              <circle cx="50" cy="78" r="5" fill="#FFD54F" filter="url(#glow)" /><circle cx="270" cy="78" r="5" fill="#FFD54F" filter="url(#glow)" />
+              {/* Cargo anchor points — gold glowing */}
+              <circle cx="95" cy="40" r="4" fill="#FFD54F" filter="url(#glow)" /><circle cx="225" cy="40" r="4" fill="#FFD54F" filter="url(#glow)" />
+              <circle cx="95" cy="68" r="4" fill="#FFD54F" filter="url(#glow)" /><circle cx="225" cy="68" r="4" fill="#FFD54F" filter="url(#glow)" />
+              {/* Red tie-down lines — vehicle anchors to cargo corners */}
+              <line x1="50" y1="78" x2="95" y2="68" stroke="#E53935" strokeWidth="2" /><line x1="50" y1="78" x2="95" y2="40" stroke="#E53935" strokeWidth="2" />
+              <line x1="270" y1="78" x2="225" y2="68" stroke="#E53935" strokeWidth="2" /><line x1="270" y1="78" x2="225" y2="40" stroke="#E53935" strokeWidth="2" />
               {/* Labels */}
-              <text x="50" y="108" textAnchor="middle" fontSize="7" fill="#78909C">Vehicle Anchor</text>
-              <text x="250" y="108" textAnchor="middle" fontSize="7" fill="#78909C">Vehicle Anchor</text>
+              <text x="50" y="115" textAnchor="middle" fontSize="8" fill="#78909C">Anchor Points</text>
+              <text x="50" y="123" textAnchor="middle" fontSize="8" fill="#78909C">on Vehicle</text>
             </svg>
             <p className="text-[10px] text-[#475569]">Vehicle anchor <strong>&rarr;</strong> attachment point on cargo. Only <span className="text-[#DC2626] font-bold">50%</span> of WLL counts.</p>
           </div>
 
-          {/* DIRECT — Method 2: Over/around cargo → SAME side (50%) — Cylinder */}
-          <div className="rounded-lg border border-[#002855]/15 bg-[#002855]/[0.02] p-3 space-y-2">
+          {/* DIRECT — Method 2: Over/around cargo → SAME side (50%) */}
+          <div className="rounded-lg border border-[#002855]/15 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#002855] text-white">DIRECT</span>
               <span className="text-[10px] text-[#DC2626] font-bold">50% WLL</span>
               <span className="text-[9px] text-[#94A3B8]">same side</span>
             </div>
-            {/* Cylindrical cargo with tie-downs going over, returning to same side */}
-            <svg viewBox="0 0 300 120" className="w-full" style={{ maxHeight: 95 }}>
+            <svg viewBox="0 0 320 130" className="w-full" style={{ maxHeight: 110 }}>
+              <defs>
+                <filter id="glow2"><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+              </defs>
               {/* Flatbed */}
-              <rect x="40" y="70" width="220" height="8" rx="2" fill="#B0BEC5" />
-              <rect x="35" y="78" width="230" height="4" rx="1" fill="#90A4AE" />
-              <circle cx="70" cy="88" r="5" fill="#607D8B" /><circle cx="230" cy="88" r="5" fill="#607D8B" />
-              {/* Cylinder cargo */}
-              <ellipse cx="150" cy="45" rx="60" ry="25" fill="#E0E0E0" stroke="#BDBDBD" strokeWidth="1.5" />
-              <text x="150" y="49" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#757575">CARGO</text>
-              {/* Vehicle anchors — left side only (same side) */}
-              <circle cx="55" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="95" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <rect x="40" y="78" width="240" height="6" rx="2" fill="#78909C" />
+              <rect x="35" y="84" width="250" height="4" rx="1" fill="#607D8B" />
+              <circle cx="75" cy="95" r="5" fill="#455A64" /><circle cx="245" cy="95" r="5" fill="#455A64" />
+              {/* Dark gray cylinder cargo */}
+              <ellipse cx="160" cy="50" rx="65" ry="28" fill="#505050" stroke="#404040" strokeWidth="1" />
+              {/* Vehicle anchors — SAME side (both left) */}
+              <circle cx="55" cy="78" r="5" fill="#FFD54F" filter="url(#glow2)" />
+              <circle cx="105" cy="78" r="5" fill="#FFD54F" filter="url(#glow2)" />
               {/* Cargo anchor points on top */}
-              <circle cx="120" cy="23" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="180" cy="23" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              {/* Tie-down — from vehicle anchor, over cargo, back to same side */}
-              <path d="M55,70 Q55,30 120,23" fill="none" stroke="#E53935" strokeWidth="1.5" />
-              <path d="M120,23 Q185,15 180,23" fill="none" stroke="#E53935" strokeWidth="1.5" opacity="0.6" />
-              <path d="M180,23 Q245,30 245,70" fill="none" stroke="#E53935" strokeWidth="1.5" />
-              <path d="M95,70 Q95,35 150,20" fill="none" stroke="#E53935" strokeWidth="1.5" />
-              {/* Same-side indicator arrow */}
-              <text x="55" y="108" textAnchor="middle" fontSize="7" fill="#78909C">Vehicle Anchor</text>
-              <text x="150" y="10" textAnchor="middle" fontSize="7" fill="#B8960C" fontWeight="bold">Anchor Points on Cargo</text>
-              <text x="245" y="108" textAnchor="middle" fontSize="7" fill="#002855" fontWeight="bold">Same Side</text>
+              <circle cx="125" cy="25" r="4" fill="#FFD54F" filter="url(#glow2)" />
+              <circle cx="195" cy="25" r="4" fill="#FFD54F" filter="url(#glow2)" />
+              {/* Red tie-down arcs — over cargo, back to same side */}
+              <path d="M55,78 Q60,35 125,25" fill="none" stroke="#E53935" strokeWidth="2" />
+              <path d="M125,25 Q160,18 195,25" fill="none" stroke="#E53935" strokeWidth="2" />
+              <path d="M195,25 Q260,35 265,78" fill="none" stroke="#E53935" strokeWidth="2" />
+              <path d="M105,78 Q110,40 160,22" fill="none" stroke="#E53935" strokeWidth="2" />
+              {/* Labels */}
+              <text x="160" y="15" textAnchor="middle" fontSize="8" fill="#B8960C" fontWeight="bold">Anchor Points on Cargo</text>
+              <text x="265" y="115" textAnchor="middle" fontSize="8" fill="#002855" fontWeight="bold">Same Side</text>
             </svg>
             <p className="text-[10px] text-[#475569]">Vehicle anchor <strong>&rarr;</strong> over/around cargo <strong>&rarr;</strong> back to <strong>same side</strong>. Still only <span className="text-[#DC2626] font-bold">50%</span> of WLL.</p>
           </div>
 
-          {/* INDIRECT — Over cargo → OTHER side (100%) — Smaller rectangle */}
-          <div className="rounded-lg border border-emerald-400/30 bg-emerald-50/40 p-3 space-y-2">
+          {/* INDIRECT — Over cargo → OTHER side (100%) */}
+          <div className="rounded-lg border border-emerald-400/30 bg-emerald-50/30 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white">INDIRECT</span>
               <span className="text-[10px] text-emerald-700 font-bold">100% WLL</span>
               <span className="text-[9px] text-[#94A3B8]">other side</span>
             </div>
-            {/* Smaller rectangular cargo with tie-downs to other side */}
-            <svg viewBox="0 0 300 120" className="w-full" style={{ maxHeight: 95 }}>
+            <svg viewBox="0 0 320 130" className="w-full" style={{ maxHeight: 110 }}>
+              <defs>
+                <filter id="glow3"><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+              </defs>
               {/* Flatbed */}
-              <rect x="40" y="70" width="220" height="8" rx="2" fill="#B0BEC5" />
-              <rect x="35" y="78" width="230" height="4" rx="1" fill="#90A4AE" />
-              <circle cx="70" cy="88" r="5" fill="#607D8B" /><circle cx="230" cy="88" r="5" fill="#607D8B" />
-              {/* Smaller rectangular cargo */}
-              <rect x="100" y="28" width="100" height="42" rx="3" fill="#E0E0E0" stroke="#BDBDBD" strokeWidth="1.5" />
-              <text x="150" y="53" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#757575">CARGO</text>
-              {/* Vehicle anchors — opposite sides */}
-              <circle cx="55" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="245" cy="70" r="4" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
+              <rect x="40" y="78" width="240" height="6" rx="2" fill="#78909C" />
+              <rect x="35" y="84" width="250" height="4" rx="1" fill="#607D8B" />
+              <circle cx="75" cy="95" r="5" fill="#455A64" /><circle cx="245" cy="95" r="5" fill="#455A64" />
+              {/* Dark gray smaller rectangular cargo */}
+              <rect x="105" y="30" width="110" height="48" rx="4" fill="#505050" stroke="#404040" strokeWidth="1" />
+              {/* Vehicle anchors — OPPOSITE sides */}
+              <circle cx="50" cy="78" r="5" fill="#FFD54F" filter="url(#glow3)" />
+              <circle cx="270" cy="78" r="5" fill="#FFD54F" filter="url(#glow3)" />
               {/* Cargo anchor points */}
-              <circle cx="110" cy="35" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="190" cy="35" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="110" cy="62" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              <circle cx="190" cy="62" r="3" fill="#D4AF37" stroke="#B8960C" strokeWidth="1" />
-              {/* Tie-down — from left vehicle to over cargo to RIGHT side */}
-              <path d="M55,70 Q55,30 110,28 Q150,15 190,28 Q245,30 245,70" fill="none" stroke="#10B981" strokeWidth="2" />
-              <path d="M55,70 Q80,50 110,62" fill="none" stroke="#10B981" strokeWidth="1.5" opacity="0.5" />
-              <path d="M245,70 Q220,50 190,62" fill="none" stroke="#10B981" strokeWidth="1.5" opacity="0.5" />
+              <circle cx="115" cy="38" r="4" fill="#FFD54F" filter="url(#glow3)" />
+              <circle cx="205" cy="38" r="4" fill="#FFD54F" filter="url(#glow3)" />
+              <circle cx="115" cy="70" r="4" fill="#FFD54F" filter="url(#glow3)" />
+              <circle cx="205" cy="70" r="4" fill="#FFD54F" filter="url(#glow3)" />
+              {/* Red tie-down lines — from left vehicle, over cargo, to RIGHT side */}
+              <path d="M50,78 Q50,35 115,30 Q160,18 205,30 Q270,35 270,78" fill="none" stroke="#E53935" strokeWidth="2" />
+              <path d="M50,78 Q75,55 115,70" fill="none" stroke="#E53935" strokeWidth="1.5" opacity="0.6" />
+              <path d="M270,78 Q245,55 205,70" fill="none" stroke="#E53935" strokeWidth="1.5" opacity="0.6" />
               {/* Labels */}
-              <text x="45" y="108" textAnchor="middle" fontSize="7" fill="#78909C">Vehicle Anchor</text>
-              <text x="255" y="108" textAnchor="middle" fontSize="7" fill="#059669" fontWeight="bold">OTHER Side</text>
-              <text x="150" y="10" textAnchor="middle" fontSize="7" fill="#B8960C" fontWeight="bold">Anchor Points on Cargo</text>
+              <text x="50" y="115" textAnchor="middle" fontSize="8" fill="#78909C">Anchor Points</text>
+              <text x="50" y="123" textAnchor="middle" fontSize="8" fill="#78909C">on Vehicle</text>
+              <text x="270" y="115" textAnchor="middle" fontSize="8" fill="#059669" fontWeight="bold">OTHER Side</text>
+              <text x="160" y="15" textAnchor="middle" fontSize="8" fill="#B8960C" fontWeight="bold">Anchor Points on Cargo</text>
             </svg>
             <p className="text-[10px] text-[#475569]">Vehicle anchor <strong>&rarr;</strong> over/around cargo <strong>&rarr;</strong> anchor on <strong>other side</strong>. Full <span className="text-emerald-700 font-bold">100%</span> of WLL counts.</p>
           </div>
@@ -877,7 +867,7 @@ export default function TieDownCalculator() {
 
           {/* Favorites section */}
           {favorites.length > 0 && (
-            <div data-testid="favorites-section">
+            <div data-testid="favorites-section" className="mt-3">
               <p className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1.5 flex items-center gap-1">
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -903,36 +893,19 @@ export default function TieDownCalculator() {
             </div>
           )}
 
-          {/* Quick-add preset grid */}
-          <div>
-            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">Common (393.108)</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" data-testid="preset-grid">
-              {QUICK_PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  onClick={() => addTiedown(p)}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] hover:bg-[#002855] hover:text-white hover:border-[#002855] active:scale-[0.97] transition-all text-left group"
-                  data-testid={`add-${p.label.replace(/[\s/"]/g, "-")}`}
-                >
-                  <Plus className="w-3.5 h-3.5 flex-shrink-0 text-[#94A3B8] group-hover:text-white" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-medium truncate">{p.label}</p>
-                    <p className="text-[9px] opacity-60">{p.wll.toLocaleString()} lbs</p>
-                  </div>
-                </button>
-              ))}
-              <button
-                onClick={() => addTiedown({ label: "Custom", wll: 0 })}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-[#94A3B8] hover:bg-[#F8FAFC] active:scale-[0.97] transition-all text-left"
-                data-testid="add-custom"
-              >
-                <Plus className="w-3.5 h-3.5 text-[#94A3B8]" />
-                <div>
-                  <p className="text-[10px] font-medium text-[#64748B]">Custom</p>
-                  <p className="text-[9px] text-[#94A3B8]">Enter WLL</p>
-                </div>
-              </button>
-            </div>
+          {/* Custom WLL option */}
+          <div className="mt-2">
+            <button
+              onClick={() => addTiedown({ label: "Custom", wll: 0 })}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-[#94A3B8] hover:bg-[#F8FAFC] active:scale-[0.97] transition-all text-left"
+              data-testid="add-custom"
+            >
+              <Plus className="w-3.5 h-3.5 text-[#94A3B8]" />
+              <div>
+                <p className="text-[10px] font-medium text-[#64748B]">Custom WLL</p>
+                <p className="text-[9px] text-[#94A3B8]">Enter any WLL value</p>
+              </div>
+            </button>
           </div>
 
           {/* 393.108 full chart picker (collapsible) */}
