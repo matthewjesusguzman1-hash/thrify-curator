@@ -67,6 +67,11 @@ class FilterOptions(BaseModel):
 
 class SmartSearchRequest(BaseModel):
     query: str
+    hazmat: str = ""
+    oos: str = ""
+    level_iii: str = ""
+    critical: str = ""
+    violation_class: str = ""
 
 
 class SmartSearchResponse(BaseModel):
@@ -440,6 +445,20 @@ Example output: ["brake", "air brake system", "393.40", "393.48", "pushrod", "br
             {"cfr_part": {"$regex": combined_regex, "$options": "i"}},
         ]
     }
+
+    # Apply filters on top of AI search
+    if request.violation_class:
+        mongo_query["violation_class"] = request.violation_class
+    if request.hazmat == "Y":
+        mongo_query["violation_class"] = "Hazardous Materials"
+    elif request.hazmat == "N":
+        mongo_query["violation_class"] = {"$ne": "Hazardous Materials"}
+    if request.oos:
+        mongo_query["oos_value"] = request.oos.upper()
+    if request.level_iii:
+        mongo_query["level_iii"] = request.level_iii.upper()
+    if request.critical:
+        mongo_query["critical"] = request.critical.upper()
 
     total = await db.violations.count_documents(mongo_query)
     cursor = db.violations.find(mongo_query, {"_id": 0}).limit(100)

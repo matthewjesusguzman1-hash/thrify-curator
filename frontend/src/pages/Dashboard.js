@@ -121,6 +121,9 @@ export default function Dashboard() {
       try {
         const res = await axios.post(`${API}/violations/smart-search`, {
           query: searchKeyword,
+          ...Object.fromEntries(
+            Object.entries(filters).filter(([, v]) => v !== "")
+          ),
         });
         setViolations(res.data.violations);
         setTotal(res.data.total);
