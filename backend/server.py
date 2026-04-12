@@ -367,7 +367,7 @@ async def get_filter_options():
 @api_router.get("/violations/tree")
 async def get_violation_tree():
     # 3-level tree: class → category → regulation section with labels
-    # Get descriptive labels per regulatory reference using the text after " - "
+    # Get descriptive labels per (category + regulatory_reference) pair
     label_pipeline = [
         {"$addFields": {
             "desc": {
@@ -376,22 +376,35 @@ async def get_violation_tree():
                     "then": {"$arrayElemAt": [{"$split": ["$violation_text", " - "]}, 1]},
                     "else": "$violation_text"
                 }
+            },
+            "subject": {
+                "$cond": {
+                    "if": {"$gt": [{"$indexOfCP": ["$violation_text", " - "]}, -1]},
+                    "then": {"$arrayElemAt": [{"$split": ["$violation_text", " - "]}, 0]},
+                    "else": ""
+                }
             }
         }},
         {"$group": {
-            "_id": {"reg_ref": "$regulatory_reference"},
+            "_id": {"cat": "$violation_category", "reg_ref": "$regulatory_reference"},
             "label": {"$first": "$desc"},
+            "subject": {"$first": "$subject"},
+            "count": {"$sum": 1},
         }}
     ]
     label_results = await db.violations.aggregate(label_pipeline).to_list(5000)
+    # Key: "category|reg_ref" → label
     ref_labels = {}
     for lr in label_results:
+        cat = lr["_id"].get("cat", "")
         ref = (lr["_id"].get("reg_ref") or "").strip()
+        count = lr.get("count", 1)
         label = (lr.get("label") or "").strip()
+        subject = (lr.get("subject") or "").strip()
         if ref and label:
             if len(label) > 55:
                 label = label[:52] + "..."
-            ref_labels[ref] = label
+            ref_labels[f"{cat}|{ref}"] = label
 
     # Main tree aggregation — use full regulatory_reference for each violation
     pipeline = [
@@ -431,7 +444,7 @@ async def get_violation_tree():
             tree[cls]["categories"][cat] = {"count": 0, "sections": []}
         tree[cls]["categories"][cat]["count"] += r["count"]
         if reg_ref:
-            label = ref_labels.get(reg_ref, "")
+            label = ref_labels.get(f"{cat}|{reg_ref}", "")
             tree[cls]["categories"][cat]["sections"].append({
                 "ref": reg_ref, "count": r["count"], "label": label
             })
