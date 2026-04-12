@@ -367,7 +367,30 @@ async def get_filter_options():
 
 @api_router.get("/violations/tree")
 async def get_violation_tree():
-    # 3-level tree: class → category → regulation section (base number)
+    # 3-level tree: class → category → regulation section with labels
+    # First get section labels from violation text subject prefixes
+    label_pipeline = [
+        {"$addFields": {
+            "reg_base": {"$arrayElemAt": [{"$split": ["$regulatory_reference", "("]}, 0]},
+            "subject": {"$arrayElemAt": [{"$split": ["$violation_text", " - "]}, 0]}
+        }},
+        {"$group": {
+            "_id": {"reg_base": "$reg_base"},
+            "label": {"$first": "$subject"},
+        }}
+    ]
+    label_results = await db.violations.aggregate(label_pipeline).to_list(2000)
+    reg_labels = {}
+    for lr in label_results:
+        base = (lr["_id"].get("reg_base") or "").strip()
+        label = (lr.get("label") or "").strip()
+        if base and label:
+            # Truncate long labels
+            if len(label) > 35:
+                label = label[:32] + "..."
+            reg_labels[base] = label
+
+    # Main tree aggregation
     pipeline = [
         {"$addFields": {
             "reg_base": {"$arrayElemAt": [{"$split": ["$regulatory_reference", "("]}, 0]}
@@ -391,6 +414,11 @@ async def get_violation_tree():
         reg = (r["_id"].get("reg_base") or "").strip()
         if not cls:
             continue
+
+        # Merge Motor Carrier HOS into Driver
+        if cls == "Motor Carrier" and "hours" in cat.lower():
+            cls = "Driver"
+
         if cls not in tree:
             tree[cls] = {"count": 0, "categories": {}}
         tree[cls]["count"] += r["count"]
@@ -398,9 +426,24 @@ async def get_violation_tree():
             tree[cls]["categories"][cat] = {"count": 0, "sections": []}
         tree[cls]["categories"][cat]["count"] += r["count"]
         if reg:
-            tree[cls]["categories"][cat]["sections"].append({"ref": reg, "count": r["count"]})
+            label = reg_labels.get(reg, "")
+            tree[cls]["categories"][cat]["sections"].append({
+                "ref": reg, "count": r["count"], "label": label
+            })
 
-    # Convert categories dict to sorted list, sort sections by ref
+    # Merge duplicate sections within a category (from class merging)
+    for cls in tree:
+        for cat_name in tree[cls]["categories"]:
+            sections = tree[cls]["categories"][cat_name]["sections"]
+            merged = {}
+            for s in sections:
+                if s["ref"] in merged:
+                    merged[s["ref"]]["count"] += s["count"]
+                else:
+                    merged[s["ref"]] = dict(s)
+            tree[cls]["categories"][cat_name]["sections"] = list(merged.values())
+
+    # Convert to sorted result
     result = {}
     for cls in tree:
         cats = []
