@@ -196,6 +196,14 @@ async def startup_event():
         ("violation_code", "text"),
         ("violation_category", "text"),
     ])
+    # Field indexes for fast filtering
+    await db.violations.create_index("violation_class")
+    await db.violations.create_index("violation_category")
+    await db.violations.create_index("regulatory_reference")
+    await db.violations.create_index("oos_value")
+    await db.violations.create_index("cfr_part")
+    await db.violations.create_index("level_iii")
+    await db.violations.create_index("critical")
     # Init object storage
     try:
         init_storage()
@@ -300,27 +308,36 @@ async def search_violations(
 ):
     query = {}
 
-    # Keyword search - use regex for partial matching
-    # Split multi-word queries, stem common suffixes for broader matching
+    # Keyword search - use $text index for speed, with stemming fallback
     if keyword.strip():
         words = keyword.strip().split()
-        parts = []
-        for w in words:
-            if len(w) <= 2:
-                continue
-            # Simple stemming: strip common English suffixes for broader regex matching
-            stem = re.sub(r'(ing|tion|ed|ly|er|est|ment|ness|ous|ive|able|ible|ful|less|ated|ting)$', '', w, flags=re.I)
-            if len(stem) < 3:
-                stem = w  # Don't over-stem short words
-            parts.append(re.escape(stem))
-        word_regex = "|".join(parts) if parts else re.escape(keyword.strip())
-        query["$or"] = [
-            {"violation_text": {"$regex": word_regex, "$options": "i"}},
-            {"regulatory_reference": {"$regex": word_regex, "$options": "i"}},
-            {"violation_code": {"$regex": word_regex, "$options": "i"}},
-            {"violation_category": {"$regex": word_regex, "$options": "i"}},
-            {"cfr_part": {"$regex": word_regex, "$options": "i"}},
-        ]
+        # Try $text search first (uses MongoDB's built-in text index — very fast)
+        # Build a text search query with OR semantics
+        text_query = " ".join(words)
+        query["$text"] = {"$search": text_query}
+        
+        # Check if we get results with $text
+        text_count = await db.violations.count_documents(query)
+        
+        if text_count == 0:
+            # Fallback to regex with stemming for broader matching
+            del query["$text"]
+            parts = []
+            for w in words:
+                if len(w) <= 2:
+                    continue
+                stem = re.sub(r'(ing|tion|ed|ly|er|est|ment|ness|ous|ive|able|ible|ful|less|ated|ting)$', '', w, flags=re.I)
+                if len(stem) < 3:
+                    stem = w
+                parts.append(re.escape(stem))
+            word_regex = "|".join(parts) if parts else re.escape(keyword.strip())
+            query["$or"] = [
+                {"violation_text": {"$regex": word_regex, "$options": "i"}},
+                {"regulatory_reference": {"$regex": word_regex, "$options": "i"}},
+                {"violation_code": {"$regex": word_regex, "$options": "i"}},
+                {"violation_category": {"$regex": word_regex, "$options": "i"}},
+                {"cfr_part": {"$regex": word_regex, "$options": "i"}},
+            ]
 
     if violation_class:
         query["violation_class"] = violation_class
@@ -373,19 +390,27 @@ async def search_violations(
     )
 
 
+_filter_cache = {"data": None, "ts": 0}
+
 @api_router.get("/violations/filters", response_model=FilterOptions)
 async def get_filter_options():
+    import time
+    now = time.time()
+    if _filter_cache["data"] and (now - _filter_cache["ts"]) < 300:
+        return _filter_cache["data"]
     violation_classes = await db.violations.distinct("violation_class")
     violation_categories = await db.violations.distinct("violation_category")
     cfr_parts = await db.violations.distinct("cfr_part")
     oos_values = await db.violations.distinct("oos_value")
-
-    return FilterOptions(
+    result = FilterOptions(
         violation_classes=sorted([v for v in violation_classes if v]),
         violation_categories=sorted([v for v in violation_categories if v]),
         cfr_parts=sorted([v for v in cfr_parts if v]),
         oos_values=sorted([v for v in oos_values if v]),
     )
+    _filter_cache["data"] = result
+    _filter_cache["ts"] = now
+    return result
 
 
 @api_router.get("/violations/tree")

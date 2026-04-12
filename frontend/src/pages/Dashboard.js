@@ -29,6 +29,7 @@ const INITIAL_FILTERS = {
 export default function Dashboard() {
   const [keyword, setKeyword] = useState("");
   const [aiMode, setAiMode] = useState(false);
+  const [aiKeyword, setAiKeyword] = useState(""); // persists the AI-selected term across filter changes
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [filterOptions, setFilterOptions] = useState({
     violation_classes: [],
@@ -64,9 +65,7 @@ export default function Dashboard() {
 
   // Fetch violations when filters, page, or sort change
   useEffect(() => {
-    if (!aiMode) {
-      fetchViolations();
-    }
+    fetchViolations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, page, sortBy, sortDir]);
 
@@ -96,10 +95,9 @@ export default function Dashboard() {
 
   const fetchViolations = useCallback(async (searchKeyword) => {
     setIsLoading(true);
-    setExpandedTerms([]);
     try {
       const params = {
-        keyword: searchKeyword !== undefined ? searchKeyword : keyword,
+        keyword: searchKeyword !== undefined ? searchKeyword : (aiKeyword || keyword),
         page,
         page_size: pageSize,
         ...Object.fromEntries(
@@ -120,10 +118,11 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [keyword, page, pageSize, filters, sortBy, sortDir]);
+  }, [keyword, aiKeyword, page, pageSize, filters, sortBy, sortDir]);
 
   const handleSearch = async (searchKeyword) => {
     setPage(1);
+    setAiKeyword(""); // new manual search clears any persisted AI term
     if (aiMode && searchKeyword.trim()) {
       setIsSearching(true);
       setIsLoading(true);
@@ -148,6 +147,7 @@ export default function Dashboard() {
         setIsLoading(false);
       }
     } else {
+      setExpandedTerms([]);
       fetchViolations(searchKeyword);
     }
   };
@@ -164,6 +164,8 @@ export default function Dashboard() {
 
   const handleClearAllFilters = () => {
     setFilters(INITIAL_FILTERS);
+    setAiKeyword("");
+    setExpandedTerms([]);
     setPage(1);
   };
 
@@ -266,8 +268,8 @@ export default function Dashboard() {
           expandedTerms={expandedTerms}
           onTermClick={(term) => {
             setKeyword(term);
+            setAiKeyword(term);
             setAiMode(false);
-            setExpandedTerms([]);
             setPage(1);
             fetchViolations(term);
           }}
