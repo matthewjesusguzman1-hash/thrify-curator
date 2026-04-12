@@ -4,7 +4,7 @@ import axios from "axios";
 import {
   ChevronLeft, Plus, Trash2, AlertTriangle, CheckCircle2, XCircle,
   Info, ChevronDown, Link2, ShieldAlert, RotateCcw, Save,
-  ClipboardList, GripVertical, Package, Eye
+  ClipboardList, GripVertical, Package, Eye, FileText
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -331,9 +331,16 @@ export default function TieDownCalculator() {
       {/* FLOATING ACTION BAR */}
       {hasData && (
         <div className="sticky top-[45px] z-40 bg-white/95 backdrop-blur border-b shadow-sm">
-          <div className="max-w-[800px] mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
-            <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1 sm:flex-none" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export</Button>
-            <Button size="sm" onClick={openSaveModal} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1 sm:flex-none" data-testid="save-to-inspection-btn"><Save className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection</Button>
+          <div className="max-w-[800px] mx-auto px-3 sm:px-6 py-2 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export</Button>
+              <Button size="sm" onClick={() => {
+                const subject = encodeURIComponent("Tie-Down Assessment Report");
+                const body = encodeURIComponent(`Tie-Down Assessment\n\n${articles.length} article(s) evaluated\n\nGenerated from Violation Navigator`);
+                window.location.href = `mailto:?subject=${subject}&body=${body}`;
+              }} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1" data-testid="email-btn"><FileText className="w-3.5 h-3.5 mr-1.5" /> Email</Button>
+            </div>
+            <Button size="sm" onClick={openSaveModal} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-8 text-xs w-full" data-testid="save-to-inspection-btn"><Save className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection</Button>
           </div>
         </div>
       )}
