@@ -22,24 +22,29 @@ export function ActiveFilters({ filters, onClearFilter, onClearAll, expandedTerm
     <div data-testid="active-filters" className="flex flex-wrap items-center gap-2">
       <span className="text-xs text-[#64748B] font-medium">Active:</span>
 
-      {activeFilters.map(([key, value]) => (
-        <Badge
-          key={key}
-          variant="secondary"
-          className="filter-badge flex items-center gap-1 px-2.5 py-1 text-xs bg-[#002855]/10 text-[#002855] border border-[#002855]/20 hover:bg-[#002855]/15"
-          data-testid={`active-filter-${key}`}
-        >
-          <span className="font-semibold">{FILTER_LABELS[key] || key}:</span>
-          <span>{value}</span>
-          <button
-            onClick={() => onClearFilter(key)}
-            className="ml-0.5 hover:text-[#DC2626] transition-colors"
-            data-testid={`clear-filter-${key}`}
+      {activeFilters.map(([key, value]) => {
+        let displayValue = value;
+        if (key === "hazmat") displayValue = value === "Y" ? "Only" : "Excluded";
+        if (key === "level_iii") displayValue = value === "Y" ? "Only" : "Excluded";
+        return (
+          <Badge
+            key={key}
+            variant="secondary"
+            className="filter-badge flex items-center gap-1 px-2.5 py-1 text-xs bg-[#002855]/10 text-[#002855] border border-[#002855]/20 hover:bg-[#002855]/15"
+            data-testid={`active-filter-${key}`}
           >
-            <X className="w-3 h-3" />
-          </button>
-        </Badge>
-      ))}
+            <span className="font-semibold">{FILTER_LABELS[key] || key}:</span>
+            <span>{displayValue}</span>
+            <button
+              onClick={() => onClearFilter(key)}
+              className="ml-0.5 hover:text-[#DC2626] transition-colors"
+              data-testid={`clear-filter-${key}`}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </Badge>
+        );
+      })}
 
       {expandedTerms && expandedTerms.length > 0 && (
         <div className="flex items-center gap-1 ml-2">

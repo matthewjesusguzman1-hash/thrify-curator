@@ -18,8 +18,13 @@
 .violation-row {
     transition: background-color 0.15s ease;
 }
-.violation-row:hover {
-    background-color: rgba(0, 40, 85, 0.04);
+@media (hover: hover) {
+    .violation-row:hover {
+        background-color: rgba(0, 40, 85, 0.04);
+    }
+}
+.violation-row:active {
+    background-color: rgba(0, 40, 85, 0.06);
 }
 
 /* Badge animations */

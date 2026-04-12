@@ -40,29 +40,12 @@ function buildEcfrUrl(regRef) {
 
 function renderCell(v, colKey, idx) {
   switch (colKey) {
-    case "regulatory_reference": {
-      const ecfrUrl = buildEcfrUrl(v.regulatory_reference);
+    case "regulatory_reference":
       return (
-        <TableCell key={colKey} className="font-semibold text-sm" data-testid={`reg-ref-${idx}`}>
-          {ecfrUrl ? (
-            <a
-              href={ecfrUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="text-[#002855] hover:text-[#D4AF37] transition-colors inline-flex items-center gap-1 group"
-              data-testid={`ecfr-link-${idx}`}
-              title="Open in eCFR"
-            >
-              {v.regulatory_reference}
-              <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </a>
-          ) : (
-            <span className="text-[#002855]">{v.regulatory_reference}</span>
-          )}
+        <TableCell key={colKey} className="font-semibold text-[#002855] text-sm" data-testid={`reg-ref-${idx}`}>
+          {v.regulatory_reference}
         </TableCell>
       );
-    }
     case "violation_text":
       return (
         <TableCell key={colKey} className="text-sm text-[#334155] leading-snug" data-testid={`vio-text-${idx}`}>

@@ -20,6 +20,7 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
         Filters
       </div>
 
+      {/* Violation Class */}
       <Select
         value={filters.violation_class || "all"}
         onValueChange={(val) =>
@@ -40,6 +41,7 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
         </SelectContent>
       </Select>
 
+      {/* OOS */}
       <Select
         value={filters.oos || "all"}
         onValueChange={(val) =>
@@ -59,26 +61,47 @@ export function FilterBar({ filters, filterOptions, onFilterChange }) {
         </SelectContent>
       </Select>
 
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#CBD5E1] bg-white">
-        <Switch
+      {/* HazMat - All / Only / Exclude */}
+      <Select
+        value={filters.hazmat || "all"}
+        onValueChange={(val) =>
+          onFilterChange("hazmat", val === "all" ? "" : val)
+        }
+      >
+        <SelectTrigger
           data-testid="filter-hazmat"
-          checked={filters.hazmat === "Y"}
-          onCheckedChange={(checked) => onFilterChange("hazmat", checked ? "Y" : "")}
-          className="scale-90"
-        />
-        <Label className="text-xs font-medium text-[#334155] cursor-pointer whitespace-nowrap">HazMat Only</Label>
-      </div>
+          className="w-[160px] h-9 text-xs bg-white border-[#CBD5E1] text-[#0F172A]"
+        >
+          <SelectValue placeholder="HazMat" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All HazMat</SelectItem>
+          <SelectItem value="Y">HazMat Only</SelectItem>
+          <SelectItem value="N">Exclude HazMat</SelectItem>
+        </SelectContent>
+      </Select>
 
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#CBD5E1] bg-white">
-        <Switch
+      {/* Level III - All / Only / Exclude */}
+      <Select
+        value={filters.level_iii || "all"}
+        onValueChange={(val) =>
+          onFilterChange("level_iii", val === "all" ? "" : val)
+        }
+      >
+        <SelectTrigger
           data-testid="filter-level-iii"
-          checked={filters.level_iii === "Y"}
-          onCheckedChange={(checked) => onFilterChange("level_iii", checked ? "Y" : "")}
-          className="scale-90"
-        />
-        <Label className="text-xs font-medium text-[#334155] cursor-pointer whitespace-nowrap">Level III</Label>
-      </div>
+          className="w-[160px] h-9 text-xs bg-white border-[#CBD5E1] text-[#0F172A]"
+        >
+          <SelectValue placeholder="Level III" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Level III</SelectItem>
+          <SelectItem value="Y">Level III Only</SelectItem>
+          <SelectItem value="N">Exclude Level III</SelectItem>
+        </SelectContent>
+      </Select>
 
+      {/* Critical */}
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#CBD5E1] bg-white">
         <Switch
           data-testid="filter-critical"
