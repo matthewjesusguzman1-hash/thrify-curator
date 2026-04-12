@@ -1,4 +1,4 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -90,6 +90,18 @@ export function Header({ onUploadClick, stats }) {
               </span>
             </div>
           )}
+
+          {/* Tie-Down Calculator */}
+          <Button
+            data-testid="calculator-nav-btn"
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/calculator")}
+            className="border-[#D4AF37]/40 text-[#D4AF37] bg-transparent hover:bg-[#D4AF37] hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs font-bold"
+          >
+            <Calculator className="w-3.5 h-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Tie-Downs</span>
+          </Button>
 
           {/* Inspections */}
           <Button
