@@ -734,31 +734,40 @@ const TaxPrepStepPage = () => {
                       });
                       if (response.ok) {
                         const blob = await response.blob();
-                        const file = new File([blob], `tax_summary_${selectedYear}.pdf`, { type: 'application/pdf' });
+                        const url = window.URL.createObjectURL(blob);
                         
-                        // Try native share if available (iOS/mobile)
-                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                          await navigator.share({
-                            files: [file],
-                            title: `Tax Summary ${selectedYear}`,
-                          });
+                        // On iOS, open in new tab for preview (allows save/share from there)
+                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                        
+                        if (isIOS) {
+                          // Open PDF in new tab - iOS will show preview with share options
+                          window.open(url, '_blank');
+                        } else if (navigator.share && navigator.canShare) {
+                          // Try native share on other mobile devices
+                          const file = new File([blob], `tax_summary_${selectedYear}.pdf`, { type: 'application/pdf' });
+                          if (navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                              files: [file],
+                              title: `Tax Summary ${selectedYear}`,
+                            });
+                          }
                         } else {
-                          // Fallback for desktop/web
-                          const url = window.URL.createObjectURL(blob);
+                          // Desktop fallback
                           const a = document.createElement('a');
                           a.href = url;
                           a.download = `tax_summary_${selectedYear}.pdf`;
                           document.body.appendChild(a);
                           a.click();
-                          window.URL.revokeObjectURL(url);
                           document.body.removeChild(a);
                         }
+                        
+                        // Clean up after delay
+                        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
                       } else {
                         alert('Failed to download PDF - please try again');
                       }
                     } catch (error) {
                       console.error('Download error:', error);
-                      // If share was cancelled, don't show error
                       if (error.name !== 'AbortError') {
                         alert('Failed to download PDF');
                       }
@@ -783,25 +792,33 @@ const TaxPrepStepPage = () => {
                       });
                       if (response.ok) {
                         const blob = await response.blob();
-                        const file = new File([blob], `tax_summary_${selectedYear}.csv`, { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
                         
-                        // Try native share if available (iOS/mobile)
-                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                          await navigator.share({
-                            files: [file],
-                            title: `Tax Summary ${selectedYear}`,
-                          });
+                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                        
+                        if (isIOS || (navigator.share && navigator.canShare)) {
+                          const file = new File([blob], `tax_summary_${selectedYear}.csv`, { type: 'text/csv' });
+                          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                              files: [file],
+                              title: `Tax Summary ${selectedYear}`,
+                            });
+                          } else {
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `tax_summary_${selectedYear}.csv`;
+                            a.click();
+                          }
                         } else {
-                          // Fallback for desktop/web
-                          const url = window.URL.createObjectURL(blob);
                           const a = document.createElement('a');
                           a.href = url;
                           a.download = `tax_summary_${selectedYear}.csv`;
                           document.body.appendChild(a);
                           a.click();
-                          window.URL.revokeObjectURL(url);
                           document.body.removeChild(a);
                         }
+                        
+                        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
                       } else {
                         alert('Failed to download CSV - please try again');
                       }
@@ -831,25 +848,36 @@ const TaxPrepStepPage = () => {
                       });
                       if (response.ok) {
                         const blob = await response.blob();
-                        const file = new File([blob], `tax_package_${selectedYear}.zip`, { type: 'application/zip' });
+                        const url = window.URL.createObjectURL(blob);
                         
-                        // Try native share if available (iOS/mobile)
-                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                          await navigator.share({
-                            files: [file],
-                            title: `Tax Package ${selectedYear}`,
-                          });
+                        // On iOS, open share sheet for ZIP files
+                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                        
+                        if (isIOS || (navigator.share && navigator.canShare)) {
+                          const file = new File([blob], `tax_package_${selectedYear}.zip`, { type: 'application/zip' });
+                          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                              files: [file],
+                              title: `Tax Package ${selectedYear}`,
+                            });
+                          } else {
+                            // Fallback - open download link
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `tax_package_${selectedYear}.zip`;
+                            a.click();
+                          }
                         } else {
-                          // Fallback for desktop/web
-                          const url = window.URL.createObjectURL(blob);
+                          // Desktop fallback
                           const a = document.createElement('a');
                           a.href = url;
                           a.download = `tax_package_${selectedYear}.zip`;
                           document.body.appendChild(a);
                           a.click();
-                          window.URL.revokeObjectURL(url);
                           document.body.removeChild(a);
                         }
+                        
+                        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
                       } else {
                         alert('Failed to download package - please try again');
                       }
