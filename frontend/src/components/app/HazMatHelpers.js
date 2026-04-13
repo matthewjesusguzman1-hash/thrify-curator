@@ -570,11 +570,47 @@ function cellLabel(val) {
 
 export function SegregationTable() {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
+  const [classA, setClassA] = useState(null);
+  const [classB, setClassB] = useState(null);
 
-  const toggle = (id) => setSelected((prev) => prev === id ? null : id);
+  const pickClass = (id) => {
+    if (!classA) { setClassA(id); setClassB(null); }
+    else if (classA === id) { setClassA(null); setClassB(null); }
+    else if (classB === id) { setClassB(null); }
+    else { setClassB(id); }
+  };
 
-  const selClass = selected ? SEG_CLASSES.find(c => c.id === selected) : null;
+  const reset = () => { setClassA(null); setClassB(null); };
+
+  const result = classA && classB ? getCell(classA, classB) : null;
+  const infoA = classA ? SEG_CLASSES.find(c => c.id === classA) : null;
+  const infoB = classB ? SEG_CLASSES.find(c => c.id === classB) : null;
+
+  // Plain language descriptions
+  const plainText = {
+    X: {
+      short: "PROHIBITED",
+      detail: "These materials may NOT be loaded, transported, or stored together in the same transport vehicle or storage facility during the course of transportation.",
+      action: "They must be on completely separate vehicles. There is no separation method that allows them on the same truck.",
+    },
+    O: {
+      short: "ALLOWED ONLY IF SEPARATED",
+      detail: "These materials may be loaded together ONLY if they are separated in a manner that prevents commingling in the event of leakage under normal transport conditions.",
+      action: "They can be on the same vehicle, but packages must be physically separated so that if one leaks, the materials cannot mix. Note: Class 8 (corrosive) liquids may not be loaded above or adjacent to Class 4 or Class 5 materials even when separated.",
+    },
+    "*": {
+      short: "SEE EXPLOSIVES COMPATIBILITY TABLE",
+      detail: "Segregation between different Class 1 (explosive) divisions and compatibility groups is governed by the separate compatibility table in 177.848(f), not this segregation table.",
+      action: "Check the explosives compatibility groups (letters A through S on the shipping paper) and refer to 177.848(f) for specific rules.",
+    },
+    "": {
+      short: "NO RESTRICTION",
+      detail: "There are no segregation restrictions between these two hazard classes. They may be loaded, transported, and stored together on the same vehicle.",
+      action: "They are allowed on the same truck with no special separation required. Always still follow general securement rules (177.834).",
+    },
+  };
+
+  const pt = result !== null ? plainText[result] || plainText[""] : null;
 
   return (
     <div className="bg-white rounded-xl border overflow-hidden" data-testid="segregation-table">
@@ -588,120 +624,190 @@ export function SegregationTable() {
         </div>
         <div className="flex-1 text-left">
           <p className="text-xs font-semibold text-[#0F172A]">Segregation Table — 177.848</p>
-          <p className="text-[10px] text-[#94A3B8]">Tap any class to see what it can/cannot load with</p>
+          <p className="text-[10px] text-[#94A3B8]">Select two hazard classes to check if they can load together</p>
         </div>
         <ChevronDown className={`w-4 h-4 text-[#94A3B8] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
         <div className="border-t px-3 py-3 space-y-3">
-          {/* Selected class detail */}
-          {selClass && (
-            <div className="rounded-lg border border-[#002855]/20 bg-[#002855]/5 p-3 space-y-2" data-testid="seg-detail">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[13px] font-bold text-[#002855]">{selClass.id} — {selClass.name}</p>
-                  <p className="text-[10px] text-[#64748B]">Tap another class below to compare, or tap again to deselect</p>
-                </div>
-                <button onClick={() => setSelected(null)} className="text-[10px] text-[#94A3B8] hover:text-[#002855]">Clear</button>
+          {/* Instructions */}
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-[#64748B]">
+              {!classA ? "Select the first hazard class:" : !classB ? "Now select the second hazard class:" : "Result:"}
+            </p>
+            {classA && (
+              <button onClick={reset} className="flex items-center gap-1 text-[10px] text-[#94A3B8] hover:text-[#002855] transition-colors" data-testid="seg-reset">
+                <RotateCcw className="w-3 h-3" /> Start over
+              </button>
+            )}
+          </div>
+
+          {/* Class selector chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {SEG_CLASSES.map((c) => {
+              const isA = classA === c.id;
+              const isB = classB === c.id;
+              const picked = isA || isB;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => pickClass(c.id)}
+                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border-2 ${
+                    isA ? "bg-[#002855] text-white border-[#002855] shadow-md" :
+                    isB ? "bg-[#D4AF37] text-[#002855] border-[#D4AF37] shadow-md" :
+                    picked ? "" :
+                    "bg-white text-[#334155] border-[#E2E8F0] hover:border-[#002855]/40 hover:bg-[#F8FAFC]"
+                  }`}
+                  data-testid={`seg-pick-${c.id}`}
+                >
+                  {c.short}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Selected classes display */}
+          {classA && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 bg-[#002855] text-white px-3 py-1.5 rounded-lg">
+                <span className="text-[12px] font-bold">{infoA.short}</span>
+                <span className="text-[10px] opacity-70">{infoA.name}</span>
               </div>
-              <div className="grid grid-cols-1 gap-1">
-                {SEG_CLASSES.filter(c => c.id !== selected).map(c => {
-                  const val = getCell(selected, c.id);
-                  return (
-                    <div key={c.id} className="flex items-center gap-2 py-1">
-                      <div className={`w-7 h-5 rounded flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${val === "X" ? "bg-red-500 text-white" : val === "O" ? "bg-yellow-400 text-yellow-900" : val === "*" ? "bg-orange-400 text-white" : "bg-emerald-500 text-white"}`}>
-                        {val === "X" ? "X" : val === "O" ? "O" : val === "*" ? "*" : "OK"}
-                      </div>
-                      <span className="text-[11px] text-[#334155] font-medium">{c.short}</span>
-                      <span className="text-[10px] text-[#94A3B8]">{c.name}</span>
-                      <span className="text-[10px] ml-auto font-medium" style={{ color: val === "X" ? "#DC2626" : val === "O" ? "#92400E" : val === "*" ? "#C2410C" : "#059669" }}>
-                        {val === "X" ? "PROHIBITED" : val === "O" ? "SEPARATED" : val === "*" ? "SEE COMPAT." : "ALLOWED"}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              {classB ? (
+                <>
+                  <span className="text-[12px] font-bold text-[#64748B]">+</span>
+                  <div className="flex items-center gap-1.5 bg-[#D4AF37] text-[#002855] px-3 py-1.5 rounded-lg">
+                    <span className="text-[12px] font-bold">{infoB.short}</span>
+                    <span className="text-[10px] opacity-70">{infoB.name}</span>
+                  </div>
+                </>
+              ) : (
+                <span className="text-[11px] text-[#94A3B8] italic">+ pick a second class above</span>
+              )}
             </div>
           )}
 
-          {/* Grid table */}
-          <div className="overflow-x-auto -mx-1">
-            <table className="border-collapse text-[9px]" style={{ minWidth: 500 }}>
-              <thead>
-                <tr>
-                  <th className="sticky left-0 z-10 bg-white px-1 py-1 text-left text-[9px] font-bold text-[#64748B] w-14"></th>
-                  {SEG_CLASSES.map((c) => (
-                    <th key={c.id} className="px-0.5 py-1 text-center">
-                      <button
-                        onClick={() => toggle(c.id)}
-                        className={`w-full px-1 py-1 rounded text-[9px] font-bold transition-all ${
-                          selected === c.id
-                            ? "bg-[#002855] text-white shadow-md scale-110"
-                            : selected ? "text-[#94A3B8] hover:text-[#002855]" : "text-[#002855] hover:bg-[#002855]/10"
-                        }`}
-                        data-testid={`seg-col-${c.id}`}
-                      >
-                        {c.short}
-                      </button>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {SEG_CLASSES.map((row) => (
-                  <tr key={row.id}>
-                    <td className="sticky left-0 z-10 bg-white px-1 py-0.5">
-                      <button
-                        onClick={() => toggle(row.id)}
-                        className={`w-full text-left px-1 py-1 rounded text-[9px] font-bold transition-all whitespace-nowrap ${
-                          selected === row.id
-                            ? "bg-[#002855] text-white shadow-md"
-                            : selected ? "text-[#94A3B8] hover:text-[#002855]" : "text-[#002855] hover:bg-[#002855]/10"
-                        }`}
-                        data-testid={`seg-row-${row.id}`}
-                      >
-                        {row.short}
-                      </button>
-                    </td>
-                    {SEG_CLASSES.map((col) => {
-                      const val = getCell(row.id, col.id);
-                      const hl = !selected || selected === row.id || selected === col.id;
-                      return (
-                        <td key={col.id} className="px-0.5 py-0.5">
+          {/* RESULT — plain language */}
+          {result !== null && pt && (
+            <div className={`rounded-xl border-2 p-4 space-y-2 ${
+              result === "X" ? "border-red-400 bg-red-50" :
+              result === "O" ? "border-yellow-400 bg-yellow-50" :
+              result === "*" ? "border-orange-400 bg-orange-50" :
+              "border-emerald-400 bg-emerald-50"
+            }`} data-testid="seg-result">
+              {/* Big verdict */}
+              <div className="flex items-center gap-2">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black flex-shrink-0 ${
+                  result === "X" ? "bg-red-500 text-white" :
+                  result === "O" ? "bg-yellow-400 text-yellow-900" :
+                  result === "*" ? "bg-orange-400 text-white" :
+                  "bg-emerald-500 text-white"
+                }`}>
+                  {result === "X" ? "X" : result === "O" ? "O" : result === "*" ? "*" : "OK"}
+                </div>
+                <div>
+                  <p className={`text-[14px] font-bold ${
+                    result === "X" ? "text-red-700" : result === "O" ? "text-yellow-800" : result === "*" ? "text-orange-700" : "text-emerald-700"
+                  }`}>{pt.short}</p>
+                  <p className="text-[10px] text-[#64748B]">{infoA.short} ({infoA.name}) + {infoB.short} ({infoB.name})</p>
+                </div>
+              </div>
+
+              {/* What this means */}
+              <div className="space-y-1.5">
+                <p className="text-[11px] leading-relaxed text-[#334155]"><strong>What this means:</strong> {pt.detail}</p>
+                <p className="text-[11px] leading-relaxed text-[#334155]"><strong>What to do:</strong> {pt.action}</p>
+              </div>
+
+              {/* Ref */}
+              <p className="text-[10px] text-[#94A3B8]">Per <CfrLink r="177.848" /> segregation table</p>
+            </div>
+          )}
+
+          {/* Grid table — reference */}
+          <div>
+            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">Full Segregation Grid — 177.848(d)</p>
+            <div className="overflow-x-auto -mx-1">
+              <table className="border-collapse text-[9px]" style={{ minWidth: 500 }}>
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 bg-white px-1 py-1 text-left text-[9px] font-bold text-[#64748B] w-14"></th>
+                    {SEG_CLASSES.map((c) => (
+                      <th key={c.id} className="px-0.5 py-1 text-center">
+                        <button
+                          onClick={() => pickClass(c.id)}
+                          className={`w-full px-1 py-1 rounded text-[9px] font-bold transition-all ${
+                            classA === c.id ? "bg-[#002855] text-white shadow-md" :
+                            classB === c.id ? "bg-[#D4AF37] text-[#002855] shadow-md" :
+                            "text-[#002855] hover:bg-[#002855]/10"
+                          }`}
+                          data-testid={`seg-col-${c.id}`}
+                        >
+                          {c.short}
+                        </button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {SEG_CLASSES.map((row) => {
+                    const rowMatch = classA === row.id || classB === row.id;
+                    return (
+                      <tr key={row.id}>
+                        <td className="sticky left-0 z-10 bg-white px-1 py-0.5">
                           <button
-                            onClick={() => toggle(row.id === selected ? col.id : row.id)}
-                            className={`w-full h-6 rounded-sm flex items-center justify-center text-[9px] transition-all ${cellStyle(val, hl)}`}
-                            title={`${row.short} + ${col.short}: ${val === "X" ? "PROHIBITED" : val === "O" ? "SEPARATED" : val === "*" ? "See compatibility table" : val === "self" ? "-" : "Allowed"}`}
+                            onClick={() => pickClass(row.id)}
+                            className={`w-full text-left px-1 py-1 rounded text-[9px] font-bold transition-all whitespace-nowrap ${
+                              classA === row.id ? "bg-[#002855] text-white shadow-md" :
+                              classB === row.id ? "bg-[#D4AF37] text-[#002855] shadow-md" :
+                              "text-[#002855] hover:bg-[#002855]/10"
+                            }`}
+                            data-testid={`seg-row-${row.id}`}
                           >
-                            {cellLabel(val)}
+                            {row.short}
                           </button>
                         </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {SEG_CLASSES.map((col) => {
+                          const val = getCell(row.id, col.id);
+                          const colMatch = classA === col.id || classB === col.id;
+                          const isExact = (classA === row.id && classB === col.id) || (classB === row.id && classA === col.id);
+                          const hl = !classA || !classB || rowMatch || colMatch;
+                          return (
+                            <td key={col.id} className="px-0.5 py-0.5">
+                              <div
+                                className={`w-full h-6 rounded-sm flex items-center justify-center text-[9px] transition-all ${cellStyle(val, hl)} ${isExact ? "ring-2 ring-[#002855] ring-offset-1 scale-125 z-10 relative" : ""}`}
+                              >
+                                {cellLabel(val)}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Legend */}
           <div className="flex flex-wrap gap-3 pt-1">
             <div className="flex items-center gap-1.5">
               <div className="w-5 h-4 rounded-sm bg-red-500" />
-              <span className="text-[10px] text-[#334155]"><strong>X</strong> — Prohibited</span>
+              <span className="text-[10px] text-[#334155]"><strong>X</strong> — May NOT load together</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-5 h-4 rounded-sm bg-yellow-400" />
-              <span className="text-[10px] text-[#334155]"><strong>O</strong> — Must be separated</span>
+              <span className="text-[10px] text-[#334155]"><strong>O</strong> — Only if separated</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-5 h-4 rounded-sm bg-emerald-500/80" />
-              <span className="text-[10px] text-[#334155]">Allowed</span>
+              <span className="text-[10px] text-[#334155]">No restriction</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-5 h-4 rounded-sm bg-orange-400" />
-              <span className="text-[10px] text-[#334155]"><strong>*</strong> — See explosives compatibility</span>
+              <span className="text-[10px] text-[#334155]"><strong>*</strong> — Explosives compatibility</span>
             </div>
           </div>
 
