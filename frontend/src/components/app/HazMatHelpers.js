@@ -212,6 +212,16 @@ export function PackageClassHelper() {
                     <li>Authorized packaging per Column 8B of the HM Table — <CfrLink r="172.101" /></li>
                     <li>Additional non-bulk packaging requirements — <CfrLink r="173.24a" /></li>
                   </ul>
+                  <InfoBox color="amber">
+                    <strong>Check for exceptions before citing violations:</strong>
+                    <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                      <li><strong>Limited Quantity</strong> — reduced marking/labeling/placarding requirements — <CfrLink r="172.315" /> and Column 8A of 172.101</li>
+                      <li><strong>Materials of Trade</strong> — exempt from shipping papers, placarding, ER info, training — <CfrLink r="173.6" /></li>
+                      <li><strong>Consumer Commodity / ORM-D</strong> — reclassified as limited quantity — <CfrLink r="173.150" /></li>
+                      <li><strong>Small Quantity exceptions</strong> — <CfrLink r="173.4" /></li>
+                      <li><strong>De minimis exceptions</strong> for specific materials — check Column 7 special provisions in <CfrLink r="172.102" /></li>
+                    </ul>
+                  </InfoBox>
                   <p className="text-[10px] italic text-[#64748B]">Non-bulk packages include drums, pails, cylinders, boxes, bags, jerricans, composite packaging, and combination packaging.</p>
                 </ResultBox>
               )}
@@ -227,6 +237,16 @@ export function PackageClassHelper() {
                     <li>Must meet all specification requirements — <CfrLink r="178" label="Part 178" /></li>
                     <li>Must meet requalification/retest schedule — <CfrLink r="180" label="Part 180" /></li>
                   </ul>
+                  <InfoBox color="amber">
+                    <strong>Check for exceptions before citing violations:</strong>
+                    <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                      <li><strong>Placarding exceptions</strong> — some bulk packages are exempt from placarding: certain portable tanks, DOT 106/110, some IBCs — <CfrLink r="172.514" /></li>
+                      <li><strong>Non-spec intrastate</strong> — some bulk packages used only intrastate may qualify under <CfrLink r="173.8" /></li>
+                      <li><strong>Ag operations</strong> — special exceptions for agricultural materials — <CfrLink r="173.5" /></li>
+                      <li><strong>Special permits</strong> — verify if the carrier holds a DOT-SP that modifies standard requirements — <CfrLink r="107.105" /></li>
+                      <li><strong>Column 7 special provisions</strong> — may modify packaging, marking, or placarding for this specific material — <CfrLink r="172.102" /></li>
+                    </ul>
+                  </InfoBox>
                   <p className="text-[10px] italic text-[#64748B]">Common spec bulk packages: cargo tanks (MC/DOT series), portable tanks (DOT 51, IM 101/102), spec cylinders (3AA, 4BA, etc.), UN-rated IBCs.</p>
                 </ResultBox>
               )}
@@ -422,6 +442,9 @@ export function MaterialsOfTradeHelper() {
               <InfoBox color="green">
                 <strong>Common MOT scenarios:</strong> Pest control (pesticides/fumigants in small containers), HVAC/plumbing (propane/acetylene cylinders), pool service (chlorine), agriculture (small quantities of fertilizer/pesticide), painting (flammable paints/solvents), cleaning services (corrosive cleaners).
               </InfoBox>
+              <InfoBox color="amber">
+                <strong>Even when MOT applies, still check:</strong> Is the packaging intact and not leaking? Is the package marked with a common name or proper shipping name? Are cylinders properly marked/labeled? Does the total MOT weight stay under 440 lbs? Are any PIH, self-reactive, or hazardous waste materials mixed in (which would NOT qualify)?
+              </InfoBox>
             </ResultBox>
           )}
 
@@ -431,21 +454,35 @@ export function MaterialsOfTradeHelper() {
               <InfoBox color="amber">
                 <strong>Key distinction:</strong> A plumber carrying a propane torch to a job site = MOT. A propane delivery company delivering cylinders to customers = NOT MOT (transportation IS the principal business).
               </InfoBox>
-              <p>This shipment must comply with all applicable HMR requirements including shipping papers, placarding, labeling, marking, and packaging.</p>
+              <p>This shipment must comply with all applicable HMR requirements. However, <strong>check these other exceptions</strong> that may still reduce requirements:</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
+                <li><strong>Limited Quantity</strong> — Column 8A of 172.101 and <CfrLink r="172.315" /></li>
+                <li><strong>Small Quantity</strong> — <CfrLink r="173.4" /></li>
+                <li><strong>Agricultural operations</strong> — <CfrLink r="173.5" /></li>
+                <li><strong>Consumer Commodity</strong> — <CfrLink r="173.150" /></li>
+              </ul>
             </ResultBox>
           )}
 
           {currentQ === "not_mot_quantity" && (
             <ResultBox title="Does NOT qualify — exceeds quantity limits" compliant={false}>
               <p>The quantity of material exceeds the per-package limits in <CfrLink r="173.6(a)" />, or the total aggregate gross weight of all MOT materials on the vehicle exceeds <strong>440 lbs (200 kg)</strong> per <CfrLink r="173.6(d)" />.</p>
-              <p>This shipment must comply with all applicable HMR requirements. Consider whether a <strong>Limited Quantity</strong> exception (see <CfrLink r="173.150" /> through <CfrLink r="173.155" />) might apply instead — limited quantities have higher quantity thresholds and reduced but not fully eliminated HMR requirements.</p>
+              <p>This shipment must comply with all applicable HMR requirements. However, <strong>check these other exceptions</strong> that allow larger quantities with reduced requirements:</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
+                <li><strong>Limited Quantity</strong> — higher quantity thresholds, reduced marking/labeling/placarding — Column 8A of <CfrLink r="172.101" /> and <CfrLink r="173.150" /> through <CfrLink r="173.155" /></li>
+                <li><strong>Agricultural operations</strong> — special exceptions for farm materials — <CfrLink r="173.5" /></li>
+                <li><strong>Non-spec intrastate</strong> — some intrastate packagings may qualify — <CfrLink r="173.8" /></li>
+              </ul>
             </ResultBox>
           )}
 
           {currentQ === "not_mot_packaging" && (
             <ResultBox title="Does NOT qualify — packaging issue" compliant={false}>
-              <p>MOT materials must be in packaging that is authorized by the HMR for that specific material, or in a non-bulk package that is: properly closed, secured against movement, protected from damage, and does not leak under normal transport conditions.</p>
+              <p>MOT materials must be in packaging that is authorized by the HMR for that specific material, or a non-bulk package that is: properly closed, secured against movement, protected from damage, and does not leak under normal transport conditions.</p>
               <p>Correct the packaging issue before transport, or comply with full HMR requirements.</p>
+              <InfoBox color="amber">
+                <strong>Check for packaging exceptions:</strong> Even if MOT doesn't apply, the material may qualify for reduced packaging under <strong>Limited Quantity</strong> (Column 8A of <CfrLink r="172.101" />) or <strong>non-spec intrastate</strong> (<CfrLink r="173.8" />). Also check Column 7 special provisions (<CfrLink r="172.102" />) for material-specific packaging alternatives.
+              </InfoBox>
             </ResultBox>
           )}
 
