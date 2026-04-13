@@ -21,56 +21,56 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
       const pdfWidth = pdf.internal.pageSize.getWidth() - 16;
       const pdfHeight = pdf.internal.pageSize.getHeight() - 16;
 
-      // Always capture the entire content as one image first
-      const canvas = await html2canvas(el, {
-        scale: 2, useCORS: true, allowTaint: true, logging: false,
-        backgroundColor: "#ffffff",
-        width: el.scrollWidth, height: el.scrollHeight,
-      });
-      const imgData = canvas.toDataURL("image/jpeg", 0.92);
-      const imgH = (canvas.height * pdfWidth) / canvas.width;
+      // Helper: clone elements into an off-screen wrapper and capture.
+      // This avoids flex-container height inflation on iOS Safari.
+      const captureElements = async (elements) => {
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = `position:absolute;left:-9999px;top:0;width:${el.scrollWidth}px;background:#fff;padding:20px 16px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;color:#0F172A;line-height:1.6;`;
+        elements.forEach(e => wrapper.appendChild(e.cloneNode(true)));
+        document.body.appendChild(wrapper);
+        await new Promise((r) => setTimeout(r, 50));
+        const c = await html2canvas(wrapper, {
+          scale: 2, useCORS: true, allowTaint: true, logging: false,
+          backgroundColor: "#ffffff",
+          width: wrapper.scrollWidth, height: wrapper.scrollHeight,
+        });
+        document.body.removeChild(wrapper);
+        return c;
+      };
 
-      if (imgH <= pdfHeight) {
-        // Everything fits on one page — done
-        pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth, imgH);
-      } else {
-        // Multi-page: check if we have separate article sections
-        const articles = el.querySelectorAll("[data-pdf-section]");
-        const articleSections = Array.from(articles).filter(s => s.dataset.pdfSection?.startsWith("article-") || s.dataset.pdfSection?.startsWith("assessment-"));
-
-        if (articleSections.length > 1) {
-          // Multiple articles: capture each article with the header combined
-          const headerEl = el.querySelector("[data-pdf-section='header']") || el.querySelector("[data-pdf-section='insp-header']");
-
-          for (let i = 0; i < articleSections.length; i++) {
-            if (i > 0) pdf.addPage();
-
-            // Create a temporary wrapper with header + this article
-            const wrapper = document.createElement("div");
-            wrapper.style.cssText = `position:absolute;left:-9999px;top:0;width:${el.scrollWidth}px;background:#fff;padding:20px 16px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;color:#0F172A;line-height:1.6;`;
-            if (headerEl) wrapper.appendChild(headerEl.cloneNode(true));
-            wrapper.appendChild(articleSections[i].cloneNode(true));
-            document.body.appendChild(wrapper);
-
-            const c = await html2canvas(wrapper, {
-              scale: 2, useCORS: true, allowTaint: true, logging: false, backgroundColor: "#ffffff",
-              width: wrapper.scrollWidth, height: wrapper.scrollHeight,
-            });
-            document.body.removeChild(wrapper);
-
-            const iData = c.toDataURL("image/jpeg", 0.92);
-            const iH = (c.height * pdfWidth) / c.width;
-            if (iH <= pdfHeight) {
-              pdf.addImage(iData, "JPEG", 8, 8, pdfWidth, iH);
-            } else {
-              const scale = pdfHeight / iH;
-              pdf.addImage(iData, "JPEG", 8, 8, pdfWidth * scale, pdfHeight);
-            }
-          }
+      const addCanvasToPDF = (canvas, pdfDoc, addPage) => {
+        if (addPage) pdfDoc.addPage();
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        const imgH = (canvas.height * pdfWidth) / canvas.width;
+        if (imgH <= pdfHeight) {
+          pdfDoc.addImage(imgData, "JPEG", 8, 8, pdfWidth, imgH);
         } else {
-          // Single article or no sections — scale to fit one page
           const scale = pdfHeight / imgH;
-          pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth * scale, pdfHeight);
+          const sw = pdfWidth * scale;
+          pdfDoc.addImage(imgData, "JPEG", 8 + (pdfWidth - sw) / 2, 8, sw, pdfHeight);
+        }
+      };
+
+      const headerEl = el.querySelector("[data-pdf-section='header']") || el.querySelector("[data-pdf-section='insp-header']");
+      const articleSections = Array.from(el.querySelectorAll("[data-pdf-section]")).filter(
+        s => s.dataset.pdfSection?.startsWith("article-") || s.dataset.pdfSection?.startsWith("assessment-")
+      );
+
+      if (articleSections.length <= 1) {
+        // Single article or no sections: capture ALL children as one page
+        const canvas = await captureElements(Array.from(el.children));
+        addCanvasToPDF(canvas, pdf, false);
+      } else {
+        // Multiple articles: each article gets its own page with header
+        for (let i = 0; i < articleSections.length; i++) {
+          const parts = [];
+          if (headerEl) parts.push(headerEl);
+          parts.push(articleSections[i]);
+          // Add footer on last article
+          const footer = el.querySelector("[data-pdf-footer]");
+          if (footer && i === articleSections.length - 1) parts.push(footer);
+          const canvas = await captureElements(parts);
+          addCanvasToPDF(canvas, pdf, i > 0);
         }
       }
 

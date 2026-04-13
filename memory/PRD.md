@@ -21,7 +21,11 @@ FMCSA roadside violation search/filter app with AI-powered search, NSP blue/gold
   - Direct/Indirect infographic with user's custom images
   - Collapsible sections, eCFR links
 
+## Recent Fixes
+- **PDF Export 2-Page Bug (2026-04-13)**: Fixed single-article PDF reports splitting into 2 pages on iOS. Root cause: `html2canvas` captured in-DOM element with flex-inflated scrollHeight. Fix: off-screen cloned wrappers for accurate content height.
+
 ## Backlog
 | P1 | Dedicated mobile resources page |
 | P1 | Offline/cached mode for field use |
 | P2 | Refactor server.py into modular routes |
+| P2 | Refactor TieDownCalculator.js into sub-components |

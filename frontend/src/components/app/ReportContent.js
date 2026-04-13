@@ -136,7 +136,7 @@ export function TieDownReportContent({ articles }) {
         );
       })}
 
-      <div style={{ fontSize: 9, color: "#94A3B8", fontStyle: "italic", marginTop: 4 }}>
+      <div data-pdf-footer="true" style={{ fontSize: 9, color: "#94A3B8", fontStyle: "italic", marginTop: 4 }}>
         49 CFR 393.102/104/110 — DIR: 50% WLL, IND: 100% WLL, Req. agg. WLL: 50% of cargo weight
       </div>
     </div>
