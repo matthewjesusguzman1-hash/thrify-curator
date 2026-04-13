@@ -283,58 +283,54 @@ export function PackageClassHelper() {
 /* ================================================================
    MATERIALS OF TRADE (MOT) HELPER
    ================================================================ */
-const MOT_QUESTIONS = [
+const MOT_ITEMS = [
   {
     id: "purpose",
     question: "Is the hazardous material carried for the direct support of a principal business (other than transportation)?",
     help: "Materials of Trade (MOT) are HM carried by employees for their work — not as the primary cargo. Examples: a pest control tech carrying pesticides, a plumber with propane for soldering, a pool company with chlorine, a farmer carrying small quantities of fertilizer. The HM must be needed for the person's primary job. Note: PIH (Poison Inhalation Hazard) materials, self-reactive materials, hazardous waste, and Class 7 (radioactive) are NEVER eligible for MOT.",
-    yes: "quantity",
-    no: "not_mot_purpose",
+    failTitle: "Potential issue: Not direct support of principal business",
+    failDetail: "If the primary purpose is to transport the HM as cargo (e.g., a delivery), the MOT exception does not apply. A plumber carrying a propane torch to a job = MOT. A propane delivery company delivering cylinders = NOT MOT.",
   },
   {
     id: "quantity",
     question: "Does the material meet the quantity limits?",
-    help: null, // custom rendering
     helpType: "quantity_table",
-    yes: "packaging",
-    no: "not_mot_quantity",
+    failTitle: "Potential issue: Exceeds MOT quantity limits",
+    failDetail: "The quantity exceeds the per-package limits in 173.6(a), or the aggregate gross weight of all MOT on the vehicle exceeds 440 lbs (200 kg). Full HMR may apply, but check Limited Quantity exceptions (173.150–155) which allow larger quantities with reduced requirements.",
   },
   {
     id: "packaging",
-    question: "Is the material in a packaging authorized by the HMR (or a non-spec packaging per 173.6)?",
-    help: "MOT packaging rules per 173.6(b): Packagings must be leak tight for liquids and gases, sift proof for solids, securely closed, secured against shifting, and protected against damage. Each material must be in the manufacturer's original packaging or one of equal or greater strength. For gasoline, the container must be metal or plastic conforming to the HMR or OSHA standards (29 CFR 1910.106). Cylinders must conform to all packaging, qualification, maintenance, and use requirements of the HMR.",
-    yes: "is_mot",
-    no: "not_mot_packaging",
+    question: "Is the material in proper packaging per 173.6(b)?",
+    help: "MOT packaging rules per 173.6(b): Packagings must be leak tight for liquids and gases, sift proof for solids, securely closed, secured against shifting, and protected against damage. Each material must be in the manufacturer's original packaging or one of equal or greater strength. For gasoline, the container must be metal or plastic conforming to HMR or OSHA (29 CFR 1910.106). Cylinders must conform to all HMR requirements.",
+    failTitle: "Potential issue: Packaging does not meet 173.6(b)",
+    failDetail: "The packaging must be leak tight, sift proof, securely closed, and protected from damage. If it's not in the original packaging, it must be of equal or greater strength. Gasoline must be in metal or plastic containers per HMR or OSHA standards.",
+  },
+  {
+    id: "marking",
+    question: "Is the package marked with the common name or proper shipping name?",
+    help: "Per 173.6(c)(1), non-bulk packages (other than cylinders) must be marked with the common name or proper shipping name of the HM. If it contains a reportable quantity (RQ) of a hazardous substance, the letters 'RQ' must also appear. DOT spec cylinders (except DOT-39) must be marked and labeled per the HMR.",
+    failTitle: "Potential issue: Missing required marking",
+    failDetail: "Even under MOT, packages must be marked with the common name or proper shipping name. Cylinders must be marked and labeled per HMR. Missing markings are a citable violation even for MOT shipments.",
+  },
+  {
+    id: "driver",
+    question: "Has the driver been informed of the HM presence and 173.6 requirements?",
+    help: "Per 173.6(c)(4), the operator of the motor vehicle must be informed of: the presence of the hazardous material, whether the package contains a reportable quantity, and the requirements of section 173.6. This is a communication requirement that remains even though shipping papers are not required.",
+    failTitle: "Potential issue: Driver not informed",
+    failDetail: "The vehicle operator must be informed of the HM and the 173.6 requirements. While formal shipping papers aren't required for MOT, the driver must know what HM is on the vehicle.",
   },
 ];
 
 export function MaterialsOfTradeHelper() {
   const [open, setOpen] = useState(false);
   const [answers, setAnswers] = useState({});
-  const [currentQ, setCurrentQ] = useState("purpose");
 
-  const reset = useCallback(() => {
-    setAnswers({});
-    setCurrentQ("purpose");
-  }, []);
+  const reset = useCallback(() => { setAnswers({}); }, []);
 
-  const answer = (qId, value) => {
-    const q = MOT_QUESTIONS.find((x) => x.id === qId);
-    const next = value ? q.yes : q.no;
-    setAnswers((prev) => ({ ...prev, [qId]: value }));
-    setCurrentQ(next);
-  };
-
-  // Find which questions have been answered to show the trail
-  const trail = [];
-  let walkId = "purpose";
-  while (answers[walkId] !== undefined) {
-    const q = MOT_QUESTIONS.find((x) => x.id === walkId);
-    trail.push({ ...q, answer: answers[walkId] });
-    walkId = answers[walkId] ? q.yes : q.no;
-  }
-
-  const isResult = currentQ.startsWith("not_mot") || currentQ === "is_mot";
+  const answered = Object.keys(answers);
+  const allDone = MOT_ITEMS.every((q) => answers[q.id] !== undefined);
+  const issues = MOT_ITEMS.filter((q) => answers[q.id] === false);
+  const qualifies = allDone && issues.length === 0;
 
   return (
     <div className="bg-white rounded-xl border overflow-hidden" data-testid="mot-helper">
@@ -356,138 +352,131 @@ export function MaterialsOfTradeHelper() {
       {open && (
         <div className="border-t px-4 py-3 space-y-3">
           <InfoBox>
-            <strong>What is Materials of Trade?</strong> Under <CfrLink r="173.6" />, certain small quantities of HM carried by employees as tools of their trade are partially exempt from the HMR. If a shipment qualifies as MOT, it is <strong>exempt from</strong>: shipping papers, placarding, emergency response info, and HM training requirements. <strong>However</strong>, MOT materials must still be properly packaged and marked, and the vehicle must carry no more than the quantity limits.
+            <strong>What is Materials of Trade?</strong> Under <CfrLink r="173.6" />, certain small quantities of HM carried by employees as tools of their trade are partially exempt from the HMR. If a shipment qualifies, it is <strong>exempt from</strong>: shipping papers, placarding, emergency response info, and HM training. <strong>However</strong>, packaging, marking, and driver notification still apply. Answer all questions below to evaluate.
           </InfoBox>
 
-          {/* Answered questions trail */}
-          {trail.map((t) => (
-            <div key={t.id} className="space-y-1">
-              <p className="text-[11px] font-bold text-[#64748B]">{t.question}</p>
-              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${t.answer ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                {t.answer ? "Yes" : "No"}
-              </div>
-            </div>
-          ))}
+          {/* All questions — shown linearly */}
+          {MOT_ITEMS.map((q, idx) => {
+            const prev = idx === 0 || answers[MOT_ITEMS[idx - 1].id] !== undefined;
+            if (!prev) return null; // only show if previous is answered
+            const val = answers[q.id];
+            const isAnswered = val !== undefined;
 
-          {/* Current question */}
-          {!isResult && (() => {
-            const q = MOT_QUESTIONS.find((x) => x.id === currentQ);
-            if (!q) return null;
             return (
-              <div className="space-y-2">
-                <p className="text-[11px] font-bold text-[#002855] flex items-center gap-1.5">
-                  <HelpCircle className="w-3.5 h-3.5 text-[#D4AF37]" />
-                  {q.question}
-                </p>
-
-                {q.helpType === "quantity_table" ? (
-                  <InfoBox color="amber">
-                    <strong>MOT Quantity Limits</strong> — <CfrLink r="173.6(a)" />:
-                    <table className="w-full mt-1.5 text-[10px]">
-                      <thead>
-                        <tr className="border-b border-amber-300/50">
-                          <th className="text-left py-1 font-bold">Material Type</th>
-                          <th className="text-right py-1 font-bold">Per Package</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-amber-200/30">
-                        <tr><td className="py-1">Class 3, 8, 9, Div 4.1, 5.1, 5.2, 6.1 — <strong>PG I</strong></td><td className="text-right">0.5 kg (1 lb) or 0.5 L (1 pt)</td></tr>
-                        <tr><td className="py-1">Class 3, 8, 9, Div 4.1, 5.1, 5.2, 6.1 — <strong>PG II or III</strong></td><td className="text-right">30 kg (66 lbs) or 30 L (8 gal)</td></tr>
-                        <tr><td className="py-1">Class 9 diluted mixture (max 2% concentration)</td><td className="text-right">1,500 L (400 gal)</td></tr>
-                        <tr><td className="py-1">Division 2.1 or 2.2 in a cylinder</td><td className="text-right">100 kg (220 lbs) gross</td></tr>
-                        <tr><td className="py-1">Div 2.2 (non-liquefied, no subsidiary) in permanent tank</td><td className="text-right">70 gal water capacity</td></tr>
-                        <tr><td className="py-1">Division 4.3 (Dangerous When Wet) — PG II or III</td><td className="text-right">30 mL (1 oz)</td></tr>
-                        <tr><td className="py-1">Division 6.2 (non-Category A, human/animal samples)</td><td className="text-right">See 173.6(a)(4)</td></tr>
-                      </tbody>
-                    </table>
-                    <p className="mt-1.5 text-[9px]"><strong>NOT eligible for MOT:</strong> Poison Inhalation Hazard (PIH) materials, self-reactive materials, hazardous waste, or Class 7 (radioactive) — per 173.6(a)(5)/(a)(6).</p>
-                    <p className="mt-1 text-[9px] italic">Aggregate gross weight of ALL MOT materials on one vehicle may not exceed <strong>440 lbs (200 kg)</strong> — per 173.6(d). Exception: Class 9 diluted mixtures per (a)(1)(iii) are excluded from this aggregate limit.</p>
-                  </InfoBox>
-                ) : q.help ? (
-                  <InfoBox>{q.help}</InfoBox>
-                ) : null}
-
-                <div className="grid grid-cols-2 gap-2">
-                  <OptionButton onClick={() => answer(currentQ, true)} testId={`mot-${currentQ}-yes`}>
-                    <span className="font-semibold">Yes</span>
-                  </OptionButton>
-                  <OptionButton onClick={() => answer(currentQ, false)} testId={`mot-${currentQ}-no`}>
-                    <span className="font-semibold">No</span>
-                  </OptionButton>
+              <div key={q.id} className="space-y-2">
+                {/* Question */}
+                <div className="flex items-start gap-2">
+                  <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    !isAnswered ? "bg-[#002855]/10 text-[#002855]" :
+                    val ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
+                  }`}>
+                    {!isAnswered ? (idx + 1) : val ? (
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                    ) : "!"}
+                  </div>
+                  <div className="flex-1">
+                    <p className={`text-[11px] font-bold ${isAnswered ? "text-[#64748B]" : "text-[#002855]"}`}>{q.question}</p>
+                  </div>
                 </div>
+
+                {/* Help / quantity table — show when not yet answered */}
+                {!isAnswered && (
+                  <>
+                    {q.helpType === "quantity_table" ? (
+                      <InfoBox color="amber">
+                        <strong>MOT Quantity Limits</strong> — <CfrLink r="173.6(a)" />:
+                        <table className="w-full mt-1.5 text-[10px]">
+                          <thead>
+                            <tr className="border-b border-amber-300/50">
+                              <th className="text-left py-1 font-bold">Material Type</th>
+                              <th className="text-right py-1 font-bold">Per Package</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-amber-200/30">
+                            <tr><td className="py-1">Class 3, 8, 9, Div 4.1, 5.1, 5.2, 6.1 — <strong>PG I</strong></td><td className="text-right">0.5 kg (1 lb) or 0.5 L (1 pt)</td></tr>
+                            <tr><td className="py-1">Class 3, 8, 9, Div 4.1, 5.1, 5.2, 6.1 — <strong>PG II or III</strong></td><td className="text-right">30 kg (66 lbs) or 30 L (8 gal)</td></tr>
+                            <tr><td className="py-1">Class 9 diluted mixture (max 2% concentration)</td><td className="text-right">1,500 L (400 gal)</td></tr>
+                            <tr><td className="py-1">Division 2.1 or 2.2 in a cylinder</td><td className="text-right">100 kg (220 lbs) gross</td></tr>
+                            <tr><td className="py-1">Div 2.2 (non-liquefied, no subsidiary) in permanent tank</td><td className="text-right">70 gal water capacity</td></tr>
+                            <tr><td className="py-1">Division 4.3 (Dangerous When Wet) — PG II or III</td><td className="text-right">30 mL (1 oz)</td></tr>
+                            <tr><td className="py-1">Division 6.2 (non-Category A, human/animal samples)</td><td className="text-right">See 173.6(a)(4)</td></tr>
+                          </tbody>
+                        </table>
+                        <p className="mt-1.5 text-[9px]"><strong>NOT eligible for MOT:</strong> PIH materials, self-reactive materials, hazardous waste, or Class 7 (radioactive) — per 173.6(a)(5)/(a)(6).</p>
+                        <p className="mt-1 text-[9px] italic">Aggregate gross weight of ALL MOT on one vehicle: <strong>max 440 lbs (200 kg)</strong> — per 173.6(d).</p>
+                      </InfoBox>
+                    ) : q.help ? (
+                      <InfoBox>{q.help}</InfoBox>
+                    ) : null}
+
+                    <div className="grid grid-cols-2 gap-2 pl-7">
+                      <OptionButton onClick={() => setAnswers(p => ({ ...p, [q.id]: true }))} testId={`mot-${q.id}-yes`}>
+                        <span className="font-semibold">Yes</span>
+                      </OptionButton>
+                      <OptionButton onClick={() => setAnswers(p => ({ ...p, [q.id]: false }))} testId={`mot-${q.id}-no`}>
+                        <span className="font-semibold">No</span>
+                      </OptionButton>
+                    </div>
+                  </>
+                )}
+
+                {/* Inline violation flag for "No" — but doesn't stop the flow */}
+                {val === false && (
+                  <div className="ml-7 rounded-lg border border-red-300 bg-red-50 px-3 py-2">
+                    <p className="text-[11px] font-bold text-red-700">{q.failTitle}</p>
+                    <p className="text-[10px] text-red-800/80 leading-relaxed mt-0.5">{q.failDetail}</p>
+                  </div>
+                )}
               </div>
             );
-          })()}
+          })}
 
-          {/* RESULTS */}
-          {currentQ === "is_mot" && (
-            <ResultBox title="This likely qualifies as Materials of Trade (MOT)" compliant={true}>
-              <p>Based on your answers, this shipment appears to meet the <CfrLink r="173.6" /> criteria for Materials of Trade.</p>
-              <p><strong>What is EXEMPT for MOT:</strong></p>
-              <ul className="list-disc pl-4 space-y-0.5">
-                <li>Shipping papers — <CfrLink r="172.200" label="Subpart C" /></li>
-                <li>Placarding — <CfrLink r="172.500" label="Subpart F" /></li>
-                <li>Emergency response information — <CfrLink r="172.600" label="Subpart G" /></li>
-                <li>HM employee training — <CfrLink r="172.700" label="Subpart H" /></li>
-              </ul>
-              <p><strong>What STILL applies to MOT — per <CfrLink r="173.6" />:</strong></p>
-              <ul className="list-disc pl-4 space-y-0.5">
-                <li><strong>Packaging</strong> must be leak tight (liquids/gases), sift proof (solids), securely closed, and protected from damage — <CfrLink r="173.6(b)" /></li>
-                <li><strong>Non-bulk packages</strong> (other than cylinders) must be marked with common name or proper shipping name, plus "RQ" if a reportable quantity — <CfrLink r="173.6(c)" /></li>
-                <li><strong>DOT spec cylinders</strong> (except DOT-39) must be marked and labeled as prescribed by the HMR — <CfrLink r="173.6(c)" /></li>
-                <li><strong>Gasoline</strong> containers must be metal or plastic conforming to HMR or OSHA 29 CFR 1910.106 — <CfrLink r="173.6(b)" /></li>
-                <li><strong>Driver must be informed</strong> of the presence of the HM and the requirements of 173.6 — <CfrLink r="173.6(c)" /></li>
-                <li>Aggregate gross weight of ALL MOT on the vehicle: <strong>max 440 lbs (200 kg)</strong> — <CfrLink r="173.6(d)" /></li>
-              </ul>
-              <InfoBox color="green">
-                <strong>Common MOT scenarios:</strong> Pest control (pesticides/fumigants in small containers), HVAC/plumbing (propane/acetylene cylinders), pool service (chlorine), agriculture (small quantities of fertilizer/pesticide), painting (flammable paints/solvents), cleaning services (corrosive cleaners).
-              </InfoBox>
-              <InfoBox color="amber">
-                <strong>Even when MOT applies, still check:</strong> Is the packaging intact and not leaking? Is the package marked with a common name or proper shipping name? Are cylinders properly marked/labeled? Does the total MOT weight stay under 440 lbs? Are any PIH, self-reactive, or hazardous waste materials mixed in (which would NOT qualify)?
-              </InfoBox>
-            </ResultBox>
-          )}
+          {/* FINAL SUMMARY — shown when all questions answered */}
+          {allDone && (
+            <div className={`rounded-xl border-2 p-4 space-y-2 ${qualifies ? "border-emerald-400 bg-emerald-50" : "border-red-400 bg-red-50"}`} data-testid="mot-result">
+              <p className={`text-[14px] font-bold ${qualifies ? "text-emerald-700" : "text-red-700"}`}>
+                {qualifies ? "This likely qualifies as Materials of Trade (MOT)" : `Does NOT fully qualify — ${issues.length} issue${issues.length > 1 ? "s" : ""} found`}
+              </p>
 
-          {currentQ === "not_mot_purpose" && (
-            <ResultBox title="Does NOT qualify as Materials of Trade" compliant={false}>
-              <p>The material must be carried for the <strong>direct support of a principal business other than transportation</strong>. If the primary purpose is to transport the HM as cargo (e.g., a delivery), the MOT exception does not apply.</p>
-              <InfoBox color="amber">
-                <strong>Key distinction:</strong> A plumber carrying a propane torch to a job site = MOT. A propane delivery company delivering cylinders to customers = NOT MOT (transportation IS the principal business).
-              </InfoBox>
-              <p>This shipment must comply with all applicable HMR requirements. However, <strong>check these other exceptions</strong> that may still reduce requirements:</p>
-              <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
-                <li><strong>Limited Quantity</strong> — Column 8A of 172.101 and <CfrLink r="172.315" /></li>
-                <li><strong>Small Quantity</strong> — <CfrLink r="173.4" /></li>
-                <li><strong>Agricultural operations</strong> — <CfrLink r="173.5" /></li>
-                <li><strong>Consumer Commodity</strong> — <CfrLink r="173.150" /></li>
-              </ul>
-            </ResultBox>
-          )}
-
-          {currentQ === "not_mot_quantity" && (
-            <ResultBox title="Does NOT qualify — exceeds quantity limits" compliant={false}>
-              <p>The quantity of material exceeds the per-package limits in <CfrLink r="173.6(a)" />, or the total aggregate gross weight of all MOT materials on the vehicle exceeds <strong>440 lbs (200 kg)</strong> per <CfrLink r="173.6(d)" />.</p>
-              <p>This shipment must comply with all applicable HMR requirements. However, <strong>check these other exceptions</strong> that allow larger quantities with reduced requirements:</p>
-              <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
-                <li><strong>Limited Quantity</strong> — higher quantity thresholds, reduced marking/labeling/placarding — Column 8A of <CfrLink r="172.101" /> and <CfrLink r="173.150" /> through <CfrLink r="173.155" /></li>
-                <li><strong>Agricultural operations</strong> — special exceptions for farm materials — <CfrLink r="173.5" /></li>
-                <li><strong>Non-spec intrastate</strong> — some intrastate packagings may qualify — <CfrLink r="173.8" /></li>
-              </ul>
-            </ResultBox>
-          )}
-
-          {currentQ === "not_mot_packaging" && (
-            <ResultBox title="Does NOT qualify — packaging issue" compliant={false}>
-              <p>MOT materials must be in packaging that is authorized by the HMR for that specific material, or a non-bulk package that is: properly closed, secured against movement, protected from damage, and does not leak under normal transport conditions.</p>
-              <p>Correct the packaging issue before transport, or comply with full HMR requirements.</p>
-              <InfoBox color="amber">
-                <strong>Check for packaging exceptions:</strong> Even if MOT doesn't apply, the material may qualify for reduced packaging under <strong>Limited Quantity</strong> (Column 8A of <CfrLink r="172.101" />) or <strong>non-spec intrastate</strong> (<CfrLink r="173.8" />). Also check Column 7 special provisions (<CfrLink r="172.102" />) for material-specific packaging alternatives.
-              </InfoBox>
-            </ResultBox>
+              {qualifies ? (
+                <div className="text-[11px] leading-relaxed text-[#334155] space-y-1.5">
+                  <p>Based on your answers, this shipment appears to meet all <CfrLink r="173.6" /> criteria.</p>
+                  <p><strong>What is EXEMPT:</strong></p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    <li>Shipping papers — <CfrLink r="172.200" label="Subpart C" /></li>
+                    <li>Placarding — <CfrLink r="172.500" label="Subpart F" /></li>
+                    <li>Emergency response information — <CfrLink r="172.600" label="Subpart G" /></li>
+                    <li>HM employee training — <CfrLink r="172.700" label="Subpart H" /></li>
+                  </ul>
+                  <InfoBox color="green">
+                    <strong>Common MOT scenarios:</strong> Pest control (pesticides), HVAC/plumbing (propane/acetylene), pool service (chlorine), agriculture (fertilizer/pesticide), painting (flammable solvents), cleaning services (corrosive cleaners).
+                  </InfoBox>
+                </div>
+              ) : (
+                <div className="text-[11px] leading-relaxed text-[#334155] space-y-1.5">
+                  <p>The MOT exception under <CfrLink r="173.6" /> does not fully apply due to the following:</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {issues.map((q) => (
+                      <li key={q.id} className="text-red-800"><strong>{q.failTitle}</strong></li>
+                    ))}
+                  </ul>
+                  <p>This shipment must comply with applicable HMR requirements for the areas that failed.</p>
+                  <InfoBox color="amber">
+                    <strong>Check other exceptions that may still apply:</strong>
+                    <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                      <li><strong>Limited Quantity</strong> — Column 8A of 172.101 and <CfrLink r="173.150" /> through <CfrLink r="173.155" /></li>
+                      <li><strong>Small Quantity</strong> — <CfrLink r="173.4" /></li>
+                      <li><strong>Agricultural operations</strong> — <CfrLink r="173.5" /></li>
+                      <li><strong>Non-spec intrastate</strong> — <CfrLink r="173.8" /></li>
+                    </ul>
+                  </InfoBox>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Reset */}
-          {Object.keys(answers).length > 0 && (
+          {answered.length > 0 && (
             <button onClick={reset} className="flex items-center gap-1.5 text-[10px] text-[#94A3B8] hover:text-[#002855] transition-colors" data-testid="mot-reset">
               <RotateCcw className="w-3 h-3" /> Start over
             </button>
