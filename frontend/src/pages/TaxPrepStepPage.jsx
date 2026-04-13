@@ -729,7 +729,9 @@ const TaxPrepStepPage = () => {
                   variant="outline"
                   onClick={async () => {
                     try {
-                      const response = await fetch(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=pdf`);
+                      const response = await fetch(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=pdf`, {
+                        headers: getAuthHeader()
+                      });
                       if (response.ok) {
                         const blob = await response.blob();
                         const file = new File([blob], `tax_summary_${selectedYear}.pdf`, { type: 'application/pdf' });
@@ -752,7 +754,7 @@ const TaxPrepStepPage = () => {
                           document.body.removeChild(a);
                         }
                       } else {
-                        alert('Failed to download PDF');
+                        alert('Failed to download PDF - please try again');
                       }
                     } catch (error) {
                       console.error('Download error:', error);
@@ -776,7 +778,9 @@ const TaxPrepStepPage = () => {
                   variant="outline"
                   onClick={async () => {
                     try {
-                      const response = await fetch(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=csv`);
+                      const response = await fetch(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=csv`, {
+                        headers: getAuthHeader()
+                      });
                       if (response.ok) {
                         const blob = await response.blob();
                         const file = new File([blob], `tax_summary_${selectedYear}.csv`, { type: 'text/csv' });
@@ -799,7 +803,7 @@ const TaxPrepStepPage = () => {
                           document.body.removeChild(a);
                         }
                       } else {
-                        alert('Failed to download CSV');
+                        alert('Failed to download CSV - please try again');
                       }
                     } catch (error) {
                       console.error('Download error:', error);
@@ -815,6 +819,54 @@ const TaxPrepStepPage = () => {
                     Tax Summary (Schedule C)
                   </span>
                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">CSV</span>
+                </Button>
+                
+                <Button 
+                  className="w-full justify-between" 
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(`${API_URL}/api/financials/tax-summary/${selectedYear}/download?format=zip`, {
+                        headers: getAuthHeader()
+                      });
+                      if (response.ok) {
+                        const blob = await response.blob();
+                        const file = new File([blob], `tax_package_${selectedYear}.zip`, { type: 'application/zip' });
+                        
+                        // Try native share if available (iOS/mobile)
+                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                          await navigator.share({
+                            files: [file],
+                            title: `Tax Package ${selectedYear}`,
+                          });
+                        } else {
+                          // Fallback for desktop/web
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `tax_package_${selectedYear}.zip`;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        }
+                      } else {
+                        alert('Failed to download package - please try again');
+                      }
+                    } catch (error) {
+                      console.error('Download error:', error);
+                      if (error.name !== 'AbortError') {
+                        alert('Failed to download package');
+                      }
+                    }
+                  }}
+                  data-testid="download-tax-package"
+                >
+                  <span className="flex items-center gap-2">
+                    <Download className="w-4 h-4" />
+                    Complete Tax Package
+                  </span>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">ZIP</span>
                 </Button>
               </div>
             </div>
