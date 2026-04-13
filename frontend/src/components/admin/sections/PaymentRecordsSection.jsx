@@ -913,23 +913,15 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       )}
 
       {/* Employee Picker Modal */}
-      <AnimatePresence>
-        {showEmployeePicker && createPortal(
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
-            onClick={() => setShowEmployeePicker(false)}
+      {showEmployeePicker && createPortal(
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
+          onClick={() => setShowEmployeePicker(false)}
+        >
+          <div
+            className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[70vh] overflow-hidden shadow-xl"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[70vh] overflow-hidden shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
               <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-purple-50">
                 <h3 className="font-semibold text-purple-900">Select Employee</h3>
                 <button onClick={() => setShowEmployeePicker(false)} className="p-1 hover:bg-purple-100 rounded">
@@ -985,87 +977,78 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                   <div className="p-4 text-center text-gray-500">No employees match your search</div>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Consignment Client Picker Modal */}
-      <AnimatePresence>
-        {showClientPicker && createPortal(
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
-            onClick={() => setShowClientPicker(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[70vh] overflow-hidden shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-emerald-50">
-                <h3 className="font-semibold text-emerald-900">Select Consignment Client</h3>
-                <button onClick={() => setShowClientPicker(false)} className="p-1 hover:bg-emerald-100 rounded">
-                  <X className="w-5 h-5 text-emerald-600" />
-                </button>
-              </div>
-              <div className="p-3 border-b border-gray-100">
-                <Input
-                  type="text"
-                  placeholder="Search clients..."
-                  value={pickerSearch}
-                  onChange={(e) => setPickerSearch(e.target.value)}
-                  className="h-9"
-                  autoFocus
-                />
-              </div>
-              <div className="overflow-y-auto max-h-[50vh]">
-                {consignmentClients.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500">Loading clients...</div>
-                ) : (
-                  consignmentClients
-                    .filter(client => 
-                      client.full_name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
-                      client.email?.toLowerCase().includes(pickerSearch.toLowerCase())
-                    )
-                    .map((client, index) => (
-                      <button
-                        key={`picker-client-${index}`}
-                        onClick={() => {
-                          setCheckUploadData({
-                            ...checkUploadData,
-                            consignment_client_email: client.email,
-                            employee_name: client.full_name
-                          });
-                          setShowClientPicker(false);
-                        }}
-                        className="w-full px-4 py-3 text-left hover:bg-emerald-50 border-b border-gray-100 last:border-b-0"
-                      >
-                        <div className="font-medium text-gray-900">{client.full_name}</div>
-                        <div className="text-xs text-gray-500 flex justify-between">
-                          <span>{client.email}</span>
-                          <span className="text-emerald-600">{client.payment_method || "No payment method"}</span>
-                        </div>
-                      </button>
-                    ))
-                )}
-                {consignmentClients.length > 0 && consignmentClients.filter(client => 
-                  client.full_name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
-                  client.email?.toLowerCase().includes(pickerSearch.toLowerCase())
-                ).length === 0 && (
-                  <div className="p-4 text-center text-gray-500">No clients match your search</div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>,
+            </div>
+          </div>,
           document.body
         )}
-      </AnimatePresence>
+
+      {/* Consignment Client Picker Modal */}
+      {showClientPicker && createPortal(
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
+          onClick={() => setShowClientPicker(false)}
+        >
+          <div
+            className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[70vh] overflow-hidden shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-emerald-50">
+              <h3 className="font-semibold text-emerald-900">Select Consignment Client</h3>
+              <button onClick={() => setShowClientPicker(false)} className="p-1 hover:bg-emerald-100 rounded">
+                <X className="w-5 h-5 text-emerald-600" />
+              </button>
+            </div>
+            <div className="p-3 border-b border-gray-100">
+              <Input
+                type="text"
+                placeholder="Search clients..."
+                value={pickerSearch}
+                onChange={(e) => setPickerSearch(e.target.value)}
+                className="h-9"
+                autoFocus
+              />
+            </div>
+            <div className="overflow-y-auto max-h-[50vh]">
+              {consignmentClients.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">Loading clients...</div>
+              ) : (
+                consignmentClients
+                  .filter(client => 
+                    client.full_name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                    client.email?.toLowerCase().includes(pickerSearch.toLowerCase())
+                  )
+                  .map((client, index) => (
+                    <button
+                      key={`picker-client-${index}`}
+                      onClick={() => {
+                        setCheckUploadData({
+                          ...checkUploadData,
+                          consignment_client_email: client.email,
+                          employee_name: client.full_name
+                        });
+                        setShowClientPicker(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-emerald-50 border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="font-medium text-gray-900">{client.full_name}</div>
+                      <div className="text-xs text-gray-500 flex justify-between">
+                        <span>{client.email}</span>
+                        <span className="text-emerald-600">{client.payment_method || "No payment method"}</span>
+                      </div>
+                    </button>
+                  ))
+              )}
+              {consignmentClients.length > 0 && consignmentClients.filter(client => 
+                client.full_name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                client.email?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).length === 0 && (
+                <div className="p-4 text-center text-gray-500">No clients match your search</div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 }

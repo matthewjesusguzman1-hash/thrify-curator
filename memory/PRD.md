@@ -77,6 +77,11 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Testing: 100% pass (19/19 tests)
 
 ### In Progress / Pending User Verification
+- **Payment Records Pickers Fixed (Apr 13, 2026)**: FIXED - Employee and Consignment Client picker modals were causing a React error ("Target container is not a DOM element") when opened. The issue was `AnimatePresence` combined with `createPortal` not playing well together. Fixed by:
+  1. Removing `AnimatePresence` wrapper from the picker modals
+  2. Using plain `div` elements instead of `motion.div` for the portals
+  3. Both Employee Picker and Consignment Client Picker now work correctly on mobile
+  4. Modal opens, displays list of available employees/clients, and selection correctly populates the form
 - **GPS Bounce-Back Fix (Apr 7, 2026)**: IMPLEMENTED - Added robust bounce-back detection that:
   1. Tracks the start point and maximum distance traveled
   2. Rejects any point that jumps back more than 50% of the furthest distance reached
