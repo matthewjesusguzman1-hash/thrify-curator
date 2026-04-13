@@ -211,9 +211,17 @@ export default function EmployeePortalViewModal({
                 <div className="h-1 bg-gradient-to-r from-[#FF1493] to-[#E91E8C]" />
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-playfair text-lg font-semibold text-[#333]">Current Pay Period</h3>
+                    <h3 className="font-playfair text-lg font-semibold text-[#333]">
+                      {portalData.summary?.is_previous_period ? 'Previous Pay Period' : 'Current Pay Period'}
+                    </h3>
                     <span className="text-sm text-[#888]">
                       {(() => {
+                        // Use the period dates from the API response if available
+                        if (portalData.summary?.period_start && portalData.summary?.period_end) {
+                          const start = new Date(portalData.summary.period_start);
+                          const end = new Date(portalData.summary.period_end);
+                          return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                        }
                         const period = calculateBiweeklyPeriod();
                         if (period) {
                           return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
@@ -244,6 +252,18 @@ export default function EmployeePortalViewModal({
                     <span className="mx-2">•</span>
                     {formatHoursToHMS(portalData.summary?.period_hours)} × ${portalData.summary?.hourly_rate?.toFixed(2) || '15.00'} = ${(roundHoursToMinute(portalData.summary?.period_hours || 0) * (portalData.summary?.hourly_rate || 15)).toFixed(2)}
                   </div>
+                  {/* YTD Paid */}
+                  {portalData.summary?.ytd_paid > 0 && (
+                    <div className="mt-4 pt-4 border-t border-[#eee] flex items-center justify-between">
+                      <span className="text-sm text-[#888]">Year-to-Date Paid:</span>
+                      <span className="font-semibold text-[#333]">
+                        ${portalData.summary.ytd_paid.toFixed(2)}
+                        <span className="text-xs text-[#888] font-normal ml-1">
+                          ({portalData.summary.ytd_payment_count} payment{portalData.summary.ytd_payment_count !== 1 ? 's' : ''})
+                        </span>
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -253,6 +273,15 @@ export default function EmployeePortalViewModal({
                 <div className="p-6">
                   <h3 className="font-playfair text-lg font-semibold text-[#333] mb-4">
                     {(() => {
+                      // Use the period dates from the API response
+                      if (portalData.summary?.period_start && portalData.summary?.period_end) {
+                        const start = new Date(portalData.summary.period_start);
+                        const end = new Date(portalData.summary.period_end);
+                        const prefix = portalData.summary?.is_previous_period ? 'Previous' : 'Current';
+                        return `${prefix} Pay Period Shifts (${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+                      }
+                      
+                      // Fallback to calculating period locally
                       const entries = portalData.entries || [];
                       const period = calculateBiweeklyPeriod();
                       if (!period) return "Recent Shifts";
@@ -276,30 +305,28 @@ export default function EmployeePortalViewModal({
                   </h3>
                   {(() => {
                     const entries = portalData.entries || [];
-                    const period = calculateBiweeklyPeriod();
+                    
+                    // Use the period from API response
+                    let periodStart, periodEnd;
+                    if (portalData.summary?.period_start && portalData.summary?.period_end) {
+                      periodStart = new Date(portalData.summary.period_start);
+                      periodEnd = new Date(portalData.summary.period_end);
+                    } else {
+                      const period = calculateBiweeklyPeriod();
+                      if (period) {
+                        periodStart = period.start;
+                        periodEnd = period.end;
+                      }
+                    }
+                    
                     let shiftsToShow = [];
                     
-                    if (period) {
-                      // Get current period entries
-                      const currentPeriodEntries = entries.filter(entry => {
+                    if (periodStart && periodEnd) {
+                      // Filter entries for the period from API
+                      shiftsToShow = entries.filter(entry => {
                         const clockIn = new Date(entry.clock_in);
-                        return clockIn >= period.start && clockIn <= period.end;
+                        return clockIn >= periodStart && clockIn <= periodEnd;
                       });
-                      
-                      if (currentPeriodEntries.length > 0) {
-                        shiftsToShow = currentPeriodEntries;
-                      } else {
-                        // Get previous period entries
-                        const prevStart = new Date(period.start);
-                        prevStart.setDate(prevStart.getDate() - 14);
-                        const prevEnd = new Date(period.end);
-                        prevEnd.setDate(prevEnd.getDate() - 14);
-                        
-                        shiftsToShow = entries.filter(entry => {
-                          const clockIn = new Date(entry.clock_in);
-                          return clockIn >= prevStart && clockIn <= prevEnd;
-                        });
-                      }
                     } else {
                       shiftsToShow = entries.slice(0, 5);
                     }

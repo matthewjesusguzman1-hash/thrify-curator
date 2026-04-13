@@ -262,45 +262,85 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
-    # Use the consistent biweekly period helper
-    period_start, period_end = get_biweekly_period(period_index=0)
-    
-    # Ensure timezone awareness
-    if period_start.tzinfo is None:
-        period_start = period_start.replace(tzinfo=timezone.utc)
-    if period_end.tzinfo is None:
-        period_end = period_end.replace(tzinfo=timezone.utc)
-    
     settings = await db.payroll_settings.find_one({}, {"_id": 0})
     
     entries = await db.time_entries.find({
         "user_id": employee_id
     }, {"_id": 0}).to_list(500)
     
-    period_hours = 0
-    period_shifts = 0
-    total_hours = 0
+    total_hours = sum(entry.get("total_hours", 0) or 0 for entry in entries)
     total_shifts = len(entries)
     
-    for entry in entries:
-        hours = entry.get("total_hours", 0) or 0
-        total_hours += hours
+    # Helper function to filter entries by period
+    def get_entries_for_period(start, end):
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
         
-        clock_in = entry.get("clock_in", "")
-        if clock_in:
-            try:
-                entry_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
-                if entry_time.tzinfo is None:
-                    entry_time = entry_time.replace(tzinfo=timezone.utc)
-                if period_start <= entry_time <= period_end:
-                    period_hours += hours
-                    period_shifts += 1
-            except (ValueError, TypeError):
-                pass
+        period_hours = 0
+        period_shifts = 0
+        
+        for entry in entries:
+            clock_in = entry.get("clock_in", "")
+            if clock_in:
+                try:
+                    entry_time = datetime.fromisoformat(clock_in.replace('Z', '+00:00'))
+                    if entry_time.tzinfo is None:
+                        entry_time = entry_time.replace(tzinfo=timezone.utc)
+                    if start <= entry_time <= end:
+                        period_hours += entry.get("total_hours", 0) or 0
+                        period_shifts += 1
+                except (ValueError, TypeError):
+                    pass
+        
+        return period_hours, period_shifts, start, end
+    
+    # Get current period
+    current_period_start, current_period_end = get_biweekly_period(period_index=0)
+    current_hours, current_shifts, _, _ = get_entries_for_period(current_period_start, current_period_end)
+    
+    # If current period has no hours, use previous period instead
+    if current_hours == 0 and current_shifts == 0:
+        prev_period_start, prev_period_end = get_biweekly_period(period_index=-1)
+        period_hours, period_shifts, period_start, period_end = get_entries_for_period(prev_period_start, prev_period_end)
+        is_previous_period = True
+    else:
+        period_hours = current_hours
+        period_shifts = current_shifts
+        period_start = current_period_start
+        period_end = current_period_end
+        is_previous_period = False
     
     hourly_rate = employee.get("hourly_rate")
     if not hourly_rate:
         hourly_rate = settings.get("default_hourly_rate", 15.0) if settings else 15.0
+    
+    # Get YTD actual payments from payment records
+    today = datetime.now(timezone.utc)
+    year_start = today.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    employee_name = employee.get("name", "")
+    
+    ytd_paid = 0.0
+    ytd_payment_count = 0
+    
+    payment_records = await db.payroll_check_records.find(
+        {"payment_type": {"$in": ["employee", None]}},
+        {"_id": 0, "amount": 1, "check_date": 1, "employee_name": 1}
+    ).to_list(1000)
+    
+    for record in payment_records:
+        record_name = (record.get("employee_name") or "").strip().lower()
+        if record_name == employee_name.strip().lower():
+            check_date_str = record.get("check_date", "")
+            if check_date_str:
+                try:
+                    check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                    if check_date >= year_start:
+                        ytd_paid += record.get("amount", 0) or 0
+                        ytd_payment_count += 1
+                except (ValueError, TypeError):
+                    pass
     
     return {
         "period_hours": round(period_hours, 2),
@@ -310,7 +350,10 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
         "hourly_rate": hourly_rate,
         "estimated_pay": round(period_hours * hourly_rate, 2),
         "period_start": period_start.isoformat(),
-        "period_end": period_end.isoformat()
+        "period_end": period_end.isoformat(),
+        "is_previous_period": is_previous_period,
+        "ytd_paid": round(ytd_paid, 2),
+        "ytd_payment_count": ytd_payment_count
     }
 
 

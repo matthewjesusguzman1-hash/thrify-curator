@@ -77,6 +77,12 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Testing: 100% pass (19/19 tests)
 
 ### In Progress / Pending User Verification
+- **Admin Employee Portal View - Pay Period Summary Fix (Apr 13, 2026)**: FIXED - The Employee Portal View (accessed from Admin Dashboard → Team Management → View Portal) was showing 0 hours even when there were shifts in the period. This was because the backend was only checking the current period (Apr 13-26) but the shifts were in the previous period (Mar 30 - Apr 12). Fixed by:
+  1. Backend `/api/admin/employee/{id}/summary` now falls back to previous period if current period has no hours
+  2. Returns `is_previous_period: true/false` flag and correct period dates
+  3. Returns `ytd_paid` and `ytd_payment_count` from payment records
+  4. Frontend now displays "Previous Pay Period" label when showing previous period data
+  5. Shifts section uses the correct period dates from the API response
 - **Pay Period Label Fix (Apr 13, 2026)**: FIXED - When no hours exist in the current pay period, the Employee Dashboard now shows "Previous Pay Period" instead of "Current Pay Period". Also added Year-to-Date (YTD) paid amount display that pulls from actual payment records.
 - **Payment Records Pickers Fixed (Apr 13, 2026)**: FIXED - Employee and Consignment Client picker modals were causing a React error ("Target container is not a DOM element") when opened. The issue was `AnimatePresence` combined with `createPortal` not playing well together. Fixed by:
   1. Removing `AnimatePresence` wrapper from the picker modals
