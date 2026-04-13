@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { X, Download, Share2, Loader2 } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { X, Share2, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { toast } from "sonner";
@@ -10,75 +10,98 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
   const contentRef = useRef(null);
   const [generating, setGenerating] = useState(false);
 
-  const generatePDF = async () => {
+  const generatePDF = useCallback(async () => {
     if (!contentRef.current) return null;
     setGenerating(true);
     try {
-      const canvas = await html2canvas(contentRef.current, {
+      // Force a small delay to ensure rendering is complete
+      await new Promise((r) => setTimeout(r, 300));
+
+      const el = contentRef.current;
+      const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         logging: false,
         backgroundColor: "#ffffff",
-        windowWidth: 900,
-        width: contentRef.current.scrollWidth,
-        height: contentRef.current.scrollHeight,
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        onclone: (doc) => {
+          // Ensure cloned element is fully visible
+          const cloned = doc.querySelector('[data-pdf-content]');
+          if (cloned) {
+            cloned.style.overflow = 'visible';
+            cloned.style.height = 'auto';
+          }
+        }
       });
-      const imgData = canvas.toDataURL("image/png");
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
       const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 190;
-      const pageHeight = 277;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
+      const pdfHeight = pdf.internal.pageSize.getHeight() - 20;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      let y = 10;
       let heightLeft = imgHeight;
-      let position = 10;
 
-      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      // First page
+      pdf.addImage(imgData, "JPEG", 10, y, pdfWidth, imgHeight);
+      heightLeft -= pdfHeight;
 
+      // Additional pages
       while (heightLeft > 0) {
-        position = -(pageHeight - 10) * (Math.ceil(imgHeight / pageHeight) - Math.ceil(heightLeft / pageHeight));
         pdf.addPage();
-        pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        y = 10 - (imgHeight - heightLeft);
+        pdf.addImage(imgData, "JPEG", 10, y, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
       }
+
       return pdf;
     } catch (err) {
       console.error("PDF generation failed:", err);
-      toast.error("Failed to generate PDF");
+      toast.error("PDF generation failed. Try again.");
       return null;
     } finally {
       setGenerating(false);
     }
-  };
+  }, []);
 
   const handleSave = async () => {
     const pdf = await generatePDF();
     if (!pdf) return;
-    const blob = pdf.output("blob");
-    const pdfFile = new File([blob], `${filename || "report"}.pdf`, { type: "application/pdf" });
 
-    // On mobile with Web Share API, use share so user can pick "Save to Files" / "Save to Photos" / AirDrop etc.
-    if (navigator.share && navigator.canShare?.({ files: [pdfFile] })) {
+    const pdfBlob = pdf.output("blob");
+    const pdfFilename = `${filename || "report"}.pdf`;
+
+    // Try Web Share API first (works best on iOS for "Save to Files")
+    if (navigator.share) {
       try {
-        await navigator.share({ files: [pdfFile], title: title || "Report" });
-        return;
+        const file = new File([pdfBlob], pdfFilename, { type: "application/pdf" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: title || "Report" });
+          return;
+        }
       } catch (err) {
         if (err.name === "AbortError") return;
-        // Fall through to download
+        // Fall through to blob download
       }
     }
 
-    // Desktop / fallback: direct download via blob URL
-    const url = URL.createObjectURL(blob);
+    // Fallback: create blob URL and trigger download
+    const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${filename || "report"}.pdf`;
+    a.download = pdfFilename;
     a.style.display = "none";
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }, 200);
+    }, 500);
     toast.success("PDF downloaded");
   };
 
@@ -95,12 +118,17 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
 
         {/* Scrollable preview */}
         <div className="flex-1 overflow-y-auto bg-[#E5E7EB] p-3 sm:p-4">
-          <div ref={contentRef} className="bg-white rounded-lg shadow-sm mx-auto" style={{ maxWidth: 700, padding: "20px 16px", fontFamily: "'IBM Plex Sans', Arial, sans-serif", fontSize: 13, color: "#0F172A", lineHeight: 1.5 }}>
+          <div
+            ref={contentRef}
+            data-pdf-content="true"
+            className="bg-white rounded-lg shadow-sm mx-auto"
+            style={{ maxWidth: 700, padding: "20px 16px", fontFamily: "'IBM Plex Sans', Arial, sans-serif", fontSize: 13, color: "#0F172A", lineHeight: 1.6 }}
+          >
             {children}
           </div>
         </div>
 
-        {/* Single save/share button */}
+        {/* Save button */}
         <div className="flex-shrink-0 border-t px-4 py-3 pb-6 bg-white">
           <Button onClick={handleSave} disabled={generating} className="w-full bg-[#002855] text-white hover:bg-[#001a3a] h-11 text-sm font-semibold" data-testid="pdf-save-btn">
             {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Share2 className="w-4 h-4 mr-2" />}
