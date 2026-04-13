@@ -965,7 +965,17 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                           });
                           setShowEmployeePicker(false);
                         }}
-                        className="w-full px-4 py-3 text-left hover:bg-purple-50 border-b border-gray-100 last:border-b-0 flex justify-between items-center"
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          setCheckUploadData({
+                            ...checkUploadData,
+                            employee_name: employee.name,
+                            employee_email: employee.email
+                          });
+                          setShowEmployeePicker(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-purple-50 active:bg-purple-100 border-b border-gray-100 last:border-b-0 flex justify-between items-center"
+                        style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
                       >
                         <div>
                           <div className="font-medium text-gray-900">{employee.name}</div>

@@ -63,14 +63,14 @@ export default function PayrollSummaryCard({
                     <p className="text-2xl font-bold text-[#22c55e]">
                       {formatCurrency(payrollSummary?.current_period?.amount)}
                     </p>
-                    <p className="text-sm text-[#666]">Current Pay Period</p>
+                    <p className="text-sm text-[#666]">Wages Owed</p>
                     <p className="text-xs text-[#888]">
-                      {payrollSummary?.current_period?.hours?.toFixed(1) || 0} hrs worked
+                      {payrollSummary?.current_period?.hours?.toFixed(1) || 0} hrs worked this period
                     </p>
                   </div>
                 </div>
                 <p className="text-xs text-[#888] mt-2">
-                  {formatPeriodDates(payrollSummary?.current_period?.start, payrollSummary?.current_period?.end)}
+                  Pay Period: {formatPeriodDates(payrollSummary?.current_period?.start, payrollSummary?.current_period?.end)}
                 </p>
               </div>
 
@@ -84,7 +84,7 @@ export default function PayrollSummaryCard({
                     <p className="text-2xl font-bold text-[#ec4899]">
                       {formatCurrency(payrollSummary?.month_total)}
                     </p>
-                    <p className="text-sm text-[#666]">This Month</p>
+                    <p className="text-sm text-[#666]">Owed This Month</p>
                     <p className="text-xs text-[#888]">
                       {new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}
                     </p>
@@ -102,7 +102,7 @@ export default function PayrollSummaryCard({
                     <p className="text-2xl font-bold text-[#C5A065]">
                       {formatCurrency(payrollSummary?.year_total)}
                     </p>
-                    <p className="text-sm text-[#666]">This Year</p>
+                    <p className="text-sm text-[#666]">Owed This Year</p>
                     <p className="text-xs text-[#888]">{new Date().getFullYear()} Total</p>
                   </div>
                 </div>
