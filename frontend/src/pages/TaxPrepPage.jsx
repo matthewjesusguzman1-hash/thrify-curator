@@ -52,7 +52,7 @@ const TaxPrepPage = () => {
       
       const [progressRes, summaryRes] = await Promise.all([
         fetch(`${API_URL}/api/financials/tax-prep/progress/${selectedYear}`, { headers }),
-        fetch(`${API_URL}/api/financials/summary/${selectedYear}`, { headers })
+        fetch(`${API_URL}/api/financials/tax-prep/summary/${selectedYear}`, { headers })
       ]);
       
       if (progressRes.ok) setProgress(await progressRes.json());
