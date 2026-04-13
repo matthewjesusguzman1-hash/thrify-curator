@@ -19,8 +19,8 @@ export function TieDownReportContent({ articles }) {
   const now = new Date().toLocaleString();
   return (
     <div>
-      {/* Compact header */}
-      <div style={{ background: "#002855", color: "white", padding: "10px 14px", borderRadius: 6, marginBottom: 12 }}>
+      {/* Header — its own PDF section */}
+      <div data-pdf-section="header" style={{ background: "#002855", color: "white", padding: "10px 14px", borderRadius: 6, marginBottom: 12 }}>
         <div style={{ fontSize: 16, fontWeight: "bold", margin: 0 }}>Tie-Down Assessment Report</div>
         <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>{now} | {articles.length} article(s) | 49 CFR 393</div>
       </div>
@@ -41,7 +41,7 @@ export function TieDownReportContent({ articles }) {
         const barColor = pct >= 100 ? "#10B981" : pct >= 60 ? "#F59E0B" : "#EF4444";
 
         return (
-          <div key={a.id} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 10, pageBreakInside: "avoid" }}>
+          <div key={a.id} data-pdf-section={`article-${ai}`} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 10 }}>
             {/* Article title + status inline */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <span style={{ fontSize: 13, fontWeight: "bold", color: "#002855" }}>Article {ai + 1}: {a.label}</span>
@@ -148,7 +148,7 @@ export function InspectionReportContent({ inspection }) {
   const now = new Date().toLocaleString();
   return (
     <div>
-      <div style={{ background: "#002855", color: "white", padding: "10px 14px", borderRadius: 6, marginBottom: 12 }}>
+      <div data-pdf-section="insp-header" style={{ background: "#002855", color: "white", padding: "10px 14px", borderRadius: 6, marginBottom: 12 }}>
         <div style={{ fontSize: 16, fontWeight: "bold" }}>{inspection.title || "Inspection Report"}</div>
         <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>Created: {inspection.created_at?.slice(0, 16).replace("T", " ")} | Exported: {now}</div>
       </div>
@@ -160,7 +160,7 @@ export function InspectionReportContent({ inspection }) {
       )}
 
       {inspection.items?.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
+        <div data-pdf-section="violations" style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 13, fontWeight: "bold", color: "#002855", marginBottom: 6, borderBottom: "2px solid #D4AF37", paddingBottom: 4 }}>
             Violations ({inspection.items.length})
           </div>
@@ -193,7 +193,7 @@ export function InspectionReportContent({ inspection }) {
           {inspection.tiedown_assessments.map((a, ai) => {
             const pct = a.required_wll > 0 ? Math.round((a.total_effective_wll / a.required_wll) * 100) : 0;
             return (
-              <div key={a.assessment_id || ai} style={{ border: "1px solid #ddd", borderRadius: 4, padding: 8, marginBottom: 6, pageBreakInside: "avoid" }}>
+              <div key={a.assessment_id || ai} data-pdf-section={`assessment-${ai}`} style={{ border: "1px solid #ddd", borderRadius: 4, padding: 8, marginBottom: 6 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                   <strong style={{ fontSize: 12, color: "#002855" }}>Assessment {ai + 1}</strong>
                   <span style={{ background: a.compliant ? "#ecfdf5" : "#fef2f2", border: `1px solid ${a.compliant ? "#a7f3d0" : "#fecaca"}`, color: a.compliant ? "#10B981" : "#DC2626", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: "bold", display: "inline-block" }}>

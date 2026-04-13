@@ -14,49 +14,56 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
     if (!contentRef.current) return null;
     setGenerating(true);
     try {
-      // Force a small delay to ensure rendering is complete
       await new Promise((r) => setTimeout(r, 300));
 
       const el = contentRef.current;
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-        onclone: (doc) => {
-          // Ensure cloned element is fully visible
-          const cloned = doc.querySelector('[data-pdf-content]');
-          if (cloned) {
-            cloned.style.overflow = 'visible';
-            cloned.style.height = 'auto';
+      const sections = el.querySelectorAll("[data-pdf-section]");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth() - 16;
+      const pdfHeight = pdf.internal.pageSize.getHeight() - 16;
+
+      if (sections.length > 0) {
+        // Render each section on its own page
+        for (let i = 0; i < sections.length; i++) {
+          if (i > 0) pdf.addPage();
+          const canvas = await html2canvas(sections[i], {
+            scale: 2, useCORS: true, allowTaint: true, logging: false,
+            backgroundColor: "#ffffff",
+            width: sections[i].scrollWidth,
+            height: sections[i].scrollHeight,
+          });
+          const imgData = canvas.toDataURL("image/jpeg", 0.92);
+          const imgH = (canvas.height * pdfWidth) / canvas.width;
+
+          if (imgH <= pdfHeight) {
+            // Fits on one page
+            pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth, imgH);
+          } else {
+            // Too tall — scale to fit one page
+            const scale = pdfHeight / imgH;
+            const scaledW = pdfWidth * scale;
+            const offsetX = (pdf.internal.pageSize.getWidth() - scaledW) / 2;
+            pdf.addImage(imgData, "JPEG", offsetX, 8, scaledW, pdfHeight);
           }
         }
-      });
+      } else {
+        // Fallback: capture entire content as one image
+        const canvas = await html2canvas(el, {
+          scale: 2, useCORS: true, allowTaint: true, logging: false,
+          backgroundColor: "#ffffff",
+          width: el.scrollWidth, height: el.scrollHeight,
+        });
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        const imgH = (canvas.height * pdfWidth) / canvas.width;
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.92);
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
-      const pdfHeight = pdf.internal.pageSize.getHeight() - 20;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      let y = 10;
-      let heightLeft = imgHeight;
-
-      // First page
-      pdf.addImage(imgData, "JPEG", 10, y, pdfWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      // Additional pages
-      while (heightLeft > 0) {
-        pdf.addPage();
-        y = 10 - (imgHeight - heightLeft);
-        pdf.addImage(imgData, "JPEG", 10, y, pdfWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        if (imgH <= pdfHeight) {
+          pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth, imgH);
+        } else {
+          const scale = pdfHeight / imgH;
+          const scaledW = pdfWidth * scale;
+          const offsetX = (pdf.internal.pageSize.getWidth() - scaledW) / 2;
+          pdf.addImage(imgData, "JPEG", offsetX, 8, scaledW, pdfHeight);
+        }
       }
 
       return pdf;
@@ -76,7 +83,6 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
     const pdfBlob = pdf.output("blob");
     const pdfFilename = `${filename || "report"}.pdf`;
 
-    // Try Web Share API first (works best on iOS for "Save to Files")
     if (navigator.share) {
       try {
         const file = new File([pdfBlob], pdfFilename, { type: "application/pdf" });
@@ -86,11 +92,9 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
         }
       } catch (err) {
         if (err.name === "AbortError") return;
-        // Fall through to blob download
       }
     }
 
-    // Fallback: create blob URL and trigger download
     const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
     a.href = url;
@@ -98,37 +102,24 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
     a.style.display = "none";
     document.body.appendChild(a);
     a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 500);
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
     toast.success("PDF downloaded");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[700px] w-[95vw] h-[85vh] p-0 gap-0 overflow-hidden flex flex-col rounded-xl" data-testid="pdf-preview-modal">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-[#002855] rounded-t-xl flex-shrink-0">
           <h2 className="text-sm font-semibold text-white truncate pr-2" style={{ fontFamily: "Outfit, sans-serif" }}>{title || "Report Preview"}</h2>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 w-8 p-0 rounded-full text-white/70 hover:text-white hover:bg-white/10 flex-shrink-0">
             <X className="w-4 h-4" />
           </Button>
         </div>
-
-        {/* Scrollable preview */}
         <div className="flex-1 overflow-y-auto bg-[#E5E7EB] p-3 sm:p-4">
-          <div
-            ref={contentRef}
-            data-pdf-content="true"
-            className="bg-white rounded-lg shadow-sm mx-auto"
-            style={{ maxWidth: 700, padding: "20px 16px", fontFamily: "'IBM Plex Sans', Arial, sans-serif", fontSize: 13, color: "#0F172A", lineHeight: 1.6 }}
-          >
+          <div ref={contentRef} data-pdf-content="true" className="bg-white rounded-lg shadow-sm mx-auto" style={{ maxWidth: 700, padding: "20px 16px", fontFamily: "'IBM Plex Sans', Arial, sans-serif", fontSize: 13, color: "#0F172A", lineHeight: 1.6 }}>
             {children}
           </div>
         </div>
-
-        {/* Save button */}
         <div className="flex-shrink-0 border-t px-4 py-3 pb-6 bg-white">
           <Button onClick={handleSave} disabled={generating} className="w-full bg-[#002855] text-white hover:bg-[#001a3a] h-11 text-sm font-semibold" data-testid="pdf-save-btn">
             {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Share2 className="w-4 h-4 mr-2" />}
