@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import InspectionsPage from "./pages/InspectionsPage";
 import InspectionDetail from "./pages/InspectionDetail";
 import TieDownCalculator from "./pages/TieDownCalculator";
+import HazMatWorksheet from "./pages/HazMatWorksheet";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/inspections" element={<InspectionsPage />} />
           <Route path="/inspections/:id" element={<InspectionDetail />} />
           <Route path="/calculator" element={<TieDownCalculator />} />
+          <Route path="/hazmat-worksheet" element={<HazMatWorksheet />} />
         </Routes>
       </BrowserRouter>
     </div>

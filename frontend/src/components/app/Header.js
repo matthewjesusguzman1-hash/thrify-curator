@@ -1,4 +1,4 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, FlaskConical } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -90,6 +90,17 @@ export function Header({ onUploadClick, stats }) {
               </span>
             </div>
           )}
+
+          {/* HazMat Worksheet */}
+          <Button
+            data-testid="hazmat-nav-btn"
+            size="sm"
+            onClick={() => navigate("/hazmat-worksheet")}
+            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm"
+          >
+            <FlaskConical className="w-3.5 h-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">HazMat</span>
+          </Button>
 
           {/* Tie-Down Calculator */}
           <Button
