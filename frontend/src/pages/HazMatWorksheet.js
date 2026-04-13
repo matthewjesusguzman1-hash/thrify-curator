@@ -287,8 +287,16 @@ const QUICK_REF = [
       { ref: "177.834", desc: "General loading requirements" },
       { ref: "177.848", desc: "Segregation of HM" },
     ]},
-    { part: "Part 178", desc: "Specifications for Packagings" },
-    { part: "Part 180", desc: "Qualification & Maintenance of Packagings" },
+    { part: "Part 178", desc: "Specifications for Packagings", sub: [
+      { ref: "178.337", desc: "Cargo tank spec MC331" },
+      { ref: "178.345", desc: "Cargo tank spec DOT 406/407/412" },
+      { ref: "178.700", desc: "UN standard packaging" },
+    ]},
+    { part: "Part 180", desc: "Qualification & Maintenance of Packagings", sub: [
+      { ref: "180.407", desc: "Cargo tank inspection & test" },
+      { ref: "180.205", desc: "Cylinder requalification" },
+      { ref: "180.605", desc: "IBC inspection & test" },
+    ]},
   ]},
 ];
 
@@ -537,7 +545,9 @@ export default function HazMatWorksheet() {
                   <div className="space-y-2">
                     {section.items.map((item, ii) => (
                       <div key={ii} className="bg-[#F8FAFC] rounded-lg p-2.5">
-                        <p className="text-[11px] font-bold text-[#002855]">{item.part} — {item.desc}</p>
+                        <a href={`https://www.ecfr.gov/current/title-49/part-${item.part.match(/\d+/)?.[0]}`} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-[#002855] hover:text-[#D4AF37] hover:underline transition-colors inline-flex items-center gap-1">
+                          {item.part} — {item.desc}<ExternalLink className="w-2.5 h-2.5 opacity-40" />
+                        </a>
                         {item.sub && (
                           <div className="mt-1.5 space-y-0.5 pl-3 border-l-2 border-[#E2E8F0]">
                             {item.sub.map((s, si2) => (
