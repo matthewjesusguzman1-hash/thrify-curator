@@ -113,6 +113,7 @@ const TaxPrepStepPage = () => {
   const [showAddCogs, setShowAddCogs] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddMileage, setShowAddMileage] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
   
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
@@ -519,7 +520,7 @@ const TaxPrepStepPage = () => {
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900 flex items-center gap-2">
                   <Receipt className="w-5 h-5 text-gray-500" />
-                  Expenses by Category
+                  Expenses
                 </h2>
                 <Button 
                   variant="outline" 
@@ -533,21 +534,37 @@ const TaxPrepStepPage = () => {
               
               <div className="p-4">
                 {expenses.entries && expenses.entries.length > 0 ? (
-                  <div className="space-y-2">
-                    {EXPENSE_CATEGORIES.map(({ value, label }) => {
-                      const catData = expenses.by_category[value];
-                      const total = catData?.total || 0;
-                      const count = catData?.count || 0;
-                      
-                      if (total === 0) return null;
-                      
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {expenses.entries.map(entry => {
+                      const categoryLabel = EXPENSE_CATEGORIES.find(c => c.value === entry.category)?.label || entry.category;
                       return (
-                        <div key={value} className="flex items-center justify-between py-2 text-sm border-b border-gray-100 last:border-0">
-                          <div>
-                            <span className="text-gray-900">{label}</span>
-                            <span className="text-gray-500 ml-2">({count})</span>
+                        <div key={entry.id} className="flex items-center justify-between py-2 text-sm border-b border-gray-100 last:border-0">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-900 font-medium">{entry.description || categoryLabel}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {entry.date} • {categoryLabel}
+                            </div>
                           </div>
-                          <span className="font-medium">{formatCurrency(total)}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium text-gray-900">{formatCurrency(entry.amount)}</span>
+                            <button
+                              onClick={() => {
+                                setEditingExpense(entry);
+                                setShowAddExpense(true);
+                              }}
+                              className="text-blue-500 hover:text-blue-700"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => deleteEntry('expense', entry.id)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -859,8 +876,9 @@ const TaxPrepStepPage = () => {
         <AddExpenseModal
           year={selectedYear}
           getAuthHeader={getAuthHeader}
-          onClose={() => setShowAddExpense(false)}
-          onSave={() => { setShowAddExpense(false); fetchData(); }}
+          editingEntry={editingExpense}
+          onClose={() => { setShowAddExpense(false); setEditingExpense(null); }}
+          onSave={() => { setShowAddExpense(false); setEditingExpense(null); fetchData(); }}
         />
       )}
       
@@ -1117,11 +1135,11 @@ const AddCOGSModal = ({ year, getAuthHeader, onClose, onSave }) => {
   );
 };
 
-const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
-  const [category, setCategory] = useState('');
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [description, setDescription] = useState('');
+const AddExpenseModal = ({ year, getAuthHeader, editingEntry, onClose, onSave }) => {
+  const [category, setCategory] = useState(editingEntry?.category || '');
+  const [amount, setAmount] = useState(editingEntry?.amount?.toString() || '');
+  const [date, setDate] = useState(editingEntry?.date || new Date().toISOString().split('T')[0]);
+  const [description, setDescription] = useState(editingEntry?.description || '');
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -1133,8 +1151,13 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
     setSaving(true);
     
     try {
-      const response = await fetch(`${API_URL}/api/financials/expenses`, {
-        method: 'POST',
+      const isEditing = !!editingEntry?.id;
+      const url = isEditing 
+        ? `${API_URL}/api/financials/expenses/${editingEntry.id}`
+        : `${API_URL}/api/financials/expenses`;
+      
+      const response = await fetch(url, {
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify({
           year,
@@ -1155,7 +1178,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">Add Expense</h3>
+        <h3 className="text-lg font-semibold mb-4">{editingEntry ? 'Edit Expense' : 'Add Expense'}</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Category Selection - Button Grid */}
