@@ -95,7 +95,7 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
       try {
         const file = new File([pdfBlob], pdfFilename, { type: "application/pdf" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: title || "Report" });
+          await navigator.share({ files: [file] });
           return;
         }
       } catch (err) {
