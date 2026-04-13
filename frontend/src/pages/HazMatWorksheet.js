@@ -5,6 +5,7 @@ import {
   FileText, Package, Tag, AlertTriangle, Truck, ClipboardCheck, BookOpen,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { PackageClassHelper, MaterialsOfTradeHelper } from "../components/app/HazMatHelpers";
 import { toast } from "sonner";
 
 /* ================================================================
@@ -520,6 +521,15 @@ export default function HazMatWorksheet() {
             </div>
           );
         })}
+
+        {/* INSPECTOR TOOLS */}
+        <div className="pt-2">
+          <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-2 px-1">Inspector Tools</p>
+          <div className="space-y-3">
+            <PackageClassHelper />
+            <MaterialsOfTradeHelper />
+          </div>
+        </div>
 
         {/* QUICK REFERENCE */}
         <div className="bg-white rounded-xl border overflow-hidden" data-testid="quick-reference">
