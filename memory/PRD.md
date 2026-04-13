@@ -20,6 +20,14 @@ FMCSA roadside violation search/filter app with AI-powered search, NSP blue/gold
   - Export all articles to HTML, Save all articles to inspection
   - Direct/Indirect infographic with user's custom images
   - Collapsible sections (WLL table + each category independently), eCFR links
+- **HazMat Inspection Worksheet** (49 CFR, v26.1):
+  - 7-step interactive checklist (113 checkable items) following HM inspection procedure
+  - Collapsible steps with per-step and overall progress bars
+  - Inspector tips with contextual regulatory guidance for field use
+  - Clickable CFR references linking directly to eCFR.gov
+  - Quick Reference section — PHMSA Title 49 Chapter 1 regulation index
+  - localStorage persistence (survives page refreshes)
+  - Reset functionality with confirmation
 
 ## Recent Fixes
 - **PDF Export 2-Page Bug (2026-04-13)**: Fixed single-article PDF reports splitting into 2 pages on iOS. Root cause: `html2canvas` captured in-DOM element with flex-inflated scrollHeight. Fix: off-screen cloned wrappers for accurate content height.
