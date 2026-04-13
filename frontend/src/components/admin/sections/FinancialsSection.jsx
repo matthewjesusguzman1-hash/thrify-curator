@@ -12,7 +12,8 @@ import {
   FileText,
   Trash2,
   Camera,
-  Pencil
+  Pencil,
+  Edit2
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -56,6 +57,8 @@ const FinancialsSection = ({ getAuthHeader }) => {
   
   // Expanded sections
   const [expandedSection, setExpandedSection] = useState(null);
+  const [expandedCategory, setExpandedCategory] = useState(null);
+  const [editingExpense, setEditingExpense] = useState(null);
   
   // Modals
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -549,24 +552,80 @@ const FinancialsSection = ({ getAuthHeader }) => {
                   const catData = expenses.by_category[key];
                   const total = catData?.total || 0;
                   const count = catData?.count || 0;
+                  const categoryEntries = expenses.entries?.filter(e => e.category === key) || [];
+                  const isExpanded = expandedCategory === key;
+                  
+                  if (total === 0) {
+                    return (
+                      <div key={key} className="flex items-center justify-between text-sm py-1">
+                        <div className="flex items-center gap-2">
+                          <span>{icon}</span>
+                          <span className="text-gray-400">{label}</span>
+                        </div>
+                        <span className="text-gray-400">--</span>
+                      </div>
+                    );
+                  }
                   
                   return (
-                    <div key={key} className="flex items-center justify-between text-sm py-1">
-                      <div className="flex items-center gap-2">
-                        <span>{icon}</span>
-                        <span className={total > 0 ? 'text-gray-900' : 'text-gray-400'}>{label}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {total > 0 ? (
-                          <>
-                            <span className="text-gray-500">{count} items</span>
-                            <span className="font-medium w-20 text-right">{formatCurrency(total)}</span>
-                          </>
-                        ) : (
-                          <span className="text-gray-400">--</span>
-                        )}
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                      </div>
+                    <div key={key}>
+                      <button
+                        onClick={() => setExpandedCategory(isExpanded ? null : key)}
+                        className="w-full flex items-center justify-between text-sm py-2 hover:bg-gray-100 rounded px-2 -mx-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                          <span>{icon}</span>
+                          <span className="text-gray-900">{label}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-gray-500">{count} items</span>
+                          <span className="font-medium w-20 text-right">{formatCurrency(total)}</span>
+                        </div>
+                      </button>
+                      
+                      {isExpanded && categoryEntries.length > 0 && (
+                        <div className="ml-8 mt-2 mb-3 space-y-1 bg-white rounded-lg border border-gray-200 p-2">
+                          {categoryEntries.map(entry => (
+                            <div key={entry.id} className="flex items-center justify-between py-2 px-2 text-sm hover:bg-gray-50 rounded">
+                              <div className="flex-1">
+                                <span className="text-gray-900">{entry.description || 'No description'}</span>
+                                <span className="text-gray-500 text-xs ml-2">{entry.date}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="font-medium">{formatCurrency(entry.amount)}</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditingExpense(entry); setShowAddExpense(true); }}
+                                  className="text-blue-500 hover:text-blue-700 p-1"
+                                  title="Edit"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('Delete this expense?')) {
+                                      try {
+                                        await fetch(`${API_URL}/api/financials/expenses/${entry.id}`, {
+                                          method: 'DELETE',
+                                          headers: getAuthHeader()
+                                        });
+                                        fetchData();
+                                      } catch (err) {
+                                        console.error('Error deleting expense:', err);
+                                      }
+                                    }
+                                  }}
+                                  className="text-red-500 hover:text-red-700 p-1"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -587,8 +646,9 @@ const FinancialsSection = ({ getAuthHeader }) => {
         <AddExpenseModal
           year={selectedYear}
           getAuthHeader={getAuthHeader}
-          onClose={() => setShowAddExpense(false)}
-          onSave={() => { setShowAddExpense(false); fetchData(); }}
+          editingEntry={editingExpense}
+          onClose={() => { setShowAddExpense(false); setEditingExpense(null); }}
+          onSave={() => { setShowAddExpense(false); setEditingExpense(null); fetchData(); }}
         />
       )}
 
@@ -814,12 +874,12 @@ const AddIncomeModal = ({ year, getAuthHeader, onClose, onSave }) => {
 };
 
 // Add Expense Modal Component
-const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
-  const [category, setCategory] = useState('shipping_supplies');
+const AddExpenseModal = ({ year, getAuthHeader, editingEntry, onClose, onSave }) => {
+  const [category, setCategory] = useState(editingEntry?.category || 'shipping_supplies');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState(editingEntry?.amount?.toString() || '');
+  const [date, setDate] = useState(editingEntry?.date || new Date().toISOString().split('T')[0]);
+  const [description, setDescription] = useState(editingEntry?.description || '');
   const [saving, setSaving] = useState(false);
   const [receiptImage, setReceiptImage] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
@@ -860,8 +920,13 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
         }
       }
       
-      const response = await fetch(`${API_URL}/api/financials/expenses`, {
-        method: 'POST',
+      const isEditing = !!editingEntry?.id;
+      const url = isEditing 
+        ? `${API_URL}/api/financials/expenses/${editingEntry.id}`
+        : `${API_URL}/api/financials/expenses`;
+      
+      const response = await fetch(url, {
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify({
           year,
@@ -869,7 +934,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
           amount: parseFloat(amount),
           date,
           description,
-          receipt_id: receiptUrl
+          receipt_id: receiptUrl || editingEntry?.receipt_id
         })
       });
       
@@ -894,7 +959,7 @@ const AddExpenseModal = ({ year, getAuthHeader, onClose, onSave }) => {
         className="bg-white rounded-lg max-w-md w-full p-6 max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold mb-4">Add Expense</h3>
+        <h3 className="text-lg font-semibold mb-4">{editingEntry ? 'Edit Expense' : 'Add Expense'}</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Category - Button Grid Picker */}
