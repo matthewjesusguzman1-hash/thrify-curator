@@ -5,8 +5,59 @@ import {
   FileText, Package, Tag, AlertTriangle, Truck, ClipboardCheck, BookOpen,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
 import { PackageClassHelper, MaterialsOfTradeHelper } from "../components/app/HazMatHelpers";
 import { toast } from "sonner";
+
+/* ================================================================
+   HM RESOURCE LINKS
+   ================================================================ */
+const HM_LINKS = [
+  {
+    label: "CVSA OOS Criteria App (iOS)",
+    url: "https://apps.apple.com/us/app/cvsa-out-of-service-criteria/id1424204784",
+    desc: "Full OOS criteria on your device",
+  },
+  {
+    label: "CVSA OOS Criteria App (Android)",
+    url: "https://play.google.com/store/apps/details?id=com.cvsa&hl=en_US",
+    desc: "Full OOS criteria on your device",
+  },
+  {
+    label: "CVSA HM Inspection Bulletins",
+    url: "https://cvsa.org/inspections/inspection-bulletins/",
+    desc: "Current CVSA inspection bulletins",
+  },
+  {
+    label: "eCFR — 49 CFR Part 172",
+    url: "https://www.ecfr.gov/current/title-49/part-172",
+    desc: "HM Table, shipping papers, marking, labeling, placarding",
+  },
+  {
+    label: "eCFR — 49 CFR Part 173",
+    url: "https://www.ecfr.gov/current/title-49/part-173",
+    desc: "Packaging requirements & exceptions",
+  },
+  {
+    label: "eCFR — 49 CFR Part 177",
+    url: "https://www.ecfr.gov/current/title-49/part-177",
+    desc: "Carriage by highway, segregation table",
+  },
+  {
+    label: "PHMSA ERG (Emergency Response)",
+    url: "https://www.phmsa.dot.gov/hazmat/erg/emergency-response-guidebook-erg",
+    desc: "Emergency Response Guidebook",
+  },
+  {
+    label: "FMCSA HM Safety",
+    url: "https://www.fmcsa.dot.gov/safety/hazardous-materials-safety",
+    desc: "FMCSA HazMat safety resources",
+  },
+];
 
 /* ================================================================
    eCFR URL HELPER
@@ -314,7 +365,7 @@ export default function HazMatWorksheet() {
   const [checks, setChecks] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
   });
-  const [openSteps, setOpenSteps] = useState({ 1: true });
+  const [openSteps, setOpenSteps] = useState({});
   const [showRef, setShowRef] = useState(false);
 
   useEffect(() => {
@@ -376,9 +427,32 @@ export default function HazMatWorksheet() {
               <p className="text-[10px] text-[#8FAEC5]">49 CFR — General HM Procedure — v26.1</p>
             </div>
           </div>
-          <Button onClick={resetAll} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="reset-btn">
-            <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-[#D4AF37] hover:text-white hover:bg-white/10 h-8 px-2 text-xs font-bold" data-testid="hm-resources-btn">
+                  Resources
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[280px] p-2" align="end" data-testid="hm-resources-popover">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">HazMat Resources</p>
+                {HM_LINKS.map((link) => (
+                  <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group" data-testid={`hm-link-${link.label.replace(/[\s/()]/g, '-').toLowerCase()}`}>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                        {link.label}
+                        <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855] flex-shrink-0" />
+                      </p>
+                      <p className="text-[10px] text-[#64748B]">{link.desc}</p>
+                    </div>
+                  </a>
+                ))}
+              </PopoverContent>
+            </Popover>
+            <Button onClick={resetAll} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="reset-btn">
+              <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
+            </Button>
+          </div>
         </div>
         <div className="gold-accent h-[2px]" />
       </header>
