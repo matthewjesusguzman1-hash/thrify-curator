@@ -696,13 +696,19 @@ const TaxPrepStepPage = () => {
                   <span className="font-medium">-{formatCurrency(summary.deductions?.total)}</span>
                 </div>
                 <div className="flex justify-between py-2 pl-4 text-sm text-gray-500">
-                  <span>• Mileage ({summary.deductions?.mileage_miles} mi × ${summary.deductions?.mileage_rate})</span>
+                  <span>• Mileage ({summary.deductions?.mileage_miles?.toLocaleString()} mi × ${summary.deductions?.mileage_rate})</span>
                   <span>{formatCurrency(summary.deductions?.mileage)}</span>
                 </div>
                 <div className="flex justify-between py-2 pl-4 text-sm text-gray-500">
                   <span>• Expenses</span>
                   <span>{formatCurrency(summary.deductions?.expenses)}</span>
                 </div>
+                {summary.deductions?.contractor_payments > 0 && (
+                  <div className="flex justify-between py-2 pl-4 text-sm text-gray-500">
+                    <span>• Contractor Payments ({summary.deductions?.contractor_count} issued 1099s)</span>
+                    <span>{formatCurrency(summary.deductions?.contractor_payments)}</span>
+                  </div>
+                )}
                 
                 <div className="flex justify-between py-3 border-t-2 border-gray-300 text-lg">
                   <span className="font-bold text-gray-900">NET PROFIT</span>

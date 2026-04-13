@@ -224,6 +224,10 @@ async def get_tax_prep_summary(year: int):
     cogs_entries = await db.cogs_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
     expense_entries = await db.expense_entries.find({"year": year}, {"_id": 0}).to_list(length=None)
     
+    # Get issued 1099s (payments to contractors) - this is a deduction
+    issued_1099s = await db.issued_1099s.find({"year": year}, {"_id": 0}).to_list(length=None)
+    total_contractor_payments = sum(e.get("amount_paid", 0) for e in issued_1099s)
+    
     # Get mileage from gps_trips (single source of truth)
     start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
     end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
@@ -254,8 +258,10 @@ async def get_tax_prep_summary(year: int):
     mileage_rate = get_irs_mileage_rate(year)
     mileage_deduction = total_miles * mileage_rate
     
-    total_deductions = total_cogs + total_expenses + mileage_deduction
-    net_profit = total_income - total_deductions
+    # Total deductions includes expenses, mileage, AND contractor payments
+    total_deductions = total_expenses + mileage_deduction + total_contractor_payments
+    gross_profit = total_income - total_cogs
+    net_profit = gross_profit - total_deductions
     
     return {
         "year": year,
@@ -267,11 +273,26 @@ async def get_tax_prep_summary(year: int):
             "entries_other": income_other
         },
         "cogs": round(total_cogs, 2),
+        "gross_profit": round(gross_profit, 2),
+        "deductions": {
+            "total": round(total_deductions, 2),
+            "mileage": round(mileage_deduction, 2),
+            "mileage_miles": round(total_miles, 2),
+            "mileage_rate": mileage_rate,
+            "expenses": round(total_expenses, 2),
+            "contractor_payments": round(total_contractor_payments, 2),
+            "contractor_count": len(issued_1099s)
+        },
         "expenses": round(total_expenses, 2),
         "mileage": {
             "total_miles": round(total_miles, 2),
             "rate": mileage_rate,
             "deduction": round(mileage_deduction, 2)
+        },
+        "contractor_payments": {
+            "total": round(total_contractor_payments, 2),
+            "count": len(issued_1099s),
+            "entries": issued_1099s
         },
         "total_deductions": round(total_deductions, 2),
         "net_profit": round(net_profit, 2)
