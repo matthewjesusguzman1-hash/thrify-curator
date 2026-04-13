@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../components/ui/popover";
-import { PackageClassHelper, MaterialsOfTradeHelper } from "../components/app/HazMatHelpers";
+import { PackageClassHelper, MaterialsOfTradeHelper, SegregationTable } from "../components/app/HazMatHelpers";
 import { toast } from "sonner";
 
 /* ================================================================
@@ -602,6 +602,7 @@ export default function HazMatWorksheet() {
           <div className="space-y-3">
             <PackageClassHelper />
             <MaterialsOfTradeHelper />
+            <SegregationTable />
           </div>
         </div>
 

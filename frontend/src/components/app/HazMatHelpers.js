@@ -497,3 +497,226 @@ export function MaterialsOfTradeHelper() {
     </div>
   );
 }
+
+
+/* ================================================================
+   SEGREGATION TABLE — 49 CFR 177.848
+   ================================================================ */
+const SEG_CLASSES = [
+  { id: "1.1/1.2", short: "1.1/1.2", name: "Explosives (Mass/Projection)" },
+  { id: "1.3", short: "1.3", name: "Explosives (Fire hazard)" },
+  { id: "1.4", short: "1.4", name: "Explosives (Minor blast)" },
+  { id: "1.5", short: "1.5", name: "Very insensitive explosives" },
+  { id: "1.6", short: "1.6", name: "Extremely insensitive explosives" },
+  { id: "2.1", short: "2.1", name: "Flammable gases" },
+  { id: "2.2", short: "2.2", name: "Non-toxic, non-flammable gases" },
+  { id: "2.3A", short: "2.3A", name: "Poison gas — Zone A" },
+  { id: "2.3B", short: "2.3B", name: "Poison gas — Zone B" },
+  { id: "3", short: "3", name: "Flammable liquids" },
+  { id: "4.1", short: "4.1", name: "Flammable solids" },
+  { id: "4.2", short: "4.2", name: "Spontaneously combustible" },
+  { id: "4.3", short: "4.3", name: "Dangerous when wet" },
+  { id: "5.1", short: "5.1", name: "Oxidizers" },
+  { id: "5.2", short: "5.2", name: "Organic peroxides" },
+  { id: "6.1", short: "6.1", name: "Poison liquids PG I Zone A" },
+  { id: "7", short: "7", name: "Radioactive materials" },
+  { id: "8", short: "8", name: "Corrosive liquids" },
+];
+
+// Matrix from 49 CFR 177.848(d) — official eCFR table
+// "*" = governed by compatibility table (explosives), "X" = prohibited, "O" = separated, "" = no restriction
+const SEG_MATRIX = {
+  "1.1/1.2": { "1.1/1.2":"*","1.3":"*","1.4":"*","1.5":"*","1.6":"*","2.1":"X","2.2":"X","2.3A":"X","2.3B":"X","3":"X","4.1":"X","4.2":"X","4.3":"X","5.1":"X","5.2":"X","6.1":"X","7":"X","8":"X" },
+  "1.3":     { "1.1/1.2":"*","1.3":"*","1.4":"*","1.5":"*","1.6":"*","2.1":"X","2.2":"","2.3A":"X","2.3B":"X","3":"X","4.1":"","4.2":"X","4.3":"X","5.1":"X","5.2":"X","6.1":"X","7":"","8":"X" },
+  "1.4":     { "1.1/1.2":"*","1.3":"*","1.4":"*","1.5":"*","1.6":"*","2.1":"O","2.2":"","2.3A":"O","2.3B":"O","3":"O","4.1":"","4.2":"O","4.3":"","5.1":"","5.2":"","6.1":"O","7":"","8":"O" },
+  "1.5":     { "1.1/1.2":"*","1.3":"*","1.4":"*","1.5":"*","1.6":"*","2.1":"X","2.2":"X","2.3A":"X","2.3B":"X","3":"X","4.1":"X","4.2":"X","4.3":"X","5.1":"X","5.2":"X","6.1":"X","7":"X","8":"X" },
+  "1.6":     { "1.1/1.2":"*","1.3":"*","1.4":"*","1.5":"*","1.6":"*","2.1":"","2.2":"","2.3A":"","2.3B":"","3":"","4.1":"","4.2":"","4.3":"","5.1":"","5.2":"","6.1":"","7":"","8":"" },
+  "2.1":     { "1.1/1.2":"X","1.3":"X","1.4":"O","1.5":"X","1.6":"","2.1":"","2.2":"","2.3A":"X","2.3B":"O","3":"","4.1":"","4.2":"","4.3":"","5.1":"","5.2":"","6.1":"O","7":"O","8":"" },
+  "2.2":     { "1.1/1.2":"X","1.3":"","1.4":"","1.5":"X","1.6":"","2.1":"","2.2":"","2.3A":"","2.3B":"","3":"","4.1":"","4.2":"","4.3":"","5.1":"","5.2":"","6.1":"","7":"","8":"" },
+  "2.3A":    { "1.1/1.2":"X","1.3":"X","1.4":"O","1.5":"X","1.6":"","2.1":"X","2.2":"","2.3A":"","2.3B":"","3":"X","4.1":"X","4.2":"X","4.3":"X","5.1":"X","5.2":"X","6.1":"","7":"","8":"X" },
+  "2.3B":    { "1.1/1.2":"X","1.3":"X","1.4":"O","1.5":"X","1.6":"","2.1":"O","2.2":"","2.3A":"","2.3B":"","3":"O","4.1":"O","4.2":"O","4.3":"O","5.1":"O","5.2":"O","6.1":"","7":"","8":"O" },
+  "3":       { "1.1/1.2":"X","1.3":"X","1.4":"O","1.5":"X","1.6":"","2.1":"","2.2":"","2.3A":"X","2.3B":"O","3":"","4.1":"","4.2":"","4.3":"","5.1":"O","5.2":"","6.1":"X","7":"","8":"" },
+  "4.1":     { "1.1/1.2":"X","1.3":"","1.4":"","1.5":"X","1.6":"","2.1":"","2.2":"","2.3A":"X","2.3B":"O","3":"","4.1":"","4.2":"","4.3":"","5.1":"","5.2":"","6.1":"X","7":"","8":"O" },
+  "4.2":     { "1.1/1.2":"X","1.3":"X","1.4":"O","1.5":"X","1.6":"","2.1":"","2.2":"","2.3A":"X","2.3B":"O","3":"","4.1":"","4.2":"","4.3":"","5.1":"","5.2":"","6.1":"X","7":"","8":"X" },
+  "4.3":     { "1.1/1.2":"X","1.3":"X","1.4":"","1.5":"X","1.6":"","2.1":"","2.2":"","2.3A":"X","2.3B":"O","3":"","4.1":"","4.2":"","4.3":"","5.1":"","5.2":"","6.1":"X","7":"","8":"O" },
+  "5.1":     { "1.1/1.2":"X","1.3":"X","1.4":"","1.5":"X","1.6":"","2.1":"","2.2":"","2.3A":"X","2.3B":"O","3":"O","4.1":"","4.2":"","4.3":"","5.1":"","5.2":"","6.1":"X","7":"","8":"O" },
+  "5.2":     { "1.1/1.2":"X","1.3":"X","1.4":"","1.5":"X","1.6":"","2.1":"","2.2":"","2.3A":"X","2.3B":"O","3":"","4.1":"","4.2":"","4.3":"","5.1":"","5.2":"","6.1":"X","7":"","8":"O" },
+  "6.1":     { "1.1/1.2":"X","1.3":"X","1.4":"O","1.5":"X","1.6":"","2.1":"O","2.2":"","2.3A":"","2.3B":"","3":"X","4.1":"X","4.2":"X","4.3":"X","5.1":"X","5.2":"X","6.1":"","7":"","8":"X" },
+  "7":       { "1.1/1.2":"X","1.3":"","1.4":"","1.5":"X","1.6":"","2.1":"O","2.2":"","2.3A":"","2.3B":"","3":"","4.1":"","4.2":"","4.3":"","5.1":"","5.2":"","6.1":"","7":"","8":"" },
+  "8":       { "1.1/1.2":"X","1.3":"X","1.4":"O","1.5":"X","1.6":"","2.1":"","2.2":"","2.3A":"X","2.3B":"O","3":"","4.1":"O","4.2":"X","4.3":"O","5.1":"O","5.2":"O","6.1":"X","7":"","8":"" },
+};
+
+function getCell(r, c) {
+  if (r === c) return "self";
+  return SEG_MATRIX[r]?.[c] || "";
+}
+
+function cellStyle(val, highlight) {
+  const dim = highlight ? "" : " opacity-40";
+  if (val === "X") return `bg-red-500 text-white font-bold${dim}`;
+  if (val === "O") return `bg-yellow-400 text-yellow-900 font-bold${dim}`;
+  if (val === "*") return `bg-orange-400 text-white font-bold${dim}`;
+  if (val === "self") return "bg-[#002855] text-white font-bold";
+  return `bg-emerald-500/80 text-emerald-950${dim}`;
+}
+
+function cellLabel(val) {
+  if (val === "X") return "X";
+  if (val === "O") return "O";
+  if (val === "*") return "*";
+  if (val === "self") return "-";
+  return "";
+}
+
+export function SegregationTable() {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState(null);
+
+  const toggle = (id) => setSelected((prev) => prev === id ? null : id);
+
+  const selClass = selected ? SEG_CLASSES.find(c => c.id === selected) : null;
+
+  return (
+    <div className="bg-white rounded-xl border overflow-hidden" data-testid="segregation-table">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#FAFBFC] transition-colors"
+        data-testid="seg-table-toggle"
+      >
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#002855]/10 flex-shrink-0">
+          <svg className="w-4 h-4 text-[#002855]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-xs font-semibold text-[#0F172A]">Segregation Table — 177.848</p>
+          <p className="text-[10px] text-[#94A3B8]">Tap any class to see what it can/cannot load with</p>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-[#94A3B8] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="border-t px-3 py-3 space-y-3">
+          {/* Selected class detail */}
+          {selClass && (
+            <div className="rounded-lg border border-[#002855]/20 bg-[#002855]/5 p-3 space-y-2" data-testid="seg-detail">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-bold text-[#002855]">{selClass.id} — {selClass.name}</p>
+                  <p className="text-[10px] text-[#64748B]">Tap another class below to compare, or tap again to deselect</p>
+                </div>
+                <button onClick={() => setSelected(null)} className="text-[10px] text-[#94A3B8] hover:text-[#002855]">Clear</button>
+              </div>
+              <div className="grid grid-cols-1 gap-1">
+                {SEG_CLASSES.filter(c => c.id !== selected).map(c => {
+                  const val = getCell(selected, c.id);
+                  return (
+                    <div key={c.id} className="flex items-center gap-2 py-1">
+                      <div className={`w-7 h-5 rounded flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${val === "X" ? "bg-red-500 text-white" : val === "O" ? "bg-yellow-400 text-yellow-900" : val === "*" ? "bg-orange-400 text-white" : "bg-emerald-500 text-white"}`}>
+                        {val === "X" ? "X" : val === "O" ? "O" : val === "*" ? "*" : "OK"}
+                      </div>
+                      <span className="text-[11px] text-[#334155] font-medium">{c.short}</span>
+                      <span className="text-[10px] text-[#94A3B8]">{c.name}</span>
+                      <span className="text-[10px] ml-auto font-medium" style={{ color: val === "X" ? "#DC2626" : val === "O" ? "#92400E" : val === "*" ? "#C2410C" : "#059669" }}>
+                        {val === "X" ? "PROHIBITED" : val === "O" ? "SEPARATED" : val === "*" ? "SEE COMPAT." : "ALLOWED"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Grid table */}
+          <div className="overflow-x-auto -mx-1">
+            <table className="border-collapse text-[9px]" style={{ minWidth: 500 }}>
+              <thead>
+                <tr>
+                  <th className="sticky left-0 z-10 bg-white px-1 py-1 text-left text-[9px] font-bold text-[#64748B] w-14"></th>
+                  {SEG_CLASSES.map((c) => (
+                    <th key={c.id} className="px-0.5 py-1 text-center">
+                      <button
+                        onClick={() => toggle(c.id)}
+                        className={`w-full px-1 py-1 rounded text-[9px] font-bold transition-all ${
+                          selected === c.id
+                            ? "bg-[#002855] text-white shadow-md scale-110"
+                            : selected ? "text-[#94A3B8] hover:text-[#002855]" : "text-[#002855] hover:bg-[#002855]/10"
+                        }`}
+                        data-testid={`seg-col-${c.id}`}
+                      >
+                        {c.short}
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {SEG_CLASSES.map((row) => (
+                  <tr key={row.id}>
+                    <td className="sticky left-0 z-10 bg-white px-1 py-0.5">
+                      <button
+                        onClick={() => toggle(row.id)}
+                        className={`w-full text-left px-1 py-1 rounded text-[9px] font-bold transition-all whitespace-nowrap ${
+                          selected === row.id
+                            ? "bg-[#002855] text-white shadow-md"
+                            : selected ? "text-[#94A3B8] hover:text-[#002855]" : "text-[#002855] hover:bg-[#002855]/10"
+                        }`}
+                        data-testid={`seg-row-${row.id}`}
+                      >
+                        {row.short}
+                      </button>
+                    </td>
+                    {SEG_CLASSES.map((col) => {
+                      const val = getCell(row.id, col.id);
+                      const hl = !selected || selected === row.id || selected === col.id;
+                      return (
+                        <td key={col.id} className="px-0.5 py-0.5">
+                          <button
+                            onClick={() => toggle(row.id === selected ? col.id : row.id)}
+                            className={`w-full h-6 rounded-sm flex items-center justify-center text-[9px] transition-all ${cellStyle(val, hl)}`}
+                            title={`${row.short} + ${col.short}: ${val === "X" ? "PROHIBITED" : val === "O" ? "SEPARATED" : val === "*" ? "See compatibility table" : val === "self" ? "-" : "Allowed"}`}
+                          >
+                            {cellLabel(val)}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap gap-3 pt-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-4 rounded-sm bg-red-500" />
+              <span className="text-[10px] text-[#334155]"><strong>X</strong> — Prohibited</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-4 rounded-sm bg-yellow-400" />
+              <span className="text-[10px] text-[#334155]"><strong>O</strong> — Must be separated</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-4 rounded-sm bg-emerald-500/80" />
+              <span className="text-[10px] text-[#334155]">Allowed</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-4 rounded-sm bg-orange-400" />
+              <span className="text-[10px] text-[#334155]"><strong>*</strong> — See explosives compatibility</span>
+            </div>
+          </div>
+
+          {/* Additional rules */}
+          <div className="text-[10px] text-[#64748B] space-y-1 border-t pt-2">
+            <p><strong>Additional rules per <CfrLink r="177.848(c)" />:</strong></p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              <li><strong>Cyanides</strong> may not be loaded with <strong>acids</strong> if mixing would generate hydrogen cyanide</li>
+              <li><strong>Div 4.2</strong> may not be loaded with <strong>Class 8 liquids</strong></li>
+              <li><strong>Div 6.1 PG I Zone A</strong> may not be loaded with Class 3, Class 8 liquids, or Div 4.1/4.2/4.3/5.1/5.2</li>
+            </ul>
+            <p className="italic">Subsidiary hazards: when a package has a subsidiary label, use the more restrictive segregation — <CfrLink r="177.848(e)(6)" /></p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
