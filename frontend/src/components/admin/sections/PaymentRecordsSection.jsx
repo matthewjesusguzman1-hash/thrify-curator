@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera,
@@ -913,25 +914,22 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
 
       {/* Employee Picker Modal */}
       <AnimatePresence>
-        {showEmployeePicker && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]"
+        {showEmployeePicker && ReactDOM.createPortal(
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center"
+            style={{ zIndex: 999999 }}
             onClick={() => setShowEmployeePicker(false)}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[50vh] overflow-hidden shadow-xl"
+            <div
+              className="bg-white w-full sm:w-96 sm:rounded-xl rounded-t-xl max-h-[70vh] overflow-hidden shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-purple-50">
                 <h3 className="font-semibold text-purple-900">Select Employee</h3>
-                <button onClick={() => setShowEmployeePicker(false)} className="p-1 hover:bg-purple-100 rounded">
+                <button 
+                  onClick={() => setShowEmployeePicker(false)} 
+                  className="p-2 hover:bg-purple-100 rounded-full active:bg-purple-200"
+                >
                   <X className="w-5 h-5 text-purple-600" />
                 </button>
               </div>
@@ -941,8 +939,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                   placeholder="Search employees..."
                   value={pickerSearch}
                   onChange={(e) => setPickerSearch(e.target.value)}
-                  className="h-9"
-                  autoFocus
+                  className="h-10"
                 />
               </div>
               <div className="overflow-y-auto max-h-[50vh]">
@@ -955,9 +952,12 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                       emp.email?.toLowerCase().includes(pickerSearch.toLowerCase())
                     )
                     .map((employee, index) => (
-                      <button
+                      <div
                         key={`picker-emp-${index}`}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => {
+                          console.log('Employee clicked:', employee.name);
                           setCheckUploadData({
                             ...checkUploadData,
                             employee_name: employee.name,
@@ -965,26 +965,17 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                           });
                           setShowEmployeePicker(false);
                         }}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          setCheckUploadData({
-                            ...checkUploadData,
-                            employee_name: employee.name,
-                            employee_email: employee.email
-                          });
-                          setShowEmployeePicker(false);
-                        }}
-                        className="w-full px-4 py-3 text-left hover:bg-purple-50 active:bg-purple-100 border-b border-gray-100 last:border-b-0 flex justify-between items-center"
-                        style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
+                        className="w-full px-4 py-4 text-left hover:bg-purple-50 active:bg-purple-100 border-b border-gray-100 last:border-b-0 flex justify-between items-center cursor-pointer select-none"
+                        style={{ WebkitTapHighlightColor: 'rgba(147, 51, 234, 0.2)', touchAction: 'manipulation', userSelect: 'none' }}
                       >
                         <div>
                           <div className="font-medium text-gray-900">{employee.name}</div>
-                          <div className="text-xs text-gray-500">{employee.email}</div>
+                          <div className="text-sm text-gray-500">{employee.email}</div>
                         </div>
                         {employee.role === 'admin' && (
                           <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Admin</span>
                         )}
-                      </button>
+                      </div>
                     ))
                 )}
                 {employees.length > 0 && employees.filter(emp => 
@@ -994,8 +985,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                   <div className="p-4 text-center text-gray-500">No employees match your search</div>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
 
