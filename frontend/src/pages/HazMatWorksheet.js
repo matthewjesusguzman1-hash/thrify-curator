@@ -48,9 +48,9 @@ const HM_LINKS = [
     desc: "Carriage by highway, segregation table",
   },
   {
-    label: "PHMSA ERG (Emergency Response)",
-    url: "https://www.phmsa.dot.gov/hazmat/erg/emergency-response-guidebook-erg",
-    desc: "Emergency Response Guidebook",
+    label: "ERG App (iOS)",
+    url: "https://apps.apple.com/us/app/erg-for-ios/id1597142669",
+    desc: "Emergency Response Guidebook app",
   },
   {
     label: "FMCSA HM Safety",
