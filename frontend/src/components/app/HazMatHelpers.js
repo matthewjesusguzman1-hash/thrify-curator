@@ -267,7 +267,7 @@ const MOT_QUESTIONS = [
   {
     id: "purpose",
     question: "Is the hazardous material carried for the direct support of a principal business (other than transportation)?",
-    help: "Materials of Trade (MOT) are HM carried by employees for their work — not as the primary cargo. Examples: a pest control tech carrying pesticides, a plumber with propane for soldering, a pool company with chlorine, a farmer with fuel. The HM must be needed for the person's primary job.",
+    help: "Materials of Trade (MOT) are HM carried by employees for their work — not as the primary cargo. Examples: a pest control tech carrying pesticides, a plumber with propane for soldering, a pool company with chlorine, a farmer carrying small quantities of fertilizer. The HM must be needed for the person's primary job. Note: PIH (Poison Inhalation Hazard) materials, self-reactive materials, hazardous waste, and Class 7 (radioactive) are NEVER eligible for MOT.",
     yes: "quantity",
     no: "not_mot_purpose",
   },
@@ -282,7 +282,7 @@ const MOT_QUESTIONS = [
   {
     id: "packaging",
     question: "Is the material in a packaging authorized by the HMR (or a non-spec packaging per 173.6)?",
-    help: "MOT packaging rules (173.6(b)): The material must be contained in a package authorized by the HMR for that material, OR in a non-bulk packaging that is: closed, secured against movement, protected from damage, and does not leak under normal transport conditions. Inner packagings must be closed and cushioned to prevent breakage. Packaging must be marked with the common name or proper shipping name.",
+    help: "MOT packaging rules per 173.6(b): Packagings must be leak tight for liquids and gases, sift proof for solids, securely closed, secured against shifting, and protected against damage. Each material must be in the manufacturer's original packaging or one of equal or greater strength. For gasoline, the container must be metal or plastic conforming to the HMR or OSHA standards (29 CFR 1910.106). Cylinders must conform to all packaging, qualification, maintenance, and use requirements of the HMR.",
     yes: "vehicle",
     no: "not_mot_packaging",
   },
@@ -369,24 +369,26 @@ export function MaterialsOfTradeHelper() {
 
                 {q.helpType === "quantity_table" ? (
                   <InfoBox color="amber">
-                    <strong>MOT Quantity Limits per vehicle</strong> — <CfrLink r="173.6(a)" />:
+                    <strong>MOT Quantity Limits</strong> — <CfrLink r="173.6(a)" />:
                     <table className="w-full mt-1.5 text-[10px]">
                       <thead>
                         <tr className="border-b border-amber-300/50">
                           <th className="text-left py-1 font-bold">Material Type</th>
                           <th className="text-right py-1 font-bold">Per Package</th>
-                          <th className="text-right py-1 font-bold">Per Vehicle</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-amber-200/30">
-                        <tr><td className="py-1">Division 2.1 or 2.2 gases</td><td className="text-right">200 lbs gross</td><td className="text-right" rowSpan={5}>See Note</td></tr>
-                        <tr><td className="py-1">Div 6.1 PG III, Class 8 PG III, Class 9, ORM-D</td><td className="text-right">No limit*</td></tr>
-                        <tr><td className="py-1">Other HM (e.g., flammable liquids, PG I/II poisons)</td><td className="text-right">≤ 0.5 L or 0.5 kg (net)</td></tr>
-                        <tr><td className="py-1">Div 2.3 Zone C/D, Div 6.1 PG I/II</td><td className="text-right">≤ 1 mL or 1 g (net)</td></tr>
-                        <tr><td className="py-1">Diesel fuel / fuel oil in non-bulk tanks</td><td className="text-right">≤ 119 gal per tank</td></tr>
+                        <tr><td className="py-1">Class 3, 8, 9, Div 4.1, 5.1, 5.2, 6.1 — <strong>PG I</strong></td><td className="text-right">0.5 kg (1 lb) or 0.5 L (1 pt)</td></tr>
+                        <tr><td className="py-1">Class 3, 8, 9, Div 4.1, 5.1, 5.2, 6.1 — <strong>PG II or III</strong></td><td className="text-right">30 kg (66 lbs) or 30 L (8 gal)</td></tr>
+                        <tr><td className="py-1">Class 9 diluted mixture (max 2% concentration)</td><td className="text-right">1,500 L (400 gal)</td></tr>
+                        <tr><td className="py-1">Division 2.1 or 2.2 in a cylinder</td><td className="text-right">100 kg (220 lbs) gross</td></tr>
+                        <tr><td className="py-1">Div 2.2 (non-liquefied, no subsidiary) in permanent tank</td><td className="text-right">70 gal water capacity</td></tr>
+                        <tr><td className="py-1">Division 4.3 (Dangerous When Wet) — PG II or III</td><td className="text-right">30 mL (1 oz)</td></tr>
+                        <tr><td className="py-1">Division 6.2 (non-Category A, human/animal samples)</td><td className="text-right">See 173.6(a)(4)</td></tr>
                       </tbody>
                     </table>
-                    <p className="mt-1 text-[9px] italic">* For Div 6.1 PG III / Class 8 PG III / Class 9 / ORM-D, the limit is based on what is appropriate for the direct support of the business. Total aggregate gross weight of all MOT materials on the vehicle may not exceed <strong>440 lbs</strong> (200 kg).</p>
+                    <p className="mt-1.5 text-[9px]"><strong>NOT eligible for MOT:</strong> Poison Inhalation Hazard (PIH) materials, self-reactive materials, hazardous waste, or Class 7 (radioactive) — per 173.6(a)(5)/(a)(6).</p>
+                    <p className="mt-1 text-[9px] italic">Aggregate gross weight of ALL MOT materials on one vehicle may not exceed <strong>440 lbs (200 kg)</strong> — per 173.6(d). Exception: Class 9 diluted mixtures per (a)(1)(iii) are excluded from this aggregate limit.</p>
                   </InfoBox>
                 ) : q.help ? (
                   <InfoBox>{q.help}</InfoBox>
@@ -413,15 +415,16 @@ export function MaterialsOfTradeHelper() {
                 <li>Shipping papers — <CfrLink r="172.200" label="Subpart C" /></li>
                 <li>Placarding — <CfrLink r="172.500" label="Subpart F" /></li>
                 <li>Emergency response information — <CfrLink r="172.600" label="Subpart G" /></li>
-                <li>HM employee training — <CfrLink r="172.704" /></li>
+                <li>HM employee training — <CfrLink r="172.700" label="Subpart H" /></li>
               </ul>
-              <p><strong>What STILL applies to MOT:</strong></p>
+              <p><strong>What STILL applies to MOT — per <CfrLink r="173.6" />:</strong></p>
               <ul className="list-disc pl-4 space-y-0.5">
-                <li><strong>Package must be marked</strong> with common name or proper shipping name of the HM — <CfrLink r="173.6(b)(5)" /></li>
-                <li><strong>Cylinders</strong> must be properly labeled or marked per CGA — <CfrLink r="173.6(b)(4)" /></li>
-                <li>Package closures must be secure, no leakage, protected from damage</li>
-                <li>Aggregate gross weight of ALL MOT on the vehicle: <strong>max 440 lbs (200 kg)</strong></li>
-                <li>The outer packaging must be marked <strong>"MATERIALS OF TRADE"</strong> or the abbreviation <strong>"MOT"</strong> when transported on a vehicle that does not need to be placarded</li>
+                <li><strong>Packaging</strong> must be leak tight (liquids/gases), sift proof (solids), securely closed, and protected from damage — <CfrLink r="173.6(b)" /></li>
+                <li><strong>Non-bulk packages</strong> (other than cylinders) must be marked with common name or proper shipping name, plus "RQ" if a reportable quantity — <CfrLink r="173.6(c)" /></li>
+                <li><strong>DOT spec cylinders</strong> (except DOT-39) must be marked and labeled as prescribed by the HMR — <CfrLink r="173.6(c)" /></li>
+                <li><strong>Gasoline</strong> containers must be metal or plastic conforming to HMR or OSHA 29 CFR 1910.106 — <CfrLink r="173.6(b)" /></li>
+                <li><strong>Driver must be informed</strong> of the presence of the HM and the requirements of 173.6 — <CfrLink r="173.6(c)" /></li>
+                <li>Aggregate gross weight of ALL MOT on the vehicle: <strong>max 440 lbs (200 kg)</strong> — <CfrLink r="173.6(d)" /></li>
               </ul>
               <InfoBox color="green">
                 <strong>Common MOT scenarios:</strong> Pest control (pesticides/fumigants in small containers), HVAC/plumbing (propane/acetylene cylinders), pool service (chlorine), agriculture (small quantities of fertilizer/pesticide), painting (flammable paints/solvents), cleaning services (corrosive cleaners).
@@ -441,9 +444,8 @@ export function MaterialsOfTradeHelper() {
 
           {currentQ === "not_mot_quantity" && (
             <ResultBox title="Does NOT qualify — exceeds quantity limits" compliant={false}>
-              <p>The quantity of material exceeds the limits allowed under <CfrLink r="173.6(a)" /> for Materials of Trade.</p>
-              <p>The total aggregate gross weight of all MOT on one vehicle may not exceed <strong>440 lbs (200 kg)</strong>. Individual package limits also apply per material type.</p>
-              <p>This shipment must comply with all applicable HMR requirements. Consider whether a <strong>Limited Quantity</strong> exception (<CfrLink r="173.150" /> through <CfrLink r="173.156" />) might apply instead.</p>
+              <p>The quantity of material exceeds the per-package limits in <CfrLink r="173.6(a)" />, or the total aggregate gross weight of all MOT materials on the vehicle exceeds <strong>440 lbs (200 kg)</strong> per <CfrLink r="173.6(d)" />.</p>
+              <p>This shipment must comply with all applicable HMR requirements. Consider whether a <strong>Limited Quantity</strong> exception (see <CfrLink r="173.150" /> through <CfrLink r="173.155" />) might apply instead — limited quantities have higher quantity thresholds and reduced but not fully eliminated HMR requirements.</p>
             </ResultBox>
           )}
 
