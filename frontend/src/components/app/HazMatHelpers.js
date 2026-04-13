@@ -283,15 +283,8 @@ const MOT_QUESTIONS = [
     id: "packaging",
     question: "Is the material in a packaging authorized by the HMR (or a non-spec packaging per 173.6)?",
     help: "MOT packaging rules per 173.6(b): Packagings must be leak tight for liquids and gases, sift proof for solids, securely closed, secured against shifting, and protected against damage. Each material must be in the manufacturer's original packaging or one of equal or greater strength. For gasoline, the container must be metal or plastic conforming to the HMR or OSHA standards (29 CFR 1910.106). Cylinders must conform to all packaging, qualification, maintenance, and use requirements of the HMR.",
-    yes: "vehicle",
-    no: "not_mot_packaging",
-  },
-  {
-    id: "vehicle",
-    question: "Is the material being transported by a motor vehicle (not rail, air, or vessel)?",
-    help: "The MOT exception under 173.6 applies ONLY to highway transportation. Materials of trade transported by rail, aircraft, or vessel must comply with the full HMR.",
     yes: "is_mot",
-    no: "not_mot_mode",
+    no: "not_mot_packaging",
   },
 ];
 
@@ -453,12 +446,6 @@ export function MaterialsOfTradeHelper() {
             <ResultBox title="Does NOT qualify — packaging issue" compliant={false}>
               <p>MOT materials must be in packaging that is authorized by the HMR for that specific material, or in a non-bulk package that is: properly closed, secured against movement, protected from damage, and does not leak under normal transport conditions.</p>
               <p>Correct the packaging issue before transport, or comply with full HMR requirements.</p>
-            </ResultBox>
-          )}
-
-          {currentQ === "not_mot_mode" && (
-            <ResultBox title="Does NOT qualify — transport mode" compliant={false}>
-              <p>The <CfrLink r="173.6" /> MOT exception applies <strong>only to highway transportation</strong>. Materials transported by aircraft, rail, or vessel must comply with the full HMR for that mode, even if quantities are small.</p>
             </ResultBox>
           )}
 
