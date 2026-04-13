@@ -138,7 +138,10 @@ export default function EmployeeDashboard() {
     hourly_rate: 15.00,
     estimated_pay: 0,
     period_start: null,
-    period_end: null
+    period_end: null,
+    is_previous_period: false,
+    ytd_paid: 0,
+    ytd_payment_count: 0
   });
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1174,7 +1177,9 @@ export default function EmployeeDashboard() {
             <div className="h-1.5 bg-gradient-to-r from-[#FF1493] to-[#8B5CF6]" />
             <div className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-1">
-                <h2 className="font-poppins text-base sm:text-lg font-semibold text-[#1A1A2E]">Current Pay Period</h2>
+                <h2 className="font-poppins text-base sm:text-lg font-semibold text-[#1A1A2E]">
+                  {summary.is_previous_period ? 'Previous Pay Period' : 'Current Pay Period'}
+                </h2>
                 <span className="text-xs sm:text-sm text-gray-500">
                   {formatDate(summary.period_start)} - {formatDate(summary.period_end)}
                 </span>
@@ -1215,6 +1220,21 @@ export default function EmployeeDashboard() {
                   Rate: <span className="font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</span>
                 </p>
               </div>
+
+              {/* YTD Paid */}
+              {summary.ytd_paid > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs sm:text-sm text-gray-500">Year-to-Date Paid:</p>
+                    <p className="font-semibold text-[#1A1A2E]" data-testid="ytd-paid">
+                      {formatCurrency(summary.ytd_paid)}
+                      <span className="text-xs text-gray-400 font-normal ml-1">
+                        ({summary.ytd_payment_count} payment{summary.ytd_payment_count !== 1 ? 's' : ''})
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

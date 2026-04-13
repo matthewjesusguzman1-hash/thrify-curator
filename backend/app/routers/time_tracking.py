@@ -37,7 +37,7 @@ async def trigger_admin_live_activity_update():
                     # Include timestamp for live timer calculation
                     timestamp = dt.timestamp()
                     employee_data.append(f"{name}|{time_str}|{timestamp}")
-                except:
+                except (ValueError, OSError):
                     employee_data.append(f"{name}|--|0")
             else:
                 employee_data.append(f"{name}|--|0")
@@ -277,33 +277,76 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     if payroll_settings:
         default_rate = payroll_settings.get("default_hourly_rate", 15.00)
     
-    # Use first Monday of year as anchor
-    period_start, period_end = get_biweekly_period(period_index=0)
+    # Helper function to filter entries by period
+    def get_entries_for_period(start, end):
+        if hasattr(start, 'tzinfo') and start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if hasattr(end, 'tzinfo') and end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        
+        period_entries = []
+        for e in entries:
+            try:
+                clock_in_str = e["clock_in"]
+                clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
+                if start <= clock_in_dt <= end:
+                    period_entries.append(e)
+            except (ValueError, KeyError, TypeError):
+                pass
+        return period_entries, start, end
     
-    if hasattr(period_start, 'tzinfo') and period_start.tzinfo is None:
-        period_start = period_start.replace(tzinfo=timezone.utc)
-    if hasattr(period_end, 'tzinfo') and period_end.tzinfo is None:
-        period_end = period_end.replace(tzinfo=timezone.utc)
+    # Get current period
+    current_period_start, current_period_end = get_biweekly_period(period_index=0)
+    current_entries, current_start, current_end = get_entries_for_period(current_period_start, current_period_end)
+    current_hours = sum(e.get("total_hours", 0) or 0 for e in current_entries)
     
-    period_entries = []
-    for e in entries:
-        try:
-            clock_in_str = e["clock_in"]
-            clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
-            if period_start <= clock_in_dt <= period_end:
-                period_entries.append(e)
-        except (ValueError, KeyError, TypeError):
-            pass
+    # If current period has no hours, use previous period instead
+    if current_hours == 0 and len(current_entries) == 0:
+        prev_period_start, prev_period_end = get_biweekly_period(period_index=-1)
+        period_entries, period_start, period_end = get_entries_for_period(prev_period_start, prev_period_end)
+        is_previous_period = True
+    else:
+        period_entries = current_entries
+        period_start = current_start
+        period_end = current_end
+        is_previous_period = False
     
     period_hours = sum(e.get("total_hours", 0) or 0 for e in period_entries)
     period_shifts = len(period_entries)
     
     user_doc = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    user_name = user_doc.get("name", "") if user_doc else ""
     hourly_rate = user_doc.get("hourly_rate") if user_doc else None
     if hourly_rate is None:
         hourly_rate = default_rate
     
     estimated_pay = round(period_hours * hourly_rate, 2)
+    
+    # Get YTD actual payments from payment records for this employee
+    year_start = today.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    ytd_paid = 0.0
+    ytd_payment_count = 0
+    
+    # Find payments by employee name in check_records
+    payment_records = await db.payroll_check_records.find(
+        {"payment_type": {"$in": ["employee", None]}},
+        {"_id": 0, "amount": 1, "check_date": 1, "employee_name": 1}
+    ).to_list(1000)
+    
+    for record in payment_records:
+        # Match by employee name (case-insensitive)
+        record_name = (record.get("employee_name") or "").strip().lower()
+        if record_name == user_name.strip().lower():
+            check_date_str = record.get("check_date", "")
+            if check_date_str:
+                try:
+                    check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                    if check_date >= year_start:
+                        ytd_paid += record.get("amount", 0) or 0
+                        ytd_payment_count += 1
+                except (ValueError, TypeError):
+                    pass
     
     return {
         "total_hours": round(total_hours, 2),
@@ -314,7 +357,10 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
         "hourly_rate": hourly_rate,
         "estimated_pay": estimated_pay,
         "period_start": period_start.isoformat() if hasattr(period_start, 'isoformat') else str(period_start),
-        "period_end": period_end.isoformat() if hasattr(period_end, 'isoformat') else str(period_end)
+        "period_end": period_end.isoformat() if hasattr(period_end, 'isoformat') else str(period_end),
+        "is_previous_period": is_previous_period,
+        "ytd_paid": round(ytd_paid, 2),
+        "ytd_payment_count": ytd_payment_count
     }
 
 

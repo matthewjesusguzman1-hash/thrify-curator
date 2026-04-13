@@ -77,6 +77,7 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Testing: 100% pass (19/19 tests)
 
 ### In Progress / Pending User Verification
+- **Pay Period Label Fix (Apr 13, 2026)**: FIXED - When no hours exist in the current pay period, the Employee Dashboard now shows "Previous Pay Period" instead of "Current Pay Period". Also added Year-to-Date (YTD) paid amount display that pulls from actual payment records.
 - **Payment Records Pickers Fixed (Apr 13, 2026)**: FIXED - Employee and Consignment Client picker modals were causing a React error ("Target container is not a DOM element") when opened. The issue was `AnimatePresence` combined with `createPortal` not playing well together. Fixed by:
   1. Removing `AnimatePresence` wrapper from the picker modals
   2. Using plain `div` elements instead of `motion.div` for the portals
