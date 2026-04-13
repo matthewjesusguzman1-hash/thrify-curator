@@ -17,52 +17,60 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
       await new Promise((r) => setTimeout(r, 300));
 
       const el = contentRef.current;
-      const sections = el.querySelectorAll("[data-pdf-section]");
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth() - 16;
       const pdfHeight = pdf.internal.pageSize.getHeight() - 16;
 
-      if (sections.length > 0) {
-        // Render each section on its own page
-        for (let i = 0; i < sections.length; i++) {
-          if (i > 0) pdf.addPage();
-          const canvas = await html2canvas(sections[i], {
-            scale: 2, useCORS: true, allowTaint: true, logging: false,
-            backgroundColor: "#ffffff",
-            width: sections[i].scrollWidth,
-            height: sections[i].scrollHeight,
-          });
-          const imgData = canvas.toDataURL("image/jpeg", 0.92);
-          const imgH = (canvas.height * pdfWidth) / canvas.width;
+      // Always capture the entire content as one image first
+      const canvas = await html2canvas(el, {
+        scale: 2, useCORS: true, allowTaint: true, logging: false,
+        backgroundColor: "#ffffff",
+        width: el.scrollWidth, height: el.scrollHeight,
+      });
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      const imgH = (canvas.height * pdfWidth) / canvas.width;
 
-          if (imgH <= pdfHeight) {
-            // Fits on one page
-            pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth, imgH);
-          } else {
-            // Too tall — scale to fit one page
-            const scale = pdfHeight / imgH;
-            const scaledW = pdfWidth * scale;
-            const offsetX = (pdf.internal.pageSize.getWidth() - scaledW) / 2;
-            pdf.addImage(imgData, "JPEG", offsetX, 8, scaledW, pdfHeight);
-          }
-        }
+      if (imgH <= pdfHeight) {
+        // Everything fits on one page — done
+        pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth, imgH);
       } else {
-        // Fallback: capture entire content as one image
-        const canvas = await html2canvas(el, {
-          scale: 2, useCORS: true, allowTaint: true, logging: false,
-          backgroundColor: "#ffffff",
-          width: el.scrollWidth, height: el.scrollHeight,
-        });
-        const imgData = canvas.toDataURL("image/jpeg", 0.92);
-        const imgH = (canvas.height * pdfWidth) / canvas.width;
+        // Multi-page: check if we have separate article sections
+        const articles = el.querySelectorAll("[data-pdf-section]");
+        const articleSections = Array.from(articles).filter(s => s.dataset.pdfSection?.startsWith("article-") || s.dataset.pdfSection?.startsWith("assessment-"));
 
-        if (imgH <= pdfHeight) {
-          pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth, imgH);
+        if (articleSections.length > 1) {
+          // Multiple articles: capture each article with the header combined
+          const headerEl = el.querySelector("[data-pdf-section='header']") || el.querySelector("[data-pdf-section='insp-header']");
+
+          for (let i = 0; i < articleSections.length; i++) {
+            if (i > 0) pdf.addPage();
+
+            // Create a temporary wrapper with header + this article
+            const wrapper = document.createElement("div");
+            wrapper.style.cssText = `position:absolute;left:-9999px;top:0;width:${el.scrollWidth}px;background:#fff;padding:20px 16px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;color:#0F172A;line-height:1.6;`;
+            if (headerEl) wrapper.appendChild(headerEl.cloneNode(true));
+            wrapper.appendChild(articleSections[i].cloneNode(true));
+            document.body.appendChild(wrapper);
+
+            const c = await html2canvas(wrapper, {
+              scale: 2, useCORS: true, allowTaint: true, logging: false, backgroundColor: "#ffffff",
+              width: wrapper.scrollWidth, height: wrapper.scrollHeight,
+            });
+            document.body.removeChild(wrapper);
+
+            const iData = c.toDataURL("image/jpeg", 0.92);
+            const iH = (c.height * pdfWidth) / c.width;
+            if (iH <= pdfHeight) {
+              pdf.addImage(iData, "JPEG", 8, 8, pdfWidth, iH);
+            } else {
+              const scale = pdfHeight / iH;
+              pdf.addImage(iData, "JPEG", 8, 8, pdfWidth * scale, pdfHeight);
+            }
+          }
         } else {
+          // Single article or no sections — scale to fit one page
           const scale = pdfHeight / imgH;
-          const scaledW = pdfWidth * scale;
-          const offsetX = (pdf.internal.pageSize.getWidth() - scaledW) / 2;
-          pdf.addImage(imgData, "JPEG", offsetX, 8, scaledW, pdfHeight);
+          pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth * scale, pdfHeight);
         }
       }
 
