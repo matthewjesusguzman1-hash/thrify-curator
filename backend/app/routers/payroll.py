@@ -52,7 +52,10 @@ async def get_payroll_settings(admin: dict = Depends(get_admin_user)):
 
 @router.get("/summary")
 async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
-    """Get payroll summary - sums the EXACT values shown in each Employee Portal"""
+    """Get payroll summary:
+    - Wages Owed: matches Employee Portal exactly (hours × rate)
+    - This Month/Year: actual payments from check_records
+    """
     from app.services.helpers import get_biweekly_period
     
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
@@ -69,20 +72,9 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     # Get all employees
     employees = await db.users.find({}, {"_id": 0}).to_list(100)
     
+    # Calculate wages owed (same as Employee Portal)
     current_period_amount = 0
     current_period_hours = 0
-    month_total = 0
-    year_total = 0
-    
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    if now.month == 12:
-        month_end = now.replace(year=now.year + 1, month=1, day=1)
-    else:
-        month_end = now.replace(month=now.month + 1, day=1)
-    month_end = month_end.replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    year_end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
     for emp in employees:
         emp_id = emp.get("id")
@@ -91,54 +83,63 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             
         hourly_rate = emp.get("hourly_rate") or default_rate
         
-        # Get employee's time entries - EXACT same query as Employee Portal
+        # Get employee's time entries for current period
         entries = await db.time_entries.find({"user_id": emp_id}, {"_id": 0}).to_list(1000)
         
-        # Calculate period_hours - EXACT same logic as /api/time-tracking/summary
         emp_period_hours = 0
-        emp_month_hours = 0
-        emp_year_hours = 0
-        
         for e in entries:
             hours = e.get("total_hours", 0) or 0
             clock_in_str = e.get("clock_in", "")
             if not clock_in_str:
                 continue
-                
             try:
                 clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
-                
-                # EXACT same condition as time_tracking.py line 293
                 if period_start <= clock_in_dt <= period_end:
                     emp_period_hours += hours
-                
-                if month_start <= clock_in_dt < month_end:
-                    emp_month_hours += hours
-                    
-                if year_start <= clock_in_dt < year_end:
-                    emp_year_hours += hours
             except:
                 continue
         
-        # Calculate pay - EXACT same as Employee Portal frontend:
-        # roundHoursToMinute(summary.period_hours) * summary.hourly_rate
+        # Calculate pay same as Employee Portal frontend
         if emp_period_hours > 0:
-            # Round to nearest minute, then multiply
             total_minutes = round(emp_period_hours * 60)
             rounded_hours = total_minutes / 60
             emp_pay = rounded_hours * hourly_rate
             current_period_amount += emp_pay
             current_period_hours += emp_period_hours
+    
+    # Get ACTUAL PAYMENTS from check_records for This Month and This Year
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Fetch all check records (employee payments)
+    check_records = await db.check_records.find(
+        {"payment_type": {"$in": ["employee", None]}},  # Employee payments only
+        {"_id": 0, "amount": 1, "check_date": 1}
+    ).to_list(1000)
+    
+    month_total = 0
+    year_total = 0
+    
+    for record in check_records:
+        amount = record.get("amount", 0) or 0
+        check_date_str = record.get("check_date", "")
         
-        if emp_month_hours > 0:
-            total_minutes = round(emp_month_hours * 60)
-            rounded_hours = total_minutes / 60
-            month_total += rounded_hours * hourly_rate
-        
-        if emp_year_hours > 0:
-            total_minutes = round(emp_year_hours * 60)
-            rounded_hours = total_minutes / 60
-            year_total += rounded_hours * hourly_rate
+        if not check_date_str:
+            continue
+            
+        try:
+            # Parse date (format: YYYY-MM-DD)
+            check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            
+            # This Year
+            if check_date >= year_start:
+                year_total += amount
+                
+            # This Month
+            if check_date >= month_start:
+                month_total += amount
+        except:
+            continue
     
     return {
         "current_period": {

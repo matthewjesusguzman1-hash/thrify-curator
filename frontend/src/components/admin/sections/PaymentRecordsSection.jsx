@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import ReactDOM from "react-dom";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera,
@@ -914,12 +914,12 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
 
       {/* Employee Picker Modal */}
       <AnimatePresence>
-        {showEmployeePicker && (
+        {showEmployeePicker && createPortal(
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
             onClick={() => setShowEmployeePicker(false)}
           >
             <motion.div
@@ -927,7 +927,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[50vh] overflow-hidden shadow-xl"
+              className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[70vh] overflow-hidden shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-purple-50">
@@ -992,12 +992,12 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
 
       {/* Consignment Client Picker Modal */}
       <AnimatePresence>
-        {showClientPicker && (
+        {showClientPicker && createPortal(
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
             onClick={() => setShowClientPicker(false)}
           >
             <motion.div
@@ -1005,7 +1005,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[50vh] overflow-hidden shadow-xl"
+              className="bg-white w-[95%] sm:w-96 rounded-xl max-h-[70vh] overflow-hidden shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-emerald-50">
@@ -1062,7 +1062,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                 )}
               </div>
             </motion.div>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
     </>

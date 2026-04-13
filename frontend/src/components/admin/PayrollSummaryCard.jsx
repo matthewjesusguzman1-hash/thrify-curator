@@ -74,7 +74,7 @@ export default function PayrollSummaryCard({
                 </p>
               </div>
 
-              {/* This Month */}
+              {/* This Month - Actual Payments */}
               <div className="bg-gradient-to-br from-[#F8C8DC]/20 to-[#F8C8DC]/5 rounded-xl p-5 border border-[#F8C8DC]/30">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-[#ec4899] to-[#d946ef] rounded-lg flex items-center justify-center">
@@ -84,7 +84,7 @@ export default function PayrollSummaryCard({
                     <p className="text-2xl font-bold text-[#ec4899]">
                       {formatCurrency(payrollSummary?.month_total)}
                     </p>
-                    <p className="text-sm text-[#666]">Owed This Month</p>
+                    <p className="text-sm text-[#666]">Paid This Month</p>
                     <p className="text-xs text-[#888]">
                       {new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}
                     </p>
@@ -92,7 +92,7 @@ export default function PayrollSummaryCard({
                 </div>
               </div>
 
-              {/* This Year */}
+              {/* This Year - Actual Payments */}
               <div className="bg-gradient-to-br from-[#C5A065]/10 to-[#C5A065]/5 rounded-xl p-5 border border-[#C5A065]/20">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-[#C5A065] to-[#9A7B4F] rounded-lg flex items-center justify-center">
@@ -102,7 +102,7 @@ export default function PayrollSummaryCard({
                     <p className="text-2xl font-bold text-[#C5A065]">
                       {formatCurrency(payrollSummary?.year_total)}
                     </p>
-                    <p className="text-sm text-[#666]">Owed This Year</p>
+                    <p className="text-sm text-[#666]">Paid This Year</p>
                     <p className="text-xs text-[#888]">{new Date().getFullYear()} Total</p>
                   </div>
                 </div>
