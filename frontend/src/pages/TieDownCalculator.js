@@ -22,25 +22,29 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
    ================================================================ */
 const WLL_CHART = [
   { category: "Chain — Grade 30 (Proof Coil)", items: [
-    { label: '1/4" Gr30', wll: 1560 },{ label: '5/16" Gr30', wll: 2470 },
-    { label: '3/8" Gr30', wll: 3880 },{ label: '1/2" Gr30', wll: 6000 },
-    { label: '5/8" Gr30', wll: 6900 },
+    { label: '1/4" Gr30', wll: 1300 },{ label: '5/16" Gr30', wll: 1900 },
+    { label: '3/8" Gr30', wll: 2650 },{ label: '7/16" Gr30', wll: 3700 },
+    { label: '1/2" Gr30', wll: 4500 },{ label: '5/8" Gr30', wll: 6900 },
   ]},
   { category: "Chain — Grade 43 (High Test)", items: [
-    { label: '1/4" Gr43', wll: 3100 },{ label: '5/16" Gr43', wll: 5400 },
-    { label: '3/8" Gr43', wll: 7600 },{ label: '7/16" Gr43', wll: 9000 },
-    { label: '1/2" Gr43', wll: 12200 },{ label: '5/8" Gr43', wll: 13000 },
+    { label: '1/4" Gr43', wll: 2600 },{ label: '5/16" Gr43', wll: 3900 },
+    { label: '3/8" Gr43', wll: 5400 },{ label: '7/16" Gr43', wll: 7200 },
+    { label: '1/2" Gr43', wll: 9200 },{ label: '5/8" Gr43', wll: 13000 },
   ]},
   { category: "Chain — Grade 70 (Transport)", items: [
-    { label: '1/4" Gr70', wll: 3880 },{ label: '9/32" Gr70', wll: 5500 },
-    { label: '5/16" Gr70', wll: 6600 },{ label: '3/8" Gr70', wll: 9200 },
-    { label: '7/16" Gr70', wll: 10950 },{ label: '1/2" Gr70', wll: 14800 },
-    { label: '5/8" Gr70', wll: 15800 },
+    { label: '1/4" Gr70', wll: 3150 },{ label: '5/16" Gr70', wll: 4700 },
+    { label: '3/8" Gr70', wll: 6600 },{ label: '7/16" Gr70', wll: 8750 },
+    { label: '1/2" Gr70', wll: 11300 },{ label: '5/8" Gr70', wll: 15800 },
   ]},
   { category: "Chain — Grade 80 (Alloy)", items: [
-    { label: '1/4" Gr80', wll: 4400 },{ label: '5/16" Gr80', wll: 7100 },
-    { label: '3/8" Gr80', wll: 10000 },{ label: '1/2" Gr80', wll: 16000 },
+    { label: '1/4" Gr80', wll: 3500 },{ label: '5/16" Gr80', wll: 4500 },
+    { label: '3/8" Gr80', wll: 7100 },{ label: '1/2" Gr80', wll: 12000 },
     { label: '5/8" Gr80', wll: 18100 },
+  ]},
+  { category: "Chain — Grade 100 (Alloy)", items: [
+    { label: '1/4" Gr100', wll: 4300 },{ label: '5/16" Gr100', wll: 5700 },
+    { label: '3/8" Gr100', wll: 8800 },{ label: '1/2" Gr100', wll: 15000 },
+    { label: '5/8" Gr100', wll: 22600 },
   ]},
   { category: "Synthetic Webbing", items: [
     { label: '1-3/4" Web', wll: 1750 },{ label: '2" Web', wll: 2000 },
@@ -50,10 +54,39 @@ const WLL_CHART = [
     { label: '1/4" Wire Rope', wll: 1400 },{ label: '5/16" Wire Rope', wll: 2100 },
     { label: '3/8" Wire Rope', wll: 3000 },{ label: '7/16" Wire Rope', wll: 4100 },
     { label: '1/2" Wire Rope', wll: 5300 },{ label: '5/8" Wire Rope', wll: 8300 },
-    { label: '3/4" Wire Rope', wll: 10900 },
+    { label: '3/4" Wire Rope', wll: 10900 },{ label: '7/8" Wire Rope', wll: 16100 },
+    { label: '1" Wire Rope', wll: 20900 },
+  ]},
+  { category: "Manila Rope", items: [
+    { label: '3/8" Manila', wll: 205 },{ label: '7/16" Manila', wll: 265 },
+    { label: '1/2" Manila', wll: 315 },{ label: '5/8" Manila', wll: 465 },
+    { label: '3/4" Manila', wll: 640 },{ label: '1" Manila', wll: 1050 },
+  ]},
+  { category: "Polypropylene Fiber Rope", items: [
+    { label: '3/8" Polypro', wll: 400 },{ label: '7/16" Polypro', wll: 525 },
+    { label: '1/2" Polypro', wll: 625 },{ label: '5/8" Polypro', wll: 925 },
+    { label: '3/4" Polypro', wll: 1275 },{ label: '1" Polypro', wll: 2100 },
+  ]},
+  { category: "Polyester Fiber Rope", items: [
+    { label: '3/8" Polyester', wll: 555 },{ label: '7/16" Polyester', wll: 750 },
+    { label: '1/2" Polyester', wll: 960 },{ label: '5/8" Polyester', wll: 1500 },
+    { label: '3/4" Polyester', wll: 1880 },{ label: '1" Polyester', wll: 3300 },
+  ]},
+  { category: "Nylon Rope", items: [
+    { label: '3/8" Nylon', wll: 336 },{ label: '7/16" Nylon', wll: 502 },
+    { label: '1/2" Nylon', wll: 655 },{ label: '5/8" Nylon', wll: 1130 },
+    { label: '3/4" Nylon', wll: 1840 },{ label: '1" Nylon', wll: 3250 },
+  ]},
+  { category: "Double Braided Nylon Rope", items: [
+    { label: '3/8" Dbl Nylon', wll: 278 },{ label: '7/16" Dbl Nylon', wll: 410 },
+    { label: '1/2" Dbl Nylon', wll: 525 },{ label: '5/8" Dbl Nylon', wll: 935 },
+    { label: '3/4" Dbl Nylon', wll: 1420 },{ label: '1" Dbl Nylon', wll: 2520 },
   ]},
   { category: "Steel Strapping", items: [
-    { label: '2"x.050 Steel', wll: 2650 },
+    { label: '1-1/4"x.029 Steel', wll: 1190 },{ label: '1-1/4"x.031 Steel', wll: 1190 },
+    { label: '1-1/4"x.035 Steel', wll: 1190 },{ label: '1-1/4"x.044 Steel', wll: 1690 },
+    { label: '1-1/4"x.050 Steel', wll: 1690 },{ label: '1-1/4"x.057 Steel', wll: 1925 },
+    { label: '2"x.044 Steel', wll: 2650 },{ label: '2"x.050 Steel', wll: 2650 },
   ]},
 ];
 
@@ -173,11 +206,17 @@ function DirectIndirectGraphic({ open, onToggle }) {
 
 function WLLChartPicker({ onAdd, favorites, toggleFavorite }) {
   const [openSections, setOpenSections] = useState({});
+  const [tableOpen, setTableOpen] = useState(true);
   const toggle = (cat) => setOpenSections((p) => ({ ...p, [cat]: !p[cat] }));
   return (
     <div className="space-y-1" data-testid="wll-chart-picker">
-      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1">393.108 WLL Table</p>
-      {WLL_CHART.map(({ category, items }) => (
+      <button onClick={() => setTableOpen(o => !o)} className="w-full flex items-center justify-between mb-1" data-testid="toggle-wll-table">
+        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">393.108 WLL Table</p>
+        <ChevronDown className={`w-3.5 h-3.5 text-[#94A3B8] transition-transform duration-200 ${tableOpen ? "rotate-180" : ""}`} />
+      </button>
+      {tableOpen && (
+        <>
+          {WLL_CHART.map(({ category, items }) => (
         <div key={category} className="border border-[#E2E8F0] rounded-lg overflow-hidden">
           <button onClick={() => toggle(category)} className="w-full flex items-center justify-between px-3 py-2 bg-[#FAFBFC] hover:bg-[#F1F5F9] transition-colors" data-testid={`chart-section-${category.replace(/[\s/—()]/g, "-")}`}>
             <span className="text-[11px] font-semibold text-[#002855]">{category}</span>
@@ -207,6 +246,8 @@ function WLLChartPicker({ onAdd, favorites, toggleFavorite }) {
         </div>
       ))}
       <p className="text-[9px] text-[#94A3B8] italic pt-1">Per 49 CFR 393.108(b). Use manufacturer WLL when marked on tie-down.</p>
+        </>
+      )}
     </div>
   );
 }

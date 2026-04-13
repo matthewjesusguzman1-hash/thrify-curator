@@ -12,14 +12,14 @@ FMCSA roadside violation search/filter app with AI-powered search, NSP blue/gold
   - Multiple cargo articles on same trailer, each with own weight/length/blocking/tiedowns/photos
   - Direct=50% WLL, Indirect=100% WLL (default)
   - Headerboard/Blocking toggle (393.110b vs 393.110c)
-  - 393.108 WLL table (all grades, webbing, wire rope, steel)
+  - **Complete 393.108 WLL table** (13 categories: 5 chain grades incl. Grade 100, webbing, wire rope, manila, polypropylene, polyester, nylon, double braided nylon, steel strapping — all sizes from eCFR)
   - Favorites system (localStorage), Custom WLL
   - Drag-and-drop + up/down reorder, defective toggle
   - Count dots match tie-down position order
   - Photo upload from camera or gallery
   - Export all articles to HTML, Save all articles to inspection
   - Direct/Indirect infographic with user's custom images
-  - Collapsible sections, eCFR links
+  - Collapsible sections (WLL table + each category independently), eCFR links
 
 ## Recent Fixes
 - **PDF Export 2-Page Bug (2026-04-13)**: Fixed single-article PDF reports splitting into 2 pages on iOS. Root cause: `html2canvas` captured in-DOM element with flex-inflated scrollHeight. Fix: off-screen cloned wrappers for accurate content height.
