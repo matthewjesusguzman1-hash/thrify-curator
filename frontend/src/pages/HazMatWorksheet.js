@@ -565,8 +565,8 @@ export default function HazMatWorksheet() {
                             <div className="h-px flex-1 bg-[#E2E8F0]" />
                             <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">{item.label}</span>
                             {item.link && (
-                              <button onClick={() => navigateTo(item.link)} className="flex items-center gap-0.5 text-[9px] font-bold text-[#D4AF37] hover:text-[#002855] transition-colors whitespace-nowrap" data-testid={`link-${item.id}`}>
-                                Use tool <ArrowRight className="w-3 h-3" />
+                              <button onClick={() => navigateTo(item.link)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#D4AF37] text-[#002855] text-[10px] font-bold hover:bg-[#c9a432] transition-colors shadow-sm whitespace-nowrap" data-testid={`link-${item.id}`}>
+                                Use tool <ArrowRight className="w-3 h-3 rotate-90" />
                               </button>
                             )}
                             <div className="h-px flex-1 bg-[#E2E8F0]" />
@@ -608,8 +608,8 @@ export default function HazMatWorksheet() {
                                 </span>
                                 {item.ref && <CfrRef r={item.ref} />}
                                 {item.link && (
-                                  <button onClick={(e) => { e.stopPropagation(); navigateTo(item.link); }} className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#D4AF37] hover:text-[#002855] transition-colors flex-shrink-0" data-testid={`link-${item.id}`}>
-                                    Tool <ArrowRight className="w-2.5 h-2.5" />
+                                  <button onClick={(e) => { e.stopPropagation(); navigateTo(item.link); }} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#D4AF37] text-[#002855] text-[9px] font-bold hover:bg-[#c9a432] transition-colors flex-shrink-0 shadow-sm" data-testid={`link-${item.id}`}>
+                                    Open tool <ArrowRight className="w-2.5 h-2.5 rotate-90" />
                                   </button>
                                 )}
                               </div>

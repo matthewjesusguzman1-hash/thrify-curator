@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { ChevronDown, ExternalLink, Package, RotateCcw, HelpCircle, Truck, AlertTriangle, Search } from "lucide-react";
+import { ChevronDown, ExternalLink, Package, RotateCcw, HelpCircle, Truck, AlertTriangle, Search, ArrowRight } from "lucide-react";
 
 /* ================================================================
    SHARED UI HELPERS
@@ -64,9 +64,10 @@ function StepLink({ step, label, onNavigate }) {
   return (
     <button
       onClick={() => onNavigate(`step-${step}`)}
-      className="inline-flex items-center gap-1 text-[10px] font-bold text-[#D4AF37] hover:text-[#002855] transition-colors mt-1"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#002855] text-white text-[11px] font-bold hover:bg-[#001a3a] transition-colors shadow-sm"
     >
-      Go to Step {step}{label ? ` — ${label}` : ""} <ExternalLink className="w-2.5 h-2.5" />
+      <ArrowRight className="w-3 h-3 rotate-[-90deg]" />
+      Step {step}{label ? ` — ${label}` : ""}
     </button>
   );
 }
