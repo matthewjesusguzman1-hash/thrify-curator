@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft, ChevronDown, RotateCcw, Info, ExternalLink, CheckCircle2,
-  FileText, Package, Tag, AlertTriangle, Truck, ClipboardCheck, BookOpen,
+  FileText, Package, Tag, AlertTriangle, Truck, ClipboardCheck, BookOpen, ArrowRight,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -143,9 +143,9 @@ const STEPS = [
       { id: "2.9", label: "Basic description in proper sequence", ref: "172.202(b)", tip: "Required sequence (ISHP): UN/NA ID Number, Proper Shipping Name, Hazard Class/Division, Packing Group. Example: 'UN2744, Cyclobutyl chloroformate, 6.1, (8, 3), PG II'. Additional info (technical name, RQ, etc.) may be added before or after but cannot be interspersed within this sequence." },
       { id: "2.10", label: "Total quantity listed with unit of measure", ref: "172.202(a)(5)", tip: "Must include total quantity of HM by net or gross mass, capacity, or other appropriate measure. Acceptable units: kg, L, gallons, lbs, etc. For gases, the quantity may be the net mass or the capacity of the cylinder." },
       { id: "2.11", label: "Number and type of packages listed", ref: "172.202(a)(7)", tip: "Example: '5 drums' or '10 cylinders'. If the shipping paper covers multiple packages of the same material, a single entry with total count is acceptable." },
-      { id: "2.h2", type: "header", label: "Reportable Quantities (RQ)" },
-      { id: "2.12", label: "Check Appendix A to 172.101 — is material a Hazardous Substance?", ref: "172.101", tip: "If a material is listed in Appendix A and the quantity in a single package meets or exceeds the RQ, it is ALWAYS considered a hazardous material regardless of any other exceptions. The letters 'RQ' must appear on the shipping paper before or after the basic description." },
-      { id: "2.13", label: "Check Appendix B to 172.101 — is material a Marine Pollutant? (bulk only)", ref: "172.101", tip: "Marine pollutants in bulk packagings require specific marking and documentation. Materials listed as 'severe marine pollutants' (marked 'PP') have stricter requirements. Marine pollutant requirements apply to shipments transported by vessel." },
+      { id: "2.h2", type: "header", label: "Reportable Quantities (RQ)", link: "tool-substance-lookup" },
+      { id: "2.12", label: "Check Appendix A to 172.101 — is material a Hazardous Substance?", ref: "172.101", tip: "If a material is listed in Appendix A and the quantity in a single package meets or exceeds the RQ, it is ALWAYS considered a hazardous material regardless of any other exceptions. The letters 'RQ' must appear on the shipping paper before or after the basic description.", link: "tool-substance-lookup" },
+      { id: "2.13", label: "Check Appendix B to 172.101 — is material a Marine Pollutant? (bulk only)", ref: "172.101", tip: "Marine pollutants in bulk packagings require specific marking and documentation. Materials listed as 'severe marine pollutants' (marked 'PP') have stricter requirements. Marine pollutant requirements apply to shipments transported by vessel.", link: "tool-substance-lookup" },
       { id: "2.h3", type: "header", label: "Check for additional descriptions when required (172.203)" },
       { id: "2.14", label: "DOT Special Permits", ref: "172.203(a)", tip: "If shipping under a special permit, the notation 'DOT-SP' followed by the permit number must appear on the shipping paper. Verify that the shipment actually complies with all conditions of the special permit." },
       { id: "2.15", label: "Limited Quantities", ref: "172.203(b)", tip: "The words 'Limited Quantity' or 'Ltd Qty' must appear on the shipping paper for materials shipped under limited quantity exceptions. Limited quantities have reduced packaging, labeling, and placarding requirements." },
@@ -168,8 +168,8 @@ const STEPS = [
     tip: "The HM Table (172.101) Columns 7, 8A, 8B, and 8C direct you to the specific packaging requirements in Part 173. Always verify the packaging is authorized for the specific material being shipped. Using an unauthorized package is a serious violation.",
     items: [
       { id: "3.1", label: "Reference Column 7 for special provisions that apply", ref: "172.102", tip: "Column 7 lists numeric codes corresponding to special provisions in 172.102. These can modify any requirement — packaging, shipping descriptions, or even whether the material is subject to HMR. Common provisions: 'IB' codes for IBC use, 'T' codes for portable tanks, 'TP' codes for tank provisions." },
-      { id: "3.2", label: "Reference Column 8A — exceptions that may apply", ref: "173.XXX", tip: "Column 8A references sections in Part 173 that describe exceptions. Common examples: Limited quantities (173.150–156), Materials of Trade (173.6), consumer commodities, certain ORM-D materials. If an exception applies, some or all HMR requirements may be reduced or eliminated." },
-      { id: "3.3", label: "Reference Column 8B (non-bulk) or 8C (bulk) — authorized packages", ref: "173.XXX", tip: "Columns 8B/8C reference sections in Part 173 listing specific authorized packaging. Some packages may only be authorized by a DOT Special Permit (107.101 to 107.105). If a special permit is used, verify the shipment meets ALL conditions. Common packaging specs: UN-rated drums, cylinders, IBCs." },
+      { id: "3.2", label: "Reference Column 8A — exceptions that may apply", ref: "173.XXX", tip: "Column 8A references sections in Part 173 that describe exceptions. Common examples: Limited quantities (173.150–156), Materials of Trade (173.6), consumer commodities, certain ORM-D materials. If an exception applies, some or all HMR requirements may be reduced or eliminated.", link: "tool-mot-helper" },
+      { id: "3.3", label: "Reference Column 8B (non-bulk) or 8C (bulk) — authorized packages", ref: "173.XXX", tip: "Columns 8B/8C reference sections in Part 173 listing specific authorized packaging. Some packages may only be authorized by a DOT Special Permit (107.101 to 107.105). If a special permit is used, verify the shipment meets ALL conditions. Common packaging specs: UN-rated drums, cylinders, IBCs.", link: "tool-package-class-helper" },
     ],
   },
   {
@@ -178,9 +178,9 @@ const STEPS = [
     icon: AlertTriangle,
     tip: "Placards are 250mm (9.84 in) diamond-shaped signs displayed on vehicles to communicate hazard class to emergency responders. Use the primary hazard class from the shipping paper to find the required placard in the placarding tables at 172.504(e). Remember: Table 1 = any amount, Table 2 = over 1,001 lbs.",
     items: [
-      { id: "4.h0", type: "header", label: "Look up material by primary hazard class — find required placard" },
-      { id: "4.1", label: "Table 1 materials require placards in ANY amount", ref: "172.504(e)", tip: "Table 1 (most dangerous — placard any quantity): Div 1.1–1.3 (Explosives), Div 2.3 (Poison Gas), Div 4.3 (Dangerous When Wet), Div 5.2 (Organic Peroxide, Type B, liquid or solid, temperature controlled), Div 6.1 (Poison Inhalation Hazard only — not all PG I), Class 7 (Radioactive Yellow III label). Even a single small package requires placards." },
-      { id: "4.2", label: "Table 2 materials require placards over 1,001 lbs aggregate", ref: "172.504(e)", tip: "Table 2: Div 1.4–1.6, Div 2.1 (Flammable Gas), Div 2.2 (Non-flammable Gas), Class 3 (Flammable), Combustible Liquids, Div 4.1–4.2, Div 5.1, Div 6.1 (other than inhalation hazard), Class 8, Class 9. 'Aggregate' = total gross weight of ALL Table 2 materials on the vehicle combined." },
+      { id: "4.h0", type: "header", label: "Look up material by primary hazard class — find required placard", link: "tool-placard-helper" },
+      { id: "4.1", label: "Table 1 materials require placards in ANY amount", ref: "172.504(e)", tip: "Table 1 (most dangerous — placard any quantity): Div 1.1–1.3 (Explosives), Div 2.3 (Poison Gas), Div 4.3 (Dangerous When Wet), Div 5.2 (Organic Peroxide, Type B, liquid or solid, temperature controlled), Div 6.1 (Poison Inhalation Hazard only — not all PG I), Class 7 (Radioactive Yellow III label). Even a single small package requires placards.", link: "tool-placard-helper" },
+      { id: "4.2", label: "Table 2 materials require placards over 1,001 lbs aggregate", ref: "172.504(e)", tip: "Table 2: Div 1.4–1.6, Div 2.1 (Flammable Gas), Div 2.2 (Non-flammable Gas), Class 3 (Flammable), Combustible Liquids, Div 4.1–4.2, Div 5.1, Div 6.1 (other than inhalation hazard), Class 8, Class 9. 'Aggregate' = total gross weight of ALL Table 2 materials on the vehicle combined.", link: "tool-placard-helper" },
       { id: "4.3", label: "Bulk packages require placards (with exceptions)", ref: "172.514", tip: "Exceptions include: some portable tanks under 1,000 gal with certain gases, DOT Spec 106/110 multi-unit tanks, some flexible bulk containers, IBCs of limited quantities, and large packagings. Always verify the specific exception applies to the material in question." },
       { id: "4.h1", type: "header", label: "Check exceptions from placarding (172.500(b))" },
       { id: "4.4", label: "Limited quantities", ref: "172.500(b)", tip: "Limited quantity shipments in non-bulk packages are exempt from placarding. The package must be properly marked with the limited quantity marking (a diamond with the UN number or 'Y' marking)." },
@@ -282,7 +282,7 @@ const STEPS = [
       { id: "7.3", label: "Requalification/retest requirements met", ref: "180.XXX", tip: "Part 180 governs retesting schedules. Cylinders: generally every 5–10 years depending on type. Cargo tanks: external visual every year, internal inspection/pressure test every 5 years. Portable tanks: every 5 years. Check the last test date marking on the package." },
       { id: "7.4", label: "General securement of packages observed", ref: "177.834(a)", tip: "HM packages must be secured against movement during normal transport conditions, including sudden starts, stops, and turns. Packages must be braced, blocked, or secured to prevent shifting that could cause damage or release of HM." },
       { id: "7.5", label: "General packaging requirement verified", ref: "173.24", tip: "Five key requirements: (1) No release of HM to environment, (2) No hazardous residue on outside of package, (3) All closures tight and secure, (4) Venting only when specifically authorized, (5) Package must withstand normal transport conditions without loss of contents." },
-      { id: "7.6", label: "Segregation, separation, and compatibility verified", ref: "177.848", tip: "Use the 177.848 segregation table. 'X' = must NOT be loaded together. 'O' = may be loaded together only if separated in a manner that prevents interaction. Cyanides/cyanide mixtures must NEVER be loaded with acids. Oxidizers must be separated from flammables." },
+      { id: "7.6", label: "Segregation, separation, and compatibility verified", ref: "177.848", tip: "Use the 177.848 segregation table. 'X' = must NOT be loaded together. 'O' = may be loaded together only if separated in a manner that prevents interaction. Cyanides/cyanide mixtures must NEVER be loaded with acids. Oxidizers must be separated from flammables.", link: "tool-segregation-table" },
       { id: "7.h1", type: "header", label: "Loading/transport requirements for specific classes" },
       { id: "7.7", label: "Class 1 (Explosives)", ref: "177.835", tip: "Explosives must be protected from heat sources, sparks, and static discharge. Division 1.1/1.2/1.3 require placards any amount. No smoking within 25 feet. Vehicles must have a fire extinguisher. Special rules for compatibility groups — some divisions cannot be loaded together." },
       { id: "7.8", label: "Class 3 (Flammable Liquids)", ref: "177.837", tip: "No open flames or smoking near vehicle. Keep containers closed when not loading/unloading. Cargo tanks must be bonded/grounded during loading. Common materials: gasoline (UN1203), diesel fuel, alcohols, acetone, paint." },
@@ -397,6 +397,26 @@ export default function HazMatWorksheet() {
     }
   }, []);
 
+  // Cross-navigation between steps and tools
+  const navigateTo = useCallback((targetId) => {
+    // If targeting a step (e.g., "step-2"), open it
+    const stepMatch = targetId.match(/^step-(\d+)$/);
+    if (stepMatch) {
+      const stepNum = parseInt(stepMatch[1]);
+      setOpenSteps((prev) => ({ ...prev, [stepNum]: true }));
+    }
+    // Scroll after a short delay to let the section expand
+    setTimeout(() => {
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Flash highlight
+        el.classList.add("ring-2", "ring-[#D4AF37]", "ring-offset-2");
+        setTimeout(() => el.classList.remove("ring-2", "ring-[#D4AF37]", "ring-offset-2"), 2000);
+      }
+    }, 150);
+  }, []);
+
   // Compute progress
   const { stepProgress, totalChecked, totalCheckable } = useMemo(() => {
     const sp = {};
@@ -478,7 +498,7 @@ export default function HazMatWorksheet() {
           const stepDone = sp.checked === sp.total && sp.total > 0;
 
           return (
-            <div key={step.step} className="bg-white rounded-xl border overflow-hidden" data-testid={`step-${step.step}`}>
+            <div key={step.step} id={`step-${step.step}`} className="bg-white rounded-xl border overflow-hidden transition-all" data-testid={`step-${step.step}`}>
               {/* Step Header */}
               <button
                 onClick={() => toggleStep(step.step)}
@@ -544,6 +564,11 @@ export default function HazMatWorksheet() {
                           <div key={item.id} className="pt-3 pb-1 flex items-center gap-2">
                             <div className="h-px flex-1 bg-[#E2E8F0]" />
                             <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">{item.label}</span>
+                            {item.link && (
+                              <button onClick={() => navigateTo(item.link)} className="flex items-center gap-0.5 text-[9px] font-bold text-[#D4AF37] hover:text-[#002855] transition-colors whitespace-nowrap" data-testid={`link-${item.id}`}>
+                                Use tool <ArrowRight className="w-3 h-3" />
+                              </button>
+                            )}
                             <div className="h-px flex-1 bg-[#E2E8F0]" />
                           </div>
                         );
@@ -582,6 +607,11 @@ export default function HazMatWorksheet() {
                                   {item.label}
                                 </span>
                                 {item.ref && <CfrRef r={item.ref} />}
+                                {item.link && (
+                                  <button onClick={(e) => { e.stopPropagation(); navigateTo(item.link); }} className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#D4AF37] hover:text-[#002855] transition-colors flex-shrink-0" data-testid={`link-${item.id}`}>
+                                    Tool <ArrowRight className="w-2.5 h-2.5" />
+                                  </button>
+                                )}
                               </div>
                               {item.tip && <TipBlock tip={item.tip} />}
                             </div>
@@ -600,11 +630,11 @@ export default function HazMatWorksheet() {
         <div className="pt-2">
           <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-2 px-1">Inspector Tools</p>
           <div className="space-y-3">
-            <PlacardHelper />
-            <SubstanceLookup />
-            <PackageClassHelper />
-            <MaterialsOfTradeHelper />
-            <SegregationTable />
+            <div id="tool-placard-helper"><PlacardHelper onNavigate={navigateTo} /></div>
+            <div id="tool-substance-lookup"><SubstanceLookup onNavigate={navigateTo} /></div>
+            <div id="tool-package-class-helper"><PackageClassHelper onNavigate={navigateTo} /></div>
+            <div id="tool-mot-helper"><MaterialsOfTradeHelper onNavigate={navigateTo} /></div>
+            <div id="tool-segregation-table"><SegregationTable onNavigate={navigateTo} /></div>
           </div>
         </div>
 

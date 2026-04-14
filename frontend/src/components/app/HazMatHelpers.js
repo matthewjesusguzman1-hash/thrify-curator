@@ -59,10 +59,22 @@ function ResultBox({ title, compliant, children }) {
   );
 }
 
+function StepLink({ step, label, onNavigate }) {
+  if (!onNavigate) return null;
+  return (
+    <button
+      onClick={() => onNavigate(`step-${step}`)}
+      className="inline-flex items-center gap-1 text-[10px] font-bold text-[#D4AF37] hover:text-[#002855] transition-colors mt-1"
+    >
+      Go to Step {step}{label ? ` — ${label}` : ""} <ExternalLink className="w-2.5 h-2.5" />
+    </button>
+  );
+}
+
 /* ================================================================
    PACKAGE CLASSIFICATION HELPER
    ================================================================ */
-export function PackageClassHelper() {
+export function PackageClassHelper({ onNavigate }) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState("type"); // type -> capacity -> result
   const [packageType, setPackageType] = useState(null); // liquid, solid, gas
@@ -223,6 +235,7 @@ export function PackageClassHelper() {
                     </ul>
                   </InfoBox>
                   <p className="text-[10px] italic text-[#64748B]">Non-bulk packages include drums, pails, cylinders, boxes, bags, jerricans, composite packaging, and combination packaging.</p>
+                  <StepLink step={5} label="Check Marking" onNavigate={onNavigate} />
                 </ResultBox>
               )}
               {capacity === "bulk" && isSpec === true && (
@@ -248,6 +261,7 @@ export function PackageClassHelper() {
                     </ul>
                   </InfoBox>
                   <p className="text-[10px] italic text-[#64748B]">Common spec bulk packages: cargo tanks (MC/DOT series), portable tanks (DOT 51, IM 101/102), spec cylinders (3AA, 4BA, etc.), UN-rated IBCs.</p>
+                  <StepLink step={5} label="Check Marking" onNavigate={onNavigate} />
                 </ResultBox>
               )}
               {capacity === "bulk" && isSpec === false && (
@@ -321,7 +335,7 @@ const MOT_ITEMS = [
   },
 ];
 
-export function MaterialsOfTradeHelper() {
+export function MaterialsOfTradeHelper({ onNavigate }) {
   const [open, setOpen] = useState(false);
   const [answers, setAnswers] = useState({});
 
@@ -475,6 +489,14 @@ export function MaterialsOfTradeHelper() {
             </div>
           )}
 
+          {/* Step links */}
+          {allDone && (
+            <div className="flex flex-wrap gap-3">
+              <StepLink step={3} label="Packages & Exceptions" onNavigate={onNavigate} />
+              <StepLink step={5} label="Marking" onNavigate={onNavigate} />
+            </div>
+          )}
+
           {/* Reset */}
           {answered.length > 0 && (
             <button onClick={reset} className="flex items-center gap-1.5 text-[10px] text-[#94A3B8] hover:text-[#002855] transition-colors" data-testid="mot-reset">
@@ -557,7 +579,7 @@ function cellLabel(val) {
   return "";
 }
 
-export function SegregationTable() {
+export function SegregationTable({ onNavigate }) {
   const [open, setOpen] = useState(false);
   const [classA, setClassA] = useState(null);
   const [classB, setClassB] = useState(null);
@@ -711,6 +733,7 @@ export function SegregationTable() {
 
               {/* Ref */}
               <p className="text-[10px] text-[#94A3B8]">Per <CfrLink r="177.848" /> segregation table</p>
+              <StepLink step={7} label="Loading & Segregation" onNavigate={onNavigate} />
             </div>
           )}
 
@@ -868,7 +891,7 @@ const PLACARD_EXCEPTIONS = [
   { id: "poison_dom", title: "POISON Not Required with PIH/Poison Gas", ref: "172.504(f)(11)", desc: "For domestic transport, a POISON placard is not required if the vehicle already displays a POISON INHALATION HAZARD or POISON GAS placard." },
 ];
 
-export function PlacardHelper() {
+export function PlacardHelper({ onNavigate }) {
   const [open, setOpen] = useState(false);
   const [answers, setAnswers] = useState({});
   const [showExceptions, setShowExceptions] = useState(false);
@@ -1086,6 +1109,9 @@ export function PlacardHelper() {
             </div>
           )}
 
+          {/* Step link */}
+          {verdict && <StepLink step={4} label="Placarding Compliance" onNavigate={onNavigate} />}
+
           {/* EXCEPTIONS LIST — always available */}
           <div>
             <button
@@ -1131,7 +1157,7 @@ export function PlacardHelper() {
    ================================================================ */
 const API = process.env.REACT_APP_BACKEND_URL;
 
-export function SubstanceLookup() {
+export function SubstanceLookup({ onNavigate }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
@@ -1249,7 +1275,10 @@ export function SubstanceLookup() {
                   )}
                 </div>
               ))}
-              <p className="text-[9px] text-[#94A3B8] italic">Showing up to 20 results. Data from 49 CFR 172.101 Appendix A (Table 1) and Appendix B.</p>
+              <div className="flex items-center gap-3">
+                <p className="text-[9px] text-[#94A3B8] italic">Data from 49 CFR 172.101 Appendix A & B.</p>
+                <StepLink step={2} label="Shipping Paper" onNavigate={onNavigate} />
+              </div>
             </div>
           )}
         </div>
