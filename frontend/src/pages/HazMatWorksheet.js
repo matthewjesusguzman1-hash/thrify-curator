@@ -368,8 +368,7 @@ export default function HazMatWorksheet() {
   });
   const [openSteps, setOpenSteps] = useState({});
   const [showRef, setShowRef] = useState(false);
-  const [viewMode, setViewMode] = useState("steps"); // "steps" | "tools"
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("checklist"); // "checklist" | "tools"
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(checks));
@@ -406,20 +405,11 @@ export default function HazMatWorksheet() {
     const stepMatch = targetId.match(/^step-(\d+)$/);
 
     if (isToolTarget) {
-      // Switch to tools view or open drawer
-      if (viewMode === "steps") {
-        setDrawerOpen(true);
-      }
+      setActiveTab("tools");
     }
-
     if (stepMatch) {
-      const stepNum = parseInt(stepMatch[1]);
-      // If we're in tools-only mode, switch to steps
-      if (viewMode === "tools") {
-        setViewMode("steps");
-      }
-      setDrawerOpen(false);
-      setOpenSteps((prev) => ({ ...prev, [stepNum]: true }));
+      setActiveTab("checklist");
+      setOpenSteps((prev) => ({ ...prev, [parseInt(stepMatch[1])]: true }));
     }
 
     setTimeout(() => {
@@ -430,7 +420,7 @@ export default function HazMatWorksheet() {
         setTimeout(() => el.classList.remove("ring-2", "ring-[#D4AF37]", "ring-offset-2"), 2000);
       }
     }, 200);
-  }, [viewMode]);
+  }, []);
 
   // Compute progress
   const { stepProgress, totalChecked, totalCheckable } = useMemo(() => {
@@ -451,7 +441,7 @@ export default function HazMatWorksheet() {
   return (
     <div className="min-h-screen bg-[#F3F4F6]" data-testid="hazmat-worksheet">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-[#002855] border-b border-[#001a3a]">
+      <header className="sticky top-0 z-50 bg-[#002855]">
         <div className="max-w-3xl mx-auto px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <button onClick={() => navigate("/")} className="p-1 text-white/60 hover:text-white transition-colors" data-testid="back-btn">
@@ -489,34 +479,36 @@ export default function HazMatWorksheet() {
             </Button>
           </div>
         </div>
-        <div className="gold-accent h-[2px]" />
-      </header>
-
-      <main className="max-w-3xl mx-auto px-3 py-4 pb-24 space-y-3">
-        {/* VIEW MODE TOGGLE */}
-        <div className="flex items-center gap-2 bg-white rounded-xl border p-1.5" data-testid="view-toggle">
+        {/* Tabs */}
+        <div className="max-w-3xl mx-auto px-3 flex">
           <button
-            onClick={() => { setViewMode("steps"); setDrawerOpen(false); }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all ${
-              viewMode === "steps" ? "bg-[#002855] text-white shadow-sm" : "text-[#64748B] hover:bg-[#F1F5F9]"
+            onClick={() => setActiveTab("checklist")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold transition-all border-b-2 ${
+              activeTab === "checklist"
+                ? "text-[#D4AF37] border-[#D4AF37]"
+                : "text-white/50 border-transparent hover:text-white/80"
             }`}
-            data-testid="mode-steps"
+            data-testid="tab-checklist"
           >
             <List className="w-3.5 h-3.5" /> Checklist
           </button>
           <button
-            onClick={() => { setViewMode("tools"); setDrawerOpen(false); }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all ${
-              viewMode === "tools" ? "bg-[#D4AF37] text-[#002855] shadow-sm" : "text-[#64748B] hover:bg-[#F1F5F9]"
+            onClick={() => setActiveTab("tools")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold transition-all border-b-2 ${
+              activeTab === "tools"
+                ? "text-[#D4AF37] border-[#D4AF37]"
+                : "text-white/50 border-transparent hover:text-white/80"
             }`}
-            data-testid="mode-tools"
+            data-testid="tab-tools"
           >
-            <Wrench className="w-3.5 h-3.5" /> Tools Only
+            <Wrench className="w-3.5 h-3.5" /> Tools
           </button>
         </div>
+      </header>
 
-        {/* STEPS VIEW */}
-        {viewMode === "steps" && (
+      <main className="max-w-3xl mx-auto px-3 py-4 pb-8 space-y-3">
+        {/* CHECKLIST TAB */}
+        {activeTab === "checklist" && (
           <>
             {/* OVERALL PROGRESS */}
             <div className="bg-white rounded-xl border p-3" data-testid="overall-progress">
@@ -668,8 +660,8 @@ export default function HazMatWorksheet() {
           </>
         )}
 
-        {/* TOOLS VIEW (inline when in tools mode) */}
-        {viewMode === "tools" && (
+        {/* TOOLS TAB */}
+        {activeTab === "tools" && (
           <div className="space-y-3">
             <div id="tool-placard-helper"><PlacardHelper onNavigate={navigateTo} /></div>
             <div id="tool-substance-lookup"><SubstanceLookup onNavigate={navigateTo} /></div>
@@ -730,53 +722,6 @@ export default function HazMatWorksheet() {
           Based on HM Worksheet v26.1 — 49 CFR Chapter I (PHMSA)
         </p>
       </main>
-
-      {/* TOOLS DRAWER — slide-up panel when in steps mode */}
-      {viewMode === "steps" && (
-        <>
-          {/* Drawer backdrop */}
-          {drawerOpen && (
-            <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setDrawerOpen(false)} />
-          )}
-
-          {/* Sticky pull-up handle */}
-          <div className="fixed bottom-0 left-0 right-0 z-50">
-            {/* Drawer content */}
-            <div
-              className={`bg-[#F3F4F6] border-t-2 border-[#D4AF37] rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out ${
-                drawerOpen ? "translate-y-0" : "translate-y-[calc(100%-52px)]"
-              }`}
-              style={{ maxHeight: "85vh", height: drawerOpen ? "85vh" : "auto" }}
-            >
-              {/* Handle bar */}
-              <button
-                onClick={() => setDrawerOpen(!drawerOpen)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 cursor-pointer"
-                data-testid="drawer-toggle"
-              >
-                <div className="w-10 h-1 rounded-full bg-[#D4AF37]" />
-                <span className="text-[11px] font-bold text-[#002855] flex items-center gap-1.5">
-                  <Wrench className="w-3.5 h-3.5 text-[#D4AF37]" />
-                  Inspector Tools
-                  {drawerOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                </span>
-                <div className="w-10 h-1 rounded-full bg-[#D4AF37]" />
-              </button>
-
-              {/* Scrollable tools content */}
-              {drawerOpen && (
-                <div className="overflow-y-auto px-3 pb-6 space-y-3" style={{ maxHeight: "calc(85vh - 52px)" }}>
-                  <div id="tool-placard-helper"><PlacardHelper onNavigate={navigateTo} /></div>
-                  <div id="tool-substance-lookup"><SubstanceLookup onNavigate={navigateTo} /></div>
-                  <div id="tool-package-class-helper"><PackageClassHelper onNavigate={navigateTo} /></div>
-                  <div id="tool-mot-helper"><MaterialsOfTradeHelper onNavigate={navigateTo} /></div>
-                  <div id="tool-segregation-table"><SegregationTable onNavigate={navigateTo} /></div>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }
