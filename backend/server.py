@@ -1279,6 +1279,20 @@ async def root():
     return {"message": "SafeSpect Violation Navigator API"}
 
 
+@api_router.get("/hazmat-substances/search")
+async def search_hazmat_substances(q: str = Query("", min_length=1)):
+    """Search Appendix A (RQ) and Appendix B (Marine Pollutants) by name or ID number."""
+    query = q.strip()
+    if not query:
+        return []
+    regex = re.compile(re.escape(query), re.IGNORECASE)
+    cursor = db.hazmat_substances.find(
+        {"name": {"$regex": regex}},
+        {"_id": 0}
+    ).limit(20)
+    results = await cursor.to_list(length=20)
+    return results
+
 app.include_router(api_router)
 
 app.add_middleware(

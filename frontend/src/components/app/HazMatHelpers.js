@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { ChevronDown, ExternalLink, Package, RotateCcw, HelpCircle, Truck, AlertTriangle } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { ChevronDown, ExternalLink, Package, RotateCcw, HelpCircle, Truck, AlertTriangle, Search } from "lucide-react";
 
 /* ================================================================
    SHARED UI HELPERS
@@ -1118,6 +1118,134 @@ export function PlacardHelper() {
             <button onClick={reset} className="flex items-center gap-1.5 text-[10px] text-[#94A3B8] hover:text-[#002855] transition-colors" data-testid="placard-reset">
               <RotateCcw className="w-3 h-3" /> Start over
             </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/* ================================================================
+   RQ / MARINE POLLUTANT LOOKUP — Appendix A & B to 172.101
+   ================================================================ */
+const API = process.env.REACT_APP_BACKEND_URL;
+
+export function SubstanceLookup() {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef(null);
+
+  const search = useCallback((q) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!q || q.length < 2) { setResults(null); return; }
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API}/api/hazmat-substances/search?q=${encodeURIComponent(q)}`);
+        if (res.ok) setResults(await res.json());
+      } catch { /* ignore */ }
+      setLoading(false);
+    }, 300);
+  }, []);
+
+  const handleChange = (e) => {
+    const v = e.target.value;
+    setQuery(v);
+    search(v);
+  };
+
+  return (
+    <div className="bg-white rounded-xl border overflow-hidden" data-testid="substance-lookup">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#FAFBFC] transition-colors"
+        data-testid="substance-lookup-toggle"
+      >
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#002855]/10 flex-shrink-0">
+          <Search className="w-4 h-4 text-[#002855]" />
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-xs font-semibold text-[#0F172A]">RQ & Marine Pollutant Lookup</p>
+          <p className="text-[10px] text-[#94A3B8]">Appendix A (Reportable Quantity) & Appendix B (Marine Pollutant)</p>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-[#94A3B8] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="border-t px-4 py-3 space-y-3">
+          <InfoBox>
+            <strong>What is this?</strong> Search <CfrLink r="172.101" label="Appendix A" /> to check if a material is a <strong>hazardous substance</strong> with a reportable quantity (RQ), and <CfrLink r="172.101" label="Appendix B" /> to check if it's a <strong>marine pollutant</strong>. Type a substance name (e.g., "chlorine") or partial name.
+          </InfoBox>
+
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+            <input
+              type="text"
+              value={query}
+              onChange={handleChange}
+              placeholder="Search by name (e.g., chlorine, benzene, ammonia)..."
+              className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#E2E8F0] text-[12px] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#002855] focus:ring-1 focus:ring-[#002855] outline-none"
+              data-testid="substance-search-input"
+            />
+            {loading && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-[#002855] border-t-transparent rounded-full animate-spin" />}
+          </div>
+
+          {/* Results */}
+          {results && results.length === 0 && query.length >= 2 && (
+            <div className="text-center py-4 text-[11px] text-[#94A3B8]">
+              No matches found for "{query}". Try a different name or spelling.
+            </div>
+          )}
+
+          {results && results.length > 0 && (
+            <div className="space-y-2">
+              {results.map((r, i) => (
+                <div key={i} className="rounded-lg border bg-[#FAFBFC] p-3" data-testid={`substance-result-${i}`}>
+                  <p className="text-[12px] font-bold text-[#0F172A] mb-1.5">{r.name}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {/* RQ Badge */}
+                    {r.is_hazardous_substance ? (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#002855] text-white">
+                        <span className="text-[10px] font-bold">RQ: {r.rq_lbs?.toLocaleString()} lbs</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#F1F5F9] text-[#94A3B8]">
+                        <span className="text-[10px]">Not a Hazardous Substance</span>
+                      </div>
+                    )}
+                    {/* Marine Pollutant Badge */}
+                    {r.is_marine_pollutant ? (
+                      <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${r.is_severe_marine_pollutant ? "bg-red-500 text-white" : "bg-yellow-400 text-yellow-900"}`}>
+                        <span className="text-[10px] font-bold">
+                          {r.is_severe_marine_pollutant ? "Severe Marine Pollutant (PP)" : "Marine Pollutant"}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#F1F5F9] text-[#94A3B8]">
+                        <span className="text-[10px]">Not a Marine Pollutant</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Explanation */}
+                  {r.is_hazardous_substance && (
+                    <p className="text-[10px] text-[#475569] mt-1.5 leading-relaxed">
+                      If shipped in one package at or above <strong>{r.rq_lbs?.toLocaleString()} lbs</strong>, "RQ" must appear on the shipping paper per <CfrLink r="172.203(c)" />. Package must be marked "RQ" per <CfrLink r="172.324" />.
+                    </p>
+                  )}
+                  {r.is_marine_pollutant && (
+                    <p className="text-[10px] text-[#475569] mt-1 leading-relaxed">
+                      {r.is_severe_marine_pollutant ? "Severe marine pollutant (PP) — " : ""}
+                      Bulk packages require marine pollutant marking per <CfrLink r="172.322" />. Shipping paper must note "Marine Pollutant" per <CfrLink r="172.203(l)" />.
+                    </p>
+                  )}
+                </div>
+              ))}
+              <p className="text-[9px] text-[#94A3B8] italic">Showing up to 20 results. Data from 49 CFR 172.101 Appendix A (Table 1) and Appendix B.</p>
+            </div>
           )}
         </div>
       )}

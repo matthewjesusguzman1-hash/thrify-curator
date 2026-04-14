@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../components/ui/popover";
-import { PackageClassHelper, MaterialsOfTradeHelper, SegregationTable, PlacardHelper } from "../components/app/HazMatHelpers";
+import { PackageClassHelper, MaterialsOfTradeHelper, SegregationTable, PlacardHelper, SubstanceLookup } from "../components/app/HazMatHelpers";
 import { toast } from "sonner";
 
 /* ================================================================
@@ -601,6 +601,7 @@ export default function HazMatWorksheet() {
           <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-2 px-1">Inspector Tools</p>
           <div className="space-y-3">
             <PlacardHelper />
+            <SubstanceLookup />
             <PackageClassHelper />
             <MaterialsOfTradeHelper />
             <SegregationTable />
