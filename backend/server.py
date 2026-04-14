@@ -363,7 +363,6 @@ async def seed_hazmat_substances():
         {"n":"Ferrous sulfate","rq":1000},{"n":"Fluorine","rq":10,"ids":["UN1045"]},
         {"n":"Formaldehyde","rq":100,"ids":["UN1198","UN2209"]},{"n":"Formic acid","rq":5000,"ids":["UN1779"]},
         {"n":"Furan","rq":100},{"n":"Furfural","rq":5000,"ids":["UN1199"]},
-        {"n":"Gasoline","rq":100,"ids":["UN1203"]},
         {"n":"Heptachlor","rq":1},{"n":"Hexachlorobenzene","rq":10},
         {"n":"Hexachlorobutadiene","rq":1},{"n":"Hexachlorocyclopentadiene","rq":10},
         {"n":"Hexachloroethane","rq":100},{"n":"n-Hexane","rq":5000},
