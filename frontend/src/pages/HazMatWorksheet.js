@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ChevronLeft, ChevronDown, RotateCcw, Info, ExternalLink, CheckCircle2,
+  ChevronLeft, ChevronDown, ChevronUp, RotateCcw, Info, ExternalLink, CheckCircle2,
   FileText, Package, Tag, AlertTriangle, Truck, ClipboardCheck, BookOpen, ArrowRight,
+  Wrench, X, List,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -367,6 +368,8 @@ export default function HazMatWorksheet() {
   });
   const [openSteps, setOpenSteps] = useState({});
   const [showRef, setShowRef] = useState(false);
+  const [viewMode, setViewMode] = useState("steps"); // "steps" | "tools"
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(checks));
@@ -399,23 +402,35 @@ export default function HazMatWorksheet() {
 
   // Cross-navigation between steps and tools
   const navigateTo = useCallback((targetId) => {
-    // If targeting a step (e.g., "step-2"), open it
+    const isToolTarget = targetId.startsWith("tool-");
     const stepMatch = targetId.match(/^step-(\d+)$/);
+
+    if (isToolTarget) {
+      // Switch to tools view or open drawer
+      if (viewMode === "steps") {
+        setDrawerOpen(true);
+      }
+    }
+
     if (stepMatch) {
       const stepNum = parseInt(stepMatch[1]);
+      // If we're in tools-only mode, switch to steps
+      if (viewMode === "tools") {
+        setViewMode("steps");
+      }
+      setDrawerOpen(false);
       setOpenSteps((prev) => ({ ...prev, [stepNum]: true }));
     }
-    // Scroll after a short delay to let the section expand
+
     setTimeout(() => {
       const el = document.getElementById(targetId);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "start" });
-        // Flash highlight
         el.classList.add("ring-2", "ring-[#D4AF37]", "ring-offset-2");
         setTimeout(() => el.classList.remove("ring-2", "ring-[#D4AF37]", "ring-offset-2"), 2000);
       }
-    }, 150);
-  }, []);
+    }, 200);
+  }, [viewMode]);
 
   // Compute progress
   const { stepProgress, totalChecked, totalCheckable } = useMemo(() => {
@@ -477,17 +492,42 @@ export default function HazMatWorksheet() {
         <div className="gold-accent h-[2px]" />
       </header>
 
-      <main className="max-w-3xl mx-auto px-3 py-4 pb-20 space-y-3">
-        {/* OVERALL PROGRESS */}
-        <div className="bg-white rounded-xl border p-3" data-testid="overall-progress">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Overall Progress</span>
-            <span className="text-xs font-bold text-[#002855]">{totalChecked}/{totalCheckable} ({overallPct}%)</span>
-          </div>
-          <div className="h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${overallPct}%`, background: overallPct >= 100 ? "#10B981" : overallPct >= 50 ? "#D4AF37" : "#002855" }} />
-          </div>
+      <main className="max-w-3xl mx-auto px-3 py-4 pb-24 space-y-3">
+        {/* VIEW MODE TOGGLE */}
+        <div className="flex items-center gap-2 bg-white rounded-xl border p-1.5" data-testid="view-toggle">
+          <button
+            onClick={() => { setViewMode("steps"); setDrawerOpen(false); }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all ${
+              viewMode === "steps" ? "bg-[#002855] text-white shadow-sm" : "text-[#64748B] hover:bg-[#F1F5F9]"
+            }`}
+            data-testid="mode-steps"
+          >
+            <List className="w-3.5 h-3.5" /> Checklist
+          </button>
+          <button
+            onClick={() => { setViewMode("tools"); setDrawerOpen(false); }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all ${
+              viewMode === "tools" ? "bg-[#D4AF37] text-[#002855] shadow-sm" : "text-[#64748B] hover:bg-[#F1F5F9]"
+            }`}
+            data-testid="mode-tools"
+          >
+            <Wrench className="w-3.5 h-3.5" /> Tools Only
+          </button>
         </div>
+
+        {/* STEPS VIEW */}
+        {viewMode === "steps" && (
+          <>
+            {/* OVERALL PROGRESS */}
+            <div className="bg-white rounded-xl border p-3" data-testid="overall-progress">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Overall Progress</span>
+                <span className="text-xs font-bold text-[#002855]">{totalChecked}/{totalCheckable} ({overallPct}%)</span>
+              </div>
+              <div className="h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${overallPct}%`, background: overallPct >= 100 ? "#10B981" : overallPct >= 50 ? "#D4AF37" : "#002855" }} />
+              </div>
+            </div>
 
         {/* STEPS */}
         {STEPS.map((step) => {
@@ -625,20 +665,19 @@ export default function HazMatWorksheet() {
             </div>
           );
         })}
+          </>
+        )}
 
-        {/* INSPECTOR TOOLS */}
-        <div className="pt-2">
-          <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-2 px-1">Inspector Tools</p>
+        {/* TOOLS VIEW (inline when in tools mode) */}
+        {viewMode === "tools" && (
           <div className="space-y-3">
             <div id="tool-placard-helper"><PlacardHelper onNavigate={navigateTo} /></div>
             <div id="tool-substance-lookup"><SubstanceLookup onNavigate={navigateTo} /></div>
             <div id="tool-package-class-helper"><PackageClassHelper onNavigate={navigateTo} /></div>
             <div id="tool-mot-helper"><MaterialsOfTradeHelper onNavigate={navigateTo} /></div>
             <div id="tool-segregation-table"><SegregationTable onNavigate={navigateTo} /></div>
-          </div>
-        </div>
 
-        {/* QUICK REFERENCE */}
+            {/* QUICK REFERENCE */}
         <div className="bg-white rounded-xl border overflow-hidden" data-testid="quick-reference">
           <button
             onClick={() => setShowRef(!showRef)}
@@ -683,12 +722,61 @@ export default function HazMatWorksheet() {
             </div>
           )}
         </div>
+          </div>
+        )}
 
         {/* Footer */}
         <p className="text-center text-[9px] text-[#94A3B8] italic pt-2">
           Based on HM Worksheet v26.1 — 49 CFR Chapter I (PHMSA)
         </p>
       </main>
+
+      {/* TOOLS DRAWER — slide-up panel when in steps mode */}
+      {viewMode === "steps" && (
+        <>
+          {/* Drawer backdrop */}
+          {drawerOpen && (
+            <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setDrawerOpen(false)} />
+          )}
+
+          {/* Sticky pull-up handle */}
+          <div className="fixed bottom-0 left-0 right-0 z-50">
+            {/* Drawer content */}
+            <div
+              className={`bg-[#F3F4F6] border-t-2 border-[#D4AF37] rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out ${
+                drawerOpen ? "translate-y-0" : "translate-y-[calc(100%-52px)]"
+              }`}
+              style={{ maxHeight: "85vh", height: drawerOpen ? "85vh" : "auto" }}
+            >
+              {/* Handle bar */}
+              <button
+                onClick={() => setDrawerOpen(!drawerOpen)}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 cursor-pointer"
+                data-testid="drawer-toggle"
+              >
+                <div className="w-10 h-1 rounded-full bg-[#D4AF37]" />
+                <span className="text-[11px] font-bold text-[#002855] flex items-center gap-1.5">
+                  <Wrench className="w-3.5 h-3.5 text-[#D4AF37]" />
+                  Inspector Tools
+                  {drawerOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                </span>
+                <div className="w-10 h-1 rounded-full bg-[#D4AF37]" />
+              </button>
+
+              {/* Scrollable tools content */}
+              {drawerOpen && (
+                <div className="overflow-y-auto px-3 pb-6 space-y-3" style={{ maxHeight: "calc(85vh - 52px)" }}>
+                  <div id="tool-placard-helper"><PlacardHelper onNavigate={navigateTo} /></div>
+                  <div id="tool-substance-lookup"><SubstanceLookup onNavigate={navigateTo} /></div>
+                  <div id="tool-package-class-helper"><PackageClassHelper onNavigate={navigateTo} /></div>
+                  <div id="tool-mot-helper"><MaterialsOfTradeHelper onNavigate={navigateTo} /></div>
+                  <div id="tool-segregation-table"><SegregationTable onNavigate={navigateTo} /></div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
