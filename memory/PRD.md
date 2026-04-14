@@ -27,8 +27,10 @@ FMCSA roadside violation search/filter app with AI-powered search, NSP blue/gold
   - Inspector tips on every checkable item (113 tips) with contextual regulatory guidance
   - All CFR references are clickable links to eCFR.gov
   - **Inspector Tools**:
+    - Placard Determination Helper (Table 1 & 2, weight thresholds, CDL H endorsement, 16 exceptions with explanations)
     - Package Classification Helper (Bulk/Non-Bulk/Specification guided walkthrough)
-    - Materials of Trade (MOT) Helper (173.6 exception decision tree with quantity table)
+    - Materials of Trade (MOT) Helper (173.6 exception — linear flow, flags violations inline)
+    - Segregation Table (177.848 — pick two classes, plain-language verdict)
   - Quick Reference section — PHMSA Title 49 Chapter 1 regulation index (all Parts linkable)
   - localStorage persistence, reset functionality
 

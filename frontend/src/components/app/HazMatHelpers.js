@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ChevronDown, ExternalLink, Package, RotateCcw, HelpCircle, Truck } from "lucide-react";
+import { ChevronDown, ExternalLink, Package, RotateCcw, HelpCircle, Truck, AlertTriangle } from "lucide-react";
 
 /* ================================================================
    SHARED UI HELPERS
@@ -810,6 +810,315 @@ export function SegregationTable() {
             </ul>
             <p className="italic">Subsidiary hazards: when a package has a subsidiary label, use the more restrictive segregation — <CfrLink r="177.848(e)(6)" /></p>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/* ================================================================
+   PLACARD DETERMINATION HELPER — 49 CFR 172.504
+   ================================================================ */
+const TABLE1 = [
+  { div: "1.1", placard: "EXPLOSIVES 1.1", color: "#C2410C" },
+  { div: "1.2", placard: "EXPLOSIVES 1.2", color: "#C2410C" },
+  { div: "1.3", placard: "EXPLOSIVES 1.3", color: "#C2410C" },
+  { div: "2.3", placard: "POISON GAS", color: "#DC2626" },
+  { div: "4.3", placard: "DANGEROUS WHEN WET", color: "#1D4ED8" },
+  { div: "5.2*", placard: "ORGANIC PEROXIDE (Type B, temp. controlled)", color: "#DC2626" },
+  { div: "6.1 PIH", placard: "POISON INHALATION HAZARD", color: "#DC2626" },
+  { div: "7", placard: "RADIOACTIVE (Yellow III label)", color: "#EAB308" },
+];
+
+const TABLE2 = [
+  { div: "1.4", placard: "EXPLOSIVES 1.4", color: "#C2410C" },
+  { div: "1.5", placard: "EXPLOSIVES 1.5", color: "#C2410C" },
+  { div: "1.6", placard: "EXPLOSIVES 1.6", color: "#C2410C" },
+  { div: "2.1", placard: "FLAMMABLE GAS", color: "#DC2626" },
+  { div: "2.2", placard: "NON-FLAMMABLE GAS", color: "#16A34A" },
+  { div: "3", placard: "FLAMMABLE", color: "#DC2626" },
+  { div: "Comb. Liq.", placard: "COMBUSTIBLE", color: "#DC2626" },
+  { div: "4.1", placard: "FLAMMABLE SOLID", color: "#DC2626" },
+  { div: "4.2", placard: "SPONTANEOUSLY COMBUSTIBLE", color: "#DC2626" },
+  { div: "5.1", placard: "OXIDIZER", color: "#EAB308" },
+  { div: "5.2", placard: "ORGANIC PEROXIDE (other)", color: "#EAB308" },
+  { div: "6.1", placard: "POISON (other than PIH)", color: "#DC2626" },
+  { div: "6.2", placard: "NONE", color: "#94A3B8" },
+  { div: "8", placard: "CORROSIVE", color: "#1E293B" },
+  { div: "9", placard: "CLASS 9 (not req'd for domestic highway)", color: "#64748B" },
+];
+
+const PLACARD_EXCEPTIONS = [
+  { id: "ltd_qty", title: "Limited Quantities", ref: "172.500(b)(2)", desc: "Materials identified as limited quantity on the shipping paper per 172.203(b) or marked per 172.315 are exempt from ALL placarding requirements. Includes consumer commodities." },
+  { id: "small_qty", title: "Small Quantities", ref: "172.500(b)(4)", desc: "Materials packaged under small quantity provisions (173.4, 173.4a, 173.4b) are exempt from placarding." },
+  { id: "infectious", title: "Infectious Substances (Div 6.2)", ref: "172.500(b)(1)", desc: "Division 6.2 infectious substances are exempt from placarding entirely. Still require proper packaging, marking, labeling, and shipping papers." },
+  { id: "comb_nonbulk", title: "Combustible Liquids in Non-Bulk", ref: "172.500(b)(5)", desc: "Combustible liquids (flash point >140°F and <200°F) in non-bulk packages (≤119 gal) are exempt from placarding." },
+  { id: "under_1001", title: "Less than 1,001 lbs of Table 2 Material", ref: "172.504(c)", desc: "Table 2 materials (in non-bulk packages only) do NOT require placards if the aggregate gross weight on the vehicle is under 454 kg (1,001 lbs). Does NOT apply to Table 1 materials or bulk packages." },
+  { id: "empty", title: "Empty Non-Bulk Packages (Table 2 only)", ref: "172.504(d)", desc: "Non-bulk packages containing only the residue of a Table 2 material do not count toward the placarding determination. Does NOT apply to Table 1 residue." },
+  { id: "dangerous_sub", title: "DANGEROUS Placard Substitution", ref: "172.504(b)", desc: "When carrying 2+ categories of Table 2 materials in non-bulk packages, a single DANGEROUS placard may replace the individual Table 2 placards. EXCEPTION: If 2,205 lbs (1,000 kg) or more of one Table 2 category is loaded at one facility, that specific placard must be displayed." },
+  { id: "class1_lowest", title: "Class 1 — Only Lowest Division", ref: "172.504(f)(1)", desc: "When multiple Class 1 division placards are required, only the placard for the LOWEST division number needs to be displayed. E.g., if carrying Div 1.1 and Div 1.3, only EXPLOSIVES 1.1 is needed." },
+  { id: "flam_for_comb", title: "FLAMMABLE for COMBUSTIBLE", ref: "172.504(f)(2)", desc: "A FLAMMABLE placard may be used in place of a COMBUSTIBLE placard on a cargo tank, portable tank, or a compartmented tank car with both flammable and combustible liquids." },
+  { id: "nonfg_oxygen", title: "NON-FLAMMABLE GAS Not Required", ref: "172.504(f)(3)", desc: "A NON-FLAMMABLE GAS placard is not required if the vehicle also contains flammable gas or oxygen and is already placarded FLAMMABLE GAS or OXYGEN." },
+  { id: "oxidizer_exp", title: "OXIDIZER Not Required with Explosives", ref: "172.504(f)(4)/(5)", desc: "OXIDIZER placards are not required when the vehicle also contains Div 1.1, 1.2, or 1.5 explosives and is placarded with those explosive placards." },
+  { id: "1_4s", title: "Division 1.4S Exception", ref: "172.504(f)(6)", desc: "Div 1.4 Compatibility Group S (1.4S) materials that are not required to be labeled 1.4S do NOT require an EXPLOSIVES 1.4 placard." },
+  { id: "oxygen_dom", title: "OXYGEN for Domestic Transport", ref: "172.504(f)(7)", desc: "For domestic transport of oxygen (compressed or refrigerated liquid), the OXYGEN placard may be used instead of NON-FLAMMABLE GAS." },
+  { id: "pih_pg", title: "POISON GAS Covers PIH", ref: "172.504(f)(8)", desc: "For domestic transport, a POISON INHALATION HAZARD placard is not required if the vehicle already displays a POISON GAS placard." },
+  { id: "class9_dom", title: "Class 9 — Domestic Exception", ref: "172.504(f)(9)", desc: "A CLASS 9 placard is NOT required for domestic highway transport. However, bulk packages must still display the ID number on a Class 9 placard, orange panel, or white square-on-point." },
+  { id: "poison_dom", title: "POISON Not Required with PIH/Poison Gas", ref: "172.504(f)(11)", desc: "For domestic transport, a POISON placard is not required if the vehicle already displays a POISON INHALATION HAZARD or POISON GAS placard." },
+];
+
+export function PlacardHelper() {
+  const [open, setOpen] = useState(false);
+  const [answers, setAnswers] = useState({});
+  const [showExceptions, setShowExceptions] = useState(false);
+
+  const reset = useCallback(() => { setAnswers({}); }, []);
+
+  const QUESTIONS = [
+    { id: "bulk", question: "Is the hazardous material in a BULK packaging?", help: "Bulk = capacity >119 gal for liquids, >882 lbs for solids, or water capacity >1,000 lbs for gases (171.8). Cargo tanks, portable tanks, IBCs over these thresholds, and tank cars are all bulk." },
+    { id: "table", question: "Is the material a Table 1 or Table 2 hazard class?", help: null, helpType: "tables" },
+    { id: "weight", question: "Is the aggregate gross weight of ALL Table 2 materials on this vehicle 1,001 lbs (454 kg) or more?", help: "Add up the gross weight (including packaging) of ALL Table 2 materials on the vehicle — not just one class. If the total is 1,001 lbs or more, placards are required. If under 1,001 lbs (and no Table 1 or bulk materials), placards are not required for the Table 2 materials.", condition: (a) => a.bulk === false && a.table === "table2" },
+    { id: "exception", question: "Does any placarding exception apply?", help: null, helpType: "exception_check", condition: (a) => {
+      if (a.table === "table1") return true;
+      if (a.bulk === true) return true;
+      if (a.table === "table2" && a.weight === true) return true;
+      return false;
+    }},
+  ];
+
+  const visibleQs = QUESTIONS.filter(q => !q.condition || q.condition(answers));
+
+  const allDone = visibleQs.every(q => answers[q.id] !== undefined);
+
+  // Determine result
+  let verdict = null;
+  let endorsement = false;
+  if (allDone || (answers.table === "table2" && answers.weight === false)) {
+    if (answers.table === "table1") {
+      verdict = { required: true, reason: "Table 1 materials require placards in ANY quantity — even a single package." };
+      endorsement = true;
+    } else if (answers.bulk === true) {
+      verdict = { required: true, reason: "Bulk packages of hazardous materials require placards regardless of quantity or Table 1/Table 2 classification." };
+      endorsement = true;
+    } else if (answers.table === "table2" && answers.weight === true) {
+      verdict = { required: true, reason: "The aggregate gross weight of Table 2 materials on this vehicle meets or exceeds 1,001 lbs (454 kg)." };
+      endorsement = true;
+    } else if (answers.table === "table2" && answers.weight === false) {
+      verdict = { required: false, reason: "Table 2 materials in non-bulk packages under 1,001 lbs aggregate do NOT require placards (172.504(c)). However, all other HMR requirements (shipping papers, marking, labeling, packaging) still apply." };
+      endorsement = false;
+    } else if (answers.table === "neither") {
+      verdict = { required: false, reason: "The material does not appear to fall under Table 1 or Table 2. Check if an exception applies (limited quantity, Materials of Trade, etc.) that may remove it from the HMR entirely." };
+      endorsement = false;
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border overflow-hidden" data-testid="placard-helper">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#FAFBFC] transition-colors"
+        data-testid="placard-helper-toggle"
+      >
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#002855]/10 flex-shrink-0">
+          <AlertTriangle className="w-4 h-4 text-[#002855]" />
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-xs font-semibold text-[#0F172A]">Does It Need a Placard?</p>
+          <p className="text-[10px] text-[#94A3B8]">Placard determination, Tables 1 & 2, exceptions, CDL HM endorsement</p>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-[#94A3B8] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="border-t px-4 py-3 space-y-3">
+          <InfoBox>
+            <strong>Placarding overview:</strong> Placards are 250mm (9.84 in) diamond-shaped signs displayed on all four sides of a vehicle to identify hazard classes. <strong>Table 1</strong> materials require placards in <strong>any amount</strong>. <strong>Table 2</strong> materials require placards only when the aggregate gross weight on the vehicle is <strong>1,001 lbs or more</strong> (unless in bulk packaging). See <CfrLink r="172.504" />.
+          </InfoBox>
+
+          {/* Questions */}
+          {visibleQs.map((q, idx) => {
+            const prev = idx === 0 || answers[visibleQs[idx - 1].id] !== undefined;
+            if (!prev) return null;
+            const val = answers[q.id];
+            const isAnswered = val !== undefined;
+
+            // Skip weight question if we already know result
+            if (q.id === "weight" && (answers.table === "table1" || answers.table === "neither" || answers.bulk === true)) return null;
+            if (q.id === "exception" && verdict && !verdict.required) return null;
+
+            return (
+              <div key={q.id} className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    !isAnswered ? "bg-[#002855]/10 text-[#002855]" :
+                    "bg-[#002855] text-white"
+                  }`}>
+                    {idx + 1}
+                  </div>
+                  <p className={`text-[11px] font-bold ${isAnswered ? "text-[#64748B]" : "text-[#002855]"}`}>{q.question}</p>
+                </div>
+
+                {!isAnswered && (
+                  <>
+                    {q.helpType === "tables" ? (
+                      <div className="space-y-2 pl-7">
+                        <p className="text-[10px] text-[#64748B]">Find the material's primary hazard class from the shipping paper, then locate it below:</p>
+                        {/* Table 1 */}
+                        <div className="rounded-lg border-2 border-red-300 bg-red-50/50 p-2.5">
+                          <p className="text-[11px] font-bold text-red-700 mb-1.5">TABLE 1 — Placard required in ANY quantity</p>
+                          <div className="space-y-0.5">
+                            {TABLE1.map(t => (
+                              <div key={t.div} className="flex items-center gap-2 text-[10px]">
+                                <span className="font-mono font-bold text-red-800 w-12 flex-shrink-0">{t.div}</span>
+                                <span className="text-[#334155]">{t.placard}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Table 2 */}
+                        <div className="rounded-lg border-2 border-[#002855]/20 bg-[#002855]/5 p-2.5">
+                          <p className="text-[11px] font-bold text-[#002855] mb-1.5">TABLE 2 — Placard required at 1,001 lbs+ aggregate</p>
+                          <div className="space-y-0.5">
+                            {TABLE2.map(t => (
+                              <div key={t.div} className="flex items-center gap-2 text-[10px]">
+                                <span className="font-mono font-bold text-[#002855] w-12 flex-shrink-0">{t.div}</span>
+                                <span className="text-[#334155]">{t.placard}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, table: "table1" }))} testId="plac-table1">
+                            <span className="font-semibold text-red-700">Table 1</span>
+                          </OptionButton>
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, table: "table2" }))} testId="plac-table2">
+                            <span className="font-semibold text-[#002855]">Table 2</span>
+                          </OptionButton>
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, table: "neither" }))} testId="plac-neither">
+                            <span className="font-semibold">Neither/Unsure</span>
+                          </OptionButton>
+                        </div>
+                      </div>
+                    ) : q.helpType === "exception_check" ? (
+                      <div className="pl-7 space-y-2">
+                        <InfoBox color="amber">
+                          <strong>Before finalizing, check if any exception reduces or eliminates the placard requirement.</strong> Review the exceptions list below. If none apply, placards are required.
+                        </InfoBox>
+                        <div className="grid grid-cols-2 gap-2">
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, exception: false }))} testId="plac-no-exception">
+                            <span className="font-semibold">No exception applies</span>
+                          </OptionButton>
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, exception: true }))} testId="plac-has-exception">
+                            <span className="font-semibold">Exception applies</span>
+                          </OptionButton>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {q.help && <div className="pl-7"><InfoBox>{q.help}</InfoBox></div>}
+                        <div className="grid grid-cols-2 gap-2 pl-7">
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, [q.id]: true }))} testId={`plac-${q.id}-yes`}>
+                            <span className="font-semibold">Yes</span>
+                          </OptionButton>
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, [q.id]: false }))} testId={`plac-${q.id}-no`}>
+                            <span className="font-semibold">No</span>
+                          </OptionButton>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {/* Show answered state inline */}
+                {isAnswered && q.id === "table" && (
+                  <div className={`ml-7 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                    val === "table1" ? "bg-red-100 text-red-700" : val === "table2" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {val === "table1" ? "Table 1" : val === "table2" ? "Table 2" : "Neither"}
+                  </div>
+                )}
+                {isAnswered && q.id !== "table" && (
+                  <div className={`ml-7 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${val ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                    {typeof val === "boolean" ? (val ? "Yes" : "No") : val}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* VERDICT */}
+          {verdict && (
+            <div className={`rounded-xl border-2 p-4 space-y-3 ${verdict.required ? "border-red-400 bg-red-50" : "border-emerald-400 bg-emerald-50"}`} data-testid="placard-result">
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${verdict.required ? "bg-red-500" : "bg-emerald-500"}`}>
+                  <AlertTriangle className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className={`text-[16px] font-bold ${verdict.required ? "text-red-700" : "text-emerald-700"}`}>
+                    {answers.exception === true ? "EXCEPTION MAY REDUCE REQUIREMENTS" : verdict.required ? "PLACARDS REQUIRED" : "PLACARDS NOT REQUIRED"}
+                  </p>
+                  <p className="text-[11px] text-[#64748B] leading-relaxed">{answers.exception === true ? "An exception was identified. Review the exceptions list below to determine which specific requirements are reduced or eliminated." : verdict.reason}</p>
+                </div>
+              </div>
+
+              {/* CDL HM ENDORSEMENT */}
+              {verdict.required && !answers.exception && (
+                <div className="rounded-lg border border-[#002855]/30 bg-[#002855]/5 p-3 space-y-1.5">
+                  <p className="text-[12px] font-bold text-[#002855]">CDL Hazardous Materials Endorsement (H)</p>
+                  <p className="text-[11px] text-[#334155] leading-relaxed">
+                    Per <CfrLink r="383.93" />, a CDL with an <strong>"H" endorsement</strong> is required to operate any CMV transporting hazardous materials <strong>required to be placarded</strong> under 49 CFR Part 172, Subpart F.
+                  </p>
+                  <ul className="list-disc pl-4 text-[10px] text-[#475569] space-y-0.5">
+                    <li><strong>Placards displayed = H endorsement required.</strong> No exceptions for quantity — if placards go on the truck, the driver needs the H endorsement.</li>
+                    <li>The H endorsement requires passing a <strong>knowledge test</strong> and a <strong>TSA security threat assessment</strong> (background check).</li>
+                    <li>If also hauling in a <strong>cargo tank</strong>, both the H (HazMat) and N (Tank) endorsements are needed — combined as the <strong>"X" endorsement</strong>.</li>
+                    <li>Loads <strong>below placarding thresholds</strong> still require HM employee training per <CfrLink r="172.704" /> but do NOT require the CDL H endorsement.</li>
+                  </ul>
+                </div>
+              )}
+
+              {!verdict.required && (
+                <InfoBox>
+                  <strong>No placard = No CDL H endorsement required</strong> for this load. However, the driver must still have completed HM employee training per <CfrLink r="172.704" /> if handling hazardous materials. All other applicable HMR requirements (shipping papers, marking, labeling, packaging) still apply.
+                </InfoBox>
+              )}
+            </div>
+          )}
+
+          {/* EXCEPTIONS LIST — always available */}
+          <div>
+            <button
+              onClick={() => setShowExceptions(!showExceptions)}
+              className="w-full flex items-center justify-between py-2"
+              data-testid="placard-exceptions-toggle"
+            >
+              <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider">Placarding Exceptions — 172.500 & 172.504(f)</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-[#94A3B8] transition-transform duration-200 ${showExceptions ? "rotate-180" : ""}`} />
+            </button>
+            {showExceptions && (
+              <div className="space-y-2 pt-1">
+                <p className="text-[10px] text-[#64748B] italic">These exceptions may reduce or eliminate placarding requirements. Review each one carefully before determining compliance.</p>
+                {PLACARD_EXCEPTIONS.map((ex) => (
+                  <div key={ex.id} className="rounded-lg border bg-[#F8FAFC] p-2.5">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <p className="text-[11px] font-bold text-[#0F172A]">{ex.title} — <CfrLink r={ex.ref} /></p>
+                        <p className="text-[10px] text-[#475569] leading-relaxed mt-0.5">{ex.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reset */}
+          {Object.keys(answers).length > 0 && (
+            <button onClick={reset} className="flex items-center gap-1.5 text-[10px] text-[#94A3B8] hover:text-[#002855] transition-colors" data-testid="placard-reset">
+              <RotateCcw className="w-3 h-3" /> Start over
+            </button>
+          )}
         </div>
       )}
     </div>
