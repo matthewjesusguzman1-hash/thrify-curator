@@ -210,10 +210,10 @@ async def startup_event():
         logger.info("Object storage initialized")
     except Exception as e:
         logger.error(f"Storage init failed: {e}")
-    # Seed hazmat substances (Appendix A/B) if not present
+    # Seed hazmat substances (Appendix A/B) — re-seed if count changed (data update)
     hm_count = await db.hazmat_substances.count_documents({})
-    if hm_count == 0:
-        logger.info("Seeding hazmat substances (Appendix A/B)...")
+    if hm_count < 1000:
+        logger.info(f"Hazmat substances count={hm_count}, seeding full Appendix A/B dataset...")
         await seed_hazmat_substances()
     else:
         logger.info(f"Found {hm_count} hazmat substances in DB.")
@@ -297,229 +297,20 @@ async def _load_dataframe(df):
 
 
 async def seed_hazmat_substances():
-    """Seed Appendix A (Hazardous Substances/RQ) and Appendix B (Marine Pollutants) to 172.101."""
-    app_a = [
-        {"n":"Acetaldehyde","rq":1000,"ids":["UN1089"]},{"n":"Acetic acid","rq":5000},{"n":"Acetic anhydride","rq":5000,"ids":["UN1715"]},
-        {"n":"Acetone","rq":5000,"ids":["UN1090"]},{"n":"Acetone cyanohydrin","rq":10,"ids":["UN1541"]},{"n":"Acetonitrile","rq":5000,"ids":["UN1648"]},
-        {"n":"Acetyl chloride","rq":5000,"ids":["UN1717"]},{"n":"Acrolein","rq":1},{"n":"Acrylamide","rq":5000,"ids":["UN2074"]},
-        {"n":"Acrylic acid","rq":5000,"ids":["UN2218"]},{"n":"Acrylonitrile","rq":100,"ids":["UN1093"]},{"n":"Adipic acid","rq":5000},
-        {"n":"Aldrin","rq":1,"ids":["UN2761"]},{"n":"Allyl alcohol","rq":100,"ids":["UN1098"]},{"n":"Allyl chloride","rq":1000,"ids":["UN1100"]},
-        {"n":"Aluminum phosphide","rq":100,"ids":["UN1396"]},{"n":"Aluminum sulfate","rq":5000},
-        {"n":"Ammonia","rq":100,"ids":["UN1005","UN2073"]},{"n":"Ammonium acetate","rq":5000},{"n":"Ammonium fluoride","rq":100},
-        {"n":"Ammonium hydroxide","rq":1000},{"n":"Ammonium nitrate (fertilizer)","rq":5000},
-        {"n":"Ammonium sulfate","rq":5000},{"n":"Amyl acetate","rq":5000},
-        {"n":"Aniline","rq":5000,"ids":["UN1547"]},{"n":"Antimony pentachloride","rq":1000,"ids":["UN1730"]},
-        {"n":"Antimony potassium tartrate","rq":100},{"n":"Antimony tribromide","rq":1000},
-        {"n":"Antimony trichloride","rq":1000,"ids":["UN1733"]},{"n":"Antimony trifluoride","rq":1000},
-        {"n":"Arsenic","rq":1},{"n":"Arsenic acid","rq":1},{"n":"Arsenic disulfide","rq":1},
-        {"n":"Arsenic pentoxide","rq":1},{"n":"Arsenic trioxide","rq":1,"ids":["UN1560"]},{"n":"Arsenic trisulfide","rq":1},
-        {"n":"Asbestos (friable)","rq":1},
-        {"n":"Barium cyanide","rq":10},{"n":"Benzene","rq":10,"ids":["UN1114"]},{"n":"Benzoic acid","rq":5000},
-        {"n":"Benzonitrile","rq":5000},{"n":"Benzoyl chloride","rq":1000,"ids":["UN1736"]},
-        {"n":"Benzyl chloride","rq":100},{"n":"Beryllium","rq":10,"ids":["UN1567"]},{"n":"Beryllium chloride","rq":1},
-        {"n":"Beryllium fluoride","rq":1},{"n":"Beryllium nitrate","rq":1},
-        {"n":"Biphenyl","rq":100},{"n":"Bromine","rq":500,"ids":["UN1744"]},
-        {"n":"Bromomethane (Methyl bromide)","rq":1000,"ids":["UN1062"]},{"n":"Butyl acetate","rq":5000,"ids":["UN1120"]},
-        {"n":"Butylamine","rq":1000,"ids":["UN1125"]},{"n":"Butyric acid","rq":5000},
-        {"n":"Cadmium","rq":10},{"n":"Cadmium acetate","rq":10},{"n":"Cadmium bromide","rq":10},
-        {"n":"Cadmium chloride","rq":10},{"n":"Calcium arsenate","rq":1},
-        {"n":"Calcium carbide","rq":10,"ids":["UN1402"]},{"n":"Calcium chromate","rq":10},
-        {"n":"Calcium cyanide","rq":10},{"n":"Calcium hypochlorite","rq":10,"ids":["UN1748"]},
-        {"n":"Captan","rq":10},{"n":"Carbaryl","rq":100},{"n":"Carbofuran","rq":10},
-        {"n":"Carbon disulfide","rq":100,"ids":["UN1131"]},{"n":"Carbon tetrachloride","rq":10,"ids":["UN1846"]},
-        {"n":"Chlordane","rq":1,"ids":["UN2762"]},{"n":"Chlorine","rq":10,"ids":["UN1017"]},{"n":"Chlorine dioxide","rq":1},
-        {"n":"Chloroacetaldehyde","rq":1000,"ids":["UN1583"]},{"n":"Chlorobenzene","rq":100,"ids":["UN1134"]},
-        {"n":"Chloroform","rq":10,"ids":["UN1888"]},{"n":"Chloromethane (Methyl chloride)","rq":100,"ids":["UN1063"]},
-        {"n":"Chlorosulfonic acid","rq":1000,"ids":["UN1754"]},{"n":"Chromic acetate","rq":1000},
-        {"n":"Chromic acid","rq":10,"ids":["UN1755"]},{"n":"Chromic sulfate","rq":1000},
-        {"n":"Chromium","rq":5000},{"n":"Cobalt","rq":5000},
-        {"n":"Copper","rq":5000},{"n":"Copper cyanide","rq":10},{"n":"Copper sulfate","rq":10},
-        {"n":"Cresol","rq":100},{"n":"Crotonaldehyde","rq":100,"ids":["UN1143"]},
-        {"n":"Cumene","rq":5000},{"n":"Cyanide compounds","rq":10,"ids":["UN1588"]},
-        {"n":"Cyanogen","rq":100},{"n":"Cyanogen chloride","rq":10},
-        {"n":"Cyclohexane","rq":1000,"ids":["UN1145"]},{"n":"Cyclohexanone","rq":5000},
-        {"n":"2,4-D (Dichlorophenoxyacetic acid)","rq":100},{"n":"2,4-D esters","rq":100},
-        {"n":"DDT","rq":1},{"n":"Diazinon","rq":1},
-        {"n":"Diborane","rq":100},{"n":"Dichlorobenzene (1,2-)","rq":100,"ids":["UN1591"]},
-        {"n":"Dichlorobenzene (1,4-)","rq":100},
-        {"n":"Dichloroethane (1,2-) (Ethylene dichloride)","rq":100,"ids":["UN1135"]},
-        {"n":"Dichloroethylene (1,1-)","rq":100},{"n":"Dichloroethylene (1,2-)","rq":1000,"ids":["UN1150"]},
-        {"n":"Dichloromethane (Methylene chloride)","rq":1000,"ids":["UN1593"]},
-        {"n":"Dichloropropane (1,2-)","rq":1000},{"n":"Dichloropropene (1,3-)","rq":100},
-        {"n":"Dichlorvos (DDVP)","rq":10},{"n":"Dieldrin","rq":1},
-        {"n":"Diethylamine","rq":100,"ids":["UN1154"]},{"n":"Diethyl sulfate","rq":10},
-        {"n":"Dimethoate","rq":10},{"n":"Dimethylamine","rq":1000,"ids":["UN2264"]},
-        {"n":"Dimethyl sulfate","rq":100},{"n":"Dinitrobenzene","rq":100,"ids":["UN1597"]},
-        {"n":"Dinitrophenol (2,4-)","rq":10,"ids":["UN1598"]},{"n":"Dinitrotoluene (2,4-)","rq":10,"ids":["UN1600"]},
-        {"n":"Dioxin (2,3,7,8-TCDD)","rq":1},
-        {"n":"Endosulfan","rq":1},{"n":"Endrin","rq":1,"ids":["UN2786"]},
-        {"n":"Epichlorohydrin","rq":100,"ids":["UN2023"]},{"n":"Ethanol (waste)","rq":100},
-        {"n":"Ethion","rq":10},{"n":"Ethyl acetate","rq":5000,"ids":["UN1173"]},
-        {"n":"Ethylbenzene","rq":1000,"ids":["UN1175"]},{"n":"Ethylene dibromide","rq":1},
-        {"n":"Ethylene dichloride","rq":100,"ids":["UN1184"]},{"n":"Ethylene glycol","rq":5000,"ids":["UN1188"]},
-        {"n":"Ethylene oxide","rq":10,"ids":["UN1040"]},{"n":"Ethyl ether","rq":100,"ids":["UN1153"]},
-        {"n":"Ethyl mercaptan","rq":100},
-        {"n":"Ferric chloride","rq":1000},{"n":"Ferric sulfate","rq":1000},
-        {"n":"Ferrous sulfate","rq":1000},{"n":"Fluorine","rq":10,"ids":["UN1045"]},
-        {"n":"Formaldehyde","rq":100,"ids":["UN1198","UN2209"]},{"n":"Formic acid","rq":5000,"ids":["UN1779"]},
-        {"n":"Furan","rq":100},{"n":"Furfural","rq":5000,"ids":["UN1199"]},
-        {"n":"Heptachlor","rq":1},{"n":"Hexachlorobenzene","rq":10},
-        {"n":"Hexachlorobutadiene","rq":1},{"n":"Hexachlorocyclopentadiene","rq":10},
-        {"n":"Hexachloroethane","rq":100},{"n":"n-Hexane","rq":5000},
-        {"n":"Hydrazine","rq":1},{"n":"Hydrochloric acid","rq":5000,"ids":["UN1789"]},
-        {"n":"Hydrofluoric acid","rq":100,"ids":["UN1786","UN1790"]},{"n":"Hydrogen cyanide","rq":10,"ids":["UN1051"]},
-        {"n":"Hydrogen fluoride","rq":100},{"n":"Hydrogen peroxide (52%+)","rq":1000,"ids":["UN2014"]},
-        {"n":"Hydrogen selenide","rq":10},{"n":"Hydrogen sulfide","rq":100,"ids":["UN1053"]},
-        {"n":"Iron dextran","rq":1000},{"n":"Isobutyraldehyde","rq":5000},
-        {"n":"Isoprene","rq":100},
-        {"n":"Lead","rq":10},{"n":"Lead acetate","rq":10},{"n":"Lead chloride","rq":10},
-        {"n":"Lead fluoborate","rq":10},{"n":"Lead nitrate","rq":10},
-        {"n":"Lead stearate","rq":10},{"n":"Lead subacetate","rq":10},
-        {"n":"Lead sulfate","rq":10},{"n":"Lead sulfide","rq":10},
-        {"n":"Lindane","rq":1},{"n":"Lithium chromate","rq":10},
-        {"n":"Malathion","rq":100},{"n":"Maleic acid","rq":5000},
-        {"n":"Maleic anhydride","rq":5000},{"n":"Mercuric chloride","rq":1},
-        {"n":"Mercuric cyanide","rq":1},{"n":"Mercuric nitrate","rq":10},
-        {"n":"Mercuric sulfate","rq":10},{"n":"Mercuric thiocyanate","rq":10},
-        {"n":"Mercury","rq":1},{"n":"Methanol","rq":5000,"ids":["UN1230"]},
-        {"n":"Methoxychlor","rq":1},{"n":"Methyl acrylate","rq":1000},
-        {"n":"Methylamine","rq":100},{"n":"Methyl bromide","rq":1000,"ids":["UN1062"]},
-        {"n":"Methyl chloride","rq":100,"ids":["UN1063"]},{"n":"Methyl chloroform","rq":1000},
-        {"n":"Methylene chloride","rq":1000,"ids":["UN1593"]},{"n":"Methyl ethyl ketone","rq":5000,"ids":["UN1193"]},
-        {"n":"Methyl iodide","rq":100},{"n":"Methyl isobutyl ketone","rq":5000},
-        {"n":"Methyl isocyanate","rq":10,"ids":["UN2480"]},{"n":"Methyl mercaptan","rq":100,"ids":["UN1064"]},
-        {"n":"Methyl methacrylate","rq":1000,"ids":["UN1247"]},{"n":"Methyl parathion","rq":100,"ids":["UN2783"]},
-        {"n":"Mevinphos","rq":10,"ids":["UN2784"]},{"n":"Monoethylamine","rq":100},
-        {"n":"Naphtha","rq":100},{"n":"Naphthalene","rq":100,"ids":["UN1334"]},{"n":"Nickel","rq":100},
-        {"n":"Nickel carbonyl","rq":10,"ids":["UN1259"]},{"n":"Nickel cyanide","rq":10},
-        {"n":"Nicotine","rq":100,"ids":["UN1654"]},{"n":"Nitric acid","rq":1000,"ids":["UN2032"]},
-        {"n":"Nitric oxide","rq":10,"ids":["UN1660"]},{"n":"Nitrobenzene","rq":1000,"ids":["UN1662"]},
-        {"n":"Nitrogen dioxide","rq":10,"ids":["UN1067"]},{"n":"Nitroglycerin","rq":10},
-        {"n":"Nitrophenol (4-)","rq":100},{"n":"Nitrotoluene","rq":1000},
-        {"n":"Osmium tetroxide","rq":1000},
-        {"n":"Parathion","rq":10},{"n":"Pentachlorophenol","rq":10,"ids":["UN1669"]},
-        {"n":"Peracetic acid","rq":500},
-        {"n":"Perchloroethylene (Tetrachloroethylene)","rq":100,"ids":["UN1897"]},
-        {"n":"Phenol","rq":1000,"ids":["UN1671","UN2312"]},{"n":"Phosgene","rq":10,"ids":["UN1076"]},
-        {"n":"Phosphine","rq":100},{"n":"Phosphoric acid","rq":5000,"ids":["UN1805"]},
-        {"n":"Phosphorus (white/yellow)","rq":1,"ids":["UN1381","UN2447"]},
-        {"n":"Phosphorus oxychloride","rq":1000},{"n":"Phosphorus pentasulfide","rq":100,"ids":["UN1340"]},
-        {"n":"Phosphorus trichloride","rq":1000},
-        {"n":"Phthalic anhydride","rq":5000},
-        {"n":"Polychlorinated biphenyls (PCBs)","rq":1},
-        {"n":"Potassium chromate","rq":10},{"n":"Potassium cyanide","rq":10,"ids":["UN1680"]},
-        {"n":"Potassium hydroxide","rq":1000,"ids":["UN1813","UN1814"]},{"n":"Potassium permanganate","rq":100},
-        {"n":"Propargyl alcohol","rq":1000},{"n":"Propionic acid","rq":5000,"ids":["UN1848"]},
-        {"n":"Propylene oxide","rq":100},{"n":"Pyridine","rq":1000},
-        {"n":"Quinoline","rq":5000},
-        {"n":"Selenium","rq":100},{"n":"Selenium dioxide","rq":10},
-        {"n":"Silver","rq":1000},{"n":"Silver cyanide","rq":1},{"n":"Silver nitrate","rq":1},
-        {"n":"Sodium","rq":10,"ids":["UN1428"]},{"n":"Sodium arsenate","rq":1},
-        {"n":"Sodium arsenite","rq":1},{"n":"Sodium azide","rq":1000},
-        {"n":"Sodium bifluoride","rq":100},{"n":"Sodium bisulfite","rq":5000},
-        {"n":"Sodium chromate","rq":10},{"n":"Sodium cyanide","rq":10,"ids":["UN1689"]},
-        {"n":"Sodium dodecylbenzenesulfonate","rq":1000},
-        {"n":"Sodium fluoride","rq":1000},{"n":"Sodium hydroxide","rq":1000,"ids":["UN1823","UN1824"]},
-        {"n":"Sodium hypochlorite","rq":100},{"n":"Sodium methylate","rq":1000},
-        {"n":"Sodium nitrite","rq":100},{"n":"Sodium phosphate, dibasic","rq":5000},
-        {"n":"Sodium phosphate, tribasic","rq":5000},{"n":"Sodium selenite","rq":100},
-        {"n":"Strontium chromate","rq":10},{"n":"Strychnine","rq":10,"ids":["UN1544"]},
-        {"n":"Styrene","rq":1000},{"n":"Sulfuric acid","rq":1000,"ids":["UN1830"]},
-        {"n":"Sulfur dioxide","rq":5000,"ids":["UN1079"]},{"n":"Sulfur monochloride","rq":1000},
-        {"n":"Sulfur trioxide","rq":100},
-        {"n":"Tert-butyl alcohol","rq":5000},
-        {"n":"1,1,2,2-Tetrachloroethane","rq":100},
-        {"n":"Tetrachloroethylene (Perchloroethylene)","rq":100,"ids":["UN1897"]},
-        {"n":"Tetraethyl lead","rq":10},{"n":"Tetraethyl pyrophosphate (TEPP)","rq":10},
-        {"n":"Thallium","rq":1000},{"n":"Thallium sulfate","rq":100},
-        {"n":"Thiram","rq":10},{"n":"Titanium tetrachloride","rq":1000},
-        {"n":"Toluene","rq":1000,"ids":["UN1294"]},{"n":"Toluene diisocyanate","rq":100},
-        {"n":"Toxaphene","rq":1},{"n":"Trichlorobenzene (1,2,4-)","rq":100},
-        {"n":"Trichloroethane (1,1,1-)","rq":1000},
-        {"n":"Trichloroethane (1,1,2-)","rq":100},
-        {"n":"Trichloroethylene","rq":100,"ids":["UN1710"]},{"n":"Trichlorophenol (2,4,5-)","rq":10},
-        {"n":"Trichlorophenol (2,4,6-)","rq":10},
-        {"n":"Triethylamine","rq":5000,"ids":["UN1296"]},{"n":"Trimethylamine","rq":100},
-        {"n":"Uranyl acetate","rq":100},{"n":"Uranyl nitrate","rq":100},
-        {"n":"Vanadium pentoxide","rq":1000},{"n":"Vinyl acetate","rq":5000},
-        {"n":"Vinyl chloride","rq":1,"ids":["UN1860"]},{"n":"Vinylidene chloride","rq":100},
-        {"n":"Warfarin","rq":100},
-        {"n":"Xylene (mixed)","rq":100,"ids":["UN1307"]},{"n":"Xylenol","rq":1000},
-        {"n":"Zinc","rq":1000},{"n":"Zinc acetate","rq":1000},
-        {"n":"Zinc bromide","rq":1000},{"n":"Zinc carbonate","rq":1000},
-        {"n":"Zinc chloride","rq":1000},{"n":"Zinc cyanide","rq":10,"ids":["UN1587"]},
-        {"n":"Zinc fluoride","rq":1000},{"n":"Zinc formate","rq":1000},
-        {"n":"Zinc hydrosulfite","rq":1000},{"n":"Zinc nitrate","rq":1000},
-        {"n":"Zinc phenolsulfonate","rq":5000},{"n":"Zinc phosphide","rq":100},
-        {"n":"Zinc silicofluoride","rq":5000},{"n":"Zinc sulfate","rq":1000},
-        {"n":"Zirconium nitrate","rq":5000},{"n":"Zirconium tetrachloride","rq":5000},
-    ]
-    # Marine pollutants (Appendix B) - pp=True means severe (PP)
-    mp_names = {
-        "acetone cyanohydrin":False,"aldrin":True,"allyl alcohol":False,"aluminum phosphide":False,
-        "aniline":False,"antimony compounds":False,"arsenic":True,"arsenic compounds":True,
-        "barium cyanide":False,"benzene":False,"beryllium":True,"beryllium compounds":True,
-        "cadmium":True,"cadmium compounds":True,"calcium arsenate":True,"calcium cyanide":False,
-        "camphechlor":True,"toxaphene":True,"carbaryl":True,"carbofuran":True,
-        "carbon disulfide":False,"carbon tetrachloride":False,
-        "chlordane":True,"chlorine":False,"chlorobenzene":False,"chloroform":False,
-        "chloropicrin":False,"copper":True,"copper compounds":True,"copper cyanide":True,"copper sulfate":True,
-        "cresol":False,"crotonaldehyde":False,"cyanide compounds":False,"cyclohexane":False,
-        "ddt":True,"diazinon":True,"dichlorobenzene":False,"dichlorvos":True,"dieldrin":True,
-        "diethylamine":False,"dimethoate":True,"dinitrobenzene":False,"dinitrophenol":False,
-        "endosulfan":True,"endrin":True,"epichlorohydrin":False,"ethion":True,
-        "ethylene dibromide":False,"ethylene dichloride":False,
-        "heptachlor":True,"hexachlorobenzene":True,"hexachlorobutadiene":True,
-        "hexachlorocyclopentadiene":True,"hydrogen cyanide":False,
-        "lead":True,"lead compounds":True,"lindane":True,"malathion":True,
-        "mercuric chloride":True,"mercury":True,"mercury compounds":True,
-        "methoxychlor":True,"methyl bromide":False,"methyl parathion":True,"mevinphos":True,
-        "naphthalene":False,"nickel":True,"nickel compounds":True,"nickel carbonyl":True,
-        "nicotine":True,"nitrobenzene":False,
-        "parathion":True,"pentachlorophenol":True,"perchloroethylene":False,
-        "phenol":False,"phosphorus":True,"polychlorinated biphenyls":True,
-        "potassium cyanide":False,"selenium":True,"selenium compounds":True,
-        "silver cyanide":False,"sodium cyanide":False,"sodium arsenate":True,
-        "strychnine":True,"tetraethyl lead":True,"thallium":True,"thallium compounds":True,
-        "toluene":False,"trichlorobenzene":False,"trichloroethylene":False,
-        "triethylamine":False,"vinyl chloride":False,"xylene":False,
-        "zinc":True,"zinc compounds":True,"zinc phosphide":True,
-    }
-
-    docs = []
-    for entry in app_a:
-        nl = entry["n"].lower()
-        is_mp = False
-        is_smp = False
-        for mp_name, pp in mp_names.items():
-            if mp_name in nl or nl in mp_name:
-                is_mp = True
-                is_smp = pp
-                break
-        doc = {
-            "name": entry["n"], "name_lower": nl,
-            "rq_lbs": entry["rq"], "is_hazardous_substance": True,
-            "is_marine_pollutant": is_mp, "is_severe_marine_pollutant": is_smp,
-        }
-        if "ids" in entry:
-            doc["un_ids"] = entry["ids"]
-        docs.append(doc)
-
-    # Add marine pollutants not already in Appendix A
-    existing = {d["name_lower"] for d in docs}
-    for mp_name, pp in mp_names.items():
-        if not any(mp_name in en or en in mp_name for en in existing):
-            docs.append({
-                "name": mp_name.title(), "name_lower": mp_name,
-                "rq_lbs": None, "is_hazardous_substance": False,
-                "is_marine_pollutant": True, "is_severe_marine_pollutant": pp,
-            })
-
+    """Seed Appendix A (Hazardous Substances/RQ) and Appendix B (Marine Pollutants) from parsed JSON."""
+    import json as _json
+    data_path = ROOT_DIR / "hazmat_substances_data.json"
+    if not data_path.exists():
+        logger.error("hazmat_substances_data.json not found – cannot seed")
+        return
+    with open(data_path, "r") as f:
+        docs = _json.load(f)
     await db.hazmat_substances.drop()
     await db.hazmat_substances.insert_many(docs)
-    await db.hazmat_substances.create_index([("name", "text")])
-    await db.hazmat_substances.create_index([("un_ids", 1)])
-    logger.info(f"Seeded {len(docs)} hazmat substances")
+    await db.hazmat_substances.create_index([("name_lower", 1)])
+    await db.hazmat_substances.create_index("is_marine_pollutant")
+    await db.hazmat_substances.create_index("is_hazardous_substance")
+    logger.info(f"Seeded {len(docs)} hazmat substances from JSON")
 
 
 # API Routes

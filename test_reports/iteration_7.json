@@ -1,0 +1,57 @@
+{
+  "summary": "Completed comprehensive testing of HazMat Substances API (Appendix A/B data) with 1804 entries. All 12 backend API tests passed. All 4 frontend UI tests passed. The new dataset correctly replaces the previous ~300 entry hardcoded data.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "GET /api/hazmat-substances/search?q=benzene returns multiple results with RQ values",
+    "GET /api/hazmat-substances/search?q=aldrin returns RQ=1, is_marine_pollutant=true, is_severe_marine_pollutant=true",
+    "GET /api/hazmat-substances/search?q=gasoline returns 'Gasoline, leaded' with rq_lbs=null, is_marine_pollutant=true",
+    "GET /api/hazmat-substances/search?q=D001 returns waste stream entry with RQ=100",
+    "GET /api/hazmat-substances/search?q=zinc returns exactly 20 results (limit)",
+    "GET /api/hazmat-substances/search?q=acetone%20cyanohydrin returns RQ=10",
+    "GET /api/hazmat-substances/search?q=chlorine returns RQ=10, is_marine_pollutant=true",
+    "GET /api/hazmat-substances/search?q=xylene returns multiple isomers with correct RQ values",
+    "No MongoDB _id field in any API response",
+    "Empty query returns 422 validation error (min_length=1)",
+    "Single character query works (min_length=1)",
+    "Non-existent substance returns empty list",
+    "Frontend: HazMat Worksheet page loads at /hazmat-worksheet",
+    "Frontend: Tools tab accessible with RQ & Marine Pollutant Lookup component",
+    "Frontend: Chlorine search displays RQ badge (10 lbs) and Marine Pollutant badge",
+    "Frontend: Aldrin search displays RQ badge (1 lbs) and Severe Marine Pollutant (PP) badge",
+    "Frontend: Gasoline search displays 'Not a Hazardous Substance' and 'Marine Pollutant' badges",
+    "Backend startup logs show 'Seeded 1804 hazmat substances from JSON'"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_hazmat_substances.py",
+    "/app/test_reports/pytest/pytest_hazmat_substances.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "seed_hazmat_substances() correctly loads from hazmat_substances_data.json",
+    "Re-seeding logic (count < 1000) ensures data is updated when JSON file changes",
+    "MongoDB _id properly excluded from API response with {'_id': 0} projection",
+    "Search uses regex on name field with case-insensitive matching",
+    "Results limited to 20 entries per search",
+    "Frontend SubstanceLookup component has proper debounce (300ms) for search",
+    "All data-testid attributes present for testing"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_hazmat_substances.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (4/4 UI tests passed)"
+  },
+  "seed_data_creation": "None - data loaded from /app/backend/hazmat_substances_data.json (1804 entries)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "HazMat Substances API fully tested. Key endpoint: GET /api/hazmat-substances/search?q={query}. Returns array of objects with fields: name, name_lower, rq_lbs (null if not hazardous substance), is_hazardous_substance, is_marine_pollutant, is_severe_marine_pollutant. Frontend component: SubstanceLookup in HazMatHelpers.js, accessible via Tools tab on /hazmat-worksheet page. Data-testids: substance-lookup, substance-lookup-toggle, substance-search-input, substance-result-{n}. Dataset has 1804 entries from 49 CFR 172.101 Appendix A (Hazardous Substances/RQ) and Appendix B (Marine Pollutants)."
+}
