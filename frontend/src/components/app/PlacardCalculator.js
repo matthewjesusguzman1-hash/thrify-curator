@@ -186,6 +186,63 @@ export function PlacardCalculator({ onNavigate }) {
       }
     }
 
+    // Apply substitution rules per 172.504(f)
+    const substitutions = [];
+    const classesOnVehicle = new Set(materials.map(m => m.classValue).filter(Boolean));
+
+    // (f)(1): Div 1.4S excepted
+    if (requiredPlacards.has("1.4")) {
+      substitutions.push({ text: "Div 1.4 Compatibility Group S explosives may be excepted from placarding per 172.504(f)(1).", ref: "172.504(f)(1)" });
+    }
+
+    // (f)(2): NON-FLAMMABLE GAS may replace OXYGEN (2.2 context)
+    if (requiredPlacards.has("2.2")) {
+      substitutions.push({ text: "NON-FLAMMABLE GAS placard may be used in place of the OXYGEN placard.", ref: "172.504(f)(2)" });
+    }
+
+    // (f)(3): FLAMMABLE may be used in place of COMBUSTIBLE
+    if (requiredPlacards.has("combustible")) {
+      substitutions.push({ text: "A FLAMMABLE placard may be used in place of a COMBUSTIBLE placard.", ref: "172.504(f)(3)" });
+      // Also: not required on fuel oil cargo tank
+      substitutions.push({ text: "COMBUSTIBLE placard is not required on a cargo tank displaying 'Fuel Oil' on each side and rear.", ref: "172.504(f)(3)" });
+    }
+
+    // (f)(4): FLAMMABLE may be used for Div 2.1 (Flammable Gas)
+    if (requiredPlacards.has("2.1")) {
+      substitutions.push({ text: "A FLAMMABLE placard may be used in place of a FLAMMABLE GAS placard.", ref: "172.504(f)(4)" });
+    }
+
+    // (f)(5): OXIDIZER placard not required if FLAMMABLE also displayed
+    if (requiredPlacards.has("5.1") && (requiredPlacards.has("3") || requiredPlacards.has("2.1") || classesOnVehicle.has("3") || classesOnVehicle.has("2.1"))) {
+      substitutions.push({ text: "OXIDIZER placard is not required for Div 5.1 if the vehicle also displays a FLAMMABLE placard.", ref: "172.504(f)(5)" });
+    }
+
+    // (f)(6): POISON INHALATION HAZARD not required if POISON GAS displayed
+    if (requiredPlacards.has("6.1-pih") && requiredPlacards.has("2.3")) {
+      substitutions.push({ text: "POISON INHALATION HAZARD placard is not required if POISON GAS placard is displayed.", ref: "172.504(f)(6)" });
+    }
+
+    // (f)(7): POISON placard not required if PIH or POISON GAS displayed
+    if (requiredPlacards.has("6.1") && (requiredPlacards.has("6.1-pih") || requiredPlacards.has("2.3"))) {
+      substitutions.push({ text: "POISON (Div 6.1) placard is not required if POISON INHALATION HAZARD or POISON GAS placard is already displayed.", ref: "172.504(f)(7)" });
+    }
+
+    // (f)(8): CHLORINE placard may be used in place of POISON GAS on >105.5 gal shipments
+    if (requiredPlacards.has("2.3")) {
+      substitutions.push({ text: "A CHLORINE placard may be used in place of POISON GAS on a cargo tank or portable tank used to transport chlorine.", ref: "172.504(f)(8)" });
+    }
+
+    // (f)(9): Class 9 domestic exception (already handled above)
+
+    // (f)(10): COMBUSTIBLE not required for non-bulk
+    if (requiredPlacards.has("combustible")) {
+      const allCombNonBulk = materials.filter(m => m.classValue === "combustible").every(m => !m.isBulk);
+      if (allCombNonBulk) {
+        exceptions.push("COMBUSTIBLE placard is not required for a combustible liquid in non-bulk packaging per 172.504(f)(10).");
+        requiredPlacards.delete("combustible");
+      }
+    }
+
     // DANGEROUS placard substitution check
     const table2PlacardsNeeded = [...requiredPlacards.entries()].filter(([cv]) => {
       const def = HAZARD_CLASSES.find(c => c.value === cv);
@@ -225,6 +282,7 @@ export function PlacardCalculator({ onNavigate }) {
 
     return {
       placards: placardList,
+      substitutions,
       warnings,
       exceptions,
       needsEndorsement,
@@ -381,6 +439,19 @@ export function PlacardCalculator({ onNavigate }) {
                   <p className="text-[10px] font-bold text-[#1E40AF]">Exceptions Applied:</p>
                   {results.exceptions.map((ex, i) => (
                     <p key={i} className="text-[10px] text-[#1E40AF]">{ex}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Substitutions per 172.504(f) */}
+              {results.substitutions.length > 0 && (
+                <div className="rounded-lg border border-[#D4AF37]/30 bg-[#FFFDF5] px-3 py-2.5 space-y-1.5">
+                  <p className="text-[10px] font-bold text-[#92400E]">Placard Substitutions — <CfrLink r="172.504(f)" />:</p>
+                  {results.substitutions.map((sub, i) => (
+                    <div key={i} className="flex items-start gap-1.5">
+                      <span className="text-[10px] text-[#D4AF37] mt-0.5 flex-shrink-0">&#x25B8;</span>
+                      <p className="text-[10px] text-[#78350F] leading-relaxed">{sub.text} <span className="text-[9px] font-mono text-[#92400E]/60">({sub.ref})</span></p>
+                    </div>
                   ))}
                 </div>
               )}

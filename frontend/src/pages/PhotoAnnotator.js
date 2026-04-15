@@ -251,7 +251,7 @@ export default function PhotoAnnotator() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-3 py-4 space-y-3" ref={containerRef}>
+      <div className="max-w-3xl mx-auto px-3 py-4 pb-20 space-y-3" ref={containerRef}>
         {/* Upload / Camera section */}
         {!image && (
           <div className="space-y-3">
@@ -282,7 +282,7 @@ export default function PhotoAnnotator() {
         {/* Canvas */}
         {image && (
           <>
-            <div className="rounded-lg overflow-hidden border border-white/10 bg-black touch-none" style={{ position: "relative" }}>
+            <div className="rounded-lg overflow-hidden border border-white/10 bg-black" style={{ position: "relative", touchAction: "none" }}>
               <canvas
                 ref={canvasRef}
                 style={{ width: "100%", height: "auto", display: "block" }}
