@@ -149,7 +149,7 @@ const STEPS = [
       { id: "2.13", label: "Check Appendix B to 172.101 — is material a Marine Pollutant? (bulk only)", ref: "172.101", tip: "Marine pollutants in bulk packagings require specific marking and documentation. Materials listed as 'severe marine pollutants' (marked 'PP') have stricter requirements. Marine pollutant requirements apply to shipments transported by vessel.", link: "tool-substance-lookup" },
       { id: "2.h3", type: "header", label: "Check for additional descriptions when required (172.203)" },
       { id: "2.14", label: "DOT Special Permits", ref: "172.203(a)", tip: "If shipping under a special permit, the notation 'DOT-SP' followed by the permit number must appear on the shipping paper. Verify that the shipment actually complies with all conditions of the special permit." },
-      { id: "2.15", label: "Limited Quantities", ref: "172.203(b)", tip: "The words 'Limited Quantity' or 'Ltd Qty' must appear on the shipping paper for materials shipped under limited quantity exceptions. Limited quantities have reduced packaging, labeling, and placarding requirements." },
+      { id: "2.15", label: "Limited Quantities", ref: "172.203(b)", tip: "When a material is offered for transportation as a 'limited quantity' as authorized by this subchapter, the words 'Limited Quantity' or 'Ltd Qty' must follow the basic description on the shipping paper. Limited quantities are small amounts authorized under specific sections in Part 173 (e.g., 173.150 for Class 3, 173.152 for Div 5.1). Limited quantity shipments have reduced packaging requirements but must still comply with applicable shipping paper, marking, and compatibility requirements." },
       { id: "2.16", label: "Hazardous Substances", ref: "172.203(c)", tip: "The letters 'RQ' (Reportable Quantity) must appear either before or after the basic description. If the proper shipping name does not identify the substance by name, the name of the hazardous substance must also be shown in parentheses." },
       { id: "2.17", label: "Empty Packages", ref: "172.203(e)", tip: "The shipping paper description for a package containing the residue of a hazardous material may include the words 'RESIDUE: Last Contained ***' immediately before or after the basic description. For tank cars, the phrase 'RESIDUE: Last Contained ***' is required. The full basic shipping description (proper shipping name, hazard class, UN number, packing group) must still be provided for the residue material." },
       { id: "2.18", label: "Cargo tanks with Anhydrous Ammonia or LPG", ref: "172.203(h)", tip: "For MC 330 or MC 331 cargo tanks, the shipping paper must include: (1) Anhydrous Ammonia — the words '0.2 PERCENT WATER' if suitable for quenched and tempered (QT) steel tanks per 173.315(a) Note 14, or 'NOT FOR Q AND T TANKS' if the ammonia does not contain 0.2% or more water by weight. (2) LPG — the word 'NONCORROSIVE' or 'NONCOR' if suitable for QT steel tanks per 173.315(a) Note 15, or 'NOT FOR Q AND T TANKS' for grades of LPG other than Noncorrosive." },
@@ -168,7 +168,7 @@ const STEPS = [
     icon: Package,
     tip: "The HM Table (172.101) Columns 7, 8A, 8B, and 8C direct you to the specific packaging requirements in Part 173. Always verify the packaging is authorized for the specific material being shipped. Using an unauthorized package is a serious violation.",
     items: [
-      { id: "3.1", label: "Reference Column 7 for special provisions that apply", ref: "172.102", tip: "Column 7 lists numeric codes corresponding to special provisions in 172.102. These can modify any requirement — packaging, shipping descriptions, or even whether the material is subject to HMR. Common provisions: 'IB' codes for IBC use, 'T' codes for portable tanks, 'TP' codes for tank provisions." },
+      { id: "3.1", label: "Reference Column 7 for special provisions that apply", ref: "172.102", tip: "Column 7 lists codes for special provisions in 172.102 that can modify any requirement. Code meanings: Numeric (1–999) = general provisions that may modify descriptions, packaging, or hazard class. 'A' codes = air transport provisions. 'B' codes = bulk packaging provisions. 'IB' codes = IBC (Intermediate Bulk Container) authorizations. 'IP' codes = IBC additional provisions. 'N' codes = outage and filling limits for non-bulk packages. 'T' codes = portable tank minimum requirements (T1–T75). 'TP' codes = portable tank special provisions. 'W' codes = water transport provisions. Always look up the specific code in 172.102 — some provisions exempt materials from HMR entirely." },
       { id: "3.2", label: "Reference Column 8A — exceptions that may apply", ref: "173.XXX", tip: "Column 8A references sections in Part 173 that describe exceptions. Common examples: Limited quantities (173.150–156), Materials of Trade (173.6), consumer commodities, certain ORM-D materials. If an exception applies, some or all HMR requirements may be reduced or eliminated.", link: "tool-mot-helper" },
       { id: "3.3", label: "Reference Column 8B (non-bulk) or 8C (bulk) — authorized packages", ref: "173.XXX", tip: "Columns 8B/8C reference sections in Part 173 listing specific authorized packaging. Some packages may only be authorized by a DOT Special Permit (107.101 to 107.105). If a special permit is used, verify the shipment meets ALL conditions. Common packaging specs: UN-rated drums, cylinders, IBCs.", link: "tool-package-class-helper" },
     ],
@@ -181,7 +181,7 @@ const STEPS = [
     items: [
       { id: "4.h0", type: "header", label: "Look up material by primary hazard class — find required placard", link: "tool-placard-helper" },
       { id: "4.1", label: "Table 1 materials require placards in ANY amount", ref: "172.504(e)", tip: "Table 1 (most dangerous — placard any quantity): Div 1.1–1.3 (Explosives), Div 2.3 (Poison Gas), Div 4.3 (Dangerous When Wet), Div 5.2 (Organic Peroxide, Type B, liquid or solid, temperature controlled), Div 6.1 (Poison Inhalation Hazard only — not all PG I), Class 7 (Radioactive Yellow III label). Even a single small package requires placards.", link: "tool-placard-helper" },
-      { id: "4.2", label: "Table 2 materials require placards over 1,001 lbs aggregate", ref: "172.504(e)", tip: "Table 2: Div 1.4–1.6, Div 2.1 (Flammable Gas), Div 2.2 (Non-flammable Gas), Class 3 (Flammable), Combustible Liquids, Div 4.1–4.2, Div 5.1, Div 6.1 (other than inhalation hazard), Class 8, Class 9. 'Aggregate' = total gross weight of ALL Table 2 materials on the vehicle combined.", link: "tool-placard-helper" },
+      { id: "4.2", label: "Table 2 materials require placards over 1,001 lbs aggregate", ref: "172.504(e)", tip: "Table 2: Div 1.4–1.6, Div 2.1 (Flammable Gas), Div 2.2 (Non-flammable Gas), Class 3 (Flammable), Combustible Liquids, Div 4.1–4.2, Div 5.1, Div 6.1 (other than inhalation hazard), Class 8, Class 9. 'Aggregate' = total gross weight of ALL Table 2 materials on the vehicle combined. NOTE: Class 9 requires a CLASS 9 placard for domestic highway transportation when the aggregate gross weight is 1,001 lbs or more. This includes materials like lithium batteries, environmentally hazardous substances, elevated temperature materials, and other miscellaneous dangerous goods.", link: "tool-placard-helper" },
       { id: "4.3", label: "Bulk packages require placards (with exceptions)", ref: "172.514", tip: "Exceptions include: some portable tanks under 1,000 gal with certain gases, DOT Spec 106/110 multi-unit tanks, some flexible bulk containers, IBCs of limited quantities, and large packagings. Always verify the specific exception applies to the material in question." },
       { id: "4.h1", type: "header", label: "Check exceptions from placarding (172.500(b))" },
       { id: "4.4", label: "Limited quantities", ref: "172.500(b)", tip: "Limited quantity shipments in non-bulk packages are exempt from placarding. The package must be properly marked with the limited quantity marking (a diamond with the UN number or 'Y' marking)." },
@@ -202,7 +202,7 @@ const STEPS = [
       { id: "4.16", label: "Required for: Dangerous When Wet materials", ref: "172.505", tip: "Division 4.3 (Dangerous When Wet) materials require the DANGEROUS WHEN WET subsidiary placard when it is listed as a subsidiary hazard in Column 6 of the 172.101 table." },
       { id: "4.17", label: "Allowed for others if listed in Column 6 of 172.101", ref: "172.505", tip: "Subsidiary placards are permitted (even when not required) as long as the subsidiary hazard is listed in Column 6 of the 172.101 table. Displaying them is good practice — it provides additional safety information to responders." },
       { id: "4.h5", type: "header", label: "Verify placard display" },
-      { id: "4.18", label: "Placards displayed on both sides AND both ends of vehicle", ref: "172.504(a)", tip: "Four placards are required: front, rear, and both sides. Each must be clearly visible from the direction it faces. On a tractor-trailer, front placard goes on the tractor (or front of trailer if no tractor). Placards on trailers must be visible even when coupled." },
+      { id: "4.18", label: "Placards displayed on both sides AND both ends of vehicle", ref: "172.504(a)", tip: "Four placards are required: one on each end and one on each side of the transport vehicle, freight container, or unit load device. Each must be clearly visible from the direction it faces. On a tractor-trailer combination, the front placard is displayed on the front of the tractor and the rear placard on the rear of the trailer. Placards must not be obscured by ladders, pipes, doors, or tarpaulins." },
       { id: "4.19", label: "Placards meet general specifications", ref: "172.519", tip: "Must be at least 250mm (9.84 in) on each side, diamond-shaped (square on point), durable, not obscured by dirt/debris, correct colors per hazard class. The hazard class number must be in the bottom corner. The placard may not be hand-lettered." },
       { id: "4.20", label: "Visibility and display requirements met", ref: "172.516", tip: "Placards must be: readable from all four directions, at least 3 inches from any other marking, securely attached or in a proper holder, displayed upright in diamond orientation, free from damage/fading, and not obstructed by ladders, pipes, or other equipment." },
     ],
@@ -228,7 +228,7 @@ const STEPS = [
       { id: "5.10", label: "Gasoline", ref: "172.336(b)", tip: "Gasoline (UN1203) may display just the ID number 1203 even when carrying different grades. This simplifies marking for common fuel delivery operations." },
       { id: "5.11", label: "Fuel oil", ref: "172.336(b)", tip: "Fuel oil (NA1993) follows similar simplified display rules as gasoline for common petroleum operations." },
       { id: "5.12", label: "Petroleum distillate fuels", ref: "172.336(b)", tip: "When transporting petroleum products that could be described as either gasoline or fuel oil, the ID number may be displayed as authorized under the special provisions." },
-      { id: "5.13", label: "Nurse tanks", ref: "172.336(d)", tip: "Nurse tanks for anhydrous ammonia used in agricultural operations have specific marking requirements. The ID number UN1005 must be displayed on two opposing sides of the tank." },
+      { id: "5.13", label: "Nurse tanks", ref: "172.336(c)", tip: "Per 172.336(c) table, the ID number display is NOT required on one end of a nurse tank if that end contains valves, fittings, regulators, or gauges that prevent the markings and placard from being properly placed and visible. The nurse tank must meet the provisions of 173.315(m). The ID number and placards are still required on the other end and both sides." },
       { id: "5.h3", type: "header", label: "Additional bulk marking requirements" },
       { id: "5.14", label: "Portable tanks", ref: "172.326", tip: "Must be marked with: proper shipping name, ID number, name of owner/lessee, and any special markings required for the specific material. Check that the requalification date is current." },
       { id: "5.15", label: "Cargo tanks", ref: "172.328", tip: "Check for: 'Emergency Shutoff' marking (near shutoff valve), Class 2 material markings, proper shipping name, MC330/MC331 specifications, QT/NQT markings, and non-odorized LPG marking." },
@@ -392,11 +392,14 @@ export default function HazMatWorksheet() {
     setOpenSteps((prev) => ({ ...prev, [step]: !prev[step] }));
   }, []);
 
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
   const resetAll = useCallback(() => {
-    if (window.confirm("Reset all checkboxes? This cannot be undone.")) {
-      setChecks({});
-      toast.success("Worksheet reset");
-    }
+    setChecks({});
+    localStorage.removeItem(STORAGE_KEY);
+    setOpenSteps({});
+    setShowResetConfirm(false);
+    toast.success("Worksheet reset");
   }, []);
 
   // Cross-navigation between steps and tools
@@ -474,9 +477,21 @@ export default function HazMatWorksheet() {
                 ))}
               </PopoverContent>
             </Popover>
-            <Button onClick={resetAll} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="reset-btn">
-              <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
-            </Button>
+            {showResetConfirm ? (
+              <div className="flex items-center gap-1">
+                <span className="text-white/60 text-xs mr-1">Reset all?</span>
+                <Button onClick={resetAll} variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/20 h-7 px-2 text-xs font-bold" data-testid="reset-confirm-btn">
+                  Yes
+                </Button>
+                <Button onClick={() => setShowResetConfirm(false)} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-7 px-2 text-xs" data-testid="reset-cancel-btn">
+                  No
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={() => setShowResetConfirm(true)} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="reset-btn">
+                <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
+              </Button>
+            )}
           </div>
         </div>
         {/* Tabs */}
