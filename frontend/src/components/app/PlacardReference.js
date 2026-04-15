@@ -15,65 +15,126 @@ function CfrLink({ r, label }) {
 }
 
 /* ================================================================
-   COMPLETE PLACARD DATA — From DOT Chart 17 & 49 CFR 172.504(e)
+   PLACARD VISUAL — Renders a realistic diamond placard
    ================================================================ */
-const PLACARD_DATA = [
-  // Table 1 — Placard required in ANY quantity
-  { div: "1.1", name: "EXPLOSIVES 1.1", table: 1, color: "bg-orange-500", textColor: "text-white", symbol: "Exploding bomb", desc: "Mass explosion hazard" },
-  { div: "1.2", name: "EXPLOSIVES 1.2", table: 1, color: "bg-orange-500", textColor: "text-white", symbol: "Exploding bomb", desc: "Projection hazard" },
-  { div: "1.3", name: "EXPLOSIVES 1.3", table: 1, color: "bg-orange-500", textColor: "text-white", symbol: "Exploding bomb", desc: "Fire hazard, minor blast/projection" },
-  { div: "2.3", name: "POISON GAS", table: 1, color: "bg-white border-2 border-gray-300", textColor: "text-black", symbol: "Skull & crossbones", desc: "Gas poisonous by inhalation" },
-  { div: "4.3", name: "DANGEROUS WHEN WET", table: 1, color: "bg-blue-600", textColor: "text-white", symbol: "Flame", desc: "Emits flammable gas on contact with water" },
-  { div: "5.2", name: "ORGANIC PEROXIDE", table: 1, color: "bg-yellow-400 border border-red-500", textColor: "text-black", symbol: "Flame over circle", desc: "Type B, liquid or solid, temperature controlled", note: "Only Type B liquid/solid temp controlled is Table 1" },
-  { div: "6.1 (PIH)", name: "POISON INHALATION HAZARD", table: 1, color: "bg-white border-2 border-gray-300", textColor: "text-black", symbol: "Skull & crossbones", desc: "Toxic by inhalation (Hazard Zone A or B)" },
-  { div: "7 (Yellow III)", name: "RADIOACTIVE", table: 1, color: "bg-yellow-300 border border-gray-400", textColor: "text-black", symbol: "Trefoil", desc: "Radioactive Yellow III label — Highway Route Controlled Qty" },
+function PlacardDiamond({ topColor, bottomColor, borderColor, textColor, name, divLabel, symbol, size = "lg" }) {
+  const px = size === "lg" ? "w-20 h-20" : "w-12 h-12";
+  const textSz = size === "lg" ? "text-[8px]" : "text-[5px]";
+  const divSz = size === "lg" ? "text-[10px]" : "text-[6px]";
+  const symSz = size === "lg" ? "text-[14px]" : "text-[9px]";
 
-  // Table 2 — Placard required at 1,001 lbs aggregate
-  { div: "1.4", name: "EXPLOSIVES 1.4", table: 2, color: "bg-orange-400", textColor: "text-white", symbol: "Compatibility group letter", desc: "Minor explosion hazard — largely confined to package" },
-  { div: "1.5", name: "EXPLOSIVES 1.5", table: 2, color: "bg-orange-400", textColor: "text-white", symbol: "1.5", desc: "Very insensitive — mass explosion hazard" },
-  { div: "1.6", name: "EXPLOSIVES 1.6", table: 2, color: "bg-orange-400", textColor: "text-white", symbol: "1.6", desc: "Extremely insensitive articles" },
-  { div: "2.1", name: "FLAMMABLE GAS", table: 2, color: "bg-red-600", textColor: "text-white", symbol: "Flame", desc: "Flammable gas (e.g., propane, hydrogen, LPG)" },
-  { div: "2.2", name: "NON-FLAMMABLE GAS", table: 2, color: "bg-green-600", textColor: "text-white", symbol: "Gas cylinder", desc: "Non-flammable, non-poisonous compressed gas" },
-  { div: "3", name: "FLAMMABLE", table: 2, color: "bg-red-600", textColor: "text-white", symbol: "Flame", desc: "Flammable liquid (flash point < 60C / 140F)" },
-  { div: "Combustible", name: "COMBUSTIBLE", table: 2, color: "bg-red-600", textColor: "text-white", symbol: "Flame", desc: "Combustible liquid (flash point 60-93C / 140-200F)", note: "Not required for non-bulk per 172.504(f)(10)" },
-  { div: "4.1", name: "FLAMMABLE SOLID", table: 2, color: "bg-white border-2 border-red-500", textColor: "text-black", symbol: "Flame", desc: "Flammable solid, self-reactive, desensitized explosive", note: "Vertical red & white stripes" },
-  { div: "4.2", name: "SPONTANEOUSLY COMBUSTIBLE", table: 2, color: "bg-white border-2 border-red-500", textColor: "text-black", symbol: "Flame", desc: "Liable to spontaneous combustion", note: "Top half white, bottom half red" },
-  { div: "5.1", name: "OXIDIZER", table: 2, color: "bg-yellow-400", textColor: "text-black", symbol: "Flame over circle", desc: "Oxidizer — may cause or enhance fire" },
-  { div: "5.2 (other)", name: "ORGANIC PEROXIDE", table: 2, color: "bg-yellow-400 border border-red-500", textColor: "text-black", symbol: "Flame over circle", desc: "Organic peroxide (Types C-G, or not temp controlled)", note: "Top half red, bottom half yellow" },
-  { div: "6.1", name: "POISON", table: 2, color: "bg-white border-2 border-gray-300", textColor: "text-black", symbol: "Skull & crossbones", desc: "Toxic substance (other than inhalation hazard)" },
-  { div: "8", name: "CORROSIVE", table: 2, color: "bg-white border-2 border-gray-300", textColor: "text-black", symbol: "Liquid pouring on hand/metal", desc: "Corrosive — destroys skin, corrodes metals", note: "Top half white, bottom half black" },
-  { div: "9", name: "CLASS 9", table: 2, color: "bg-white border-2 border-gray-300", textColor: "text-black", symbol: "Vertical stripes", desc: "Miscellaneous dangerous goods (lithium batteries, dry ice, elevated temp)", note: "NOT required for domestic transport per 172.504(f)(9). Bulk must still display ID number." },
+  return (
+    <div className={`${px} flex-shrink-0 transform rotate-45 rounded-sm overflow-hidden relative`} style={{ border: `2px solid ${borderColor || "#333"}` }}>
+      {/* Top half */}
+      <div className="absolute inset-0 bottom-1/2" style={{ backgroundColor: topColor }} />
+      {/* Bottom half */}
+      <div className="absolute inset-0 top-1/2" style={{ backgroundColor: bottomColor || topColor }} />
+      {/* Content */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center transform -rotate-45">
+        {symbol && <span className={`${symSz} leading-none`} style={{ color: textColor }}>{symbol}</span>}
+        {name && <span className={`${textSz} font-black leading-tight text-center px-0.5`} style={{ color: textColor }}>{name}</span>}
+        {divLabel && <span className={`${divSz} font-black leading-none mt-0.5`} style={{ color: textColor }}>{divLabel}</span>}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   FULL PLACARD CATALOG — Based on DOT Chart 17
+   ================================================================ */
+const PLACARDS = [
+  // Class 1 — Explosives
+  { div: "1.1", searchTerms: "1.1 explosives mass explosion class 1", name: "EXPLOSIVES", divLabel: "1.1", topColor: "#F97316", bottomColor: "#F97316", borderColor: "#333", textColor: "#000", symbol: "💥", desc: "Mass explosion hazard", classes: ["1"] },
+  { div: "1.2", searchTerms: "1.2 explosives projection class 1", name: "EXPLOSIVES", divLabel: "1.2", topColor: "#F97316", bottomColor: "#F97316", borderColor: "#333", textColor: "#000", symbol: "💥", desc: "Projection hazard", classes: ["1"] },
+  { div: "1.3", searchTerms: "1.3 explosives fire minor blast class 1", name: "EXPLOSIVES", divLabel: "1.3", topColor: "#F97316", bottomColor: "#F97316", borderColor: "#333", textColor: "#000", symbol: "💥", desc: "Fire hazard, minor blast or projection", classes: ["1"] },
+  { div: "1.4", searchTerms: "1.4 explosives minor class 1", name: "EXPLOSIVES", divLabel: "1.4", topColor: "#F97316", bottomColor: "#F97316", borderColor: "#333", textColor: "#000", desc: "Minor explosion hazard, largely confined to package", classes: ["1"] },
+  { div: "1.5", searchTerms: "1.5 explosives very insensitive class 1", name: "EXPLOSIVES", divLabel: "1.5", topColor: "#F97316", bottomColor: "#F97316", borderColor: "#333", textColor: "#000", desc: "Very insensitive — mass explosion hazard", classes: ["1"] },
+  { div: "1.6", searchTerms: "1.6 explosives extremely insensitive class 1", name: "EXPLOSIVES", divLabel: "1.6", topColor: "#F97316", bottomColor: "#F97316", borderColor: "#333", textColor: "#000", desc: "Extremely insensitive articles", classes: ["1"] },
+
+  // Class 2 — Gases
+  { div: "2.1", searchTerms: "2.1 flammable gas propane hydrogen lpg class 2", name: "FLAMMABLE GAS", divLabel: "2", topColor: "#DC2626", bottomColor: "#DC2626", borderColor: "#333", textColor: "#FFF", symbol: "🔥", desc: "Flammable gas (propane, hydrogen, LPG, acetylene)", classes: ["2"] },
+  { div: "2.2", searchTerms: "2.2 non-flammable gas nonflammable compressed nitrogen helium class 2", name: "NON-FLAMMABLE GAS", divLabel: "2", topColor: "#16A34A", bottomColor: "#16A34A", borderColor: "#333", textColor: "#FFF", symbol: "⬤", desc: "Non-flammable, non-poisonous compressed gas (nitrogen, helium, CO2)", classes: ["2"] },
+  { div: "2.2 (O)", searchTerms: "oxygen compressed refrigerated 2.2 class 2", name: "OXYGEN", divLabel: "2", topColor: "#EAB308", bottomColor: "#EAB308", borderColor: "#333", textColor: "#000", symbol: "⬤", desc: "Oxygen, compressed or refrigerated liquid. May use NON-FLAMMABLE GAS instead.", classes: ["2"], note: "172.530" },
+  { div: "2.3", searchTerms: "2.3 poison gas toxic inhalation class 2", name: "POISON GAS", divLabel: "2", topColor: "#FFF", bottomColor: "#FFF", borderColor: "#333", textColor: "#000", symbol: "☠", desc: "Gas poisonous by inhalation", classes: ["2"] },
+
+  // Class 3 — Flammable Liquids
+  { div: "3", searchTerms: "3 flammable liquid gasoline alcohol fuel class 3", name: "FLAMMABLE", divLabel: "3", topColor: "#DC2626", bottomColor: "#DC2626", borderColor: "#333", textColor: "#FFF", symbol: "🔥", desc: "Flammable liquid — flash point below 60°C (140°F)", classes: ["3"] },
+  { div: "Comb. Liq.", searchTerms: "combustible liquid fuel oil diesel class 3", name: "COMBUSTIBLE", divLabel: "3", topColor: "#DC2626", bottomColor: "#DC2626", borderColor: "#333", textColor: "#FFF", symbol: "🔥", desc: "Combustible liquid — flash point 60-93°C (140-200°F)", classes: ["3"], note: "Not required for non-bulk (172.504(f)(10)). FLAMMABLE may substitute." },
+
+  // Class 4 — Flammable Solids
+  { div: "4.1", searchTerms: "4.1 flammable solid self-reactive desensitized class 4", name: "FLAMMABLE SOLID", divLabel: "4", topColor: "#FFF", bottomColor: "#FFF", borderColor: "#DC2626", textColor: "#000", symbol: "🔥", desc: "Flammable solid, self-reactive substance, desensitized explosive", classes: ["4"], note: "Red & white vertical stripes" },
+  { div: "4.2", searchTerms: "4.2 spontaneously combustible spontaneous class 4", name: "SPONTANEOUSLY COMBUSTIBLE", divLabel: "4", topColor: "#FFF", bottomColor: "#DC2626", borderColor: "#333", textColor: "#000", symbol: "🔥", desc: "Liable to spontaneous combustion — top white, bottom red", classes: ["4"] },
+  { div: "4.3", searchTerms: "4.3 dangerous when wet water reactive class 4", name: "DANGEROUS WHEN WET", divLabel: "4", topColor: "#2563EB", bottomColor: "#2563EB", borderColor: "#333", textColor: "#FFF", symbol: "🔥", desc: "Emits flammable gas on contact with water", classes: ["4"] },
+
+  // Class 5 — Oxidizers & Organic Peroxides
+  { div: "5.1", searchTerms: "5.1 oxidizer oxidizing class 5", name: "OXIDIZER", divLabel: "5.1", topColor: "#EAB308", bottomColor: "#EAB308", borderColor: "#333", textColor: "#000", symbol: "⭕", desc: "Oxidizer — may cause or enhance fire", classes: ["5"] },
+  { div: "5.2", searchTerms: "5.2 organic peroxide class 5", name: "ORGANIC PEROXIDE", divLabel: "5.2", topColor: "#DC2626", bottomColor: "#EAB308", borderColor: "#333", textColor: "#000", symbol: "🔥", desc: "Organic peroxide — top red, bottom yellow", classes: ["5"], note: "Type B liquid/solid temp controlled = Table 1; all others = Table 2" },
+
+  // Class 6 — Toxic & Infectious
+  { div: "6.1", searchTerms: "6.1 poison toxic pg class 6", name: "POISON", divLabel: "6", topColor: "#FFF", bottomColor: "#FFF", borderColor: "#333", textColor: "#000", symbol: "☠", desc: "Toxic substance (other than inhalation hazard)", classes: ["6"] },
+  { div: "6.1 PIH", searchTerms: "6.1 poison inhalation hazard pih zone class 6", name: "POISON INHALATION HAZARD", divLabel: "6", topColor: "#FFF", bottomColor: "#FFF", borderColor: "#333", textColor: "#000", symbol: "☠", desc: "Toxic by inhalation — Hazard Zone A or B", classes: ["6"], note: "Not required if POISON GAS placard displayed (172.504(f)(8))" },
+
+  // Class 7 — Radioactive
+  { div: "7", searchTerms: "7 radioactive nuclear trefoil class 7", name: "RADIOACTIVE", divLabel: "7", topColor: "#FDE047", bottomColor: "#FFF", borderColor: "#333", textColor: "#000", symbol: "☢", desc: "Radioactive material — Yellow III label required", classes: ["7"] },
+
+  // Class 8 — Corrosive
+  { div: "8", searchTerms: "8 corrosive acid base class 8", name: "CORROSIVE", divLabel: "8", topColor: "#FFF", bottomColor: "#1E293B", borderColor: "#333", textColor: "#000", symbol: "⚗", desc: "Destroys skin tissue, corrodes metals — top white, bottom black", classes: ["8"] },
+
+  // Class 9 — Miscellaneous
+  { div: "9", searchTerms: "9 miscellaneous lithium battery dry ice elevated temperature class 9", name: "CLASS 9", divLabel: "9", topColor: "#FFF", bottomColor: "#FFF", borderColor: "#333", textColor: "#000", symbol: "|||", desc: "Miscellaneous dangerous goods (lithium batteries, dry ice, elevated temp)", classes: ["9"], note: "NOT required for domestic transport. Bulk must still display ID number." },
+
+  // Special
+  { div: "DANGEROUS", searchTerms: "dangerous substitute multiple table 2", name: "DANGEROUS", divLabel: "", topColor: "#DC2626", bottomColor: "#FFF", borderColor: "#333", textColor: "#000", desc: "Substitutes for 2+ Table 2 placards when all non-bulk and none over 2,205 lbs from one facility (172.504(b))", classes: [], isSpecial: true },
+  { div: "CHLORINE", searchTerms: "chlorine poison gas cargo tank", name: "CHLORINE", divLabel: "", topColor: "#FFF", bottomColor: "#FFF", borderColor: "#333", textColor: "#000", symbol: "☠", desc: "May replace POISON GAS on cargo tank/portable tank transporting chlorine (172.542)", classes: [], isSpecial: true },
 ];
 
-/* Additional/substitute placards */
-const SPECIAL_PLACARDS = [
-  { name: "DANGEROUS", color: "bg-white border-2 border-red-500", textColor: "text-red-600", desc: "May substitute for individual Table 2 placards when 2+ categories present, all non-bulk, none over 2,205 lbs from one facility (172.504(b))", note: "Top half red, bottom half white, word DANGEROUS in center" },
-  { name: "OXYGEN", color: "bg-yellow-400", textColor: "text-black", desc: "For Div 2.2 Oxygen, compressed or refrigerated. May be replaced by NON-FLAMMABLE GAS placard.", note: "172.530" },
-  { name: "CHLORINE", color: "bg-white border-2 border-gray-300", textColor: "text-black", desc: "May be used in place of POISON GAS on a cargo tank or portable tank transporting chlorine.", note: "172.542" },
-  { name: "FUEL OIL", color: "bg-red-600", textColor: "text-white", desc: "Alternative marking for cargo tanks carrying only fuel oil. If marked 'Fuel Oil' on each side and rear (2 in+ letters), COMBUSTIBLE placard and ID number not required.", note: "172.544(c)" },
+/* Table 1 and Table 2 simple lists (matching existing format) */
+const TABLE1_LIST = [
+  { div: "1.1", placard: "EXPLOSIVES 1.1" },
+  { div: "1.2", placard: "EXPLOSIVES 1.2" },
+  { div: "1.3", placard: "EXPLOSIVES 1.3" },
+  { div: "2.3", placard: "POISON GAS" },
+  { div: "4.3", placard: "DANGEROUS WHEN WET" },
+  { div: "5.2*", placard: "ORGANIC PEROXIDE (Type B, temp. controlled)" },
+  { div: "6.1 PIH", placard: "POISON INHALATION HAZARD" },
+  { div: "7", placard: "RADIOACTIVE (Yellow III label)" },
+];
+
+const TABLE2_LIST = [
+  { div: "1.4", placard: "EXPLOSIVES 1.4" },
+  { div: "1.5", placard: "EXPLOSIVES 1.5" },
+  { div: "1.6", placard: "EXPLOSIVES 1.6" },
+  { div: "2.1", placard: "FLAMMABLE GAS" },
+  { div: "2.2", placard: "NON-FLAMMABLE GAS" },
+  { div: "3", placard: "FLAMMABLE" },
+  { div: "Comb. Liq.", placard: "COMBUSTIBLE" },
+  { div: "4.1", placard: "FLAMMABLE SOLID" },
+  { div: "4.2", placard: "SPONTANEOUSLY COMBUSTIBLE" },
+  { div: "5.1", placard: "OXIDIZER" },
+  { div: "5.2", placard: "ORGANIC PEROXIDE (other)" },
+  { div: "6.1", placard: "POISON (other than PIH)" },
+  { div: "6.2", placard: "(none — exempt from placarding)" },
+  { div: "8", placard: "CORROSIVE" },
+  { div: "9", placard: "CLASS 9 (not req'd for domestic highway)" },
 ];
 
 /* ================================================================
-   PLACARD REFERENCE COMPONENT
+   MAIN COMPONENT
    ================================================================ */
 export function PlacardReference() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showTable, setShowTable] = useState("both"); // "both" | "1" | "2"
 
-  const filtered = useMemo(() => {
+  const matchedPlacards = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    let items = PLACARD_DATA;
-    if (showTable === "1") items = items.filter(p => p.table === 1);
-    if (showTable === "2") items = items.filter(p => p.table === 2);
-    if (!q) return items;
-    return items.filter(p =>
+    if (!q) return [];
+    return PLACARDS.filter(p =>
+      p.searchTerms.includes(q) ||
       p.div.toLowerCase().includes(q) ||
       p.name.toLowerCase().includes(q) ||
-      p.desc.toLowerCase().includes(q) ||
-      (p.note && p.note.toLowerCase().includes(q))
+      p.desc.toLowerCase().includes(q)
     );
-  }, [searchQuery, showTable]);
+  }, [searchQuery]);
 
   return (
     <div className="bg-white rounded-xl border overflow-hidden" data-testid="placard-reference">
@@ -87,108 +148,104 @@ export function PlacardReference() {
         </div>
         <div className="flex-1 text-left">
           <p className="text-xs font-semibold text-[#0F172A]">Placard Quick Reference (Chart 17)</p>
-          <p className="text-[10px] text-[#94A3B8]">Table 1 & 2, placard types by hazard class</p>
+          <p className="text-[10px] text-[#94A3B8]">Table 1 & 2, placard lookup by hazard class</p>
         </div>
         <ChevronDown className={`w-4 h-4 text-[#94A3B8] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div className="border-t px-4 py-3 space-y-3">
-          {/* Info */}
-          <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2.5 text-[11px] leading-relaxed text-[#1E40AF]">
-            <strong>Table 1</strong> = placard required in <strong>ANY quantity</strong> (most dangerous). <strong>Table 2</strong> = placard required when aggregate gross weight on vehicle is <strong>1,001 lbs or more</strong>. Reference: <CfrLink r="172.504(e)" /> / DOT Chart 17.
-          </div>
+        <div className="border-t px-4 py-3 space-y-4">
 
-          {/* Search + filter */}
-          <div className="flex gap-2">
-            <div className="flex-1 relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by class, division, or name..."
-                className="w-full pl-8 pr-3 py-2 rounded-lg border border-[#E2E8F0] text-[12px] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#002855] focus:ring-1 focus:ring-[#002855] outline-none"
-                data-testid="placard-ref-search"
-              />
-            </div>
-          </div>
-
-          {/* Table toggle */}
-          <div className="flex gap-1">
-            {[
-              { val: "both", label: "All" },
-              { val: "1", label: "Table 1 (Any Qty)" },
-              { val: "2", label: "Table 2 (1,001+ lbs)" },
-            ].map(opt => (
-              <button
-                key={opt.val}
-                onClick={() => setShowTable(opt.val)}
-                className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
-                  showTable === opt.val
-                    ? "bg-[#002855] text-white"
-                    : "bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]"
-                }`}
-                data-testid={`table-filter-${opt.val}`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Placard list */}
-          <div className="space-y-1.5">
-            {filtered.length === 0 && (
-              <p className="text-center py-3 text-[11px] text-[#94A3B8]">No matching placards found.</p>
-            )}
-            {filtered.map((p, i) => (
-              <div key={i} className="rounded-lg border border-[#E2E8F0] bg-[#FAFBFC] p-2.5 flex items-start gap-2.5" data-testid={`placard-ref-${p.div.replace(/[^a-z0-9]/gi, "-")}`}>
-                {/* Placard diamond */}
-                <div className={`w-10 h-10 rounded-sm flex items-center justify-center transform rotate-45 flex-shrink-0 ${p.color}`}>
-                  <span className={`transform -rotate-45 text-[7px] font-black leading-none text-center ${p.textColor}`}>
-                    {p.div.replace(" (PIH)", "").replace(" (Yellow III)", "").replace(" (other)", "")}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-bold text-[#0F172A]">{p.name}</span>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${p.table === 1 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
-                      Table {p.table}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-[#64748B] mt-0.5">
-                    <strong>Div {p.div}:</strong> {p.desc}
-                  </p>
-                  {p.note && (
-                    <p className="text-[9px] text-[#D4AF37] mt-0.5 font-medium">{p.note}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Special / Substitute Placards */}
-          <div className="pt-2 border-t border-[#E2E8F0]">
-            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">Substitute / Special Placards</p>
-            <div className="space-y-1.5">
-              {SPECIAL_PLACARDS.map((p, i) => (
-                <div key={i} className="rounded-lg border border-[#E2E8F0] bg-[#FAFBFC] p-2.5 flex items-start gap-2.5">
-                  <div className={`w-10 h-10 rounded-sm flex items-center justify-center transform rotate-45 flex-shrink-0 ${p.color}`}>
-                    <span className={`transform -rotate-45 text-[6px] font-black leading-none text-center ${p.textColor}`}>
-                      {p.name.slice(0, 4)}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[11px] font-bold text-[#0F172A]">{p.name}</span>
-                    <p className="text-[10px] text-[#64748B] mt-0.5">{p.desc}</p>
-                    {p.note && <p className="text-[9px] text-[#94A3B8] mt-0.5 font-mono">{p.note}</p>}
-                  </div>
+          {/* ---- TABLE 1 ---- */}
+          <div className="rounded-lg border-2 border-red-300 bg-red-50/50 p-2.5">
+            <p className="text-[11px] font-bold text-red-700 mb-1.5">TABLE 1 — Placard required in ANY quantity <CfrLink r="172.504(e)" /></p>
+            <div className="space-y-0.5">
+              {TABLE1_LIST.map(t => (
+                <div key={t.div} className="flex items-center gap-2 text-[10px]">
+                  <span className="font-mono font-bold text-red-800 w-12 flex-shrink-0">{t.div}</span>
+                  <span className="text-[#334155]">{t.placard}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <p className="text-[9px] text-[#94A3B8] italic text-center pt-1">Reference: DOT Chart 17 — Hazardous Materials Markings, Labeling and Placarding Guide</p>
+          {/* ---- TABLE 2 ---- */}
+          <div className="rounded-lg border-2 border-[#002855]/20 bg-[#002855]/5 p-2.5">
+            <p className="text-[11px] font-bold text-[#002855] mb-1.5">TABLE 2 — Placard required at 1,001 lbs+ aggregate <CfrLink r="172.504(e)" /></p>
+            <div className="space-y-0.5">
+              {TABLE2_LIST.map(t => (
+                <div key={t.div} className="flex items-center gap-2 text-[10px]">
+                  <span className="font-mono font-bold text-[#002855] w-14 flex-shrink-0">{t.div}</span>
+                  <span className="text-[#334155]">{t.placard}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ---- PLACARD LOOKUP ---- */}
+          <div className="pt-1 border-t border-[#E2E8F0]">
+            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-2">Placard Lookup — type a hazard class or division</p>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="e.g. 2.1, flammable, corrosive, 8, poison..."
+                className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-[#E2E8F0] text-[12px] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#002855] focus:ring-1 focus:ring-[#002855] outline-none"
+                data-testid="placard-ref-search"
+              />
+            </div>
+
+            {/* Search results — visual placard cards */}
+            {searchQuery.trim().length > 0 && (
+              <div className="mt-3 space-y-3">
+                {matchedPlacards.length === 0 ? (
+                  <p className="text-center py-3 text-[11px] text-[#94A3B8]">No matching placards for "{searchQuery}"</p>
+                ) : (
+                  matchedPlacards.map((p, i) => (
+                    <div key={i} className="rounded-xl border border-[#E2E8F0] bg-[#FAFBFC] p-3 flex items-center gap-4" data-testid={`placard-result-${i}`}>
+                      {/* Visual placard diamond */}
+                      <PlacardDiamond
+                        topColor={p.topColor}
+                        bottomColor={p.bottomColor}
+                        borderColor={p.borderColor}
+                        textColor={p.textColor}
+                        name={p.name.length > 12 ? "" : p.name}
+                        divLabel={p.divLabel}
+                        symbol={p.symbol}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-black text-[#0F172A] tracking-tight">{p.name}</p>
+                        <p className="text-[11px] text-[#475569] mt-0.5">{p.desc}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="text-[10px] font-mono font-bold text-[#002855] bg-[#002855]/10 px-1.5 py-0.5 rounded">
+                            {p.isSpecial ? "Substitute" : `Div ${p.div}`}
+                          </span>
+                          {!p.isSpecial && (
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                              ["1.1","1.2","1.3","2.3","4.3","6.1 PIH"].includes(p.div) || (p.div === "5.2" && p.note?.includes("Table 1")) || p.div === "7"
+                                ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                            }`}>
+                              {["1.1","1.2","1.3","2.3","4.3","6.1 PIH"].includes(p.div) || p.div === "7" ? "Table 1 — Any Qty" : "Table 2 — 1,001+ lbs"}
+                            </span>
+                          )}
+                        </div>
+                        {p.note && <p className="text-[9px] text-[#D4AF37] mt-1 font-medium">{p.note}</p>}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Hint when no search */}
+            {searchQuery.trim().length === 0 && (
+              <p className="text-[10px] text-[#94A3B8] italic mt-2">Type a hazard class (e.g., "3"), division (e.g., "2.1"), or placard name (e.g., "corrosive") to see the corresponding placard.</p>
+            )}
+          </div>
+
+          <p className="text-[9px] text-[#94A3B8] italic text-center">Reference: DOT Chart 17 / <CfrLink r="172.504" /> / <CfrLink r="172.519" label="Placard specs" /></p>
         </div>
       )}
     </div>
