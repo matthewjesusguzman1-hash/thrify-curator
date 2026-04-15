@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save } from "lucide-react";
+import { ChevronLeft, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, Move } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 
@@ -26,34 +26,39 @@ export default function PhotoAnnotator() {
   const [lineWidth, setLineWidth] = useState(3);
   const [history, setHistory] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [startPos, setStartPos] = useState(null);
+  const [drawStart, setDrawStart] = useState(null);
+  const [lastPos, setLastPos] = useState(null);
   const [textInput, setTextInput] = useState("");
-  const [textPos, setTextPos] = useState(null);
   const [showTextInput, setShowTextInput] = useState(false);
+  const [textPlacePos, setTextPlacePos] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  /* Load image onto canvas */
+  /* Load image */
   const loadImage = useCallback((file) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
         setImage(img);
         const container = containerRef.current;
         if (!container) return;
         const maxW = container.clientWidth;
-        const maxH = window.innerHeight * 0.6;
+        const maxH = window.innerHeight * 0.55;
         const scale = Math.min(maxW / img.width, maxH / img.height, 1);
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        setImgDimensions({ w, h });
+        setImgDimensions({ w: Math.round(img.width * scale), h: Math.round(img.height * scale) });
         setHistory([]);
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
       };
-      img.src = e.target.result;
+      img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   }, []);
 
-  /* Redraw canvas */
+  /* Redraw */
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !image) return;
@@ -61,7 +66,7 @@ export default function PhotoAnnotator() {
     canvas.width = imgDimensions.w;
     canvas.height = imgDimensions.h;
     ctx.drawImage(image, 0, 0, imgDimensions.w, imgDimensions.h);
-    // Replay history
+
     for (const item of history) {
       ctx.strokeStyle = item.color;
       ctx.fillStyle = item.color;
@@ -72,37 +77,33 @@ export default function PhotoAnnotator() {
       if (item.type === "freehand" && item.points.length > 1) {
         ctx.beginPath();
         ctx.moveTo(item.points[0].x, item.points[0].y);
-        for (let i = 1; i < item.points.length; i++) {
-          ctx.lineTo(item.points[i].x, item.points[i].y);
-        }
+        for (let i = 1; i < item.points.length; i++) ctx.lineTo(item.points[i].x, item.points[i].y);
         ctx.stroke();
       } else if (item.type === "circle") {
         const dx = item.end.x - item.start.x;
         const dy = item.end.y - item.start.y;
-        const radius = Math.sqrt(dx * dx + dy * dy);
         ctx.beginPath();
-        ctx.arc(item.start.x, item.start.y, radius, 0, Math.PI * 2);
+        ctx.arc(item.start.x, item.start.y, Math.sqrt(dx * dx + dy * dy), 0, Math.PI * 2);
         ctx.stroke();
       } else if (item.type === "arrow") {
-        const { start, end } = item;
-        const angle = Math.atan2(end.y - start.y, end.x - start.x);
+        const angle = Math.atan2(item.end.y - item.start.y, item.end.x - item.start.x);
         const headLen = 15;
         ctx.beginPath();
-        ctx.moveTo(start.x, start.y);
-        ctx.lineTo(end.x, end.y);
+        ctx.moveTo(item.start.x, item.start.y);
+        ctx.lineTo(item.end.x, item.end.y);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(end.x, end.y);
-        ctx.lineTo(end.x - headLen * Math.cos(angle - Math.PI / 6), end.y - headLen * Math.sin(angle - Math.PI / 6));
-        ctx.moveTo(end.x, end.y);
-        ctx.lineTo(end.x - headLen * Math.cos(angle + Math.PI / 6), end.y - headLen * Math.sin(angle + Math.PI / 6));
+        ctx.moveTo(item.end.x, item.end.y);
+        ctx.lineTo(item.end.x - headLen * Math.cos(angle - Math.PI / 6), item.end.y - headLen * Math.sin(angle - Math.PI / 6));
+        ctx.moveTo(item.end.x, item.end.y);
+        ctx.lineTo(item.end.x - headLen * Math.cos(angle + Math.PI / 6), item.end.y - headLen * Math.sin(angle + Math.PI / 6));
         ctx.stroke();
       } else if (item.type === "text") {
-        ctx.font = `bold ${item.fontSize || 16}px sans-serif`;
-        // text background
+        const fs = item.fontSize || 16;
+        ctx.font = `bold ${fs}px sans-serif`;
         const metrics = ctx.measureText(item.text);
-        ctx.fillStyle = "rgba(0,0,0,0.6)";
-        ctx.fillRect(item.pos.x - 2, item.pos.y - (item.fontSize || 16) + 2, metrics.width + 4, (item.fontSize || 16) + 4);
+        ctx.fillStyle = "rgba(0,0,0,0.65)";
+        ctx.fillRect(item.pos.x - 2, item.pos.y - fs + 2, metrics.width + 4, fs + 4);
         ctx.fillStyle = item.color;
         ctx.fillText(item.text, item.pos.x, item.pos.y);
       }
@@ -111,42 +112,99 @@ export default function PhotoAnnotator() {
 
   useEffect(() => { redraw(); }, [redraw]);
 
-  /* Get position from event */
-  const getPos = (e) => {
+  /* Canvas position helper */
+  const getCanvasPos = (e) => {
     const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
+    if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    const touch = e.touches ? e.touches[0] : e;
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
     return {
-      x: ((touch.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((touch.clientY - rect.top) / rect.height) * canvas.height,
+      x: ((clientX - rect.left) / rect.width) * canvas.width,
+      y: ((clientY - rect.top) / rect.height) * canvas.height,
     };
   };
 
-  /* Drawing handlers */
-  const handleStart = (e) => {
+  /* Check if a text item was tapped */
+  const findTextAt = (pos) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return -1;
+    const ctx = canvas.getContext("2d");
+    for (let i = history.length - 1; i >= 0; i--) {
+      const item = history[i];
+      if (item.type !== "text") continue;
+      const fs = item.fontSize || 16;
+      ctx.font = `bold ${fs}px sans-serif`;
+      const w = ctx.measureText(item.text).width + 4;
+      const h = fs + 4;
+      if (pos.x >= item.pos.x - 2 && pos.x <= item.pos.x - 2 + w && pos.y >= item.pos.y - fs + 2 && pos.y <= item.pos.y - fs + 2 + h) {
+        return i;
+      }
+    }
+    return -1;
+  };
+
+  /* Pointer down */
+  const onPointerDown = (e) => {
     if (!image) return;
     e.preventDefault();
-    const pos = getPos(e);
+    const pos = getCanvasPos(e);
+    if (!pos) return;
 
+    // Text tool: place text
     if (tool === "text") {
-      setTextPos(pos);
+      setTextPlacePos(pos);
       setShowTextInput(true);
       return;
     }
 
+    // Check if tapping on existing text to drag
+    const idx = findTextAt(pos);
+    if (idx >= 0) {
+      const item = history[idx];
+      setDragIdx(idx);
+      setDragOffset({ x: pos.x - item.pos.x, y: pos.y - item.pos.y });
+      return;
+    }
+
     setIsDrawing(true);
-    setStartPos(pos);
+    setDrawStart(pos);
+    setLastPos(pos);
 
     if (tool === "freehand") {
       setHistory(prev => [...prev, { type: "freehand", color, lineWidth, points: [pos] }]);
     }
   };
 
-  const handleMove = (e) => {
-    if (!isDrawing || !image) return;
+  /* Pointer move */
+  const onPointerMove = (e) => {
+    if (!image) return;
+    const pos = getCanvasPos(e);
+    if (!pos) return;
+
+    // Dragging text
+    if (dragIdx !== null) {
+      e.preventDefault();
+      setHistory(prev => {
+        const next = [...prev];
+        next[dragIdx] = { ...next[dragIdx], pos: { x: pos.x - dragOffset.x, y: pos.y - dragOffset.y } };
+        return next;
+      });
+      return;
+    }
+
+    if (!isDrawing) return;
     e.preventDefault();
-    const pos = getPos(e);
+    setLastPos(pos);
 
     if (tool === "freehand") {
       setHistory(prev => {
@@ -159,50 +217,44 @@ export default function PhotoAnnotator() {
     }
   };
 
-  const handleEnd = (e) => {
+  /* Pointer up */
+  const onPointerUp = (e) => {
+    if (dragIdx !== null) {
+      setDragIdx(null);
+      return;
+    }
     if (!isDrawing || !image) return;
-    e.preventDefault();
     setIsDrawing(false);
 
-    if ((tool === "circle" || tool === "arrow") && startPos) {
-      const pos = getPos(e.changedTouches ? e : e);
-      // For touch end, use last known position
-      let endPos = pos;
-      if (e.changedTouches) {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const touch = e.changedTouches[0];
-        endPos = {
-          x: ((touch.clientX - rect.left) / rect.width) * canvasRef.current.width,
-          y: ((touch.clientY - rect.top) / rect.height) * canvasRef.current.height,
-        };
-      }
-      setHistory(prev => [...prev, { type: tool, color, lineWidth, start: startPos, end: endPos }]);
+    const pos = getCanvasPos(e) || lastPos;
+
+    if ((tool === "circle" || tool === "arrow") && drawStart && pos) {
+      setHistory(prev => [...prev, { type: tool, color, lineWidth, start: drawStart, end: pos }]);
     }
-    setStartPos(null);
+    setDrawStart(null);
+    setLastPos(null);
   };
 
   const addText = () => {
-    if (!textInput.trim() || !textPos) return;
-    setHistory(prev => [...prev, { type: "text", color, text: textInput.trim(), pos: textPos, fontSize: 16 }]);
+    if (!textInput.trim() || !textPlacePos) return;
+    setHistory(prev => [...prev, { type: "text", color, text: textInput.trim(), pos: textPlacePos, fontSize: 16 }]);
     setTextInput("");
-    setTextPos(null);
+    setTextPlacePos(null);
     setShowTextInput(false);
   };
 
-  const undo = () => {
-    setHistory(prev => prev.slice(0, -1));
-  };
+  const undo = () => setHistory(prev => prev.slice(0, -1));
+  const clearAll = () => setHistory([]);
 
-  const clearAll = () => {
-    setHistory([]);
-  };
+  const zoomIn = () => setZoom(z => Math.min(z + 0.25, 3));
+  const zoomOut = () => setZoom(z => Math.max(z - 0.25, 0.5));
+  const resetZoom = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
   const downloadImage = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const link = document.createElement("a");
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
-    link.download = `inspection-photo-${timestamp}.png`;
+    link.download = `inspection-${new Date().toISOString().slice(0, 10)}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
     toast.success("Photo saved to downloads");
@@ -251,68 +303,72 @@ export default function PhotoAnnotator() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-3 py-4 pb-20 space-y-3" ref={containerRef}>
-        {/* Upload / Camera section */}
+      <div className="max-w-3xl mx-auto px-3 py-4 pb-24 space-y-3" ref={containerRef}>
+        {/* Upload / Camera */}
         {!image && (
           <div className="space-y-3">
             <div className="flex gap-3">
-              <button
-                onClick={() => cameraInputRef.current?.click()}
-                className="flex-1 flex flex-col items-center gap-2 px-4 py-8 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#002855]/30 hover:bg-[#002855]/50 transition-colors"
-                data-testid="take-photo-btn"
-              >
+              <button onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center gap-2 px-4 py-8 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#002855]/30 hover:bg-[#002855]/50 transition-colors" data-testid="take-photo-btn">
                 <Camera className="w-8 h-8 text-[#D4AF37]" />
                 <span className="text-xs font-semibold text-white/80">Take Photo</span>
               </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 flex flex-col items-center gap-2 px-4 py-8 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#002855]/30 hover:bg-[#002855]/50 transition-colors"
-                data-testid="upload-photo-btn"
-              >
+              <button onClick={() => fileInputRef.current?.click()} className="flex-1 flex flex-col items-center gap-2 px-4 py-8 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#002855]/30 hover:bg-[#002855]/50 transition-colors" data-testid="upload-photo-btn">
                 <Upload className="w-8 h-8 text-[#D4AF37]" />
                 <span className="text-xs font-semibold text-white/80">Upload Photo</span>
               </button>
             </div>
             <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files[0] && loadImage(e.target.files[0])} />
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && loadImage(e.target.files[0])} />
-            <p className="text-[11px] text-white/40 text-center">Take a photo or upload one to start annotating. Add circles, arrows, text, and freehand drawings to document inspection findings.</p>
+            <p className="text-[11px] text-white/40 text-center">Take a photo or upload one to start annotating. Draw circles, arrows, text, and freehand to document findings.</p>
           </div>
         )}
 
-        {/* Canvas */}
+        {/* Canvas area */}
         {image && (
           <>
-            <div className="rounded-lg overflow-hidden border border-white/10 bg-black" style={{ position: "relative", touchAction: "none" }}>
-              <canvas
-                ref={canvasRef}
-                style={{ width: "100%", height: "auto", display: "block" }}
-                onMouseDown={handleStart}
-                onMouseMove={handleMove}
-                onMouseUp={handleEnd}
-                onMouseLeave={() => { if (isDrawing) handleEnd({ preventDefault: () => {} }); }}
-                onTouchStart={handleStart}
-                onTouchMove={handleMove}
-                onTouchEnd={handleEnd}
-                data-testid="annotation-canvas"
-              />
-              {/* Text input overlay */}
-              {showTextInput && textPos && (
-                <div className="absolute top-2 left-2 right-2 flex gap-1 z-10">
-                  <input
-                    type="text"
-                    value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addText()}
-                    placeholder="Type annotation text..."
-                    className="flex-1 px-2.5 py-2 rounded-lg border border-[#D4AF37] bg-[#0B1729] text-white text-xs placeholder:text-white/40 focus:ring-1 focus:ring-[#D4AF37] outline-none"
-                    autoFocus
-                    data-testid="text-annotation-input"
-                  />
-                  <button onClick={addText} className="px-3 py-2 rounded-lg bg-[#D4AF37] text-[#002855] text-xs font-bold" data-testid="add-text-btn">Add</button>
-                  <button onClick={() => { setShowTextInput(false); setTextPos(null); }} className="px-2 py-2 rounded-lg bg-white/10 text-white text-xs">Cancel</button>
-                </div>
-              )}
+            {/* Zoom controls */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <button onClick={zoomOut} className="p-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white" data-testid="zoom-out-btn"><ZoomOut className="w-4 h-4" /></button>
+                <span className="text-[10px] text-white/50 w-10 text-center">{Math.round(zoom * 100)}%</span>
+                <button onClick={zoomIn} className="p-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white" data-testid="zoom-in-btn"><ZoomIn className="w-4 h-4" /></button>
+                {zoom !== 1 && <button onClick={resetZoom} className="text-[10px] text-[#D4AF37] ml-1">Reset</button>}
+              </div>
+              <p className="text-[9px] text-white/30">Tap text to drag it</p>
             </div>
+
+            {/* Canvas wrapper — scrollable/zoomable */}
+            <div className="rounded-lg border border-white/10 bg-black overflow-auto" style={{ maxHeight: "60vh" }}>
+              <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: imgDimensions.w, height: imgDimensions.h }}>
+                <canvas
+                  ref={canvasRef}
+                  style={{ width: imgDimensions.w, height: imgDimensions.h, display: "block", touchAction: "none", cursor: tool === "text" ? "crosshair" : "default" }}
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerLeave={() => { if (isDrawing) { setIsDrawing(false); if ((tool === "circle" || tool === "arrow") && drawStart && lastPos) { setHistory(prev => [...prev, { type: tool, color, lineWidth, start: drawStart, end: lastPos }]); } setDrawStart(null); setLastPos(null); } if (dragIdx !== null) setDragIdx(null); }}
+                  data-testid="annotation-canvas"
+                />
+              </div>
+            </div>
+
+            {/* Text input overlay */}
+            {showTextInput && (
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addText()}
+                  placeholder="Type annotation text..."
+                  className="flex-1 px-2.5 py-2 rounded-lg border border-[#D4AF37] bg-[#0B1729] text-white text-xs placeholder:text-white/40 focus:ring-1 focus:ring-[#D4AF37] outline-none"
+                  autoFocus
+                  data-testid="text-annotation-input"
+                />
+                <button onClick={addText} className="px-3 py-2 rounded-lg bg-[#D4AF37] text-[#002855] text-xs font-bold" data-testid="add-text-btn">Add</button>
+                <button onClick={() => { setShowTextInput(false); setTextPlacePos(null); }} className="px-2 py-2 rounded-lg bg-white/10 text-white text-xs">Cancel</button>
+              </div>
+            )}
 
             {/* Toolbar */}
             <div className="bg-[#002855]/80 rounded-xl p-3 space-y-2.5 border border-white/10">
@@ -352,15 +408,7 @@ export default function PhotoAnnotator() {
               {/* Line width */}
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-white/40 font-medium">Size:</span>
-                <input
-                  type="range"
-                  min="1"
-                  max="8"
-                  value={lineWidth}
-                  onChange={(e) => setLineWidth(parseInt(e.target.value))}
-                  className="flex-1 h-1 accent-[#D4AF37]"
-                  data-testid="line-width-slider"
-                />
+                <input type="range" min="1" max="8" value={lineWidth} onChange={(e) => setLineWidth(parseInt(e.target.value))} className="flex-1 h-1 accent-[#D4AF37]" data-testid="line-width-slider" />
                 <span className="text-[10px] text-white/40 w-4 text-center">{lineWidth}</span>
               </div>
 
@@ -372,15 +420,15 @@ export default function PhotoAnnotator() {
                 <button onClick={clearAll} disabled={history.length === 0} className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white text-[10px] font-semibold disabled:opacity-30 transition-all" data-testid="clear-all-btn">
                   <Trash2 className="w-3.5 h-3.5" /> Clear All
                 </button>
-                <button onClick={() => { setImage(null); setHistory([]); }} className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white text-[10px] font-semibold transition-all" data-testid="new-photo-btn">
+                <button onClick={() => { setImage(null); setHistory([]); setZoom(1); setPan({x:0,y:0}); }} className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white text-[10px] font-semibold transition-all" data-testid="new-photo-btn">
                   <Camera className="w-3.5 h-3.5" /> New Photo
                 </button>
               </div>
             </div>
 
-            {/* Quick text stamps */}
+            {/* Quick stamps */}
             <div className="bg-[#002855]/50 rounded-xl p-3 border border-white/10">
-              <p className="text-[10px] text-white/40 font-medium mb-2">Quick stamps (tap then tap on photo to place):</p>
+              <p className="text-[10px] text-white/40 font-medium mb-2">Quick stamps — tap a stamp, then tap on photo to place:</p>
               <div className="flex flex-wrap gap-1.5">
                 {["VIOLATION", "OOS", "DEFECT", new Date().toLocaleDateString(), "SEE REPORT"].map(stamp => (
                   <button
@@ -388,7 +436,7 @@ export default function PhotoAnnotator() {
                     onClick={() => {
                       setTool("text");
                       setTextInput(stamp);
-                      toast.info("Tap on the photo to place the text");
+                      toast.info("Tap on the photo to place text");
                     }}
                     className="px-2.5 py-1.5 rounded-md bg-white/5 text-white/60 hover:bg-[#D4AF37] hover:text-[#002855] text-[10px] font-bold transition-all"
                     data-testid={`stamp-${stamp.toLowerCase().replace(/[^a-z]/g, "-")}`}
