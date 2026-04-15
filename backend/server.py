@@ -626,7 +626,28 @@ async def smart_search(request: SmartSearchRequest):
             session_id=f"smart-search-{uuid.uuid4()}",
             system_message=f"""You are an expert search assistant for FMCSA roadside inspection violations under 49 CFR (Code of Federal Regulations, Title 49 - Transportation).
 
-Your job: given a user's search query, generate 8-15 specific keywords, phrases, CFR section numbers, and regulatory terms that would match relevant violations in a database.
+Your job: given a user's search query (which may be a natural language description of what they observed), generate 8-15 specific keywords, phrases, CFR section numbers, and regulatory terms that would match relevant violations in a database.
+
+CRITICAL: Users often describe what they SEE, not the regulation name. You must translate observations into regulatory terms:
+- "driver not wearing seatbelt" → 392.16, seat belt, safety belt, restraint system
+- "cell phone in hand" or "texting" → 392.80, 392.82, handheld mobile telephone, texting while driving, mobile device, hand-held
+- "bald tires" → 393.75, tread depth, tire condition, worn tires, tread groove
+- "cracked windshield" → 393.60, glazing, windshield condition, vision obstruction
+- "no fire extinguisher" → 393.95, fire extinguisher, safety equipment
+- "leaking fluid" → 393.83, fuel system, hydraulic, brake fluid leak
+- "expired medical card" → 391.41, 391.45, medical certificate, medical examiner's certificate
+- "no triangles" or "no reflectors" → 393.95, warning devices, emergency equipment, reflective triangles
+- "drunk driver" or "alcohol" → 392.5, under the influence, alcohol, controlled substance, impaired
+- "driver asleep" or "fatigued" → 395.3, hours of service, driving time, fatigue, 11-hour rule, 14-hour rule
+- "overweight" → 392.2, gross weight, axle weight, bridge formula, overloaded
+- "no logbook" or "no ELD" → 395.8, record of duty status, electronic logging device, driver's record
+- "smoke from brakes" → 393.40, 393.42, 393.48, brake condition, overheated brakes, brake adjustment
+- "load falling off" → 393.100, 393.104, cargo securement, load securement, tie down, working load limit
+- "no CDL" or "wrong license" → 383.23, 383.91, commercial driver's license, endorsement, restriction
+- "hazmat spill" or "leaking package" → 173.24, 177.854, release of hazardous material, leaking package
+- "no placards" → 172.504, 172.516, placard display, missing placard, placarding
+- "inattentive driving" → 392.9, inattentive, distracted, failure to maintain safe operation
+- "parts and accessories" → 393, parts and accessories, vehicle condition, equipment
 
 USE YOUR KNOWLEDGE OF 49 CFR TO EXPAND SEARCHES:
 - If someone searches "brakes", include specific CFR sections like "393.40", "393.42", "393.45", "393.47", "393.48" and terms like "air brake", "hydraulic brake", "parking brake", "brake hose", "brake drum", "brake adjustment", "pushrod"
@@ -636,6 +657,9 @@ USE YOUR KNOWLEDGE OF 49 CFR TO EXPAND SEARCHES:
 - If someone searches "hazmat" or "dangerous goods", include "171", "172", "173", "177", "178", "placarding", "shipping papers", "markings", "packaging"
 - If someone searches "weight" or "overweight", include "392.2", "gross weight", "axle weight", "bridge formula"
 - If someone searches "CDL" or "license", include "383", "endorsement", "restriction", "medical certificate"
+- If someone searches "seatbelt" or "seat belt", include "392.16", "safety belt", "restraint", "seat belt assembly"
+- If someone searches "phone" or "cell phone" or "texting", include "392.80", "392.82", "handheld mobile telephone", "texting", "mobile device", "hand-held", "390.17"
+- If someone searches "inattentive" or "distracted", include "392.9", "inattentive driving", "distracted", "failure to devote attention", "safe operation"
 
 VIOLATION CATEGORIES IN THE DATABASE: {cat_list}
 
@@ -644,11 +668,11 @@ SAMPLE VIOLATIONS FOR CONTEXT:
 
 Return ONLY a JSON array of strings. Include a mix of:
 1. Plain English terms and synonyms
-2. Specific CFR section numbers (e.g., "393.48", "395.8")  
+2. Specific CFR section numbers (e.g., "393.48", "395.8", "392.16", "392.80")
 3. Regulatory phrases from the actual CFR text
 4. Common abbreviations (e.g., "CMV", "HM", "OOS", "ELD")
 
-Example output: ["brake", "air brake system", "393.40", "393.48", "pushrod", "brake adjustment", "stopping distance", "hydraulic"]"""
+Example for "driver on phone": ["392.80", "392.82", "handheld mobile telephone", "texting while driving", "mobile device", "hand-held", "cell phone", "driving a CMV while using a hand-held mobile telephone", "390.17"]"""
         ).with_model("openai", "gpt-4.1-mini")
 
         user_msg = UserMessage(text=f"Search query: {query_text}")

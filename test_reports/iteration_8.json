@@ -1,0 +1,54 @@
+{
+  "summary": "Completed comprehensive testing of 3 new features: (1) Placard Calculator - all 4 test cases passed, (2) AI Smart Search - all 6 backend tests passed for natural language queries, (3) Photo Annotator - page loads correctly with Take Photo and Upload Photo buttons. All existing tools on HazMat Tools tab still work.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Placard Calculator: Table 1 material (Div 2.3 Poison Gas, 100 lbs) shows POISON GAS placard required in ANY quantity",
+    "Placard Calculator: Two Table 2 materials (Class 3 800 lbs + Class 8 300 lbs = 1100 lbs) shows FLAMMABLE and CORROSIVE placards with DANGEROUS substitution option",
+    "Placard Calculator: Class 9 (500 lbs, non-bulk) shows 'No placards required' with domestic transport exception",
+    "Placard Calculator: Single Table 2 material (Class 3, 500 lbs, non-bulk) shows 'No placards required' since under 1,001 lbs",
+    "AI Search: POST /api/violations/smart-search with 'driver not wearing seatbelt' returns violations with 392.16",
+    "AI Search: POST /api/violations/smart-search with 'cell phone in hand' returns violations with 392.82 and 390.17",
+    "AI Search: POST /api/violations/smart-search with 'texting while driving' returns relevant violations",
+    "AI Search: Empty query returns empty results",
+    "AI Search: Smart search works with additional filters (e.g., oos=Y)",
+    "AI Search: Response structure is correct (violations, total, expanded_terms, original_query)",
+    "Photo Annotator: Page loads at /photo-annotator with data-testid='photo-annotator'",
+    "Photo Annotator: 'Take Photo' button present with data-testid='take-photo-btn'",
+    "Photo Annotator: 'Upload Photo' button present with data-testid='upload-photo-btn'",
+    "Header: Photo navigation button present with data-testid='photo-annotator-nav-btn'",
+    "Existing Tools: Placard Helper, RQ Lookup, Package Class, MOT, Segregation Table all still work on Tools tab",
+    "Existing Endpoints: /api/violations, /api/violations/filters, /api/violations/stats, /api/hazmat-substances/search all working"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/test_reports/pytest/pytest_new_features.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PlacardCalculator.js correctly implements Table 1 vs Table 2 logic per 172.504",
+    "Class 9 domestic exception (172.504(f)(9)) properly applied for non-bulk packages",
+    "DANGEROUS placard substitution option correctly shown when 2+ Table 2 categories present",
+    "AI smart search system prompt updated with comprehensive natural language mappings",
+    "PhotoAnnotator.js has proper canvas-based annotation tools (freehand, circle, arrow, text)",
+    "All data-testid attributes present for testing"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_new_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)",
+    "frontend": "100% (All UI tests passed)"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Three new features tested: (1) PlacardCalculator in HazMat Tools tab - calculates required placards based on Table 1/Table 2 logic, (2) AI Smart Search at POST /api/violations/smart-search - natural language queries like 'driver not wearing seatbelt' find correct violations, (3) PhotoAnnotator at /photo-annotator - canvas-based photo annotation tool. Key data-testids: placard-calculator, placard-calculator-toggle, add-material-btn, material-class-{n}, material-weight-{n}, calculate-placards-btn, photo-annotator, take-photo-btn, upload-photo-btn, photo-annotator-nav-btn."
+}

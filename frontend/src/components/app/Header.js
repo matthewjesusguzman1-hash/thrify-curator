@@ -1,4 +1,4 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -111,6 +111,18 @@ export function Header({ onUploadClick, stats }) {
           >
             <Calculator className="w-3.5 h-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Tie-Down Calc</span>
+          </Button>
+
+          {/* Photo Annotator */}
+          <Button
+            data-testid="photo-annotator-nav-btn"
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/photo-annotator")}
+            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs"
+          >
+            <Camera className="w-3.5 h-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Photo</span>
           </Button>
 
           {/* Inspections */}
