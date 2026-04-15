@@ -1305,23 +1305,13 @@ async def root():
 
 @api_router.get("/hazmat-substances/search")
 async def search_hazmat_substances(q: str = Query("", min_length=1)):
-    """Search Appendix A (RQ) and Appendix B (Marine Pollutants) by name or UN/NA ID number."""
+    """Search Appendix A (RQ) and Appendix B (Marine Pollutants) by substance name."""
     query = q.strip()
     if not query:
         return []
-    # Check if query looks like an ID number (digits, or UN/NA prefix)
-    id_query = query.upper().replace(" ", "")
-    if id_query.isdigit():
-        id_query = f"UN{id_query}"  # assume UN if just digits
-    conditions = [{"name": {"$regex": re.compile(re.escape(query), re.IGNORECASE)}}]
-    if id_query.startswith("UN") or id_query.startswith("NA"):
-        conditions.append({"un_ids": id_query})
-        # Also try without prefix in case user typed just the number
-        if query.isdigit():
-            conditions.append({"un_ids": f"NA{query}"})
     cursor = db.hazmat_substances.find(
-        {"$or": conditions},
-        {"_id": 0}
+        {"name": {"$regex": re.compile(re.escape(query), re.IGNORECASE)}},
+        {"_id": 0, "un_ids": 0}
     ).limit(20)
     results = await cursor.to_list(length=20)
     return results

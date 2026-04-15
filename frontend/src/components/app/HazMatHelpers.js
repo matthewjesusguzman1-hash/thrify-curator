@@ -1204,7 +1204,7 @@ export function SubstanceLookup({ onNavigate }) {
       {open && (
         <div className="border-t px-4 py-3 space-y-3">
           <InfoBox>
-            <strong>What is this?</strong> Search <CfrLink r="172.101" label="Appendix A" /> to check if a material is a <strong>hazardous substance</strong> with a reportable quantity (RQ), and <CfrLink r="172.101" label="Appendix B" /> to check if it's a <strong>marine pollutant</strong>. Type a substance name or UN/NA ID number.
+            <strong>What is this?</strong> Search <CfrLink r="172.101" label="Appendix A" /> to check if a material is a <strong>hazardous substance</strong> with a reportable quantity (RQ), and <CfrLink r="172.101" label="Appendix B" /> to check if it's a <strong>marine pollutant</strong>. Type a substance name to search.
           </InfoBox>
 
           {/* Search input */}
@@ -1214,12 +1214,13 @@ export function SubstanceLookup({ onNavigate }) {
               type="text"
               value={query}
               onChange={handleChange}
-              placeholder="Name or ID number (e.g., chlorine, 1203, UN1017)..."
+              placeholder="Search by substance name (e.g., chlorine, benzene, aldrin)..."
               className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#E2E8F0] text-[12px] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#002855] focus:ring-1 focus:ring-[#002855] outline-none"
               data-testid="substance-search-input"
             />
             {loading && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-[#002855] border-t-transparent rounded-full animate-spin" />}
           </div>
+          <p className="text-[10px] text-[#64748B] italic">Search by substance name only — partial names will show matching results.</p>
 
           {/* Results */}
           {results && results.length === 0 && query.length >= 2 && (
@@ -1234,9 +1235,6 @@ export function SubstanceLookup({ onNavigate }) {
                 <div key={i} className="rounded-lg border bg-[#FAFBFC] p-3" data-testid={`substance-result-${i}`}>
                   <div className="flex items-center gap-2 mb-1.5">
                     <p className="text-[12px] font-bold text-[#0F172A]">{r.name}</p>
-                    {r.un_ids && r.un_ids.length > 0 && (
-                      <span className="text-[10px] font-mono text-[#64748B] bg-[#F1F5F9] px-1.5 py-0.5 rounded">{r.un_ids.join(", ")}</span>
-                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {/* RQ Badge */}
