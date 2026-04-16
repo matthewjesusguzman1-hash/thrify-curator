@@ -46,6 +46,29 @@ const HM_LINKS = [
   },
 ];
 
+const FLOWCHARTS = [
+  {
+    label: "Is a USDOT Number Required?",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/ysauzg1k_cvsa_daaf1c2cc0cecc39aeb7decb7f74a0eb.pdf",
+    desc: "CVSA decision tree for USDOT number requirements",
+  },
+  {
+    label: "How To Find the Responsible Carrier and Correct USDOT Number",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/x5ejnwu7_How_To_Find_The_Responsible_Carrier_and_Correct_USDOT_Number_508CLN.pdf",
+    desc: "FMCSA guide for identifying the responsible motor carrier",
+  },
+  {
+    label: "Determining Class of CDL Required",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/su07qof5_cvsa_05b838b9b6a2166cfaf418d5f97c34e2.pdf",
+    desc: "CVSA flowchart for CDL class determination (A, B, or C)",
+  },
+  {
+    label: "Post-Accident Drug & Alcohol Testing Requirements",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/g1p8yd97_Flowchart_Post-Accident_DA_Testing_Requirements.pdf",
+    desc: "FMCSA flowchart for post-accident DA testing requirements",
+  },
+];
+
 /* ================================================================
    eCFR URL HELPER
    ================================================================ */
@@ -484,7 +507,7 @@ export default function HazMatWorksheet() {
                   Resources
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[280px] p-2" align="end" data-testid="hm-resources-popover">
+              <PopoverContent className="w-[280px] p-2 max-h-[400px] overflow-y-auto" align="end" data-testid="hm-resources-popover">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">HazMat Resources</p>
                 {HM_LINKS.map((link) => (
                   <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group" data-testid={`hm-link-${link.label.replace(/[\s/()]/g, '-').toLowerCase()}`}>
@@ -497,6 +520,20 @@ export default function HazMatWorksheet() {
                     </div>
                   </a>
                 ))}
+                <div className="border-t border-[#E2E8F0] mt-2 pt-2">
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">Flowcharts</p>
+                  {FLOWCHARTS.map((link) => (
+                    <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group" data-testid={`flowchart-${link.label.replace(/[\s/()]/g, '-').toLowerCase()}`}>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                          {link.label}
+                          <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855] flex-shrink-0" />
+                        </p>
+                        <p className="text-[10px] text-[#64748B]">{link.desc}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
               </PopoverContent>
             </Popover>
             {showResetConfirm ? (
