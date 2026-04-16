@@ -138,7 +138,7 @@ const STEPS = [
       { id: "2.2", label: "If hazardous waste — check manifest", ref: "172.205", tip: "Requires Uniform Hazardous Waste Manifest (EPA Form 8700-22). 'WASTE' must precede the proper shipping name. Must include EPA ID numbers for generator, transporter, and destination." },
       { id: "2.3", label: "Check basic shipping description", ref: "172.202", tip: "Use the Hazardous Materials Table (172.101) to verify each element of the description.", subs: [
         { label: "Locate entry by proper shipping name in Column 2 — must be Roman type (not italics)", ref: "172.101" },
-        { label: "Reference Column 1 for symbols that may apply (+, A, D, G, I, W)" },
+        { label: "Reference Column 1 for symbols: (+) = fixed name/class/PG, cannot be modified. (A) = regulated only by aircraft. (D) = domestic-only proper shipping name. (G) = generic name, requires technical name in parentheses per 172.203(k). (I) = international shipping name. (W) = regulated only by water." },
         { label: "ID number is as listed in Column 4" },
         { label: "Hazard class/division is as listed in Column 3" },
         { label: "Subsidiary hazards (in parentheses) are as listed in Column 6" },
@@ -147,8 +147,8 @@ const STEPS = [
         { label: "Total quantity listed with unit of measure", ref: "172.202(a)(5)" },
         { label: "Number and type of packages listed", ref: "172.202(a)(7)" },
       ]},
-      { id: "2.4", label: "Check Appendix A — is material a Hazardous Substance?", ref: "172.101", tip: "Hazardous substances are ALWAYS HM regardless of other exceptions. 'RQ' must appear on the shipping paper.", link: "tool-substance-lookup" },
-      { id: "2.5", label: "Check Appendix B — is material a Marine Pollutant? (bulk only)", ref: "172.101", tip: "Marine pollutants in bulk require specific marking and documentation. 'PP' = severe marine pollutant.", link: "tool-substance-lookup" },
+      { id: "2.4", label: "Check Appendix A — is material a Hazardous Substance?", ref: "172.101", tip: "If the material is listed in Appendix A and the quantity in a single package equals or exceeds the Reportable Quantity (RQ), it is ALWAYS a hazardous material regardless of other exceptions. Per 172.203(c): the letters 'RQ' must appear on the shipping paper either before or after the basic description (e.g., 'RQ, UN1760, Corrosive liquid, n.o.s., 8, PG II'). If the proper shipping name does not identify the hazardous substance by name, the name must also appear in parentheses.", link: "tool-substance-lookup" },
+      { id: "2.5", label: "Check Appendix B — is material a Marine Pollutant? (bulk only)", ref: "172.101", tip: "Per 172.203(l): for bulk shipments, the words 'Marine Pollutant' must appear on the shipping paper after the basic description. If the proper shipping name does not identify the marine pollutant component, the name of the marine pollutant must be shown in parentheses (e.g., 'UN3082, Environmentally hazardous substance, liquid, n.o.s., 9, PG III, Marine Pollutant (Phenol)'). 'PP' in Appendix B = severe marine pollutant with stricter requirements.", link: "tool-substance-lookup" },
       { id: "2.6", label: "Check for additional descriptions when required", ref: "172.203", tip: "Review each applicable additional description requirement based on the material type.", subs: [
         { label: "DOT special permits", ref: "172.203(a)" },
         { label: "Limited Quantities", ref: "172.203(b)" },
@@ -162,7 +162,7 @@ const STEPS = [
         { label: "Organic peroxide / self-reactive material", ref: "172.203(o)" },
         { label: "Non-odorized LPG", ref: "172.203(p)" },
       ]},
-      { id: "2.7", label: "Check emergency response telephone number", ref: "172.604", tip: "Must be on the shipping paper with area code. Monitored at all times — answering machines/voicemail do NOT comply. Must appear either after each HM description or once prominently with 'EMERGENCY CONTACT' label. ERI provider name or contract number must be identified." },
+      { id: "2.7", label: "Check emergency response telephone number", ref: "172.604", tip: "Per 172.604(a), a 24-hour emergency response telephone number must be entered on the shipping paper. The number must include the area code or international access code and be preceded by the '+' symbol for international numbers. The number must be: (1) monitored at all times the material is in transportation — answering machines, voicemail, paging services, or beepers do NOT comply; (2) for a person who is either knowledgeable of the HM being shipped and has comprehensive emergency response and incident mitigation information, or has immediate access to a person who possesses such knowledge and information; (3) entered either immediately following each HM description, OR entered once on the shipping paper in a clearly visible, prominent location. If entered once, the offeror must also include the name of the person or contract number (or other unique identifier) of the ERI provider. CHEMTREC (1-800-424-9300) is a commonly used ERI provider." },
     ],
   },
   {

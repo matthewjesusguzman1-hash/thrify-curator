@@ -1340,6 +1340,45 @@ async def search_hazmat_substances(q: str = Query("", min_length=1)):
     results = await cursor.to_list(length=20)
     return results
 
+
+class OCRRequest(BaseModel):
+    image_base64: str
+
+@api_router.post("/hazmat-substances/ocr")
+async def ocr_shipping_paper(req: OCRRequest):
+    """Use AI vision to extract substance names from a photo of a shipping paper."""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="LLM key not configured")
+    try:
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ocr-{uuid.uuid4()}",
+            system_message="You extract hazardous material substance names from photos of shipping papers. Return ONLY a JSON array of substance name strings found in the image. Look for proper shipping names, chemical names, UN numbers, and any substance identifiers. If you cannot read any substance names, return an empty array []. Do not include any explanation, just the JSON array."
+        ).with_model("openai", "gpt-4.1-mini")
+        
+        image_content = ImageContent(image_base64=req.image_base64)
+        user_message = UserMessage(
+            text="Extract all hazardous material substance names from this shipping paper photo. Return only a JSON array of substance name strings.",
+            file_contents=[image_content]
+        )
+        response = await chat.send_message(user_message)
+        # Parse the response as JSON array
+        import json as _json
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            cleaned = cleaned.rsplit("```", 1)[0]
+        names = _json.loads(cleaned)
+        if not isinstance(names, list):
+            names = []
+        return {"substances": names}
+    except Exception as e:
+        logger.error(f"OCR error: {e}")
+        return {"substances": [], "error": str(e)}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
