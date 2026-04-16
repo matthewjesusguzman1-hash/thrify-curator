@@ -1388,22 +1388,42 @@ export function SubstanceLookup({ onNavigate }) {
     setOcrLoading(true);
     setOcrResults(null);
     try {
-      // Convert to base64
-      const reader = new FileReader();
-      const base64 = await new Promise((resolve) => {
-        reader.onload = () => resolve(reader.result.split(",")[1]);
-        reader.readAsDataURL(file);
+      // Resize image to max 1024px to keep payload small
+      const base64 = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1024;
+          let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) {
+            const scale = maxDim / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+          resolve(dataUrl.split(",")[1]);
+        };
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = URL.createObjectURL(file);
       });
-      // Send to OCR endpoint
+
+      // Send to OCR endpoint with timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
       const res = await fetch(`${API}/api/hazmat-substances/ocr`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image_base64: base64 }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+
       if (res.ok) {
         const data = await res.json();
         if (data.substances && data.substances.length > 0) {
-          // Search each substance found
           const allResults = [];
           for (const name of data.substances.slice(0, 5)) {
             try {
@@ -1412,16 +1432,20 @@ export function SubstanceLookup({ onNavigate }) {
                 const matches = await sr.json();
                 allResults.push({ searchedName: name, matches });
               }
-            } catch { /* ignore */ }
+            } catch { /* skip individual search errors */ }
           }
           setOcrResults(allResults);
         } else {
           setOcrResults([]);
         }
+      } else {
+        setOcrResults([]);
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("OCR error:", err);
+      setOcrResults([]);
+    }
     setOcrLoading(false);
-    // Reset file input
     if (cameraRef.current) cameraRef.current.value = "";
   };
 
@@ -1472,7 +1496,7 @@ export function SubstanceLookup({ onNavigate }) {
                 <circle cx="12" cy="13" r="4" />
               </svg>
             </button>
-            <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraCapture} data-testid="substance-camera-input" />
+            <input ref={cameraRef} type="file" accept="image/*" className="hidden" onChange={handleCameraCapture} data-testid="substance-camera-input" />
           </div>
           <p className="text-[10px] text-[#64748B] italic">Search by substance name or tap the camera icon to scan a shipping paper.</p>
 
@@ -1480,7 +1504,8 @@ export function SubstanceLookup({ onNavigate }) {
           {ocrLoading && (
             <div className="flex items-center gap-2 py-3 px-3 rounded-lg bg-[#EFF6FF] border border-[#BFDBFE]">
               <div className="w-4 h-4 border-2 border-[#002855] border-t-transparent rounded-full animate-spin flex-shrink-0" />
-              <span className="text-[11px] text-[#1E40AF]">Reading shipping paper... extracting substance names</span>
+              <span className="text-[11px] text-[#1E40AF]">Reading image... this may take a few seconds</span>
+              <button onClick={() => { setOcrLoading(false); setOcrResults(null); }} className="ml-auto text-[10px] text-[#64748B] hover:text-[#002855]">Cancel</button>
             </div>
           )}
 
