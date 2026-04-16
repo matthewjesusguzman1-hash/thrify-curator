@@ -901,14 +901,19 @@ export function PlacardHelper({ onNavigate }) {
 
   const QUESTIONS = [
     { id: "table", question: "Is the material a Table 1 or Table 2 hazard class?", help: null, helpType: "tables" },
-    { id: "bulk", question: "Is the hazardous material in a BULK packaging?", help: null, helpType: "bulk_help", condition: (a) => a.table === "table2" },
-    { id: "weight", question: "Is the aggregate gross weight of ALL Table 2 materials on this vehicle 1,001 lbs (454 kg) or more?", help: "Add up the gross weight (including packaging) of ALL Table 2 materials on the vehicle — not just one class. If the total is 1,001 lbs or more, placards are required. If under 1,001 lbs (and no Table 1 or bulk materials), placards are not required for the Table 2 materials.", condition: (a) => a.table === "table2" && a.bulk === false },
-    { id: "exception", question: "Does any placarding exception apply?", help: null, helpType: "exception_check", condition: (a) => {
+    { id: "weight", question: "Is the aggregate gross weight of ALL Table 2 materials on this vehicle 1,001 lbs (454 kg) or more?", help: "Add up the gross weight (including packaging) of ALL Table 2 materials on the vehicle — not just one class. If the total is 1,001 lbs or more, placards are required. If under 1,001 lbs, placards are not required for the Table 2 materials (unless in bulk packaging).", condition: (a) => a.table === "table2" },
+    { id: "exception", question: "Does any placarding exception in 172.504(f) apply?", help: null, helpType: "exception_check", condition: (a) => {
       if (a.table === "table1") return true;
-      if (a.table === "table2" && a.bulk === true) return true;
       if (a.table === "table2" && a.weight === true) return true;
       return false;
     }},
+    { id: "bulk", question: "Is the hazardous material in a BULK packaging?", help: "Bulk = capacity greater than 119 gal for liquids, 882 lbs for solids, or water capacity greater than 1,000 lbs for gases (171.8). Cargo tanks, portable tanks, IBCs over these thresholds, and tank cars are all bulk. Bulk packaging must be placarded when it contains any quantity of HM.", condition: (a) => {
+      if (a.table === "table1" && a.exception !== undefined) return true;
+      if (a.table === "table2" && a.weight === true && a.exception !== undefined) return true;
+      if (a.table === "table2" && a.weight === false) return true;
+      return false;
+    }},
+    { id: "bulkException", question: "Does any bulk placarding exception in 172.514 apply?", help: null, helpType: "bulk_exception_check", condition: (a) => a.bulk === true },
   ];
 
   const visibleQs = QUESTIONS.filter(q => !q.condition || q.condition(answers));
@@ -918,23 +923,21 @@ export function PlacardHelper({ onNavigate }) {
   // Determine result
   let verdict = null;
   let endorsement = false;
-  if (allDone || (answers.table === "table2" && answers.bulk === false && answers.weight === false) || answers.table === "neither") {
-    if (answers.table === "table1") {
-      verdict = { required: true, reason: "Table 1 materials require placards in ANY quantity — even a single package." };
-      endorsement = true;
-    } else if (answers.table === "table2" && answers.bulk === true) {
-      verdict = { required: true, reason: "Bulk packages of hazardous materials require placards regardless of quantity or the 1,001 lb threshold." };
-      endorsement = true;
-    } else if (answers.table === "table2" && answers.weight === true) {
-      verdict = { required: true, reason: "The aggregate gross weight of Table 2 materials on this vehicle meets or exceeds 1,001 lbs (454 kg)." };
-      endorsement = true;
-    } else if (answers.table === "table2" && answers.bulk === false && answers.weight === false) {
-      verdict = { required: false, reason: "Table 2 materials in non-bulk packages under 1,001 lbs aggregate do NOT require placards (172.504(c)). However, all other HMR requirements (shipping papers, marking, labeling, packaging) still apply." };
-      endorsement = false;
-    } else if (answers.table === "neither") {
-      verdict = { required: false, reason: "The material does not appear to fall under Table 1 or Table 2. Check if an exception applies (limited quantity, Materials of Trade, etc.) that may remove it from the HMR entirely." };
-      endorsement = false;
-    }
+  const a = answers;
+
+  if (a.table === "neither") {
+    verdict = { required: false, reason: "The material does not appear to fall under Table 1 or Table 2. Check if an exception applies (limited quantity, Materials of Trade, etc.) that may remove it from the HMR entirely." };
+  } else if (a.table === "table2" && a.weight === false && a.bulk === false) {
+    verdict = { required: false, reason: "Table 2 materials in non-bulk packages under 1,001 lbs aggregate do NOT require placards (172.504(c)). However, all other HMR requirements (shipping papers, marking, labeling, packaging) still apply." };
+  } else if (a.table === "table2" && a.weight === false && a.bulk === true) {
+    verdict = { required: true, reason: "Even though the aggregate weight is under 1,001 lbs, bulk packaging must be placarded when it contains any quantity of hazardous material (172.514(a))." };
+    endorsement = true;
+  } else if (a.table === "table1" && a.exception !== undefined && a.bulk !== undefined) {
+    verdict = { required: true, reason: "Table 1 materials require placards in ANY quantity — even a single package." };
+    endorsement = true;
+  } else if (a.table === "table2" && a.weight === true && a.exception !== undefined && a.bulk !== undefined) {
+    verdict = { required: true, reason: "The aggregate gross weight of Table 2 materials on this vehicle meets or exceeds 1,001 lbs (454 kg)." };
+    endorsement = true;
   }
 
   return (
@@ -967,10 +970,11 @@ export function PlacardHelper({ onNavigate }) {
             const val = answers[q.id];
             const isAnswered = val !== undefined;
 
-            // Skip weight question if we already know result
-            if (q.id === "weight" && (answers.table === "table1" || answers.table === "neither" || answers.bulk === true)) return null;
-            if (q.id === "bulk" && (answers.table === "table1" || answers.table === "neither")) return null;
-            if (q.id === "exception" && verdict && !verdict.required) return null;
+            // Skip questions that don't apply to this path
+            if (q.id === "weight" && (answers.table === "table1" || answers.table === "neither")) return null;
+            if (q.id === "exception" && (answers.table === "neither" || (answers.table === "table2" && answers.weight === false))) return null;
+            if (q.id === "bulk" && answers.table === "neither") return null;
+            if (q.id === "bulkException" && answers.bulk !== true) return null;
 
             return (
               <div key={q.id} className="space-y-2">
@@ -1025,10 +1029,24 @@ export function PlacardHelper({ onNavigate }) {
                           </OptionButton>
                         </div>
                       </div>
-                    ) : q.helpType === "bulk_help" ? (
+                    ) : q.helpType === "exception_check" ? (
+                      <div className="pl-7 space-y-2">
+                        <InfoBox color="amber">
+                          <strong>Check if any placarding exception in <CfrLink r="172.504(f)" /> reduces or eliminates the placard requirement.</strong> Review the exceptions list below. If none apply, placards are required.
+                        </InfoBox>
+                        <div className="grid grid-cols-2 gap-2">
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, exception: false }))} testId="plac-no-exception">
+                            <span className="font-semibold">No exception applies</span>
+                          </OptionButton>
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, exception: true }))} testId="plac-has-exception">
+                            <span className="font-semibold">Exception applies</span>
+                          </OptionButton>
+                        </div>
+                      </div>
+                    ) : q.helpType === "bulk_exception_check" ? (
                       <div className="pl-7 space-y-2">
                         <InfoBox>
-                          <strong>Bulk</strong> = capacity greater than 119 gal for liquids, 882 lbs for solids, or water capacity greater than 1,000 lbs for gases (<CfrLink r="171.8" />). Cargo tanks, portable tanks, IBCs over these thresholds, and tank cars are all bulk. <strong>Bulk packaging must be placarded when it contains any quantity of HM</strong>, and must remain placarded when emptied unless cleaned/purged (<CfrLink r="172.514" />).
+                          <strong>Bulk packaging must be placarded</strong> when it contains any quantity of HM, and must remain placarded when emptied unless cleaned/purged (<CfrLink r="172.514(a)(b)" />).
                         </InfoBox>
                         <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-[10px] text-[#1E40AF] space-y-1">
                           <p className="font-bold">Bulk placarding exceptions — <CfrLink r="172.514(c)" />:</p>
@@ -1045,24 +1063,10 @@ export function PlacardHelper({ onNavigate }) {
                           <p>Must remain placarded when emptied, <strong>unless</strong>: (1) sufficiently cleaned/purged of residue and vapors, (2) refilled with a material requiring different or no placards, or (3) contains residue of Class 9 hazardous substance below the reportable quantity.</p>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          <OptionButton onClick={() => setAnswers(p => ({ ...p, bulk: true }))} testId="plac-bulk-yes">
-                            <span className="font-semibold">Yes — Bulk</span>
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, bulkException: false }))} testId="plac-no-bulk-exception">
+                            <span className="font-semibold">No bulk exception</span>
                           </OptionButton>
-                          <OptionButton onClick={() => setAnswers(p => ({ ...p, bulk: false }))} testId="plac-bulk-no">
-                            <span className="font-semibold">No — Non-Bulk</span>
-                          </OptionButton>
-                        </div>
-                      </div>
-                    ) : q.helpType === "exception_check" ? (
-                      <div className="pl-7 space-y-2">
-                        <InfoBox color="amber">
-                          <strong>Before finalizing, check if any exception reduces or eliminates the placard requirement.</strong> Review the exceptions list below. If none apply, placards are required.
-                        </InfoBox>
-                        <div className="grid grid-cols-2 gap-2">
-                          <OptionButton onClick={() => setAnswers(p => ({ ...p, exception: false }))} testId="plac-no-exception">
-                            <span className="font-semibold">No exception applies</span>
-                          </OptionButton>
-                          <OptionButton onClick={() => setAnswers(p => ({ ...p, exception: true }))} testId="plac-has-exception">
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, bulkException: true }))} testId="plac-has-bulk-exception">
                             <span className="font-semibold">Exception applies</span>
                           </OptionButton>
                         </div>
