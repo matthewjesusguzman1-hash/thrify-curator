@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Search, Sparkles, Loader2, X } from "lucide-react";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
@@ -13,10 +13,27 @@ export function SearchBar({
   isSearching,
 }) {
   const [localKeyword, setLocalKeyword] = useState(keyword);
+  const debounceRef = useRef(null);
+
+  // Auto-search on typing for regular mode (debounced)
+  const prevLocalRef = useRef(localKeyword);
+  useEffect(() => {
+    if (aiMode) return;
+    if (prevLocalRef.current === localKeyword) return;
+    prevLocalRef.current = localKeyword;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onKeywordChange(localKeyword);
+      onSearch(localKeyword);
+    }, 500);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localKeyword, aiMode]);
 
   const handleKeyDown = useCallback(
     (e) => {
       if (e.key === "Enter") {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
         onKeywordChange(localKeyword);
         onSearch(localKeyword);
       }
@@ -25,15 +42,25 @@ export function SearchBar({
   );
 
   const handleSearchClick = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     onKeywordChange(localKeyword);
     onSearch(localKeyword);
   };
 
   const handleClear = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     setLocalKeyword("");
     onKeywordChange("");
     onSearch("");
   };
+
+  // Sync with external keyword changes (e.g. tree clicks) only if user isn't actively typing
+  useEffect(() => {
+    if (keyword !== prevLocalRef.current) {
+      setLocalKeyword(keyword);
+      prevLocalRef.current = keyword;
+    }
+  }, [keyword]);
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
@@ -77,7 +104,7 @@ export function SearchBar({
           disabled={isSearching}
           className="px-4 h-10 bg-[#002855] text-white text-sm font-medium hover:bg-[#001a3a] transition-colors disabled:opacity-50"
         >
-          Search
+          {aiMode ? "AI Search" : "Search"}
         </button>
       </div>
 

@@ -335,9 +335,38 @@ async def search_violations(
     # Keyword search - use $text index for speed, with stemming fallback
     if keyword.strip():
         words = keyword.strip().split()
-        # Try $text search first (uses MongoDB's built-in text index — very fast)
+
+        # Common synonym expansion for regular search (no AI needed)
+        SYNONYMS = {
+            "distracted": ["inattentive", "distracted"],
+            "inattentive": ["inattentive", "distracted"],
+            "seatbelt": ["seat belt", "safety belt", "restraint"],
+            "cellphone": ["mobile telephone", "hand-held", "texting"],
+            "phone": ["mobile telephone", "hand-held", "texting"],
+            "texting": ["texting", "mobile telephone", "hand-held"],
+            "drunk": ["under the influence", "alcohol", "impaired"],
+            "alcohol": ["under the influence", "alcohol", "impaired"],
+            "bald": ["tread depth", "tread groove", "tire condition"],
+            "overweight": ["gross weight", "axle weight", "overloaded"],
+            "logbook": ["record of duty", "electronic logging"],
+            "eld": ["electronic logging device", "record of duty"],
+            "fatigue": ["hours of service", "driving time", "fatigue"],
+            "sleepy": ["hours of service", "fatigue", "driving time"],
+            "expired": ["expired", "not current", "invalid"],
+            "leaking": ["leak", "release", "discharge"],
+            "speeding": ["speeding", "speed", "exceed"],
+        }
+
+        expanded_words = []
+        for w in words:
+            wl = w.lower()
+            if wl in SYNONYMS:
+                expanded_words.extend(SYNONYMS[wl])
+            else:
+                expanded_words.append(w)
+
         # Build a text search query with OR semantics
-        text_query = " ".join(words)
+        text_query = " ".join(expanded_words)
         query["$text"] = {"$search": text_query}
         
         # Check if we get results with $text
@@ -347,13 +376,16 @@ async def search_violations(
             # Fallback to regex with stemming for broader matching
             del query["$text"]
             parts = []
-            for w in words:
+            all_words = list(expanded_words) + list(words)  # include original + synonyms
+            for w in all_words:
                 if len(w) <= 2:
                     continue
                 stem = re.sub(r'(ing|tion|ed|ly|er|est|ment|ness|ous|ive|able|ible|ful|less|ated|ting)$', '', w, flags=re.I)
                 if len(stem) < 3:
                     stem = w
                 parts.append(re.escape(stem))
+            # Deduplicate
+            parts = list(dict.fromkeys(parts))
             word_regex = "|".join(parts) if parts else re.escape(keyword.strip())
             query["$or"] = [
                 {"violation_text": {"$regex": word_regex, "$options": "i"}},
@@ -403,6 +435,43 @@ async def search_violations(
     cursor = db.violations.find(query, {"_id": 0}).skip(skip).limit(page_size)
     if sort_options:
         cursor = cursor.sort(sort_options)
+    elif keyword.strip():
+        # When searching by keyword with no explicit sort, fetch more and rank by relevance
+        cursor = db.violations.find(query, {"_id": 0}).skip(skip).limit(page_size)
+        results_raw = await cursor.to_list(page_size)
+        kw_lower = keyword.strip().lower()
+        # Build all search terms including synonyms
+        all_search_terms = [kw_lower] + [w.lower() for w in expanded_words]
+        all_search_terms = list(dict.fromkeys(all_search_terms))  # dedupe
+
+        def relevance(v):
+            text_l = (v.get("violation_text") or "").lower()
+            ref_l = (v.get("regulatory_reference") or "").lower()
+            score = 0
+            # Exact original keyword in text
+            if kw_lower in text_l:
+                score += 100
+            if kw_lower in ref_l:
+                score += 80
+            # Check all synonym terms
+            for term in all_search_terms:
+                if term in text_l:
+                    score += 30
+                if term in ref_l:
+                    score += 20
+            # Bonus for exact word boundary match
+            for term in all_search_terms:
+                if re.search(r'\b' + re.escape(term) + r'\b', text_l):
+                    score += 15
+            return -score
+        results_raw.sort(key=relevance)
+        return ViolationSearchResponse(
+            violations=[Violation(**r) for r in results_raw],
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
     results = await cursor.to_list(page_size)
 
     return ViolationSearchResponse(
@@ -737,8 +806,51 @@ Example for "driver on phone": ["392.80", "392.82", "handheld mobile telephone",
     cursor = db.violations.find(mongo_query, {"_id": 0}).limit(100)
     results = await cursor.to_list(100)
 
+    # Score and rank results by relevance
+    original_lower = query_text.lower()
+    scored = []
+    for r in results:
+        score = 0
+        text_lower = (r.get("violation_text", "") or "").lower()
+        ref_lower = (r.get("regulatory_reference", "") or "").lower()
+        cat_lower = (r.get("violation_category", "") or "").lower()
+        code_lower = (r.get("violation_code", "") or "").lower()
+        combined = f"{text_lower} {ref_lower} {cat_lower} {code_lower}"
+
+        # Highest: exact original query appears in violation text
+        if original_lower in text_lower:
+            score += 100
+        # High: original query in any field
+        if original_lower in combined:
+            score += 50
+
+        # Score each expanded term by how many match
+        for term in expanded_terms:
+            tl = str(term).lower().strip()
+            if not tl:
+                continue
+            # CFR section numbers in regulatory_reference get high weight
+            if re.match(r'^\d{3}\.\d', tl) and tl in ref_lower:
+                score += 30
+            elif tl in text_lower:
+                score += 10
+            elif tl in combined:
+                score += 5
+
+        # Bonus for exact regulatory_reference match
+        for term in expanded_terms:
+            tl = str(term).lower().strip()
+            if re.match(r'^\d{3}\.\d', tl) and ref_lower.startswith(tl):
+                score += 40
+
+        scored.append((score, r))
+
+    # Sort by score descending, then by regulatory_reference
+    scored.sort(key=lambda x: (-x[0], x[1].get("regulatory_reference", "")))
+    ranked_results = [r for _, r in scored]
+
     return SmartSearchResponse(
-        violations=[Violation(**r) for r in results],
+        violations=[Violation(**r) for r in ranked_results],
         total=total,
         expanded_terms=expanded_terms,
         original_query=query_text,
