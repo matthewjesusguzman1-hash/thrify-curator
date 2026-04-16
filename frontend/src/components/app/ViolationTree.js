@@ -293,7 +293,7 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
             onClick={() => onOpenChange(false)}
             data-testid="tree-drawer-backdrop"
           />
-          <div className="fixed inset-x-0 top-0 z-40 lg:hidden" style={{ height: `${splitPct}vh` }}>
+          <div className="fixed inset-x-0 z-40 lg:hidden" style={{ top: "48px", height: `calc(${splitPct}vh - 48px)` }}>
             <div className="h-full bg-white flex flex-col shadow-lg">
               <div className="flex items-center justify-between px-4 py-2 border-b bg-[#002855] flex-shrink-0">
                 <span className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>Violation Tree</span>
