@@ -998,6 +998,63 @@ async def delete_photo(inspection_id: str, item_id: str, photo_id: str):
     return {"message": "Photo removed"}
 
 
+class AnnotationUpdate(BaseModel):
+    annotations: list = []
+
+@api_router.get("/inspections/{inspection_id}/photos/{photo_id}/annotations")
+async def get_annotations(inspection_id: str, photo_id: str):
+    """Get annotations for a photo."""
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    # Search in violation photos
+    for item in doc.get("items", []):
+        for photo in item.get("photos", []):
+            if photo.get("photo_id") == photo_id:
+                return {"annotations": photo.get("annotations", []), "storage_path": photo.get("storage_path", "")}
+    # Search in tiedown photos
+    for a in doc.get("tiedown_assessments", []):
+        for photo in a.get("photos", []):
+            if photo.get("photo_id") == photo_id:
+                return {"annotations": photo.get("annotations", []), "storage_path": photo.get("storage_path", "")}
+    raise HTTPException(status_code=404, detail="Photo not found")
+
+@api_router.put("/inspections/{inspection_id}/photos/{photo_id}/annotations")
+async def save_annotations(inspection_id: str, photo_id: str, req: AnnotationUpdate):
+    """Save annotations for a photo (editable layer, not baked into image)."""
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    # Update in violation photos
+    for item in doc.get("items", []):
+        for photo in item.get("photos", []):
+            if photo.get("photo_id") == photo_id:
+                await db.inspections.update_one(
+                    {"id": inspection_id, "items.item_id": item["item_id"]},
+                    {"$set": {
+                        f"items.$.photos.$[p].annotations": req.annotations,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }},
+                    array_filters=[{"p.photo_id": photo_id}]
+                )
+                return {"message": "Annotations saved"}
+    # Update in tiedown photos
+    for idx, a in enumerate(doc.get("tiedown_assessments", [])):
+        for photo in a.get("photos", []):
+            if photo.get("photo_id") == photo_id:
+                await db.inspections.update_one(
+                    {"id": inspection_id},
+                    {"$set": {
+                        f"tiedown_assessments.{idx}.photos.$[p].annotations": req.annotations,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }},
+                    array_filters=[{"p.photo_id": photo_id}]
+                )
+                return {"message": "Annotations saved"}
+    raise HTTPException(status_code=404, detail="Photo not found")
+
+
+
 # ========== TIE-DOWN ASSESSMENT ENDPOINTS ==========
 
 def _compute_tiedown_assessment(cargo_weight, cargo_length, tiedowns_raw, has_blocking=False):
