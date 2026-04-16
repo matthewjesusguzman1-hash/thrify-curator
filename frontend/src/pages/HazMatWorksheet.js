@@ -12,7 +12,6 @@ import {
   PopoverTrigger,
 } from "../components/ui/popover";
 import { PackageClassHelper, MaterialsOfTradeHelper, SegregationTable, PlacardHelper, SubstanceLookup } from "../components/app/HazMatHelpers";
-import { PlacardCalculator } from "../components/app/PlacardCalculator";
 import { PlacardReference } from "../components/app/PlacardReference";
 import { toast } from "sonner";
 
@@ -681,7 +680,6 @@ export default function HazMatWorksheet() {
         {activeTab === "tools" && (
           <div className="space-y-3">
             <div id="tool-placard-helper"><PlacardHelper onNavigate={navigateTo} /></div>
-            <div id="tool-placard-calculator"><PlacardCalculator onNavigate={navigateTo} /></div>
             <div id="tool-placard-reference"><PlacardReference /></div>
             <div id="tool-substance-lookup"><SubstanceLookup onNavigate={navigateTo} /></div>
             <div id="tool-package-class-helper"><PackageClassHelper onNavigate={navigateTo} /></div>
