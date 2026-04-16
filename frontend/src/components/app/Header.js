@@ -1,4 +1,4 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -49,6 +49,33 @@ const CVSA_LINKS = [
     url: "https://portal.fmcsa.gov",
     description: "State user portal",
     icon: Globe,
+  },
+];
+
+const FLOWCHARTS = [
+  {
+    label: "Is a USDOT Number Required?",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/ysauzg1k_cvsa_daaf1c2cc0cecc39aeb7decb7f74a0eb.pdf",
+    description: "CVSA decision tree",
+    icon: FileText,
+  },
+  {
+    label: "Finding Responsible Carrier & USDOT Number",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/x5ejnwu7_How_To_Find_The_Responsible_Carrier_and_Correct_USDOT_Number_508CLN.pdf",
+    description: "FMCSA carrier identification guide",
+    icon: FileText,
+  },
+  {
+    label: "Determining Class of CDL Required",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/su07qof5_cvsa_05b838b9b6a2166cfaf418d5f97c34e2.pdf",
+    description: "CVSA CDL class flowchart",
+    icon: FileText,
+  },
+  {
+    label: "Post-Accident DA Testing Requirements",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/g1p8yd97_Flowchart_Post-Accident_DA_Testing_Requirements.pdf",
+    description: "FMCSA post-accident testing flowchart",
+    icon: FileText,
   },
 ];
 
@@ -150,7 +177,7 @@ export function Header({ onUploadClick, stats }) {
               </Button>
             </PopoverTrigger>
             <PopoverContent
-              className="w-[260px] p-2"
+              className="w-[260px] p-2 max-h-[420px] overflow-y-auto"
               align="end"
               data-testid="cvsa-popover"
             >
@@ -178,6 +205,32 @@ export function Header({ onUploadClick, stats }) {
                   </div>
                 </a>
               ))}
+              <div className="border-t border-[#E2E8F0] mt-2 pt-2">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">
+                  Flowcharts
+                </p>
+                {FLOWCHARTS.map((link) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
+                    data-testid={`flowchart-${link.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#D4AF37]/10 flex-shrink-0">
+                      <link.icon className="w-4 h-4 text-[#D4AF37]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                        {link.label}
+                        <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
+                      </p>
+                      <p className="text-[10px] text-[#64748B]">{link.description}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
             </PopoverContent>
           </Popover>
 
