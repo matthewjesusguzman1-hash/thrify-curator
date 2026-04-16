@@ -112,195 +112,231 @@ function TipBlock({ tip }) {
 }
 
 /* ================================================================
-   WORKSHEET DATA — 49 CFR HazMat Inspection Steps
+   WORKSHEET DATA — 49 CFR HazMat Inspection Steps (v26.1)
+   Matches reference sheet hierarchy: main items are checkable, subs are reference info
    ================================================================ */
 const STEPS = [
   {
     step: 1,
     title: "Collect Required Documents",
     icon: FileText,
-    tip: "Before beginning, collect all required documents from the driver. Shipping papers must be within the driver's immediate reach while at the controls or in the driver's side door pouch. During rest stops, papers should be placed on the driver's seat or in a holder on the driver's door.",
+    tip: "Before beginning, collect all required documents from the driver. Shipping papers must be within the driver's immediate reach while at the controls or in the driver's side door pouch.",
     items: [
-      { id: "1.1", label: "Shipping papers", ref: "177.817", tip: "Must be readily accessible. Driver must present them immediately upon request. Check that they are properly completed — not just a bill of lading without HM descriptions. The driver must be able to distinguish HM shipping papers from other papers." },
-      { id: "1.2", label: "Emergency response information", ref: "172.602(c)", tip: "Must be immediately accessible and include: basic description of the HM, immediate hazards to health, risks of fire/explosion, immediate precautions, firefighting procedures, initial methods for spill handling, and preliminary first aid. Can be provided on the shipping paper itself, in a separate document like an SDS, or in the Emergency Response Guidebook (ERG) as long as it cross-references the shipping paper description. Must be maintained in the same manner as shipping papers — within driver's reach or in the driver's door pouch." },
-      { id: "1.3", label: "HM Registration when required", ref: "107.601", tip: "Required for any person who offers or transports in commerce: a highway route-controlled quantity of radioactive material, more than 25 kg (55 lbs) of Div 1.1/1.2/1.3 material, more than 1 liter per package of PIH Zone A material, a bulk packaging with capacity of 3,500 gal (liquids/gases) or 468 cu ft (solids) or more, a non-bulk shipment of 5,000 lbs or more gross weight of one placardable class, or any quantity requiring placarding. Registration is through PHMSA and must be renewed annually (July 1–June 30)." },
-      { id: "1.4", label: "HM Safety Permit when required", ref: "385.403", tip: "Required for: highway route-controlled quantity of radioactive material, more than 55 lbs of Division 1.1/1.2/1.3 explosives, more than 1 liter of a PIH Zone A material, bulk Division 2.3 gas, MCT cargo tanks carrying certain Class 3 or Division 2.1 materials. Carrier must have a satisfactory safety rating to hold a permit." },
+      { id: "1.1", label: "Shipping papers", ref: "177.817", tip: "Must be readily accessible. Driver must present them immediately upon request. During rest stops, papers should be placed on the driver's seat or in a holder on the driver's door." },
+      { id: "1.2", label: "Emergency response information", ref: "172.602(c)", tip: "Must be immediately accessible. Can be on the shipping paper, in a separate document like an SDS, or in the ERG as long as it cross-references the shipping paper. Includes: basic description, immediate hazards, fire/explosion risks, precautions, firefighting procedures, spill handling, and first aid." },
+      { id: "1.3", label: "HM Registration when required", ref: "107.601 / 107.620", tip: "Required for highway route-controlled quantity of radioactive material, more than 55 lbs of Div 1.1/1.2/1.3, more than 1 liter per package of PIH Zone A, bulk packaging 3,500+ gal (liquids/gases) or 468+ cu ft (solids), non-bulk 5,000+ lbs of one placardable class, or any quantity requiring placarding. Registration through PHMSA, renewed annually (July 1–June 30)." },
+      { id: "1.4", label: "HM Safety Permit when required", ref: "385.403 / 385.415", tip: "Required for: highway route-controlled quantity radioactive, more than 55 lbs Div 1.1/1.2/1.3, more than 1 liter PIH Zone A, bulk Div 2.3 gas, MCT cargo tanks with certain Class 3 or Div 2.1. Carrier must have satisfactory safety rating." },
     ],
   },
   {
     step: 2,
     title: "Check the Shipping Paper",
     icon: ClipboardCheck,
-    tip: "The shipping paper is the most critical document for identifying hazardous materials. Always verify using the Hazardous Materials Table (172.101) — it has 10 columns. The basic description must appear in a specific sequence per 172.202(b): ID Number, Proper Shipping Name, Hazard Class/Division, Packing Group (remember: ISHP).",
+    tip: "The shipping paper is the most critical document. Always verify using the Hazardous Materials Table (172.101). The basic description must appear in ISHP sequence per 172.202(b): ID Number, Proper Shipping Name, Hazard Class/Division, Packing Group.",
     items: [
-      { id: "2.1", label: "Listed properly with non-HM", ref: "172.201(a)(1)", tip: "HM entries must be distinguished from non-HM. Acceptable methods: listing HM first, placing an 'X' in a column marked 'HM', highlighting or printing in a different color, or any method that makes them stand out. If all items on the paper are HM, a statement to that effect is acceptable." },
-      { id: "2.2", label: "If hazardous waste — check manifest", ref: "172.205", tip: "Hazardous waste shipments require a Uniform Hazardous Waste Manifest (EPA Form 8700-22). The word 'WASTE' must precede the proper shipping name. The manifest must include EPA ID numbers for generator, transporter, and destination facility." },
-      { id: "2.h1", type: "header", label: "Check basic shipping description using HM Table (172.101)" },
-      { id: "2.3", label: "Locate entry by proper shipping name in Column 2", ref: "172.101", tip: "The proper shipping name must be in ROMAN type (not italics). Italicized entries in the table are NOT proper shipping names — they are cross-references. The name on the shipping paper must match the table exactly (minor additions for clarity are permitted, but not alterations)." },
-      { id: "2.4", label: "Reference Column 1 for symbols that may apply", ref: "172.101", tip: "Column 1 symbols: (+) = fixed name/class/PG — cannot be modified even by special provision, (A) = subject to HMR only when transported by aircraft, (D) = domestic-only proper shipping name, (G) = generic name — requires technical name in parentheses per 172.203(k), (I) = international shipping name, (W) = subject to HMR only when transported by water." },
-      { id: "2.5", label: "ID number is as listed in Column 4", ref: "172.101", tip: "ID numbers start with 'UN' (international) or 'NA' (North America only). Common examples: UN1203 (Gasoline), UN1075 (LPG), UN1005 (Anhydrous Ammonia). NA numbers are not recognized internationally." },
-      { id: "2.6", label: "Hazard class/division is as listed in Column 3", ref: "172.101", tip: "9 hazard classes: 1-Explosives, 2-Gases, 3-Flammable Liquids, 4-Flammable Solids, 5-Oxidizers/Organic Peroxides, 6-Toxic/Infectious, 7-Radioactive, 8-Corrosives, 9-Miscellaneous. Divisions (e.g., 2.1, 2.2, 2.3) further specify the hazard." },
-      { id: "2.7", label: "Subsidiary hazards (in parentheses) are as listed in Column 6", ref: "172.101", tip: "Column 6 lists secondary hazards. Example: a material might be Class 3 (flammable liquid) with a subsidiary hazard of 6.1 (toxic). Subsidiary hazards determine additional labeling and placarding requirements." },
-      { id: "2.8", label: "Packing group is as listed in Column 5", ref: "172.101", tip: "Packing Group indicates degree of danger: PG I = Great danger, PG II = Medium danger, PG III = Minor danger. Not all materials have a PG (e.g., most compressed gases, explosives, self-reactive materials, organic peroxides, infectious substances)." },
-      { id: "2.9", label: "Basic description in proper sequence", ref: "172.202(b)", tip: "Required sequence (ISHP): UN/NA ID Number, Proper Shipping Name, Hazard Class/Division, Packing Group. Example: 'UN2744, Cyclobutyl chloroformate, 6.1, (8, 3), PG II'. Additional info (technical name, RQ, etc.) may be added before or after but cannot be interspersed within this sequence." },
-      { id: "2.10", label: "Total quantity listed with unit of measure", ref: "172.202(a)(5)", tip: "Must include total quantity of HM by net or gross mass, capacity, or other appropriate measure. Acceptable units: kg, L, gallons, lbs, etc. For gases, the quantity may be the net mass or the capacity of the cylinder." },
-      { id: "2.11", label: "Number and type of packages listed", ref: "172.202(a)(7)", tip: "Example: '5 drums' or '10 cylinders'. If the shipping paper covers multiple packages of the same material, a single entry with total count is acceptable." },
-      { id: "2.h2", type: "header", label: "Reportable Quantities (RQ)", link: "tool-substance-lookup" },
-      { id: "2.12", label: "Check Appendix A to 172.101 — is material a Hazardous Substance?", ref: "172.101", tip: "If a material is listed in Appendix A and the quantity in a single package meets or exceeds the RQ, it is ALWAYS considered a hazardous material regardless of any other exceptions. The letters 'RQ' must appear on the shipping paper before or after the basic description.", link: "tool-substance-lookup" },
-      { id: "2.13", label: "Check Appendix B to 172.101 — is material a Marine Pollutant? (bulk only)", ref: "172.101", tip: "Marine pollutants in bulk packagings require specific marking and documentation. Materials listed as 'severe marine pollutants' (marked 'PP') have stricter requirements. Marine pollutant requirements apply to shipments transported by vessel.", link: "tool-substance-lookup" },
-      { id: "2.h3", type: "header", label: "Check for additional descriptions when required (172.203)" },
-      { id: "2.14", label: "DOT Special Permits", ref: "172.203(a)", tip: "If shipping under a special permit, the notation 'DOT-SP' followed by the permit number must appear on the shipping paper. Verify that the shipment actually complies with all conditions of the special permit." },
-      { id: "2.15", label: "Limited Quantities", ref: "172.203(b)", tip: "When a material is offered for transportation as a 'limited quantity' as authorized by this subchapter, the words 'Limited Quantity' or 'Ltd Qty' must follow the basic description on the shipping paper. Limited quantities are small amounts authorized under specific sections in Part 173 (e.g., 173.150 for Class 3, 173.152 for Div 5.1). Limited quantity shipments have reduced packaging requirements but must still comply with applicable shipping paper, marking, and compatibility requirements." },
-      { id: "2.16", label: "Hazardous Substances", ref: "172.203(c)", tip: "The letters 'RQ' (Reportable Quantity) must appear either before or after the basic description. If the proper shipping name does not identify the substance by name, the name of the hazardous substance must also be shown in parentheses." },
-      { id: "2.17", label: "Empty Packages", ref: "172.203(e)", tip: "The shipping paper description for a package containing the residue of a hazardous material may include the words 'RESIDUE: Last Contained ***' immediately before or after the basic description. For tank cars, the phrase 'RESIDUE: Last Contained ***' is required. The full basic shipping description (proper shipping name, hazard class, UN number, packing group) must still be provided for the residue material." },
-      { id: "2.18", label: "Cargo tanks with Anhydrous Ammonia or LPG", ref: "172.203(h)", tip: "For MC 330 or MC 331 cargo tanks, the shipping paper must include: (1) Anhydrous Ammonia — the words '0.2 PERCENT WATER' if suitable for quenched and tempered (QT) steel tanks per 173.315(a) Note 14, or 'NOT FOR Q AND T TANKS' if the ammonia does not contain 0.2% or more water by weight. (2) LPG — the word 'NONCORROSIVE' or 'NONCOR' if suitable for QT steel tanks per 173.315(a) Note 15, or 'NOT FOR Q AND T TANKS' for grades of LPG other than Noncorrosive." },
-      { id: "2.19", label: "Technical Names", ref: "172.203(k)", tip: "Required when Column 1 of 172.101 shows a 'G' (generic). Technical name must be in parentheses after the basic description. Example: 'Corrosive liquid, n.o.s., 8, UN1760, PG II (Hydrochloric acid)'. For mixtures, at least two components contributing most to the hazard must be listed." },
-      { id: "2.20", label: "Marine Pollutants", ref: "172.203(l)", tip: "The words 'Marine Pollutant' must appear on the shipping paper for materials meeting the marine pollutant criteria in bulk packages. If the proper shipping name doesn't identify the pollutant, the name of the marine pollutant component must be shown in parentheses." },
-      { id: "2.21", label: "Poisonous Materials", ref: "172.203(m)", tip: "Materials meeting the inhalation toxicity criteria require 'Poison-Inhalation Hazard' or 'Toxic-Inhalation Hazard' and the applicable hazard zone (Zone A, B, C, or D) on the shipping paper." },
-      { id: "2.22", label: "Elevated Temperature Materials", ref: "172.203(n)", tip: "The word 'HOT' must immediately precede the proper shipping name for materials intentionally heated to 100°C (212°F) or above for liquids, or 240°C (464°F) or above for solids, including molten metals and molten sulfur." },
-      { id: "2.23", label: "Organic peroxide / self-reactive material", ref: "172.203(o)", tip: "Additional shipping paper requirements: (1) If competent authority approval is required, a statement of approval of the classification and conditions of transport must appear. (2) If the material requires temperature control during transport, the words 'TEMPERATURE CONTROLLED' must be added as part of the proper shipping name (unless already included), and the control and emergency temperatures must be listed on the shipping paper. (3) The word 'SAMPLE' must be included when a sample of a Division 4.1 (self-reactive) or Division 5.2 (organic peroxide) material is offered for transportation." },
-      { id: "2.24", label: "Non-odorized LPG", ref: "172.203(p)", tip: "If LPG is not odorized, the words 'NON-ODORIZED' or 'NOT ODORIZED' must appear on the shipping paper. This is critical because first responders may not detect leaks by smell." },
-      { id: "2.25", label: "Check emergency response telephone number", ref: "172.604", tip: "Per 172.604(a), a numeric emergency response phone number (with area code) must be on the shipping paper. It must appear either: (1) immediately following each HM description, or (2) entered once in a prominent, clearly visible location (highlighted, larger font, or different color) with a label such as 'EMERGENCY CONTACT: [number]'. The number must be monitored at all times the material is in transportation — answering machines, voicemail, or beepers do NOT comply. The person or ERI provider name (or contract number) must be identified on the shipping paper near the phone number. CHEMTREC (1-800-424-9300) is a commonly used ERI provider." },
+      { id: "2.1", label: "Listed properly with non-HM", ref: "172.201(a)(1)", tip: "HM entries must be distinguished from non-HM. Methods: listing HM first, 'X' in HM column, highlighting, different color, or a statement that all items are HM." },
+      { id: "2.2", label: "If hazardous waste — check manifest", ref: "172.205", tip: "Requires Uniform Hazardous Waste Manifest (EPA Form 8700-22). 'WASTE' must precede the proper shipping name. Must include EPA ID numbers for generator, transporter, and destination." },
+      { id: "2.3", label: "Check basic shipping description", ref: "172.202", tip: "Use the Hazardous Materials Table (172.101) to verify each element of the description.", subs: [
+        { label: "Locate entry by proper shipping name in Column 2 — must be Roman type (not italics)", ref: "172.101" },
+        { label: "Reference Column 1 for symbols that may apply (+, A, D, G, I, W)" },
+        { label: "ID number is as listed in Column 4" },
+        { label: "Hazard class/division is as listed in Column 3" },
+        { label: "Subsidiary hazards (in parentheses) are as listed in Column 6" },
+        { label: "Packing group is as listed in Column 5" },
+        { label: "Basic description in proper sequence (ISHP)", ref: "172.202(b)" },
+        { label: "Total quantity listed with unit of measure", ref: "172.202(a)(5)" },
+        { label: "Number and type of packages listed", ref: "172.202(a)(7)" },
+      ]},
+      { id: "2.4", label: "Check Appendix A — is material a Hazardous Substance?", ref: "172.101", tip: "Hazardous substances are ALWAYS HM regardless of other exceptions. 'RQ' must appear on the shipping paper.", link: "tool-substance-lookup" },
+      { id: "2.5", label: "Check Appendix B — is material a Marine Pollutant? (bulk only)", ref: "172.101", tip: "Marine pollutants in bulk require specific marking and documentation. 'PP' = severe marine pollutant.", link: "tool-substance-lookup" },
+      { id: "2.6", label: "Check for additional descriptions when required", ref: "172.203", tip: "Review each applicable additional description requirement based on the material type.", subs: [
+        { label: "DOT special permits", ref: "172.203(a)" },
+        { label: "Limited Quantities", ref: "172.203(b)" },
+        { label: "Hazardous substances (RQ notation)", ref: "172.203(c)" },
+        { label: "Empty packages ('RESIDUE: Last Contained ***')", ref: "172.203(e)" },
+        { label: "Cargo tanks with Anhydrous Ammonia or LPG", ref: "172.203(h)" },
+        { label: "Technical Names (when Column 1 shows 'G')", ref: "172.203(k)" },
+        { label: "Marine Pollutants", ref: "172.203(l)" },
+        { label: "Poisonous Materials (inhalation hazard + zone)", ref: "172.203(m)" },
+        { label: "Elevated Temperature materials ('HOT')", ref: "172.203(n)" },
+        { label: "Organic peroxide / self-reactive material", ref: "172.203(o)" },
+        { label: "Non-odorized LPG", ref: "172.203(p)" },
+      ]},
+      { id: "2.7", label: "Check emergency response telephone number", ref: "172.604", tip: "Must be on the shipping paper with area code. Monitored at all times — answering machines/voicemail do NOT comply. Must appear either after each HM description or once prominently with 'EMERGENCY CONTACT' label. ERI provider name or contract number must be identified." },
     ],
   },
   {
     step: 3,
     title: "Check for Authorized Packages & Exceptions",
     icon: Package,
-    tip: "The HM Table (172.101) Columns 7, 8A, 8B, and 8C direct you to the specific packaging requirements in Part 173. Always verify the packaging is authorized for the specific material being shipped. Using an unauthorized package is a serious violation.",
+    tip: "The HM Table (172.101) Columns 7, 8A, 8B, and 8C direct you to the specific packaging requirements in Part 173. Always verify the packaging is authorized for the specific material.",
     items: [
-      { id: "3.1", label: "Reference Column 7 for special provisions that apply", ref: "172.102", tip: "Column 7 lists codes for special provisions in 172.102 that can modify any requirement. Code meanings per 172.102(b): Numeric only (e.g., '11') = multi-modal, applies to bulk and non-bulk. 'A' codes = applies only to transportation by aircraft. 'B' codes = applies only to bulk packaging requirements (does not apply to UN/IM portable tanks or IBCs unless otherwise provided). 'IB' or 'IP' codes = applies only to transportation in IBCs. 'N' codes = applies only to non-bulk packaging requirements. 'R' codes = applies only to transportation by rail. 'T' codes = applies only to transportation in UN or IM Specification portable tanks. 'TP' codes = portable tank special provisions in addition to those provided by portable tank instructions or Part 178 requirements. 'W' codes = applies only to transportation by water." },
-      { id: "3.2", label: "Reference Column 8A — exceptions that may apply", ref: "173.XXX", tip: "Column 8A references sections in Part 173 that describe exceptions. Common examples: Limited quantities (173.150–156), Materials of Trade (173.6), consumer commodities, certain ORM-D materials. If an exception applies, some or all HMR requirements may be reduced or eliminated.", link: "tool-mot-helper" },
-      { id: "3.3", label: "Reference Column 8B (non-bulk) or 8C (bulk) — authorized packages", ref: "173.XXX", tip: "Columns 8B/8C reference sections in Part 173 listing specific authorized packaging. Some packages may only be authorized by a DOT Special Permit (107.101 to 107.105). If a special permit is used, verify the shipment meets ALL conditions. Common packaging specs: UN-rated drums, cylinders, IBCs.", link: "tool-package-class-helper" },
+      { id: "3.1", label: "Using the Hazardous Materials Table (172.101)", ref: "172.101", tip: "Column 7 lists special provision codes in 172.102. Code meanings per 172.102(b): Numeric only = multi-modal (bulk and non-bulk). 'A' = aircraft only. 'B' = bulk only (not UN/IM portable tanks or IBCs). 'IB'/'IP' = IBCs only. 'N' = non-bulk only. 'R' = rail only. 'T' = UN/IM portable tanks only. 'TP' = portable tank additional provisions. 'W' = water only.", subs: [
+        { label: "Reference Column 7 for special provisions that apply", ref: "172.102" },
+        { label: "Reference Column 8A for exceptions (limited quantities, consumer commodities, etc.)", ref: "173.XXX" },
+        { label: "Reference Column 8B (non-bulk) or 8C (bulk) for authorized packages", ref: "173.XXX" },
+        { label: "Some packages may be authorized only by special permit", ref: "107.101–107.105" },
+      ]},
     ],
   },
+  { step: 0, title: "BEGIN THE VEHICLE INSPECTION", divider: true },
   {
     step: 4,
     title: "Check for Placarding Compliance",
     icon: AlertTriangle,
-    tip: "Placards are 250mm (9.84 in) diamond-shaped signs displayed on vehicles to communicate hazard class to emergency responders. Use the primary hazard class from the shipping paper to find the required placard in the placarding tables at 172.504(e). Remember: Table 1 = any amount, Table 2 = over 1,001 lbs.",
+    tip: "Placards are 250mm (9.84 in) diamond-shaped signs on all four sides of a vehicle. Use the primary hazard class from the shipping paper to find the required placard. Table 1 = any amount, Table 2 = over 1,001 lbs.",
     items: [
-      { id: "4.h0", type: "header", label: "Look up material by primary hazard class — find required placard", link: "tool-placard-helper" },
-      { id: "4.1", label: "Table 1 materials require placards in ANY amount", ref: "172.504(e)", tip: "Table 1 (most dangerous — placard any quantity): Div 1.1–1.3 (Explosives), Div 2.3 (Poison Gas), Div 4.3 (Dangerous When Wet), Div 5.2 (Organic Peroxide, Type B, liquid or solid, temperature controlled), Div 6.1 (Poison Inhalation Hazard only — not all PG I), Class 7 (Radioactive Yellow III label). Even a single small package requires placards.", link: "tool-placard-helper" },
-      { id: "4.2", label: "Table 2 materials require placards over 1,001 lbs aggregate", ref: "172.504(e)", tip: "Table 2: Div 1.4–1.6, Div 2.1 (Flammable Gas), Div 2.2 (Non-flammable Gas), Class 3 (Flammable), Combustible Liquids, Div 4.1–4.2, Div 5.1, Div 6.1 (other than inhalation hazard), Class 8, Class 9. 'Aggregate' = total gross weight of ALL Table 2 materials on the vehicle combined. EXCEPTION per 172.504(f)(9): For Class 9, a CLASS 9 placard is NOT required for domestic transportation, including the portion of international transportation that occurs within the United States. However, a bulk packaging must still be marked with the appropriate identification number on a CLASS 9 placard, an orange panel, or a white square-on-point display configuration as required by subpart D.", link: "tool-placard-helper" },
-      { id: "4.3", label: "Bulk packages require placards (with exceptions)", ref: "172.514", tip: "Exceptions include: some portable tanks under 1,000 gal with certain gases, DOT Spec 106/110 multi-unit tanks, some flexible bulk containers, IBCs of limited quantities, and large packagings. Always verify the specific exception applies to the material in question." },
-      { id: "4.h1", type: "header", label: "Check exceptions from placarding (172.500(b))" },
-      { id: "4.4", label: "Limited quantities", ref: "172.500(b)", tip: "Limited quantity shipments in non-bulk packages are exempt from placarding. The package must be properly marked with the limited quantity marking (a diamond with the UN number or 'Y' marking)." },
-      { id: "4.5", label: "Small quantities", ref: "173.13", tip: "Materials of trade (173.6) and small quantity exceptions (173.4) may be exempt from placarding requirements. Verify the specific conditions are met for the exception to apply." },
-      { id: "4.6", label: "Combustible liquids in non-bulk packages", ref: "172.500(b)", tip: "Combustible liquids (flash point above 60°C/140°F and below 93°C/200°F per 173.120) in non-bulk packages are generally exempt from placarding. However, if in bulk packaging (>119 gal), the COMBUSTIBLE placard is required." },
-      { id: "4.7", label: "Infectious substances", ref: "172.500(b)", tip: "Division 6.2 (infectious substances) are generally exempt from placarding. However, they still require proper packaging, marking, labeling, and shipping papers." },
-      { id: "4.8", label: "Check for placard substitutions", ref: "172.504(f)", tip: "Common substitutions: DANGER placard may substitute for specific Table 2 placards in certain multi-load scenarios. NON-FLAMMABLE GAS may replace OXYGEN placard (but not vice versa). Review all 11 substitution provisions in 172.504(f)." },
-      { id: "4.h2", type: "header", label: "DANGEROUS placard rules (172.504(b))" },
-      { id: "4.9", label: "May be used for 2+ Table 2 materials in non-bulk packages", ref: "172.504(b)", tip: "The DANGEROUS placard may replace individual Table 2 placards ONLY when: (1) there are two or more Table 2 categories of HM on the vehicle, (2) ALL are in non-bulk packages, and (3) no single category exceeds 2,205 lbs from one loading facility." },
-      { id: "4.10", label: "Must placard for specific class if 2,205+ lbs of one category loaded at one facility", ref: "172.504(b)", tip: "If 2,205 lbs (1,000 kg) or more of a single Table 2 hazard class/division is loaded at one facility, the DANGEROUS placard is NOT sufficient — you must display the specific class placard. The DANGEROUS placard may still be used for the remaining classes." },
-      { id: "4.h3", type: "header", label: "Prohibited & permissive placarding" },
-      { id: "4.11", label: "No placards unless material is HM and represents actual hazard", ref: "172.502(a)(1)", tip: "It is illegal to display a placard for a material that is not actually on the vehicle. This prevents false alarms and misdirected emergency responses." },
-      { id: "4.12", label: "No signs/advertisements that could be confused with placards", ref: "172.502(a)(2)", tip: "Any sign, advertisement, slogan, or device on the vehicle that by its color, design, shape, or content could be confused with a placard is prohibited. This includes old or outdated placards left on an empty vehicle." },
-      { id: "4.13", label: "Check permissive placarding", ref: "172.502(c)", tip: "Permissive placarding allows displaying additional placards that are not required. For example, a carrier may placard for a Table 2 material even if the quantity is under 1,001 lbs. This can help emergency responders but must still be accurate." },
-      { id: "4.h4", type: "header", label: "Subsidiary hazard placards (172.505)" },
-      { id: "4.14", label: "Required for: >1,001 lbs uranium hexafluoride w/ Corrosive subsidiary", ref: "172.505", tip: "Non-fissile, fissile-excepted, or fissile uranium hexafluoride in quantities exceeding 1,001 lbs must display both the Class 7 (Radioactive) placard and the CORROSIVE subsidiary placard." },
-      { id: "4.15", label: "Required for: Poison Inhalation Hazard (PIH)", ref: "172.505", tip: "Materials with an inhalation toxicity hazard (PIH) ALWAYS require a POISON INHALATION HAZARD or POISON GAS subsidiary placard, in addition to the primary hazard placard. This applies regardless of quantity." },
-      { id: "4.16", label: "Required for: Dangerous When Wet materials", ref: "172.505", tip: "Division 4.3 (Dangerous When Wet) materials require the DANGEROUS WHEN WET subsidiary placard when it is listed as a subsidiary hazard in Column 6 of the 172.101 table." },
-      { id: "4.17", label: "Allowed for others if listed in Column 6 of 172.101", ref: "172.505", tip: "Subsidiary placards are permitted (even when not required) as long as the subsidiary hazard is listed in Column 6 of the 172.101 table. Displaying them is good practice — it provides additional safety information to responders." },
-      { id: "4.h5", type: "header", label: "Verify placard display" },
-      { id: "4.18", label: "Placards displayed on both sides AND both ends of vehicle", ref: "172.504(a)", tip: "Four placards are required: one on each end and one on each side of the transport vehicle, freight container, or unit load device. Each must be clearly visible from the direction it faces. On a tractor-trailer combination, the front placard is displayed on the front of the tractor and the rear placard on the rear of the trailer. Placards must not be obscured by ladders, pipes, doors, or tarpaulins." },
-      { id: "4.19", label: "Placards meet general specifications", ref: "172.519", tip: "Must be at least 250mm (9.84 in) on each side, diamond-shaped (square on point), durable, not obscured by dirt/debris, correct colors per hazard class. The hazard class number must be in the bottom corner. The placard may not be hand-lettered." },
-      { id: "4.20", label: "Visibility and display requirements met", ref: "172.516", tip: "Placards must be: readable from all four directions, at least 3 inches from any other marking, securely attached or in a proper holder, displayed upright in diamond orientation, free from damage/fading, and not obstructed by ladders, pipes, or other equipment." },
+      { id: "4.1", label: "Look up material by primary hazard class — find required placard", ref: "172.504(e)", tip: "Use the placarding tables to determine if a placard is required based on the material's hazard class.", link: "tool-placard-helper", subs: [
+        { label: "Table 1 materials require placards in ANY amount" },
+        { label: "Table 2 materials require placards over 1,001 lbs aggregate weight" },
+      ]},
+      { id: "4.2", label: "Bulk packages require placards except:", ref: "172.514", subs: [
+        { label: "Some portable tanks (<1,000 gal)" },
+        { label: "DOT 106/110 multi-unit tank car tanks" },
+        { label: "Some bulk bags/boxes (<640 cu ft)" },
+        { label: "IBCs (may be labeled instead)" },
+        { label: "Large packagings" },
+      ]},
+      { id: "4.3", label: "Check exceptions from placarding", ref: "172.500(b)", subs: [
+        { label: "Limited quantities" },
+        { label: "Small quantities", ref: "173.13 / 173.4" },
+        { label: "Combustible liquids in non-bulk packages" },
+        { label: "Infectious substances" },
+      ]},
+      { id: "4.4", label: "Check for placard substitutions", ref: "172.504(f)(1-11)", tip: "Review all 11 substitution provisions. Common: NON-FLAMMABLE GAS for OXYGEN, FLAMMABLE for COMBUSTIBLE, Class 9 domestic exception." },
+      { id: "4.5", label: "Check proper use of DANGEROUS placard", ref: "172.504(b)", subs: [
+        { label: "May be used for 2+ Table 2 materials in non-bulk packages" },
+        { label: "Must placard for one category over 2,205 lbs loaded at one facility" },
+      ]},
+      { id: "4.6", label: "Check prohibited placarding", ref: "172.502(a)", subs: [
+        { label: "No placards unless material is HM, represents hazard of HM, and conforms to requirements", ref: "172.502(a)(1)" },
+        { label: "No signs, advertisements, slogans, or devices that could be confused with placards", ref: "172.502(a)(2)" },
+      ]},
+      { id: "4.7", label: "Check permissive placarding", ref: "172.502(c)", tip: "Placards may be displayed even when not required, as long as they conform to requirements and represent an actual hazard on the vehicle." },
+      { id: "4.8", label: "Check for subsidiary hazard placards", ref: "172.505", tip: "Subsidiary placards are in addition to the primary hazard placard.", subs: [
+        { label: "Required for: >1,001 lbs uranium hexafluoride with Corrosive subsidiary" },
+        { label: "Required for: Poison Inhalation Hazard (PIH) — always, any quantity" },
+        { label: "Required for: Dangerous When Wet subsidiary" },
+        { label: "Allowed for others if listed in Column 6 of 172.101 table" },
+      ]},
+      { id: "4.9", label: "Verify placards displayed on both sides AND both ends", ref: "172.504(a)", tip: "Four placards required. On a tractor-trailer: front on the tractor, rear on the trailer. Must not be obscured by ladders, pipes, doors, or tarpaulins." },
+      { id: "4.10", label: "Verify placards meet general specifications", ref: "172.519", tip: "At least 250mm (9.84 in) per side, diamond-shaped, durable, correct colors, class number in bottom corner." },
+      { id: "4.11", label: "Check visibility and display of placards", ref: "172.516", tip: "Readable from all four directions, at least 3 inches from other markings, securely attached, upright diamond orientation, free from damage/fading." },
     ],
   },
   {
     step: 5,
     title: "Check Marking Compliance",
     icon: Tag,
-    tip: "Markings identify the specific hazardous material in a package or on a vehicle. They differ from placards (hazard class on vehicles) and labels (hazard diamonds on packages). Key distinction: Bulk = capacity >119 gal for liquids, >882 lbs for solids, or water capacity >1,000 lbs for gases.",
+    tip: "Markings identify the specific HM in a package or on a vehicle. Key distinction: Bulk = capacity >119 gal (liquids), >882 lbs (solids), or >1,000 lbs water capacity (gases).",
     items: [
+      { id: "5.0", label: "Determine if the shipment is bulk or non-bulk" },
       { id: "5.h0", type: "header", label: "Both types of packages" },
-      { id: "5.1", label: "If poisonous — verify package is marked as required", ref: "172.313", tip: "Non-bulk packages of Division 6.1 PG I or II materials must be marked 'PG I TOXIC' or 'PG II TOXIC' (172.313(a)). Materials meeting the inhalation toxicity criteria must also be marked 'INHALATION HAZARD' (172.313(a)(2)). This marking is in addition to the proper shipping name." },
-      { id: "5.2", label: "If DOT Special Permit — marked with 'DOT-SP' or 'DOT-E' + number", ref: "172.301(c)", tip: "Non-bulk: 172.301(c), Bulk: 172.302(c). The special permit number must be visibly marked on the outside of the package or vehicle. Older permits may use 'DOT-E' (exemption) numbering — both are valid." },
-      { id: "5.3", label: "Transport vehicle displays ID numbers when required", ref: "172.332", tip: "ID numbers must be displayed on the transport vehicle when carrying bulk HM or when required by 172.301(a)(3) for large non-bulk shipments. The 4-digit number must be displayed on orange panels, across the placard, or on a white square-on-point configuration." },
-      { id: "5.4", label: "Large quantities of single HM in non-bulk", ref: "172.301(a)(3)", tip: "When 4,000 kg (8,820 lbs) or more of a single HM in non-bulk packages is loaded at one facility, the ID number of that material must be displayed on the vehicle in the same manner as for bulk shipments." },
-      { id: "5.5", label: "Bulk package markings not visible from outside vehicle", ref: "172.328(a)(3)", tip: "When a bulk package is not visible from outside the vehicle (e.g., portable tank inside an enclosed trailer), the vehicle itself must display the required markings: ID number on orange panel, placard, or white square-on-point." },
+      { id: "5.1", label: "If poisonous — verify package marked as required", ref: "172.313", tip: "Div 6.1 PG I/II: mark 'PG I TOXIC' or 'PG II TOXIC'. Materials meeting inhalation toxicity criteria: also mark 'INHALATION HAZARD'." },
+      { id: "5.2", label: "If DOT Special Permit — marked with 'DOT-SP' or 'DOT-E' + number", ref: "172.301(c) / 172.302(c)", tip: "Non-bulk: 172.301(c). Bulk: 172.302(c). Older permits may use 'DOT-E' numbering — both valid." },
+      { id: "5.3", label: "Transport vehicle displays ID numbers when required", ref: "172.332" },
+      { id: "5.4", label: "Large quantities of single HM in non-bulk (4,000+ kg)", ref: "172.301(a)(3)", tip: "When 4,000 kg (8,820 lbs) or more of a single HM in non-bulk is loaded at one facility, display ID number on vehicle as for bulk." },
+      { id: "5.5", label: "Bulk package markings not visible from outside vehicle", subs: [
+        { label: "Portable tank", ref: "172.326(c)(2)" },
+        { label: "Cargo tank", ref: "172.328(a)(3)" },
+        { label: "Multi-unit tank car tank", ref: "172.330(b)" },
+        { label: "Other bulk packages", ref: "172.331(c)" },
+      ]},
       { id: "5.h1", type: "header", label: "Bulk packages" },
-      { id: "5.6", label: "ID number displayed on each side and each end (1,000+ gal)", ref: "172.302", tip: "Bulk packages with a capacity of 1,000 gallons or more must display the ID number on each side AND each end (four locations total). The numbers must be on orange panels, across the placard, or on a white square-on-point." },
-      { id: "5.7", label: "ID number on two opposing sides (less than 1,000 gal)", ref: "172.302", tip: "Bulk packages under 1,000 gallons capacity only need the ID number on two opposing sides. This commonly applies to smaller portable tanks and IBCs." },
-      { id: "5.8", label: "ID number in acceptable format: orange panels, placards, or white square-on-point", ref: "172.332", tip: "Three acceptable formats: (1) Orange rectangular panel (at least 160mm x 400mm), (2) Across the center of the required placard, (3) White square-on-point display (same size as placard). You CANNOT mix display methods on the same vehicle — choose one method and use it consistently." },
-      { id: "5.h2", type: "header", label: "ID number special provisions (172.336)" },
-      { id: "5.9", label: "Multiple compartments", ref: "172.336(a)", tip: "Each compartment of a multi-compartment cargo tank must display the ID number for the material in that compartment. If compartments contain the same material, a single display may suffice if it covers the entire tank." },
-      { id: "5.10", label: "Gasoline", ref: "172.336(b)", tip: "Gasoline (UN1203) may display just the ID number 1203 even when carrying different grades. This simplifies marking for common fuel delivery operations." },
-      { id: "5.11", label: "Fuel oil", ref: "172.336(b)", tip: "Fuel oil (NA1993) follows similar simplified display rules as gasoline for common petroleum operations." },
-      { id: "5.12", label: "Petroleum distillate fuels", ref: "172.336(b)", tip: "When transporting petroleum products that could be described as either gasoline or fuel oil, the ID number may be displayed as authorized under the special provisions." },
-      { id: "5.13", label: "Nurse tanks", ref: "172.336(c)", tip: "Per 172.336(c) table, the ID number display is NOT required on one end of a nurse tank if that end contains valves, fittings, regulators, or gauges that prevent the markings and placard from being properly placed and visible. The nurse tank must meet the provisions of 173.315(m). The ID number and placards are still required on the other end and both sides." },
-      { id: "5.h3", type: "header", label: "Additional bulk marking requirements" },
-      { id: "5.14", label: "Portable tanks", ref: "172.326", tip: "Must be marked with: proper shipping name, ID number, name of owner/lessee, and any special markings required for the specific material. Check that the requalification date is current." },
-      { id: "5.15", label: "Cargo tanks", ref: "172.328", tip: "Check for: 'Emergency Shutoff' marking (near shutoff valve), Class 2 material markings, proper shipping name, MC330/MC331 specifications, QT/NQT markings, and non-odorized LPG marking." },
-      { id: "5.16", label: "Cargo tank — 'Emergency Shutoff' marking", ref: "172.328(c)", tip: "Cargo tanks equipped with an emergency shutoff device must be marked 'Emergency Shutoff' near the shutoff activation device. This helps first responders quickly locate the shutoff in an emergency." },
-      { id: "5.17", label: "Cargo tank — Class 2 materials / Proper shipping name", ref: "172.328(b)", tip: "Cargo tanks transporting Class 2 (compressed gas) materials must display the proper shipping name on both sides and both ends in letters at least 2 inches tall. This is in addition to the ID number display." },
-      { id: "5.18", label: "Cargo tank — MC330/MC331 / QT or NQT designation", ref: "172.328(d)", tip: "MC330 and MC331 cargo tanks must be marked with either 'QT' (quench-tempered) or 'NQT' (not quench-tempered). This determines the tank's permitted materials and pressure limits. QT tanks are generally more versatile." },
-      { id: "5.19", label: "Cargo tank — Non-odorized LPG", ref: "172.328(e)", tip: "Cargo tanks containing LPG that has NOT been odorized must be marked 'NON-ODORIZED' or 'NOT ODORIZED' on both sides and both ends. This is critical because unodorized LPG cannot be detected by smell in a leak." },
-      { id: "5.20", label: "Multi-unit tank car tanks", ref: "172.330", tip: "Multi-unit tank car tanks (ton containers for chlorine, sulfur dioxide, etc.) must be marked with the proper shipping name and ID number. Check that each unit in the assembly is properly marked." },
-      { id: "5.21", label: "Other bulk packages (IBC)", ref: "172.331", tip: "Intermediate Bulk Containers (IBCs) must display: UN packaging code, stacking test load, maximum gross mass, tare mass, date of manufacture, and the proper shipping name and ID number of contents." },
-      { id: "5.h4", type: "header", label: "Verify special markings for:" },
-      { id: "5.22", label: "Marine pollutant", ref: "172.322", tip: "Packages containing marine pollutants must bear the marine pollutant marking — a triangle with a fish and tree symbol. For bulk packages, the marking must be displayed on each side and each end adjacent to the required placard." },
-      { id: "5.23", label: "Infectious substances", ref: "172.323", tip: "Division 6.2 packages must display: the international biohazard symbol, proper shipping name, ID number, shipper/consignee name and address, and for Category A materials — UN2814 or UN2900." },
-      { id: "5.24", label: "Elevated temperature materials", ref: "172.325", tip: "Bulk packages containing materials shipped at elevated temperatures must be marked with the word 'HOT' on both sides and both ends. This applies to materials at or above 100°C (212°F) for liquids or 240°C (464°F) for solids." },
-      { id: "5.25", label: "Petroleum sour crude oil", ref: "172.327", tip: "Packages of petroleum sour crude oil containing hydrogen sulfide (H2S) must bear specific markings identifying the H2S content. This is critical for responder safety due to the extreme toxicity of H2S." },
-      { id: "5.h5", type: "header", label: "Non-bulk packages" },
-      { id: "5.26", label: "General requirements — proper shipping name & ID number", ref: "172.301", tip: "Each non-bulk package must be marked with: the proper shipping name and UN/NA ID number as shown in Column 2 and Column 4 of the 172.101 table. Letters must be on a contrasting background and durable enough to withstand normal transport conditions." },
-      { id: "5.27", label: "Technical names on non-bulk (when required)", ref: "172.301(b)", tip: "When a 'G' symbol appears in Column 1 of the 172.101 table for the material, the technical name must be marked on the package in parentheses after the proper shipping name. For mixtures, at least two components must be listed." },
-      { id: "5.28", label: "Non-odorized LPG marking", ref: "172.301(f)", tip: "Non-bulk packages of LPG that is not odorized must be marked 'NON-ODORIZED' or 'NOT ODORIZED'. This alerts handlers and responders that they cannot rely on smell to detect leaks." },
-      { id: "5.h6", type: "header", label: "Check required markings on non-bulk:" },
-      { id: "5.29", label: "Liquid HM — orientation arrows", ref: "172.312", tip: "Required on combination packages with inner packages containing liquid HM. Two arrows pointing UP must be placed on two opposite sides. Common exceptions: inner packages ≤120 mL, totally leak-proof packages, and certain infectious substances." },
-      { id: "5.30", label: "Limited quantities", ref: "172.315", tip: "Limited quantity packages must bear the limited quantity mark: a diamond-shaped marking (square on point) with the top and bottom portions black and a white center. The UN number may appear in the center for certain air shipments." },
-      { id: "5.31", label: "ORM-D", ref: "172.316", tip: "ORM-D (Other Regulated Material — Domestic) marking was phased out for domestic ground transport as of January 1, 2021, replaced by the limited quantity diamond. However, ORM-D marked packages may still be in transit." },
-      { id: "5.32", label: "Explosive HM", ref: "172.320", tip: "Explosive packages must be marked with the EX number (approval number) from the associate administrator. This number is assigned during the classification approval process for each explosive article or substance." },
-      { id: "5.33", label: "Hazardous Substances (RQ)", ref: "172.324", tip: "Non-bulk packages of hazardous substances must be marked 'RQ' in association with the proper shipping name. If the proper shipping name doesn't identify the hazardous substance, the name must also appear on the package." },
+      { id: "5.6", label: "ID number displayed correctly", ref: "172.302", subs: [
+        { label: "Each side and each end if 1,000 gal or more" },
+        { label: "Two opposing sides if less than 1,000 gal" },
+      ]},
+      { id: "5.7", label: "ID number in acceptable format", ref: "172.332", subs: [
+        { label: "Orange panels" },
+        { label: "Across the placard" },
+        { label: "White square-on-point display" },
+      ]},
+      { id: "5.8", label: "Check ID number special provisions", ref: "172.336", subs: [
+        { label: "Multiple compartments / Petroleum distillate fuels / Gasoline / Fuel oil" },
+        { label: "Nurse tanks (ID not required on end with valves/fittings per 173.315(m))" },
+      ]},
+      { id: "5.9", label: "Portable tanks", ref: "172.326", tip: "Mark with: proper shipping name, ID number, owner/lessee name. Check requalification date." },
+      { id: "5.10", label: "Cargo tanks", ref: "172.328", subs: [
+        { label: "'Emergency Shutoff' marking near shutoff device", ref: "172.328(c)" },
+        { label: "Class 2 materials — proper shipping name on sides and ends (2 in+ letters)", ref: "172.328(b)" },
+        { label: "MC330/MC331 — QT or NQT designation", ref: "172.328(d)" },
+        { label: "Non-odorized LPG marking", ref: "172.328(e)" },
+      ]},
+      { id: "5.11", label: "Multi-unit tank car tanks", ref: "172.330" },
+      { id: "5.12", label: "Other bulk packages (IBC)", ref: "172.331" },
+      { id: "5.h2", type: "header", label: "Verify special markings for:" },
+      { id: "5.13", label: "Marine pollutant", ref: "172.322", tip: "Triangle with fish and tree symbol. Bulk: displayed on each side and each end adjacent to placard." },
+      { id: "5.14", label: "Infectious substances", ref: "172.323", tip: "International biohazard symbol, proper shipping name, ID number, shipper/consignee info." },
+      { id: "5.15", label: "Elevated temperature materials", ref: "172.325", tip: "'HOT' marking on both sides and both ends for bulk." },
+      { id: "5.16", label: "Petroleum sour crude oil", ref: "172.327" },
+      { id: "5.h3", type: "header", label: "Non-bulk packages" },
+      { id: "5.17", label: "Check general requirements", ref: "172.301", subs: [
+        { label: "Proper shipping name and identification number" },
+        { label: "Technical names (when Column 1 shows 'G')" },
+        { label: "Non-odorized LPG marking" },
+      ]},
+      { id: "5.18", label: "Check for required markings on:", subs: [
+        { label: "Liquid HM — orientation arrows", ref: "172.312" },
+        { label: "Limited quantities", ref: "172.315" },
+        { label: "ORM-D", ref: "172.316" },
+        { label: "Explosive HM (EX number)", ref: "172.320" },
+        { label: "Hazardous Substances (RQ)", ref: "172.324" },
+      ]},
     ],
   },
   {
     step: 6,
     title: "Check Labeling Compliance",
     icon: Tag,
-    tip: "Labels are smaller (100mm/3.9 in) diamond-shaped hazard warnings affixed to individual packages. They are similar in appearance to placards but are package-level. Every package must have a primary hazard label unless a specific exception applies. Labels must be visible and not obscured by markings or attachments.",
+    tip: "Labels are smaller (100mm/3.9 in) diamond-shaped hazard warnings on individual packages. Every package must have a primary hazard label unless an exception applies.",
     items: [
-      { id: "6.1", label: "Verify labels for primary hazard on all packages", ref: "172.400", tip: "Each package must have a label corresponding to the primary hazard class found in Column 3 of 172.101. The label must match exactly. Common labels: FLAMMABLE LIQUID (red), CORROSIVE (half black/half white), POISON (white with skull), FLAMMABLE GAS (red), OXIDIZER (yellow)." },
-      { id: "6.2", label: "Verify labels for subsidiary hazards as required", ref: "172.402", tip: "Subsidiary hazard labels are required per Column 6 of the 172.101 table. They must be placed adjacent to the primary label. Subsidiary labels do NOT display the hazard class number in the bottom corner — only primary labels do." },
-      { id: "6.h1", type: "header", label: "Exceptions from labeling (172.400a)" },
-      { id: "6.3", label: "Dewar flask or cylinder with Class 2 with CGA label", ref: "172.400a", tip: "A Dewar flask (vacuum-insulated container) or cylinder marked with a CGA (Compressed Gas Association) label meeting DOT specifications is exempt from the additional 172.400 labeling requirement. The CGA label serves as the equivalent." },
-      { id: "6.4", label: "Certain DOD (Department of Defense) shipments", ref: "172.400a", tip: "Certain DOD shipments, when accompanied by the appropriate military shipping documents and marked in accordance with DOD regulations, may be exempt from some civilian labeling requirements." },
-      { id: "6.5", label: "Compressed gas cylinder permanently mounted on vehicle", ref: "172.400a", tip: "A compressed gas cylinder that is permanently mounted on or integral to a vehicle (e.g., welding truck) may be exempt from labeling if the vehicle is properly placarded for the gas and the cylinder is not offered for transport separately." },
-      { id: "6.6", label: "Overpack — if labels for each HM inside are visible", ref: "172.400a", tip: "If a package is placed inside an overpack and all required labels on the inner package are clearly visible through the overpack, additional labeling on the overpack is not required. If labels are not visible, the overpack must bear labels for all HM inside plus the word 'OVERPACK'." },
-      { id: "6.7", label: "Check for correct placement of labels", ref: "172.406", tip: "Labels must be: (1) on the same surface and near the proper shipping name, (2) not obscured by markings or attachments, (3) displayed on a contrasting background or within a border, (4) primary and subsidiary labels must be within 6 inches of each other." },
-      { id: "6.8", label: "Check that labels meet specifications", ref: "172.407", tip: "Labels must be at least 100mm (3.9 in) on each side, diamond-shaped, durable, weather-resistant, on contrasting background, and printed (not handwritten). The hazard class number must appear in the bottom corner of primary hazard labels. Colors must match the specifications for each class." },
+      { id: "6.1", label: "Verify labels for primary hazard on all packages", ref: "172.400", subs: [
+        { label: "Some bulk packages may be labeled or placarded" },
+      ]},
+      { id: "6.2", label: "Verify labels for subsidiary hazards as required", ref: "172.402", tip: "Subsidiary labels are required per Column 6 of 172.101. They do NOT display the class number in the bottom corner." },
+      { id: "6.3", label: "Check exceptions from labeling", ref: "172.400a", subs: [
+        { label: "Dewar flask or cylinder with Class 2 with CGA label" },
+        { label: "Certain DOD (Department of Defense) shipments" },
+        { label: "Compressed gas cylinder permanently mounted on vehicle" },
+        { label: "Overpack — if labels for each HM inside are visible" },
+      ]},
+      { id: "6.4", label: "Check for correct placement of labels", ref: "172.406", tip: "On same surface near proper shipping name. Primary and subsidiary labels within 6 inches of each other. Not obscured by markings or attachments." },
+      { id: "6.5", label: "Check that labels meet specifications", ref: "172.407", tip: "At least 100mm (3.9 in) per side, diamond-shaped, durable, weather-resistant, on contrasting background. Class number in bottom corner of primary labels only." },
     ],
   },
   {
     step: 7,
     title: "Check Loading & Packaging Compliance",
     icon: Truck,
-    tip: "The final step verifies packages are properly loaded, secured, and segregated. Incompatible materials placed too close together can cause catastrophic reactions. Always reference the 177.848 segregation table. This step also verifies that the physical packaging meets specification and requalification requirements.",
+    tip: "Verify packages are authorized, properly loaded, secured, and segregated. Incompatible materials placed too close together can cause catastrophic reactions.",
     items: [
-      { id: "7.1", label: "Packages are authorized as determined in Step 3", ref: "173.XXX", tip: "Cross-reference your findings from Step 3. The package type, specification, and condition must all be authorized for the specific material. An unauthorized package is a serious violation that may result in an out-of-service order." },
-      { id: "7.2", label: "All specification requirements for packages are met", ref: "178.XXX", tip: "Part 178 contains detailed specifications for each package type (drums, cylinders, IBCs, cargo tanks, portable tanks). Check that the packaging bears the proper UN specification marking and is in good condition with no visible damage, corrosion, or leakage." },
-      { id: "7.3", label: "Requalification/retest requirements met", ref: "180.XXX", tip: "Part 180 governs retesting schedules. Cylinders: generally every 5–10 years depending on type. Cargo tanks: external visual every year, internal inspection/pressure test every 5 years. Portable tanks: every 5 years. Check the last test date marking on the package." },
-      { id: "7.4", label: "General securement of packages observed", ref: "177.834(a)", tip: "HM packages must be secured against movement during normal transport conditions, including sudden starts, stops, and turns. Packages must be braced, blocked, or secured to prevent shifting that could cause damage or release of HM." },
-      { id: "7.5", label: "General packaging requirement verified", ref: "173.24", tip: "Five key requirements: (1) No release of HM to environment, (2) No hazardous residue on outside of package, (3) All closures tight and secure, (4) Venting only when specifically authorized, (5) Package must withstand normal transport conditions without loss of contents." },
-      { id: "7.6", label: "Segregation, separation, and compatibility verified", ref: "177.848", tip: "Use the 177.848 segregation table. 'X' = must NOT be loaded together. 'O' = may be loaded together only if separated in a manner that prevents interaction. Cyanides/cyanide mixtures must NEVER be loaded with acids. Oxidizers must be separated from flammables.", link: "tool-segregation-table" },
-      { id: "7.h1", type: "header", label: "Loading/transport requirements for specific classes" },
-      { id: "7.7", label: "Class 1 (Explosives)", ref: "177.835", tip: "Explosives must be protected from heat sources, sparks, and static discharge. Division 1.1/1.2/1.3 require placards any amount. No smoking within 25 feet. Vehicles must have a fire extinguisher. Special rules for compatibility groups — some divisions cannot be loaded together." },
-      { id: "7.8", label: "Class 3 (Flammable Liquids)", ref: "177.837", tip: "No open flames or smoking near vehicle. Keep containers closed when not loading/unloading. Cargo tanks must be bonded/grounded during loading. Common materials: gasoline (UN1203), diesel fuel, alcohols, acetone, paint." },
-      { id: "7.9", label: "Class 4 / Class 5 / Division 4.2", ref: "177.838", tip: "Class 4.1 (Flammable Solids) must be kept dry. Class 4.2 (Spontaneously Combustible) must be protected from heat. Class 4.3 (Dangerous When Wet) must be protected from water/moisture. Class 5.1 (Oxidizers) must be separated from combustibles." },
-      { id: "7.10", label: "Class 8 (Corrosives)", ref: "177.839", tip: "Corrosive materials must not be loaded above or adjacent to food, animal feed, or any materials that could be damaged by leakage. Corrosive liquids in glass or earthenware containers must be packed right-side up. Common materials: sulfuric acid, hydrochloric acid, sodium hydroxide." },
-      { id: "7.11", label: "Class 2 (Compressed Gases)", ref: "177.840", tip: "Cylinders must be secured in an upright or horizontal position. Valve protection caps must be in place on compressed gas cylinders when not connected. Refrigerated liquids require proper venting. No smoking within 25 feet of Division 2.1 (Flammable Gas) loading." },
-      { id: "7.12", label: "Division 6.1 (Poison) and Division 2.3 (Poison Gas)", ref: "177.841", tip: "Poison materials must NEVER be loaded with foodstuffs, animal feed, or any other material intended for consumption by humans or animals. For PIH (Poison Inhalation Hazard) materials, the vehicle must display both the primary hazard placard and the POISON INHALATION HAZARD placard." },
-      { id: "7.h2", type: "header", label: "Additional requirements for specific packages" },
-      { id: "7.13", label: "Non-bulk packages", ref: "173.24a", tip: "Additional non-bulk requirements include: inner packaging support and cushioning, absorbent material for liquid inners, closure effectiveness testing, and compatibility between packaging materials and contents." },
-      { id: "7.14", label: "Bulk packages", ref: "173.24b", tip: "Bulk packages must have: proper vents and pressure relief devices, manhole covers secured, proper filling limits observed (e.g., outage for thermal expansion of liquids), and all valves, fittings, and closures in proper working condition." },
-      { id: "7.15", label: "Portable tanks", ref: "173.32", tip: "Portable tanks must meet specific design, manufacturing, testing, and approval standards. Check that: requalification is current, pressure relief devices function properly, shell thickness meets minimum requirements, and structural integrity is maintained." },
-      { id: "7.16", label: "Cargo tanks", ref: "173.33", tip: "Verify: proper specification marking (MC306, MC307, MC312, MC330, MC331, or DOT 406, 407, 412), current test date, proper fittings and closures, no visible damage or corrosion, emergency shutoff accessible and functional." },
-      { id: "7.17", label: "IBCs (Intermediate Bulk Containers)", ref: "173.35", tip: "IBCs must meet UN performance standards. Check: structural integrity, proper UN marking, correct stacking capability, filling limits, and that the IBC type is authorized for the specific material. Rigid IBCs have a 2.5-year retest requirement." },
-      { id: "7.18", label: "Large packagings", ref: "173.36", tip: "Large packagings are designed for inner packagings and articles. They must bear UN specification markings and be in good condition. Maximum net mass varies by type — verify the marking on the packaging against the actual load." },
-      { id: "7.19", label: "Flexible bulk containers", ref: "173.37", tip: "Flexible bulk containers (FBCs) are woven or fabric-based containers for dry solid materials. They must meet specific drop, topple, righting, and tear resistance tests. Verify the UN marking and that the material is authorized for FBC transport." },
-      { id: "7.20", label: "Toxic materials in cylinders", ref: "173.40", tip: "Cylinders containing toxic materials (Division 2.3 or Division 6.1 in a cylinder) have additional requirements: proper valve protection, leak testing, special marking requirements, and may require overpack or protective containers for transport." },
+      { id: "7.1", label: "Verify packages are authorized as determined in Step 3", ref: "173.XXX" },
+      { id: "7.2", label: "Ensure all specification requirements for packages are met", ref: "178.XXX", tip: "Part 178 contains specifications for each package type. Check UN specification marking, condition, no visible damage, corrosion, or leakage." },
+      { id: "7.3", label: "Ensure requalification/retest requirements are met", ref: "180.XXX", tip: "Cylinders: every 5–10 years. Cargo tanks: external visual annually, internal/pressure every 5 years. Portable tanks: every 5 years. IBCs: every 2.5–5 years." },
+      { id: "7.4", label: "Observe general securement of packages", ref: "177.834(a)", tip: "Packages must be braced, blocked, or secured against movement during normal transport." },
+      { id: "7.5", label: "Verify general packaging requirement", ref: "173.24", subs: [
+        { label: "No leaks, no residue on outside, closures tight, venting only when allowed" },
+      ]},
+      { id: "7.6", label: "Verify segregation, separation, and compatibility", ref: "177.848", tip: "'X' = must NOT be loaded together. 'O' = may be loaded together only if separated. Cyanides/cyanide mixtures must NEVER be loaded with acids.", link: "tool-segregation-table" },
+      { id: "7.7", label: "Check loading/transport requirements for certain materials", subs: [
+        { label: "Class 1 (Explosives)", ref: "177.835" },
+        { label: "Class 3 (Flammable Liquids)", ref: "177.837" },
+        { label: "Class 4, Class 5, and Division 4.2", ref: "177.838" },
+        { label: "Class 8 (Corrosives)", ref: "177.839" },
+        { label: "Class 2 (Compressed Gases)", ref: "177.840" },
+        { label: "Division 6.1 and Division 2.3", ref: "177.841" },
+      ]},
+      { id: "7.8", label: "Check additional requirements for certain packages", subs: [
+        { label: "Non-bulk", ref: "173.24a" },
+        { label: "Bulk", ref: "173.24b" },
+        { label: "Portable tanks", ref: "173.32" },
+        { label: "Cargo tanks", ref: "173.33" },
+        { label: "IBCs", ref: "173.35" },
+        { label: "Large packagings", ref: "173.36" },
+        { label: "Flexible bulk containers", ref: "173.37" },
+        { label: "Toxic materials in cylinders", ref: "173.40" },
+      ]},
     ],
   },
 ];
@@ -430,7 +466,7 @@ export default function HazMatWorksheet() {
   const { stepProgress, totalChecked, totalCheckable } = useMemo(() => {
     const sp = {};
     let tc = 0, ta = 0;
-    STEPS.forEach((s) => {
+    STEPS.filter(s => !s.divider).forEach((s) => {
       const checkable = s.items.filter((i) => i.type !== "header" && i.type !== "info");
       const checked = checkable.filter((i) => checks[i.id]);
       sp[s.step] = { checked: checked.length, total: checkable.length };
@@ -539,6 +575,17 @@ export default function HazMatWorksheet() {
 
         {/* STEPS */}
         {STEPS.map((step) => {
+          // Divider
+          if (step.divider) {
+            return (
+              <div key="divider" className="flex items-center gap-3 py-2">
+                <div className="h-px flex-1 bg-[#D4AF37]/40" />
+                <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest whitespace-nowrap">{step.title}</span>
+                <div className="h-px flex-1 bg-[#D4AF37]/40" />
+              </div>
+            );
+          }
+
           const isOpen = openSteps[step.step];
           const sp = stepProgress[step.step] || { checked: 0, total: 0 };
           const stepPct = sp.total > 0 ? Math.round((sp.checked / sp.total) * 100) : 0;
@@ -622,14 +669,6 @@ export default function HazMatWorksheet() {
                         );
                       }
 
-                      if (item.type === "info") {
-                        return (
-                          <div key={item.id} className="py-1 px-2 text-[11px] text-[#64748B] italic bg-[#F8FAFC] rounded">
-                            {item.label}
-                          </div>
-                        );
-                      }
-
                       const checked = !!checks[item.id];
                       return (
                         <div key={item.id} className="group">
@@ -661,6 +700,22 @@ export default function HazMatWorksheet() {
                                   </button>
                                 )}
                               </div>
+                              {/* Sub-items (reference bullets, not checkboxes) */}
+                              {item.subs && item.subs.length > 0 && (
+                                <div className="mt-1.5 ml-1 pl-2.5 border-l-2 border-[#E2E8F0] space-y-0.5">
+                                  {item.subs.map((sub, si) => {
+                                    const subLabel = typeof sub === "string" ? sub : sub.label;
+                                    const subRef = typeof sub === "string" ? null : sub.ref;
+                                    return (
+                                      <div key={si} className="flex items-start gap-1.5 text-[11px] text-[#475569] leading-relaxed">
+                                        <span className="text-[#94A3B8] mt-0.5 flex-shrink-0">-</span>
+                                        <span>{subLabel}</span>
+                                        {subRef && <CfrRef r={subRef} />}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                               {item.tip && <TipBlock tip={item.tip} />}
                             </div>
                           </div>
