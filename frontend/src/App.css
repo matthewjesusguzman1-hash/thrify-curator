@@ -1,3 +1,9 @@
+/* Disable pull-to-refresh on mobile/PWA */
+html, body {
+    overscroll-behavior-y: contain;
+}
+
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
