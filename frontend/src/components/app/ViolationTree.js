@@ -266,7 +266,7 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
     const onMove = (ev) => {
       const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
       const delta = y - startY;
-      const newPct = Math.min(75, Math.max(25, startPct + (delta / vh) * 100));
+      const newPct = Math.min(75, Math.max(10, startPct + (delta / vh) * 100));
       setSplitPct(Math.round(newPct));
     };
     const onEnd = () => {
@@ -274,6 +274,8 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
       document.removeEventListener("mouseup", onEnd);
       document.removeEventListener("touchmove", onMove);
       document.removeEventListener("touchend", onEnd);
+      // Auto-close if dragged below 15%
+      if (splitPct < 15) onOpenChange(false);
     };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onEnd);
@@ -284,14 +286,21 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
   return (
     <>
       {open && (
-        <div className="fixed inset-x-0 top-0 z-40 lg:hidden" style={{ height: `${splitPct}vh` }}>
-          <div className="h-full bg-white flex flex-col shadow-lg">
-            <div className="flex items-center justify-between px-4 py-2 border-b bg-[#002855] flex-shrink-0">
-              <span className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>Violation Tree</span>
-              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 px-3 text-white/70 hover:text-white hover:bg-white/10 text-xs font-medium" data-testid="tree-drawer-close">
-                Done
-              </Button>
-            </div>
+        <>
+          {/* Backdrop — tap to close */}
+          <div
+            className="fixed inset-0 z-30 lg:hidden bg-black/20"
+            onClick={() => onOpenChange(false)}
+            data-testid="tree-drawer-backdrop"
+          />
+          <div className="fixed inset-x-0 top-0 z-40 lg:hidden" style={{ height: `${splitPct}vh` }}>
+            <div className="h-full bg-white flex flex-col shadow-lg">
+              <div className="flex items-center justify-between px-4 py-2 border-b bg-[#002855] flex-shrink-0">
+                <span className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>Violation Tree</span>
+                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 px-3 text-white/70 hover:text-white hover:bg-white/10 text-xs font-medium" data-testid="tree-drawer-close">
+                  Done
+                </Button>
+              </div>
             <ScrollArea className="flex-1">
               <ViolationTree
                 activeClass={activeClass}
@@ -316,6 +325,7 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
             </div>
           </div>
         </div>
+        </>
       )}
     </>
   );
