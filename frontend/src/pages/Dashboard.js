@@ -57,6 +57,26 @@ export default function Dashboard() {
   const [treeDrawerOpen, setTreeDrawerOpen] = useState(false);
   const [proceduresOpen, setProceduresOpen] = useState(false);
 
+  // Favorites — stored in localStorage
+  const FAV_KEY = "violation-favorites";
+  const [favorites, setFavorites] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { return []; }
+  });
+  const toggleFavorite = useCallback((v) => {
+    setFavorites(prev => {
+      const regRef = v.regulatory_reference;
+      const exists = prev.some(f => f.regulatory_reference === regRef);
+      let next;
+      if (exists) {
+        next = prev.filter(f => f.regulatory_reference !== regRef);
+      } else {
+        next = [...prev, { regulatory_reference: v.regulatory_reference, violation_text: v.violation_text, violation_class: v.violation_class, violation_code: v.violation_code, oos_value: v.oos_value }];
+      }
+      localStorage.setItem(FAV_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   // Load filter options and stats on mount
   useEffect(() => {
     fetchFilterOptions();
@@ -216,6 +236,9 @@ export default function Dashboard() {
               activeRegBase={filters.reg_base}
               onSelect={handleTreeSelect}
               className="py-3"
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+              onFavoriteClick={handleViolationClick}
             />
           </ScrollArea>
         </aside>
@@ -290,6 +313,8 @@ export default function Dashboard() {
           onViolationClick={handleViolationClick}
           columnOrder={columnOrder}
           onColumnOrderChange={setColumnOrder}
+          favorites={favorites.map(f => f.regulatory_reference)}
+          onToggleFavorite={toggleFavorite}
         />
       </main>
       </div>
@@ -302,6 +327,9 @@ export default function Dashboard() {
         activeCategory={filters.violation_category}
         activeRegBase={filters.reg_base}
         onSelect={handleTreeSelect}
+        favorites={favorites}
+        onToggleFavorite={toggleFavorite}
+        onFavoriteClick={handleViolationClick}
       />
 
       {/* Upload Dialog */}

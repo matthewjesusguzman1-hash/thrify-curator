@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, FileSearch, ArrowUp, ArrowDown, ArrowUpDown, GripVertical, ArrowLeftToLine, Settings2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileSearch, ArrowUp, ArrowDown, ArrowUpDown, GripVertical, ArrowLeftToLine, Settings2, Star } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { SaveToInspection } from "./SaveToInspection";
 import {
@@ -76,7 +76,10 @@ export function ViolationTable({
   onViolationClick,
   columnOrder,
   onColumnOrderChange,
+  favorites = [],
+  onToggleFavorite,
 }) {
+  const favSet = new Set(favorites);
   const orderedColumns = columnOrder.map(getColumnDef);
 
   if (isLoading) {
@@ -174,6 +177,14 @@ export function ViolationTable({
                 <span>CFR {v.cfr_part}</span>
               </div>
               <SaveToInspection violation={v} />
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(v); }}
+                className="p-1 -mr-1 transition-colors"
+                data-testid={`fav-mobile-${idx}`}
+                title={favSet.has(v.regulatory_reference) ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Star className={`w-4 h-4 ${favSet.has(v.regulatory_reference) ? "fill-[#D4AF37] text-[#D4AF37]" : "text-[#CBD5E1]"}`} />
+              </button>
             </div>
           </div>
         ))}
@@ -185,6 +196,9 @@ export function ViolationTable({
           <Table>
             <TableHeader>
               <TableRow className="bg-[#002855]">
+                <TableHead className="w-[36px] text-center border-b-0">
+                  <Star className="w-3 h-3 text-[#D4AF37] mx-auto" />
+                </TableHead>
                 {orderedColumns.map((col) => (
                   <TableHead
                     key={col.key}
@@ -208,6 +222,15 @@ export function ViolationTable({
                   data-testid={`violation-row-${idx}`}
                   onClick={() => onViolationClick?.(v)}
                 >
+                  <TableCell className="text-center w-[36px] px-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(v); }}
+                      className="p-1 transition-colors hover:scale-110"
+                      data-testid={`fav-desktop-${idx}`}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${favSet.has(v.regulatory_reference) ? "fill-[#D4AF37] text-[#D4AF37]" : "text-[#CBD5E1] hover:text-[#D4AF37]"}`} />
+                    </button>
+                  </TableCell>
                   {columnOrder.map((colKey) => renderCell(v, colKey, idx))}
                 </TableRow>
               ))}

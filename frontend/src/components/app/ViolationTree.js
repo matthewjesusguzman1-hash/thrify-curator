@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronDown, FolderTree, X, Truck, AlertTriangle, User, Building2 } from "lucide-react";
+import { ChevronRight, ChevronDown, FolderTree, X, Truck, AlertTriangle, User, Building2, Star, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
 import axios from "axios";
@@ -18,9 +18,10 @@ function sortCatNum(name) {
   return m ? parseInt(m[1], 10) : 9999;
 }
 
-export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSelect, className = "", mobile = false }) {
+export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSelect, className = "", mobile = false, favorites = [], onToggleFavorite, onFavoriteClick }) {
   const [tree, setTree] = useState({});
   const [loading, setLoading] = useState(true);
+  const [favOpen, setFavOpen] = useState(false);
   // Section expand state (Driver, Vehicle, HazMat, Other) — start collapsed
   const [sectionOpen, setSectionOpen] = useState({});
   // Reg section expand state (deepest level)
@@ -66,6 +67,47 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
       )}
 
       <div className="space-y-0.5">
+        {/* Favorites section */}
+        {favorites.length > 0 && (
+          <div className="mb-1">
+            <button
+              onClick={() => setFavOpen(!favOpen)}
+              className={`flex items-center gap-2.5 w-full px-4 ${mobile ? "py-3" : "py-2"} rounded-md mx-1 cursor-pointer transition-colors hover:bg-[#D4AF37]/10`}
+              data-testid="tree-favorites-toggle"
+            >
+              {favOpen ? <ChevronDown className="w-3 h-3 text-[#D4AF37]" /> : <ChevronRight className="w-3 h-3 text-[#D4AF37]" />}
+              <Star className="w-3.5 h-3.5 fill-[#D4AF37] text-[#D4AF37]" />
+              <span className={`font-semibold text-[#D4AF37] ${mobile ? "text-sm" : "text-xs"}`}>Favorites</span>
+              <span className={`ml-auto font-mono text-[#D4AF37]/60 ${mobile ? "text-xs" : "text-[10px]"}`}>{favorites.length}</span>
+            </button>
+            {favOpen && (
+              <div className="ml-6 mr-2 space-y-0.5 mt-0.5">
+                {favorites.map((fav) => (
+                  <div key={fav.regulatory_reference} className="flex items-center gap-1 group">
+                    <button
+                      onClick={() => onFavoriteClick?.(fav)}
+                      className={`flex-1 flex items-start gap-2 px-3 ${mobile ? "py-2.5" : "py-1.5"} rounded-md text-left transition-colors hover:bg-[#F1F5F9]`}
+                      data-testid={`fav-tree-${fav.regulatory_reference}`}
+                    >
+                      <span className={`font-bold text-[#002855] flex-shrink-0 ${mobile ? "text-xs" : "text-[11px]"}`}>{fav.regulatory_reference}</span>
+                      <span className={`text-[#64748B] truncate ${mobile ? "text-xs" : "text-[10px]"}`}>{fav.violation_text?.slice(0, 60)}{fav.violation_text?.length > 60 ? "..." : ""}</span>
+                    </button>
+                    <button
+                      onClick={() => onToggleFavorite?.(fav)}
+                      className="p-1 opacity-0 group-hover:opacity-100 sm:opacity-100 text-[#CBD5E1] hover:text-[#DC2626] transition-all flex-shrink-0"
+                      title="Remove from favorites"
+                      data-testid={`fav-remove-${fav.regulatory_reference}`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="h-px bg-[#E2E8F0] mx-3 my-1.5" />
+          </div>
+        )}
+
         {SECTIONS.map((section) => {
           const data = getData(section.key);
           if (!data || data.count === 0) return null;
@@ -211,7 +253,7 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
   );
 }
 
-export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCategory, activeRegBase, onSelect }) {
+export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCategory, activeRegBase, onSelect, favorites = [], onToggleFavorite, onFavoriteClick }) {
   const [splitPct, setSplitPct] = useState(50);
   const dragRef = { current: null };
 
@@ -258,6 +300,9 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
                 onSelect={onSelect}
                 className="py-2"
                 mobile
+                favorites={favorites}
+                onToggleFavorite={onToggleFavorite}
+                onFavoriteClick={onFavoriteClick}
               />
             </ScrollArea>
             {/* Drag handle to resize */}
