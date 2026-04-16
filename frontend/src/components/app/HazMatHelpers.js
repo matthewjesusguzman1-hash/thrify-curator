@@ -901,7 +901,7 @@ export function PlacardHelper({ onNavigate }) {
 
   const QUESTIONS = [
     { id: "table", question: "Is the material a Table 1 or Table 2 hazard class?", help: null, helpType: "tables" },
-    { id: "bulk", question: "Is the hazardous material in a BULK packaging?", help: "Bulk = capacity >119 gal for liquids, >882 lbs for solids, or water capacity >1,000 lbs for gases (171.8). Cargo tanks, portable tanks, IBCs over these thresholds, and tank cars are all bulk.", condition: (a) => a.table === "table2" },
+    { id: "bulk", question: "Is the hazardous material in a BULK packaging?", help: null, helpType: "bulk_help", condition: (a) => a.table === "table2" },
     { id: "weight", question: "Is the aggregate gross weight of ALL Table 2 materials on this vehicle 1,001 lbs (454 kg) or more?", help: "Add up the gross weight (including packaging) of ALL Table 2 materials on the vehicle — not just one class. If the total is 1,001 lbs or more, placards are required. If under 1,001 lbs (and no Table 1 or bulk materials), placards are not required for the Table 2 materials.", condition: (a) => a.table === "table2" && a.bulk === false },
     { id: "exception", question: "Does any placarding exception apply?", help: null, helpType: "exception_check", condition: (a) => {
       if (a.table === "table1") return true;
@@ -1022,6 +1022,34 @@ export function PlacardHelper({ onNavigate }) {
                           </OptionButton>
                           <OptionButton onClick={() => setAnswers(p => ({ ...p, table: "neither" }))} testId="plac-neither">
                             <span className="font-semibold">Neither/Unsure</span>
+                          </OptionButton>
+                        </div>
+                      </div>
+                    ) : q.helpType === "bulk_help" ? (
+                      <div className="pl-7 space-y-2">
+                        <InfoBox>
+                          <strong>Bulk</strong> = capacity greater than 119 gal for liquids, 882 lbs for solids, or water capacity greater than 1,000 lbs for gases (<CfrLink r="171.8" />). Cargo tanks, portable tanks, IBCs over these thresholds, and tank cars are all bulk. <strong>Bulk packaging must be placarded when it contains any quantity of HM</strong>, and must remain placarded when emptied unless cleaned/purged (<CfrLink r="172.514" />).
+                        </InfoBox>
+                        <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-[10px] text-[#1E40AF] space-y-1">
+                          <p className="font-bold">Bulk placarding exceptions — <CfrLink r="172.514(c)" />:</p>
+                          <p>The following may be placarded on <strong>only two opposite sides</strong>, or may be <strong>labeled instead of placarded</strong>:</p>
+                          <ul className="list-disc pl-4 space-y-0.5">
+                            <li>Portable tank with capacity less than 1,000 gallons (3,785 L)</li>
+                            <li>DOT 106 or 110 multi-unit tank car tank</li>
+                            <li>Bulk packaging (other than portable tank, cargo tank, flexible bulk container, or tank car) with volumetric capacity less than 640 cubic feet (e.g., bulk bag or box)</li>
+                            <li>IBC labeled per Subpart E — may display proper shipping name and UN ID markings in lieu of orange panel/placard</li>
+                            <li>Large Packaging as defined in <CfrLink r="171.8" /></li>
+                          </ul>
+                          <p>Flexible bulk containers may be placarded on <strong>two opposing positions</strong> — <CfrLink r="172.514(d)" />.</p>
+                          <p className="font-bold mt-1">Emptied bulk packaging — <CfrLink r="172.514(b)" />:</p>
+                          <p>Must remain placarded when emptied, <strong>unless</strong>: (1) sufficiently cleaned/purged of residue and vapors, (2) refilled with a material requiring different or no placards, or (3) contains residue of Class 9 hazardous substance below the reportable quantity.</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, bulk: true }))} testId="plac-bulk-yes">
+                            <span className="font-semibold">Yes — Bulk</span>
+                          </OptionButton>
+                          <OptionButton onClick={() => setAnswers(p => ({ ...p, bulk: false }))} testId="plac-bulk-no">
+                            <span className="font-semibold">No — Non-Bulk</span>
                           </OptionButton>
                         </div>
                       </div>
