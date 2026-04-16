@@ -289,7 +289,7 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
         <>
           {/* Backdrop — tap to close */}
           <div
-            className="fixed inset-0 z-30 lg:hidden bg-black/20"
+            className="fixed inset-0 z-30 lg:hidden"
             onClick={() => onOpenChange(false)}
             data-testid="tree-drawer-backdrop"
           />
