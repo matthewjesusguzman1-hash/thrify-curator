@@ -580,6 +580,164 @@ function cellLabel(val) {
   return "";
 }
 
+/* ================================================================
+   EXPLOSIVES COMPATIBILITY TABLE — 49 CFR 177.848(f)
+   ================================================================ */
+const COMPAT_GROUPS = ["A","B","C","D","E","F","G","H","J","K","L","N","S"];
+
+const COMPAT_MATRIX = {
+  A: {B:"X",C:"X",D:"X",E:"X",F:"X",G:"X",H:"X",J:"X",K:"X",L:"X",N:"X",S:"X"},
+  B: {A:"X",C:"X",D:"X4",E:"X",F:"X",G:"X",H:"X",J:"X",K:"X",L:"X",N:"X",S:"45"},
+  C: {A:"X",B:"X",D:"2",E:"2",F:"X",G:"6",H:"X",J:"X",K:"X",L:"X",N:"3",S:"45"},
+  D: {A:"X",B:"X4",C:"2",E:"2",F:"X",G:"6",H:"X",J:"X",K:"X",L:"X",N:"3",S:"45"},
+  E: {A:"X",B:"X",C:"2",D:"2",F:"X",G:"6",H:"X",J:"X",K:"X",L:"X",N:"3",S:"45"},
+  F: {A:"X",B:"X",C:"X",D:"X",E:"X",G:"X",H:"X",J:"X",K:"X",L:"X",N:"X",S:"45"},
+  G: {A:"X",B:"X",C:"6",D:"6",E:"6",F:"X",H:"X",J:"X",K:"X",L:"X",N:"X",S:"45"},
+  H: {A:"X",B:"X",C:"X",D:"X",E:"X",F:"X",G:"X",J:"X",K:"X",L:"X",N:"X",S:"45"},
+  J: {A:"X",B:"X",C:"X",D:"X",E:"X",F:"X",G:"X",H:"X",K:"X",L:"X",N:"X",S:"45"},
+  K: {A:"X",B:"X",C:"X",D:"X",E:"X",F:"X",G:"X",H:"X",J:"X",L:"X",N:"X",S:"45"},
+  L: {A:"X",B:"X",C:"X",D:"X",E:"X",F:"X",G:"X",H:"X",J:"X",K:"X",N:"X",S:"X"},
+  N: {A:"X",B:"X",C:"3",D:"3",E:"3",F:"X",G:"X",H:"X",J:"X",K:"X",L:"X",S:"45"},
+  S: {A:"X",B:"45",C:"45",D:"45",E:"45",F:"45",G:"45",H:"45",J:"45",K:"45",L:"X",N:"45"},
+};
+
+const COMPAT_GROUP_DESC = {
+  A: "Primary detonating explosive substance (very sensitive)",
+  B: "Article containing primary detonating substance (not 2+ protective features)",
+  C: "Propellant explosive or deflagrating explosive substance or article",
+  D: "Secondary detonating explosive substance, black powder, or article w/ detonating substance w/o means of initiation",
+  E: "Article containing secondary detonating explosive w/o means of initiation, with propelling charge",
+  F: "Article containing secondary detonating explosive with its own means of initiation, with propelling charge",
+  G: "Pyrotechnic substance or article containing pyrotechnic substance, or article containing both explosive and illuminating/incendiary substance",
+  H: "Article containing both explosive substance and white phosphorus",
+  J: "Article containing both explosive substance and flammable liquid or gel",
+  K: "Article containing both explosive substance and toxic chemical agent",
+  L: "Explosive substance or article containing explosive substance, presenting special risk needing isolation",
+  N: "Article containing only extremely insensitive detonating substances",
+  S: "Article or substance packaged/designed to limit hazardous effects to the package (1.4S)",
+};
+
+const COMPAT_NOTES = {
+  "1": "Group L shall only be carried with an identical explosive.",
+  "2": "Any combination of C, D, or E is assigned to compatibility group E.",
+  "3": "Any combination of C, D, or E with N is assigned to compatibility group D.",
+  "45": "See 177.835(g) for detonators. Div 1.4S fireworks may NOT be loaded with Div 1.1 or 1.2 materials.",
+  "X4": "X — except see 177.835(g) for detonators.",
+  "6": "Group G articles (other than fireworks/special handling) may be loaded with C, D, and E, provided explosive substances (not in articles) are not on the same vehicle.",
+};
+
+function ExplosivesCompatibility() {
+  const [groupA, setGroupA] = useState(null);
+  const [groupB, setGroupB] = useState(null);
+
+  const pick = (g) => {
+    if (!groupA) setGroupA(g);
+    else if (!groupB && g !== groupA) setGroupB(g);
+    else { setGroupA(g); setGroupB(null); }
+  };
+
+  const compatResult = groupA && groupB ? (COMPAT_MATRIX[groupA]?.[groupB] || "") : null;
+
+  const getResultText = (code) => {
+    if (!code) return { verdict: "ALLOWED", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-300", desc: "No restrictions. These compatibility groups may be loaded together." };
+    if (code === "X") return { verdict: "PROHIBITED", color: "text-red-700", bg: "bg-red-50 border-red-300", desc: "These compatibility groups may NOT be carried on the same transport vehicle." };
+    const note = COMPAT_NOTES[code];
+    return { verdict: "CONDITIONAL", color: "text-amber-700", bg: "bg-amber-50 border-amber-300", desc: note || `See note ${code}.` };
+  };
+
+  return (
+    <div className="space-y-2 pt-1">
+      <p className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">Explosives Compatibility — <CfrLink r="177.848(f)" /></p>
+
+      {/* Group picker */}
+      <div className="space-y-1">
+        <p className="text-[10px] text-[#64748B]">{!groupA ? "Select first compatibility group:" : !groupB ? "Select second compatibility group:" : "Result:"}</p>
+        <div className="flex flex-wrap gap-1">
+          {COMPAT_GROUPS.map(g => (
+            <button
+              key={g}
+              onClick={() => pick(g)}
+              className={`w-8 h-8 rounded-lg text-[11px] font-bold transition-all ${
+                groupA === g ? "bg-[#002855] text-white ring-2 ring-[#002855]" :
+                groupB === g ? "bg-[#D4AF37] text-[#002855] ring-2 ring-[#D4AF37]" :
+                "bg-white border border-[#E2E8F0] text-[#334155] hover:border-[#002855] hover:bg-[#002855]/5"
+              }`}
+              data-testid={`compat-group-${g}`}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+        {groupA && (
+          <p className="text-[9px] text-[#475569]"><strong>Group {groupA}:</strong> {COMPAT_GROUP_DESC[groupA]}</p>
+        )}
+        {groupB && (
+          <p className="text-[9px] text-[#475569]"><strong>Group {groupB}:</strong> {COMPAT_GROUP_DESC[groupB]}</p>
+        )}
+      </div>
+
+      {/* Result */}
+      {compatResult !== null && (() => {
+        const rt = getResultText(compatResult);
+        return (
+          <div className={`rounded-lg border-2 p-2.5 ${rt.bg}`} data-testid="compat-result">
+            <p className={`text-[12px] font-bold ${rt.color}`}>{rt.verdict}: Group {groupA} + Group {groupB}</p>
+            <p className="text-[10px] text-[#334155] mt-1 leading-relaxed">{rt.desc}</p>
+          </div>
+        );
+      })()}
+
+      {/* Reset */}
+      {groupA && (
+        <button onClick={() => { setGroupA(null); setGroupB(null); }} className="text-[10px] text-[#94A3B8] hover:text-orange-700 transition-colors">Reset groups</button>
+      )}
+
+      {/* Reference grid */}
+      <details className="text-[9px]">
+        <summary className="text-[10px] font-bold text-[#64748B] cursor-pointer hover:text-[#002855]">View full compatibility grid</summary>
+        <div className="overflow-x-auto mt-1.5">
+          <table className="border-collapse" style={{ minWidth: 400 }}>
+            <thead>
+              <tr>
+                <th className="px-1 py-0.5 text-left font-bold text-[#64748B]"></th>
+                {COMPAT_GROUPS.map(g => (
+                  <th key={g} className={`px-1 py-0.5 text-center font-bold ${groupA === g || groupB === g ? "text-[#002855] bg-[#002855]/10" : "text-[#64748B]"}`}>{g}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {COMPAT_GROUPS.map(row => (
+                <tr key={row}>
+                  <td className={`px-1 py-0.5 font-bold ${groupA === row || groupB === row ? "text-[#002855] bg-[#002855]/10" : "text-[#64748B]"}`}>{row}</td>
+                  {COMPAT_GROUPS.map(col => {
+                    if (row === col) return <td key={col} className="px-1 py-0.5 text-center bg-[#002855] text-white font-bold">-</td>;
+                    const val = COMPAT_MATRIX[row]?.[col] || "";
+                    const isHighlight = (groupA === row && groupB === col) || (groupA === col && groupB === row);
+                    const bgClass = val === "X" || val === "X4" ? "bg-red-500 text-white" :
+                      val === "" ? "bg-emerald-100 text-emerald-800" :
+                      "bg-amber-200 text-amber-900";
+                    return (
+                      <td key={col} className={`px-1 py-0.5 text-center font-bold ${bgClass} ${isHighlight ? "ring-2 ring-[#002855]" : ""}`}>
+                        {val === "" ? "" : val === "X4" ? "X*" : val}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-1.5 space-y-0.5 text-[9px] text-[#64748B]">
+          <p><strong>X</strong> = May NOT be on same vehicle. <strong>Blank</strong> = No restriction.</p>
+          <p><strong>1</strong> = Group L only with identical explosive. <strong>2</strong> = C+D+E combination → assigned Group E.</p>
+          <p><strong>3</strong> = C/D/E + N → assigned Group D. <strong>4/5</strong> = See 177.835(g) for detonators; 1.4S fireworks NOT with 1.1/1.2.</p>
+          <p><strong>6</strong> = Group G articles (not fireworks) may load with C, D, E if no explosive substances (non-articles) present.</p>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 export function SegregationTable({ onNavigate }) {
   const [open, setOpen] = useState(false);
   const [classA, setClassA] = useState(null);
@@ -612,8 +770,9 @@ export function SegregationTable({ onNavigate }) {
     },
     "*": {
       short: "SEE EXPLOSIVES COMPATIBILITY TABLE",
-      detail: "Segregation between different Class 1 (explosive) divisions and compatibility groups is governed by the separate compatibility table in 177.848(f), not this segregation table.",
-      action: "Check the explosives compatibility groups (letters A through S on the shipping paper) and refer to 177.848(f) for specific rules.",
+      detail: "Segregation between different Class 1 (explosive) divisions and compatibility groups is governed by the compatibility table in 177.848(f).",
+      action: "Select the compatibility groups below to check if they can be loaded together.",
+      showCompat: true,
     },
     "": {
       short: "NO RESTRICTION",
@@ -731,6 +890,9 @@ export function SegregationTable({ onNavigate }) {
                 <p className="text-[11px] leading-relaxed text-[#334155]"><strong>What this means:</strong> {pt.detail}</p>
                 <p className="text-[11px] leading-relaxed text-[#334155]"><strong>What to do:</strong> {pt.action}</p>
               </div>
+
+              {/* Explosives compatibility table — shown when "*" */}
+              {pt.showCompat && <ExplosivesCompatibility />}
 
               {/* Ref */}
               <p className="text-[10px] text-[#94A3B8]">Per <CfrLink r="177.848" /> segregation table</p>
