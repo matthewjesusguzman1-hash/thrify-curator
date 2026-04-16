@@ -35,16 +35,6 @@ const HM_LINKS = [
     desc: "Current CVSA inspection bulletins",
   },
   {
-    label: "eCFR — 49 CFR Part 172",
-    url: "https://www.ecfr.gov/current/title-49/part-172",
-    desc: "HM Table, shipping papers, marking, labeling, placarding",
-  },
-  {
-    label: "eCFR — 49 CFR Part 173",
-    url: "https://www.ecfr.gov/current/title-49/part-173",
-    desc: "Packaging requirements & exceptions",
-  },
-  {
     label: "eCFR — 49 CFR Part 177",
     url: "https://www.ecfr.gov/current/title-49/part-177",
     desc: "Carriage by highway, segregation table",
@@ -53,11 +43,6 @@ const HM_LINKS = [
     label: "ERG App (iOS)",
     url: "https://apps.apple.com/us/app/erg-for-ios/id1597142669",
     desc: "Emergency Response Guidebook app",
-  },
-  {
-    label: "FMCSA HM Safety",
-    url: "https://www.fmcsa.dot.gov/safety/hazardous-materials-safety",
-    desc: "FMCSA HazMat safety resources",
   },
 ];
 
@@ -148,7 +133,7 @@ const STEPS = [
         { label: "Number and type of packages listed", ref: "172.202(a)(7)" },
       ]},
       { id: "2.4", label: "Check Appendix A — is material a Hazardous Substance?", ref: "172.101", tip: "If the material is listed in Appendix A and the quantity in a single package equals or exceeds the Reportable Quantity (RQ), it is ALWAYS a hazardous material regardless of other exceptions. Per 172.203(c): the letters 'RQ' must appear on the shipping paper either before or after the basic description (e.g., 'RQ, UN1760, Corrosive liquid, n.o.s., 8, PG II'). If the proper shipping name does not identify the hazardous substance by name, the name must also appear in parentheses.", link: "tool-substance-lookup" },
-      { id: "2.5", label: "Check Appendix B — is material a Marine Pollutant? (bulk only)", ref: "172.101", tip: "Per 172.203(l): for bulk shipments, the words 'Marine Pollutant' must appear on the shipping paper after the basic description. If the proper shipping name does not identify the marine pollutant component, the name of the marine pollutant must be shown in parentheses (e.g., 'UN3082, Environmentally hazardous substance, liquid, n.o.s., 9, PG III, Marine Pollutant (Phenol)'). 'PP' in Appendix B = severe marine pollutant with stricter requirements.", link: "tool-substance-lookup" },
+      { id: "2.5", label: "Check Appendix B — is material a Marine Pollutant?", ref: "172.101", tip: "Per 172.203(l): (1) For n.o.s. or generic entries (Column 1 shows 'G'), the name of the component making the material a marine pollutant must appear in parentheses (e.g., 'UN3082, Environmentally hazardous substance, liquid, n.o.s., 9, PG III (Phenol), Marine Pollutant'). If two or more marine pollutant components are present, at least two must be listed. (2) The words 'Marine Pollutant' must be entered in association with the basic description. IMPORTANT: Per 172.203(l)(4), marine pollutants in NON-BULK packagings are EXCEPTED from (l)(1) and (l)(2) unless all or part of transportation is by vessel.", link: "tool-substance-lookup" },
       { id: "2.6", label: "Check for additional descriptions when required", ref: "172.203", tip: "Review each applicable additional description requirement based on the material type.", subs: [
         { label: "DOT special permits", ref: "172.203(a)" },
         { label: "Limited Quantities", ref: "172.203(b)" },
