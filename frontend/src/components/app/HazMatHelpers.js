@@ -900,12 +900,12 @@ export function PlacardHelper({ onNavigate }) {
   const reset = useCallback(() => { setAnswers({}); }, []);
 
   const QUESTIONS = [
-    { id: "bulk", question: "Is the hazardous material in a BULK packaging?", help: "Bulk = capacity >119 gal for liquids, >882 lbs for solids, or water capacity >1,000 lbs for gases (171.8). Cargo tanks, portable tanks, IBCs over these thresholds, and tank cars are all bulk." },
     { id: "table", question: "Is the material a Table 1 or Table 2 hazard class?", help: null, helpType: "tables" },
-    { id: "weight", question: "Is the aggregate gross weight of ALL Table 2 materials on this vehicle 1,001 lbs (454 kg) or more?", help: "Add up the gross weight (including packaging) of ALL Table 2 materials on the vehicle — not just one class. If the total is 1,001 lbs or more, placards are required. If under 1,001 lbs (and no Table 1 or bulk materials), placards are not required for the Table 2 materials.", condition: (a) => a.bulk === false && a.table === "table2" },
+    { id: "bulk", question: "Is the hazardous material in a BULK packaging?", help: "Bulk = capacity >119 gal for liquids, >882 lbs for solids, or water capacity >1,000 lbs for gases (171.8). Cargo tanks, portable tanks, IBCs over these thresholds, and tank cars are all bulk.", condition: (a) => a.table === "table2" },
+    { id: "weight", question: "Is the aggregate gross weight of ALL Table 2 materials on this vehicle 1,001 lbs (454 kg) or more?", help: "Add up the gross weight (including packaging) of ALL Table 2 materials on the vehicle — not just one class. If the total is 1,001 lbs or more, placards are required. If under 1,001 lbs (and no Table 1 or bulk materials), placards are not required for the Table 2 materials.", condition: (a) => a.table === "table2" && a.bulk === false },
     { id: "exception", question: "Does any placarding exception apply?", help: null, helpType: "exception_check", condition: (a) => {
       if (a.table === "table1") return true;
-      if (a.bulk === true) return true;
+      if (a.table === "table2" && a.bulk === true) return true;
       if (a.table === "table2" && a.weight === true) return true;
       return false;
     }},
@@ -918,17 +918,17 @@ export function PlacardHelper({ onNavigate }) {
   // Determine result
   let verdict = null;
   let endorsement = false;
-  if (allDone || (answers.table === "table2" && answers.weight === false)) {
+  if (allDone || (answers.table === "table2" && answers.bulk === false && answers.weight === false) || answers.table === "neither") {
     if (answers.table === "table1") {
       verdict = { required: true, reason: "Table 1 materials require placards in ANY quantity — even a single package." };
       endorsement = true;
-    } else if (answers.bulk === true) {
-      verdict = { required: true, reason: "Bulk packages of hazardous materials require placards regardless of quantity or Table 1/Table 2 classification." };
+    } else if (answers.table === "table2" && answers.bulk === true) {
+      verdict = { required: true, reason: "Bulk packages of hazardous materials require placards regardless of quantity or the 1,001 lb threshold." };
       endorsement = true;
     } else if (answers.table === "table2" && answers.weight === true) {
       verdict = { required: true, reason: "The aggregate gross weight of Table 2 materials on this vehicle meets or exceeds 1,001 lbs (454 kg)." };
       endorsement = true;
-    } else if (answers.table === "table2" && answers.weight === false) {
+    } else if (answers.table === "table2" && answers.bulk === false && answers.weight === false) {
       verdict = { required: false, reason: "Table 2 materials in non-bulk packages under 1,001 lbs aggregate do NOT require placards (172.504(c)). However, all other HMR requirements (shipping papers, marking, labeling, packaging) still apply." };
       endorsement = false;
     } else if (answers.table === "neither") {
@@ -969,6 +969,7 @@ export function PlacardHelper({ onNavigate }) {
 
             // Skip weight question if we already know result
             if (q.id === "weight" && (answers.table === "table1" || answers.table === "neither" || answers.bulk === true)) return null;
+            if (q.id === "bulk" && (answers.table === "table1" || answers.table === "neither")) return null;
             if (q.id === "exception" && verdict && !verdict.required) return null;
 
             return (
