@@ -37,6 +37,8 @@ export default function PhotoAnnotator() {
   const [zoom, setZoom] = useState(1);
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [preview, setPreview] = useState(null);
+  const [cursorPos, setCursorPos] = useState(null);
   const [saving, setSaving] = useState(false);
 
   // URL params for editing inspection photos
@@ -101,12 +103,14 @@ export default function PhotoAnnotator() {
     canvas.height = imgDimensions.h;
     ctx.drawImage(image, 0, 0, imgDimensions.w, imgDimensions.h);
 
-    for (const item of history) {
+    const allItems = preview ? [...history, preview] : history;
+    for (const item of allItems) {
       ctx.strokeStyle = item.color;
       ctx.fillStyle = item.color;
       ctx.lineWidth = item.lineWidth;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+      if (item === preview) ctx.globalAlpha = 0.6;
 
       if (item.type === "freehand" && item.points?.length > 1) {
         ctx.beginPath();
@@ -136,13 +140,15 @@ export default function PhotoAnnotator() {
         const fs = item.fontSize || 16;
         ctx.font = `bold ${fs}px sans-serif`;
         const metrics = ctx.measureText(item.text);
-        ctx.fillStyle = "rgba(0,0,0,0.65)";
+        ctx.fillStyle = item === preview ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.65)";
         ctx.fillRect(item.pos.x - 2, item.pos.y - fs + 2, metrics.width + 4, fs + 4);
         ctx.fillStyle = item.color;
         ctx.fillText(item.text, item.pos.x, item.pos.y);
       }
+
+      if (item === preview) ctx.globalAlpha = 1;
     }
-  }, [image, imgDimensions, history]);
+  }, [image, imgDimensions, history, preview]);
 
   useEffect(() => { redraw(); }, [redraw]);
 
@@ -244,7 +250,16 @@ export default function PhotoAnnotator() {
     }
 
     e.preventDefault();
-    if (tool === "text") { setTextPlacePos(pos); setShowTextInput(true); return; }
+    if (tool === "text") {
+      if (textInput.trim()) {
+        /* Stamp pre-filled: place immediately */
+        setHistory(prev => [...prev, { type: "text", color, text: textInput.trim(), pos, fontSize: 16 }]);
+        setPreview(null);
+      } else {
+        setTextPlacePos(pos); setShowTextInput(true);
+      }
+      return;
+    }
     /* Non-select tools: still allow text dragging */
     const textIdx = findTextAt(pos);
     if (textIdx >= 0) { setDragIdx(textIdx); setDragOffset({ x: pos.x - history[textIdx].pos.x, y: pos.y - history[textIdx].pos.y }); return; }
@@ -258,6 +273,10 @@ export default function PhotoAnnotator() {
     if (!image) return;
     const pos = getCanvasPos(e);
     if (!pos) return;
+
+    /* Track cursor for text preview */
+    setCursorPos(pos);
+
     if (dragIdx !== null) {
       e.preventDefault();
       const anchor = getItemAnchor(history[dragIdx]);
@@ -266,15 +285,28 @@ export default function PhotoAnnotator() {
       setHistory(prev => { const n = [...prev]; n[dragIdx] = moveItem(n[dragIdx], dx, dy); return n; });
       return;
     }
-    if (!isDrawing) return;
+    if (!isDrawing) {
+      /* Show text ghost preview when text tool active with pre-filled text */
+      if (tool === "text" && textInput && !showTextInput) {
+        setPreview({ type: "text", color, text: textInput, pos, fontSize: 16 });
+      } else {
+        setPreview(null);
+      }
+      return;
+    }
     e.preventDefault();
     setLastPos(pos);
     if (tool === "freehand") {
       setHistory(prev => { const n = [...prev]; const l = { ...n[n.length - 1] }; l.points = [...l.points, pos]; n[n.length - 1] = l; return n; });
+    } else if (tool === "circle" && drawStart) {
+      setPreview({ type: "circle", color, lineWidth, start: drawStart, end: pos });
+    } else if (tool === "arrow" && drawStart) {
+      setPreview({ type: "arrow", color, lineWidth, start: drawStart, end: pos });
     }
   };
 
   const onPointerUp = (e) => {
+    setPreview(null);
     if (dragIdx !== null) {
       try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
       setDragIdx(null);
@@ -394,7 +426,7 @@ export default function PhotoAnnotator() {
                   ref={canvasRef}
                   style={{ width: imgDimensions.w, height: imgDimensions.h, display: "block", touchAction: "none", cursor: tool === "text" ? "crosshair" : tool === "select" ? "default" : "crosshair" }}
                   onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
-                  onPointerLeave={() => { if (isDrawing) { setIsDrawing(false); if ((tool === "circle" || tool === "arrow") && drawStart && lastPos) setHistory(prev => [...prev, { type: tool, color, lineWidth, start: drawStart, end: lastPos }]); setDrawStart(null); setLastPos(null); } if (dragIdx !== null) setDragIdx(null); }}
+                  onPointerLeave={() => { setPreview(null); setCursorPos(null); if (isDrawing) { setIsDrawing(false); if ((tool === "circle" || tool === "arrow") && drawStart && lastPos) setHistory(prev => [...prev, { type: tool, color, lineWidth, start: drawStart, end: lastPos }]); setDrawStart(null); setLastPos(null); } if (dragIdx !== null) setDragIdx(null); }}
                   data-testid="annotation-canvas"
                 />
               </div>
