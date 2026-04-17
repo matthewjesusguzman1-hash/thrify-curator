@@ -1,4 +1,4 @@
-import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText } from "lucide-react";
+import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -76,6 +76,29 @@ const FLOWCHARTS = [
     url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/g1p8yd97_Flowchart_Post-Accident_DA_Testing_Requirements.pdf",
     description: "FMCSA post-accident testing flowchart",
     icon: FileText,
+  },
+];
+
+const JOB_AIDS = [
+  {
+    label: "CVSA Decals Reference",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/nu3n21lh_IMG_1552.jpeg",
+    description: "Quarter by color, month by corner",
+  },
+  {
+    label: "ABS Inspection Procedure",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/skwbdvl9_IMG_1550.jpeg",
+    description: "Antilock Brake System field reference",
+  },
+  {
+    label: "HOS / RODS Inspection Flowchart",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/zbhlfbts_IMG_1542.jpeg",
+    description: "All records of duty status",
+  },
+  {
+    label: "Ag Exemptions Job Aid",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/qd97fk82_IMG_1543.jpeg",
+    description: "Interstate FMCSR agricultural flowchart",
   },
 ];
 
@@ -223,6 +246,32 @@ export function Header({ onUploadClick, stats }) {
                         <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
                       </p>
                       <p className="text-[10px] text-[#64748B]">{link.description}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+              <div className="border-t border-[#E2E8F0] mt-2 pt-2">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">
+                  Job Aids
+                </p>
+                {JOB_AIDS.map((aid) => (
+                  <a
+                    key={aid.url}
+                    href={aid.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
+                    data-testid={`job-aid-${aid.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#16A34A]/10 flex-shrink-0">
+                      <Briefcase className="w-4 h-4 text-[#16A34A]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                        {aid.label}
+                        <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
+                      </p>
+                      <p className="text-[10px] text-[#64748B]">{aid.description}</p>
                     </div>
                   </a>
                 ))}
