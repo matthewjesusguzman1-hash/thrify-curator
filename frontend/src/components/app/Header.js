@@ -227,19 +227,23 @@ export function Header({ onUploadClick, stats }) {
                   </a>
                 ))}
               </div>
+              <div className="border-t border-[#E2E8F0] mt-2 pt-2">
+                <button
+                  onClick={onUploadClick}
+                  className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group w-full text-left"
+                  data-testid="upload-btn"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#002855]/10 flex-shrink-0">
+                    <Upload className="w-4 h-4 text-[#002855]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-[#0F172A]">Upload Violations Data</p>
+                    <p className="text-[10px] text-[#64748B]">Import Excel/CSV file</p>
+                  </div>
+                </button>
+              </div>
             </PopoverContent>
           </Popover>
-
-          <Button
-            data-testid="upload-btn"
-            variant="outline"
-            size="sm"
-            onClick={onUploadClick}
-            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs flex-shrink-0"
-          >
-            <Upload className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Upload Data</span>
-          </Button>
         </div>
 
         {stats && (
