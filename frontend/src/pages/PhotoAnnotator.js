@@ -229,15 +229,17 @@ export default function PhotoAnnotator() {
     const pos = getCanvasPos(e);
     if (!pos) return;
 
-    /* Select mode: only drag, let native scroll/zoom through otherwise */
+    /* Select mode: capture pointer on hit so browser doesn't steal it for scroll */
     if (tool === "select") {
       const idx = findItemAt(pos);
       if (idx >= 0) {
         e.preventDefault();
+        e.target.setPointerCapture(e.pointerId);
         const anchor = getItemAnchor(history[idx]);
         setDragIdx(idx);
         setDragOffset({ x: pos.x - anchor.x, y: pos.y - anchor.y });
       }
+      /* If no item hit, do nothing — browser handles scroll/zoom natively */
       return;
     }
 
@@ -273,7 +275,11 @@ export default function PhotoAnnotator() {
   };
 
   const onPointerUp = (e) => {
-    if (dragIdx !== null) { setDragIdx(null); return; }
+    if (dragIdx !== null) {
+      try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
+      setDragIdx(null);
+      return;
+    }
     if (!isDrawing || !image) return;
     setIsDrawing(false);
     const pos = getCanvasPos(e) || lastPos;
