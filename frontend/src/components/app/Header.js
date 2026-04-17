@@ -1,4 +1,4 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Scale } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -150,18 +150,6 @@ export function Header({ onUploadClick, stats }) {
           >
             <Camera className="w-3.5 h-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Photo</span>
-          </Button>
-
-          {/* Reg Applicability */}
-          <Button
-            data-testid="reg-applicability-nav-btn"
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/reg-applicability")}
-            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs"
-          >
-            <Scale className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Regs</span>
           </Button>
 
           {/* Inspections */}
