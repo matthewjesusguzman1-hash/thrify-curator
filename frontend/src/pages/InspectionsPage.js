@@ -7,11 +7,13 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { Toaster, toast } from "sonner";
+import { useAuth } from "../components/app/AuthContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function InspectionsPage() {
   const navigate = useNavigate();
+  const { badge } = useAuth();
   const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -19,7 +21,7 @@ export default function InspectionsPage() {
 
   const fetchInspections = async () => {
     try {
-      const res = await axios.get(`${API}/inspections`);
+      const res = await axios.get(`${API}/inspections?badge=${badge}`);
       setInspections(res.data.inspections || []);
     } catch {
       toast.error("Failed to load inspections");
@@ -34,6 +36,7 @@ export default function InspectionsPage() {
     try {
       const res = await axios.post(`${API}/inspections`, {
         title: newTitle || undefined,
+        badge,
       });
       setCreating(false);
       setNewTitle("");

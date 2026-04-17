@@ -13,6 +13,7 @@ import { InspectionProcedures } from "../components/app/InspectionProcedures";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "sonner";
+import { useAuth } from "../components/app/AuthContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -27,6 +28,7 @@ const INITIAL_FILTERS = {
 };
 
 export default function Dashboard() {
+  const { badge } = useAuth();
   const [keyword, setKeyword] = useState("");
   const [aiMode, setAiMode] = useState(false);
   const [aiKeyword, setAiKeyword] = useState(""); // persists the AI-selected term across filter changes
@@ -57,8 +59,8 @@ export default function Dashboard() {
   const [treeDrawerOpen, setTreeDrawerOpen] = useState(false);
   const [proceduresOpen, setProceduresOpen] = useState(false);
 
-  // Favorites — stored in localStorage
-  const FAV_KEY = "violation-favorites";
+  // Favorites — stored in localStorage, scoped by badge
+  const FAV_KEY = `violation-favorites-${badge}`;
   const [favorites, setFavorites] = useState(() => {
     try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { return []; }
   });

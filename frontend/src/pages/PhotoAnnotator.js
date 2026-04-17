@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2, Share2, FolderPlus, Check, X as XIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
+import { useAuth } from "../components/app/AuthContext";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const COLORS = ["#FF0000", "#FFFF00", "#00FF00", "#0088FF", "#FF00FF", "#FFFFFF", "#000000"];
@@ -17,6 +18,7 @@ const TOOLS = [
 export default function PhotoAnnotator() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { badge } = useAuth();
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -405,7 +407,7 @@ export default function PhotoAnnotator() {
     setShowInspPicker(true);
     setLoadingInsps(true);
     try {
-      const res = await fetch(`${API}/api/inspections`);
+      const res = await fetch(`${API}/api/inspections?badge=${badge}`);
       if (res.ok) {
         const data = await res.json();
         setInspections(Array.isArray(data) ? data : data.inspections || []);
@@ -441,7 +443,7 @@ export default function PhotoAnnotator() {
       const res = await fetch(`${API}/api/inspections`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title, badge }),
       });
       if (res.ok) {
         const insp = await res.json();

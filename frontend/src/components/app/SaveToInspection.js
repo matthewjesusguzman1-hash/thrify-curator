@@ -7,10 +7,12 @@ import {
 } from "../ui/popover";
 import axios from "axios";
 import { toast } from "sonner";
+import { useAuth } from "./AuthContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export function SaveToInspection({ violation, currentInspectionId, className = "" }) {
+  const { badge } = useAuth();
   const [inspections, setInspections] = useState([]);
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -55,7 +57,7 @@ export function SaveToInspection({ violation, currentInspectionId, className = "
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await axios.get(`${API}/inspections`);
+        const res = await axios.get(`${API}/inspections?badge=${badge}`);
         checkSavedStatus(res.data.inspections || []);
       } catch { /* ignore */ }
     };
@@ -64,7 +66,7 @@ export function SaveToInspection({ violation, currentInspectionId, className = "
 
   const fetchInspections = async () => {
     try {
-      const res = await axios.get(`${API}/inspections`);
+      const res = await axios.get(`${API}/inspections?badge=${badge}`);
       const list = res.data.inspections || [];
       setInspections(list);
       checkSavedStatus(list);
@@ -111,7 +113,7 @@ export function SaveToInspection({ violation, currentInspectionId, className = "
 
   const createAndAdd = async () => {
     try {
-      const res = await axios.post(`${API}/inspections`, {});
+      const res = await axios.post(`${API}/inspections`, { badge });
       await addToInspection(res.data.id);
     } catch {
       toast.error("Failed to create inspection");

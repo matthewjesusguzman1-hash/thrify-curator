@@ -385,16 +385,18 @@ const STORAGE_KEY = "hazmat-worksheet-checks";
    ================================================================ */
 export default function HazMatWorksheet() {
   const navigate = useNavigate();
+  const badge = localStorage.getItem("safespect-badge") || "";
+  const storageKey = `hazmat-worksheet-checks-${badge}`;
   const [checks, setChecks] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem(storageKey)) || {}; } catch { return {}; }
   });
   const [openSteps, setOpenSteps] = useState({});
   const [showRef, setShowRef] = useState(false);
   const [activeTab, setActiveTab] = useState("checklist"); // "checklist" | "tools"
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(checks));
-  }, [checks]);
+    localStorage.setItem(storageKey, JSON.stringify(checks));
+  }, [checks, storageKey]);
 
   const toggleCheck = useCallback((id) => {
     setChecks((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -418,11 +420,11 @@ export default function HazMatWorksheet() {
 
   const resetAll = useCallback(() => {
     setChecks({});
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey);
     setOpenSteps({});
     setShowResetConfirm(false);
     toast.success("Worksheet reset");
-  }, []);
+  }, [storageKey]);
 
   // Cross-navigation between steps and tools
   const navigateTo = useCallback((targetId) => {

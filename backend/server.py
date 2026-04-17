@@ -149,6 +149,7 @@ class InspectionModel(BaseModel):
 
 class CreateInspectionRequest(BaseModel):
     title: str = ""
+    badge: str = ""
 
 class AddViolationRequest(BaseModel):
     violation_id: str = ""
@@ -178,6 +179,18 @@ class SaveTieDownRequest(BaseModel):
     has_blocking: bool = False
     tiedowns: List[TieDownItemData] = []
     photos: List[dict] = []
+
+# Auth Models
+class RegisterRequest(BaseModel):
+    badge: str
+    pin: str
+
+class LoginRequest(BaseModel):
+    badge: str
+    pin: str
+
+class AdminLoginRequest(BaseModel):
+    admin_pin: str
 
 
 # Seed data on startup
@@ -969,6 +982,61 @@ async def get_similar_violations(violation_id: str):
 
 
 
+
+# ========== AUTH ENDPOINTS ==========
+
+ADMIN_PIN = os.environ.get("ADMIN_PIN", "9999")
+
+@api_router.post("/auth/register")
+async def register_user(req: RegisterRequest):
+    badge = req.badge.strip()
+    pin = req.pin.strip()
+    if not badge or not pin:
+        raise HTTPException(status_code=400, detail="Badge and PIN are required")
+    if len(pin) < 4:
+        raise HTTPException(status_code=400, detail="PIN must be at least 4 digits")
+    existing = await db.users.find_one({"badge": badge})
+    if existing:
+        raise HTTPException(status_code=409, detail="Badge number already registered")
+    user = {
+        "badge": badge,
+        "pin": pin,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.users.insert_one(user)
+    return {"badge": badge, "message": "Registered successfully"}
+
+@api_router.post("/auth/login")
+async def login_user(req: LoginRequest):
+    badge = req.badge.strip()
+    pin = req.pin.strip()
+    user = await db.users.find_one({"badge": badge})
+    if not user:
+        raise HTTPException(status_code=404, detail="Badge number not found. Register first.")
+    if user["pin"] != pin:
+        raise HTTPException(status_code=401, detail="Incorrect PIN")
+    return {"badge": badge, "message": "Login successful"}
+
+@api_router.post("/auth/check-badge")
+async def check_badge(req: dict):
+    badge = req.get("badge", "").strip()
+    user = await db.users.find_one({"badge": badge})
+    return {"exists": user is not None}
+
+@api_router.post("/admin/login")
+async def admin_login(req: AdminLoginRequest):
+    if req.admin_pin != ADMIN_PIN:
+        raise HTTPException(status_code=401, detail="Invalid admin PIN")
+    return {"message": "Admin access granted"}
+
+@api_router.get("/admin/users")
+async def list_users(admin_pin: str = Query(...)):
+    if admin_pin != ADMIN_PIN:
+        raise HTTPException(status_code=401, detail="Invalid admin PIN")
+    users = await db.users.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return {"users": users, "total": len(users)}
+
+
 # ========== INSPECTION ENDPOINTS ==========
 
 @api_router.post("/inspections")
@@ -977,6 +1045,7 @@ async def create_inspection(req: CreateInspectionRequest):
     inspection = {
         "id": str(uuid.uuid4()),
         "title": req.title or f"Inspection {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}",
+        "badge": req.badge,
         "notes": "",
         "created_at": now,
         "updated_at": now,
@@ -988,8 +1057,9 @@ async def create_inspection(req: CreateInspectionRequest):
 
 
 @api_router.get("/inspections")
-async def list_inspections():
-    results = await db.inspections.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+async def list_inspections(badge: str = Query("")):
+    query = {"badge": badge} if badge else {}
+    results = await db.inspections.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
     return {"inspections": results}
 
 
