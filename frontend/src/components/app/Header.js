@@ -78,6 +78,12 @@ const FLOWCHARTS = [
     description: "FMCSA post-accident testing flowchart",
     icon: FileText,
   },
+  {
+    label: "Windshield Damage Reference",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/y6quiga3_IMG_1553.jpeg",
+    description: "Acceptable vs unacceptable damage zones",
+    icon: FileText,
+  },
 ];
 
 const JOB_AIDS = [
@@ -100,11 +106,6 @@ const JOB_AIDS = [
     label: "Ag Exemptions Job Aid",
     url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/qd97fk82_IMG_1543.jpeg",
     description: "Interstate FMCSR agricultural flowchart",
-  },
-  {
-    label: "Windshield Damage Reference",
-    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/y6quiga3_IMG_1553.jpeg",
-    description: "Acceptable vs unacceptable damage zones",
   },
 ];
 
@@ -242,7 +243,7 @@ export function Header({ onUploadClick, stats }) {
               {/* Flowcharts — collapsible */}
               <div className="border-t border-[#E2E8F0] mt-1 pt-1">
                 <button onClick={() => toggle("flowcharts")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
-                  <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">Flowcharts</p>
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">Flowcharts / Visor Cards</p>
                   {openSections.flowcharts ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
                 </button>
                 {openSections.flowcharts && (
