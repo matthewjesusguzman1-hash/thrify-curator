@@ -1,4 +1,4 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, FileSearch } from "lucide-react";
+import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -86,55 +86,15 @@ export function Header({ onUploadClick, stats }) {
       data-testid="app-header"
       className="sticky top-0 z-50 bg-[#002855] border-b border-[#001a3a]"
     >
-      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 py-2 sm:py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-[#D4AF37] flex-shrink-0">
-            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[#002855]" strokeWidth={2} />
-          </div>
-          <div className="min-w-0">
-            <h1
-              data-testid="app-title"
-              className="text-sm sm:text-xl font-semibold tracking-tight text-white leading-tight truncate"
-              style={{ fontFamily: "Outfit, sans-serif" }}
-            >
-              SafeSpect Violation Navigator
-            </h1>
-            <p className="text-[10px] sm:text-xs text-[#8FAEC5] tracking-wide hidden sm:block">
-              FMCSA Current Violations Database
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-          {stats && (
-            <div className="hidden md:flex items-center gap-4 text-xs text-[#8FAEC5]">
-              <span data-testid="stat-total">
-                <strong className="text-[#D4AF37]">{stats.total?.toLocaleString()}</strong> violations
-              </span>
-              <span className="w-px h-4 bg-white/20" />
-              <span data-testid="stat-oos">
-                <strong className="text-[#EF4444]">{stats.oos_count?.toLocaleString()}</strong> OOS
-              </span>
-            </div>
-          )}
-
-          {/* HazMat Worksheet */}
-          <Button
-            data-testid="hazmat-nav-btn"
-            size="sm"
-            onClick={() => navigate("/hazmat-worksheet")}
-            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm"
-          >
-            <span className="text-[11px] font-black sm:mr-1">HM</span>
-            <span className="hidden sm:inline">HazMat</span>
-          </Button>
-
+      {/* Top row: nav buttons */}
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pt-2 sm:pt-3 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
           {/* Level 3 Inspection */}
           <Button
             data-testid="level3-nav-btn"
             size="sm"
             onClick={() => navigate("/level3")}
-            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm"
+            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
           >
             <span className="text-[11px] font-black sm:mr-1">3</span>
             <span className="hidden sm:inline">Level 3</span>
@@ -145,10 +105,21 @@ export function Header({ onUploadClick, stats }) {
             data-testid="calculator-nav-btn"
             size="sm"
             onClick={() => navigate("/calculator")}
-            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm"
+            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
           >
             <Calculator className="w-3.5 h-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Tie-Down Calc</span>
+          </Button>
+
+          {/* HazMat Worksheet */}
+          <Button
+            data-testid="hazmat-nav-btn"
+            size="sm"
+            onClick={() => navigate("/hazmat-worksheet")}
+            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
+          >
+            <span className="text-[11px] font-black sm:mr-1">HM</span>
+            <span className="hidden sm:inline">HazMat</span>
           </Button>
 
           {/* Photo Annotator */}
@@ -157,7 +128,7 @@ export function Header({ onUploadClick, stats }) {
             variant="outline"
             size="sm"
             onClick={() => navigate("/photo-annotator")}
-            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs"
+            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs flex-shrink-0"
           >
             <Camera className="w-3.5 h-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Photo</span>
@@ -169,7 +140,7 @@ export function Header({ onUploadClick, stats }) {
             variant="outline"
             size="sm"
             onClick={() => navigate("/inspections")}
-            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs"
+            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs flex-shrink-0"
           >
             <ClipboardList className="w-3.5 h-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Inspections</span>
@@ -182,7 +153,7 @@ export function Header({ onUploadClick, stats }) {
                 data-testid="cvsa-btn"
                 variant="outline"
                 size="sm"
-                className="border-[#D4AF37]/40 text-[#D4AF37] bg-transparent hover:bg-[#D4AF37] hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs font-bold"
+                className="border-[#D4AF37]/40 text-[#D4AF37] bg-transparent hover:bg-[#D4AF37] hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs font-bold flex-shrink-0"
               >
                 Resources
               </Button>
@@ -250,12 +221,38 @@ export function Header({ onUploadClick, stats }) {
             variant="outline"
             size="sm"
             onClick={onUploadClick}
-            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs"
+            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs flex-shrink-0"
           >
             <Upload className="w-3.5 h-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Upload Data</span>
           </Button>
         </div>
+
+        {stats && (
+          <div className="hidden md:flex items-center gap-4 text-xs text-[#8FAEC5] flex-shrink-0 ml-3">
+            <span data-testid="stat-total">
+              <strong className="text-[#D4AF37]">{stats.total?.toLocaleString()}</strong> violations
+            </span>
+            <span className="w-px h-4 bg-white/20" />
+            <span data-testid="stat-oos">
+              <strong className="text-[#EF4444]">{stats.oos_count?.toLocaleString()}</strong> OOS
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom row: app title */}
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pb-1.5 pt-1">
+        <h1
+          data-testid="app-title"
+          className="text-[11px] sm:text-sm font-semibold tracking-tight text-white/70 leading-tight"
+          style={{ fontFamily: "Outfit, sans-serif" }}
+        >
+          SafeSpect Violation Navigator
+          <span className="text-[10px] sm:text-xs text-[#8FAEC5] font-normal ml-2 hidden sm:inline">
+            FMCSA Current Violations Database
+          </span>
+        </h1>
       </div>
       <div className="gold-accent h-[2px]" />
     </header>
