@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronDown, FolderTree, X, Truck, AlertTriangle, User, Building2, Star, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronDown, FolderTree, X, Truck, AlertTriangle, User, Building2, Star } from "lucide-react";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
 import axios from "axios";
@@ -81,24 +81,24 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
               <span className={`ml-auto font-mono text-[#D4AF37]/60 ${mobile ? "text-xs" : "text-[10px]"}`}>{favorites.length}</span>
             </button>
             {favOpen && (
-              <div className="ml-6 mr-2 space-y-0.5 mt-0.5">
+              <div className="ml-6 mr-2 space-y-1 mt-0.5">
                 {favorites.map((fav) => (
-                  <div key={fav.violation_code || fav.regulatory_reference} className="flex items-center gap-1 group">
+                  <div key={fav.violation_code || fav.regulatory_reference} className="flex items-start gap-1.5 px-2 py-1.5 rounded-md hover:bg-[#F1F5F9] transition-colors">
                     <button
                       onClick={() => onFavoriteClick?.(fav)}
-                      className={`flex-1 flex items-start gap-2 px-3 ${mobile ? "py-2.5" : "py-1.5"} rounded-md text-left transition-colors hover:bg-[#F1F5F9]`}
+                      className="flex-1 min-w-0 text-left"
                       data-testid={`fav-tree-${fav.violation_code || fav.regulatory_reference}`}
                     >
-                      <span className={`font-bold text-[#002855] flex-shrink-0 ${mobile ? "text-xs" : "text-[11px]"}`}>{fav.regulatory_reference}</span>
-                      <span className={`text-[#64748B] truncate ${mobile ? "text-xs" : "text-[10px]"}`}>{fav.violation_text?.slice(0, 60)}{fav.violation_text?.length > 60 ? "..." : ""}</span>
+                      <span className={`font-bold text-[#002855] block ${mobile ? "text-xs" : "text-[11px]"}`}>{fav.regulatory_reference}</span>
+                      <span className={`text-[#64748B] block leading-snug ${mobile ? "text-[11px]" : "text-[10px]"}`}>{fav.violation_text?.slice(0, 80)}{fav.violation_text?.length > 80 ? "..." : ""}</span>
                     </button>
                     <button
                       onClick={() => onToggleFavorite?.(fav)}
-                      className="p-1 text-[#CBD5E1] hover:text-[#DC2626] transition-all flex-shrink-0"
+                      className="p-1.5 text-[#DC2626]/40 hover:text-[#DC2626] hover:bg-[#DC2626]/10 rounded transition-all flex-shrink-0 mt-0.5"
                       title="Remove from favorites"
                       data-testid={`fav-remove-${fav.violation_code || fav.regulatory_reference}`}
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
@@ -255,6 +255,14 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
 
 export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCategory, activeRegBase, onSelect, favorites = [], onToggleFavorite, onFavoriteClick }) {
   const [splitPct, setSplitPct] = useState(50);
+  const [headerH, setHeaderH] = useState(70);
+
+  useEffect(() => {
+    if (open) {
+      const h = document.querySelector('[data-testid="app-header"]');
+      if (h) setHeaderH(h.getBoundingClientRect().height);
+    }
+  }, [open]);
   const dragRef = { current: null };
 
   const handleDragStart = (e) => {
@@ -293,11 +301,11 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
             onClick={() => onOpenChange(false)}
             data-testid="tree-drawer-backdrop"
           />
-          <div className="fixed inset-x-0 z-40 lg:hidden" style={{ top: "48px", height: `calc(${splitPct}vh - 48px)` }}>
+          <div className="fixed inset-x-0 z-40 lg:hidden" style={{ top: `${headerH}px`, height: `calc(${splitPct}vh - ${headerH}px)` }}>
             <div className="h-full bg-white flex flex-col shadow-lg">
-              <div className="flex items-center justify-between px-4 py-2 border-b bg-[#002855] flex-shrink-0">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b bg-[#002855] flex-shrink-0">
                 <span className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>Violation Tree</span>
-                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 px-3 text-white/70 hover:text-white hover:bg-white/10 text-xs font-medium" data-testid="tree-drawer-close">
+                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 px-4 text-white/70 hover:text-white hover:bg-white/10 text-xs font-medium" data-testid="tree-drawer-close">
                   Done
                 </Button>
               </div>
