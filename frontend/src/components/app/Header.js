@@ -148,7 +148,7 @@ export function Header({ onUploadClick, stats }) {
             onClick={() => navigate("/level3")}
             className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
           >
-            <span className="text-[11px] font-black sm:mr-1">3</span>
+            <span className="text-[11px] font-black sm:hidden">3</span>
             <span className="hidden sm:inline">Level 3</span>
           </Button>
 
