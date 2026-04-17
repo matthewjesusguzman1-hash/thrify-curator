@@ -10,6 +10,10 @@ import {
 const INSPECTIONS = [
   {
     name: "Level I – Full Inspection",
+    images: [
+      "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/esoihxj9_IMG_1544.jpeg",
+      "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/5nvm3u9i_IMG_1545.jpeg",
+    ],
     steps: [
       "Choose the Inspection Site",
       "Approach the Vehicle",
@@ -85,6 +89,10 @@ const INSPECTIONS = [
   },
   {
     name: "Level II – Walk-Around",
+    images: [
+      "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/6457x1vb_IMG_1546.jpeg",
+      "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/9csotkh6_IMG_1547.jpeg",
+    ],
     steps: [
       "Choose the Inspection Site",
       "Approach the Vehicle",
@@ -121,6 +129,9 @@ const INSPECTIONS = [
   },
   {
     name: "Level III – Driver Only",
+    images: [
+      "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/swsu4e2i_IMG_1541.jpeg",
+    ],
     steps: [
       "Choose the Inspection Site",
       "Approach the Vehicle",
@@ -269,6 +280,20 @@ export function InspectionProcedures({ open, onOpenChange }) {
 
                 {isOpen && (
                   <div className="px-4 py-3 bg-[#F8FAFC] border-t">
+                    {insp.images?.length > 0 && (
+                      <div className="space-y-2 mb-4">
+                        {insp.images.map((src, imgIdx) => (
+                          <a key={imgIdx} href={src} target="_blank" rel="noopener noreferrer" className="block">
+                            <img
+                              src={src}
+                              alt={`${insp.name} schematic ${imgIdx + 1}`}
+                              className="w-full rounded-lg border border-[#E2E8F0] shadow-sm"
+                              loading="lazy"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     <ol className="space-y-1.5">
                       {insp.steps.map((step, sIdx) => (
                         <li key={sIdx} className="flex gap-2.5 text-xs">
