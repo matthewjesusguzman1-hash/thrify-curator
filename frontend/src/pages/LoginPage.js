@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShieldCheck, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 
@@ -62,16 +62,16 @@ export default function LoginPage({ onLogin }) {
     <div className="min-h-screen bg-[#002855] flex items-center justify-center px-4" data-testid="login-page">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#D4AF37] mb-4">
-            <ShieldCheck className="w-8 h-8 text-[#002855]" strokeWidth={2} />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl overflow-hidden mb-4">
+            <img src="/app-icon-180.png" alt="NSP" className="w-full h-full object-cover" />
           </div>
           <h1
             className="text-2xl font-bold text-white tracking-tight"
             style={{ fontFamily: "Outfit, sans-serif" }}
           >
-            SafeSpect
+            NSP
           </h1>
-          <p className="text-sm text-[#8FAEC5] mt-1">Violation Navigator</p>
+          <p className="text-sm text-[#8FAEC5] mt-1">Inspection Navigator</p>
         </div>
 
         <div className="bg-[#0F1D2F] rounded-2xl p-6 border border-white/10 space-y-4">
@@ -148,7 +148,7 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         <p className="text-[10px] text-[#8FAEC5]/40 text-center mt-4">
-          FMCSA Current Violations Database
+          FMCSA Violations Database
         </p>
       </div>
     </div>

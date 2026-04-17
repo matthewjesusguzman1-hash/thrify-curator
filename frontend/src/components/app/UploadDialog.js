@@ -79,7 +79,7 @@ export function UploadDialog({ open, onOpenChange, onUploadSuccess }) {
           </DialogTitle>
           <DialogDescription className="text-xs text-[#64748B]">
             Upload an Excel file (.xlsx) to refresh the violations database.
-            The file should match the SafeSpect format with headers in row 5.
+            The file should match the NSP format with headers in row 5.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,6 +1,6 @@
 {
-  "short_name": "Quick Search",
-  "name": "Quick Search - Find Regs Fast",
+  "short_name": "NSP Navigator",
+  "name": "NSP Inspection Navigator",
   "icons": [
     {
       "src": "app-icon-192.png",
@@ -16,5 +16,5 @@
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#002855",
-  "background_color": "#EFF2F7"
+  "background_color": "#002855"
 }
