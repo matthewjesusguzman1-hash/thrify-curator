@@ -64,11 +64,11 @@ export default function Dashboard() {
   });
   const toggleFavorite = useCallback((v) => {
     setFavorites(prev => {
-      const regRef = v.regulatory_reference;
-      const exists = prev.some(f => f.regulatory_reference === regRef);
+      const key = v.violation_code || v.regulatory_reference;
+      const exists = prev.some(f => (f.violation_code || f.regulatory_reference) === key);
       let next;
       if (exists) {
-        next = prev.filter(f => f.regulatory_reference !== regRef);
+        next = prev.filter(f => (f.violation_code || f.regulatory_reference) !== key);
       } else {
         next = [...prev, { regulatory_reference: v.regulatory_reference, violation_text: v.violation_text, violation_class: v.violation_class, violation_code: v.violation_code, oos_value: v.oos_value }];
       }
@@ -313,7 +313,7 @@ export default function Dashboard() {
           onViolationClick={handleViolationClick}
           columnOrder={columnOrder}
           onColumnOrderChange={setColumnOrder}
-          favorites={favorites.map(f => f.regulatory_reference)}
+          favorites={favorites.map(f => f.violation_code || f.regulatory_reference)}
           onToggleFavorite={toggleFavorite}
         />
       </main>

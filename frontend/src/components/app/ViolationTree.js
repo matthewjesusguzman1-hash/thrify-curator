@@ -83,11 +83,11 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
             {favOpen && (
               <div className="ml-6 mr-2 space-y-0.5 mt-0.5">
                 {favorites.map((fav) => (
-                  <div key={fav.regulatory_reference} className="flex items-center gap-1 group">
+                  <div key={fav.violation_code || fav.regulatory_reference} className="flex items-center gap-1 group">
                     <button
                       onClick={() => onFavoriteClick?.(fav)}
                       className={`flex-1 flex items-start gap-2 px-3 ${mobile ? "py-2.5" : "py-1.5"} rounded-md text-left transition-colors hover:bg-[#F1F5F9]`}
-                      data-testid={`fav-tree-${fav.regulatory_reference}`}
+                      data-testid={`fav-tree-${fav.violation_code || fav.regulatory_reference}`}
                     >
                       <span className={`font-bold text-[#002855] flex-shrink-0 ${mobile ? "text-xs" : "text-[11px]"}`}>{fav.regulatory_reference}</span>
                       <span className={`text-[#64748B] truncate ${mobile ? "text-xs" : "text-[10px]"}`}>{fav.violation_text?.slice(0, 60)}{fav.violation_text?.length > 60 ? "..." : ""}</span>
@@ -96,7 +96,7 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                       onClick={() => onToggleFavorite?.(fav)}
                       className="p-1 opacity-0 group-hover:opacity-100 sm:opacity-100 text-[#CBD5E1] hover:text-[#DC2626] transition-all flex-shrink-0"
                       title="Remove from favorites"
-                      data-testid={`fav-remove-${fav.regulatory_reference}`}
+                      data-testid={`fav-remove-${fav.violation_code || fav.regulatory_reference}`}
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>

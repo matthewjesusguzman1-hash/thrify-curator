@@ -80,6 +80,7 @@ export function ViolationTable({
   onToggleFavorite,
 }) {
   const favSet = new Set(favorites);
+  const isFav = (v) => favSet.has(v.violation_code || v.regulatory_reference);
   const orderedColumns = columnOrder.map(getColumnDef);
 
   if (isLoading) {
@@ -181,9 +182,9 @@ export function ViolationTable({
                 onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(v); }}
                 className="p-1 -mr-1 transition-colors"
                 data-testid={`fav-mobile-${idx}`}
-                title={favSet.has(v.regulatory_reference) ? "Remove from favorites" : "Add to favorites"}
+                title={isFav(v) ? "Remove from favorites" : "Add to favorites"}
               >
-                <Star className={`w-4 h-4 ${favSet.has(v.regulatory_reference) ? "fill-[#D4AF37] text-[#D4AF37]" : "text-[#CBD5E1]"}`} />
+                <Star className={`w-4 h-4 ${isFav(v) ? "fill-[#D4AF37] text-[#D4AF37]" : "text-[#CBD5E1]"}`} />
               </button>
             </div>
           </div>
@@ -228,7 +229,7 @@ export function ViolationTable({
                       className="p-1 transition-colors hover:scale-110"
                       data-testid={`fav-desktop-${idx}`}
                     >
-                      <Star className={`w-3.5 h-3.5 ${favSet.has(v.regulatory_reference) ? "fill-[#D4AF37] text-[#D4AF37]" : "text-[#CBD5E1] hover:text-[#D4AF37]"}`} />
+                      <Star className={`w-3.5 h-3.5 ${isFav(v) ? "fill-[#D4AF37] text-[#D4AF37]" : "text-[#CBD5E1] hover:text-[#D4AF37]"}`} />
                     </button>
                   </TableCell>
                   {columnOrder.map((colKey) => renderCell(v, colKey, idx))}
