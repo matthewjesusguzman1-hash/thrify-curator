@@ -1036,6 +1036,20 @@ async def list_users(admin_pin: str = Query(...)):
     users = await db.users.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
     return {"users": users, "total": len(users)}
 
+@api_router.put("/admin/users/{badge_num}/reset-pin")
+async def reset_user_pin(badge_num: str, req: dict):
+    admin_pin = req.get("admin_pin", "")
+    new_pin = req.get("new_pin", "")
+    if admin_pin != ADMIN_PIN:
+        raise HTTPException(status_code=401, detail="Invalid admin PIN")
+    if not new_pin or len(new_pin) < 4:
+        raise HTTPException(status_code=400, detail="New PIN must be at least 4 digits")
+    result = await db.users.update_one({"badge": badge_num}, {"$set": {"pin": new_pin}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Badge not found")
+    return {"message": f"PIN reset for badge {badge_num}"}
+
+
 
 # ========== INSPECTION ENDPOINTS ==========
 

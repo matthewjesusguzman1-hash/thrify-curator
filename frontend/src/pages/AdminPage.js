@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Shield, Users, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, Shield, Users, Eye, EyeOff, Search, RotateCcw, X } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 
@@ -14,6 +14,10 @@ export default function AdminPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showPins, setShowPins] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [resetBadge, setResetBadge] = useState(null);
+  const [newPin, setNewPin] = useState("");
+  const [resetting, setResetting] = useState(false);
 
   const handleLogin = async () => {
     if (!adminPin.trim()) return;
@@ -44,6 +48,33 @@ export default function AdminPage() {
       }
     } catch { toast.error("Failed to load users"); }
   };
+
+  const handleResetPin = async (badge) => {
+    if (!newPin || newPin.length < 4) { toast.error("PIN must be at least 4 digits"); return; }
+    setResetting(true);
+    try {
+      const res = await fetch(`${API}/api/admin/users/${badge}/reset-pin`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_pin: adminPin, new_pin: newPin }),
+      });
+      if (res.ok) {
+        toast.success(`PIN reset for badge ${badge}`);
+        setResetBadge(null);
+        setNewPin("");
+        fetchUsers();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || "Reset failed");
+      }
+    } catch { toast.error("Connection error"); }
+    setResetting(false);
+  };
+
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm.trim()) return users;
+    return users.filter(u => u.badge.includes(searchTerm.trim()));
+  }, [users, searchTerm]);
 
   return (
     <div className="min-h-screen bg-[#F0F2F5]" data-testid="admin-page">
@@ -93,7 +124,7 @@ export default function AdminPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-[#002855]" />
                 <h2 className="text-lg font-bold text-[#0F172A]">Registered Users</h2>
@@ -109,8 +140,29 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {users.length === 0 ? (
-              <p className="text-sm text-[#94A3B8] text-center py-8">No users registered yet</p>
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value.replace(/\D/g, ""))}
+                placeholder="Search by badge number..."
+                className="w-full pl-9 pr-9 py-2.5 text-sm rounded-lg border border-[#E2E8F0] bg-white focus:outline-none focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] transition-all"
+                data-testid="admin-search"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#334155]">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {filteredUsers.length === 0 ? (
+              <p className="text-sm text-[#94A3B8] text-center py-8">
+                {searchTerm ? `No users matching "${searchTerm}"` : "No users registered yet"}
+              </p>
             ) : (
               <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden shadow-sm">
                 <table className="w-full">
@@ -119,20 +171,69 @@ export default function AdminPage() {
                       <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">Badge</th>
                       <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">PIN</th>
                       <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">Registered</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u) => (
+                    {filteredUsers.map((u) => (
                       <tr key={u.badge} className="border-b border-[#F1F5F9] last:border-0 hover:bg-[#F8FAFC]" data-testid={`admin-user-${u.badge}`}>
                         <td className="px-4 py-3 text-sm font-bold text-[#002855] tracking-wider">{u.badge}</td>
-                        <td className="px-4 py-3 text-sm font-mono text-[#64748B]">{showPins ? u.pin : "****"}</td>
+                        <td className="px-4 py-3 text-sm font-mono text-[#64748B]">
+                          {resetBadge === u.badge ? (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={newPin}
+                                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                                onKeyDown={(e) => e.key === "Enter" && handleResetPin(u.badge)}
+                                placeholder="New PIN"
+                                autoFocus
+                                className="w-20 px-2 py-1 text-xs rounded border border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] outline-none text-center font-mono"
+                                data-testid={`reset-pin-input-${u.badge}`}
+                              />
+                              <button
+                                onClick={() => handleResetPin(u.badge)}
+                                disabled={resetting || newPin.length < 4}
+                                className="text-[10px] font-bold text-white bg-[#D4AF37] px-2 py-1 rounded hover:bg-[#c9a432] disabled:opacity-40"
+                                data-testid={`reset-pin-save-${u.badge}`}
+                              >
+                                {resetting ? "..." : "Save"}
+                              </button>
+                              <button
+                                onClick={() => { setResetBadge(null); setNewPin(""); }}
+                                className="text-[#94A3B8] hover:text-[#334155] p-0.5"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            showPins ? u.pin : "****"
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-xs text-[#94A3B8]">{new Date(u.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-right">
+                          {resetBadge !== u.badge && (
+                            <button
+                              onClick={() => { setResetBadge(u.badge); setNewPin(""); }}
+                              className="inline-flex items-center gap-1 text-[10px] font-medium text-[#64748B] hover:text-[#002855] transition-colors px-2 py-1 rounded hover:bg-[#F1F5F9]"
+                              data-testid={`reset-pin-btn-${u.badge}`}
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              Reset PIN
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
+
+            <p className="text-[10px] text-[#94A3B8] text-center">
+              Showing {filteredUsers.length} of {total} users
+            </p>
           </div>
         )}
       </main>
