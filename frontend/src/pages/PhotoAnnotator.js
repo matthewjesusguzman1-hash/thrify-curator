@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2, Share2, FolderPlus, Check, X as XIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2, Share2, FolderPlus, Check, X as XIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 
@@ -28,6 +28,8 @@ export default function PhotoAnnotator() {
   const [color, setColor] = useState("#FF0000");
   const [lineWidth, setLineWidth] = useState(3);
   const [history, setHistory] = useState([]);
+  const [photoQueue, setPhotoQueue] = useState([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStart, setDrawStart] = useState(null);
   const [lastPos, setLastPos] = useState(null);
@@ -92,11 +94,43 @@ export default function PhotoAnnotator() {
         setImgDimensions({ w: Math.round(img.width * scale), h: Math.round(img.height * scale) });
         setHistory([]);
         setZoom(1);
+        setPreview(null);
       };
       img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   }, []);
+
+  /* Load multiple files into queue */
+  const loadFiles = useCallback((files) => {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
+    const queue = fileArr.map(f => ({ file: f, annotations: [] }));
+    setPhotoQueue(queue);
+    setCurrentIdx(0);
+    loadImage(queue[0].file);
+  }, [loadImage]);
+
+  /* Save current annotations before switching */
+  const saveCurrentAnnotations = useCallback(() => {
+    if (photoQueue.length > 0) {
+      setPhotoQueue(prev => {
+        const next = [...prev];
+        if (next[currentIdx]) next[currentIdx] = { ...next[currentIdx], annotations: history };
+        return next;
+      });
+    }
+  }, [photoQueue.length, currentIdx, history]);
+
+  /* Navigate to a specific photo in queue */
+  const goToPhoto = useCallback((idx) => {
+    if (idx < 0 || idx >= photoQueue.length) return;
+    saveCurrentAnnotations();
+    setCurrentIdx(idx);
+    const entry = photoQueue[idx];
+    loadImage(entry.file);
+    setTimeout(() => setHistory(entry.annotations || []), 100);
+  }, [photoQueue, saveCurrentAnnotations, loadImage]);
 
   /* Redraw */
   const redraw = useCallback(() => {
@@ -466,14 +500,52 @@ export default function PhotoAnnotator() {
                 <span className="text-xs font-semibold text-white/80">Upload Photo</span>
               </button>
             </div>
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files[0] && loadImage(e.target.files[0])} />
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && loadImage(e.target.files[0])} />
-            <p className="text-[11px] text-white/40 text-center">Take a photo or upload one to annotate. Or open a saved inspection photo to edit.</p>
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files[0] && loadFiles(e.target.files)} />
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files?.length && loadFiles(e.target.files)} />
+            <p className="text-[11px] text-white/40 text-center">Take a photo or select one or more to annotate.</p>
           </div>
         )}
 
         {image && (
           <>
+            {/* Photo queue navigation */}
+            {photoQueue.length > 1 && (
+              <div className="flex items-center gap-2 bg-[#002855]/60 rounded-lg px-3 py-2 border border-white/10">
+                <button
+                  onClick={() => goToPhoto(currentIdx - 1)}
+                  disabled={currentIdx === 0}
+                  className="p-1 rounded text-white/60 hover:text-white disabled:opacity-20 transition-colors"
+                  data-testid="photo-prev"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex gap-1.5 overflow-x-auto flex-1 py-0.5">
+                  {photoQueue.map((entry, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => goToPhoto(idx)}
+                      className={`w-8 h-8 rounded flex-shrink-0 border-2 transition-all text-[9px] font-bold ${
+                        idx === currentIdx
+                          ? "border-[#D4AF37] bg-[#D4AF37]/20 text-[#D4AF37]"
+                          : "border-white/10 bg-white/5 text-white/40 hover:border-white/30"
+                      }`}
+                      data-testid={`photo-thumb-${idx}`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] text-white/40 flex-shrink-0">{currentIdx + 1}/{photoQueue.length}</span>
+                <button
+                  onClick={() => goToPhoto(currentIdx + 1)}
+                  disabled={currentIdx === photoQueue.length - 1}
+                  className="p-1 rounded text-white/60 hover:text-white disabled:opacity-20 transition-colors"
+                  data-testid="photo-next"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <button onClick={() => setZoom(z => Math.max(z - 0.25, 0.5))} className="p-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white" data-testid="zoom-out-btn"><ZoomOut className="w-4 h-4" /></button>
@@ -533,7 +605,7 @@ export default function PhotoAnnotator() {
                   <Trash2 className="w-3.5 h-3.5" /> Clear All
                 </button>
                 {!inspectionId && (
-                  <button onClick={() => { setImage(null); setHistory([]); setZoom(1); }} className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white text-[10px] font-semibold transition-all" data-testid="new-photo-btn">
+                  <button onClick={() => { setImage(null); setHistory([]); setZoom(1); setPhotoQueue([]); setCurrentIdx(0); }} className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white text-[10px] font-semibold transition-all" data-testid="new-photo-btn">
                     <Camera className="w-3.5 h-3.5" /> New
                   </button>
                 )}
