@@ -1023,6 +1023,24 @@ async def check_badge(req: dict):
     user = await db.users.find_one({"badge": badge})
     return {"exists": user is not None}
 
+@api_router.put("/auth/change-pin")
+async def change_pin(req: dict):
+    badge = req.get("badge", "").strip()
+    current_pin = req.get("current_pin", "").strip()
+    new_pin = req.get("new_pin", "").strip()
+    if not badge or not current_pin or not new_pin:
+        raise HTTPException(status_code=400, detail="All fields required")
+    if len(new_pin) < 4:
+        raise HTTPException(status_code=400, detail="New PIN must be at least 4 digits")
+    user = await db.users.find_one({"badge": badge})
+    if not user:
+        raise HTTPException(status_code=404, detail="Badge not found")
+    if user["pin"] != current_pin:
+        raise HTTPException(status_code=401, detail="Current PIN is incorrect")
+    await db.users.update_one({"badge": badge}, {"$set": {"pin": new_pin}})
+    return {"message": "PIN changed successfully"}
+
+
 @api_router.post("/admin/login")
 async def admin_login(req: AdminLoginRequest):
     if req.admin_pin != ADMIN_PIN:

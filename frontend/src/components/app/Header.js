@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield } from "lucide-react";
+import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -116,6 +116,103 @@ const JOB_AIDS = [
   },
 ];
 
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+function ChangePinPopover({ badge, navigate, logout }) {
+  const [mode, setMode] = useState("menu"); // menu | change
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleChangePin = async () => {
+    if (currentPin.length < 4) { setError("Enter current PIN"); return; }
+    if (newPin.length < 4) { setError("New PIN must be 4+ digits"); return; }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`${API_URL}/api/auth/change-pin`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ badge, current_pin: currentPin, new_pin: newPin }),
+      });
+      if (res.ok) {
+        setMode("menu");
+        setCurrentPin("");
+        setNewPin("");
+      } else {
+        const err = await res.json();
+        setError(err.detail || "Failed to change PIN");
+      }
+    } catch { setError("Connection error"); }
+    setSaving(false);
+  };
+
+  if (mode === "change") {
+    return (
+      <div className="space-y-2">
+        <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider px-1">Change PIN</p>
+        <input
+          type="password"
+          inputMode="numeric"
+          value={currentPin}
+          onChange={(e) => { setCurrentPin(e.target.value.replace(/\D/g, "").slice(0, 8)); setError(""); }}
+          placeholder="Current PIN"
+          autoFocus
+          className="w-full px-3 py-2 text-xs rounded-lg border border-[#E2E8F0] focus:ring-1 focus:ring-[#002855] outline-none text-center font-mono tracking-widest"
+          data-testid="current-pin-input"
+        />
+        <input
+          type="password"
+          inputMode="numeric"
+          value={newPin}
+          onChange={(e) => { setNewPin(e.target.value.replace(/\D/g, "").slice(0, 8)); setError(""); }}
+          onKeyDown={(e) => e.key === "Enter" && handleChangePin()}
+          placeholder="New PIN"
+          className="w-full px-3 py-2 text-xs rounded-lg border border-[#E2E8F0] focus:ring-1 focus:ring-[#002855] outline-none text-center font-mono tracking-widest"
+          data-testid="new-pin-input"
+        />
+        {error && <p className="text-[10px] text-[#EF4444] text-center" data-testid="change-pin-error">{error}</p>}
+        <div className="flex gap-1.5">
+          <button onClick={() => { setMode("menu"); setError(""); setCurrentPin(""); setNewPin(""); }} className="flex-1 px-2 py-1.5 text-[10px] rounded-md bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]">Cancel</button>
+          <button onClick={handleChangePin} disabled={saving} className="flex-1 px-2 py-1.5 text-[10px] rounded-md bg-[#D4AF37] text-[#002855] font-bold hover:bg-[#c9a432] disabled:opacity-50" data-testid="save-pin-btn">{saving ? "..." : "Save"}</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <p className="text-[10px] text-[#94A3B8] px-2 pb-1">Badge #{badge}</p>
+      <button
+        onClick={() => setMode("change")}
+        className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
+        data-testid="change-pin-link"
+      >
+        <KeyRound className="w-3.5 h-3.5 text-[#64748B]" />
+        Change PIN
+      </button>
+      <button
+        onClick={() => navigate("/admin")}
+        className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
+        data-testid="admin-link"
+      >
+        <Shield className="w-3.5 h-3.5 text-[#64748B]" />
+        Admin Panel
+      </button>
+      <button
+        onClick={logout}
+        className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#FEE2E2] text-xs text-[#DC2626] transition-colors"
+        data-testid="logout-btn"
+      >
+        <LogOut className="w-3.5 h-3.5" />
+        Sign Out
+      </button>
+    </>
+  );
+}
+
+
 export function Header({ onUploadClick, stats }) {
   const navigate = useNavigate();
   const { badge, logout } = useAuth();
@@ -146,24 +243,8 @@ export function Header({ onUploadClick, stats }) {
                 <span className="text-[11px] font-bold text-[#D4AF37] tracking-wider">{badge}</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-[180px] p-2" align="end">
-              <p className="text-[10px] text-[#94A3B8] px-2 pb-1">Badge #{badge}</p>
-              <button
-                onClick={() => navigate("/admin")}
-                className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
-                data-testid="admin-link"
-              >
-                <Shield className="w-3.5 h-3.5 text-[#64748B]" />
-                Admin Panel
-              </button>
-              <button
-                onClick={logout}
-                className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#FEE2E2] text-xs text-[#DC2626] transition-colors"
-                data-testid="logout-btn"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign Out
-              </button>
+            <PopoverContent className="w-[220px] p-2" align="end">
+              <ChangePinPopover badge={badge} navigate={navigate} logout={logout} />
             </PopoverContent>
           </Popover>
         </div>
