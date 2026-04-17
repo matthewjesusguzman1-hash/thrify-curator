@@ -392,7 +392,7 @@ export default function PhotoAnnotator() {
               <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: imgDimensions.w, height: imgDimensions.h }}>
                 <canvas
                   ref={canvasRef}
-                  style={{ width: imgDimensions.w, height: imgDimensions.h, display: "block", touchAction: tool === "select" ? "auto" : "none", cursor: tool === "text" ? "crosshair" : tool === "select" ? "default" : "crosshair" }}
+                  style={{ width: imgDimensions.w, height: imgDimensions.h, display: "block", touchAction: "none", cursor: tool === "text" ? "crosshair" : tool === "select" ? "default" : "crosshair" }}
                   onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
                   onPointerLeave={() => { if (isDrawing) { setIsDrawing(false); if ((tool === "circle" || tool === "arrow") && drawStart && lastPos) setHistory(prev => [...prev, { type: tool, color, lineWidth, start: drawStart, end: lastPos }]); setDrawStart(null); setLastPos(null); } if (dragIdx !== null) setDragIdx(null); }}
                   data-testid="annotation-canvas"
