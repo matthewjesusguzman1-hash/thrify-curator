@@ -43,6 +43,7 @@ export default function PhotoAnnotator() {
   const [showInspPicker, setShowInspPicker] = useState(false);
   const [inspections, setInspections] = useState([]);
   const [loadingInsps, setLoadingInsps] = useState(false);
+  const [newInspTitle, setNewInspTitle] = useState("");
 
   // URL params for editing inspection photos
   const inspectionId = searchParams.get("inspection");
@@ -399,6 +400,25 @@ export default function PhotoAnnotator() {
     setSaving(false);
   };
 
+  const createAndAdd = async () => {
+    const title = newInspTitle.trim() || `Inspection ${new Date().toLocaleDateString()}`;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/api/inspections`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      if (res.ok) {
+        const insp = await res.json();
+        setNewInspTitle("");
+        await addToInspection(insp.id);
+      } else toast.error("Failed to create inspection");
+    } catch { toast.error("Failed to create inspection"); }
+    setSaving(false);
+  };
+
+
   return (
     <div className="min-h-screen bg-[#0B1729]" data-testid="photo-annotator">
       <div className="sticky top-0 z-50 bg-[#002855] border-b border-[#D4AF37]/20 px-3 py-2">
@@ -544,13 +564,35 @@ export default function PhotoAnnotator() {
                 <XIcon className="w-4 h-4" />
               </button>
             </div>
+            <div className="px-3 pt-3 pb-2 border-b border-white/10">
+              <p className="text-[10px] text-white/40 font-medium mb-1.5">New Inspection</p>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={newInspTitle}
+                  onChange={(e) => setNewInspTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && createAndAdd()}
+                  placeholder="Inspection name..."
+                  className="flex-1 px-2.5 py-2 rounded-lg border border-white/10 bg-white/5 text-white text-xs placeholder:text-white/30 focus:ring-1 focus:ring-[#D4AF37] outline-none"
+                  data-testid="new-inspection-input"
+                />
+                <button
+                  onClick={createAndAdd}
+                  disabled={saving}
+                  className="px-3 py-2 rounded-lg bg-[#D4AF37] text-[#002855] text-xs font-bold disabled:opacity-50 flex-shrink-0"
+                  data-testid="create-inspection-btn"
+                >
+                  {saving ? "..." : "Create & Add"}
+                </button>
+              </div>
+            </div>
             <div className="overflow-y-auto max-h-[55vh] p-2">
               {loadingInsps ? (
                 <p className="text-xs text-white/40 text-center py-8">Loading inspections...</p>
               ) : inspections.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-xs text-white/40">No inspections found</p>
-                  <p className="text-[10px] text-white/25 mt-1">Create one from the Inspections page first</p>
+                <div className="text-center py-6">
+                  <p className="text-xs text-white/40">No existing inspections</p>
+                  <p className="text-[10px] text-white/25 mt-1">Create one above to get started</p>
                 </div>
               ) : (
                 inspections.map((insp) => (
