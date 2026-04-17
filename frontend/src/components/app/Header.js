@@ -85,7 +85,7 @@ const FLOWCHARTS = [
     icon: FileText,
   },
   {
-    label: "Agricultural Exemptions",
+    label: "Agricultural Operations",
     url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/mnzrncpv_visorcard.pdf",
     description: "Quick reference visor card (PDF)",
     icon: FileText,
