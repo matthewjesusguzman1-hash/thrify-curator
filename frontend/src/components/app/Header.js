@@ -193,14 +193,6 @@ function ChangePinPopover({ badge, navigate, logout }) {
         Change PIN
       </button>
       <button
-        onClick={() => navigate("/admin")}
-        className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
-        data-testid="admin-link"
-      >
-        <Shield className="w-3.5 h-3.5 text-[#64748B]" />
-        Admin Panel
-      </button>
-      <button
         onClick={logout}
         className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#FEE2E2] text-xs text-[#DC2626] transition-colors"
         data-testid="logout-btn"
