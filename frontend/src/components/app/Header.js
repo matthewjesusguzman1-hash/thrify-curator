@@ -1,4 +1,5 @@
-import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase } from "lucide-react";
+import { useState } from "react";
+import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -100,10 +101,17 @@ const JOB_AIDS = [
     url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/qd97fk82_IMG_1543.jpeg",
     description: "Interstate FMCSR agricultural flowchart",
   },
+  {
+    label: "Windshield Damage Reference",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/y6quiga3_IMG_1553.jpeg",
+    description: "Acceptable vs unacceptable damage zones",
+  },
 ];
 
 export function Header({ onUploadClick, stats }) {
   const navigate = useNavigate();
+  const [openSections, setOpenSections] = useState({});
+  const toggle = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
   return (
     <header
       data-testid="app-header"
@@ -196,87 +204,109 @@ export function Header({ onUploadClick, stats }) {
               </Button>
             </PopoverTrigger>
             <PopoverContent
-              className="w-[260px] p-2 max-h-[420px] overflow-y-auto"
+              className="w-[280px] p-2 max-h-[480px] overflow-y-auto"
               align="end"
               data-testid="cvsa-popover"
             >
-              <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">
-                CVSA Resources
-              </p>
-              {CVSA_LINKS.map((link) => (
-                <a
-                  key={link.url}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
-                  data-testid={`cvsa-link-${link.label.replace(/\s/g, '-').toLowerCase()}`}
-                >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#002855]/10 flex-shrink-0">
-                    <link.icon className="w-4 h-4 text-[#002855]" />
+              {/* CVSA Resources — collapsible */}
+              <button onClick={() => toggle("cvsa")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">CVSA Resources</p>
+                {openSections.cvsa ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
+              </button>
+              {openSections.cvsa && (
+                <div className="space-y-0.5 mb-1">
+                  {CVSA_LINKS.map((link) => (
+                    <a
+                      key={link.url}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
+                      data-testid={`cvsa-link-${link.label.replace(/\s/g, '-').toLowerCase()}`}
+                    >
+                      <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#002855]/10 flex-shrink-0">
+                        <link.icon className="w-4 h-4 text-[#002855]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                          {link.label}
+                          <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
+                        </p>
+                        <p className="text-[10px] text-[#64748B]">{link.description}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {/* Flowcharts — collapsible */}
+              <div className="border-t border-[#E2E8F0] mt-1 pt-1">
+                <button onClick={() => toggle("flowcharts")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">Flowcharts</p>
+                  {openSections.flowcharts ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
+                </button>
+                {openSections.flowcharts && (
+                  <div className="space-y-0.5 mb-1">
+                    {FLOWCHARTS.map((link) => (
+                      <a
+                        key={link.url}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
+                        data-testid={`flowchart-${link.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#D4AF37]/10 flex-shrink-0">
+                          <link.icon className="w-4 h-4 text-[#D4AF37]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                            {link.label}
+                            <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
+                          </p>
+                          <p className="text-[10px] text-[#64748B]">{link.description}</p>
+                        </div>
+                      </a>
+                    ))}
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
-                      {link.label}
-                      <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
-                    </p>
-                    <p className="text-[10px] text-[#64748B]">{link.description}</p>
+                )}
+              </div>
+
+              {/* Job Aids — collapsible */}
+              <div className="border-t border-[#E2E8F0] mt-1 pt-1">
+                <button onClick={() => toggle("jobaids")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">Job Aids</p>
+                  {openSections.jobaids ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
+                </button>
+                {openSections.jobaids && (
+                  <div className="space-y-0.5 mb-1">
+                    {JOB_AIDS.map((aid) => (
+                      <a
+                        key={aid.url}
+                        href={aid.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
+                        data-testid={`job-aid-${aid.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#16A34A]/10 flex-shrink-0">
+                          <Briefcase className="w-4 h-4 text-[#16A34A]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                            {aid.label}
+                            <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
+                          </p>
+                          <p className="text-[10px] text-[#64748B]">{aid.description}</p>
+                        </div>
+                      </a>
+                    ))}
                   </div>
-                </a>
-              ))}
-              <div className="border-t border-[#E2E8F0] mt-2 pt-2">
-                <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">
-                  Flowcharts
-                </p>
-                {FLOWCHARTS.map((link) => (
-                  <a
-                    key={link.url}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
-                    data-testid={`flowchart-${link.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
-                  >
-                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#D4AF37]/10 flex-shrink-0">
-                      <link.icon className="w-4 h-4 text-[#D4AF37]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
-                        {link.label}
-                        <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
-                      </p>
-                      <p className="text-[10px] text-[#64748B]">{link.description}</p>
-                    </div>
-                  </a>
-                ))}
+                )}
               </div>
-              <div className="border-t border-[#E2E8F0] mt-2 pt-2">
-                <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8] px-2 pb-2">
-                  Job Aids
-                </p>
-                {JOB_AIDS.map((aid) => (
-                  <a
-                    key={aid.url}
-                    href={aid.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
-                    data-testid={`job-aid-${aid.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
-                  >
-                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#16A34A]/10 flex-shrink-0">
-                      <Briefcase className="w-4 h-4 text-[#16A34A]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
-                        {aid.label}
-                        <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
-                      </p>
-                      <p className="text-[10px] text-[#64748B]">{aid.description}</p>
-                    </div>
-                  </a>
-                ))}
-              </div>
-              <div className="border-t border-[#E2E8F0] mt-2 pt-2">
+
+              {/* Upload — always visible */}
+              <div className="border-t border-[#E2E8F0] mt-1 pt-1">
                 <button
                   onClick={onUploadClick}
                   className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group w-full text-left"
