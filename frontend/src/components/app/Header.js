@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound } from "lucide-react";
+import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import { NotesPanel } from "./NotesPanel";
 import {
   Popover,
   PopoverContent,
@@ -209,8 +210,10 @@ export function Header({ onUploadClick, stats }) {
   const navigate = useNavigate();
   const { badge, logout } = useAuth();
   const [openSections, setOpenSections] = useState({});
+  const [notesOpen, setNotesOpen] = useState(false);
   const toggle = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
   return (
+    <>
     <header
       data-testid="app-header"
       className="sticky top-0 z-50 bg-[#002855] border-b border-[#001a3a]"
@@ -228,6 +231,14 @@ export function Header({ onUploadClick, stats }) {
           </span>
         </h1>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setNotesOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 transition-colors"
+            data-testid="notes-btn"
+          >
+            <MessageSquarePlus className="w-3 h-3 text-[#8FAEC5]" />
+            <span className="text-[11px] text-[#8FAEC5] font-medium hidden sm:inline">Notes</span>
+          </button>
           <Popover>
             <PopoverTrigger asChild>
               <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 transition-colors" data-testid="badge-display">
@@ -451,5 +462,7 @@ export function Header({ onUploadClick, stats }) {
 
       <div className="gold-accent h-[2px]" />
     </header>
+    <NotesPanel open={notesOpen} onClose={() => setNotesOpen(false)} />
+    </>
   );
 }

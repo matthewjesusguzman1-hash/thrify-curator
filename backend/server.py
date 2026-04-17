@@ -1054,6 +1054,56 @@ async def list_users(admin_pin: str = Query(...)):
     users = await db.users.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
     return {"users": users, "total": len(users)}
 
+# ========== TEST NOTES ENDPOINTS ==========
+
+@api_router.get("/notes")
+async def list_notes():
+    notes = await db.test_notes.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"notes": notes}
+
+@api_router.post("/notes")
+async def create_note(req: dict):
+    badge = req.get("badge", "").strip()
+    text = req.get("text", "").strip()
+    if not badge or not text:
+        raise HTTPException(status_code=400, detail="Badge and text required")
+    note = {
+        "id": str(uuid.uuid4()),
+        "badge": badge,
+        "text": text,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.test_notes.insert_one(note)
+    note.pop("_id", None)
+    return note
+
+@api_router.put("/notes/{note_id}")
+async def update_note(note_id: str, req: dict):
+    badge = req.get("badge", "").strip()
+    text = req.get("text", "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Text required")
+    existing = await db.test_notes.find_one({"id": note_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Note not found")
+    if existing["badge"] != badge:
+        raise HTTPException(status_code=403, detail="You can only edit your own notes")
+    await db.test_notes.update_one({"id": note_id}, {"$set": {"text": text, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    return {"message": "Note updated"}
+
+@api_router.delete("/notes/{note_id}")
+async def delete_note(note_id: str, badge: str = Query(...)):
+    existing = await db.test_notes.find_one({"id": note_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Note not found")
+    if existing["badge"] != badge:
+        raise HTTPException(status_code=403, detail="You can only delete your own notes")
+    await db.test_notes.delete_one({"id": note_id})
+    return {"message": "Note deleted"}
+
+
+
 @api_router.put("/admin/users/{badge_num}/reset-pin")
 async def reset_user_pin(badge_num: str, req: dict):
     admin_pin = req.get("admin_pin", "")
