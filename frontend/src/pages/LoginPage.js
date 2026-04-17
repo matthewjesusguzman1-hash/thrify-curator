@@ -222,10 +222,12 @@ export default function LoginPage({ onLogin }) {
               </Button>
             </>
           ) : (
-            <>
+            <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} autoComplete="on">
+              {/* Hidden username field for browser password manager */}
+              <input type="text" name="username" autoComplete="username" value={badge} readOnly className="absolute opacity-0 h-0 w-0 pointer-events-none" tabIndex={-1} />
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-white/40">Badge: <strong className="text-[#D4AF37]">{badge}</strong></span>
-                <button onClick={() => { setStep("badge"); setPin(""); setError(""); }} className="text-[10px] text-white/30 hover:text-white/60">Change</button>
+                <button type="button" onClick={() => { setStep("badge"); setPin(""); setError(""); }} className="text-[10px] text-white/30 hover:text-white/60">Change</button>
               </div>
               <div>
                 <label className="text-[11px] font-medium text-white/50 uppercase tracking-wider block mb-2">
@@ -233,10 +235,11 @@ export default function LoginPage({ onLogin }) {
                 </label>
                 <input
                   type="password"
+                  name="password"
+                  autoComplete={isNew ? "new-password" : "current-password"}
                   inputMode="numeric"
                   value={pin}
                   onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 8)); setError(""); }}
-                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                   placeholder={isNew ? "Create a 4+ digit PIN" : "Enter your PIN"}
                   autoFocus
                   className={`w-full px-4 py-3 rounded-xl bg-white/5 border text-white text-center text-2xl font-bold tracking-[0.3em] placeholder:text-white/20 placeholder:text-base placeholder:tracking-normal focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none ${error ? "border-[#EF4444]" : "border-white/10"}`}
@@ -254,14 +257,14 @@ export default function LoginPage({ onLogin }) {
                 )}
               </div>
               <Button
-                onClick={handleSubmit}
+                type="submit"
                 disabled={pin.length < 4 || loading}
-                className="w-full bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] h-12 text-sm font-bold"
+                className="w-full bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] h-12 text-sm font-bold mt-4"
                 data-testid="login-submit-btn"
               >
                 {loading ? "..." : isNew ? "Create Account & Sign In" : "Sign In"}
               </Button>
-            </>
+            </form>
           )}
         </div>
 
