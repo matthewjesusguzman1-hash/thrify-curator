@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const COLORS = ["#FF0000", "#FFFF00", "#00FF00", "#0088FF", "#FF00FF", "#FFFFFF", "#000000"];
 const TOOLS = [
+  { id: "select", icon: MousePointer2, label: "Select" },
   { id: "freehand", icon: Pencil, label: "Draw" },
   { id: "circle", icon: Circle, label: "Circle" },
   { id: "arrow", icon: ArrowUp, label: "Arrow" },
@@ -171,14 +172,80 @@ export default function PhotoAnnotator() {
     return -1;
   };
 
+  /* Hit-test any item (text, circle, arrow, freehand) — used in select mode */
+  const HIT_RADIUS = 14;
+  const findItemAt = (pos) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return -1;
+    const ctx = canvas.getContext("2d");
+    for (let i = history.length - 1; i >= 0; i--) {
+      const item = history[i];
+      if (item.type === "text") {
+        const fs = item.fontSize || 16;
+        ctx.font = `bold ${fs}px sans-serif`;
+        const w = ctx.measureText(item.text).width + 4;
+        if (pos.x >= item.pos.x - 2 && pos.x <= item.pos.x - 2 + w && pos.y >= item.pos.y - fs + 2 && pos.y <= item.pos.y + 6) return i;
+      } else if (item.type === "circle" && item.start && item.end) {
+        const dx = item.end.x - item.start.x;
+        const dy = item.end.y - item.start.y;
+        const r = Math.sqrt(dx * dx + dy * dy);
+        const dist = Math.sqrt((pos.x - item.start.x) ** 2 + (pos.y - item.start.y) ** 2);
+        if (Math.abs(dist - r) < HIT_RADIUS || dist < r) return i;
+      } else if (item.type === "arrow" && item.start && item.end) {
+        const lx = item.end.x - item.start.x, ly = item.end.y - item.start.y;
+        const len2 = lx * lx + ly * ly;
+        if (len2 === 0) { if (Math.sqrt((pos.x - item.start.x) ** 2 + (pos.y - item.start.y) ** 2) < HIT_RADIUS) return i; continue; }
+        let t = ((pos.x - item.start.x) * lx + (pos.y - item.start.y) * ly) / len2;
+        t = Math.max(0, Math.min(1, t));
+        const px = item.start.x + t * lx, py = item.start.y + t * ly;
+        if (Math.sqrt((pos.x - px) ** 2 + (pos.y - py) ** 2) < HIT_RADIUS) return i;
+      } else if (item.type === "freehand" && item.points?.length > 0) {
+        for (const pt of item.points) {
+          if (Math.sqrt((pos.x - pt.x) ** 2 + (pos.y - pt.y) ** 2) < HIT_RADIUS) return i;
+        }
+      }
+    }
+    return -1;
+  };
+
+  /* Compute the drag anchor for any item type */
+  const getItemAnchor = (item) => {
+    if (item.type === "text") return { x: item.pos.x, y: item.pos.y };
+    if (item.type === "circle" || item.type === "arrow") return { x: item.start.x, y: item.start.y };
+    if (item.type === "freehand" && item.points?.length > 0) return { x: item.points[0].x, y: item.points[0].y };
+    return { x: 0, y: 0 };
+  };
+
+  /* Move an item by delta */
+  const moveItem = (item, dx, dy) => {
+    if (item.type === "text") return { ...item, pos: { x: item.pos.x + dx, y: item.pos.y + dy } };
+    if (item.type === "circle" || item.type === "arrow") return { ...item, start: { x: item.start.x + dx, y: item.start.y + dy }, end: { x: item.end.x + dx, y: item.end.y + dy } };
+    if (item.type === "freehand") return { ...item, points: item.points.map(p => ({ x: p.x + dx, y: p.y + dy })) };
+    return item;
+  };
+
   const onPointerDown = (e) => {
     if (!image) return;
-    e.preventDefault();
     const pos = getCanvasPos(e);
     if (!pos) return;
+
+    /* Select mode: only drag, let native scroll/zoom through otherwise */
+    if (tool === "select") {
+      const idx = findItemAt(pos);
+      if (idx >= 0) {
+        e.preventDefault();
+        const anchor = getItemAnchor(history[idx]);
+        setDragIdx(idx);
+        setDragOffset({ x: pos.x - anchor.x, y: pos.y - anchor.y });
+      }
+      return;
+    }
+
+    e.preventDefault();
     if (tool === "text") { setTextPlacePos(pos); setShowTextInput(true); return; }
-    const idx = findTextAt(pos);
-    if (idx >= 0) { setDragIdx(idx); setDragOffset({ x: pos.x - history[idx].pos.x, y: pos.y - history[idx].pos.y }); return; }
+    /* Non-select tools: still allow text dragging */
+    const textIdx = findTextAt(pos);
+    if (textIdx >= 0) { setDragIdx(textIdx); setDragOffset({ x: pos.x - history[textIdx].pos.x, y: pos.y - history[textIdx].pos.y }); return; }
     setIsDrawing(true);
     setDrawStart(pos);
     setLastPos(pos);
@@ -191,7 +258,10 @@ export default function PhotoAnnotator() {
     if (!pos) return;
     if (dragIdx !== null) {
       e.preventDefault();
-      setHistory(prev => { const n = [...prev]; n[dragIdx] = { ...n[dragIdx], pos: { x: pos.x - dragOffset.x, y: pos.y - dragOffset.y } }; return n; });
+      const anchor = getItemAnchor(history[dragIdx]);
+      const dx = (pos.x - dragOffset.x) - anchor.x;
+      const dy = (pos.y - dragOffset.y) - anchor.y;
+      setHistory(prev => { const n = [...prev]; n[dragIdx] = moveItem(n[dragIdx], dx, dy); return n; });
       return;
     }
     if (!isDrawing) return;
@@ -309,14 +379,14 @@ export default function PhotoAnnotator() {
                 <button onClick={() => setZoom(z => Math.min(z + 0.25, 3))} className="p-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white" data-testid="zoom-in-btn"><ZoomIn className="w-4 h-4" /></button>
                 {zoom !== 1 && <button onClick={() => setZoom(1)} className="text-[10px] text-[#D4AF37] ml-1">Reset</button>}
               </div>
-              <p className="text-[9px] text-white/30">Tap text to drag it</p>
+              <p className="text-[9px] text-white/30">{tool === "select" ? "Drag items to move \u2022 Pinch to zoom" : "Select tool to move items"}</p>
             </div>
 
             <div className="rounded-lg border border-white/10 bg-black overflow-auto" style={{ maxHeight: "60vh" }}>
               <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: imgDimensions.w, height: imgDimensions.h }}>
                 <canvas
                   ref={canvasRef}
-                  style={{ width: imgDimensions.w, height: imgDimensions.h, display: "block", touchAction: "none", cursor: tool === "text" ? "crosshair" : "default" }}
+                  style={{ width: imgDimensions.w, height: imgDimensions.h, display: "block", touchAction: tool === "select" ? "auto" : "none", cursor: tool === "text" ? "crosshair" : tool === "select" ? "default" : "crosshair" }}
                   onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
                   onPointerLeave={() => { if (isDrawing) { setIsDrawing(false); if ((tool === "circle" || tool === "arrow") && drawStart && lastPos) setHistory(prev => [...prev, { type: tool, color, lineWidth, start: drawStart, end: lastPos }]); setDrawStart(null); setLastPos(null); } if (dragIdx !== null) setDragIdx(null); }}
                   data-testid="annotation-canvas"
