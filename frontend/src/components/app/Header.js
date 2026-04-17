@@ -235,7 +235,7 @@ export function Header({ onUploadClick, stats }) {
           className="text-[11px] sm:text-sm font-semibold tracking-tight text-white/70 leading-tight"
           style={{ fontFamily: "Outfit, sans-serif" }}
         >
-          NSP Inspection Navigator
+          Inspection Navigator
           <span className="text-[10px] sm:text-xs text-[#8FAEC5] font-normal ml-2 hidden sm:inline">
             FMCSA Violations Database
           </span>
