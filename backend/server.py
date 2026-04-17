@@ -1110,6 +1110,42 @@ async def delete_photo(inspection_id: str, item_id: str, photo_id: str):
     return {"message": "Photo removed"}
 
 
+@api_router.post("/inspections/{inspection_id}/annotated-photos")
+async def upload_annotated_photo(inspection_id: str, file: UploadFile = File(...)):
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files allowed")
+
+    data = await file.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    ext = file.filename.split(".")[-1] if "." in file.filename else "png"
+    storage_path = f"{APP_NAME}/inspections/{inspection_id}/annotated/{uuid.uuid4()}.{ext}"
+
+    try:
+        result = put_object(storage_path, data, file.content_type)
+    except Exception as e:
+        logger.error(f"Annotated photo upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Photo upload failed")
+
+    photo = {
+        "photo_id": str(uuid.uuid4()),
+        "storage_path": result["path"],
+        "original_filename": file.filename,
+        "content_type": file.content_type,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "annotations": [],
+    }
+
+    await db.inspections.update_one(
+        {"id": inspection_id},
+        {"$push": {"general_photos": photo}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return photo
+
+
+
+
 class AnnotationUpdate(BaseModel):
     annotations: list = []
 

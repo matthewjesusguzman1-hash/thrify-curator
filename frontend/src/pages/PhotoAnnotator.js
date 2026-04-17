@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2 } from "lucide-react";
+import { ChevronLeft, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2, Share2, FolderPlus, Check, X as XIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 
@@ -40,6 +40,9 @@ export default function PhotoAnnotator() {
   const [preview, setPreview] = useState(null);
   const [cursorPos, setCursorPos] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showInspPicker, setShowInspPicker] = useState(false);
+  const [inspections, setInspections] = useState([]);
+  const [loadingInsps, setLoadingInsps] = useState(false);
 
   // URL params for editing inspection photos
   const inspectionId = searchParams.get("inspection");
@@ -328,7 +331,7 @@ export default function PhotoAnnotator() {
   };
 
   const saveAnnotations = async () => {
-    if (!inspectionId || !photoId) { downloadImage(); return; }
+    if (!inspectionId || !photoId) return;
     setSaving(true);
     try {
       const res = await fetch(`${API}/api/inspections/${inspectionId}/photos/${photoId}/annotations`, {
@@ -359,8 +362,41 @@ export default function PhotoAnnotator() {
       const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
       const file = new File([blob], "inspection-photo.png", { type: "image/png" });
       if (navigator.share && navigator.canShare({ files: [file] })) await navigator.share({ files: [file] });
-      else downloadImage();
+      else { toast.info("Share not supported — downloading instead"); downloadImage(); }
     } catch { downloadImage(); }
+  };
+
+  const openInspectionPicker = async () => {
+    setShowInspPicker(true);
+    setLoadingInsps(true);
+    try {
+      const res = await fetch(`${API}/api/inspections`);
+      if (res.ok) {
+        const data = await res.json();
+        setInspections(Array.isArray(data) ? data : data.inspections || []);
+      }
+    } catch { toast.error("Failed to load inspections"); }
+    setLoadingInsps(false);
+  };
+
+  const addToInspection = async (targetInspectionId) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setSaving(true);
+    try {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      const formData = new FormData();
+      formData.append("file", blob, `annotated-${new Date().toISOString().slice(0, 10)}.png`);
+      const res = await fetch(`${API}/api/inspections/${targetInspectionId}/annotated-photos`, {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        toast.success("Photo added to inspection");
+        setShowInspPicker(false);
+      } else toast.error("Failed to add photo");
+    } catch { toast.error("Failed to add photo"); }
+    setSaving(false);
   };
 
   return (
@@ -378,11 +414,19 @@ export default function PhotoAnnotator() {
           </div>
           {image && (
             <div className="flex items-center gap-1">
-              <Button onClick={saveAnnotations} disabled={saving} variant="ghost" size="sm" className="text-[#D4AF37] hover:text-white hover:bg-white/10 h-8 px-2 text-xs font-bold" data-testid="save-annotations-btn">
-                <Save className="w-3.5 h-3.5 mr-1" /> {saving ? "Saving..." : inspectionId ? "Save" : "Share"}
-              </Button>
+              {inspectionId && photoId && (
+                <Button onClick={saveAnnotations} disabled={saving} variant="ghost" size="sm" className="text-[#D4AF37] hover:text-white hover:bg-white/10 h-8 px-2 text-xs font-bold" data-testid="save-annotations-btn">
+                  <Save className="w-3.5 h-3.5 mr-1" /> {saving ? "..." : "Save"}
+                </Button>
+              )}
               <Button onClick={downloadImage} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="download-photo-btn">
-                <Download className="w-3.5 h-3.5 mr-1" /> Download
+                <Download className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Save</span>
+              </Button>
+              <Button onClick={shareImage} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="share-photo-btn">
+                <Share2 className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Share</span>
+              </Button>
+              <Button onClick={openInspectionPicker} disabled={saving} variant="ghost" size="sm" className="text-[#D4AF37] hover:text-white hover:bg-white/10 h-8 px-2 text-xs font-bold" data-testid="add-to-inspection-btn">
+                <FolderPlus className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Inspection</span>
               </Button>
             </div>
           )}
@@ -489,6 +533,48 @@ export default function PhotoAnnotator() {
           </>
         )}
       </div>
+
+      {/* Inspection Picker Modal */}
+      {showInspPicker && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60" onClick={() => setShowInspPicker(false)}>
+          <div className="bg-[#0F1D2F] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[70vh] overflow-hidden border border-white/10" onClick={(e) => e.stopPropagation()} data-testid="inspection-picker-modal">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <h3 className="text-sm font-bold text-white">Add to Inspection</h3>
+              <button onClick={() => setShowInspPicker(false)} className="text-white/40 hover:text-white p-1" data-testid="close-insp-picker">
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[55vh] p-2">
+              {loadingInsps ? (
+                <p className="text-xs text-white/40 text-center py-8">Loading inspections...</p>
+              ) : inspections.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-xs text-white/40">No inspections found</p>
+                  <p className="text-[10px] text-white/25 mt-1">Create one from the Inspections page first</p>
+                </div>
+              ) : (
+                inspections.map((insp) => (
+                  <button
+                    key={insp.id}
+                    onClick={() => addToInspection(insp.id)}
+                    disabled={saving}
+                    className="w-full flex items-center justify-between px-3 py-3 rounded-lg hover:bg-white/5 transition-colors text-left group"
+                    data-testid={`insp-option-${insp.id}`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-white truncate">{insp.title || "Untitled"}</p>
+                      <p className="text-[10px] text-white/30">
+                        {insp.items?.length || 0} violation{(insp.items?.length || 0) !== 1 ? "s" : ""} &bull; {new Date(insp.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <FolderPlus className="w-4 h-4 text-white/20 group-hover:text-[#D4AF37] flex-shrink-0 transition-colors" />
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
