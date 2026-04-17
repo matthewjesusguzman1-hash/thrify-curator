@@ -62,16 +62,9 @@ export default function LoginPage({ onLogin }) {
     <div className="min-h-screen bg-[#002855] flex items-center justify-center px-4" data-testid="login-page">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl overflow-hidden mb-4">
+          <div className="inline-flex items-center justify-center w-32 h-32 rounded-3xl overflow-hidden">
             <img src="/app-icon-180.png" alt="NSP" className="w-full h-full object-cover" />
           </div>
-          <h1
-            className="text-2xl font-bold text-white tracking-tight"
-            style={{ fontFamily: "Outfit, sans-serif" }}
-          >
-            NSP
-          </h1>
-          <p className="text-sm text-[#8FAEC5] mt-1">Inspection Navigator</p>
         </div>
 
         <div className="bg-[#0F1D2F] rounded-2xl p-6 border border-white/10 space-y-4">
