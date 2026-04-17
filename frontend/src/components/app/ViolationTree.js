@@ -94,7 +94,7 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                     </button>
                     <button
                       onClick={() => onToggleFavorite?.(fav)}
-                      className="p-1 opacity-0 group-hover:opacity-100 sm:opacity-100 text-[#CBD5E1] hover:text-[#DC2626] transition-all flex-shrink-0"
+                      className="p-1 text-[#CBD5E1] hover:text-[#DC2626] transition-all flex-shrink-0"
                       title="Remove from favorites"
                       data-testid={`fav-remove-${fav.violation_code || fav.regulatory_reference}`}
                     >
