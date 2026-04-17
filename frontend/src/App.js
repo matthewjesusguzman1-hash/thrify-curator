@@ -6,6 +6,7 @@ import InspectionDetail from "./pages/InspectionDetail";
 import TieDownCalculator from "./pages/TieDownCalculator";
 import HazMatWorksheet from "./pages/HazMatWorksheet";
 import PhotoAnnotator from "./pages/PhotoAnnotator";
+import Level3InspectionTool from "./pages/Level3InspectionTool";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/calculator" element={<TieDownCalculator />} />
           <Route path="/hazmat-worksheet" element={<HazMatWorksheet />} />
           <Route path="/photo-annotator" element={<PhotoAnnotator />} />
+          <Route path="/level3" element={<Level3InspectionTool />} />
         </Routes>
       </BrowserRouter>
     </div>

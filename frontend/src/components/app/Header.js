@@ -1,4 +1,4 @@
-import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText } from "lucide-react";
+import { ShieldCheck, Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, FileSearch } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -127,6 +127,17 @@ export function Header({ onUploadClick, stats }) {
           >
             <span className="text-[11px] font-black sm:mr-1">HM</span>
             <span className="hidden sm:inline">HazMat</span>
+          </Button>
+
+          {/* Level 3 Inspection */}
+          <Button
+            data-testid="level3-nav-btn"
+            size="sm"
+            onClick={() => navigate("/level3")}
+            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm"
+          >
+            <FileSearch className="w-3.5 h-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Level 3</span>
           </Button>
 
           {/* Tie-Down Calculator */}
