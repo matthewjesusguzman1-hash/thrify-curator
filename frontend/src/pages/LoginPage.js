@@ -11,6 +11,7 @@ export default function LoginPage({ onLogin }) {
   const [step, setStep] = useState("badge"); // badge -> pin
   const [isNew, setIsNew] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const checkBadge = async () => {
     const b = badge.trim();
@@ -35,8 +36,9 @@ export default function LoginPage({ onLogin }) {
     const b = badge.trim();
     const p = pin.trim();
     if (!b || !p) return;
-    if (p.length < 4) { toast.error("PIN must be at least 4 digits"); return; }
+    if (p.length < 4) { setError("PIN must be at least 4 digits"); return; }
     setLoading(true);
+    setError("");
     try {
       const endpoint = isNew ? "/api/auth/register" : "/api/auth/login";
       const res = await fetch(`${API}${endpoint}`, {
@@ -48,10 +50,10 @@ export default function LoginPage({ onLogin }) {
         onLogin(b);
       } else {
         const err = await res.json();
-        toast.error(err.detail || "Login failed");
+        setError(err.detail || "Login failed");
       }
     } catch {
-      toast.error("Connection error");
+      setError("Connection error");
     }
     setLoading(false);
   };
@@ -105,7 +107,7 @@ export default function LoginPage({ onLogin }) {
             <>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-white/40">Badge: <strong className="text-[#D4AF37]">{badge}</strong></span>
-                <button onClick={() => { setStep("badge"); setPin(""); }} className="text-[10px] text-white/30 hover:text-white/60">Change</button>
+                <button onClick={() => { setStep("badge"); setPin(""); setError(""); }} className="text-[10px] text-white/30 hover:text-white/60">Change</button>
               </div>
               <div>
                 <label className="text-[11px] font-medium text-white/50 uppercase tracking-wider block mb-2">
@@ -115,14 +117,19 @@ export default function LoginPage({ onLogin }) {
                   type="password"
                   inputMode="numeric"
                   value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 8)); setError(""); }}
                   onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                   placeholder={isNew ? "Create a 4+ digit PIN" : "Enter your PIN"}
                   autoFocus
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-center text-2xl font-bold tracking-[0.3em] placeholder:text-white/20 placeholder:text-base placeholder:tracking-normal focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none"
+                  className={`w-full px-4 py-3 rounded-xl bg-white/5 border text-white text-center text-2xl font-bold tracking-[0.3em] placeholder:text-white/20 placeholder:text-base placeholder:tracking-normal focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none ${error ? "border-[#EF4444]" : "border-white/10"}`}
                   data-testid="pin-input"
                 />
-                {isNew && (
+                {error && (
+                  <p className="text-[11px] text-[#EF4444] mt-2 text-center font-medium" data-testid="pin-error">
+                    {error}
+                  </p>
+                )}
+                {isNew && !error && (
                   <p className="text-[10px] text-[#D4AF37]/60 mt-2 text-center">
                     First time? You're creating a new account.
                   </p>
