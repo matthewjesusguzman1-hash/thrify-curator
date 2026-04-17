@@ -985,7 +985,7 @@ async def get_similar_violations(violation_id: str):
 
 # ========== AUTH ENDPOINTS ==========
 
-ADMIN_PIN = os.environ.get("ADMIN_PIN", "9999")
+ADMIN_BADGE = "121"
 
 @api_router.post("/auth/register")
 async def register_user(req: RegisterRequest):
@@ -1042,15 +1042,16 @@ async def change_pin(req: dict):
 
 
 @api_router.post("/admin/login")
-async def admin_login(req: AdminLoginRequest):
-    if req.admin_pin != ADMIN_PIN:
-        raise HTTPException(status_code=401, detail="Invalid admin PIN")
+async def admin_login(req: dict):
+    badge = req.get("badge", "").strip()
+    if badge != ADMIN_BADGE:
+        raise HTTPException(status_code=401, detail="Not authorized")
     return {"message": "Admin access granted"}
 
 @api_router.get("/admin/users")
-async def list_users(admin_pin: str = Query(...)):
-    if admin_pin != ADMIN_PIN:
-        raise HTTPException(status_code=401, detail="Invalid admin PIN")
+async def list_users(badge: str = Query(...)):
+    if badge != ADMIN_BADGE:
+        raise HTTPException(status_code=401, detail="Not authorized")
     users = await db.users.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
     return {"users": users, "total": len(users)}
 
@@ -1106,10 +1107,10 @@ async def delete_note(note_id: str, badge: str = Query(...)):
 
 @api_router.put("/admin/users/{badge_num}/reset-pin")
 async def reset_user_pin(badge_num: str, req: dict):
-    admin_pin = req.get("admin_pin", "")
+    caller_badge = req.get("badge", "").strip()
     new_pin = req.get("new_pin", "")
-    if admin_pin != ADMIN_PIN:
-        raise HTTPException(status_code=401, detail="Invalid admin PIN")
+    if caller_badge != ADMIN_BADGE:
+        raise HTTPException(status_code=401, detail="Not authorized")
     if not new_pin or len(new_pin) < 4:
         raise HTTPException(status_code=400, detail="New PIN must be at least 4 digits")
     result = await db.users.update_one({"badge": badge_num}, {"$set": {"pin": new_pin}})
