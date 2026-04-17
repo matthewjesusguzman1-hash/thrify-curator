@@ -1,17 +1,91 @@
-import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowRight, ScanFace } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+/* Save credentials to browser password manager (triggers Face ID save prompt) */
+async function storeCredential(badge, pin) {
+  if (!window.PasswordCredential) return;
+  try {
+    const cred = new window.PasswordCredential({
+      id: badge,
+      password: pin,
+      name: `Badge #${badge}`,
+    });
+    await navigator.credentials.store(cred);
+  } catch {}
+}
+
+/* Retrieve saved credentials (triggers Face ID / Touch ID) */
+async function getSavedCredential() {
+  if (!window.PasswordCredential) return null;
+  try {
+    const cred = await navigator.credentials.get({
+      password: true,
+      mediation: "optional",
+    });
+    if (cred && cred.id && cred.password) {
+      return { badge: cred.id, pin: cred.password };
+    }
+  } catch {}
+  return null;
+}
+
 export default function LoginPage({ onLogin }) {
   const [badge, setBadge] = useState("");
   const [pin, setPin] = useState("");
-  const [step, setStep] = useState("badge"); // badge -> pin
+  const [step, setStep] = useState("badge"); // badge -> pin -> biometric
   const [isNew, setIsNew] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [tryingBiometric, setTryingBiometric] = useState(true);
+  const attempted = useRef(false);
+
+  /* On mount: try auto-login with saved credentials */
+  useEffect(() => {
+    if (attempted.current) return;
+    attempted.current = true;
+
+    (async () => {
+      if (!window.PasswordCredential) {
+        setTryingBiometric(false);
+        return;
+      }
+      setBiometricAvailable(true);
+      try {
+        const cred = await getSavedCredential();
+        if (cred) {
+          const res = await fetch(`${API}/api/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ badge: cred.badge, pin: cred.pin }),
+          });
+          if (res.ok) {
+            onLogin(cred.badge);
+            return;
+          }
+        }
+      } catch {}
+      setTryingBiometric(false);
+    })();
+  }, [onLogin]);
+
+  const loginWithCredentials = async (b, p) => {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ badge: b, pin: p }),
+    });
+    if (res.ok) {
+      await storeCredential(b, p);
+      onLogin(b);
+      return true;
+    }
+    return false;
+  };
 
   const checkBadge = async () => {
     const b = badge.trim();
@@ -47,6 +121,7 @@ export default function LoginPage({ onLogin }) {
         body: JSON.stringify({ badge: b, pin: p }),
       });
       if (res.ok) {
+        await storeCredential(b, p);
         onLogin(b);
       } else {
         const err = await res.json();
@@ -58,18 +133,68 @@ export default function LoginPage({ onLogin }) {
     setLoading(false);
   };
 
+  const retryBiometric = async () => {
+    setLoading(true);
+    try {
+      const cred = await getSavedCredential();
+      if (cred) {
+        const success = await loginWithCredentials(cred.badge, cred.pin);
+        if (success) return;
+      }
+      toast.error("No saved credentials found");
+    } catch {
+      toast.error("Biometric login failed");
+    }
+    setLoading(false);
+  };
+
+  /* Show loading state while attempting biometric */
+  if (tryingBiometric) {
+    return (
+      <div className="min-h-screen bg-[#002855] flex items-center justify-center px-4" data-testid="login-page">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-32 h-32 rounded-3xl overflow-hidden mb-6">
+            <img src="/app-icon-180.png" alt="Inspection Navigator" className="w-full h-full object-cover" />
+          </div>
+          <p className="text-sm text-[#8FAEC5] animate-pulse">Signing in...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#002855] flex items-center justify-center px-4" data-testid="login-page">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-32 h-32 rounded-3xl overflow-hidden">
-            <img src="/app-icon-180.png" alt="NSP" className="w-full h-full object-cover" />
+            <img src="/app-icon-180.png" alt="Inspection Navigator" className="w-full h-full object-cover" />
           </div>
         </div>
 
         <div className="bg-[#0F1D2F] rounded-2xl p-6 border border-white/10 space-y-4">
           {step === "badge" ? (
             <>
+              {/* Face ID / biometric button if available */}
+              {biometricAvailable && (
+                <button
+                  onClick={retryBiometric}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-colors mb-2"
+                  data-testid="biometric-login-btn"
+                >
+                  <ScanFace className="w-5 h-5" />
+                  <span className="text-sm font-medium">Sign in with Face ID</span>
+                </button>
+              )}
+
+              {biometricAvailable && (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-white/10" />
+                  <span className="text-[10px] text-white/30 uppercase tracking-wider">or enter badge</span>
+                  <div className="flex-1 h-px bg-white/10" />
+                </div>
+              )}
+
               <div>
                 <label className="text-[11px] font-medium text-white/50 uppercase tracking-wider block mb-2">
                   Badge Number
@@ -81,7 +206,7 @@ export default function LoginPage({ onLogin }) {
                   onChange={(e) => setBadge(e.target.value.replace(/\D/g, "").slice(0, 5))}
                   onKeyDown={(e) => e.key === "Enter" && checkBadge()}
                   placeholder="Enter badge number..."
-                  autoFocus
+                  autoFocus={!biometricAvailable}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-center text-2xl font-bold tracking-[0.3em] placeholder:text-white/20 placeholder:text-base placeholder:tracking-normal focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none"
                   data-testid="badge-input"
                 />
