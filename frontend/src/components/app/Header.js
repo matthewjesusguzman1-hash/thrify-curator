@@ -86,8 +86,22 @@ export function Header({ onUploadClick, stats }) {
       data-testid="app-header"
       className="sticky top-0 z-50 bg-[#002855] border-b border-[#001a3a]"
     >
-      {/* Top row: nav buttons */}
-      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pt-2 sm:pt-3 flex items-center justify-between">
+      {/* Top row: app title */}
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pt-2 sm:pt-3 pb-1">
+        <h1
+          data-testid="app-title"
+          className="text-[11px] sm:text-sm font-semibold tracking-tight text-white/70 leading-tight"
+          style={{ fontFamily: "Outfit, sans-serif" }}
+        >
+          SafeSpect Violation Navigator
+          <span className="text-[10px] sm:text-xs text-[#8FAEC5] font-normal ml-2 hidden sm:inline">
+            FMCSA Current Violations Database
+          </span>
+        </h1>
+      </div>
+
+      {/* Bottom row: nav buttons */}
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
           {/* Level 3 Inspection */}
           <Button
@@ -241,19 +255,6 @@ export function Header({ onUploadClick, stats }) {
         )}
       </div>
 
-      {/* Bottom row: app title */}
-      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pb-1.5 pt-1">
-        <h1
-          data-testid="app-title"
-          className="text-[11px] sm:text-sm font-semibold tracking-tight text-white/70 leading-tight"
-          style={{ fontFamily: "Outfit, sans-serif" }}
-        >
-          SafeSpect Violation Navigator
-          <span className="text-[10px] sm:text-xs text-[#8FAEC5] font-normal ml-2 hidden sm:inline">
-            FMCSA Current Violations Database
-          </span>
-        </h1>
-      </div>
       <div className="gold-accent h-[2px]" />
     </header>
   );
