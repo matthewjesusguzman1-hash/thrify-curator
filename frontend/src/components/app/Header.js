@@ -233,11 +233,11 @@ export function Header({ onUploadClick, stats }) {
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setNotesOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 transition-colors"
             data-testid="notes-btn"
           >
-            <MessageSquarePlus className="w-3 h-3 text-[#8FAEC5]" />
-            <span className="text-[11px] text-[#8FAEC5] font-medium hidden sm:inline">Notes</span>
+            <MessageSquarePlus className="w-4 h-4 text-[#8FAEC5]" />
+            <span className="text-xs text-[#8FAEC5] font-medium">Notes</span>
           </button>
           <Popover>
             <PopoverTrigger asChild>

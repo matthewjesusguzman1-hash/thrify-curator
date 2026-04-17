@@ -70,13 +70,13 @@ export function NotesPanel({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-start justify-center pt-16 sm:pt-20 bg-black/50" onClick={onClose}>
       <div
-        className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[80vh] flex flex-col overflow-hidden border border-[#E2E8F0] shadow-xl"
+        className="bg-white rounded-2xl w-[95%] sm:max-w-lg max-h-[70vh] flex flex-col overflow-hidden border border-[#E2E8F0] shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="notes-panel"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-[#002855] sm:rounded-t-2xl flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-[#002855] rounded-t-2xl flex-shrink-0">
           <div className="flex items-center gap-2">
             <MessageSquarePlus className="w-4 h-4 text-[#D4AF37]" />
             <h3 className="text-sm font-bold text-white">Test Notes</h3>
