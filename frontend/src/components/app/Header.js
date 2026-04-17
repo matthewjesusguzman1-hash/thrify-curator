@@ -84,6 +84,12 @@ const FLOWCHARTS = [
     description: "Acceptable vs unacceptable damage zones",
     icon: FileText,
   },
+  {
+    label: "Visor Card",
+    url: "https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/mnzrncpv_visorcard.pdf",
+    description: "Quick reference visor card (PDF)",
+    icon: FileText,
+  },
 ];
 
 const JOB_AIDS = [
