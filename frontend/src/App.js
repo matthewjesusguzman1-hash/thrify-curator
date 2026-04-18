@@ -10,6 +10,7 @@ import HazMatWorksheet from "./pages/HazMatWorksheet";
 import PhotoAnnotator from "./pages/PhotoAnnotator";
 import Level3InspectionTool from "./pages/Level3InspectionTool";
 import AdminPage from "./pages/AdminPage";
+import BridgeChartPage from "./pages/BridgeChartPage";
 
 function AppRoutes() {
   const { isLoggedIn, login } = useAuth();
@@ -28,6 +29,7 @@ function AppRoutes() {
       <Route path="/photo-annotator" element={<PhotoAnnotator />} />
       <Route path="/level3" element={<Level3InspectionTool />} />
       <Route path="/admin" element={<AdminPage />} />
+      <Route path="/bridge-chart" element={<BridgeChartPage />} />
     </Routes>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus } from "lucide-react";
+import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus, Scale } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -286,6 +286,17 @@ export function Header({ onUploadClick, stats }) {
           >
             <Calculator className="w-3.5 h-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Tie-Down Calc</span>
+          </Button>
+
+          {/* Bridge Chart */}
+          <Button
+            data-testid="bridge-chart-nav-btn"
+            size="sm"
+            onClick={() => navigate("/bridge-chart")}
+            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
+          >
+            <Scale className="w-3.5 h-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Bridge</span>
           </Button>
 
           {/* HazMat Worksheet */}
