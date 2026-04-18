@@ -783,13 +783,19 @@ export default function BridgeChartPage() {
                             <input type="checkbox" checked={!!g.dummyAxle} onChange={e => updateGroup(gi, "dummyAxle", e.target.checked)} className="w-3 h-3 accent-[#D4AF37]" />
                             <span>Add <strong className="text-[#D4AF37]">dummy axle</strong> <span className="text-[#94A3B8]">(counts if it meets either threshold: ≥ 8,000 lbs OR ≥ 8% of gross; otherwise disregarded)</span></span>
                           </label>
-                          {g.dummyAxle && viol?.dummy?.dummyWeight > 0 && (
-                            <div className={`text-[10px] rounded px-2 py-1 font-medium ${viol.dummy.disregarded ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-[#FEF3C7] text-[#92400E]"}`}>
-                              {viol.dummy.disregarded
-                                ? `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is DISREGARDED — axle count drops to ${parseInt(g.axles)}; weight still counted in group + gross`
-                                : `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) COUNTS — axle count ${parseInt(g.axles) + 1}${parseInt(g.axles) === 2 ? "; tandem 34k rule still applies" : ""}`}
-                            </div>
-                          )}
+                          {g.dummyAxle && viol?.dummy?.dummyWeight > 0 && (() => {
+                            const anyGroupViol = !!((viol.max && viol.actual > viol.max) || (viol.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max) || (viol.axleOverages && viol.axleOverages.length > 0));
+                            const cls = anyGroupViol
+                              ? "bg-[#FEE2E2] text-[#DC2626]"
+                              : "bg-[#FEF3C7] text-[#92400E]";
+                            return (
+                              <div className={`text-[10px] rounded px-2 py-1 font-medium ${cls}`}>
+                                {viol.dummy.disregarded
+                                  ? `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is DISREGARDED — axle count drops to ${parseInt(g.axles)}; weight still counted in group + gross`
+                                  : `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) COUNTS — axle count ${parseInt(g.axles) + 1}${parseInt(g.axles) === 2 ? "; tandem 34k rule still applies" : ""}`}
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
 
