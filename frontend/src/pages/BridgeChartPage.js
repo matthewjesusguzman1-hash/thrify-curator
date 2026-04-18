@@ -957,8 +957,8 @@ export default function BridgeChartPage() {
           )}
           </>)}{/* end !isReportCollapsed */}
 
-          {/* Diagram */}
-          {(record.valid || isCustom) && record.totalAxles > 0 && (
+          {/* Diagram — always show when there are axles */}
+          {record.totalAxles > 0 && (
             <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
               <button type="button" onClick={() => setIsDiagramCollapsed(v => !v)} className="w-full px-3 py-2.5 flex items-center justify-between gap-2 bg-[#002855] text-white hover:bg-[#001a3a] transition-colors" data-testid="toggle-diagram-collapse" data-html2canvas-ignore="true">
                 <div className="flex items-center gap-2 min-w-0">
@@ -971,7 +971,7 @@ export default function BridgeChartPage() {
                 </div>
               </button>
               {!isDiagramCollapsed && (<>
-              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} hideViolations={!showViolations} toleranceApplies={record.toleranceApplies} /></div>
+              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String((parseInt(g.axles) || 0) + (g.dummyAxle ? 1 : 0)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} hideViolations={!showViolations} toleranceApplies={record.toleranceApplies} /></div>
               {photos.length > 0 && (
                 <div className="px-4 pb-3">
                   <div className="flex gap-2 overflow-x-auto pb-1">{photos.map((p, i) => <div key={i} className="relative flex-shrink-0"><img src={p.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]" /><button onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] rounded-full flex items-center justify-center" data-html2canvas-ignore="true"><X className="w-2.5 h-2.5 text-white" /></button></div>)}</div>
