@@ -441,9 +441,12 @@ export default function BridgeChartPage() {
               return (
                 <div key={gi} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isOver ? withinTol ? "border-[#F97316]/40" : "border-[#EF4444]/40" : "border-[#E2E8F0]"}`}>
                   {/* Header — always visible, clickable to collapse/expand */}
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => updateGroup(gi, "_collapsed", !g._collapsed)}
-                    className="w-full px-3 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0] flex items-center justify-between text-left"
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); updateGroup(gi, "_collapsed", !g._collapsed); } }}
+                    className="w-full px-3 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0] flex items-center justify-between text-left cursor-pointer"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: COLORS[gi % COLORS.length] }} />
@@ -463,7 +466,7 @@ export default function BridgeChartPage() {
                       </select>
                       {groups.length > 1 && <button onClick={e => { e.stopPropagation(); removeGroup(gi); }} className="text-[#94A3B8] hover:text-[#DC2626] p-0.5"><Trash2 className="w-3 h-3" /></button>}
                     </div>
-                  </button>
+                  </div>
 
                   {/* Body — collapsible */}
                   {!isCollapsed && (

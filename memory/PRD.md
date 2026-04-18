@@ -24,6 +24,7 @@ FMCSA roadside violation search/filter app with AI-powered search, NSP blue/gold
   - Mobile-optimized for field use
 
 ## Recent Changes
+- **Bridge Chart Enhancements (2026-04-18)**: Finalized /bridge-chart Record Weights. (1) Full-section capture via html2canvas — Save/Share/Add-to-Inspection now grabs the entire tab (inputs + violations + diagram) as one PNG. (2) Collapsible "Hide Inputs / Show Inputs" toggle. (3) Clickable row/col/cell highlighting on Bridge Chart lookup table + "ft" labels on distance column. (4) Dummy Axle checkbox for tandem groups — group counts as triple for bridge formula lookup, but secondary strict 34,000 lb rule enforced on the first 2 axles (displayed as separate inline violation). Also fixed pre-existing nested-button hydration warning in group header (converted to div[role=button]).
 - **Level 3 Inspection Guide (2026-04-16)**: Built from DIR Sheet 2025-2026 docx. 20 accordion sections, search, nav chips, CFR links, mobile-ready. Route: /level3
 - **Worksheet Restructured (2026-04-15)**: Matched reference sheet v26.1 hierarchy
 - **Placard Flow Reordered (2026-04-15)**: Table->Weight->Exceptions->Bulk->Bulk Exceptions
