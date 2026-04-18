@@ -1015,7 +1015,15 @@ async def login_user(req: LoginRequest):
         raise HTTPException(status_code=404, detail="Badge number not found. Register first.")
     if user["pin"] != pin:
         raise HTTPException(status_code=401, detail="Incorrect PIN")
+    await db.users.update_one({"badge": badge}, {"$set": {"last_active": datetime.now(timezone.utc).isoformat()}})
     return {"badge": badge, "message": "Login successful"}
+
+@api_router.post("/auth/heartbeat")
+async def heartbeat(req: dict):
+    badge = req.get("badge", "").strip()
+    if badge:
+        await db.users.update_one({"badge": badge}, {"$set": {"last_active": datetime.now(timezone.utc).isoformat()}})
+    return {"ok": True}
 
 @api_router.post("/auth/check-badge")
 async def check_badge(req: dict):

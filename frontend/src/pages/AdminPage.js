@@ -8,6 +8,18 @@ import { UploadDialog } from "../components/app/UploadDialog";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+function timeAgo(isoStr) {
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(isoStr).toLocaleDateString();
+}
+
 export default function AdminPage() {
   const navigate = useNavigate();
   const { badge } = useAuth();
@@ -149,6 +161,7 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">Badge</th>
                     <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">PIN</th>
                     <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">Registered</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">Last Active</th>
                     <th className="text-right px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">Actions</th>
                   </tr>
                 </thead>
@@ -190,6 +203,15 @@ export default function AdminPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-[#94A3B8]">{new Date(u.created_at).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-xs">
+                        {u.last_active ? (
+                          <span className={`${timeAgo(u.last_active).includes("now") || timeAgo(u.last_active).includes("min") ? "text-[#16A34A] font-medium" : "text-[#94A3B8]"}`}>
+                            {timeAgo(u.last_active)}
+                          </span>
+                        ) : (
+                          <span className="text-[#CBD5E1]">Never</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right">
                         {resetBadge !== u.badge && (
                           <button
