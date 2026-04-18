@@ -101,18 +101,18 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
       {groupMeta.map((gm, i) => {
         const cx = (gm.startX + gm.endX) / 2;
         const color = gm.isOver ? (gm.withinTol ? WARN_ORANGE : OVER_RED) : (hideViolations ? "#D4AF37" : OK_GREEN);
-        const pillW = 230, pillH = 86;
+        const pillW = 240, pillH = 96;
         return (
           <g key={`banner-${i}`}>
             <rect x={cx - pillW / 2} y={14} width={pillW} height={pillH} rx="12" fill={gm.isOver ? (gm.withinTol ? "#3B2415" : "#3B1818") : (hideViolations ? "#1E293B" : "#0F2A1F")} stroke={color} strokeWidth="2.5" />
-            <text x={cx} y={38} textAnchor="middle" fill="#94A3B8" fontSize="15" fontWeight="bold">
+            <text x={cx} y={38} textAnchor="middle" fill="#94A3B8" fontSize="18" fontWeight="bold">
               {gm.endAxleNum !== gm.startAxleNum ? `A${gm.startAxleNum}-A${gm.endAxleNum}` : `A${gm.startAxleNum}`}
             </text>
             <text x={cx} y={70} textAnchor="middle" fill={color} fontSize="28" fontWeight="900" fontFamily="monospace">{gm.gWeight > 0 ? gm.gWeight.toLocaleString() : "—"}</text>
             {!hideViolations && gm.isOver ? (
-              <text x={cx} y={92} textAnchor="middle" fill={color} fontSize="14" fontWeight="900">{`+${gm.overBy.toLocaleString()} OVER${gm.withinTol ? " (5% tol)" : ""}`}</text>
+              <text x={cx} y={94} textAnchor="middle" fill={color} fontSize="17" fontWeight="900">{`+${gm.overBy.toLocaleString()} OVER${gm.withinTol ? " (5% tol)" : ""}`}</text>
             ) : !hideViolations && gm.max ? (
-              <text x={cx} y={92} textAnchor="middle" fill="#64748B" fontSize="14" fontWeight="bold">{`max ${gm.max.toLocaleString()}`}</text>
+              <text x={cx} y={94} textAnchor="middle" fill="#64748B" fontSize="17" fontWeight="bold">{`max ${gm.max.toLocaleString()}`}</text>
             ) : null}
           </g>
         );
@@ -127,15 +127,15 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
       )}
 
       {/* Gross label inside trailer */}
-      <text x={w / 2} y={tTop + 54} textAnchor="middle" fill="#8FAEC5" fontSize="18" fontWeight="bold">GROSS WEIGHT</text>
+      <text x={w / 2} y={tTop + 54} textAnchor="middle" fill="#8FAEC5" fontSize="21" fontWeight="bold">GROSS WEIGHT</text>
       <text x={w / 2} y={tTop + 118} textAnchor="middle" fill={grossColor} fontSize="56" fontWeight="900" fontFamily="monospace">{grossWeight ? grossWeight.toLocaleString() : "—"}</text>
       {!hideViolations && grossMax && (
-        <text x={w / 2} y={tTop + 152} textAnchor="middle" fill={grossActuallyOver ? OVER_RED : "#64748B"} fontSize="17" fontWeight="bold">
+        <text x={w / 2} y={tTop + 154} textAnchor="middle" fill={grossActuallyOver ? OVER_RED : "#94A3B8"} fontSize="20" fontWeight="bold">
           {grossActuallyOver ? `+${(grossWeight - grossMax).toLocaleString()} OVER max ${grossMax.toLocaleString()}` : `max ${grossMax.toLocaleString()} lbs`}
         </text>
       )}
       {!hideViolations && grossMax && (
-        <text x={w / 2} y={tTop + 184} textAnchor="middle" fill={grossActuallyOver ? OVER_RED : OK_GREEN} fontSize="18" fontWeight="900">
+        <text x={w / 2} y={tTop + 188} textAnchor="middle" fill={grossActuallyOver ? OVER_RED : OK_GREEN} fontSize="21" fontWeight="900">
           {grossActuallyOver ? "OVERWEIGHT" : "LEGAL"}
         </text>
       )}
@@ -149,9 +149,9 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
           <g key={i}>
             <line x1={a.x} y1={axleY - 28} x2={a.x} y2={axleY + 14} stroke={axleIsOver ? OVER_RED : "#94A3B8"} strokeWidth="5" strokeLinecap="round" />
             <circle cx={a.x} cy={axleY + 22} r="19" fill={wheelFill} stroke={wheelStroke} strokeWidth={axleIsOver ? 3.5 : 3} opacity={a.dummyDisregarded ? 0.5 : 1} />
-            <text x={a.x} y={axleY - 34} textAnchor="middle" fill={axleIsOver ? OVER_RED : "#CBD5E1"} fontSize="15" fontWeight="900">{`A${a.axleNum}`}</text>
+            <text x={a.x} y={axleY - 34} textAnchor="middle" fill={axleIsOver ? OVER_RED : "#CBD5E1"} fontSize="18" fontWeight="900">{`A${a.axleNum}`}</text>
             {a.isDummy && (
-              <text x={a.x + 22} y={axleY + 28} fill={a.dummyDisregarded ? "#64748B" : "#D4AF37"} fontSize="14" fontWeight="900">D</text>
+              <text x={a.x + 22} y={axleY + 28} fill={a.dummyDisregarded ? "#64748B" : "#D4AF37"} fontSize="17" fontWeight="900">D</text>
             )}
           </g>
         );
@@ -173,7 +173,7 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
                 <line x1={gm.startX} y1={y - 7} x2={gm.startX} y2={y + 7} stroke={brColor} strokeWidth="3" opacity={gm.dummyDisregarded ? 0.35 : 0.7} />
                 <line x1={gm.endX} y1={y - 7} x2={gm.endX} y2={y + 7} stroke={brColor} strokeWidth="3" opacity={gm.dummyDisregarded ? 0.35 : 0.7} />
                 {gm.distFtFull && (
-                  <text x={cx} y={y - 4} textAnchor="middle" fill={gm.dummyDisregarded ? "#64748B" : "#D4AF37"} fontSize="14" fontWeight="900" style={gm.dummyDisregarded ? { textDecoration: "line-through" } : {}}>{`${gm.distFtFull} ft${gm.dummyDisregarded ? " (unused)" : ""}`}</text>
+                  <text x={cx} y={y - 6} textAnchor="middle" fill={gm.dummyDisregarded ? "#64748B" : "#D4AF37"} fontSize="17" fontWeight="900" style={gm.dummyDisregarded ? { textDecoration: "line-through" } : {}}>{`${gm.distFtFull} ft${gm.dummyDisregarded ? " (unused)" : ""}`}</text>
                 )}
               </>
             )}
@@ -183,10 +183,10 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
                 <line x1={gm.startX} y1={yReduced} x2={gm.reducedEndX} y2={yReduced} stroke="#16A34A" strokeWidth="3" opacity="0.9" />
                 <line x1={gm.startX} y1={yReduced - 7} x2={gm.startX} y2={yReduced + 7} stroke="#16A34A" strokeWidth="3" opacity="0.9" />
                 <line x1={gm.reducedEndX} y1={yReduced - 7} x2={gm.reducedEndX} y2={yReduced + 7} stroke="#16A34A" strokeWidth="3" opacity="0.9" />
-                <text x={(gm.startX + gm.reducedEndX) / 2} y={yReduced - 4} textAnchor="middle" fill="#16A34A" fontSize="13" fontWeight="900">{`${gm.distFtReduced} ft (calc)`}</text>
+                <text x={(gm.startX + gm.reducedEndX) / 2} y={yReduced - 6} textAnchor="middle" fill="#16A34A" fontSize="16" fontWeight="900">{`${gm.distFtReduced} ft (calc)`}</text>
               </>
             )}
-            <text x={cx} y={(showReduced ? yReduced : y) + 28} textAnchor="middle" fill={brColor} fontSize="16" fontWeight="bold">
+            <text x={cx} y={(showReduced ? yReduced : y) + 30} textAnchor="middle" fill={brColor} fontSize="19" fontWeight="bold">
               {gm.label || (gm.n > 1 ? `A${gm.startAxleNum}–A${gm.endAxleNum}` : `A${gm.startAxleNum}`)}
             </text>
           </g>
@@ -200,7 +200,7 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
         const iY = axleY + 145;
         const intOver = !hideViolations && interior.over;
         const intColor = intOver ? OVER_RED : "#D4AF37";
-        const pillW = 280, pillH = 24;
+        const pillW = 340, pillH = 32;
         const cx = (startX + endX) / 2;
         return (
           <g>
@@ -208,7 +208,7 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
             <line x1={startX} y1={iY - 7} x2={startX} y2={iY + 7} stroke={intColor} strokeWidth="3" opacity="0.85" />
             <line x1={endX} y1={iY - 7} x2={endX} y2={iY + 7} stroke={intColor} strokeWidth="3" opacity="0.85" />
             <rect x={cx - pillW / 2} y={iY + 12} width={pillW} height={pillH} rx="6" fill="#0F172A" stroke={intColor} strokeWidth="1.5" />
-            <text x={cx} y={iY + 29} textAnchor="middle" fill={intColor} fontSize="13" fontWeight="900">
+            <text x={cx} y={iY + 33} textAnchor="middle" fill={intColor} fontSize="17" fontWeight="900">
               {interior.distFt
                 ? (intOver
                     ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · +${interior.overBy.toLocaleString()} OVER`
@@ -227,7 +227,7 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
           <line x1={allAxles[0].x} y1={axleY + 195} x2={allAxles[allAxles.length - 1].x} y2={axleY + 195} stroke="#64748B" strokeWidth="2" />
           <line x1={allAxles[0].x} y1={axleY + 187} x2={allAxles[0].x} y2={axleY + 203} stroke="#64748B" strokeWidth="2" />
           <line x1={allAxles[allAxles.length - 1].x} y1={axleY + 187} x2={allAxles[allAxles.length - 1].x} y2={axleY + 203} stroke="#64748B" strokeWidth="2" />
-          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 221} textAnchor="middle" fill="#94A3B8" fontSize="16" fontWeight="bold">{`${overallDist} ft overall`}</text>
+          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 221} textAnchor="middle" fill="#CBD5E1" fontSize="19" fontWeight="bold">{`${overallDist} ft overall`}</text>
         </g>
       )}
     </svg>
