@@ -481,6 +481,8 @@ export default function BridgeChartPage() {
               <>
                 <Button variant="ghost" size="sm" onClick={() => photoRef.current?.click()} className="text-white hover:bg-white/10 h-8 px-2" title="Add photos" data-testid="header-photo-btn"><Camera className="w-4 h-4" /></Button>
                 <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} />
+                <Button variant="ghost" size="sm" onClick={shareDiag} className="text-white hover:bg-white/10 h-8 px-2" title="Share" data-testid="header-share-btn"><Share2 className="w-4 h-4" /></Button>
+                <Button variant="ghost" size="sm" onClick={openInspPicker} className="text-[#D4AF37] hover:bg-white/10 h-8 px-2" title="Add to inspection" data-testid="header-inspection-btn"><FolderPlus className="w-4 h-4" /></Button>
               </>
             )}
             <Button variant="ghost" size="sm" onClick={() => setShowRules(!showRules)} className={`text-xs h-8 px-3 ${showRules ? "bg-[#D4AF37] text-[#002855]" : "text-[#D4AF37] hover:bg-white/10"}`} data-testid="toggle-rules-btn"><Info className="w-3.5 h-3.5 mr-1" />Rules</Button>
@@ -865,11 +867,7 @@ export default function BridgeChartPage() {
             <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
               <div className="px-4 py-2.5 border-b border-[#E2E8F0] flex items-center justify-between gap-2">
                 <h3 className="text-xs font-bold text-[#002855] uppercase">Weight Diagram</h3>
-                <div className="flex items-center gap-1.5">
-                  <button onClick={downloadDiag} title="Save" className="p-1.5 rounded-md text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9]"><Download className="w-3.5 h-3.5" /></button>
-                  <button onClick={shareDiag} title="Share" className="p-1.5 rounded-md text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9]"><Share2 className="w-3.5 h-3.5" /></button>
-                  <button onClick={openInspPicker} title="Add to inspection" className="p-1.5 rounded-md text-[#D4AF37] hover:bg-[#D4AF37]/10"><FolderPlus className="w-3.5 h-3.5" /></button>
-                </div>
+                <button onClick={downloadDiag} title="Save" className="p-1.5 rounded-md text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9]" data-testid="diagram-save-btn"><Download className="w-3.5 h-3.5" /></button>
               </div>
               <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} hideViolations={!showViolations} toleranceApplies={record.toleranceApplies} /></div>
               {photos.length > 0 && (
@@ -885,8 +883,8 @@ export default function BridgeChartPage() {
       </main>
 
       {showInspPicker && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60" onClick={() => setShowInspPicker(false)}>
-          <div className="bg-[#0F1D2F] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[70vh] overflow-hidden border border-white/10" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 p-4" style={{ zIndex: 2147483647 }} onClick={() => setShowInspPicker(false)}>
+          <div className="bg-[#0F1D2F] rounded-2xl w-full sm:max-w-sm max-h-[80vh] overflow-hidden border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10"><h3 className="text-sm font-bold text-white">Add to Inspection</h3><button onClick={() => setShowInspPicker(false)} className="text-white/40 hover:text-white"><X className="w-4 h-4" /></button></div>
             <div className="px-3 pt-3 pb-2 border-b border-white/10"><div className="flex gap-1.5"><input type="text" value={newInspTitle} onChange={e => setNewInspTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && createAndAdd()} placeholder="New inspection..." className="flex-1 px-2.5 py-2 rounded-lg border border-white/10 bg-white/5 text-white text-xs placeholder:text-white/30 outline-none" /><button onClick={createAndAdd} disabled={saving} className="px-3 py-2 rounded-lg bg-[#D4AF37] text-[#002855] text-xs font-bold disabled:opacity-50">{saving ? "..." : "Create & Add"}</button></div></div>
             <div className="overflow-y-auto max-h-[50vh] p-2">{inspections.map(insp => <button key={insp.id} onClick={() => addToInsp(insp.id)} disabled={saving} className="w-full flex items-center justify-between px-3 py-3 rounded-lg hover:bg-white/5 text-left"><div><p className="text-xs font-medium text-white truncate">{insp.title}</p><p className="text-[10px] text-white/30">{new Date(insp.created_at).toLocaleDateString()}</p></div><FolderPlus className="w-4 h-4 text-white/20" /></button>)}</div>
