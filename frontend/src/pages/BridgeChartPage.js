@@ -249,8 +249,13 @@ export default function BridgeChartPage() {
       return JSON.parse(raw);
     } catch { return null; }
   };
+  const defaultGroups = () => [
+    makeGroup("Steer", "Single", 1),
+    makeGroup("Drive", "Tandem (2)", 2),
+    makeGroup("Trailer", "Tandem (2)", 2),
+  ];
   const initial = loadSaved();
-  const [groups, setGroups] = useState(initial?.groups || [makeGroup("Steer", "Single", 1)]);
+  const [groups, setGroups] = useState(initial?.groups || defaultGroups());
   const [overallDistFt, setOverallDistFt] = useState(initial?.overallDistFt || "");
   const [customGrossMax, setCustomGrossMax] = useState(initial?.customGrossMax || "");
   const [photos, setPhotos] = useState(initial?.photos || []);
@@ -265,7 +270,7 @@ export default function BridgeChartPage() {
 
   const clearRecord = () => {
     if (!window.confirm("Clear all recorded weights, distances, and photos?")) return;
-    setGroups([makeGroup("Steer", "Single", 1)]);
+    setGroups(defaultGroups());
     setOverallDistFt("");
     setCustomGrossMax("");
     setPhotos([]);
@@ -278,6 +283,8 @@ export default function BridgeChartPage() {
   const [inspections, setInspections] = useState([]);
   const [newInspTitle, setNewInspTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const [isReportCollapsed, setIsReportCollapsed] = useState(false);
+  const [isDiagramCollapsed, setIsDiagramCollapsed] = useState(false);
 
   const addGroup = (preset = "Tandem (2)", axles = 2) => setGroups(p => [...p, makeGroup("", preset, axles)]);
   const removeGroup = (i) => setGroups(p => p.filter((_, j) => j !== i));
@@ -800,14 +807,18 @@ export default function BridgeChartPage() {
 
           {/* ===== CAPTURED SECTION — Weight Report ===== */}
           <div className="bg-[#F0F2F5] p-3 rounded-xl -mx-3 sm:-mx-6 md:mx-0 space-y-4" data-testid="record-report-section">
-            <div className="flex items-center justify-between text-[10px] text-[#64748B] px-1">
+            <button type="button" onClick={() => setIsReportCollapsed(v => !v)} className="w-full flex items-center justify-between text-[10px] text-[#64748B] px-1 hover:text-[#002855] transition-colors" data-testid="toggle-report-collapse" data-html2canvas-ignore="true">
               <div className="flex items-center gap-2">
                 <Scale className="w-3.5 h-3.5 text-[#D4AF37]" />
                 <span className="font-bold text-[#002855]">Weight Report</span>
                 {badge && <span className="text-[#94A3B8]">· Badge {badge}</span>}
               </div>
-              <span>{new Date().toLocaleString()}</span>
-            </div>
+              <div className="flex items-center gap-2">
+                <span>{new Date().toLocaleString()}</span>
+                {isReportCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+              </div>
+            </button>
+            {!isReportCollapsed && (<>
           {/* Violations */}
           {showViolations && record.gross > 0 && (
             <div className="space-y-2">
@@ -895,26 +906,28 @@ export default function BridgeChartPage() {
           )}
 
           {/* Conflicts */}
-          {!record.valid && record.conflicts.length > 0 && !isCustom && (
-            <div className="bg-[#FEF3C7] border border-[#F59E0B]/30 rounded-lg px-3 py-2 space-y-1">
+          {!record.valid && record.conflicts.length > 0 && !isCustom && (            <div className="bg-[#FEF3C7] border border-[#F59E0B]/30 rounded-lg px-3 py-2 space-y-1">
               <p className="text-[10px] font-bold text-[#92400E] uppercase">Diagram issues:</p>
               {record.conflicts.map((c, i) => <p key={i} className="text-[11px] text-[#92400E] flex items-center gap-1"><XCircle className="w-3 h-3 flex-shrink-0" />{c}</p>)}
             </div>
           )}
+          </>)}{/* end !isReportCollapsed */}
 
           {/* Diagram */}
           {(record.valid || isCustom) && record.totalAxles > 0 && (
             <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-[#E2E8F0] flex items-center justify-between gap-2">
-                <h3 className="text-xs font-bold text-[#002855] uppercase">Weight Diagram</h3>
-                <button onClick={downloadDiag} title="Save" className="p-1.5 rounded-md text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9]" data-testid="diagram-save-btn" data-html2canvas-ignore="true"><Download className="w-3.5 h-3.5" /></button>
-              </div>
+              <button type="button" onClick={() => setIsDiagramCollapsed(v => !v)} className="w-full px-4 py-2.5 border-b border-[#E2E8F0] flex items-center justify-between gap-2 hover:bg-[#F8FAFC] transition-colors" data-testid="toggle-diagram-collapse" data-html2canvas-ignore="true">
+                <h3 className="text-xs font-bold text-[#002855] uppercase flex items-center gap-1.5">Weight Diagram{isDiagramCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}</h3>
+                <span onClick={(e) => { e.stopPropagation(); downloadDiag(); }} title="Save" role="button" tabIndex={0} className="p-1.5 rounded-md text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9] cursor-pointer" data-testid="diagram-save-btn"><Download className="w-3.5 h-3.5" /></span>
+              </button>
+              {!isDiagramCollapsed && (<>
               <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} hideViolations={!showViolations} toleranceApplies={record.toleranceApplies} /></div>
               {photos.length > 0 && (
                 <div className="px-4 pb-3">
                   <div className="flex gap-2 overflow-x-auto pb-1">{photos.map((p, i) => <div key={i} className="relative flex-shrink-0"><img src={p.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]" /><button onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] rounded-full flex items-center justify-center" data-html2canvas-ignore="true"><X className="w-2.5 h-2.5 text-white" /></button></div>)}</div>
                 </div>
               )}
+              </>)}
             </div>
           )}
           </div>{/* end record-report-section */}
