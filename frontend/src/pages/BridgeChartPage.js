@@ -367,12 +367,13 @@ export default function BridgeChartPage() {
     });
 
     // Gross max lookup
-    let grossMax = null, grossSource = "";
+    let grossMax = null, grossSource = "", grossNote = "";
     if (isCustom && customGrossMax) {
       grossMax = parseInt(customGrossMax); grossSource = "Custom";
     } else if (overallRound && totalAxles >= 2) {
       const lk = bridgeLookup(overallRound, totalAxles);
       if (lk) { grossMax = lk; grossSource = `Bridge (${overallRound}ft, ${totalAxles}ax)`; }
+      else { grossNote = `No bridge data for ${overallRound}ft / ${totalAxles} axles`; }
     } else if (!overallRound && totalAxles >= 2) {
       const colMax = Math.max(...Object.values(BD).map(row => row[totalAxles] || 0));
       if (colMax > 0) { grossMax = colMax; grossSource = `Max for ${totalAxles} axles (enter distance for accuracy)`; }
@@ -385,7 +386,7 @@ export default function BridgeChartPage() {
       if (n > 1 && d && (d < 4 || d > 60)) conflicts.push(`${g.label || `Group ${i + 1}`}: ${d}ft outside bridge range (4-60)`);
       if (!isCustom && n >= 2 && d && !bridgeLookup(d, n)) conflicts.push(`${g.label || `Group ${i + 1}`}: no data for ${d}ft / ${n} axles`);
     });
-    return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList };
+    return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, grossNote, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList };
   }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers]);
 
   const handlePhoto = (e) => { Array.from(e.target.files || []).forEach(f => { const r = new FileReader(); r.onload = (ev) => setPhotos(p => [...p, { dataUrl: ev.target.result, file: f }]); r.readAsDataURL(f); }); e.target.value = ""; };
@@ -681,17 +682,41 @@ export default function BridgeChartPage() {
               );
             })}
             <div className="flex gap-2">
-              <button onClick={() => addGroup("Tandem (2)", 2)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed border-[#E2E8F0] text-xs font-medium text-[#94A3B8] hover:border-[#002855] hover:text-[#002855] transition-colors"><Plus className="w-3.5 h-3.5" />Add Tandem</button>
-              <button onClick={() => addGroup("Triple (3)", 3)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed border-[#E2E8F0] text-xs font-medium text-[#94A3B8] hover:border-[#002855] hover:text-[#002855] transition-colors"><Plus className="w-3.5 h-3.5" />Add Triple</button>
-              <button onClick={() => addGroup("Custom", 0)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed border-[#E2E8F0] text-xs font-medium text-[#94A3B8] hover:border-[#002855] hover:text-[#002855] transition-colors"><Plus className="w-3.5 h-3.5" />Custom</button>
+              <button onClick={() => addGroup("Tandem (2)", 2)} data-testid="add-tandem-btn" className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#002855] text-white text-xs font-bold hover:bg-[#001a3a] active:scale-[0.98] transition-all shadow-sm"><Plus className="w-4 h-4" />Add Tandem</button>
+              <button onClick={() => addGroup("Triple (3)", 3)} data-testid="add-triple-btn" className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#002855] text-white text-xs font-bold hover:bg-[#001a3a] active:scale-[0.98] transition-all shadow-sm"><Plus className="w-4 h-4" />Add Triple</button>
+              <button onClick={() => addGroup("Custom", 0)} data-testid="add-custom-btn" className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#D4AF37] text-[#002855] text-xs font-bold hover:bg-[#BC9A2F] active:scale-[0.98] transition-all shadow-sm"><Plus className="w-4 h-4" />Custom</button>
             </div>
           </div>
 
           {/* Overall + Gross */}
           <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-3">
             <div className={`grid gap-3 ${isCustom ? "grid-cols-3" : "grid-cols-2"}`}>
-              <div><label className="text-[9px] font-bold text-[#94A3B8] uppercase block mb-0.5">Overall Distance (ft)</label><input type="number" inputMode="numeric" value={overallDistFt} onChange={e => setOverallDistFt(e.target.value)} placeholder="—" className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] outline-none" /></div>
-              <div><label className="text-[9px] font-bold text-[#002855] uppercase block mb-0.5">Gross Weight</label><div className="px-2 py-2 text-sm font-black text-center text-[#002855] bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">{record.gross > 0 ? record.gross.toLocaleString() : "—"}</div></div>
+              <div>
+                <label className="text-[9px] font-bold text-[#94A3B8] uppercase block mb-0.5">Overall Distance (ft)</label>
+                <input type="number" inputMode="numeric" value={overallDistFt} onChange={e => setOverallDistFt(e.target.value)} placeholder="—" className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] outline-none" />
+                {record.grossMax && (
+                  <p className="mt-1 text-[10px] text-[#002855] font-medium text-center bg-[#F8FAFC] rounded-md px-2 py-1 border border-[#E2E8F0]">
+                    Max: <strong className="text-[#002855]">{record.grossMax.toLocaleString()}</strong> lbs
+                    <span className="block text-[9px] text-[#94A3B8] font-normal">{record.grossSource}</span>
+                  </p>
+                )}
+                {!record.grossMax && record.grossNote && (
+                  <p className="mt-1 text-[10px] text-[#92400E] bg-[#FEF3C7]/60 rounded-md px-2 py-1 border border-[#F59E0B]/30 text-center">
+                    {record.grossNote}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="text-[9px] font-bold text-[#002855] uppercase block mb-0.5">Gross Weight = Sum of Axles</label>
+                <div className="px-2 py-2 text-sm font-black text-center text-[#002855] bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
+                  {record.gross > 0 ? record.gross.toLocaleString() : "—"}
+                </div>
+                {record.gross > 0 && (
+                  <p className="mt-1 text-[10px] text-[#64748B] font-mono text-center truncate bg-[#F8FAFC] rounded-md px-2 py-1 border border-[#E2E8F0]" title={record.groupViolations.map(v => `${v.label}=${v.actual.toLocaleString()}`).join(" + ")}>
+                    Σ {record.groupViolations.map(v => v.actual.toLocaleString()).join(" + ")}
+                  </p>
+                )}
+              </div>
               {isCustom && <div><label className="text-[9px] font-bold text-[#94A3B8] uppercase block mb-0.5">Gross Max (lbs)</label><input type="number" inputMode="numeric" value={customGrossMax} onChange={e => setCustomGrossMax(e.target.value)} placeholder="Custom" className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" /></div>}
             </div>
             {!isCustom && !overallDistFt && (
