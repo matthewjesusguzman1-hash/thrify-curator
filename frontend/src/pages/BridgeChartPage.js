@@ -399,10 +399,11 @@ export default function BridgeChartPage() {
       // Distance selection:
       //   • No dummy → use g.distFt (standard group span)
       //   • Dummy counted → use g.distFt (full span including dummy)
-      //   • Dummy disregarded → use g.distFtReduced (span of remaining axles only), fall back to g.distFt
+      //   • Dummy disregarded → use g.distFtReduced ONLY. If not provided, treat as
+      //     a standard group with no distance (so a tandem reverts to the 34k rule).
       const gDistFull = roundDist(g.distFt, "0");
       const gDistReduced = roundDist(g.distFtReduced, "0");
-      const gDist = di.hasDummy && di.disregarded ? (gDistReduced || gDistFull) : gDistFull;
+      const gDist = di.hasDummy && di.disregarded ? gDistReduced : gDistFull;
       let max = null, source = "";
       if (isCustom && g.maxOverride) { max = parseInt(g.maxOverride); source = "Custom"; }
       else if (n === 1) { max = 20000; source = "Single axle"; }
@@ -478,7 +479,7 @@ export default function BridgeChartPage() {
     if (!isCustom) groups.forEach((g, i) => {
       const n = ruleAxles(g, i);
       const di = dummyInfoList[i];
-      const d = di.hasDummy && di.disregarded ? (roundDist(g.distFtReduced, "0") || roundDist(g.distFt, "0")) : roundDist(g.distFt, "0");
+      const d = di.hasDummy && di.disregarded ? roundDist(g.distFtReduced, "0") : roundDist(g.distFt, "0");
       if (n > 1 && d && (d < 4 || d > 60)) conflicts.push(`${g.label || `Group ${i + 1}`}: ${d}ft outside bridge range (4-60)`);
       if (!isCustom && n >= 2 && d && !bridgeLookup(d, n)) conflicts.push(`${g.label || `Group ${i + 1}`}: no data for ${d}ft / ${n} axles`);
     });
@@ -716,14 +717,18 @@ export default function BridgeChartPage() {
                             <input type="number" inputMode="numeric" value={g.distFt} onChange={e => updateGroup(gi, "distFt", e.target.value)} placeholder={n === 2 ? "Std" : "ft"} className={`w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#E2E8F0] outline-none placeholder:text-[#CBD5E1] ${g.dummyAxle && viol?.dummy?.disregarded ? "opacity-50" : ""}`} />
                           </div>
                         )}
-                        {g.dummyAxle && n > 1 && (
-                          <div className="w-24">
-                            <label className={`text-[8px] font-bold uppercase block ${viol?.dummy?.disregarded ? "text-[#16A34A]" : "text-[#94A3B8]"}`} title="Distance of the remaining axles (used if dummy is disregarded)">
-                              Reduced (ft)
-                            </label>
-                            <input type="number" inputMode="numeric" value={g.distFtReduced} onChange={e => updateGroup(gi, "distFtReduced", e.target.value)} placeholder={`${parseInt(g.axles)} ax`} className={`w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border outline-none placeholder:text-[#CBD5E1] ${viol?.dummy?.disregarded ? "border-[#16A34A]/50 bg-[#F0FDF4]" : "border-[#E2E8F0]"}`} />
-                          </div>
-                        )}
+                        {g.dummyAxle && n > 1 && (() => {
+                          const baseNumLocal = parseInt(g.axles) || 0;
+                          const reducedLabel = baseNumLocal === 1 ? `A${an.start}` : `A${an.start}-A${an.start + baseNumLocal - 1}`;
+                          return (
+                            <div className="w-24">
+                              <label className={`text-[8px] font-bold uppercase block ${viol?.dummy?.disregarded ? "text-[#16A34A]" : "text-[#94A3B8]"}`} title="Distance of the remaining axles (used when dummy is disregarded)">
+                                {reducedLabel} (ft)
+                              </label>
+                              <input type="number" inputMode="numeric" value={g.distFtReduced} onChange={e => updateGroup(gi, "distFtReduced", e.target.value)} placeholder={baseNumLocal === 2 ? "Std" : "ft"} className={`w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border outline-none placeholder:text-[#CBD5E1] ${viol?.dummy?.disregarded ? "border-[#16A34A]/50 bg-[#F0FDF4]" : "border-[#E2E8F0]"}`} />
+                            </div>
+                          );
+                        })()}
                         {isCustom && <div className="w-20"><label className="text-[8px] font-bold text-[#94A3B8] uppercase block">Max (lbs)</label><input type="number" inputMode="numeric" value={g.maxOverride} onChange={e => updateGroup(gi, "maxOverride", e.target.value)} placeholder="Custom" className="w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" /></div>}
                         {n > 1 && (
                           <div className="flex gap-1 ml-auto">
