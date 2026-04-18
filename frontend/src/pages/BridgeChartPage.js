@@ -68,7 +68,8 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
     for (let i = 0; i < n; i++) {
       const isDummy = viol?.dummy?.hasDummy && i === baseN;
       const dummyDisregarded = isDummy && viol.dummy.disregarded && !hideViolations;
-      allAxles.push({ x, axleNum: runningAxleNum, groupIdx: gi, isDummy, dummyDisregarded, isOver, withinTol });
+      const axleOver = !hideViolations && viol?.axleOverages?.some(o => o.axleIndex === i);
+      allAxles.push({ x, axleNum: runningAxleNum, groupIdx: gi, isDummy, dummyDisregarded, isOver, withinTol, axleOver });
       runningAxleNum++;
       if (i < n - 1) x += TIGHT;
     }
@@ -139,9 +140,9 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
 
       {/* Axles */}
       {allAxles.map((a, i) => {
-        const axleIsOver = !hideViolations && a.isOver;
-        const wheelFill = axleIsOver ? (a.withinTol ? WARN_ORANGE : OVER_RED) : (a.isDummy ? (a.dummyDisregarded ? "#64748B" : "#D4AF37") : "#334155");
-        const wheelStroke = axleIsOver ? (a.withinTol ? WARN_ORANGE : OVER_RED) : (a.isDummy ? "#D4AF37" : "#64748B");
+        const axleIsOver = !hideViolations && (a.isOver || a.axleOver);
+        const wheelFill = axleIsOver ? ((a.withinTol && !a.axleOver) ? WARN_ORANGE : OVER_RED) : (a.isDummy ? (a.dummyDisregarded ? "#64748B" : "#D4AF37") : "#334155");
+        const wheelStroke = axleIsOver ? ((a.withinTol && !a.axleOver) ? WARN_ORANGE : OVER_RED) : (a.isDummy ? "#D4AF37" : "#64748B");
         return (
           <g key={i}>
             <line x1={a.x} y1={axleY - 28} x2={a.x} y2={axleY + 14} stroke={axleIsOver ? OVER_RED : "#94A3B8"} strokeWidth="5" strokeLinecap="round" />
@@ -402,17 +403,38 @@ export default function BridgeChartPage() {
         }
       }
 
+      // Single-axle 20,000 lb rule — applies to every axle individually (base + dummy if counted)
+      // Only evaluable in Individual weights mode
+      const SINGLE_AXLE_MAX = 20000;
+      const axleOverages = [];
+      if (!g.useGroup && !isCustom) {
+        for (let k = 0; k < baseN; k++) {
+          const w = parseInt(g.weights?.[k]) || 0;
+          if (w > SINGLE_AXLE_MAX) {
+            axleOverages.push({ axleNum: axleNumbers[gi].start + k, axleIndex: k, weight: w, max: SINGLE_AXLE_MAX, over: w - SINGLE_AXLE_MAX });
+          }
+        }
+        // Include dummy axle too when it's counted (not disregarded)
+        if (di.hasDummy && !di.disregarded) {
+          const dw = di.dummyWeight;
+          if (dw > SINGLE_AXLE_MAX) {
+            axleOverages.push({ axleNum: axleNumbers[gi].start + baseN, axleIndex: baseN, weight: dw, max: SINGLE_AXLE_MAX, over: dw - SINGLE_AXLE_MAX, isDummy: true });
+          }
+        }
+      }
+
       const an = axleNumbers[gi];
       const axLabel = an.start === an.end ? `A${an.start}` : `A${an.start}-${an.end}`;
-      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, tandemCheck, dummy: di };
+      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, tandemCheck, dummy: di, axleOverages };
     });
 
-    // Count how many axle groups/tandem-checks are in violation (for 5% tolerance rule)
-    // 5% tolerance applies ONLY when exactly one violation exists across all groups.
+    // Count how many violations exist across all groups (for 5% tolerance rule)
+    // 5% tolerance applies ONLY when exactly one violation exists.
     let violationCount = 0;
     groupViolations.forEach(v => {
       if (v.max && v.actual > v.max) violationCount++;
       if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) violationCount++;
+      if (v.axleOverages) violationCount += v.axleOverages.length;
     });
     // Note: gross weight never gets tolerance, so don't count it
     const toleranceApplies = violationCount === 1;
@@ -613,7 +635,8 @@ export default function BridgeChartPage() {
               const hasViol = showViolations && viol && viol.max && gWeight > 0;
               const mainOver = hasViol && gWeight > viol.max;
               const tandemOver = showViolations && viol?.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max;
-              const isOver = mainOver || tandemOver;
+              const anyAxleOver = showViolations && (viol?.axleOverages?.length > 0);
+              const isOver = mainOver || tandemOver || anyAxleOver;
               const withinTol = hasViol && !isCustom && record.toleranceApplies && mainOver && gWeight <= Math.round(viol.max * 1.05);
               const isCollapsed = g._collapsed && gWeight > 0;
 
@@ -633,8 +656,13 @@ export default function BridgeChartPage() {
                       <span className="text-[10px] text-white/60 font-mono flex-shrink-0">{axLabel}</span>
                       {gWeight > 0 && <span className="text-xs font-black text-[#D4AF37] flex-shrink-0 font-mono">{gWeight.toLocaleString()}</span>}
                       {isOver && (
-                        <span className="text-[10px] font-bold flex-shrink-0 flex items-center gap-0.5 text-white bg-black/20 rounded px-1.5 py-0.5">
-                          <AlertTriangle className="w-2.5 h-2.5" />+{(mainOver ? (gWeight - viol.max) : (viol.tandemCheck.actual - viol.tandemCheck.max)).toLocaleString()}
+                        <span className={`text-[10px] font-bold flex-shrink-0 flex items-center gap-0.5 text-white bg-black/20 rounded px-1.5 py-0.5`}>
+                          <AlertTriangle className="w-2.5 h-2.5" />
+                          +{(
+                            mainOver ? (gWeight - viol.max) :
+                            tandemOver ? (viol.tandemCheck.actual - viol.tandemCheck.max) :
+                            anyAxleOver ? viol.axleOverages.reduce((s, o) => s + o.over, 0) : 0
+                          ).toLocaleString()}
                         </span>
                       )}
                       {hasViol && !isOver && gWeight > 0 && <CheckCircle2 className="w-3.5 h-3.5 text-[#22C55E] flex-shrink-0" />}
@@ -694,12 +722,13 @@ export default function BridgeChartPage() {
                             const isDummy = g.dummyAxle && wi === baseNum;
                             const di = viol?.dummy;
                             const counted = isDummy && di && di.hasDummy && !di.disregarded && di.dummyWeight > 0;
+                            const axleOver = showViolations && viol?.axleOverages?.some(o => o.axleIndex === wi);
                             return (
                               <div key={wi} className="flex-1 min-w-0">
-                                <span className={`text-[7px] font-bold flex items-center gap-0.5 ${isDummy ? (counted ? "text-[#DC2626]" : "text-[#D4AF37]") : "text-[#94A3B8]"}`}>
-                                  A{an.start + wi}{isDummy ? " (dummy)" : ""}{counted && <AlertTriangle className="w-2 h-2" />}
+                                <span className={`text-[7px] font-bold flex items-center gap-0.5 ${axleOver ? "text-[#DC2626]" : isDummy ? (counted ? "text-[#DC2626]" : "text-[#D4AF37]") : "text-[#94A3B8]"}`}>
+                                  A{an.start + wi}{isDummy ? " (dummy)" : ""}{(counted || axleOver) && <AlertTriangle className="w-2 h-2" />}
                                 </span>
-                                <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder={isDummy ? "dummy lbs" : "lbs"} className={`w-full px-1 py-1.5 text-[11px] font-bold text-center rounded border outline-none ${isDummy ? (counted ? "border-[#EF4444]/70 bg-[#FEE2E2]/50 text-[#DC2626]" : "border-[#D4AF37]/50 bg-[#D4AF37]/5") : isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
+                                <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder={isDummy ? "dummy lbs" : "lbs"} className={`w-full px-1 py-1.5 text-[11px] font-bold text-center rounded border outline-none ${axleOver ? "border-[#EF4444]/80 bg-[#FEE2E2]/70 text-[#DC2626]" : isDummy ? (counted ? "border-[#EF4444]/70 bg-[#FEE2E2]/50 text-[#DC2626]" : "border-[#D4AF37]/50 bg-[#D4AF37]/5") : isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
                               </div>
                             );
                           })}
@@ -722,6 +751,14 @@ export default function BridgeChartPage() {
                           )}
                         </div>
                       )}
+
+                      {/* Single-axle 20k overages */}
+                      {showViolations && viol?.axleOverages?.map(o => (
+                        <div key={`axle-${o.axleNum}`} className="rounded px-2 py-1 text-[10px] flex items-center justify-between bg-[#FEE2E2]">
+                          <span className="text-[#64748B]">A{o.axleNum}{o.isDummy ? " (dummy)" : ""}: {o.max.toLocaleString()} single-axle max</span>
+                          <span className="font-bold text-[#DC2626]">{o.weight.toLocaleString()} → +{o.over.toLocaleString()} over</span>
+                        </div>
+                      ))}
 
                       {/* Inline violation */}
                       {hasViol && gWeight > 0 && (
@@ -825,7 +862,7 @@ export default function BridgeChartPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Violations</h3>
-                {!isCustom && !record.toleranceApplies && record.groupViolations.some(v => (v.max && v.actual > v.max) || (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max)) && (
+                {!isCustom && !record.toleranceApplies && record.groupViolations.some(v => (v.max && v.actual > v.max) || (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) || (v.axleOverages && v.axleOverages.length > 0)) && (
                   <span className="text-[9px] font-bold text-[#DC2626] bg-[#FEE2E2] px-2 py-0.5 rounded-full">5% tolerance does not apply (more than one violation)</span>
                 )}
               </div>
@@ -833,10 +870,11 @@ export default function BridgeChartPage() {
                 <React.Fragment key={i}>
                   {v.max && v.actual > 0 && <ViolationCard label={`${v.label} (${v.source})`} actual={v.actual} max={v.max} tolerance={!isCustom && record.toleranceApplies} />}
                   {v.tandemCheck && <ViolationCard label={v.tandemCheck.source} actual={v.tandemCheck.actual} max={v.tandemCheck.max} tolerance={!isCustom && record.toleranceApplies} />}
+                  {v.axleOverages?.map(o => <ViolationCard key={`axle-${o.axleNum}`} label={`A${o.axleNum}${o.isDummy ? " (dummy)" : ""} (Single axle max)`} actual={o.weight} max={o.max} tolerance={!isCustom && record.toleranceApplies} />)}
                 </React.Fragment>
               ))}
               {record.grossMax && record.gross > 0 && <ViolationCard label={`Gross (${record.grossSource})`} actual={record.gross} max={record.grossMax} tolerance={false} />}
-              {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max)) && (!record.grossMax || record.gross <= record.grossMax) && record.gross > 0 && (
+              {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max) && (!v.axleOverages || v.axleOverages.length === 0)) && (!record.grossMax || record.gross <= record.grossMax) && record.gross > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] border border-[#16A34A]/30 rounded-lg"><CheckCircle2 className="w-4 h-4 text-[#16A34A]" /><span className="text-xs font-bold text-[#16A34A]">All weights within legal limits</span></div>
               )}
             </div>
@@ -883,6 +921,11 @@ export default function BridgeChartPage() {
                           {v.tandemCheck.source}: {v.tandemCheck.actual.toLocaleString()} {v.tandemCheck.actual > v.tandemCheck.max ? "exceeds" : "within"} {v.tandemCheck.max.toLocaleString()} → <strong>{v.tandemCheck.actual > v.tandemCheck.max ? `+${(v.tandemCheck.actual - v.tandemCheck.max).toLocaleString()} OVER` : "LEGAL"}</strong>
                         </p>
                       )}
+                      {v.axleOverages?.map(o => (
+                        <p key={`axle-${o.axleNum}`} className="mt-1 font-mono text-[#DC2626]">
+                          Single axle rule (A{o.axleNum}{o.isDummy ? " dummy" : ""}): {o.weight.toLocaleString()} exceeds {o.max.toLocaleString()} → <strong>+{o.over.toLocaleString()} OVER</strong>
+                        </p>
+                      ))}
                     </div>
                   );
                 })}
