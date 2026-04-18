@@ -31,123 +31,160 @@ const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"
 /* ================================================================
    TRUCK DIAGRAM — improved with tight grouped axles
    ================================================================ */
-function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false, grossWithinTol = false }) {
-  const w = 720, h = 380, mL = 70, mR = 70, axleY = h - 110, tTop = 55, tH = axleY - tTop - 30;
+function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false }) {
+  // Larger, clearer viewport with roomy spacing
+  const w = 900, h = 460, mL = 90, mR = 90;
+  const tTop = 120;                // trailer top
+  const tH = 160;                  // trailer height
+  const axleY = tTop + tH + 28;    // axle line y
+  const TIGHT = 30;                // px between axles in same group
 
-  // Build axle layout: groups are spaced apart, axles within a group are close
-  const TIGHT = 22; // px between axles in same group
-  const totalGroups = groups.filter(g => (parseInt(g.axles) || 0) > 0).length;
   const totalAxles = groups.reduce((s, g) => s + (parseInt(g.axles) || 0), 0);
   if (totalAxles === 0) return null;
 
-  // Calculate total tight width and distribute remaining space as group gaps
   const groupSizes = groups.map(g => parseInt(g.axles) || 0).filter(n => n > 0);
+  const totalGroups = groupSizes.length;
   const totalTight = groupSizes.reduce((s, n) => s + (n - 1) * TIGHT, 0);
   const usable = w - mL - mR - totalTight;
   const gapCount = Math.max(totalGroups - 1, 1);
   const groupGap = totalGroups > 1 ? usable / gapCount : 0;
 
-  let allAxles = [];
+  const allAxles = [];
+  const groupMeta = [];
   let runningAxleNum = 1;
   let x = mL;
-  let groupMeta = [];
 
   groups.forEach((g, gi) => {
     const n = parseInt(g.axles) || 0;
     if (n === 0) return;
-    const startAxleNum = runningAxleNum;
-    const startX = x;
     const viol = groupViolations[gi];
     const baseN = viol?.baseN ?? n;
-    const isOver = viol && ((viol.max && viol.actual > viol.max) || (viol.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max));
-    const withinTol = viol && viol.max && viol.actual > viol.max && viol.actual <= viol.max * 1.05;
+    const mainOver = viol && viol.max && viol.actual > viol.max;
+    const tandemOver = viol?.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max;
+    const isOver = mainOver || tandemOver;
+    const withinTol = viol && mainOver && viol.actual <= viol.max * 1.05;
+    const startAxleNum = runningAxleNum;
+    const startX = x;
     for (let i = 0; i < n; i++) {
       const isDummy = viol?.dummy?.hasDummy && i === baseN;
       const dummyDisregarded = isDummy && viol.dummy.disregarded;
-      allAxles.push({ x, axleNum: runningAxleNum, groupIdx: gi, isDummy, dummyDisregarded, isOver });
+      allAxles.push({ x, axleNum: runningAxleNum, groupIdx: gi, isDummy, dummyDisregarded, isOver, withinTol });
       runningAxleNum++;
       if (i < n - 1) x += TIGHT;
     }
     const endX = x;
-    const endAxleNum = runningAxleNum - 1;
-    const axleLabel = startAxleNum === endAxleNum ? `A${startAxleNum}` : `A${startAxleNum}-${endAxleNum}`;
-    const gWeightDisplay = viol ? viol.actual : 0;
-    const overBy = isOver ? (viol.max && viol.actual > viol.max ? viol.actual - viol.max : (viol.tandemCheck ? viol.tandemCheck.actual - viol.tandemCheck.max : 0)) : 0;
-    groupMeta.push({ gi, startX, endX, label: g.label, axleLabel, distFt: roundDist(g.distFt, "0"), n, gWeight: gWeightDisplay, isOver, withinTol, overBy, max: viol?.max, source: viol?.source });
+    const overBy = isOver ? (mainOver ? viol.actual - viol.max : (viol.tandemCheck.actual - viol.tandemCheck.max)) : 0;
+    groupMeta.push({ gi, startX, endX, label: g.label, startAxleNum, endAxleNum: runningAxleNum - 1, distFt: roundDist(g.distFt, "0"), n, gWeight: viol ? viol.actual : 0, isOver, withinTol, overBy, max: viol?.max || (viol?.tandemCheck?.max ?? null), source: viol?.source });
     if (gi < groups.length - 1) x += groupGap;
   });
 
   const OVER_RED = "#DC2626";
   const WARN_ORANGE = "#F97316";
   const OK_GREEN = "#16A34A";
-  const grossColor = grossOver ? (grossWithinTol ? WARN_ORANGE : OVER_RED) : "#D4AF37";
+  const grossColor = grossOver ? OVER_RED : "#D4AF37";
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ maxHeight: 340 }}>
-      <rect width={w} height={h} fill="#0F172A" rx="12" />
-      {allAxles.length > 0 && (
-        <>
-          <rect x={allAxles[0].x - 25} y={tTop} width={Math.max(allAxles[allAxles.length - 1].x - allAxles[0].x + 50, 60)} height={tH} rx="8" fill="#1E293B" stroke={grossOver ? grossColor : "#334155"} strokeWidth={grossOver ? 2 : 1.5} />
-          <rect x={allAxles[0].x - 25} y={tTop + 10} width={45} height={tH - 10} rx="6" fill="#1E293B" stroke="#D4AF37" strokeWidth="0.8" opacity="0.4" />
-        </>
-      )}
-      <text x={w / 2} y={tTop + tH / 2 - 6} textAnchor="middle" fill="#8FAEC5" fontSize="9" fontWeight="bold">GROSS</text>
-      <text x={w / 2} y={tTop + tH / 2 + 14} textAnchor="middle" fill={grossColor} fontSize="18" fontWeight="900" fontFamily="monospace">{grossWeight ? grossWeight.toLocaleString() : "—"}</text>
-      {grossMax && (
-        <text x={w / 2} y={tTop + tH / 2 + 28} textAnchor="middle" fill={grossOver ? grossColor : "#64748B"} fontSize="9" fontWeight="bold">
-          {grossOver ? (grossWithinTol ? `+${(grossWeight - grossMax).toLocaleString()} (5% tol)` : `+${(grossWeight - grossMax).toLocaleString()} OVER`) : `/ ${grossMax.toLocaleString()} max`}
-        </text>
-      )}
-      {/* Axles — single wheel per axle; overweight groups get red wheels */}
-      {allAxles.map((a, i) => {
-        const wheelFill = a.isOver ? OVER_RED : (a.isDummy ? (a.dummyDisregarded ? "#64748B" : "#D4AF37") : "#334155");
-        const wheelStroke = a.isOver ? OVER_RED : (a.isDummy ? "#D4AF37" : "#64748B");
-        return (
-          <g key={i}>
-            <line x1={a.x} y1={axleY - 14} x2={a.x} y2={axleY + 8} stroke={a.isOver ? OVER_RED : "#94A3B8"} strokeWidth="2.5" />
-            <circle cx={a.x} cy={axleY + 9} r="7" fill={wheelFill} stroke={wheelStroke} strokeWidth={a.isOver ? 2 : 1.5} opacity={a.dummyDisregarded ? 0.45 : 1} />
-            <rect x={a.x - 2} y={axleY - 17} width="4" height="2" fill={a.isOver ? OVER_RED : COLORS[a.groupIdx % COLORS.length]} rx="1" />
-            {a.isDummy && (
-              <text x={a.x} y={axleY + 28} textAnchor="middle" fill={a.dummyDisregarded ? "#64748B" : "#D4AF37"} fontSize="7" fontWeight="bold">D</text>
-            )}
-          </g>
-        );
-      })}
-      {/* Group labels + weights above */}
+    <svg ref={svgRef} viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ maxHeight: 430 }}>
+      <defs>
+        <linearGradient id="trailerGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#1E293B" />
+          <stop offset="1" stopColor="#0F172A" />
+        </linearGradient>
+      </defs>
+      <rect width={w} height={h} fill="#0F172A" rx="14" />
+
+      {/* Group weight banners — above trailer, one per group */}
       {groupMeta.map((gm, i) => {
         const cx = (gm.startX + gm.endX) / 2;
-        const labelColor = gm.isOver ? (gm.withinTol ? WARN_ORANGE : OVER_RED) : COLORS[i % COLORS.length];
-        const weightColor = gm.isOver ? (gm.withinTol ? WARN_ORANGE : OVER_RED) : "#FFFFFF";
+        const color = gm.isOver ? (gm.withinTol ? WARN_ORANGE : OVER_RED) : OK_GREEN;
+        const pillW = 180, pillH = 58;
         return (
-          <g key={`gm-${i}`}>
-            <text x={cx} y={tTop - 30} textAnchor="middle" fill={weightColor} fontSize="12" fontWeight="bold" fontFamily="monospace">{gm.gWeight > 0 ? gm.gWeight.toLocaleString() : ""}</text>
-            {gm.isOver && gm.overBy > 0 && (
-              <text x={cx} y={tTop - 18} textAnchor="middle" fill={gm.withinTol ? WARN_ORANGE : OVER_RED} fontSize="9" fontWeight="900">+{gm.overBy.toLocaleString()} OVER</text>
-            )}
-            {!gm.isOver && gm.max && gm.gWeight > 0 && (
-              <text x={cx} y={tTop - 18} textAnchor="middle" fill={OK_GREEN} fontSize="8" fontWeight="bold">/ {gm.max.toLocaleString()} max</text>
-            )}
-            <text x={cx} y={tTop - 6} textAnchor="middle" fill={labelColor} fontSize="8" fontWeight="bold">{gm.axleLabel}</text>
-            {gm.n > 1 && (
-              <>
-                <line x1={gm.startX} y1={axleY + 40} x2={gm.endX} y2={axleY + 40} stroke={labelColor} strokeWidth="1.5" opacity="0.6" />
-                <line x1={gm.startX} y1={axleY + 34} x2={gm.startX} y2={axleY + 46} stroke={labelColor} strokeWidth="1" opacity="0.5" />
-                <line x1={gm.endX} y1={axleY + 34} x2={gm.endX} y2={axleY + 46} stroke={labelColor} strokeWidth="1" opacity="0.5" />
-                <text x={cx} y={axleY + 58} textAnchor="middle" fill={labelColor} fontSize="8" fontWeight="bold">
-                  {gm.distFt ? `${gm.distFt}ft ` : ""}{gm.label || ""}
-                </text>
-              </>
-            )}
-            {gm.n === 1 && <text x={cx} y={axleY + 46} textAnchor="middle" fill={labelColor} fontSize="8" fontWeight="bold">{gm.label || ""}</text>}
+          <g key={`banner-${i}`}>
+            <rect x={cx - pillW / 2} y={10} width={pillW} height={pillH} rx="8" fill={gm.isOver ? (gm.withinTol ? "#3B2415" : "#3B1818") : "#0F2A1F"} stroke={color} strokeWidth="1.5" />
+            <text x={cx} y={26} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="bold">
+              {gm.endAxleNum !== gm.startAxleNum ? `A${gm.startAxleNum}-A${gm.endAxleNum}` : `A${gm.startAxleNum}`}
+            </text>
+            <text x={cx} y={46} textAnchor="middle" fill={color} fontSize="18" fontWeight="900" fontFamily="monospace">{gm.gWeight > 0 ? gm.gWeight.toLocaleString() : "—"}</text>
+            {gm.isOver ? (
+              <text x={cx} y={62} textAnchor="middle" fill={color} fontSize="10" fontWeight="900">+{gm.overBy.toLocaleString()} OVER{gm.withinTol ? " (5% tol)" : ""}</text>
+            ) : gm.max ? (
+              <text x={cx} y={62} textAnchor="middle" fill="#64748B" fontSize="10" fontWeight="bold">max {gm.max.toLocaleString()}</text>
+            ) : null}
           </g>
         );
       })}
+
+      {/* Trailer body */}
+      {allAxles.length > 0 && (
+        <g>
+          <rect x={allAxles[0].x - 28} y={tTop} width={Math.max(allAxles[allAxles.length - 1].x - allAxles[0].x + 56, 80)} height={tH} rx="10" fill="url(#trailerGrad)" stroke={grossOver ? OVER_RED : "#334155"} strokeWidth={grossOver ? 2.5 : 1.5} />
+          <rect x={allAxles[0].x - 20} y={tTop + 12} width={46} height={tH - 24} rx="6" fill="#1E293B" stroke="#D4AF37" strokeWidth="0.8" opacity="0.35" />
+        </g>
+      )}
+
+      {/* Gross label inside trailer */}
+      <text x={w / 2} y={tTop + 40} textAnchor="middle" fill="#8FAEC5" fontSize="13" fontWeight="bold">GROSS WEIGHT</text>
+      <text x={w / 2} y={tTop + 82} textAnchor="middle" fill={grossColor} fontSize="36" fontWeight="900" fontFamily="monospace">{grossWeight ? grossWeight.toLocaleString() : "—"}</text>
+      {grossMax && (
+        <text x={w / 2} y={tTop + 108} textAnchor="middle" fill={grossOver ? OVER_RED : "#64748B"} fontSize="13" fontWeight="bold">
+          {grossOver ? `+${(grossWeight - grossMax).toLocaleString()} OVER max ${grossMax.toLocaleString()}` : `max ${grossMax.toLocaleString()} lbs`}
+        </text>
+      )}
+      {grossMax && (
+        <text x={w / 2} y={tTop + 132} textAnchor="middle" fill={grossOver ? OVER_RED : OK_GREEN} fontSize="12" fontWeight="900">
+          {grossOver ? "OVERWEIGHT" : "LEGAL"}
+        </text>
+      )}
+
+      {/* Axles */}
+      {allAxles.map((a, i) => {
+        const wheelFill = a.isOver ? (a.withinTol ? WARN_ORANGE : OVER_RED) : (a.isDummy ? (a.dummyDisregarded ? "#64748B" : "#D4AF37") : "#334155");
+        const wheelStroke = a.isOver ? (a.withinTol ? WARN_ORANGE : OVER_RED) : (a.isDummy ? "#D4AF37" : "#64748B");
+        return (
+          <g key={i}>
+            {/* axle rod */}
+            <line x1={a.x} y1={axleY - 18} x2={a.x} y2={axleY + 10} stroke={a.isOver ? OVER_RED : "#94A3B8"} strokeWidth="3" strokeLinecap="round" />
+            {/* wheel */}
+            <circle cx={a.x} cy={axleY + 14} r="11" fill={wheelFill} stroke={wheelStroke} strokeWidth={a.isOver ? 2.5 : 2} opacity={a.dummyDisregarded ? 0.5 : 1} />
+            {/* axle number */}
+            <text x={a.x} y={axleY - 22} textAnchor="middle" fill={a.isOver ? OVER_RED : "#CBD5E1"} fontSize="9" fontWeight="900">A{a.axleNum}</text>
+            {a.isDummy && (
+              <text x={a.x + 14} y={axleY + 18} fill={a.dummyDisregarded ? "#64748B" : "#D4AF37"} fontSize="8" fontWeight="900">D</text>
+            )}
+          </g>
+        );
+      })}
+
+      {/* Group brackets + labels below axles */}
+      {groupMeta.map((gm, i) => {
+        const cx = (gm.startX + gm.endX) / 2;
+        const color = gm.isOver ? (gm.withinTol ? WARN_ORANGE : OVER_RED) : "#CBD5E1";
+        const y = axleY + 50;
+        return (
+          <g key={`gm-${i}`}>
+            {gm.n > 1 && (
+              <>
+                <line x1={gm.startX} y1={y} x2={gm.endX} y2={y} stroke={color} strokeWidth="2" opacity="0.6" />
+                <line x1={gm.startX} y1={y - 5} x2={gm.startX} y2={y + 5} stroke={color} strokeWidth="2" opacity="0.6" />
+                <line x1={gm.endX} y1={y - 5} x2={gm.endX} y2={y + 5} stroke={color} strokeWidth="2" opacity="0.6" />
+              </>
+            )}
+            <text x={cx} y={y + 18} textAnchor="middle" fill={color} fontSize="10" fontWeight="bold">
+              {gm.label || (gm.n > 1 ? `A${gm.startAxleNum}–A${gm.endAxleNum}` : `A${gm.startAxleNum}`)}
+              {gm.distFt ? ` · ${gm.distFt}ft` : ""}
+            </text>
+          </g>
+        );
+      })}
+
       {/* Overall distance */}
       {allAxles.length > 1 && overallDist && (
-        <>
-          <line x1={allAxles[0].x} y1={axleY + 72} x2={allAxles[allAxles.length - 1].x} y2={axleY + 72} stroke="#64748B" strokeWidth="1" />
-          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 86} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="bold">{overallDist} ft overall</text>
-        </>
+        <g>
+          <line x1={allAxles[0].x} y1={axleY + 80} x2={allAxles[allAxles.length - 1].x} y2={axleY + 80} stroke="#64748B" strokeWidth="1.2" />
+          <line x1={allAxles[0].x} y1={axleY + 75} x2={allAxles[0].x} y2={axleY + 85} stroke="#64748B" strokeWidth="1.2" />
+          <line x1={allAxles[allAxles.length - 1].x} y1={axleY + 75} x2={allAxles[allAxles.length - 1].x} y2={axleY + 85} stroke="#64748B" strokeWidth="1.2" />
+          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 98} textAnchor="middle" fill="#94A3B8" fontSize="11" fontWeight="bold">{overallDist} ft overall</text>
+        </g>
       )}
     </svg>
   );
@@ -499,9 +536,7 @@ export default function BridgeChartPage() {
             </div>
           </div>
 
-          {/* Everything below is captured together for Save/Share/Add to Inspection */}
-          <div ref={captureRef} className="space-y-4" data-testid="record-capture-area">
-
+          {/* Everything below this line is captured for Save/Share/Add-to-Inspection */}
           {/* Axle Groups */}
           {!isInputsCollapsed && (<>
           <div className="space-y-2">
@@ -676,6 +711,17 @@ export default function BridgeChartPage() {
             )}
           </div>
           </>)}{/* end !isInputsCollapsed */}
+
+          {/* ===== CAPTURE AREA — violations + math + diagram only ===== */}
+          <div ref={captureRef} className="space-y-4 bg-[#F0F2F5] p-3 rounded-xl" data-testid="record-capture-area">
+            <div className="flex items-center justify-between text-[10px] text-[#64748B] px-1">
+              <div className="flex items-center gap-2">
+                <Scale className="w-3.5 h-3.5 text-[#D4AF37]" />
+                <span className="font-bold text-[#002855]">Weight Report</span>
+                {badge && <span className="text-[#94A3B8]">· Badge {badge}</span>}
+              </div>
+              <span>{new Date().toLocaleString()}</span>
+            </div>
           {/* Violations */}
           {showViolations && record.gross > 0 && (
             <div className="space-y-2">
@@ -690,6 +736,70 @@ export default function BridgeChartPage() {
               {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max)) && (!record.grossMax || record.gross <= record.grossMax) && record.gross > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] border border-[#16A34A]/30 rounded-lg"><CheckCircle2 className="w-4 h-4 text-[#16A34A]" /><span className="text-xs font-bold text-[#16A34A]">All weights within legal limits</span></div>
               )}
+            </div>
+          )}
+
+          {/* Calculation Details — explains HOW each number was derived */}
+          {record.gross > 0 && (
+            <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+              <div className="px-4 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Calculation Details</h3>
+              </div>
+              <div className="divide-y divide-[#F1F5F9]">
+                {record.groupViolations.map((v, i) => {
+                  const g = groups[i];
+                  const baseN = v.baseN;
+                  const baseW = g.useGroup ? (parseInt(g.groupWeight) || 0) : (g.weights || []).slice(0, baseN).reduce((s, w) => s + (parseInt(w) || 0), 0);
+                  const di = v.dummy || {};
+                  const overVal = v.max && v.actual > v.max ? v.actual - v.max : 0;
+                  const withinTol5 = v.max && v.actual > v.max && v.actual <= Math.round(v.max * 1.05) && !isCustom;
+                  // Build the weight expression
+                  const parts = [];
+                  if (g.useGroup) parts.push(`${baseW.toLocaleString()} (combined)`);
+                  else (g.weights || []).slice(0, baseN).forEach((w, k) => parts.push(`A${axleNumbers[i].start + k}=${(parseInt(w) || 0).toLocaleString()}`));
+                  if (di.hasDummy && di.dummyWeight > 0) parts.push(`A${axleNumbers[i].start + baseN}(dummy)=${di.dummyWeight.toLocaleString()}`);
+                  const sum = baseW + (di.dummyWeight || 0);
+                  return (
+                    <div key={i} className="px-4 py-2.5 text-[11px] leading-relaxed">
+                      <p className="font-bold text-[#002855] mb-0.5">{v.label} <span className="font-normal text-[#94A3B8]">· {baseN} axle{baseN > 1 ? "s" : ""}{di.hasDummy ? " + 1 dummy" : ""}</span></p>
+                      <p className="text-[#475569] font-mono">{parts.join(" + ")} = <strong>{sum.toLocaleString()} lbs</strong></p>
+                      {di.hasDummy && di.dummyWeight > 0 && (
+                        <p className={`mt-1 ${di.disregarded ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
+                          Dummy discount check: {di.dummyWeight.toLocaleString()} &lt; 8,000? <strong>{di.dummyWeight < 8000 ? "YES" : "NO"}</strong> · {di.dummyWeight.toLocaleString()} &lt; 8% of {record.gross.toLocaleString()} ({Math.round(record.gross * 0.08).toLocaleString()})? <strong>{di.dummyWeight < record.gross * 0.08 ? "YES" : "NO"}</strong> → {di.disregarded ? "DISREGARDED (axle count − 1)" : "IN VIOLATION (axle counts, applies to group)"}
+                        </p>
+                      )}
+                      {v.max ? (
+                        <p className={`mt-1 font-mono ${overVal > 0 ? (withinTol5 ? "text-[#F97316]" : "text-[#DC2626]") : "text-[#16A34A]"}`}>
+                          {v.source}: {sum.toLocaleString()} {overVal > 0 ? ">" : "≤"} {v.max.toLocaleString()} → <strong>{overVal > 0 ? `+${overVal.toLocaleString()} OVER${withinTol5 ? ` (within 5% tol ${Math.round(v.max * 1.05).toLocaleString()})` : ""}` : "LEGAL"}</strong>
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-[#94A3B8] italic">No max rule applied (enter distance or set Custom).</p>
+                      )}
+                      {v.tandemCheck && (
+                        <p className={`mt-1 font-mono ${v.tandemCheck.actual > v.tandemCheck.max ? "text-[#DC2626]" : "text-[#16A34A]"}`}>
+                          {v.tandemCheck.source}: {v.tandemCheck.actual.toLocaleString()} {v.tandemCheck.actual > v.tandemCheck.max ? ">" : "≤"} {v.tandemCheck.max.toLocaleString()} → <strong>{v.tandemCheck.actual > v.tandemCheck.max ? `+${(v.tandemCheck.actual - v.tandemCheck.max).toLocaleString()} OVER` : "LEGAL"}</strong>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="px-4 py-2.5 text-[11px] bg-[#F8FAFC]">
+                  <p className="font-bold text-[#002855] mb-0.5">Gross Weight</p>
+                  <p className="text-[#475569] font-mono">
+                    {record.groupViolations.map((v, i) => `${v.label}=${v.actual.toLocaleString()}`).join(" + ")} = <strong>{record.gross.toLocaleString()} lbs</strong>
+                  </p>
+                  {record.grossMax ? (
+                    <p className={`mt-1 font-mono ${record.gross > record.grossMax ? "text-[#DC2626]" : "text-[#16A34A]"}`}>
+                      {record.grossSource}: {record.gross.toLocaleString()} {record.gross > record.grossMax ? ">" : "≤"} {record.grossMax.toLocaleString()} → <strong>{record.gross > record.grossMax ? `+${(record.gross - record.grossMax).toLocaleString()} OVER (no tolerance on gross)` : "LEGAL"}</strong>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[#94A3B8] italic">Enter Overall Distance for an exact gross max.</p>
+                  )}
+                  {record.dummyInfoList.some(di => di.disregarded) && (
+                    <p className="mt-1 text-[10px] text-[#64748B]">Axle count for gross: <strong>{record.totalAxles}</strong> (disregarded dummies excluded; their weight stays in gross).</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -712,7 +822,7 @@ export default function BridgeChartPage() {
                   <button onClick={openInspPicker} className="p-1.5 rounded-md text-[#D4AF37] hover:bg-[#D4AF37]/10"><FolderPlus className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
-              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} grossWithinTol={false} /></div>
+              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} /></div>
               <div className="px-4 pb-3">
                 <div className="flex items-center gap-2 mb-2"><span className="text-[10px] font-bold text-[#64748B] uppercase">Photos</span><button onClick={() => photoRef.current?.click()} className="flex items-center gap-1 text-[10px] text-[#002855] font-medium hover:underline"><Plus className="w-3 h-3" />Add</button><input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} /></div>
                 {photos.length > 0 && <div className="flex gap-2 overflow-x-auto pb-1">{photos.map((p, i) => <div key={i} className="relative flex-shrink-0"><img src={p.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]" /><button onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] rounded-full flex items-center justify-center"><X className="w-2.5 h-2.5 text-white" /></button></div>)}</div>}
