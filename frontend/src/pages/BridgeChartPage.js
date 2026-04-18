@@ -33,7 +33,7 @@ const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"
    ================================================================ */
 function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false, hideViolations = false, toleranceApplies = false }) {
   // Larger viewBox aspect so diagram renders TALL when given full-width container
-  const w = 900, h = 620, mL = 90, mR = 90;
+  const w = 900, h = 680, mL = 90, mR = 90;
   const tTop = 150;                // trailer top
   const tH = 220;                  // trailer height
   const axleY = tTop + tH + 40;    // axle line y
@@ -65,17 +65,19 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
     const withinTol = !hideViolations && toleranceApplies && viol && mainOver && viol.actual <= viol.max * 1.05;
     const startAxleNum = runningAxleNum;
     const startX = x;
+    let reducedEndX = x; // x-position of the last non-dummy axle
     for (let i = 0; i < n; i++) {
       const isDummy = viol?.dummy?.hasDummy && i === baseN;
       const dummyDisregarded = isDummy && viol.dummy.disregarded && !hideViolations;
       const axleOver = !hideViolations && viol?.axleOverages?.some(o => o.axleIndex === i);
       allAxles.push({ x, axleNum: runningAxleNum, groupIdx: gi, isDummy, dummyDisregarded, isOver, withinTol, axleOver });
+      if (!isDummy) reducedEndX = x;
       runningAxleNum++;
       if (i < n - 1) x += TIGHT;
     }
     const endX = x;
     const overBy = isOver ? (mainOver ? viol.actual - viol.max : (viol.tandemCheck.actual - viol.tandemCheck.max)) : 0;
-    groupMeta.push({ gi, startX, endX, label: g.label, startAxleNum, endAxleNum: runningAxleNum - 1, distFt: roundDist(g.distFt, "0"), n, gWeight: viol ? viol.actual : 0, isOver, withinTol, overBy, max: viol?.max || (viol?.tandemCheck?.max ?? null), source: viol?.source });
+    groupMeta.push({ gi, startX, endX, reducedEndX, label: g.label, startAxleNum, endAxleNum: runningAxleNum - 1, distFt: roundDist(g.distFt, "0"), distFtFull: viol?.distFtFull, distFtReduced: viol?.distFtReduced, dummyDisregarded: viol?.dummy?.hasDummy && viol.dummy.disregarded, hasDummy: viol?.dummy?.hasDummy, n, gWeight: viol ? viol.actual : 0, isOver, withinTol, overBy, max: viol?.max || (viol?.tandemCheck?.max ?? null), source: viol?.source });
     if (gi < groups.length - 1) x += groupGap;
   });
 
@@ -159,20 +161,32 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
       {groupMeta.map((gm, i) => {
         const cx = (gm.startX + gm.endX) / 2;
         const brColor = !hideViolations && gm.isOver ? (gm.withinTol ? WARN_ORANGE : OVER_RED) : "#CBD5E1";
-        const y = axleY + 72;
+        const y = axleY + 72;            // outer/full bracket y
+        const yReduced = axleY + 100;    // inner/reduced bracket y (below outer)
+        const showReduced = gm.hasDummy && gm.distFtReduced && gm.reducedEndX !== undefined;
         return (
           <g key={`gm-${i}`}>
             {gm.n > 1 && (
               <>
-                <line x1={gm.startX} y1={y} x2={gm.endX} y2={y} stroke={brColor} strokeWidth="3" opacity="0.7" />
-                <line x1={gm.startX} y1={y - 7} x2={gm.startX} y2={y + 7} stroke={brColor} strokeWidth="3" opacity="0.7" />
-                <line x1={gm.endX} y1={y - 7} x2={gm.endX} y2={y + 7} stroke={brColor} strokeWidth="3" opacity="0.7" />
-                {gm.distFt && (
-                  <text x={cx} y={y - 4} textAnchor="middle" fill="#D4AF37" fontSize="14" fontWeight="900">{gm.distFt} ft</text>
+                {/* Outer (full) bracket */}
+                <line x1={gm.startX} y1={y} x2={gm.endX} y2={y} stroke={brColor} strokeWidth="3" opacity={gm.dummyDisregarded ? 0.35 : 0.7} strokeDasharray={gm.dummyDisregarded ? "6 4" : "0"} />
+                <line x1={gm.startX} y1={y - 7} x2={gm.startX} y2={y + 7} stroke={brColor} strokeWidth="3" opacity={gm.dummyDisregarded ? 0.35 : 0.7} />
+                <line x1={gm.endX} y1={y - 7} x2={gm.endX} y2={y + 7} stroke={brColor} strokeWidth="3" opacity={gm.dummyDisregarded ? 0.35 : 0.7} />
+                {gm.distFtFull && (
+                  <text x={cx} y={y - 4} textAnchor="middle" fill={gm.dummyDisregarded ? "#64748B" : "#D4AF37"} fontSize="14" fontWeight="900" style={gm.dummyDisregarded ? { textDecoration: "line-through" } : {}}>{gm.distFtFull} ft{gm.dummyDisregarded ? " (unused)" : ""}</text>
                 )}
               </>
             )}
-            <text x={cx} y={y + 28} textAnchor="middle" fill={brColor} fontSize="16" fontWeight="bold">
+            {/* Inner bracket for reduced (dummy-disregarded) calc */}
+            {showReduced && (
+              <>
+                <line x1={gm.startX} y1={yReduced} x2={gm.reducedEndX} y2={yReduced} stroke="#16A34A" strokeWidth="3" opacity="0.9" />
+                <line x1={gm.startX} y1={yReduced - 7} x2={gm.startX} y2={yReduced + 7} stroke="#16A34A" strokeWidth="3" opacity="0.9" />
+                <line x1={gm.reducedEndX} y1={yReduced - 7} x2={gm.reducedEndX} y2={yReduced + 7} stroke="#16A34A" strokeWidth="3" opacity="0.9" />
+                <text x={(gm.startX + gm.reducedEndX) / 2} y={yReduced - 4} textAnchor="middle" fill="#16A34A" fontSize="13" fontWeight="900">{gm.distFtReduced} ft (calc)</text>
+              </>
+            )}
+            <text x={cx} y={(showReduced ? yReduced : y) + 28} textAnchor="middle" fill={brColor} fontSize="16" fontWeight="bold">
               {gm.label || (gm.n > 1 ? `A${gm.startAxleNum}–A${gm.endAxleNum}` : `A${gm.startAxleNum}`)}
             </text>
           </g>
@@ -182,10 +196,10 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
       {/* Overall distance */}
       {allAxles.length > 1 && overallDist && (
         <g>
-          <line x1={allAxles[0].x} y1={axleY + 120} x2={allAxles[allAxles.length - 1].x} y2={axleY + 120} stroke="#64748B" strokeWidth="2" />
-          <line x1={allAxles[0].x} y1={axleY + 112} x2={allAxles[0].x} y2={axleY + 128} stroke="#64748B" strokeWidth="2" />
-          <line x1={allAxles[allAxles.length - 1].x} y1={axleY + 112} x2={allAxles[allAxles.length - 1].x} y2={axleY + 128} stroke="#64748B" strokeWidth="2" />
-          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 146} textAnchor="middle" fill="#94A3B8" fontSize="16" fontWeight="bold">{overallDist} ft overall</text>
+          <line x1={allAxles[0].x} y1={axleY + 150} x2={allAxles[allAxles.length - 1].x} y2={axleY + 150} stroke="#64748B" strokeWidth="2" />
+          <line x1={allAxles[0].x} y1={axleY + 142} x2={allAxles[0].x} y2={axleY + 158} stroke="#64748B" strokeWidth="2" />
+          <line x1={allAxles[allAxles.length - 1].x} y1={axleY + 142} x2={allAxles[allAxles.length - 1].x} y2={axleY + 158} stroke="#64748B" strokeWidth="2" />
+          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 176} textAnchor="middle" fill="#94A3B8" fontSize="16" fontWeight="bold">{overallDist} ft overall</text>
         </g>
       )}
     </svg>
@@ -240,7 +254,7 @@ export default function BridgeChartPage() {
   const [isInputsCollapsed, setIsInputsCollapsed] = useState(false);
   const captureRef = useRef(null);
   const makeGroup = (label, preset, axles) => ({
-    label, preset, axles: String(axles), distFt: "", useGroup: axles > 1, groupWeight: "", weights: Array(axles).fill(""), maxOverride: "", dummyAxle: false
+    label, preset, axles: String(axles), distFt: "", distFtReduced: "", useGroup: axles > 1, groupWeight: "", weights: Array(axles).fill(""), maxOverride: "", dummyAxle: false
   });
   // Initialize from localStorage if present
   const loadSaved = () => {
@@ -381,7 +395,13 @@ export default function BridgeChartPage() {
       // Group weight ALWAYS includes dummy weight (counted or disregarded) —
       // disregarded only removes the axle from the COUNT, not the weight.
       const gWeight = baseWeight + dummyWeight;
-      const gDist = roundDist(g.distFt, "0");
+      // Distance selection:
+      //   • No dummy → use g.distFt (standard group span)
+      //   • Dummy counted → use g.distFt (full span including dummy)
+      //   • Dummy disregarded → use g.distFtReduced (span of remaining axles only), fall back to g.distFt
+      const gDistFull = roundDist(g.distFt, "0");
+      const gDistReduced = roundDist(g.distFtReduced, "0");
+      const gDist = di.hasDummy && di.disregarded ? (gDistReduced || gDistFull) : gDistFull;
       let max = null, source = "";
       if (isCustom && g.maxOverride) { max = parseInt(g.maxOverride); source = "Custom"; }
       else if (n === 1) { max = 20000; source = "Single axle"; }
@@ -425,7 +445,7 @@ export default function BridgeChartPage() {
 
       const an = axleNumbers[gi];
       const axLabel = an.start === an.end ? `A${an.start}` : `A${an.start}-${an.end}`;
-      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, tandemCheck, dummy: di, axleOverages };
+      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, distFtFull: gDistFull, distFtReduced: gDistReduced, tandemCheck, dummy: di, axleOverages };
     });
 
     // Count how many violations exist across all groups (for 5% tolerance rule)
@@ -455,7 +475,9 @@ export default function BridgeChartPage() {
     const conflicts = [];
     if (totalAxles < 1) conflicts.push("No axles defined");
     if (!isCustom) groups.forEach((g, i) => {
-      const n = ruleAxles(g, i), d = roundDist(g.distFt, "0");
+      const n = ruleAxles(g, i);
+      const di = dummyInfoList[i];
+      const d = di.hasDummy && di.disregarded ? (roundDist(g.distFtReduced, "0") || roundDist(g.distFt, "0")) : roundDist(g.distFt, "0");
       if (n > 1 && d && (d < 4 || d > 60)) conflicts.push(`${g.label || `Group ${i + 1}`}: ${d}ft outside bridge range (4-60)`);
       if (!isCustom && n >= 2 && d && !bridgeLookup(d, n)) conflicts.push(`${g.label || `Group ${i + 1}`}: no data for ${d}ft / ${n} axles`);
     });
@@ -685,7 +707,22 @@ export default function BridgeChartPage() {
                           <div className="w-16"><label className="text-[8px] font-bold text-[#94A3B8] uppercase block">Axles</label><input type="number" inputMode="numeric" min="1" max="7" value={g.axles} onChange={e => updateGroup(gi, "axles", e.target.value)} className="w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#E2E8F0] outline-none" /></div>
                         )}
                         <div className="w-16"><label className="text-[8px] font-bold text-[#94A3B8] uppercase block">Name</label><input type="text" value={g.label} onChange={e => updateGroup(gi, "label", e.target.value)} placeholder={axLabel} className="w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#E2E8F0] outline-none placeholder:text-[#CBD5E1] placeholder:font-normal" /></div>
-                        {n > 1 && <div className="w-20"><label className="text-[8px] font-bold text-[#94A3B8] uppercase block">Dist (ft)</label><input type="number" inputMode="numeric" value={g.distFt} onChange={e => updateGroup(gi, "distFt", e.target.value)} placeholder={n === 2 ? "Std" : "ft"} className="w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#E2E8F0] outline-none placeholder:text-[#CBD5E1]" /></div>}
+                        {n > 1 && (
+                          <div className="w-24">
+                            <label className={`text-[8px] font-bold uppercase block ${g.dummyAxle && viol?.dummy?.disregarded ? "text-[#94A3B8] line-through" : "text-[#94A3B8]"}`} title={g.dummyAxle ? "Full group span including dummy" : "Group span"}>
+                              {g.dummyAxle ? "Full Span (ft)" : "Dist (ft)"}
+                            </label>
+                            <input type="number" inputMode="numeric" value={g.distFt} onChange={e => updateGroup(gi, "distFt", e.target.value)} placeholder={n === 2 ? "Std" : "ft"} className={`w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#E2E8F0] outline-none placeholder:text-[#CBD5E1] ${g.dummyAxle && viol?.dummy?.disregarded ? "opacity-50" : ""}`} />
+                          </div>
+                        )}
+                        {g.dummyAxle && n > 1 && (
+                          <div className="w-24">
+                            <label className={`text-[8px] font-bold uppercase block ${viol?.dummy?.disregarded ? "text-[#16A34A]" : "text-[#94A3B8]"}`} title="Distance of the remaining axles (used if dummy is disregarded)">
+                              Reduced (ft)
+                            </label>
+                            <input type="number" inputMode="numeric" value={g.distFtReduced} onChange={e => updateGroup(gi, "distFtReduced", e.target.value)} placeholder={`${parseInt(g.axles)} ax`} className={`w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border outline-none placeholder:text-[#CBD5E1] ${viol?.dummy?.disregarded ? "border-[#16A34A]/50 bg-[#F0FDF4]" : "border-[#E2E8F0]"}`} />
+                          </div>
+                        )}
                         {isCustom && <div className="w-20"><label className="text-[8px] font-bold text-[#94A3B8] uppercase block">Max (lbs)</label><input type="number" inputMode="numeric" value={g.maxOverride} onChange={e => updateGroup(gi, "maxOverride", e.target.value)} placeholder="Custom" className="w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" /></div>}
                         {n > 1 && (
                           <div className="flex gap-1 ml-auto">
