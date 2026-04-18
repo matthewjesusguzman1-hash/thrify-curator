@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Shield, Users, Eye, EyeOff, Search, RotateCcw, X } from "lucide-react";
+import { ChevronLeft, Shield, Users, Eye, EyeOff, Search, RotateCcw, X, RefreshCw } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
@@ -98,6 +98,14 @@ export default function AdminPage() {
               <Users className="w-5 h-5 text-[#002855]" />
               <h2 className="text-lg font-bold text-[#0F172A]">Registered Users</h2>
               <span className="text-xs bg-[#002855] text-white px-2 py-0.5 rounded-full font-bold">{total}</span>
+              <button
+                onClick={fetchUsers}
+                className="p-1.5 rounded-lg text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9] transition-colors"
+                title="Refresh"
+                data-testid="admin-refresh-btn"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
             </div>
             <button
               onClick={() => setShowPins(!showPins)}
