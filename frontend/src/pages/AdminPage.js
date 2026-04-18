@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Shield, Users, Eye, EyeOff, Search, RotateCcw, X, RefreshCw } from "lucide-react";
+import { ChevronLeft, Shield, Users, Eye, EyeOff, Search, RotateCcw, X, RefreshCw, Upload } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
+import { UploadDialog } from "../components/app/UploadDialog";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -17,6 +18,7 @@ export default function AdminPage() {
   const [resetBadge, setResetBadge] = useState(null);
   const [newPin, setNewPin] = useState("");
   const [resetting, setResetting] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const isAdmin = badge === "121";
 
@@ -210,6 +212,26 @@ export default function AdminPage() {
           <p className="text-[10px] text-[#94A3B8] text-center">
             Showing {filteredUsers.length} of {total} users
           </p>
+
+          {/* Upload Violations Data */}
+          <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 shadow-sm mt-6">
+            <h3 className="text-sm font-bold text-[#0F172A] mb-2">Data Management</h3>
+            <button
+              onClick={() => setUploadOpen(true)}
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-[#F8FAFC] border border-[#E2E8F0] transition-colors text-left"
+              data-testid="admin-upload-btn"
+            >
+              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#002855]/10 flex-shrink-0">
+                <Upload className="w-4 h-4 text-[#002855]" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-[#0F172A]">Upload Violations Data</p>
+                <p className="text-[10px] text-[#64748B]">Import Excel/CSV file</p>
+              </div>
+            </button>
+          </div>
+
+          <UploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onUploadSuccess={() => { setUploadOpen(false); toast.success("Data uploaded"); }} />
         </div>
       </main>
     </div>
