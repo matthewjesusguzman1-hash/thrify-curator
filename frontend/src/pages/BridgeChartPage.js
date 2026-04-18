@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle, ChevronDown, ChevronUp, Camera } from "lucide-react";
 import html2canvas from "html2canvas";
@@ -232,7 +232,8 @@ export default function BridgeChartPage() {
   }, [cRound, cAxles, cActual]);
   const cLocked = cResult?.max != null;
 
-  // Record tab
+  // Record tab — persisted to localStorage per-badge until user clicks Clear
+  const STORAGE_KEY = `bridge-record-${badge || "anon"}`;
   const [isCustom, setIsCustom] = useState(false);
   const [showViolations, setShowViolations] = useState(true);
   const [isInputsCollapsed, setIsInputsCollapsed] = useState(false);
@@ -240,10 +241,39 @@ export default function BridgeChartPage() {
   const makeGroup = (label, preset, axles) => ({
     label, preset, axles: String(axles), distFt: "", useGroup: axles > 1, groupWeight: "", weights: Array(axles).fill(""), maxOverride: "", dummyAxle: false
   });
-  const [groups, setGroups] = useState([makeGroup("Steer", "Single", 1)]);
-  const [overallDistFt, setOverallDistFt] = useState("");
-  const [customGrossMax, setCustomGrossMax] = useState("");
-  const [photos, setPhotos] = useState([]);
+  // Initialize from localStorage if present
+  const loadSaved = () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  };
+  const initial = loadSaved();
+  const [groups, setGroups] = useState(initial?.groups || [makeGroup("Steer", "Single", 1)]);
+  const [overallDistFt, setOverallDistFt] = useState(initial?.overallDistFt || "");
+  const [customGrossMax, setCustomGrossMax] = useState(initial?.customGrossMax || "");
+  const [photos, setPhotos] = useState(initial?.photos || []);
+  useEffect(() => { if (initial?.isCustom) setIsCustom(true); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Persist on change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ groups, overallDistFt, customGrossMax, photos, isCustom }));
+    } catch {}
+  }, [STORAGE_KEY, groups, overallDistFt, customGrossMax, photos, isCustom]);
+
+  const clearRecord = () => {
+    if (!window.confirm("Clear all recorded weights, distances, and photos?")) return;
+    setGroups([makeGroup("Steer", "Single", 1)]);
+    setOverallDistFt("");
+    setCustomGrossMax("");
+    setPhotos([]);
+    setIsCustom(false);
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    toast.success("Cleared");
+  };
+
   const [showInspPicker, setShowInspPicker] = useState(false);
   const [inspections, setInspections] = useState([]);
   const [newInspTitle, setNewInspTitle] = useState("");
@@ -554,6 +584,9 @@ export default function BridgeChartPage() {
               </button>
               <button onClick={() => setShowViolations(!showViolations)} className="flex items-center gap-1.5 text-[11px] font-medium text-[#64748B]" data-testid="toggle-violations">
                 {showViolations ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}{showViolations ? "Violations On" : "Violations Off"}
+              </button>
+              <button onClick={clearRecord} className="flex items-center gap-1 text-[11px] font-medium text-[#DC2626] hover:text-[#991B1B]" data-testid="clear-record-btn" title="Clear all weights, distances, photos">
+                <Trash2 className="w-3.5 h-3.5" />Clear
               </button>
             </div>
           </div>
