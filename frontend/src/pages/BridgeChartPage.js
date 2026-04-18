@@ -33,7 +33,7 @@ const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"
    ================================================================ */
 function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false, hideViolations = false, toleranceApplies = false, interior = null }) {
   // Larger viewBox aspect so diagram renders TALL when given full-width container
-  const w = 900, h = 720, mL = 90, mR = 90;
+  const w = 900, h = 760, mL = 90, mR = 90;
   const tTop = 150;                // trailer top
   const tH = 220;                  // trailer height
   const axleY = tTop + tH + 40;    // axle line y
@@ -200,15 +200,15 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
         const iY = axleY + 145;
         const intOver = !hideViolations && interior.over;
         const intColor = intOver ? OVER_RED : "#D4AF37";
-        const pillW = 340, pillH = 32;
+        const pillW = 440, pillH = 42;
         const cx = (startX + endX) / 2;
         return (
           <g>
             <line x1={startX} y1={iY} x2={endX} y2={iY} stroke={intColor} strokeWidth="3" opacity="0.85" strokeDasharray="4 3" />
             <line x1={startX} y1={iY - 7} x2={startX} y2={iY + 7} stroke={intColor} strokeWidth="3" opacity="0.85" />
             <line x1={endX} y1={iY - 7} x2={endX} y2={iY + 7} stroke={intColor} strokeWidth="3" opacity="0.85" />
-            <rect x={cx - pillW / 2} y={iY + 12} width={pillW} height={pillH} rx="6" fill="#0F172A" stroke={intColor} strokeWidth="1.5" />
-            <text x={cx} y={iY + 33} textAnchor="middle" fill={intColor} fontSize="17" fontWeight="900">
+            <rect x={cx - pillW / 2} y={iY + 12} width={pillW} height={pillH} rx="8" fill="#0F172A" stroke={intColor} strokeWidth="2" />
+            <text x={cx} y={iY + 40} textAnchor="middle" fill={intColor} fontSize="22" fontWeight="900">
               {interior.distFt
                 ? (intOver
                     ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · +${interior.overBy.toLocaleString()} OVER`
@@ -224,10 +224,10 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
       {/* Overall distance */}
       {allAxles.length > 1 && overallDist && (
         <g>
-          <line x1={allAxles[0].x} y1={axleY + 195} x2={allAxles[allAxles.length - 1].x} y2={axleY + 195} stroke="#64748B" strokeWidth="2" />
-          <line x1={allAxles[0].x} y1={axleY + 187} x2={allAxles[0].x} y2={axleY + 203} stroke="#64748B" strokeWidth="2" />
-          <line x1={allAxles[allAxles.length - 1].x} y1={axleY + 187} x2={allAxles[allAxles.length - 1].x} y2={axleY + 203} stroke="#64748B" strokeWidth="2" />
-          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 221} textAnchor="middle" fill="#CBD5E1" fontSize="19" fontWeight="bold">{`${overallDist} ft overall`}</text>
+          <line x1={allAxles[0].x} y1={axleY + 225} x2={allAxles[allAxles.length - 1].x} y2={axleY + 225} stroke="#64748B" strokeWidth="2" />
+          <line x1={allAxles[0].x} y1={axleY + 217} x2={allAxles[0].x} y2={axleY + 233} stroke="#64748B" strokeWidth="2" />
+          <line x1={allAxles[allAxles.length - 1].x} y1={axleY + 217} x2={allAxles[allAxles.length - 1].x} y2={axleY + 233} stroke="#64748B" strokeWidth="2" />
+          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 253} textAnchor="middle" fill="#CBD5E1" fontSize="19" fontWeight="bold">{`${overallDist} ft overall`}</text>
         </g>
       )}
     </svg>
