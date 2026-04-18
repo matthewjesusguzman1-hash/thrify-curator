@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle, ChevronDown, ChevronUp, Camera } from "lucide-react";
 import html2canvas from "html2canvas";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
@@ -31,7 +31,7 @@ const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"
 /* ================================================================
    TRUCK DIAGRAM — improved with tight grouped axles
    ================================================================ */
-function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false, hideViolations = false }) {
+function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false, hideViolations = false, toleranceApplies = false }) {
   // Larger viewBox aspect so diagram renders TALL when given full-width container
   const w = 900, h = 620, mL = 90, mR = 90;
   const tTop = 150;                // trailer top
@@ -62,7 +62,7 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
     const mainOver = !hideViolations && viol && viol.max && viol.actual > viol.max;
     const tandemOver = !hideViolations && viol?.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max;
     const isOver = mainOver || tandemOver;
-    const withinTol = !hideViolations && viol && mainOver && viol.actual <= viol.max * 1.05;
+    const withinTol = !hideViolations && toleranceApplies && viol && mainOver && viol.actual <= viol.max * 1.05;
     const startAxleNum = runningAxleNum;
     const startX = x;
     for (let i = 0; i < n; i++) {
@@ -370,6 +370,16 @@ export default function BridgeChartPage() {
       return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, tandemCheck, dummy: di };
     });
 
+    // Count how many axle groups/tandem-checks are in violation (for 5% tolerance rule)
+    // 5% tolerance applies ONLY when exactly one violation exists across all groups.
+    let violationCount = 0;
+    groupViolations.forEach(v => {
+      if (v.max && v.actual > v.max) violationCount++;
+      if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) violationCount++;
+    });
+    // Note: gross weight never gets tolerance, so don't count it
+    const toleranceApplies = violationCount === 1;
+
     // Gross max lookup
     let grossMax = null, grossSource = "", grossNote = "";
     if (isCustom && customGrossMax) {
@@ -390,7 +400,7 @@ export default function BridgeChartPage() {
       if (n > 1 && d && (d < 4 || d > 60)) conflicts.push(`${g.label || `Group ${i + 1}`}: ${d}ft outside bridge range (4-60)`);
       if (!isCustom && n >= 2 && d && !bridgeLookup(d, n)) conflicts.push(`${g.label || `Group ${i + 1}`}: no data for ${d}ft / ${n} axles`);
     });
-    return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, grossNote, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList };
+    return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, grossNote, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList, toleranceApplies };
   }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers]);
 
   const handlePhoto = (e) => { Array.from(e.target.files || []).forEach(f => { const r = new FileReader(); r.onload = (ev) => setPhotos(p => [...p, { dataUrl: ev.target.result, file: f }]); r.readAsDataURL(f); }); e.target.value = ""; };
@@ -466,7 +476,15 @@ export default function BridgeChartPage() {
             <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-white hover:bg-white/10 h-8 px-2"><ChevronLeft className="w-4 h-4" /></Button>
             <h1 className="text-sm sm:text-lg font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>Bridge Chart</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setShowRules(!showRules)} className={`text-xs h-8 px-3 ${showRules ? "bg-[#D4AF37] text-[#002855]" : "text-[#D4AF37] hover:bg-white/10"}`} data-testid="toggle-rules-btn"><Info className="w-3.5 h-3.5 mr-1" />Rules</Button>
+          <div className="flex items-center gap-1">
+            {tab === "record" && (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => photoRef.current?.click()} className="text-white hover:bg-white/10 h-8 px-2" title="Add photos" data-testid="header-photo-btn"><Camera className="w-4 h-4" /></Button>
+                <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} />
+              </>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setShowRules(!showRules)} className={`text-xs h-8 px-3 ${showRules ? "bg-[#D4AF37] text-[#002855]" : "text-[#D4AF37] hover:bg-white/10"}`} data-testid="toggle-rules-btn"><Info className="w-3.5 h-3.5 mr-1" />Rules</Button>
+          </div>
         </div>
         <div className="max-w-4xl mx-auto px-3 sm:px-6 flex gap-1 pb-2">
           {[["chart", "Bridge Chart"], ["record", "Record Weights"]].map(([k, l]) => (
@@ -553,7 +571,7 @@ export default function BridgeChartPage() {
               const mainOver = hasViol && gWeight > viol.max;
               const tandemOver = showViolations && viol?.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max;
               const isOver = mainOver || tandemOver;
-              const withinTol = hasViol && !isCustom && mainOver && gWeight <= Math.round(viol.max * 1.05);
+              const withinTol = hasViol && !isCustom && record.toleranceApplies && mainOver && gWeight <= Math.round(viol.max * 1.05);
               const isCollapsed = g._collapsed && gWeight > 0;
 
               return (
@@ -751,11 +769,16 @@ export default function BridgeChartPage() {
           {/* Violations */}
           {showViolations && record.gross > 0 && (
             <div className="space-y-2">
-              <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider px-1">Violations</h3>
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Violations</h3>
+                {!isCustom && !record.toleranceApplies && record.groupViolations.some(v => (v.max && v.actual > v.max) || (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max)) && (
+                  <span className="text-[9px] font-bold text-[#DC2626] bg-[#FEE2E2] px-2 py-0.5 rounded-full">5% tolerance does not apply (more than one violation)</span>
+                )}
+              </div>
               {record.groupViolations.map((v, i) => (
                 <React.Fragment key={i}>
-                  {v.max && v.actual > 0 && <ViolationCard label={`${v.label} (${v.source})`} actual={v.actual} max={v.max} tolerance={!isCustom} />}
-                  {v.tandemCheck && <ViolationCard label={v.tandemCheck.source} actual={v.tandemCheck.actual} max={v.tandemCheck.max} tolerance={!isCustom} />}
+                  {v.max && v.actual > 0 && <ViolationCard label={`${v.label} (${v.source})`} actual={v.actual} max={v.max} tolerance={!isCustom && record.toleranceApplies} />}
+                  {v.tandemCheck && <ViolationCard label={v.tandemCheck.source} actual={v.tandemCheck.actual} max={v.tandemCheck.max} tolerance={!isCustom && record.toleranceApplies} />}
                 </React.Fragment>
               ))}
               {record.grossMax && record.gross > 0 && <ViolationCard label={`Gross (${record.grossSource})`} actual={record.gross} max={record.grossMax} tolerance={false} />}
@@ -778,7 +801,7 @@ export default function BridgeChartPage() {
                   const baseW = g.useGroup ? (parseInt(g.groupWeight) || 0) : (g.weights || []).slice(0, baseN).reduce((s, w) => s + (parseInt(w) || 0), 0);
                   const di = v.dummy || {};
                   const overVal = v.max && v.actual > v.max ? v.actual - v.max : 0;
-                  const withinTol5 = v.max && v.actual > v.max && v.actual <= Math.round(v.max * 1.05) && !isCustom;
+                  const withinTol5 = v.max && v.actual > v.max && v.actual <= Math.round(v.max * 1.05) && !isCustom && record.toleranceApplies;
                   // Build the weight expression
                   const parts = [];
                   if (g.useGroup) parts.push(`${baseW.toLocaleString()} (combined)`);
@@ -843,14 +866,12 @@ export default function BridgeChartPage() {
               <div className="px-4 py-2.5 border-b border-[#E2E8F0] flex items-center justify-between gap-2">
                 <h3 className="text-xs font-bold text-[#002855] uppercase">Weight Diagram</h3>
                 <div className="flex items-center gap-1.5">
-                  <button onClick={() => photoRef.current?.click()} title="Add photos" className="p-1.5 rounded-md text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9]" data-testid="diagram-photo-btn"><Plus className="w-3.5 h-3.5" /></button>
-                  <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} />
                   <button onClick={downloadDiag} title="Save" className="p-1.5 rounded-md text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9]"><Download className="w-3.5 h-3.5" /></button>
                   <button onClick={shareDiag} title="Share" className="p-1.5 rounded-md text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9]"><Share2 className="w-3.5 h-3.5" /></button>
                   <button onClick={openInspPicker} title="Add to inspection" className="p-1.5 rounded-md text-[#D4AF37] hover:bg-[#D4AF37]/10"><FolderPlus className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
-              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} hideViolations={!showViolations} /></div>
+              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} hideViolations={!showViolations} toleranceApplies={record.toleranceApplies} /></div>
               {photos.length > 0 && (
                 <div className="px-4 pb-3">
                   <div className="flex gap-2 overflow-x-auto pb-1">{photos.map((p, i) => <div key={i} className="relative flex-shrink-0"><img src={p.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]" /><button onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] rounded-full flex items-center justify-center"><X className="w-2.5 h-2.5 text-white" /></button></div>)}</div>
