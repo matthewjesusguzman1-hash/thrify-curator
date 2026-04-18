@@ -625,25 +625,26 @@ export default function BridgeChartPage() {
                     tabIndex={0}
                     onClick={() => updateGroup(gi, "_collapsed", !g._collapsed)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); updateGroup(gi, "_collapsed", !g._collapsed); } }}
-                    className="w-full px-3 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0] flex items-center justify-between text-left cursor-pointer"
+                    className={`w-full px-3 py-2.5 flex items-center justify-between text-left cursor-pointer border-b ${isOver ? (withinTol ? "bg-[#F97316] border-[#F97316]" : "bg-[#DC2626] border-[#DC2626]") : "bg-[#002855] border-[#002855]"}`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: COLORS[gi % COLORS.length] }} />
-                      <span className="text-xs font-bold text-[#002855] truncate">{g.label || axLabel}</span>
-                      <span className="text-[9px] text-[#94A3B8] font-mono flex-shrink-0">{axLabel}</span>
-                      {gWeight > 0 && <span className="text-[10px] font-bold text-[#334155] flex-shrink-0">{gWeight.toLocaleString()} lbs</span>}
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white/20" style={{ background: COLORS[gi % COLORS.length] }} />
+                      <span className="text-sm font-bold text-white truncate">{g.label || axLabel}</span>
+                      <span className="text-[10px] text-white/60 font-mono flex-shrink-0">{axLabel}</span>
+                      {gWeight > 0 && <span className="text-xs font-black text-[#D4AF37] flex-shrink-0 font-mono">{gWeight.toLocaleString()}</span>}
                       {isOver && (
-                        <span className={`text-[9px] font-bold flex-shrink-0 flex items-center gap-0.5 ${withinTol ? "text-[#F97316]" : "text-[#DC2626]"}`}>
+                        <span className="text-[10px] font-bold flex-shrink-0 flex items-center gap-0.5 text-white bg-black/20 rounded px-1.5 py-0.5">
                           <AlertTriangle className="w-2.5 h-2.5" />+{(mainOver ? (gWeight - viol.max) : (viol.tandemCheck.actual - viol.tandemCheck.max)).toLocaleString()}
                         </span>
                       )}
-                      {hasViol && !isOver && gWeight > 0 && <CheckCircle2 className="w-3 h-3 text-[#16A34A] flex-shrink-0" />}
+                      {hasViol && !isOver && gWeight > 0 && <CheckCircle2 className="w-3.5 h-3.5 text-[#22C55E] flex-shrink-0" />}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <select value={g.preset} onClick={e => e.stopPropagation()} onChange={e => updateGroup(gi, "preset", e.target.value)} className="text-[10px] bg-white border border-[#E2E8F0] rounded px-1.5 py-0.5 outline-none">
-                        {[{ l: "Single", v: "Single" }, { l: "Tandem", v: "Tandem (2)" }, { l: "Triple", v: "Triple (3)" }, { l: "Quad", v: "Quad (4)" }, { l: "Custom", v: "Custom" }].map(p => <option key={p.v} value={p.v}>{p.l}</option>)}
+                      <select value={g.preset} onClick={e => e.stopPropagation()} onChange={e => updateGroup(gi, "preset", e.target.value)} className="text-[10px] bg-white/10 text-white border border-white/20 rounded px-1.5 py-0.5 outline-none">
+                        {[{ l: "Single", v: "Single" }, { l: "Tandem", v: "Tandem (2)" }, { l: "Triple", v: "Triple (3)" }, { l: "Quad", v: "Quad (4)" }, { l: "Custom", v: "Custom" }].map(p => <option key={p.v} value={p.v} className="text-[#002855]">{p.l}</option>)}
                       </select>
-                      {groups.length > 1 && <button onClick={e => { e.stopPropagation(); removeGroup(gi); }} className="text-[#94A3B8] hover:text-[#DC2626] p-0.5"><Trash2 className="w-3 h-3" /></button>}
+                      {groups.length > 1 && <button onClick={e => { e.stopPropagation(); removeGroup(gi); }} className="text-white/50 hover:text-white p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>}
+                      {g._collapsed ? <ChevronDown className="w-4 h-4 text-white/80" /> : <ChevronUp className="w-4 h-4 text-white/80" />}
                     </div>
                   </div>
 
@@ -807,15 +808,15 @@ export default function BridgeChartPage() {
 
           {/* ===== CAPTURED SECTION — Weight Report ===== */}
           <div className="bg-[#F0F2F5] p-3 rounded-xl -mx-3 sm:-mx-6 md:mx-0 space-y-4" data-testid="record-report-section">
-            <button type="button" onClick={() => setIsReportCollapsed(v => !v)} className="w-full flex items-center justify-between text-[10px] text-[#64748B] px-1 hover:text-[#002855] transition-colors" data-testid="toggle-report-collapse" data-html2canvas-ignore="true">
-              <div className="flex items-center gap-2">
-                <Scale className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span className="font-bold text-[#002855]">Weight Report</span>
-                {badge && <span className="text-[#94A3B8]">· Badge {badge}</span>}
+            <button type="button" onClick={() => setIsReportCollapsed(v => !v)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#002855] text-white hover:bg-[#001a3a] transition-colors" data-testid="toggle-report-collapse" data-html2canvas-ignore="true">
+              <div className="flex items-center gap-2 min-w-0">
+                <Scale className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
+                <span className="text-sm font-bold text-white">Weight Report</span>
+                {badge && <span className="text-[10px] text-white/60 font-mono">· Badge {badge}</span>}
               </div>
-              <div className="flex items-center gap-2">
-                <span>{new Date().toLocaleString()}</span>
-                {isReportCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-[10px] text-white/60 hidden sm:inline">{new Date().toLocaleString()}</span>
+                {isReportCollapsed ? <ChevronDown className="w-4 h-4 text-white/80" /> : <ChevronUp className="w-4 h-4 text-white/80" />}
               </div>
             </button>
             {!isReportCollapsed && (<>
@@ -916,9 +917,15 @@ export default function BridgeChartPage() {
           {/* Diagram */}
           {(record.valid || isCustom) && record.totalAxles > 0 && (
             <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-              <button type="button" onClick={() => setIsDiagramCollapsed(v => !v)} className="w-full px-4 py-2.5 border-b border-[#E2E8F0] flex items-center justify-between gap-2 hover:bg-[#F8FAFC] transition-colors" data-testid="toggle-diagram-collapse" data-html2canvas-ignore="true">
-                <h3 className="text-xs font-bold text-[#002855] uppercase flex items-center gap-1.5">Weight Diagram{isDiagramCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}</h3>
-                <span onClick={(e) => { e.stopPropagation(); downloadDiag(); }} title="Save" role="button" tabIndex={0} className="p-1.5 rounded-md text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9] cursor-pointer" data-testid="diagram-save-btn"><Download className="w-3.5 h-3.5" /></span>
+              <button type="button" onClick={() => setIsDiagramCollapsed(v => !v)} className="w-full px-3 py-2.5 flex items-center justify-between gap-2 bg-[#002855] text-white hover:bg-[#001a3a] transition-colors" data-testid="toggle-diagram-collapse" data-html2canvas-ignore="true">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Calculator className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
+                  <span className="text-sm font-bold text-white">Weight Diagram</span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span onClick={(e) => { e.stopPropagation(); downloadDiag(); }} title="Save" role="button" tabIndex={0} className="p-1 rounded-md text-white/70 hover:text-white hover:bg-white/10 cursor-pointer" data-testid="diagram-save-btn"><Download className="w-4 h-4" /></span>
+                  {isDiagramCollapsed ? <ChevronDown className="w-4 h-4 text-white/80" /> : <ChevronUp className="w-4 h-4 text-white/80" />}
+                </div>
               </button>
               {!isDiagramCollapsed && (<>
               <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} hideViolations={!showViolations} toleranceApplies={record.toleranceApplies} /></div>
