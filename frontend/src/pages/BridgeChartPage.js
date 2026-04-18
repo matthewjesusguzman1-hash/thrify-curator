@@ -209,13 +209,17 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
             <line x1={endX} y1={iY - 7} x2={endX} y2={iY + 7} stroke={intColor} strokeWidth="3" opacity="0.85" />
             <rect x={cx - pillW / 2} y={iY + 12} width={pillW} height={pillH} rx="8" fill="#0F172A" stroke={intColor} strokeWidth="2" />
             <text x={cx} y={iY + 40} textAnchor="middle" fill={intColor} fontSize="22" fontWeight="900">
-              {interior.distFt
+              {interior.isCustom && !interior.distFt
                 ? (intOver
-                    ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · +${interior.overBy.toLocaleString()} OVER`
-                    : (interior.max
-                        ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · max ${interior.max.toLocaleString()}`
-                        : `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft (no bridge data)`))
-                : `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum}`}
+                    ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · Custom · +${interior.overBy.toLocaleString()} OVER`
+                    : `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · Custom max ${(interior.max || 0).toLocaleString()}`)
+                : interior.distFt
+                  ? (intOver
+                      ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · +${interior.overBy.toLocaleString()} OVER`
+                      : (interior.max
+                          ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · max ${interior.max.toLocaleString()}`
+                          : `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft (no bridge data)`))
+                  : `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum}`}
             </text>
           </g>
         );
@@ -303,15 +307,16 @@ export default function BridgeChartPage() {
   const [customGrossMax, setCustomGrossMax] = useState(initial?.customGrossMax || "");
   const [photos, setPhotos] = useState(initial?.photos || []);
   const [interiorDistFt, setInteriorDistFt] = useState(initial?.interiorDistFt || "");
+  const [customInteriorMax, setCustomInteriorMax] = useState(initial?.customInteriorMax || "");
   const [isInteriorBridgeCollapsed, setIsInteriorBridgeCollapsed] = useState(true);
   useEffect(() => { if (initial?.isCustom) setIsCustom(true); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Persist on change
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt, customInteriorMax }));
     } catch {}
-  }, [STORAGE_KEY, groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt]);
+  }, [STORAGE_KEY, groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt, customInteriorMax]);
 
   const clearRecord = () => {
     if (!window.confirm("Clear all recorded weights, distances, and photos?")) return;
@@ -321,6 +326,7 @@ export default function BridgeChartPage() {
     setPhotos([]);
     setIsCustom(false);
     setInteriorDistFt("");
+    setCustomInteriorMax("");
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
     toast.success("Cleared");
   };
@@ -536,13 +542,16 @@ export default function BridgeChartPage() {
       const interiorLastAxleNum = axleNumbers.reduce((last, an) => Math.max(last, an.end), 0);
       const interiorStartAxleNum = axleNumbers[firstGroupIdx]?.start + 1 || 2; // A2 of first group (or 2nd overall)
       let interiorMax = null, interiorSource = "";
-      if (interiorDistRound && interiorAxleCount >= 2) {
+      if (isCustom && customInteriorMax) {
+        interiorMax = parseInt(customInteriorMax) || null;
+        if (interiorMax) interiorSource = "Custom";
+      } else if (interiorDistRound && interiorAxleCount >= 2) {
         const lk = bridgeLookup(interiorDistRound, interiorAxleCount);
         if (lk) { interiorMax = lk; interiorSource = `Bridge (${interiorDistRound}ft, ${interiorAxleCount}ax)`; }
         else if (interiorAxleCount === 2) { interiorMax = 34000; interiorSource = "Tandem"; }
       }
       interior = {
-        enabled: !!interiorDistFt,
+        enabled: isCustom ? !!customInteriorMax : !!interiorDistFt,
         distFt: interiorDistRound,
         axleCount: interiorAxleCount,
         actual: interiorActual,
@@ -551,13 +560,14 @@ export default function BridgeChartPage() {
         endAxleNum: interiorLastAxleNum,
         max: interiorMax,
         source: interiorSource,
+        isCustom: isCustom && !!customInteriorMax,
         over: interiorMax != null && interiorActual > interiorMax,
         overBy: interiorMax != null && interiorActual > interiorMax ? interiorActual - interiorMax : 0,
       };
-      if (interiorDistRound && interiorAxleCount >= 2 && !interiorMax) {
+      if (!isCustom && interiorDistRound && interiorAxleCount >= 2 && !interiorMax) {
         conflicts.push(`Interior bridge: no data for ${interiorDistRound}ft / ${interiorAxleCount} axles`);
       }
-      if (interiorDistRound && (interiorDistRound < 4 || interiorDistRound > 60) && interiorAxleCount >= 2) {
+      if (!isCustom && interiorDistRound && (interiorDistRound < 4 || interiorDistRound > 60) && interiorAxleCount >= 2) {
         conflicts.push(`Interior bridge: ${interiorDistRound}ft outside bridge range (4-60)`);
       }
     }
@@ -567,7 +577,7 @@ export default function BridgeChartPage() {
     const toleranceApplies = violationCount === 1;
 
     return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, grossNote, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList, toleranceApplies, interior };
-  }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers, interiorDistFt]);
+  }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers, interiorDistFt, customInteriorMax]);
 
   const handlePhoto = (e) => { Array.from(e.target.files || []).forEach(f => { const r = new FileReader(); r.onload = (ev) => setPhotos(p => [...p, { dataUrl: ev.target.result, file: f }]); r.readAsDataURL(f); }); e.target.value = ""; };
 
@@ -992,9 +1002,11 @@ export default function BridgeChartPage() {
               {!isInteriorBridgeCollapsed && (
                 <div className="p-3 space-y-3 border-t border-[#E2E8F0]">
                   <p className="text-[10px] text-[#64748B] leading-relaxed">
-                    Checks the bridge formula for an interior span (from <strong>A{record.interior?.startAxleNum || 2}</strong> to <strong>A{record.interior?.endAxleNum || record.totalAxles}</strong>, excluding the first axle). Axle count is auto-calculated from your setup. Enter the distance between these axles to cross-reference with the bridge chart.
+                    {isCustom
+                      ? <>Set a <strong>custom max weight</strong> for the interior span (from <strong>A{record.interior?.startAxleNum || 2}</strong> to <strong>A{record.interior?.endAxleNum || record.totalAxles}</strong>, excluding the first axle). Useful for permits where the bridge chart doesn't apply. Distance is optional in custom mode.</>
+                      : <>Checks the bridge formula for an interior span (from <strong>A{record.interior?.startAxleNum || 2}</strong> to <strong>A{record.interior?.endAxleNum || record.totalAxles}</strong>, excluding the first axle). Axle count is auto-calculated from your setup. Enter the distance between these axles to cross-reference with the bridge chart.</>}
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className={`grid gap-2 ${isCustom ? "grid-cols-4" : "grid-cols-3"}`}>
                     <div className="space-y-1">
                       <label className="text-[9px] font-bold text-[#94A3B8] uppercase block leading-tight">From Axle</label>
                       <div className="px-2 h-10 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center text-[#002855]" data-testid="interior-from-axle">
@@ -1008,9 +1020,15 @@ export default function BridgeChartPage() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-[#94A3B8] uppercase block leading-tight">Distance (ft)</label>
+                      <label className="text-[9px] font-bold text-[#94A3B8] uppercase block leading-tight">Distance (ft){isCustom ? " · opt" : ""}</label>
                       <input type="number" inputMode="numeric" value={interiorDistFt} onChange={e => setInteriorDistFt(e.target.value)} placeholder="—" className="w-full px-2 h-10 text-xs font-bold text-center rounded-lg border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" data-testid="interior-distance-input" />
                     </div>
+                    {isCustom && (
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-[#D4AF37] uppercase block leading-tight">Max (lbs)</label>
+                        <input type="number" inputMode="numeric" value={customInteriorMax} onChange={e => setCustomInteriorMax(e.target.value)} placeholder="Custom" className="w-full px-2 h-10 text-xs font-bold text-center rounded-lg border border-[#D4AF37]/60 outline-none bg-[#D4AF37]/10 text-[#002855]" data-testid="interior-custom-max-input" />
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-[#F8FAFC] rounded-md px-2 py-2 border border-[#E2E8F0] text-center">
@@ -1043,7 +1061,7 @@ export default function BridgeChartPage() {
                   ) : (
                     <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-md px-3 py-2 text-[11px] text-[#64748B] flex items-start gap-2">
                       <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                      <span>Enter a distance to cross-reference with the bridge chart. Any violation will be added to the report.</span>
+                      <span>{isCustom ? "Enter a custom Max (lbs) to enable the interior bridge check for this permit." : "Enter a distance to cross-reference with the bridge chart. Any violation will be added to the report."}</span>
                     </div>
                   )}
                 </div>
