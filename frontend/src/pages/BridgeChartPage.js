@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
 import html2canvas from "html2canvas";
@@ -21,7 +21,7 @@ const RULES = [
   { title: "Measuring Distance", items: ["Measured to the nearest foot. At exactly 6\", round up.", "3 axle group max 34,000 lbs unless distance at least 96\"."] },
   { title: "Tandem Exception (36'-38')", hl: true, items: ["Two consecutive tandem sets at 36'-38' may carry 34,000 lbs each."] },
   { title: "Weight Tolerance (5% Shift)", hl: true, items: ["5% shift if only one axle/group overweight and distance 12' or less."] },
-  { title: "Dummy Axles", items: ["Disregarded if < 8,000 lbs or < 8% of gross."] },
+  { title: "Dummy Axles", items: ["Disregarded if weight is < 8,000 lbs AND < 8% of gross.", "If NOT disregarded, dummy weight is applied to the adjacent axle group check (e.g., tandem 34k rule)."] },
   { title: "APU Allowance", items: ["Up to 550 lbs. Not in addition to 5% tolerance."] },
   { title: "Natural Gas Vehicles", items: ["Up to 2,000 lbs extra. Max 82,000 lbs on Interstate."] },
 ];
@@ -220,18 +220,47 @@ export default function BridgeChartPage() {
   }, [groups]);
 
   const record = useMemo(() => {
-    const totalAxles = groups.reduce((s, g) => s + effAxles(g), 0);
-    let gross = 0;
+    // Pass 1: compute raw gross (sum of all weights, including all dummies) — needed for 8% threshold
+    let rawGross = 0;
     groups.forEach(g => {
-      if (g.useGroup) gross += parseInt(g.groupWeight) || 0;
-      else gross += (g.weights || []).reduce((s, w) => s + (parseInt(w) || 0), 0);
+      if (g.useGroup) rawGross += parseInt(g.groupWeight) || 0;
+      else rawGross += (g.weights || []).reduce((s, w) => s + (parseInt(w) || 0), 0);
     });
+
+    // Pass 2: evaluate dummy-axle disregard status for each group
+    // Rule: Dummy is disregarded if it bears < 8,000 lbs AND < 8% of gross (raw gross).
+    // Can only evaluate in individual-weights mode (group-mode has no split).
+    const dummyInfoList = groups.map(g => {
+      const baseN = parseInt(g.axles) || 0;
+      const hasDummy = !!g.dummyAxle && baseN >= 2;
+      if (!hasDummy) return { hasDummy: false, dummyWeight: 0, disregarded: false, unknownSplit: false };
+      if (g.useGroup) return { hasDummy: true, dummyWeight: 0, disregarded: false, unknownSplit: true };
+      const dummyWeight = parseInt(g.weights?.[baseN]) || 0;
+      const disregarded = dummyWeight > 0 && dummyWeight < 8000 && dummyWeight < rawGross * 0.08;
+      return { hasDummy: true, dummyWeight, disregarded, unknownSplit: false };
+    });
+
+    // Effective (rule-relevant) axle count per group (excludes disregarded dummies)
+    const ruleAxles = (g, gi) => {
+      const base = parseInt(g.axles) || 0;
+      const di = dummyInfoList[gi];
+      return base + (di.hasDummy && !di.disregarded ? 1 : 0);
+    };
+    const totalAxles = groups.reduce((s, g, gi) => s + ruleAxles(g, gi), 0);
+
+    // Effective gross: subtract disregarded-dummy weights
+    let gross = rawGross;
+    dummyInfoList.forEach(di => { if (di.disregarded) gross -= di.dummyWeight; });
+
     const overallRound = roundDist(overallDistFt, "0");
 
     const groupViolations = groups.map((g, gi) => {
       const baseN = parseInt(g.axles) || 0;
-      const n = effAxles(g); // includes dummy for bridge calc
-      const gWeight = g.useGroup ? (parseInt(g.groupWeight) || 0) : (g.weights || []).reduce((s, w) => s + (parseInt(w) || 0), 0);
+      const di = dummyInfoList[gi];
+      const n = ruleAxles(g, gi); // excludes disregarded dummy
+      const gWeightRaw = g.useGroup ? (parseInt(g.groupWeight) || 0) : (g.weights || []).reduce((s, w) => s + (parseInt(w) || 0), 0);
+      // Group weight for bridge check: excludes disregarded dummy
+      const gWeight = gWeightRaw - (di.disregarded ? di.dummyWeight : 0);
       const gDist = roundDist(g.distFt, "0");
       let max = null, source = "";
       if (isCustom && g.maxOverride) { max = parseInt(g.maxOverride); source = "Custom"; }
@@ -239,39 +268,53 @@ export default function BridgeChartPage() {
       else if (n === 2 && !gDist) { max = 34000; source = "Tandem"; }
       else if (n >= 2 && gDist) {
         const lk = bridgeLookup(gDist, n);
-        if (lk) { max = lk; source = `Bridge (${gDist}ft, ${n}ax${g.dummyAxle ? " +dummy" : ""})`; }
+        if (lk) { max = lk; source = `Bridge (${gDist}ft, ${n}ax${di.hasDummy && !di.disregarded ? " +dummy" : ""})`; }
         else if (n === 2) { max = 34000; source = "Tandem"; }
       }
       else if (n === 2) { max = 34000; source = "Tandem"; }
 
-      // Secondary tandem check if dummy axle is active on a base-tandem group
+      // Secondary tandem 34k check — only for base-tandem groups with a dummy
+      // Rule: If dummy is NOT disregarded (it's "in violation" of discount rule), its weight
+      //       is automatically applied to the tandem check (wA+wB+wDummy ≤ 34k).
+      //       If disregarded, tandem check is wA+wB only.
       let tandemCheck = null;
-      if (g.dummyAxle && baseN === 2 && !g.useGroup) {
+      if (di.hasDummy && baseN === 2 && !g.useGroup) {
         const wA = parseInt(g.weights?.[0]) || 0;
         const wB = parseInt(g.weights?.[1]) || 0;
-        const tandemActual = wA + wB;
+        const dummyAdd = !di.disregarded ? di.dummyWeight : 0;
+        const tandemActual = wA + wB + dummyAdd;
         if (tandemActual > 0) {
-          tandemCheck = { actual: tandemActual, max: 34000, source: "Tandem (first 2 axles)" };
+          const note = di.disregarded ? " — dummy disregarded" : (dummyAdd > 0 ? " — dummy applied" : "");
+          tandemCheck = { actual: tandemActual, max: 34000, source: `Tandem (A${axleNumbers[gi].start}-A${axleNumbers[gi].start + 1})${note}` };
         }
       }
 
       const an = axleNumbers[gi];
       const axLabel = an.start === an.end ? `A${an.start}` : `A${an.start}-${an.end}`;
-      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, distRound: gDist, tandemCheck };
+      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, distRound: gDist, tandemCheck, dummy: di };
     });
 
+    // Gross max lookup
     let grossMax = null, grossSource = "";
-    if (isCustom && customGrossMax) { grossMax = parseInt(customGrossMax); grossSource = "Custom"; }
-    else if (overallRound && totalAxles >= 2) { const lk = bridgeLookup(overallRound, totalAxles); if (lk) { grossMax = lk; grossSource = `Bridge (${overallRound}ft, ${totalAxles}ax)`; } }
+    if (isCustom && customGrossMax) {
+      grossMax = parseInt(customGrossMax); grossSource = "Custom";
+    } else if (overallRound && totalAxles >= 2) {
+      const lk = bridgeLookup(overallRound, totalAxles);
+      if (lk) { grossMax = lk; grossSource = `Bridge (${overallRound}ft, ${totalAxles}ax)`; }
+    } else if (!overallRound && totalAxles >= 2) {
+      // Default when no distance entered: max possible value for this axle count in the bridge chart
+      const colMax = Math.max(...Object.values(BD).map(row => row[totalAxles] || 0));
+      if (colMax > 0) { grossMax = colMax; grossSource = `Max for ${totalAxles} axles (enter distance for accuracy)`; }
+    }
 
     const conflicts = [];
     if (totalAxles < 1) conflicts.push("No axles defined");
     if (!isCustom) groups.forEach((g, i) => {
-      const n = effAxles(g), d = roundDist(g.distFt, "0");
+      const n = ruleAxles(g, i), d = roundDist(g.distFt, "0");
       if (n > 1 && d && (d < 4 || d > 60)) conflicts.push(`${g.label || `Group ${i + 1}`}: ${d}ft outside bridge range (4-60)`);
       if (!isCustom && n >= 2 && d && !bridgeLookup(d, n)) conflicts.push(`${g.label || `Group ${i + 1}`}: no data for ${d}ft / ${n} axles`);
     });
-    return { totalAxles, gross, overallRound, groupViolations, grossMax, grossSource, conflicts, valid: conflicts.length === 0 && totalAxles > 0 };
+    return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList };
   }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers]);
 
   const handlePhoto = (e) => { Array.from(e.target.files || []).forEach(f => { const r = new FileReader(); r.onload = (ev) => setPhotos(p => [...p, { dataUrl: ev.target.result, file: f }]); r.readAsDataURL(f); }); e.target.value = ""; };
@@ -429,12 +472,14 @@ export default function BridgeChartPage() {
               const n = parseInt(g.axles) || 0;
               const an = axleNumbers[gi];
               const axLabel = an.count === 1 ? `Axle ${an.start}` : `Axles ${an.start}-${an.end}`;
-              const gWeight = g.useGroup ? (parseInt(g.groupWeight) || 0) : (g.weights || []).reduce((s, w) => s + (parseInt(w) || 0), 0);
-              // Inline violation
+              // Inline violation (already accounts for disregarded dummy in viol.actual)
               const viol = record.groupViolations[gi];
+              const gWeight = viol ? viol.actual : 0;
               const hasViol = showViolations && viol && viol.max && gWeight > 0;
-              const isOver = hasViol && gWeight > viol.max;
-              const withinTol = hasViol && !isCustom && gWeight > viol.max && gWeight <= Math.round(viol.max * 1.05);
+              const mainOver = hasViol && gWeight > viol.max;
+              const tandemOver = showViolations && viol?.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max;
+              const isOver = mainOver || tandemOver;
+              const withinTol = hasViol && !isCustom && mainOver && gWeight <= Math.round(viol.max * 1.05);
               const isCollapsed = g._collapsed && gWeight > 0;
 
               return (
@@ -454,7 +499,7 @@ export default function BridgeChartPage() {
                       {gWeight > 0 && <span className="text-[10px] font-bold text-[#334155] flex-shrink-0">{gWeight.toLocaleString()} lbs</span>}
                       {isOver && (
                         <span className={`text-[9px] font-bold flex-shrink-0 flex items-center gap-0.5 ${withinTol ? "text-[#F97316]" : "text-[#DC2626]"}`}>
-                          <AlertTriangle className="w-2.5 h-2.5" />+{(gWeight - viol.max).toLocaleString()}
+                          <AlertTriangle className="w-2.5 h-2.5" />+{(mainOver ? (gWeight - viol.max) : (viol.tandemCheck.actual - viol.tandemCheck.max)).toLocaleString()}
                         </span>
                       )}
                       {hasViol && !isOver && gWeight > 0 && <CheckCircle2 className="w-3 h-3 text-[#16A34A] flex-shrink-0" />}
@@ -505,19 +550,31 @@ export default function BridgeChartPage() {
                         </div>
                       )}
 
-                      {/* Dummy Axle toggle — only for base tandems */}
-                      {parseInt(g.axles) === 2 && (
-                        <label className="flex items-center gap-1.5 text-[10px] text-[#64748B] cursor-pointer select-none" data-testid={`dummy-axle-toggle-${gi}`}>
-                          <input type="checkbox" checked={!!g.dummyAxle} onChange={e => updateGroup(gi, "dummyAxle", e.target.checked)} className="w-3 h-3 accent-[#D4AF37]" />
-                          <span>Add <strong className="text-[#D4AF37]">dummy axle</strong> <span className="text-[#94A3B8]">(group counts as triple for bridge; tandem 34k still applies to first 2 axles)</span></span>
-                        </label>
+                      {/* Dummy Axle toggle — for base tandem / triple / quad */}
+                      {parseInt(g.axles) >= 2 && parseInt(g.axles) <= 4 && (
+                        <div className="space-y-1">
+                          <label className="flex items-center gap-1.5 text-[10px] text-[#64748B] cursor-pointer select-none" data-testid={`dummy-axle-toggle-${gi}`}>
+                            <input type="checkbox" checked={!!g.dummyAxle} onChange={e => updateGroup(gi, "dummyAxle", e.target.checked)} className="w-3 h-3 accent-[#D4AF37]" />
+                            <span>Add <strong className="text-[#D4AF37]">dummy axle</strong> <span className="text-[#94A3B8]">(disregarded if &lt; 8,000 lbs AND &lt; 8% of gross; otherwise weight applies to this group's check)</span></span>
+                          </label>
+                          {g.dummyAxle && record.groupViolations[gi]?.dummy && !record.groupViolations[gi].dummy.unknownSplit && record.groupViolations[gi].dummy.dummyWeight > 0 && (
+                            <div className={`text-[10px] rounded px-2 py-1 ${record.groupViolations[gi].dummy.disregarded ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-[#FFF7ED] text-[#C2410C]"}`}>
+                              {record.groupViolations[gi].dummy.disregarded
+                                ? `Dummy (${record.groupViolations[gi].dummy.dummyWeight.toLocaleString()} lbs) is DISREGARDED — bridge uses ${parseInt(g.axles)} axles, gross excludes dummy`
+                                : `Dummy (${record.groupViolations[gi].dummy.dummyWeight.toLocaleString()} lbs) is COUNTED — bridge uses ${parseInt(g.axles) + 1} axles${parseInt(g.axles) === 2 ? ", tandem 34k includes dummy" : ""}`}
+                            </div>
+                          )}
+                          {g.dummyAxle && g.useGroup && (
+                            <p className="text-[10px] text-[#94A3B8] italic">Switch to Individual weights to evaluate the 8k / 8% discount rule.</p>
+                          )}
+                        </div>
                       )}
 
                       {/* Inline violation */}
                       {hasViol && gWeight > 0 && (
-                        <div className={`rounded px-2 py-1 text-[10px] flex items-center justify-between ${isOver ? withinTol ? "bg-[#FFF7ED]" : "bg-[#FEE2E2]" : "bg-[#F0FDF4]"}`}>
+                        <div className={`rounded px-2 py-1 text-[10px] flex items-center justify-between ${mainOver ? withinTol ? "bg-[#FFF7ED]" : "bg-[#FEE2E2]" : "bg-[#F0FDF4]"}`}>
                           <span className="text-[#64748B]">{viol.source}: {viol.max.toLocaleString()} max</span>
-                          {isOver ? <span className={`font-bold ${withinTol ? "text-[#F97316]" : "text-[#DC2626]"}`}>+{(gWeight - viol.max).toLocaleString()} over{withinTol ? " (5% tol)" : ""}</span> : <span className="text-[#16A34A] font-bold">Legal</span>}
+                          {mainOver ? <span className={`font-bold ${withinTol ? "text-[#F97316]" : "text-[#DC2626]"}`}>+{(gWeight - viol.max).toLocaleString()} over{withinTol ? " (5% tol)" : ""}</span> : <span className="text-[#16A34A] font-bold">Legal</span>}
                         </div>
                       )}
 
@@ -551,15 +608,32 @@ export default function BridgeChartPage() {
               <div><label className="text-[9px] font-bold text-[#002855] uppercase block mb-0.5">Gross Weight</label><div className="px-2 py-2 text-sm font-black text-center text-[#002855] bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">{record.gross > 0 ? record.gross.toLocaleString() : "—"}</div></div>
               {isCustom && <div><label className="text-[9px] font-bold text-[#94A3B8] uppercase block mb-0.5">Gross Max (lbs)</label><input type="number" inputMode="numeric" value={customGrossMax} onChange={e => setCustomGrossMax(e.target.value)} placeholder="Custom" className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" /></div>}
             </div>
+            {!isCustom && !overallDistFt && (
+              <p className="mt-2 text-[10px] text-[#92400E] bg-[#FEF3C7]/60 border border-[#F59E0B]/30 rounded-md px-2 py-1.5 flex items-start gap-1.5">
+                <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                <span>Enter an <strong>Overall Distance</strong> for the most accurate gross max. Without a distance, we show the maximum allowed weight for the current axle count.</span>
+              </p>
+            )}
+            {record.rawGross !== record.gross && record.rawGross > record.gross && (
+              <p className="mt-2 text-[10px] text-[#16A34A] bg-[#F0FDF4] border border-[#16A34A]/30 rounded-md px-2 py-1.5 flex items-start gap-1.5">
+                <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                <span>Disregarded dummy axle weight: <strong>{(record.rawGross - record.gross).toLocaleString()} lbs</strong> (raw total {record.rawGross.toLocaleString()})</span>
+              </p>
+            )}
           </div>
           </>)}{/* end !isInputsCollapsed */}
           {/* Violations */}
           {showViolations && record.gross > 0 && (
             <div className="space-y-2">
               <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider px-1">Violations</h3>
-              {record.groupViolations.map((v, i) => v.max && v.actual > 0 && <ViolationCard key={i} label={`${v.label} (${v.source})`} actual={v.actual} max={v.max} tolerance={!isCustom} />)}
+              {record.groupViolations.map((v, i) => (
+                <React.Fragment key={i}>
+                  {v.max && v.actual > 0 && <ViolationCard label={`${v.label} (${v.source})`} actual={v.actual} max={v.max} tolerance={!isCustom} />}
+                  {v.tandemCheck && <ViolationCard label={v.tandemCheck.source} actual={v.tandemCheck.actual} max={v.tandemCheck.max} tolerance={!isCustom} />}
+                </React.Fragment>
+              ))}
               {record.grossMax && record.gross > 0 && <ViolationCard label={`Gross (${record.grossSource})`} actual={record.gross} max={record.grossMax} tolerance={!isCustom} />}
-              {record.groupViolations.every(v => !v.max || v.actual <= (v.max || Infinity)) && (!record.grossMax || record.gross <= record.grossMax) && record.gross > 0 && (
+              {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max)) && (!record.grossMax || record.gross <= record.grossMax) && record.gross > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] border border-[#16A34A]/30 rounded-lg"><CheckCircle2 className="w-4 h-4 text-[#16A34A]" /><span className="text-xs font-bold text-[#16A34A]">All weights within legal limits</span></div>
               )}
             </div>
