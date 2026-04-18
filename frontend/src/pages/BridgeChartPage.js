@@ -31,8 +31,8 @@ const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"
 /* ================================================================
    TRUCK DIAGRAM — improved with tight grouped axles
    ================================================================ */
-function TruckDiagram({ groups, grossWeight, overallDist, svgRef }) {
-  const w = 720, h = 360, mL = 70, mR = 70, axleY = h - 90, tTop = 55, tH = axleY - tTop - 30;
+function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false, grossWithinTol = false }) {
+  const w = 720, h = 380, mL = 70, mR = 70, axleY = h - 110, tTop = 55, tH = axleY - tTop - 30;
 
   // Build axle layout: groups are spaced apart, axles within a group are close
   const TIGHT = 22; // px between axles in same group
@@ -57,64 +57,96 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef }) {
     if (n === 0) return;
     const startAxleNum = runningAxleNum;
     const startX = x;
+    const viol = groupViolations[gi];
+    const baseN = viol?.baseN ?? n;
+    const isOver = viol && ((viol.max && viol.actual > viol.max) || (viol.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max));
+    const withinTol = viol && viol.max && viol.actual > viol.max && viol.actual <= viol.max * 1.05;
     for (let i = 0; i < n; i++) {
-      allAxles.push({ x, axleNum: runningAxleNum, weight: parseInt(g.useGroup ? "" : g.weights?.[i]) || 0, groupIdx: gi, isSingle: n === 1 });
+      const isDummy = viol?.dummy?.hasDummy && i === baseN;
+      const dummyDisregarded = isDummy && viol.dummy.disregarded;
+      allAxles.push({ x, axleNum: runningAxleNum, groupIdx: gi, isDummy, dummyDisregarded, isOver });
       runningAxleNum++;
       if (i < n - 1) x += TIGHT;
     }
     const endX = x;
     const endAxleNum = runningAxleNum - 1;
     const axleLabel = startAxleNum === endAxleNum ? `A${startAxleNum}` : `A${startAxleNum}-${endAxleNum}`;
-    const gWeight = g.useGroup ? (parseInt(g.groupWeight) || 0) : (g.weights || []).reduce((s, wt) => s + (parseInt(wt) || 0), 0);
-    groupMeta.push({ gi, startX, endX, label: g.label, axleLabel, distFt: roundDist(g.distFt, "0"), n, gWeight });
+    const gWeightDisplay = viol ? viol.actual : 0;
+    const overBy = isOver ? (viol.max && viol.actual > viol.max ? viol.actual - viol.max : (viol.tandemCheck ? viol.tandemCheck.actual - viol.tandemCheck.max : 0)) : 0;
+    groupMeta.push({ gi, startX, endX, label: g.label, axleLabel, distFt: roundDist(g.distFt, "0"), n, gWeight: gWeightDisplay, isOver, withinTol, overBy, max: viol?.max, source: viol?.source });
     if (gi < groups.length - 1) x += groupGap;
   });
 
+  const OVER_RED = "#DC2626";
+  const WARN_ORANGE = "#F97316";
+  const OK_GREEN = "#16A34A";
+  const grossColor = grossOver ? (grossWithinTol ? WARN_ORANGE : OVER_RED) : "#D4AF37";
+
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ maxHeight: 310 }}>
+    <svg ref={svgRef} viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ maxHeight: 340 }}>
       <rect width={w} height={h} fill="#0F172A" rx="12" />
       {allAxles.length > 0 && (
         <>
-          <rect x={allAxles[0].x - 25} y={tTop} width={Math.max(allAxles[allAxles.length - 1].x - allAxles[0].x + 50, 60)} height={tH} rx="8" fill="#1E293B" stroke="#334155" strokeWidth="1.5" />
+          <rect x={allAxles[0].x - 25} y={tTop} width={Math.max(allAxles[allAxles.length - 1].x - allAxles[0].x + 50, 60)} height={tH} rx="8" fill="#1E293B" stroke={grossOver ? grossColor : "#334155"} strokeWidth={grossOver ? 2 : 1.5} />
           <rect x={allAxles[0].x - 25} y={tTop + 10} width={45} height={tH - 10} rx="6" fill="#1E293B" stroke="#D4AF37" strokeWidth="0.8" opacity="0.4" />
         </>
       )}
       <text x={w / 2} y={tTop + tH / 2 - 6} textAnchor="middle" fill="#8FAEC5" fontSize="9" fontWeight="bold">GROSS</text>
-      <text x={w / 2} y={tTop + tH / 2 + 14} textAnchor="middle" fill="#D4AF37" fontSize="18" fontWeight="900" fontFamily="monospace">{grossWeight ? grossWeight.toLocaleString() : "—"}</text>
-      {/* Axles — single wheel per axle */}
-      {allAxles.map((a, i) => (
-        <g key={i}>
-          <line x1={a.x} y1={axleY - 14} x2={a.x} y2={axleY + 8} stroke="#94A3B8" strokeWidth="2.5" />
-          <circle cx={a.x} cy={axleY + 9} r="7" fill="#334155" stroke="#64748B" strokeWidth="1.5" />
-          <rect x={a.x - 2} y={axleY - 17} width="4" height="2" fill={COLORS[a.groupIdx % COLORS.length]} rx="1" />
-        </g>
-      ))}
+      <text x={w / 2} y={tTop + tH / 2 + 14} textAnchor="middle" fill={grossColor} fontSize="18" fontWeight="900" fontFamily="monospace">{grossWeight ? grossWeight.toLocaleString() : "—"}</text>
+      {grossMax && (
+        <text x={w / 2} y={tTop + tH / 2 + 28} textAnchor="middle" fill={grossOver ? grossColor : "#64748B"} fontSize="9" fontWeight="bold">
+          {grossOver ? (grossWithinTol ? `+${(grossWeight - grossMax).toLocaleString()} (5% tol)` : `+${(grossWeight - grossMax).toLocaleString()} OVER`) : `/ ${grossMax.toLocaleString()} max`}
+        </text>
+      )}
+      {/* Axles — single wheel per axle; overweight groups get red wheels */}
+      {allAxles.map((a, i) => {
+        const wheelFill = a.isOver ? OVER_RED : (a.isDummy ? (a.dummyDisregarded ? "#64748B" : "#D4AF37") : "#334155");
+        const wheelStroke = a.isOver ? OVER_RED : (a.isDummy ? "#D4AF37" : "#64748B");
+        return (
+          <g key={i}>
+            <line x1={a.x} y1={axleY - 14} x2={a.x} y2={axleY + 8} stroke={a.isOver ? OVER_RED : "#94A3B8"} strokeWidth="2.5" />
+            <circle cx={a.x} cy={axleY + 9} r="7" fill={wheelFill} stroke={wheelStroke} strokeWidth={a.isOver ? 2 : 1.5} opacity={a.dummyDisregarded ? 0.45 : 1} />
+            <rect x={a.x - 2} y={axleY - 17} width="4" height="2" fill={a.isOver ? OVER_RED : COLORS[a.groupIdx % COLORS.length]} rx="1" />
+            {a.isDummy && (
+              <text x={a.x} y={axleY + 28} textAnchor="middle" fill={a.dummyDisregarded ? "#64748B" : "#D4AF37"} fontSize="7" fontWeight="bold">D</text>
+            )}
+          </g>
+        );
+      })}
       {/* Group labels + weights above */}
       {groupMeta.map((gm, i) => {
         const cx = (gm.startX + gm.endX) / 2;
+        const labelColor = gm.isOver ? (gm.withinTol ? WARN_ORANGE : OVER_RED) : COLORS[i % COLORS.length];
+        const weightColor = gm.isOver ? (gm.withinTol ? WARN_ORANGE : OVER_RED) : "#FFFFFF";
         return (
           <g key={`gm-${i}`}>
-            <text x={cx} y={tTop - 18} textAnchor="middle" fill="#FFFFFF" fontSize="12" fontWeight="bold" fontFamily="monospace">{gm.gWeight > 0 ? gm.gWeight.toLocaleString() : ""}</text>
-            <text x={cx} y={tTop - 6} textAnchor="middle" fill={COLORS[i % COLORS.length]} fontSize="8" fontWeight="bold">{gm.axleLabel}</text>
+            <text x={cx} y={tTop - 30} textAnchor="middle" fill={weightColor} fontSize="12" fontWeight="bold" fontFamily="monospace">{gm.gWeight > 0 ? gm.gWeight.toLocaleString() : ""}</text>
+            {gm.isOver && gm.overBy > 0 && (
+              <text x={cx} y={tTop - 18} textAnchor="middle" fill={gm.withinTol ? WARN_ORANGE : OVER_RED} fontSize="9" fontWeight="900">+{gm.overBy.toLocaleString()} OVER</text>
+            )}
+            {!gm.isOver && gm.max && gm.gWeight > 0 && (
+              <text x={cx} y={tTop - 18} textAnchor="middle" fill={OK_GREEN} fontSize="8" fontWeight="bold">/ {gm.max.toLocaleString()} max</text>
+            )}
+            <text x={cx} y={tTop - 6} textAnchor="middle" fill={labelColor} fontSize="8" fontWeight="bold">{gm.axleLabel}</text>
             {gm.n > 1 && (
               <>
-                <line x1={gm.startX} y1={axleY + 26} x2={gm.endX} y2={axleY + 26} stroke={COLORS[i % COLORS.length]} strokeWidth="1.5" opacity="0.6" />
-                <line x1={gm.startX} y1={axleY + 20} x2={gm.startX} y2={axleY + 32} stroke={COLORS[i % COLORS.length]} strokeWidth="1" opacity="0.5" />
-                <line x1={gm.endX} y1={axleY + 20} x2={gm.endX} y2={axleY + 32} stroke={COLORS[i % COLORS.length]} strokeWidth="1" opacity="0.5" />
-                <text x={cx} y={axleY + 44} textAnchor="middle" fill={COLORS[i % COLORS.length]} fontSize="8" fontWeight="bold">
+                <line x1={gm.startX} y1={axleY + 40} x2={gm.endX} y2={axleY + 40} stroke={labelColor} strokeWidth="1.5" opacity="0.6" />
+                <line x1={gm.startX} y1={axleY + 34} x2={gm.startX} y2={axleY + 46} stroke={labelColor} strokeWidth="1" opacity="0.5" />
+                <line x1={gm.endX} y1={axleY + 34} x2={gm.endX} y2={axleY + 46} stroke={labelColor} strokeWidth="1" opacity="0.5" />
+                <text x={cx} y={axleY + 58} textAnchor="middle" fill={labelColor} fontSize="8" fontWeight="bold">
                   {gm.distFt ? `${gm.distFt}ft ` : ""}{gm.label || ""}
                 </text>
               </>
             )}
-            {gm.n === 1 && <text x={cx} y={axleY + 32} textAnchor="middle" fill={COLORS[i % COLORS.length]} fontSize="8" fontWeight="bold">{gm.label || ""}</text>}
+            {gm.n === 1 && <text x={cx} y={axleY + 46} textAnchor="middle" fill={labelColor} fontSize="8" fontWeight="bold">{gm.label || ""}</text>}
           </g>
         );
       })}
       {/* Overall distance */}
       {allAxles.length > 1 && overallDist && (
         <>
-          <line x1={allAxles[0].x} y1={axleY + 58} x2={allAxles[allAxles.length - 1].x} y2={axleY + 58} stroke="#64748B" strokeWidth="1" />
-          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 72} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="bold">{overallDist} ft overall</text>
+          <line x1={allAxles[0].x} y1={axleY + 72} x2={allAxles[allAxles.length - 1].x} y2={axleY + 72} stroke="#64748B" strokeWidth="1" />
+          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 86} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="bold">{overallDist} ft overall</text>
         </>
       )}
     </svg>
@@ -220,22 +252,31 @@ export default function BridgeChartPage() {
   }, [groups]);
 
   const record = useMemo(() => {
-    // Pass 1: compute raw gross (sum of all weights, including all dummies) — needed for 8% threshold
+    // Helpers: read group's base weight and dummy weight separately
+    const readDummy = (g) => {
+      const baseN = parseInt(g.axles) || 0;
+      if (!g.dummyAxle || baseN < 2) return 0;
+      return parseInt(g.weights?.[baseN]) || 0;
+    };
+    const readBaseWeight = (g) => {
+      // In group mode, base weight = groupWeight (excludes dummy, which is a separate field when dummy is on)
+      // In individual mode, base weight = sum of first baseN weights
+      const baseN = parseInt(g.axles) || 0;
+      if (g.useGroup) return parseInt(g.groupWeight) || 0;
+      return (g.weights || []).slice(0, baseN).reduce((s, w) => s + (parseInt(w) || 0), 0);
+    };
+
+    // Pass 1: raw gross = sum of every physical axle weight (base + dummy across all groups)
     let rawGross = 0;
-    groups.forEach(g => {
-      if (g.useGroup) rawGross += parseInt(g.groupWeight) || 0;
-      else rawGross += (g.weights || []).reduce((s, w) => s + (parseInt(w) || 0), 0);
-    });
+    groups.forEach(g => { rawGross += readBaseWeight(g) + readDummy(g); });
 
     // Pass 2: evaluate dummy-axle disregard status for each group
     // Rule: Dummy is disregarded if it bears < 8,000 lbs AND < 8% of gross (raw gross).
-    // Can only evaluate in individual-weights mode (group-mode has no split).
     const dummyInfoList = groups.map(g => {
       const baseN = parseInt(g.axles) || 0;
       const hasDummy = !!g.dummyAxle && baseN >= 2;
       if (!hasDummy) return { hasDummy: false, dummyWeight: 0, disregarded: false, unknownSplit: false };
-      if (g.useGroup) return { hasDummy: true, dummyWeight: 0, disregarded: false, unknownSplit: true };
-      const dummyWeight = parseInt(g.weights?.[baseN]) || 0;
+      const dummyWeight = readDummy(g);
       const disregarded = dummyWeight > 0 && dummyWeight < 8000 && dummyWeight < rawGross * 0.08;
       return { hasDummy: true, dummyWeight, disregarded, unknownSplit: false };
     });
@@ -257,10 +298,11 @@ export default function BridgeChartPage() {
     const groupViolations = groups.map((g, gi) => {
       const baseN = parseInt(g.axles) || 0;
       const di = dummyInfoList[gi];
-      const n = ruleAxles(g, gi); // excludes disregarded dummy
-      const gWeightRaw = g.useGroup ? (parseInt(g.groupWeight) || 0) : (g.weights || []).reduce((s, w) => s + (parseInt(w) || 0), 0);
-      // Group weight for bridge check: excludes disregarded dummy
-      const gWeight = gWeightRaw - (di.disregarded ? di.dummyWeight : 0);
+      const n = ruleAxles(g, gi);
+      const baseWeight = readBaseWeight(g);
+      const dummyWeight = readDummy(g);
+      // Group weight for bridge check: base + counted dummy (if any)
+      const gWeight = baseWeight + (di.disregarded ? 0 : dummyWeight);
       const gDist = roundDist(g.distFt, "0");
       let max = null, source = "";
       if (isCustom && g.maxOverride) { max = parseInt(g.maxOverride); source = "Custom"; }
@@ -273,16 +315,11 @@ export default function BridgeChartPage() {
       }
       else if (n === 2) { max = 34000; source = "Tandem"; }
 
-      // Secondary tandem 34k check — only for base-tandem groups with a dummy
-      // Rule: If dummy is NOT disregarded (it's "in violation" of discount rule), its weight
-      //       is automatically applied to the tandem check (wA+wB+wDummy ≤ 34k).
-      //       If disregarded, tandem check is wA+wB only.
+      // Secondary tandem 34k check — only for base-tandem groups with dummy
       let tandemCheck = null;
-      if (di.hasDummy && baseN === 2 && !g.useGroup) {
-        const wA = parseInt(g.weights?.[0]) || 0;
-        const wB = parseInt(g.weights?.[1]) || 0;
+      if (di.hasDummy && baseN === 2) {
         const dummyAdd = !di.disregarded ? di.dummyWeight : 0;
-        const tandemActual = wA + wB + dummyAdd;
+        const tandemActual = baseWeight + dummyAdd;
         if (tandemActual > 0) {
           const note = di.disregarded ? " — dummy disregarded" : (dummyAdd > 0 ? " — dummy applied" : "");
           tandemCheck = { actual: tandemActual, max: 34000, source: `Tandem (A${axleNumbers[gi].start}-A${axleNumbers[gi].start + 1})${note}` };
@@ -291,7 +328,7 @@ export default function BridgeChartPage() {
 
       const an = axleNumbers[gi];
       const axLabel = an.start === an.end ? `A${an.start}` : `A${an.start}-${an.end}`;
-      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, distRound: gDist, tandemCheck, dummy: di };
+      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, tandemCheck, dummy: di };
     });
 
     // Gross max lookup
@@ -302,7 +339,6 @@ export default function BridgeChartPage() {
       const lk = bridgeLookup(overallRound, totalAxles);
       if (lk) { grossMax = lk; grossSource = `Bridge (${overallRound}ft, ${totalAxles}ax)`; }
     } else if (!overallRound && totalAxles >= 2) {
-      // Default when no distance entered: max possible value for this axle count in the bridge chart
       const colMax = Math.max(...Object.values(BD).map(row => row[totalAxles] || 0));
       if (colMax > 0) { grossMax = colMax; grossSource = `Max for ${totalAxles} axles (enter distance for accuracy)`; }
     }
@@ -535,15 +571,35 @@ export default function BridgeChartPage() {
                       {n === 1 ? (
                         <input type="number" inputMode="numeric" value={g.weights?.[0] || ""} onChange={e => updateWeight(gi, 0, e.target.value)} placeholder="Weight (lbs)" className={`w-full px-2 py-2 text-xs font-bold text-center rounded-lg border outline-none ${isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
                       ) : g.useGroup ? (
-                        <input type="number" inputMode="numeric" value={g.groupWeight} onChange={e => updateGroup(gi, "groupWeight", e.target.value)} placeholder={`A${an.start},${an.end} combined (lbs)`} className={`w-full px-2 py-2 text-xs font-bold text-center rounded-lg border outline-none ${isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
+                        <div className="flex gap-1.5">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[7px] text-[#94A3B8] font-bold">A{an.start}-A{an.start + n - 1 - (g.dummyAxle ? 1 : 0)} combined</span>
+                            <input type="number" inputMode="numeric" value={g.groupWeight} onChange={e => updateGroup(gi, "groupWeight", e.target.value)} placeholder="combined (lbs)" className={`w-full px-2 py-2 text-xs font-bold text-center rounded-lg border outline-none ${isOver && !(viol?.dummy?.hasDummy && !viol.dummy.disregarded) ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
+                          </div>
+                          {g.dummyAxle && (() => {
+                            const di = viol?.dummy;
+                            const counted = di && di.hasDummy && !di.disregarded && di.dummyWeight > 0;
+                            return (
+                              <div className="w-24 flex-shrink-0">
+                                <span className={`text-[7px] font-bold flex items-center gap-0.5 ${counted ? "text-[#DC2626]" : "text-[#D4AF37]"}`}>A{an.end} (dummy){counted && <AlertTriangle className="w-2 h-2" />}</span>
+                                <input type="number" inputMode="numeric" value={g.weights?.[parseInt(g.axles)] || ""} onChange={e => updateWeight(gi, parseInt(g.axles), e.target.value)} placeholder="dummy lbs" className={`w-full px-2 py-2 text-xs font-bold text-center rounded-lg border outline-none ${counted ? "border-[#EF4444]/70 bg-[#FEE2E2]/50 text-[#DC2626]" : "border-[#D4AF37]/50 bg-[#D4AF37]/5"}`} />
+                              </div>
+                            );
+                          })()}
+                        </div>
                       ) : (
                         <div className="flex gap-1.5">
                           {Array.from({ length: effAxles(g) }, (_, wi) => {
-                            const isDummy = g.dummyAxle && parseInt(g.axles) === 2 && wi === 2;
+                            const baseNum = parseInt(g.axles) || 0;
+                            const isDummy = g.dummyAxle && wi === baseNum;
+                            const di = viol?.dummy;
+                            const counted = isDummy && di && di.hasDummy && !di.disregarded && di.dummyWeight > 0;
                             return (
                               <div key={wi} className="flex-1 min-w-0">
-                                <span className={`text-[7px] font-bold ${isDummy ? "text-[#D4AF37]" : "text-[#94A3B8]"}`}>A{an.start + wi}{isDummy ? " (dummy)" : ""}</span>
-                                <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder={isDummy ? "dummy lbs" : "lbs"} className={`w-full px-1 py-1.5 text-[11px] font-bold text-center rounded border outline-none ${isDummy ? "border-[#D4AF37]/50 bg-[#D4AF37]/5" : isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
+                                <span className={`text-[7px] font-bold flex items-center gap-0.5 ${isDummy ? (counted ? "text-[#DC2626]" : "text-[#D4AF37]") : "text-[#94A3B8]"}`}>
+                                  A{an.start + wi}{isDummy ? " (dummy)" : ""}{counted && <AlertTriangle className="w-2 h-2" />}
+                                </span>
+                                <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder={isDummy ? "dummy lbs" : "lbs"} className={`w-full px-1 py-1.5 text-[11px] font-bold text-center rounded border outline-none ${isDummy ? (counted ? "border-[#EF4444]/70 bg-[#FEE2E2]/50 text-[#DC2626]" : "border-[#D4AF37]/50 bg-[#D4AF37]/5") : isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
                               </div>
                             );
                           })}
@@ -557,15 +613,12 @@ export default function BridgeChartPage() {
                             <input type="checkbox" checked={!!g.dummyAxle} onChange={e => updateGroup(gi, "dummyAxle", e.target.checked)} className="w-3 h-3 accent-[#D4AF37]" />
                             <span>Add <strong className="text-[#D4AF37]">dummy axle</strong> <span className="text-[#94A3B8]">(disregarded if &lt; 8,000 lbs AND &lt; 8% of gross; otherwise weight applies to this group's check)</span></span>
                           </label>
-                          {g.dummyAxle && record.groupViolations[gi]?.dummy && !record.groupViolations[gi].dummy.unknownSplit && record.groupViolations[gi].dummy.dummyWeight > 0 && (
-                            <div className={`text-[10px] rounded px-2 py-1 ${record.groupViolations[gi].dummy.disregarded ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-[#FFF7ED] text-[#C2410C]"}`}>
-                              {record.groupViolations[gi].dummy.disregarded
-                                ? `Dummy (${record.groupViolations[gi].dummy.dummyWeight.toLocaleString()} lbs) is DISREGARDED — bridge uses ${parseInt(g.axles)} axles, gross excludes dummy`
-                                : `Dummy (${record.groupViolations[gi].dummy.dummyWeight.toLocaleString()} lbs) is COUNTED — bridge uses ${parseInt(g.axles) + 1} axles${parseInt(g.axles) === 2 ? ", tandem 34k includes dummy" : ""}`}
+                          {g.dummyAxle && viol?.dummy?.dummyWeight > 0 && (
+                            <div className={`text-[10px] rounded px-2 py-1 font-medium ${viol.dummy.disregarded ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-[#FEE2E2] text-[#DC2626]"}`}>
+                              {viol.dummy.disregarded
+                                ? `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is DISREGARDED — bridge uses ${parseInt(g.axles)} axles, gross excludes dummy`
+                                : `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is IN VIOLATION — bridge uses ${parseInt(g.axles) + 1} axles${parseInt(g.axles) === 2 ? ", tandem 34k includes dummy" : ""}`}
                             </div>
-                          )}
-                          {g.dummyAxle && g.useGroup && (
-                            <p className="text-[10px] text-[#94A3B8] italic">Switch to Individual weights to evaluate the 8k / 8% discount rule.</p>
                           )}
                         </div>
                       )}
@@ -658,7 +711,7 @@ export default function BridgeChartPage() {
                   <button onClick={openInspPicker} className="p-1.5 rounded-md text-[#D4AF37] hover:bg-[#D4AF37]/10"><FolderPlus className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
-              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} /></div>
+              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} grossWithinTol={!!(record.grossMax && record.gross > record.grossMax && record.gross <= Math.round(record.grossMax * 1.05))} /></div>
               <div className="px-4 pb-3">
                 <div className="flex items-center gap-2 mb-2"><span className="text-[10px] font-bold text-[#64748B] uppercase">Photos</span><button onClick={() => photoRef.current?.click()} className="flex items-center gap-1 text-[10px] text-[#002855] font-medium hover:underline"><Plus className="w-3 h-3" />Add</button><input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} /></div>
                 {photos.length > 0 && <div className="flex gap-2 overflow-x-auto pb-1">{photos.map((p, i) => <div key={i} className="relative flex-shrink-0"><img src={p.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]" /><button onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] rounded-full flex items-center justify-center"><X className="w-2.5 h-2.5 text-white" /></button></div>)}</div>}
