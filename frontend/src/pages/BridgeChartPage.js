@@ -199,8 +199,7 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
         const endX = allAxles[allAxles.length - 1].x;
         const iY = axleY + 145;
         const intOver = !hideViolations && interior.over;
-        const intWithinTol = intOver && toleranceApplies && interior.actual <= interior.max * 1.05;
-        const intColor = intOver ? (intWithinTol ? WARN_ORANGE : OVER_RED) : "#D4AF37";
+        const intColor = intOver ? OVER_RED : "#D4AF37";
         const pillW = 280, pillH = 24;
         const cx = (startX + endX) / 2;
         return (
@@ -212,7 +211,7 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
             <text x={cx} y={iY + 29} textAnchor="middle" fill={intColor} fontSize="13" fontWeight="900">
               {interior.distFt
                 ? (intOver
-                    ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · +${interior.overBy.toLocaleString()} OVER${intWithinTol ? " (5% tol)" : ""}`
+                    ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · +${interior.overBy.toLocaleString()} OVER`
                     : (interior.max
                         ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · max ${interior.max.toLocaleString()}`
                         : `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft (no bridge data)`))
@@ -563,8 +562,8 @@ export default function BridgeChartPage() {
       }
     }
 
-    // Finalize tolerance: include interior bridge violation in count (gross never gets tolerance).
-    if (interior && interior.over) violationCount++;
+    // Finalize tolerance: interior bridge never gets the 5% tolerance (like gross weight),
+    // and it is not counted toward the tolerance threshold.
     const toleranceApplies = violationCount === 1;
 
     return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, grossNote, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList, toleranceApplies, interior };
@@ -1084,7 +1083,7 @@ export default function BridgeChartPage() {
               ))}
               {record.grossMax && record.gross > 0 && <ViolationCard label={`Gross (${record.grossSource})`} actual={record.gross} max={record.grossMax} tolerance={false} />}
               {record.interior?.enabled && record.interior?.max && record.interior.over && (
-                <ViolationCard label={`Interior Bridge A${record.interior.startAxleNum}–A${record.interior.endAxleNum} (${record.interior.source})`} actual={record.interior.actual} max={record.interior.max} tolerance={!isCustom && record.toleranceApplies} />
+                <ViolationCard label={`Interior Bridge A${record.interior.startAxleNum}–A${record.interior.endAxleNum} (${record.interior.source})`} actual={record.interior.actual} max={record.interior.max} tolerance={false} />
               )}
               {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max) && (!v.axleOverages || v.axleOverages.length === 0)) && (!record.grossMax || record.gross <= record.grossMax) && !(record.interior?.over) && record.gross > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] border border-[#16A34A]/30 rounded-lg"><CheckCircle2 className="w-4 h-4 text-[#16A34A]" /><span className="text-xs font-bold text-[#16A34A]">All weights within legal limits</span></div>
