@@ -281,7 +281,8 @@ export default function BridgeChartPage() {
       return { hasDummy: true, dummyWeight, disregarded, unknownSplit: false };
     });
 
-    // Effective (rule-relevant) axle count per group (excludes disregarded dummies)
+    // Effective (rule-relevant) axle count per group — excludes disregarded dummies.
+    // Note: the dummy's WEIGHT is still applied to the group + gross; only the axle COUNT drops.
     const ruleAxles = (g, gi) => {
       const base = parseInt(g.axles) || 0;
       const di = dummyInfoList[gi];
@@ -289,9 +290,9 @@ export default function BridgeChartPage() {
     };
     const totalAxles = groups.reduce((s, g, gi) => s + ruleAxles(g, gi), 0);
 
-    // Effective gross: subtract disregarded-dummy weights
-    let gross = rawGross;
-    dummyInfoList.forEach(di => { if (di.disregarded) gross -= di.dummyWeight; });
+    // Gross weight ALWAYS includes every physical weight (including disregarded dummies).
+    // Only the axle-COUNT used for the gross bridge lookup changes when dummies are disregarded.
+    const gross = rawGross;
 
     const overallRound = roundDist(overallDistFt, "0");
 
@@ -301,8 +302,9 @@ export default function BridgeChartPage() {
       const n = ruleAxles(g, gi);
       const baseWeight = readBaseWeight(g);
       const dummyWeight = readDummy(g);
-      // Group weight for bridge check: base + counted dummy (if any)
-      const gWeight = baseWeight + (di.disregarded ? 0 : dummyWeight);
+      // Group weight ALWAYS includes dummy weight (counted or disregarded) —
+      // disregarded only removes the axle from the COUNT, not the weight.
+      const gWeight = baseWeight + dummyWeight;
       const gDist = roundDist(g.distFt, "0");
       let max = null, source = "";
       if (isCustom && g.maxOverride) { max = parseInt(g.maxOverride); source = "Custom"; }
@@ -310,19 +312,18 @@ export default function BridgeChartPage() {
       else if (n === 2 && !gDist) { max = 34000; source = "Tandem"; }
       else if (n >= 2 && gDist) {
         const lk = bridgeLookup(gDist, n);
-        if (lk) { max = lk; source = `Bridge (${gDist}ft, ${n}ax${di.hasDummy && !di.disregarded ? " +dummy" : ""})`; }
+        if (lk) { max = lk; source = `Bridge (${gDist}ft, ${n}ax${di.hasDummy && !di.disregarded ? " +dummy" : di.hasDummy ? " (dummy disregarded)" : ""})`; }
         else if (n === 2) { max = 34000; source = "Tandem"; }
       }
       else if (n === 2) { max = 34000; source = "Tandem"; }
 
-      // Secondary tandem 34k check — only for base-tandem groups with dummy
+      // Secondary tandem 34k check — only needed when dummy is COUNTED on a base-tandem group.
+      // When disregarded, the main group check (n=2 → 34k) already covers base+dummy vs 34k.
       let tandemCheck = null;
-      if (di.hasDummy && baseN === 2) {
-        const dummyAdd = !di.disregarded ? di.dummyWeight : 0;
-        const tandemActual = baseWeight + dummyAdd;
+      if (di.hasDummy && baseN === 2 && !di.disregarded && di.dummyWeight > 0) {
+        const tandemActual = baseWeight + di.dummyWeight;
         if (tandemActual > 0) {
-          const note = di.disregarded ? " — dummy disregarded" : (dummyAdd > 0 ? " — dummy applied" : "");
-          tandemCheck = { actual: tandemActual, max: 34000, source: `Tandem (A${axleNumbers[gi].start}-A${axleNumbers[gi].start + 1})${note}` };
+          tandemCheck = { actual: tandemActual, max: 34000, source: `Tandem (A${axleNumbers[gi].start}-A${axleNumbers[gi].start + 1}) — dummy applied` };
         }
       }
 
@@ -616,8 +617,8 @@ export default function BridgeChartPage() {
                           {g.dummyAxle && viol?.dummy?.dummyWeight > 0 && (
                             <div className={`text-[10px] rounded px-2 py-1 font-medium ${viol.dummy.disregarded ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-[#FEE2E2] text-[#DC2626]"}`}>
                               {viol.dummy.disregarded
-                                ? `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is DISREGARDED — bridge uses ${parseInt(g.axles)} axles, gross excludes dummy`
-                                : `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is IN VIOLATION — bridge uses ${parseInt(g.axles) + 1} axles${parseInt(g.axles) === 2 ? ", tandem 34k includes dummy" : ""}`}
+                                ? `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is DISREGARDED — axle count drops to ${parseInt(g.axles)}; weight still counted in group + gross`
+                                : `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is IN VIOLATION — axle count ${parseInt(g.axles) + 1}${parseInt(g.axles) === 2 ? "; tandem 34k rule still applies" : ""}`}
                             </div>
                           )}
                         </div>
@@ -667,10 +668,10 @@ export default function BridgeChartPage() {
                 <span>Enter an <strong>Overall Distance</strong> for the most accurate gross max. Without a distance, we show the maximum allowed weight for the current axle count.</span>
               </p>
             )}
-            {record.rawGross !== record.gross && record.rawGross > record.gross && (
+            {record.dummyInfoList.some(di => di.disregarded) && (
               <p className="mt-2 text-[10px] text-[#16A34A] bg-[#F0FDF4] border border-[#16A34A]/30 rounded-md px-2 py-1.5 flex items-start gap-1.5">
                 <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                <span>Disregarded dummy axle weight: <strong>{(record.rawGross - record.gross).toLocaleString()} lbs</strong> (raw total {record.rawGross.toLocaleString()})</span>
+                <span>Dummy axle(s) disregarded from axle count (weight still counted in gross). Gross max uses {record.totalAxles} axles.</span>
               </p>
             )}
           </div>
