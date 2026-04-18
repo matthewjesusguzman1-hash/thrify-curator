@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend-only testing of /bridge-chart Record Weights + Bridge Chart enhancements (4 changes). All 4 requested features verified working end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "tests_executed": [
+    "Login via Badge 042 / PIN 1234 — OK",
+    "Distance column labels include 'ft' suffix (verified '4 ft' .. '60 ft') — PASS",
+    "Click column header (chart-col-5) highlights column with #D4AF37 accent — PASS",
+    "Click distance row label (chart-row-10) highlights row — PASS",
+    "Click cell (chart-cell-20-4) highlights both row + column — PASS",
+    "Record tab: toggle-inputs-collapse exists and text switches Hide Inputs <-> Show Inputs — PASS",
+    "Record tab: record-capture-area wrapper present; Diagram/Violations remain visible when inputs collapsed; dummy-axle-toggle hidden while collapsed — PASS",
+    "Tandem group: dummy-axle-toggle-{gi} checkbox visible with helper text (group counts as triple; tandem 34k still applies) — PASS",
+    "Dummy axle enabled: 3rd input labeled '(dummy)' with golden accent (placeholder 'dummy lbs', border-[#D4AF37]/50) — PASS",
+    "With dummy axle + dist=10ft + weights 18000/17000/5000: Bridge violation card shows 'Bridge (10ft, 3ax +dummy)' (source note with +dummy) — PASS",
+    "Secondary inline 'Tandem (first 2 axles): 34,000 max +1,000 over' appears — PASS",
+    "Save (Download icon): triggers download of 'weight-YYYY-MM-DD.png' (html2canvas capture of record-capture-area) — PASS",
+    "Existing Steer single violation card still renders (regression OK)"
+  ],
+  "critical_code_review_comments": [
+    "Invalid HTML: React warning 'In HTML, <button> cannot be a descendant of <button>' fires on every render of the Record tab. Root cause: in BridgeChartPage.js line ~444, each axle-group card uses a <button> as its collapse header, but that header contains a nested <select> AND a nested <button> (the Trash2 remove button, line ~464). The <select> alone (onClick stopPropagation) is not the issue — the nested <button> inside the parent <button> is invalid HTML and will cause hydration errors. Recommended fix: convert the outer collapse header to a <div role='button' tabIndex={0} onClick=...> or move the Trash2 button outside the collapsible header.",
+    "Minor UX: when dummy axle is toggled on for a tandem, the 'Dist (ft)' input placeholder remains 'Std' (because placeholder uses parseInt(g.axles)===2, base count). Functionally fine; placeholder could say 'ft' since group is now effectively 3-axle.",
+    "Toast 'Saved' — not visually verified during test (may auto-dismiss fast). Download itself was confirmed triggered with correct filename."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Fix nested <button> inside collapse-header button in BridgeChartPage.js (group-card header around lines 444-466) — causes React hydration error. Best fix: change the outer <button> to a <div role='button'> (or extract the Trash2 remove control outside the header). This is the only meaningful issue found."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% (12/12 feature assertions passed)"},
+  "test_credentials": "Badge 042 / PIN 1234 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 4 Bridge Chart changes verified on /bridge-chart. Testids in use: tab-chart, tab-record, chart-row-{d}, chart-col-{a}, chart-cell-{d}-{a}, toggle-inputs-collapse, record-capture-area, dummy-axle-toggle-{gi}. Note the Dist (ft) input inside a tandem-with-dummy group has placeholder 'Std' (not 'ft'); weight inputs have placeholders 'lbs' and 'dummy lbs'. Download produces filename weight-YYYY-MM-DD.png via html2canvas of record-capture-area.",
+  "rca of the issue": "Console hydration error: root cause is invalid HTML — <button> nested inside <button> in the group collapsible header (BridgeChartPage.js L444 outer button + L464 inner Trash2 button). Remediation: change outer to <div role='button'> or relocate Trash2 button outside the header."
+}

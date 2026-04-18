@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
+import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import html2canvas from "html2canvas";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
@@ -164,8 +165,10 @@ export default function BridgeChartPage() {
   // Record tab
   const [isCustom, setIsCustom] = useState(false);
   const [showViolations, setShowViolations] = useState(true);
+  const [isInputsCollapsed, setIsInputsCollapsed] = useState(false);
+  const captureRef = useRef(null);
   const makeGroup = (label, preset, axles) => ({
-    label, preset, axles: String(axles), distFt: "", useGroup: axles > 1, groupWeight: "", weights: Array(axles).fill(""), maxOverride: ""
+    label, preset, axles: String(axles), distFt: "", useGroup: axles > 1, groupWeight: "", weights: Array(axles).fill(""), maxOverride: "", dummyAxle: false
   });
   const [groups, setGroups] = useState([makeGroup("Steer", "Single", 1)]);
   const [overallDistFt, setOverallDistFt] = useState("");
@@ -184,20 +187,33 @@ export default function BridgeChartPage() {
       if (field === "preset") {
         const map = { "Single": 1, "Tandem (2)": 2, "Triple (3)": 3, "Quad (4)": 4 };
         const ax = map[val] || 0;
-        if (ax > 0) { n[i].axles = String(ax); n[i].useGroup = ax > 1; n[i].weights = Array(ax).fill(""); n[i].groupWeight = ""; }
-        if (val === "Custom") { n[i].useGroup = false; }
+        if (ax > 0) { n[i].axles = String(ax); n[i].useGroup = ax > 1; n[i].weights = Array(ax).fill(""); n[i].groupWeight = ""; n[i].dummyAxle = false; }
+        if (val === "Custom") { n[i].useGroup = false; n[i].dummyAxle = false; }
       }
-      if (field === "axles") { const c = parseInt(val) || 0; n[i].weights = Array(c).fill(""); n[i].useGroup = c > 1; n[i].groupWeight = ""; }
+      if (field === "axles") { const c = parseInt(val) || 0; n[i].weights = Array(c).fill(""); n[i].useGroup = c > 1; n[i].groupWeight = ""; n[i].dummyAxle = false; }
+      if (field === "dummyAxle") {
+        // Expand/contract weights array to include/exclude the dummy axle slot
+        const base = parseInt(n[i].axles) || 0;
+        const target = val ? base + 1 : base;
+        const cur = n[i].weights || [];
+        const next = Array(target).fill("").map((_, k) => cur[k] || "");
+        n[i].weights = next;
+        n[i].useGroup = false; // force individual so tandem check can evaluate
+        n[i].groupWeight = "";
+      }
       return n;
     });
   };
   const updateWeight = (gi, wi, val) => setGroups(p => { const n = [...p]; const w = [...(n[gi].weights || [])]; w[wi] = val; n[gi] = { ...n[gi], weights: w }; return n; });
 
-  // Compute sequential axle numbers
+  // Effective axle count (includes dummy axle if present)
+  const effAxles = (g) => (parseInt(g.axles) || 0) + (g.dummyAxle ? 1 : 0);
+
+  // Compute sequential axle numbers (using effective count so dummy gets its own number)
   const axleNumbers = useMemo(() => {
     let num = 1;
     return groups.map(g => {
-      const n = parseInt(g.axles) || 0;
+      const n = effAxles(g);
       const start = num;
       num += n;
       return { start, end: num - 1, count: n };
@@ -205,7 +221,7 @@ export default function BridgeChartPage() {
   }, [groups]);
 
   const record = useMemo(() => {
-    const totalAxles = groups.reduce((s, g) => s + (parseInt(g.axles) || 0), 0);
+    const totalAxles = groups.reduce((s, g) => s + effAxles(g), 0);
     let gross = 0;
     groups.forEach(g => {
       if (g.useGroup) gross += parseInt(g.groupWeight) || 0;
@@ -214,7 +230,8 @@ export default function BridgeChartPage() {
     const overallRound = roundDist(overallDistFt, "0");
 
     const groupViolations = groups.map((g, gi) => {
-      const n = parseInt(g.axles) || 0;
+      const baseN = parseInt(g.axles) || 0;
+      const n = effAxles(g); // includes dummy for bridge calc
       const gWeight = g.useGroup ? (parseInt(g.groupWeight) || 0) : (g.weights || []).reduce((s, w) => s + (parseInt(w) || 0), 0);
       const gDist = roundDist(g.distFt, "0");
       let max = null, source = "";
@@ -223,13 +240,25 @@ export default function BridgeChartPage() {
       else if (n === 2 && !gDist) { max = 34000; source = "Tandem"; }
       else if (n >= 2 && gDist) {
         const lk = bridgeLookup(gDist, n);
-        if (lk) { max = lk; source = `Bridge (${gDist}ft, ${n}ax)`; }
+        if (lk) { max = lk; source = `Bridge (${gDist}ft, ${n}ax${g.dummyAxle ? " +dummy" : ""})`; }
         else if (n === 2) { max = 34000; source = "Tandem"; }
       }
       else if (n === 2) { max = 34000; source = "Tandem"; }
+
+      // Secondary tandem check if dummy axle is active on a base-tandem group
+      let tandemCheck = null;
+      if (g.dummyAxle && baseN === 2 && !g.useGroup) {
+        const wA = parseInt(g.weights?.[0]) || 0;
+        const wB = parseInt(g.weights?.[1]) || 0;
+        const tandemActual = wA + wB;
+        if (tandemActual > 0) {
+          tandemCheck = { actual: tandemActual, max: 34000, source: "Tandem (first 2 axles)" };
+        }
+      }
+
       const an = axleNumbers[gi];
-      const axLabel = an.start === an.end ? `A${an.start}` : `A${an.start},${an.end}`;
-      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, distRound: gDist };
+      const axLabel = an.start === an.end ? `A${an.start}` : `A${an.start}-${an.end}`;
+      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, distRound: gDist, tandemCheck };
     });
 
     let grossMax = null, grossSource = "";
@@ -239,7 +268,7 @@ export default function BridgeChartPage() {
     const conflicts = [];
     if (totalAxles < 1) conflicts.push("No axles defined");
     if (!isCustom) groups.forEach((g, i) => {
-      const n = parseInt(g.axles) || 0, d = roundDist(g.distFt, "0");
+      const n = effAxles(g), d = roundDist(g.distFt, "0");
       if (n > 1 && d && (d < 4 || d > 60)) conflicts.push(`${g.label || `Group ${i + 1}`}: ${d}ft outside bridge range (4-60)`);
       if (!isCustom && n >= 2 && d && !bridgeLookup(d, n)) conflicts.push(`${g.label || `Group ${i + 1}`}: no data for ${d}ft / ${n} axles`);
     });
@@ -247,11 +276,68 @@ export default function BridgeChartPage() {
   }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers]);
 
   const handlePhoto = (e) => { Array.from(e.target.files || []).forEach(f => { const r = new FileReader(); r.onload = (ev) => setPhotos(p => [...p, { dataUrl: ev.target.result, file: f }]); r.readAsDataURL(f); }); e.target.value = ""; };
-  const getSvgBlob = useCallback(async () => { const s = svgRef.current; if (!s) return null; const d = new XMLSerializer().serializeToString(s); const c = document.createElement("canvas"); c.width = 1440; c.height = 720; const ctx = c.getContext("2d"); const img = new Image(); return new Promise(r => { img.onload = () => { ctx.drawImage(img, 0, 0, 1440, 720); c.toBlob(r, "image/png"); }; img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(d); }); }, []);
-  const downloadDiag = async () => { const b = await getSvgBlob(); if (!b) return; const l = document.createElement("a"); l.download = `weight-${new Date().toISOString().slice(0, 10)}.png`; l.href = URL.createObjectURL(b); l.click(); toast.success("Saved"); };
-  const shareDiag = async () => { const b = await getSvgBlob(); if (!b) return; try { const f = new File([b], "weight.png", { type: "image/png" }); if (navigator.share && navigator.canShare({ files: [f] })) await navigator.share({ files: [f] }); else downloadDiag(); } catch { downloadDiag(); } };
+
+  // Capture the ENTIRE record tab content (violations, inputs, diagram) as a single PNG
+  const getCaptureBlob = useCallback(async () => {
+    const node = captureRef.current;
+    if (!node) return null;
+    try {
+      const canvas = await html2canvas(node, {
+        backgroundColor: "#F0F2F5",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      return await new Promise(r => canvas.toBlob(r, "image/png"));
+    } catch (err) {
+      console.error("Capture failed", err);
+      return null;
+    }
+  }, []);
+
+  const downloadDiag = async () => {
+    const b = await getCaptureBlob();
+    if (!b) { toast.error("Capture failed"); return; }
+    const l = document.createElement("a");
+    l.download = `weight-${new Date().toISOString().slice(0, 10)}.png`;
+    l.href = URL.createObjectURL(b);
+    l.click();
+    toast.success("Saved");
+  };
+  const shareDiag = async () => {
+    const b = await getCaptureBlob();
+    if (!b) { toast.error("Capture failed"); return; }
+    try {
+      const f = new File([b], "weight.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [f] })) {
+        await navigator.share({ files: [f] });
+      } else {
+        downloadDiag();
+      }
+    } catch {
+      downloadDiag();
+    }
+  };
   const openInspPicker = async () => { setShowInspPicker(true); try { const r = await fetch(`${API}/api/inspections?badge=${badge}`); if (r.ok) { const d = await r.json(); setInspections(d.inspections || []); } } catch {} };
-  const addToInsp = async (id) => { setSaving(true); const b = await getSvgBlob(); if (b) { const fd = new FormData(); fd.append("file", b, "weight.png"); await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd }); } for (const p of photos) { if (p.file) { const fd = new FormData(); fd.append("file", p.file, p.file.name); await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd }); } } toast.success("Added to inspection"); setShowInspPicker(false); setSaving(false); };
+  const addToInsp = async (id) => {
+    setSaving(true);
+    const b = await getCaptureBlob();
+    if (b) {
+      const fd = new FormData();
+      fd.append("file", b, "weight.png");
+      await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd });
+    }
+    for (const p of photos) {
+      if (p.file) {
+        const fd = new FormData();
+        fd.append("file", p.file, p.file.name);
+        await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd });
+      }
+    }
+    toast.success("Added to inspection");
+    setShowInspPicker(false);
+    setSaving(false);
+  };
   const createAndAdd = async () => { setSaving(true); try { const r = await fetch(`${API}/api/inspections`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: newInspTitle.trim() || `Weight ${new Date().toLocaleDateString()}`, badge }) }); if (r.ok) { const i = await r.json(); setNewInspTitle(""); await addToInsp(i.id); } } catch {} setSaving(false); };
 
   return (
@@ -307,9 +393,12 @@ export default function BridgeChartPage() {
             </div>
           </div>
           <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#E2E8F0]"><h2 className="text-xs font-bold text-[#002855] uppercase tracking-wider">Bridge Chart — Max Load (lbs)</h2></div>
-            <div className="overflow-x-auto"><table className="w-full text-xs"><thead className="sticky top-0 z-10"><tr className="bg-[#002855] text-white"><th className="px-3 py-2.5 text-left font-bold text-[10px] uppercase sticky left-0 bg-[#002855] z-20">Dist</th>{ALL_AX.map(a => <th key={a} className={`px-3 py-2.5 text-right font-bold text-[10px] uppercase ${cLocked && cResult.axles === a ? "bg-[#D4AF37] text-[#002855]" : ""}`}>{a} Ax</th>)}</tr></thead>
-              <tbody>{ALL_DIST.map(d => { const row = BD[d]; const isRow = cLocked && d === cResult.dist; return (<tr key={d} className={`border-b border-[#F1F5F9] ${isRow ? "bg-[#D4AF37]/15" : d % 2 === 0 ? "bg-white" : "bg-[#FAFBFD]"}`}><td className={`px-3 py-2 font-bold sticky left-0 z-10 ${isRow ? "text-[#002855] bg-[#D4AF37]/15" : "text-[#002855] bg-inherit"}`}>{d}</td>{ALL_AX.map(a => { const isCell = cLocked && d === cResult.dist && a === cResult.axles; return <td key={a} className={`px-3 py-2 text-right tabular-nums ${isCell ? "bg-[#D4AF37] text-[#002855] font-black text-sm" : ""}`}>{row[a] ? <span className={isCell ? "" : "text-[#334155] font-medium"}>{row[a].toLocaleString()}</span> : <span className="text-[#E2E8F0]">—</span>}</td>; })}</tr>); })}</tbody>
+            <div className="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between">
+              <h2 className="text-xs font-bold text-[#002855] uppercase tracking-wider">Bridge Chart — Max Load (lbs)</h2>
+              <p className="text-[10px] text-[#94A3B8]">Tap any cell to highlight</p>
+            </div>
+            <div className="overflow-x-auto"><table className="w-full text-xs"><thead className="sticky top-0 z-10"><tr className="bg-[#002855] text-white"><th className="px-3 py-2.5 text-left font-bold text-[10px] uppercase sticky left-0 bg-[#002855] z-20">Dist (ft)</th>{ALL_AX.map(a => <th key={a} onClick={() => { setCAxles(String(a)); }} className={`px-3 py-2.5 text-right font-bold text-[10px] uppercase cursor-pointer hover:bg-[#D4AF37]/20 ${String(cAxles) === String(a) ? "bg-[#D4AF37] text-[#002855]" : ""}`} data-testid={`chart-col-${a}`}>{a} Ax</th>)}</tr></thead>
+              <tbody>{ALL_DIST.map(d => { const row = BD[d]; const isRow = String(cFt) === String(d) && !cIn; return (<tr key={d} className={`border-b border-[#F1F5F9] ${isRow ? "bg-[#D4AF37]/15" : d % 2 === 0 ? "bg-white" : "bg-[#FAFBFD]"}`}><td onClick={() => { setCFt(String(d)); setCIn(""); }} className={`px-3 py-2 font-bold sticky left-0 z-10 cursor-pointer hover:bg-[#D4AF37]/20 ${isRow ? "text-[#002855] bg-[#D4AF37]/15" : "text-[#002855] bg-inherit"}`} data-testid={`chart-row-${d}`}>{d} ft</td>{ALL_AX.map(a => { const isCell = String(cFt) === String(d) && !cIn && String(cAxles) === String(a); return <td key={a} onClick={() => { setCFt(String(d)); setCIn(""); setCAxles(String(a)); }} className={`px-3 py-2 text-right tabular-nums cursor-pointer hover:bg-[#D4AF37]/10 ${isCell ? "bg-[#D4AF37] text-[#002855] font-black text-sm" : ""}`} data-testid={`chart-cell-${d}-${a}`}>{row[a] ? <span className={isCell ? "" : "text-[#334155] font-medium"}>{row[a].toLocaleString()}</span> : <span className="text-[#E2E8F0]">—</span>}</td>; })}</tr>); })}</tbody>
             </table></div>
           </div>
         </>)}
@@ -318,15 +407,24 @@ export default function BridgeChartPage() {
         {tab === "record" && (<>
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <button onClick={() => setIsCustom(false)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${!isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`}>Bridge Formula</button>
-              <button onClick={() => setIsCustom(true)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`}>Custom / Permit</button>
+              <button onClick={() => setIsCustom(false)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${!isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-bridge">Bridge Formula</button>
+              <button onClick={() => setIsCustom(true)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-custom">Custom / Permit</button>
             </div>
-            <button onClick={() => setShowViolations(!showViolations)} className="flex items-center gap-1.5 text-[11px] font-medium text-[#64748B]">
-              {showViolations ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}{showViolations ? "Violations On" : "Violations Off"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIsInputsCollapsed(v => !v)} className="flex items-center gap-1 text-[11px] font-bold text-[#002855]" data-testid="toggle-inputs-collapse">
+                {isInputsCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}{isInputsCollapsed ? "Show Inputs" : "Hide Inputs"}
+              </button>
+              <button onClick={() => setShowViolations(!showViolations)} className="flex items-center gap-1.5 text-[11px] font-medium text-[#64748B]" data-testid="toggle-violations">
+                {showViolations ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}{showViolations ? "Violations On" : "Violations Off"}
+              </button>
+            </div>
           </div>
 
+          {/* Everything below is captured together for Save/Share/Add to Inspection */}
+          <div ref={captureRef} className="space-y-4" data-testid="record-capture-area">
+
           {/* Axle Groups */}
+          {!isInputsCollapsed && (<>
           <div className="space-y-2">
             {groups.map((g, gi) => {
               const n = parseInt(g.axles) || 0;
@@ -393,13 +491,24 @@ export default function BridgeChartPage() {
                         <input type="number" inputMode="numeric" value={g.groupWeight} onChange={e => updateGroup(gi, "groupWeight", e.target.value)} placeholder={`A${an.start},${an.end} combined (lbs)`} className={`w-full px-2 py-2 text-xs font-bold text-center rounded-lg border outline-none ${isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
                       ) : (
                         <div className="flex gap-1.5">
-                          {Array.from({ length: n }, (_, wi) => (
-                            <div key={wi} className="flex-1 min-w-0">
-                              <span className="text-[7px] text-[#94A3B8] font-bold">A{an.start + wi}</span>
-                              <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder="lbs" className={`w-full px-1 py-1.5 text-[11px] font-bold text-center rounded border outline-none ${isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
-                            </div>
-                          ))}
+                          {Array.from({ length: effAxles(g) }, (_, wi) => {
+                            const isDummy = g.dummyAxle && parseInt(g.axles) === 2 && wi === 2;
+                            return (
+                              <div key={wi} className="flex-1 min-w-0">
+                                <span className={`text-[7px] font-bold ${isDummy ? "text-[#D4AF37]" : "text-[#94A3B8]"}`}>A{an.start + wi}{isDummy ? " (dummy)" : ""}</span>
+                                <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder={isDummy ? "dummy lbs" : "lbs"} className={`w-full px-1 py-1.5 text-[11px] font-bold text-center rounded border outline-none ${isDummy ? "border-[#D4AF37]/50 bg-[#D4AF37]/5" : isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
+                              </div>
+                            );
+                          })}
                         </div>
+                      )}
+
+                      {/* Dummy Axle toggle — only for base tandems */}
+                      {parseInt(g.axles) === 2 && (
+                        <label className="flex items-center gap-1.5 text-[10px] text-[#64748B] cursor-pointer select-none" data-testid={`dummy-axle-toggle-${gi}`}>
+                          <input type="checkbox" checked={!!g.dummyAxle} onChange={e => updateGroup(gi, "dummyAxle", e.target.checked)} className="w-3 h-3 accent-[#D4AF37]" />
+                          <span>Add <strong className="text-[#D4AF37]">dummy axle</strong> <span className="text-[#94A3B8]">(group counts as triple for bridge; tandem 34k still applies to first 2 axles)</span></span>
+                        </label>
                       )}
 
                       {/* Inline violation */}
@@ -407,6 +516,18 @@ export default function BridgeChartPage() {
                         <div className={`rounded px-2 py-1 text-[10px] flex items-center justify-between ${isOver ? withinTol ? "bg-[#FFF7ED]" : "bg-[#FEE2E2]" : "bg-[#F0FDF4]"}`}>
                           <span className="text-[#64748B]">{viol.source}: {viol.max.toLocaleString()} max</span>
                           {isOver ? <span className={`font-bold ${withinTol ? "text-[#F97316]" : "text-[#DC2626]"}`}>+{(gWeight - viol.max).toLocaleString()} over{withinTol ? " (5% tol)" : ""}</span> : <span className="text-[#16A34A] font-bold">Legal</span>}
+                        </div>
+                      )}
+
+                      {/* Secondary tandem check for dummy-axle groups */}
+                      {showViolations && viol?.tandemCheck && (
+                        <div className={`rounded px-2 py-1 text-[10px] flex items-center justify-between ${viol.tandemCheck.actual > viol.tandemCheck.max ? "bg-[#FEE2E2]" : "bg-[#F0FDF4]"}`}>
+                          <span className="text-[#64748B]">{viol.tandemCheck.source}: {viol.tandemCheck.max.toLocaleString()} max</span>
+                          {viol.tandemCheck.actual > viol.tandemCheck.max ? (
+                            <span className="font-bold text-[#DC2626]">+{(viol.tandemCheck.actual - viol.tandemCheck.max).toLocaleString()} over</span>
+                          ) : (
+                            <span className="text-[#16A34A] font-bold">Tandem legal ({viol.tandemCheck.actual.toLocaleString()})</span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -429,7 +550,7 @@ export default function BridgeChartPage() {
               {isCustom && <div><label className="text-[9px] font-bold text-[#94A3B8] uppercase block mb-0.5">Gross Max (lbs)</label><input type="number" inputMode="numeric" value={customGrossMax} onChange={e => setCustomGrossMax(e.target.value)} placeholder="Custom" className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" /></div>}
             </div>
           </div>
-
+          </>)}{/* end !isInputsCollapsed */}
           {/* Violations */}
           {showViolations && record.gross > 0 && (
             <div className="space-y-2">
@@ -461,13 +582,15 @@ export default function BridgeChartPage() {
                   <button onClick={openInspPicker} className="p-1.5 rounded-md text-[#D4AF37] hover:bg-[#D4AF37]/10"><FolderPlus className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
-              <div className="p-2"><TruckDiagram groups={groups} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} /></div>
+              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} /></div>
               <div className="px-4 pb-3">
                 <div className="flex items-center gap-2 mb-2"><span className="text-[10px] font-bold text-[#64748B] uppercase">Photos</span><button onClick={() => photoRef.current?.click()} className="flex items-center gap-1 text-[10px] text-[#002855] font-medium hover:underline"><Plus className="w-3 h-3" />Add</button><input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} /></div>
                 {photos.length > 0 && <div className="flex gap-2 overflow-x-auto pb-1">{photos.map((p, i) => <div key={i} className="relative flex-shrink-0"><img src={p.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]" /><button onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] rounded-full flex items-center justify-center"><X className="w-2.5 h-2.5 text-white" /></button></div>)}</div>}
               </div>
             </div>
           )}
+
+          </div>{/* end captureRef */}
         </>)}
       </main>
 
