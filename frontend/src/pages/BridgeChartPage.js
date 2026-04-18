@@ -31,9 +31,9 @@ const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"
 /* ================================================================
    TRUCK DIAGRAM — improved with tight grouped axles
    ================================================================ */
-function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false, hideViolations = false, toleranceApplies = false }) {
+function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false, hideViolations = false, toleranceApplies = false, interior = null }) {
   // Larger viewBox aspect so diagram renders TALL when given full-width container
-  const w = 900, h = 680, mL = 90, mR = 90;
+  const w = 900, h = 720, mL = 90, mR = 90;
   const tTop = 150;                // trailer top
   const tH = 220;                  // trailer height
   const axleY = tTop + tH + 40;    // axle line y
@@ -193,13 +193,42 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
         );
       })}
 
+      {/* Interior Bridge bracket (A2 → last axle) */}
+      {interior && interior.enabled && allAxles.length >= 2 && (() => {
+        const startX = allAxles[1].x;
+        const endX = allAxles[allAxles.length - 1].x;
+        const iY = axleY + 145;
+        const intOver = !hideViolations && interior.over;
+        const intWithinTol = intOver && toleranceApplies && interior.actual <= interior.max * 1.05;
+        const intColor = intOver ? (intWithinTol ? WARN_ORANGE : OVER_RED) : "#D4AF37";
+        const pillW = 280, pillH = 24;
+        const cx = (startX + endX) / 2;
+        return (
+          <g>
+            <line x1={startX} y1={iY} x2={endX} y2={iY} stroke={intColor} strokeWidth="3" opacity="0.85" strokeDasharray="4 3" />
+            <line x1={startX} y1={iY - 7} x2={startX} y2={iY + 7} stroke={intColor} strokeWidth="3" opacity="0.85" />
+            <line x1={endX} y1={iY - 7} x2={endX} y2={iY + 7} stroke={intColor} strokeWidth="3" opacity="0.85" />
+            <rect x={cx - pillW / 2} y={iY + 12} width={pillW} height={pillH} rx="6" fill="#0F172A" stroke={intColor} strokeWidth="1.5" />
+            <text x={cx} y={iY + 29} textAnchor="middle" fill={intColor} fontSize="13" fontWeight="900">
+              {interior.distFt
+                ? (intOver
+                    ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · +${interior.overBy.toLocaleString()} OVER${intWithinTol ? " (5% tol)" : ""}`
+                    : (interior.max
+                        ? `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft · max ${interior.max.toLocaleString()}`
+                        : `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum} · ${interior.distFt} ft (no bridge data)`))
+                : `INTERIOR A${interior.startAxleNum}-A${interior.endAxleNum}`}
+            </text>
+          </g>
+        );
+      })()}
+
       {/* Overall distance */}
       {allAxles.length > 1 && overallDist && (
         <g>
-          <line x1={allAxles[0].x} y1={axleY + 150} x2={allAxles[allAxles.length - 1].x} y2={axleY + 150} stroke="#64748B" strokeWidth="2" />
-          <line x1={allAxles[0].x} y1={axleY + 142} x2={allAxles[0].x} y2={axleY + 158} stroke="#64748B" strokeWidth="2" />
-          <line x1={allAxles[allAxles.length - 1].x} y1={axleY + 142} x2={allAxles[allAxles.length - 1].x} y2={axleY + 158} stroke="#64748B" strokeWidth="2" />
-          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 176} textAnchor="middle" fill="#94A3B8" fontSize="16" fontWeight="bold">{`${overallDist} ft overall`}</text>
+          <line x1={allAxles[0].x} y1={axleY + 195} x2={allAxles[allAxles.length - 1].x} y2={axleY + 195} stroke="#64748B" strokeWidth="2" />
+          <line x1={allAxles[0].x} y1={axleY + 187} x2={allAxles[0].x} y2={axleY + 203} stroke="#64748B" strokeWidth="2" />
+          <line x1={allAxles[allAxles.length - 1].x} y1={axleY + 187} x2={allAxles[allAxles.length - 1].x} y2={axleY + 203} stroke="#64748B" strokeWidth="2" />
+          <text x={(allAxles[0].x + allAxles[allAxles.length - 1].x) / 2} y={axleY + 221} textAnchor="middle" fill="#94A3B8" fontSize="16" fontWeight="bold">{`${overallDist} ft overall`}</text>
         </g>
       )}
     </svg>
@@ -1169,7 +1198,7 @@ export default function BridgeChartPage() {
                 </div>
               </button>
               {!isDiagramCollapsed && (<>
-              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String((parseInt(g.axles) || 0) + (g.dummyAxle ? 1 : 0)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} hideViolations={!showViolations} toleranceApplies={record.toleranceApplies} /></div>
+              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String((parseInt(g.axles) || 0) + (g.dummyAxle ? 1 : 0)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} hideViolations={!showViolations} toleranceApplies={record.toleranceApplies} interior={record.interior} /></div>
               {photos.length > 0 && (
                 <div className="px-4 pb-3">
                   <div className="flex gap-2 overflow-x-auto pb-1">{photos.map((p, i) => <div key={i} className="relative flex-shrink-0"><img src={p.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]" /><button onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] rounded-full flex items-center justify-center" data-html2canvas-ignore="true"><X className="w-2.5 h-2.5 text-white" /></button></div>)}</div>
