@@ -80,22 +80,12 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef }) {
       )}
       <text x={w / 2} y={tTop + tH / 2 - 6} textAnchor="middle" fill="#8FAEC5" fontSize="9" fontWeight="bold">GROSS</text>
       <text x={w / 2} y={tTop + tH / 2 + 14} textAnchor="middle" fill="#D4AF37" fontSize="18" fontWeight="900" fontFamily="monospace">{grossWeight ? grossWeight.toLocaleString() : "—"}</text>
-      {/* Axles */}
+      {/* Axles — single wheel per axle */}
       {allAxles.map((a, i) => (
         <g key={i}>
-          <line x1={a.x} y1={axleY - 16} x2={a.x} y2={axleY + 6} stroke="#94A3B8" strokeWidth="2" />
-          {a.isSingle ? (
-            <>
-              <circle cx={a.x - 8} cy={axleY + 7} r="7" fill="#334155" stroke="#64748B" strokeWidth="1.2" />
-              <circle cx={a.x + 8} cy={axleY + 7} r="7" fill="#334155" stroke="#64748B" strokeWidth="1.2" />
-            </>
-          ) : (
-            <>
-              <circle cx={a.x - 7} cy={axleY + 7} r="6" fill="#334155" stroke="#64748B" strokeWidth="1" />
-              <circle cx={a.x + 7} cy={axleY + 7} r="6" fill="#334155" stroke="#64748B" strokeWidth="1" />
-            </>
-          )}
-          {!a.isSingle || true ? <rect x={a.x - 2} y={axleY - 19} width="4" height="2" fill={COLORS[a.groupIdx % COLORS.length]} rx="1" /> : null}
+          <line x1={a.x} y1={axleY - 14} x2={a.x} y2={axleY + 8} stroke="#94A3B8" strokeWidth="2.5" />
+          <circle cx={a.x} cy={axleY + 9} r="7" fill="#334155" stroke="#64748B" strokeWidth="1.5" />
+          <rect x={a.x - 2} y={axleY - 17} width="4" height="2" fill={COLORS[a.groupIdx % COLORS.length]} rx="1" />
         </g>
       ))}
       {/* Group labels + weights above */}
@@ -337,72 +327,90 @@ export default function BridgeChartPage() {
           </div>
 
           {/* Axle Groups */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {groups.map((g, gi) => {
               const n = parseInt(g.axles) || 0;
               const an = axleNumbers[gi];
               const axLabel = an.count === 1 ? `Axle ${an.start}` : `Axles ${an.start}-${an.end}`;
+              const gWeight = g.useGroup ? (parseInt(g.groupWeight) || 0) : (g.weights || []).reduce((s, w) => s + (parseInt(w) || 0), 0);
+              // Inline violation
+              const viol = record.groupViolations[gi];
+              const hasViol = showViolations && viol && viol.max && gWeight > 0;
+              const isOver = hasViol && gWeight > viol.max;
+              const withinTol = hasViol && !isCustom && gWeight > viol.max && gWeight <= Math.round(viol.max * 1.05);
+              const isCollapsed = g._collapsed && gWeight > 0;
+
               return (
-                <div key={gi} className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-                  <div className="px-3 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0] flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[gi % COLORS.length] }} />
-                      <input type="text" value={g.label} onChange={e => updateGroup(gi, "label", e.target.value)} placeholder={axLabel} className="text-xs font-bold text-[#002855] bg-transparent outline-none w-28 placeholder:text-[#94A3B8]" />
-                      <span className="text-[9px] text-[#94A3B8] font-mono">{axLabel}</span>
+                <div key={gi} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isOver ? withinTol ? "border-[#F97316]/40" : "border-[#EF4444]/40" : "border-[#E2E8F0]"}`}>
+                  {/* Header — always visible, clickable to collapse/expand */}
+                  <button
+                    onClick={() => updateGroup(gi, "_collapsed", !g._collapsed)}
+                    className="w-full px-3 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0] flex items-center justify-between text-left"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: COLORS[gi % COLORS.length] }} />
+                      <span className="text-xs font-bold text-[#002855] truncate">{g.label || axLabel}</span>
+                      <span className="text-[9px] text-[#94A3B8] font-mono flex-shrink-0">{axLabel}</span>
+                      {gWeight > 0 && <span className="text-[10px] font-bold text-[#334155] flex-shrink-0">{gWeight.toLocaleString()} lbs</span>}
+                      {isOver && (
+                        <span className={`text-[9px] font-bold flex-shrink-0 flex items-center gap-0.5 ${withinTol ? "text-[#F97316]" : "text-[#DC2626]"}`}>
+                          <AlertTriangle className="w-2.5 h-2.5" />+{(gWeight - viol.max).toLocaleString()}
+                        </span>
+                      )}
+                      {hasViol && !isOver && gWeight > 0 && <CheckCircle2 className="w-3 h-3 text-[#16A34A] flex-shrink-0" />}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <select value={g.preset} onChange={e => updateGroup(gi, "preset", e.target.value)} className="text-[10px] bg-white border border-[#E2E8F0] rounded px-2 py-1 outline-none">
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <select value={g.preset} onClick={e => e.stopPropagation()} onChange={e => updateGroup(gi, "preset", e.target.value)} className="text-[10px] bg-white border border-[#E2E8F0] rounded px-1.5 py-0.5 outline-none">
                         {[{ l: "Single", v: "Single" }, { l: "Tandem", v: "Tandem (2)" }, { l: "Triple", v: "Triple (3)" }, { l: "Quad", v: "Quad (4)" }, { l: "Custom", v: "Custom" }].map(p => <option key={p.v} value={p.v}>{p.l}</option>)}
                       </select>
-                      {groups.length > 1 && <button onClick={() => removeGroup(gi)} className="text-[#94A3B8] hover:text-[#DC2626] p-0.5"><Trash2 className="w-3 h-3" /></button>}
+                      {groups.length > 1 && <button onClick={e => { e.stopPropagation(); removeGroup(gi); }} className="text-[#94A3B8] hover:text-[#DC2626] p-0.5"><Trash2 className="w-3 h-3" /></button>}
                     </div>
-                  </div>
-                  <div className="p-3 space-y-2.5">
-                    {/* Axle count + distance row — hide distance for single axle */}
-                    <div className={`grid gap-2 ${n > 1 && isCustom ? "grid-cols-3" : n > 1 ? "grid-cols-2" : isCustom ? "grid-cols-2" : "grid-cols-1"}`}>
-                      {g.preset === "Custom" && (
-                        <div><label className="text-[9px] font-bold text-[#94A3B8] uppercase block mb-0.5">Axles</label><input type="number" inputMode="numeric" min="1" max="7" value={g.axles} onChange={e => updateGroup(gi, "axles", e.target.value)} className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] outline-none" /></div>
-                      )}
-                      {n > 1 && (
-                        <div>
-                          <label className="text-[9px] font-bold text-[#94A3B8] uppercase block mb-0.5">Distance (ft) <span className="font-normal normal-case text-[#CBD5E1]">{n === 2 ? "default tandem" : ""}</span></label>
-                          <input type="number" inputMode="numeric" value={g.distFt} onChange={e => updateGroup(gi, "distFt", e.target.value)} placeholder={n === 2 ? "Std tandem" : "ft"} className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] outline-none placeholder:text-[#CBD5E1] placeholder:font-normal" />
+                  </button>
+
+                  {/* Body — collapsible */}
+                  {!isCollapsed && (
+                    <div className="px-3 py-2 space-y-2">
+                      {/* Config row */}
+                      <div className="flex gap-2 items-end flex-wrap">
+                        {g.preset === "Custom" && (
+                          <div className="w-16"><label className="text-[8px] font-bold text-[#94A3B8] uppercase block">Axles</label><input type="number" inputMode="numeric" min="1" max="7" value={g.axles} onChange={e => updateGroup(gi, "axles", e.target.value)} className="w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#E2E8F0] outline-none" /></div>
+                        )}
+                        <div className="w-16"><label className="text-[8px] font-bold text-[#94A3B8] uppercase block">Name</label><input type="text" value={g.label} onChange={e => updateGroup(gi, "label", e.target.value)} placeholder={axLabel} className="w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#E2E8F0] outline-none placeholder:text-[#CBD5E1] placeholder:font-normal" /></div>
+                        {n > 1 && <div className="w-20"><label className="text-[8px] font-bold text-[#94A3B8] uppercase block">Dist (ft)</label><input type="number" inputMode="numeric" value={g.distFt} onChange={e => updateGroup(gi, "distFt", e.target.value)} placeholder={n === 2 ? "Std" : "ft"} className="w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#E2E8F0] outline-none placeholder:text-[#CBD5E1]" /></div>}
+                        {isCustom && <div className="w-20"><label className="text-[8px] font-bold text-[#94A3B8] uppercase block">Max (lbs)</label><input type="number" inputMode="numeric" value={g.maxOverride} onChange={e => updateGroup(gi, "maxOverride", e.target.value)} placeholder="Custom" className="w-full px-1.5 py-1.5 text-xs font-bold text-center rounded border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" /></div>}
+                        {n > 1 && (
+                          <div className="flex gap-1 ml-auto">
+                            <button onClick={() => updateGroup(gi, "useGroup", true)} className={`text-[9px] px-1.5 py-1 rounded ${g.useGroup ? "bg-[#002855] text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>Group</button>
+                            <button onClick={() => updateGroup(gi, "useGroup", false)} className={`text-[9px] px-1.5 py-1 rounded ${!g.useGroup ? "bg-[#002855] text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>Individual</button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Weight input */}
+                      {n === 1 ? (
+                        <input type="number" inputMode="numeric" value={g.weights?.[0] || ""} onChange={e => updateWeight(gi, 0, e.target.value)} placeholder="Weight (lbs)" className={`w-full px-2 py-2 text-xs font-bold text-center rounded-lg border outline-none ${isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
+                      ) : g.useGroup ? (
+                        <input type="number" inputMode="numeric" value={g.groupWeight} onChange={e => updateGroup(gi, "groupWeight", e.target.value)} placeholder={`A${an.start},${an.end} combined (lbs)`} className={`w-full px-2 py-2 text-xs font-bold text-center rounded-lg border outline-none ${isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
+                      ) : (
+                        <div className="flex gap-1.5">
+                          {Array.from({ length: n }, (_, wi) => (
+                            <div key={wi} className="flex-1 min-w-0">
+                              <span className="text-[7px] text-[#94A3B8] font-bold">A{an.start + wi}</span>
+                              <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder="lbs" className={`w-full px-1 py-1.5 text-[11px] font-bold text-center rounded border outline-none ${isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
+                            </div>
+                          ))}
                         </div>
                       )}
-                      {isCustom && (
-                        <div><label className="text-[9px] font-bold text-[#94A3B8] uppercase block mb-0.5">Max Allowed (lbs)</label><input type="number" inputMode="numeric" value={g.maxOverride} onChange={e => updateGroup(gi, "maxOverride", e.target.value)} placeholder="Custom" className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" /></div>
+
+                      {/* Inline violation */}
+                      {hasViol && gWeight > 0 && (
+                        <div className={`rounded px-2 py-1 text-[10px] flex items-center justify-between ${isOver ? withinTol ? "bg-[#FFF7ED]" : "bg-[#FEE2E2]" : "bg-[#F0FDF4]"}`}>
+                          <span className="text-[#64748B]">{viol.source}: {viol.max.toLocaleString()} max</span>
+                          {isOver ? <span className={`font-bold ${withinTol ? "text-[#F97316]" : "text-[#DC2626]"}`}>+{(gWeight - viol.max).toLocaleString()} over{withinTol ? " (5% tol)" : ""}</span> : <span className="text-[#16A34A] font-bold">Legal</span>}
+                        </div>
                       )}
                     </div>
-
-                    {/* Weight entry — group or individual toggle for multi-axle */}
-                    {n > 1 && (
-                      <div className="flex items-center gap-2 mb-1">
-                        <button onClick={() => updateGroup(gi, "useGroup", true)} className={`text-[10px] px-2 py-0.5 rounded ${g.useGroup ? "bg-[#002855] text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>Group Weight</button>
-                        <button onClick={() => updateGroup(gi, "useGroup", false)} className={`text-[10px] px-2 py-0.5 rounded ${!g.useGroup ? "bg-[#002855] text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>Individual</button>
-                      </div>
-                    )}
-
-                    {n === 1 ? (
-                      <div>
-                        <span className="text-[9px] text-[#94A3B8] font-bold">A{an.start} Weight</span>
-                        <input type="number" inputMode="numeric" value={g.weights?.[0] || ""} onChange={e => updateWeight(gi, 0, e.target.value)} placeholder="lbs" className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] outline-none mt-0.5" />
-                      </div>
-                    ) : g.useGroup ? (
-                      <div>
-                        <span className="text-[9px] text-[#94A3B8] font-bold">A{an.start},{an.end} Combined Weight</span>
-                        <input type="number" inputMode="numeric" value={g.groupWeight} onChange={e => updateGroup(gi, "groupWeight", e.target.value)} placeholder="Total group lbs" className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] outline-none mt-0.5" />
-                      </div>
-                    ) : (
-                      <div className="flex gap-1.5 flex-wrap">
-                        {Array.from({ length: n }, (_, wi) => (
-                          <div key={wi} className="flex-1 min-w-[60px]">
-                            <span className="text-[8px] text-[#94A3B8] font-bold">A{an.start + wi}</span>
-                            <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder="lbs" className="w-full px-2 py-1.5 text-[11px] font-bold text-center rounded border border-[#E2E8F0] outline-none" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               );
             })}
