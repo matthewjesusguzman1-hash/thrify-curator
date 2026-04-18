@@ -685,7 +685,7 @@ export default function BridgeChartPage() {
                   {v.tandemCheck && <ViolationCard label={v.tandemCheck.source} actual={v.tandemCheck.actual} max={v.tandemCheck.max} tolerance={!isCustom} />}
                 </React.Fragment>
               ))}
-              {record.grossMax && record.gross > 0 && <ViolationCard label={`Gross (${record.grossSource})`} actual={record.gross} max={record.grossMax} tolerance={!isCustom} />}
+              {record.grossMax && record.gross > 0 && <ViolationCard label={`Gross (${record.grossSource})`} actual={record.gross} max={record.grossMax} tolerance={false} />}
               {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max)) && (!record.grossMax || record.gross <= record.grossMax) && record.gross > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] border border-[#16A34A]/30 rounded-lg"><CheckCircle2 className="w-4 h-4 text-[#16A34A]" /><span className="text-xs font-bold text-[#16A34A]">All weights within legal limits</span></div>
               )}
@@ -711,7 +711,7 @@ export default function BridgeChartPage() {
                   <button onClick={openInspPicker} className="p-1.5 rounded-md text-[#D4AF37] hover:bg-[#D4AF37]/10"><FolderPlus className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
-              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} grossWithinTol={!!(record.grossMax && record.gross > record.grossMax && record.gross <= Math.round(record.grossMax * 1.05))} /></div>
+              <div className="p-2"><TruckDiagram groups={groups.map(g => ({ ...g, axles: String(effAxles(g)) }))} grossWeight={record.gross} overallDist={record.overallRound} svgRef={svgRef} groupViolations={record.groupViolations} grossMax={record.grossMax} grossOver={!!(record.grossMax && record.gross > record.grossMax)} grossWithinTol={false} /></div>
               <div className="px-4 pb-3">
                 <div className="flex items-center gap-2 mb-2"><span className="text-[10px] font-bold text-[#64748B] uppercase">Photos</span><button onClick={() => photoRef.current?.click()} className="flex items-center gap-1 text-[10px] text-[#002855] font-medium hover:underline"><Plus className="w-3 h-3" />Add</button><input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} /></div>
                 {photos.length > 0 && <div className="flex gap-2 overflow-x-auto pb-1">{photos.map((p, i) => <div key={i} className="relative flex-shrink-0"><img src={p.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]" /><button onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-[#DC2626] rounded-full flex items-center justify-center"><X className="w-2.5 h-2.5 text-white" /></button></div>)}</div>}
