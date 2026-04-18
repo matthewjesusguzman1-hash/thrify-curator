@@ -21,7 +21,7 @@ const RULES = [
   { title: "Measuring Distance", items: ["Measured to the nearest foot. At exactly 6\", round up.", "3 axle group max 34,000 lbs unless distance at least 96\"."] },
   { title: "Tandem Exception (36'-38')", hl: true, items: ["Two consecutive tandem sets at 36'-38' may carry 34,000 lbs each."] },
   { title: "Weight Tolerance (5% Shift)", hl: true, items: ["5% shift if only one axle/group overweight and distance 12' or less."] },
-  { title: "Dummy Axles", items: ["Disregarded if weight is < 8,000 lbs OR < 8% of gross.", "If NOT disregarded (counts), dummy weight applies to the adjacent axle group check (e.g., tandem 34k rule)."] },
+  { title: "Dummy Axles", items: ["Counts when it meets EITHER threshold: ≥ 8,000 lbs OR ≥ 8% of gross.", "Disregarded only when under 8,000 lbs AND under 8% of gross.", "If it counts, its weight applies to the group check (e.g., tandem 34k rule)."] },
   { title: "APU Allowance", items: ["Up to 550 lbs. Not in addition to 5% tolerance."] },
   { title: "Natural Gas Vehicles", items: ["Up to 2,000 lbs extra. Max 82,000 lbs on Interstate."] },
 ];
@@ -361,14 +361,14 @@ export default function BridgeChartPage() {
     groups.forEach(g => { rawGross += readBaseWeight(g) + readDummy(g); });
 
     // Pass 2: evaluate dummy-axle disregard status for each group
-    // Rule: Dummy is disregarded if it bears < 8,000 lbs OR < 8% of gross.
-    // (To COUNT, it must meet BOTH thresholds: ≥ 8,000 lbs AND ≥ 8% of gross.)
+    // Rule: To COUNT, dummy must meet AT LEAST ONE threshold: ≥ 8,000 lbs OR ≥ 8% of gross.
+    // Disregarded only when it fails BOTH (< 8,000 lbs AND < 8% of gross).
     const dummyInfoList = groups.map(g => {
       const baseN = parseInt(g.axles) || 0;
       const hasDummy = !!g.dummyAxle && baseN >= 2;
       if (!hasDummy) return { hasDummy: false, dummyWeight: 0, disregarded: false, unknownSplit: false };
       const dummyWeight = readDummy(g);
-      const disregarded = dummyWeight > 0 && (dummyWeight < 8000 || dummyWeight < rawGross * 0.08);
+      const disregarded = dummyWeight > 0 && dummyWeight < 8000 && dummyWeight < rawGross * 0.08;
       return { hasDummy: true, dummyWeight, disregarded, unknownSplit: false };
     });
 
@@ -778,7 +778,7 @@ export default function BridgeChartPage() {
                         <div className="space-y-1">
                           <label className="flex items-center gap-1.5 text-[10px] text-[#64748B] cursor-pointer select-none" data-testid={`dummy-axle-toggle-${gi}`}>
                             <input type="checkbox" checked={!!g.dummyAxle} onChange={e => updateGroup(gi, "dummyAxle", e.target.checked)} className="w-3 h-3 accent-[#D4AF37]" />
-                            <span>Add <strong className="text-[#D4AF37]">dummy axle</strong> <span className="text-[#94A3B8]">(disregarded if under 8,000 lbs OR under 8% of gross; otherwise weight applies to this group's check)</span></span>
+                            <span>Add <strong className="text-[#D4AF37]">dummy axle</strong> <span className="text-[#94A3B8]">(counts if it meets either threshold: ≥ 8,000 lbs OR ≥ 8% of gross; otherwise disregarded)</span></span>
                           </label>
                           {g.dummyAxle && viol?.dummy?.dummyWeight > 0 && (
                             <div className={`text-[10px] rounded px-2 py-1 font-medium ${viol.dummy.disregarded ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-[#FEE2E2] text-[#DC2626]"}`}>
@@ -944,7 +944,7 @@ export default function BridgeChartPage() {
                       <p className="text-[#475569] font-mono">{parts.join(" + ")} = <strong>{sum.toLocaleString()} lbs</strong></p>
                       {di.hasDummy && di.dummyWeight > 0 && (
                         <p className={`mt-1 ${di.disregarded ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
-                          Dummy discount check: {di.dummyWeight.toLocaleString()} under 8,000? <strong>{di.dummyWeight < 8000 ? "YES" : "NO"}</strong> · {di.dummyWeight.toLocaleString()} under 8% of {record.gross.toLocaleString()} ({Math.round(record.gross * 0.08).toLocaleString()})? <strong>{di.dummyWeight < record.gross * 0.08 ? "YES" : "NO"}</strong> → {di.disregarded ? "DISREGARDED (either condition triggers)" : "COUNTS (must meet both thresholds)"}
+                          Dummy discount check: {di.dummyWeight.toLocaleString()} meets 8,000? <strong>{di.dummyWeight >= 8000 ? "YES" : "NO"}</strong> · {di.dummyWeight.toLocaleString()} meets 8% of {record.gross.toLocaleString()} ({Math.round(record.gross * 0.08).toLocaleString()})? <strong>{di.dummyWeight >= record.gross * 0.08 ? "YES" : "NO"}</strong> → {di.disregarded ? "DISREGARDED (neither threshold met)" : "COUNTS (at least one threshold met)"}
                         </p>
                       )}
                       {v.max ? (
