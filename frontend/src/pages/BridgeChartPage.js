@@ -785,7 +785,7 @@ export default function BridgeChartPage() {
                           </label>
                           {g.dummyAxle && viol?.dummy?.dummyWeight > 0 && (() => {
                             const anyGroupViol = !!((viol.max && viol.actual > viol.max) || (viol.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max) || (viol.axleOverages && viol.axleOverages.length > 0));
-                            const cls = anyGroupViol
+                            const cls = viol.dummy.disregarded && anyGroupViol
                               ? "bg-[#FEE2E2] text-[#DC2626]"
                               : "bg-[#FEF3C7] text-[#92400E]";
                             return (
