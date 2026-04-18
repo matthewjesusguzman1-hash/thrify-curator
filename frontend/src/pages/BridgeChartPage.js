@@ -792,7 +792,7 @@ export default function BridgeChartPage() {
                               <div className={`text-[10px] rounded px-2 py-1 font-medium ${cls}`}>
                                 {viol.dummy.disregarded
                                   ? `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is DISREGARDED — axle count drops to ${parseInt(g.axles)}; weight still counted in group + gross`
-                                  : `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) COUNTS — axle count ${parseInt(g.axles) + 1}${parseInt(g.axles) === 2 ? "; tandem 34k rule still applies" : ""}`}
+                                  : `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) COUNTS — axle count ${parseInt(g.axles) + 1}`}
                               </div>
                             );
                           })()}
