@@ -749,37 +749,37 @@ export default function BridgeChartPage() {
           {/* Overall + Gross */}
           <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-3">
             <div className={`grid gap-3 ${isCustom ? "grid-cols-3" : "grid-cols-2"}`}>
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-[#94A3B8] uppercase block h-7 leading-tight">Overall Distance (ft)</label>
+              <div className="space-y-1 flex flex-col">
+                <label className="text-[9px] font-bold text-[#94A3B8] uppercase block leading-tight min-h-[28px]">Overall Distance (ft)</label>
                 <input type="number" inputMode="numeric" value={overallDistFt} onChange={e => setOverallDistFt(e.target.value)} placeholder="—" className="w-full px-2 h-10 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] outline-none" />
                 {record.grossMax && !isCustom && (
-                  <p className="text-[10px] text-[#002855] font-medium text-center bg-[#F8FAFC] rounded-md px-2 py-1 border border-[#E2E8F0] h-10 flex flex-col justify-center">
+                  <p className="text-[10px] text-[#002855] font-medium text-center bg-[#F8FAFC] rounded-md px-2 py-1.5 border border-[#E2E8F0] flex-1 flex flex-col justify-center min-h-[40px]">
                     <span>Max: <strong>{record.grossMax.toLocaleString()}</strong> lbs</span>
-                    <span className="text-[9px] text-[#94A3B8] font-normal truncate">{record.grossSource}</span>
+                    <span className="text-[9px] text-[#94A3B8] font-normal">{record.grossSource}</span>
                   </p>
                 )}
                 {!record.grossMax && record.grossNote && !isCustom && (
-                  <p className="text-[10px] text-[#92400E] bg-[#FEF3C7]/60 rounded-md px-2 py-1 border border-[#F59E0B]/30 text-center h-10 flex items-center justify-center">
+                  <p className="text-[10px] text-[#92400E] bg-[#FEF3C7]/60 rounded-md px-2 py-1.5 border border-[#F59E0B]/30 text-center flex-1 flex items-center justify-center min-h-[40px]">
                     {record.grossNote}
                   </p>
                 )}
               </div>
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-[#002855] uppercase block h-7 leading-tight">Gross Weight<span className="block text-[8px] text-[#94A3B8] font-normal normal-case">Sum of axles</span></label>
+              <div className="space-y-1 flex flex-col">
+                <label className="text-[9px] font-bold text-[#002855] uppercase block leading-tight min-h-[28px]">Gross Weight<span className="block text-[8px] text-[#94A3B8] font-normal normal-case">Sum of axles</span></label>
                 <div className="px-2 h-10 text-sm font-black text-center text-[#002855] bg-[#F8FAFC] rounded-lg border border-[#E2E8F0] flex items-center justify-center">
                   {record.gross > 0 ? record.gross.toLocaleString() : "—"}
                 </div>
                 {record.gross > 0 && (
-                  <p className="text-[10px] text-[#64748B] font-mono text-center bg-[#F8FAFC] rounded-md px-2 py-1 border border-[#E2E8F0] h-10 flex items-center justify-center truncate" title={record.groupViolations.map(v => `${v.label}=${v.actual.toLocaleString()}`).join(" + ")}>
+                  <p className="text-[10px] text-[#64748B] font-mono text-center bg-[#F8FAFC] rounded-md px-2 py-1.5 border border-[#E2E8F0] flex-1 flex items-center justify-center min-h-[40px] break-words leading-snug">
                     {record.groupViolations.map(v => v.actual.toLocaleString()).join(" + ")}
                   </p>
                 )}
               </div>
               {isCustom && (
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-[#94A3B8] uppercase block h-7 leading-tight">Gross Max (lbs)</label>
+                <div className="space-y-1 flex flex-col">
+                  <label className="text-[9px] font-bold text-[#94A3B8] uppercase block leading-tight min-h-[28px]">Gross Max (lbs)</label>
                   <input type="number" inputMode="numeric" value={customGrossMax} onChange={e => setCustomGrossMax(e.target.value)} placeholder="Custom" className="w-full px-2 h-10 text-xs font-bold text-center rounded-lg border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" />
-                  <p className="text-[10px] text-[#94A3B8] italic text-center h-10 flex items-center justify-center">Custom permit</p>
+                  <p className="text-[10px] text-[#94A3B8] italic text-center flex-1 flex items-center justify-center min-h-[40px]">Custom permit</p>
                 </div>
               )}
             </div>
