@@ -84,7 +84,7 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
   const grossColor = grossOver ? OVER_RED : "#D4AF37";
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ minHeight: 620 }}>
+    <svg ref={svgRef} viewBox={`0 0 ${w} ${h}`} className="w-full block" preserveAspectRatio="xMidYMid meet" style={{ maxHeight: "75vh" }}>
       <defs>
         <linearGradient id="trailerGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#1E293B" />
