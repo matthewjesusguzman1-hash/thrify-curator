@@ -747,8 +747,8 @@ export default function BridgeChartPage() {
                             const counted = di && di.hasDummy && !di.disregarded && di.dummyWeight > 0;
                             return (
                               <div className="w-24 flex-shrink-0">
-                                <span className={`text-[7px] font-bold flex items-center gap-0.5 ${counted ? "text-[#DC2626]" : "text-[#D4AF37]"}`}>A{an.end} (dummy){counted && <AlertTriangle className="w-2 h-2" />}</span>
-                                <input type="number" inputMode="numeric" value={g.weights?.[parseInt(g.axles)] || ""} onChange={e => updateWeight(gi, parseInt(g.axles), e.target.value)} placeholder="dummy lbs" className={`w-full px-2 py-2 text-xs font-bold text-center rounded-lg border outline-none ${counted ? "border-[#EF4444]/70 bg-[#FEE2E2]/50 text-[#DC2626]" : "border-[#D4AF37]/50 bg-[#D4AF37]/5"}`} />
+                                <span className="text-[7px] font-bold flex items-center gap-0.5 text-[#D4AF37]">A{an.end} (dummy){counted ? "" : ""}</span>
+                                <input type="number" inputMode="numeric" value={g.weights?.[parseInt(g.axles)] || ""} onChange={e => updateWeight(gi, parseInt(g.axles), e.target.value)} placeholder="dummy lbs" className="w-full px-2 py-2 text-xs font-bold text-center rounded-lg border border-[#D4AF37]/50 bg-[#D4AF37]/5 outline-none" />
                               </div>
                             );
                           })()}
@@ -758,15 +758,13 @@ export default function BridgeChartPage() {
                           {Array.from({ length: effAxles(g) }, (_, wi) => {
                             const baseNum = parseInt(g.axles) || 0;
                             const isDummy = g.dummyAxle && wi === baseNum;
-                            const di = viol?.dummy;
-                            const counted = isDummy && di && di.hasDummy && !di.disregarded && di.dummyWeight > 0;
                             const axleOver = showViolations && viol?.axleOverages?.some(o => o.axleIndex === wi);
                             return (
                               <div key={wi} className="flex-1 min-w-0">
-                                <span className={`text-[7px] font-bold flex items-center gap-0.5 ${axleOver ? "text-[#DC2626]" : isDummy ? (counted ? "text-[#DC2626]" : "text-[#D4AF37]") : "text-[#94A3B8]"}`}>
-                                  A{an.start + wi}{isDummy ? " (dummy)" : ""}{(counted || axleOver) && <AlertTriangle className="w-2 h-2" />}
+                                <span className={`text-[7px] font-bold flex items-center gap-0.5 ${axleOver ? "text-[#DC2626]" : isDummy ? "text-[#D4AF37]" : "text-[#94A3B8]"}`}>
+                                  A{an.start + wi}{isDummy ? " (dummy)" : ""}{axleOver && <AlertTriangle className="w-2 h-2" />}
                                 </span>
-                                <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder={isDummy ? "dummy lbs" : "lbs"} className={`w-full px-1 py-1.5 text-[11px] font-bold text-center rounded border outline-none ${axleOver ? "border-[#EF4444]/80 bg-[#FEE2E2]/70 text-[#DC2626]" : isDummy ? (counted ? "border-[#EF4444]/70 bg-[#FEE2E2]/50 text-[#DC2626]" : "border-[#D4AF37]/50 bg-[#D4AF37]/5") : isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
+                                <input type="number" inputMode="numeric" value={g.weights?.[wi] || ""} onChange={e => updateWeight(gi, wi, e.target.value)} placeholder={isDummy ? "dummy lbs" : "lbs"} className={`w-full px-1 py-1.5 text-[11px] font-bold text-center rounded border outline-none ${axleOver ? "border-[#EF4444]/80 bg-[#FEE2E2]/70 text-[#DC2626]" : isDummy ? "border-[#D4AF37]/50 bg-[#D4AF37]/5" : isOver ? "border-[#EF4444]/50 bg-[#FEE2E2]/30" : "border-[#E2E8F0]"}`} />
                               </div>
                             );
                           })}
@@ -781,10 +779,10 @@ export default function BridgeChartPage() {
                             <span>Add <strong className="text-[#D4AF37]">dummy axle</strong> <span className="text-[#94A3B8]">(counts if it meets either threshold: ≥ 8,000 lbs OR ≥ 8% of gross; otherwise disregarded)</span></span>
                           </label>
                           {g.dummyAxle && viol?.dummy?.dummyWeight > 0 && (
-                            <div className={`text-[10px] rounded px-2 py-1 font-medium ${viol.dummy.disregarded ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-[#FEE2E2] text-[#DC2626]"}`}>
+                            <div className={`text-[10px] rounded px-2 py-1 font-medium ${viol.dummy.disregarded ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-[#FEF3C7] text-[#92400E]"}`}>
                               {viol.dummy.disregarded
                                 ? `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is DISREGARDED — axle count drops to ${parseInt(g.axles)}; weight still counted in group + gross`
-                                : `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) is IN VIOLATION — axle count ${parseInt(g.axles) + 1}${parseInt(g.axles) === 2 ? "; tandem 34k rule still applies" : ""}`}
+                                : `Dummy (${viol.dummy.dummyWeight.toLocaleString()} lbs) COUNTS — axle count ${parseInt(g.axles) + 1}${parseInt(g.axles) === 2 ? "; tandem 34k rule still applies" : ""}`}
                             </div>
                           )}
                         </div>
