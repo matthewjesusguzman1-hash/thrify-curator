@@ -274,14 +274,16 @@ export default function BridgeChartPage() {
   const [overallDistFt, setOverallDistFt] = useState(initial?.overallDistFt || "");
   const [customGrossMax, setCustomGrossMax] = useState(initial?.customGrossMax || "");
   const [photos, setPhotos] = useState(initial?.photos || []);
+  const [interiorDistFt, setInteriorDistFt] = useState(initial?.interiorDistFt || "");
+  const [isInteriorBridgeCollapsed, setIsInteriorBridgeCollapsed] = useState(true);
   useEffect(() => { if (initial?.isCustom) setIsCustom(true); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Persist on change
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ groups, overallDistFt, customGrossMax, photos, isCustom }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt }));
     } catch {}
-  }, [STORAGE_KEY, groups, overallDistFt, customGrossMax, photos, isCustom]);
+  }, [STORAGE_KEY, groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt]);
 
   const clearRecord = () => {
     if (!window.confirm("Clear all recorded weights, distances, and photos?")) return;
@@ -290,6 +292,7 @@ export default function BridgeChartPage() {
     setCustomGrossMax("");
     setPhotos([]);
     setIsCustom(false);
+    setInteriorDistFt("");
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
     toast.success("Cleared");
   };
@@ -459,7 +462,6 @@ export default function BridgeChartPage() {
       if (v.axleOverages) violationCount += v.axleOverages.length;
     });
     // Note: gross weight never gets tolerance, so don't count it
-    const toleranceApplies = violationCount === 1;
 
     // Gross max lookup
     let grossMax = null, grossSource = "", grossNote = "";
@@ -483,8 +485,61 @@ export default function BridgeChartPage() {
       if (n > 1 && d && (d < 4 || d > 60)) conflicts.push(`${g.label || `Group ${i + 1}`}: ${d}ft outside bridge range (4-60)`);
       if (!isCustom && n >= 2 && d && !bridgeLookup(d, n)) conflicts.push(`${g.label || `Group ${i + 1}`}: no data for ${d}ft / ${n} axles`);
     });
-    return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, grossNote, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList, toleranceApplies };
-  }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers]);
+
+    // Interior Bridge (A2 → last axle). Optional check against bridge formula.
+    // Axle count auto-computed from current setup. Weight = gross − A1 weight.
+    // A1 weight: first axle of the first non-empty group. Uses individual weight when available,
+    // otherwise approximates via (groupWeight / count) so group-mode entries still produce a usable check.
+    let interior = null;
+    const interiorDistRound = roundDist(interiorDistFt, "0");
+    const firstGroupIdx = groups.findIndex(g => (parseInt(g.axles) || 0) > 0);
+    if (totalAxles >= 2 && firstGroupIdx !== -1) {
+      const g0 = groups[firstGroupIdx];
+      const baseN0 = parseInt(g0.axles) || 0;
+      let a1Weight = 0;
+      if (g0.useGroup) {
+        const gw = parseInt(g0.groupWeight) || 0;
+        a1Weight = baseN0 > 0 ? Math.round(gw / baseN0) : gw;
+      } else {
+        a1Weight = parseInt(g0.weights?.[0]) || 0;
+      }
+      const interiorAxleCount = totalAxles - 1;
+      const interiorActual = Math.max(0, gross - a1Weight);
+      const interiorLastAxleNum = axleNumbers.reduce((last, an) => Math.max(last, an.end), 0);
+      const interiorStartAxleNum = axleNumbers[firstGroupIdx]?.start + 1 || 2; // A2 of first group (or 2nd overall)
+      let interiorMax = null, interiorSource = "";
+      if (interiorDistRound && interiorAxleCount >= 2) {
+        const lk = bridgeLookup(interiorDistRound, interiorAxleCount);
+        if (lk) { interiorMax = lk; interiorSource = `Bridge (${interiorDistRound}ft, ${interiorAxleCount}ax)`; }
+        else if (interiorAxleCount === 2) { interiorMax = 34000; interiorSource = "Tandem"; }
+      }
+      interior = {
+        enabled: !!interiorDistFt,
+        distFt: interiorDistRound,
+        axleCount: interiorAxleCount,
+        actual: interiorActual,
+        a1Weight,
+        startAxleNum: interiorStartAxleNum,
+        endAxleNum: interiorLastAxleNum,
+        max: interiorMax,
+        source: interiorSource,
+        over: interiorMax != null && interiorActual > interiorMax,
+        overBy: interiorMax != null && interiorActual > interiorMax ? interiorActual - interiorMax : 0,
+      };
+      if (interiorDistRound && interiorAxleCount >= 2 && !interiorMax) {
+        conflicts.push(`Interior bridge: no data for ${interiorDistRound}ft / ${interiorAxleCount} axles`);
+      }
+      if (interiorDistRound && (interiorDistRound < 4 || interiorDistRound > 60) && interiorAxleCount >= 2) {
+        conflicts.push(`Interior bridge: ${interiorDistRound}ft outside bridge range (4-60)`);
+      }
+    }
+
+    // Finalize tolerance: include interior bridge violation in count (gross never gets tolerance).
+    if (interior && interior.over) violationCount++;
+    const toleranceApplies = violationCount === 1;
+
+    return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, grossNote, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList, toleranceApplies, interior };
+  }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers, interiorDistFt]);
 
   const handlePhoto = (e) => { Array.from(e.target.files || []).forEach(f => { const r = new FileReader(); r.onload = (ev) => setPhotos(p => [...p, { dataUrl: ev.target.result, file: f }]); r.readAsDataURL(f); }); e.target.value = ""; };
 
@@ -890,6 +945,84 @@ export default function BridgeChartPage() {
           </div>
           </>)}{/* end !isInputsCollapsed */}
 
+          {/* ===== INTERIOR BRIDGE — optional extra bridge check A2 → last axle ===== */}
+          {record.totalAxles >= 2 && (
+            <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden" data-testid="interior-bridge-section">
+              <button type="button" onClick={() => setIsInteriorBridgeCollapsed(v => !v)} className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#F8FAFC] transition-colors border-l-4 border-[#D4AF37]" data-testid="toggle-interior-bridge" data-html2canvas-ignore="true">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Calculator className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
+                  <span className="text-sm font-bold text-[#002855]">Interior Bridge</span>
+                  <span className="text-[10px] text-[#94A3B8] font-normal hidden sm:inline">· Optional — A{(record.interior?.startAxleNum) || 2} → A{(record.interior?.endAxleNum) || record.totalAxles}</span>
+                  {record.interior?.over && (
+                    <span className="text-[9px] font-bold text-[#DC2626] bg-[#FEE2E2] px-2 py-0.5 rounded-full">OVER</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {isInteriorBridgeCollapsed ? <ChevronDown className="w-4 h-4 text-[#64748B]" /> : <ChevronUp className="w-4 h-4 text-[#64748B]" />}
+                </div>
+              </button>
+              {!isInteriorBridgeCollapsed && (
+                <div className="p-3 space-y-3 border-t border-[#E2E8F0]">
+                  <p className="text-[10px] text-[#64748B] leading-relaxed">
+                    Checks the bridge formula for an interior span (from <strong>A{record.interior?.startAxleNum || 2}</strong> to <strong>A{record.interior?.endAxleNum || record.totalAxles}</strong>, excluding the first axle). Axle count is auto-calculated from your setup. Enter the distance between these axles to cross-reference with the bridge chart.
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-[#94A3B8] uppercase block leading-tight">From Axle</label>
+                      <div className="px-2 h-10 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center text-[#002855]" data-testid="interior-from-axle">
+                        {`A${record.interior?.startAxleNum || 2}`}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-[#94A3B8] uppercase block leading-tight">To Axle</label>
+                      <div className="px-2 h-10 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center text-[#002855]" data-testid="interior-to-axle">
+                        {`A${record.interior?.endAxleNum || record.totalAxles}`}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-[#94A3B8] uppercase block leading-tight">Distance (ft)</label>
+                      <input type="number" inputMode="numeric" value={interiorDistFt} onChange={e => setInteriorDistFt(e.target.value)} placeholder="—" className="w-full px-2 h-10 text-xs font-bold text-center rounded-lg border border-[#D4AF37]/40 outline-none bg-[#D4AF37]/5" data-testid="interior-distance-input" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-[#F8FAFC] rounded-md px-2 py-2 border border-[#E2E8F0] text-center">
+                      <div className="text-[9px] text-[#94A3B8] font-bold uppercase">Axles</div>
+                      <div className="text-sm font-black text-[#002855]" data-testid="interior-axle-count">{record.interior?.axleCount ?? "—"}</div>
+                    </div>
+                    <div className="bg-[#F8FAFC] rounded-md px-2 py-2 border border-[#E2E8F0] text-center">
+                      <div className="text-[9px] text-[#94A3B8] font-bold uppercase">Weight</div>
+                      <div className="text-sm font-black text-[#002855]" data-testid="interior-actual">{record.interior?.actual > 0 ? record.interior.actual.toLocaleString() : "—"}</div>
+                    </div>
+                    <div className={`rounded-md px-2 py-2 border text-center ${record.interior?.over ? "bg-[#FEE2E2] border-[#DC2626]/30" : (record.interior?.max ? "bg-[#F0FDF4] border-[#16A34A]/30" : "bg-[#F8FAFC] border-[#E2E8F0]")}`}>
+                      <div className="text-[9px] text-[#94A3B8] font-bold uppercase">Max Allowed</div>
+                      <div className={`text-sm font-black ${record.interior?.over ? "text-[#DC2626]" : (record.interior?.max ? "text-[#16A34A]" : "text-[#94A3B8]")}`} data-testid="interior-max">
+                        {record.interior?.max ? record.interior.max.toLocaleString() : "—"}
+                      </div>
+                    </div>
+                  </div>
+                  {record.interior?.enabled && record.interior?.max ? (
+                    <div className={`rounded-md px-3 py-2 text-[11px] font-mono flex items-start gap-2 ${record.interior.over ? "bg-[#FEE2E2] text-[#DC2626] border border-[#DC2626]/30" : "bg-[#F0FDF4] text-[#16A34A] border border-[#16A34A]/30"}`} data-testid="interior-result">
+                      {record.interior.over ? <XCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /> : <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />}
+                      <span>
+                        <strong>{record.interior.source}:</strong> {record.interior.actual.toLocaleString()} {record.interior.over ? "exceeds" : "within"} {record.interior.max.toLocaleString()} → <strong>{record.interior.over ? `+${record.interior.overBy.toLocaleString()} OVER` : "LEGAL"}</strong>
+                      </span>
+                    </div>
+                  ) : record.interior?.enabled ? (
+                    <div className="bg-[#FEF3C7]/60 border border-[#F59E0B]/30 rounded-md px-3 py-2 text-[11px] text-[#92400E] flex items-start gap-2">
+                      <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>No bridge data for {record.interior.distFt}ft / {record.interior.axleCount} axles. Check distance is 4–60 ft and axle count is 2–7.</span>
+                    </div>
+                  ) : (
+                    <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-md px-3 py-2 text-[11px] text-[#64748B] flex items-start gap-2">
+                      <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>Enter a distance to cross-reference with the bridge chart. Any violation will be added to the report.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ===== CAPTURED SECTION — Weight Report ===== */}
           <div className="bg-[#F0F2F5] p-3 rounded-xl -mx-3 sm:-mx-6 md:mx-0 space-y-4" data-testid="record-report-section">
             <button type="button" onClick={() => setIsReportCollapsed(v => !v)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#002855] text-white hover:bg-[#001a3a] transition-colors" data-testid="toggle-report-collapse" data-html2canvas-ignore="true">
@@ -921,7 +1054,10 @@ export default function BridgeChartPage() {
                 </React.Fragment>
               ))}
               {record.grossMax && record.gross > 0 && <ViolationCard label={`Gross (${record.grossSource})`} actual={record.gross} max={record.grossMax} tolerance={false} />}
-              {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max) && (!v.axleOverages || v.axleOverages.length === 0)) && (!record.grossMax || record.gross <= record.grossMax) && record.gross > 0 && (
+              {record.interior?.enabled && record.interior?.max && record.interior.over && (
+                <ViolationCard label={`Interior Bridge A${record.interior.startAxleNum}–A${record.interior.endAxleNum} (${record.interior.source})`} actual={record.interior.actual} max={record.interior.max} tolerance={!isCustom && record.toleranceApplies} />
+              )}
+              {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max) && (!v.axleOverages || v.axleOverages.length === 0)) && (!record.grossMax || record.gross <= record.grossMax) && !(record.interior?.over) && record.gross > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] border border-[#16A34A]/30 rounded-lg"><CheckCircle2 className="w-4 h-4 text-[#16A34A]" /><span className="text-xs font-bold text-[#16A34A]">All weights within legal limits</span></div>
               )}
             </div>
@@ -992,6 +1128,21 @@ export default function BridgeChartPage() {
                     <p className="mt-1 text-[10px] text-[#64748B]">Axle count for gross: <strong>{record.totalAxles}</strong> (disregarded dummies excluded; their weight stays in gross).</p>
                   )}
                 </div>
+                {record.interior?.enabled && (
+                  <div className="px-4 py-2.5 text-[11px]">
+                    <p className="font-bold text-[#002855] mb-0.5">Interior Bridge <span className="font-normal text-[#94A3B8]">· A{record.interior.startAxleNum} → A{record.interior.endAxleNum} ({record.interior.axleCount} axles)</span></p>
+                    <p className="text-[#475569] font-mono">
+                      Gross {record.gross.toLocaleString()} − A{record.interior.startAxleNum - 1} ({record.interior.a1Weight.toLocaleString()}) = <strong>{record.interior.actual.toLocaleString()} lbs</strong>
+                    </p>
+                    {record.interior.max ? (
+                      <p className={`mt-1 font-mono ${record.interior.over ? "text-[#DC2626]" : "text-[#16A34A]"}`}>
+                        {record.interior.source}: {record.interior.actual.toLocaleString()} {record.interior.over ? "exceeds" : "within"} {record.interior.max.toLocaleString()} → <strong>{record.interior.over ? `+${record.interior.overBy.toLocaleString()} OVER` : "LEGAL"}</strong>
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[#94A3B8] italic">No bridge data for {record.interior.distFt}ft / {record.interior.axleCount} axles.</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
