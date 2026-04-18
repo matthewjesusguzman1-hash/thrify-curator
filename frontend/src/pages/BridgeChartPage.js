@@ -198,8 +198,7 @@ export default function BridgeChartPage() {
         const cur = n[i].weights || [];
         const next = Array(target).fill("").map((_, k) => cur[k] || "");
         n[i].weights = next;
-        n[i].useGroup = false; // force individual so tandem check can evaluate
-        n[i].groupWeight = "";
+        // Preserve the user's useGroup choice — tandem 34k check simply won't evaluate in group mode
       }
       return n;
     });
