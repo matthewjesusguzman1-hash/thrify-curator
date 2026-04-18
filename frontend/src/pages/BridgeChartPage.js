@@ -574,7 +574,8 @@ export default function BridgeChartPage() {
 
     // Finalize tolerance: interior bridge never gets the 5% tolerance (like gross weight),
     // and it is not counted toward the tolerance threshold.
-    const toleranceApplies = violationCount === 1;
+    // Custom / Permit mode never applies the 5% tolerance (permits have their own rules).
+    const toleranceApplies = !isCustom && violationCount === 1;
 
     return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, grossNote, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList, toleranceApplies, interior };
   }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers, interiorDistFt, customInteriorMax]);
