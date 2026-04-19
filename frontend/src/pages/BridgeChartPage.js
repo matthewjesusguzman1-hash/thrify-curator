@@ -981,6 +981,19 @@ export default function BridgeChartPage() {
                 <span>Dummy axle(s) disregarded from axle count (weight still counted in gross). Gross max uses {record.totalAxles} axles.</span>
               </p>
             )}
+            {record.gross > 0 && record.grossMax && (() => {
+              const grossOver = record.gross > record.grossMax;
+              return (
+                <div className={`mt-2 rounded px-2 py-1.5 text-[11px] flex items-center justify-between ${grossOver ? "bg-[#FEE2E2]" : "bg-[#F0FDF4]"}`} data-testid="gross-status-pill">
+                  <span className="text-[#64748B] font-medium">{record.grossSource}: {record.grossMax.toLocaleString()} max</span>
+                  {grossOver ? (
+                    <span className="font-black text-[#DC2626] flex items-center gap-1"><AlertTriangle className="w-3 h-3" />+{(record.gross - record.grossMax).toLocaleString()} over</span>
+                  ) : (
+                    <span className="text-[#16A34A] font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Legal</span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           </>)}{/* end !isInputsCollapsed */}
 
