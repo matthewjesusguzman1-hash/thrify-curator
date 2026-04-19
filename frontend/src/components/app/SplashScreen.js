@@ -51,8 +51,8 @@ export default function SplashScreen({ onFinish }) {
             alt="Inspection Navigator"
             className={`w-full h-full object-contain transition-all duration-700 ease-out ${phase === "arrive" ? "scale-90 opacity-80" : "scale-100 opacity-100"}`}
             style={{
-              WebkitMaskImage: "radial-gradient(circle at 50% 50%, #000 58%, rgba(0,0,0,0.55) 72%, transparent 88%)",
-              maskImage: "radial-gradient(circle at 50% 50%, #000 58%, rgba(0,0,0,0.55) 72%, transparent 88%)",
+              clipPath: "inset(1% round 18%)",
+              WebkitClipPath: "inset(1% round 18%)",
             }}
             draggable={false}
           />
