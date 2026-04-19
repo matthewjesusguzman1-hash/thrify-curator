@@ -13,22 +13,23 @@ async def main():
 
     chat = LlmChat(
         api_key=api_key,
-        session_id="simplify-logo",
+        session_id="simplify-logo-v2",
         system_message="You are a senior brand designer specializing in minimalist iOS app icons.",
     )
     chat.with_model("gemini", "gemini-3.1-flash-image-preview").with_params(modalities=["image", "text"])
 
     prompt = (
         "Redesign this app icon for 'Inspection Navigator' — a mobile tool for truck inspectors. "
-        "Simplify it significantly. Requirements: \n"
-        "- iOS-style rounded-square icon (1024x1024, solid deep navy background #002855)\n"
-        "- ONE clean, bold, minimal silhouette as the focal point: a modern semi-truck (side profile, highly simplified) with a small magnifying glass subtly integrated — NO star, NO road/wheat laurels, NO arrows, NO gradients on the subject\n"
-        "- Use a warm gold accent (#D4AF37) ONLY on the magnifying glass or truck details for contrast; the truck body can be soft silver/white\n"
-        "- NO TEXT anywhere on the icon (no 'Inspection', no 'Navigator', no letters at all)\n"
-        "- Flat/modern vector style with crisp edges, slight depth via simple shadow only\n"
-        "- Strong silhouette visible at 40px — must be instantly readable\n"
-        "- Leave generous negative space around the subject; center the composition\n"
-        "Output only the icon."
+        "Simplify the current busy design but keep it RICH and premium, not flat-boring. Requirements:\n"
+        "- iOS-style rounded-square icon (1024x1024), deep navy #002855 primary background with a subtle radial depth from #0A3A78 at center\n"
+        "- CENTER: a modern semi-truck (3/4 front-angle view, headed slightly right), clean silver/chrome with warm gold #D4AF37 accents on the grille, light bar, and wheel hubs. Confident silhouette, visible cab windows, clear wheels, a short shadow beneath.\n"
+        "- FOREGROUND OVERLAY: a bold gold magnifying glass tilted naturally in front of the truck cab, its lens encircling the windshield area (suggesting inspection). The glass ring is thick #D4AF37; the inside is a semi-transparent lighter tint so the truck shows through.\n"
+        "- BACKGROUND ACCENT: a single subtle gold banner/ribbon curve sweeping behind the truck (stylized highway horizon). Keep it minimal — one sweeping line, not busy.\n"
+        "- SUBTLE GOLD STARS OR DOTS: 3 small gold 4-point stars scattered at the upper-left as a premium brand touch (NOT a sheriff star).\n"
+        "- NO TEXT at all (no letters, no words, no 'INS', no 'Navigator')\n"
+        "- Style: semi-realistic 3D rendered with soft gradients on the truck body for depth, crisp edges, premium look like professional iOS apps (similar polish to Things 3 or Fantastical). Everything centered, strong composition.\n"
+        "- Readable silhouette at 48px.\n"
+        "Output ONLY the final icon, full-bleed, no padding."
     )
 
     msg = UserMessage(text=prompt, file_contents=[ImageContent(ref_b64)])
@@ -37,7 +38,7 @@ async def main():
     if not images:
         print("No images returned")
         return
-    out_path = "/app/frontend/public/app-icon-180-simple.png"
+    out_path = "/app/frontend/public/app-icon-180-v2.png"
     with open(out_path, "wb") as f:
         f.write(base64.b64decode(images[0]["data"]))
     print(f"Saved: {out_path}")
