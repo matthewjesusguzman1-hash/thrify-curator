@@ -485,23 +485,25 @@ export default function PhotoAnnotator() {
               <p className="text-[10px] text-white/50">{inspectionId ? "Editing inspection photo" : "Annotate inspection photos"}</p>
             </div>
           </div>
-          {image && (
+          {image && inspectionId && photoId && (
             <div className="flex items-center gap-1">
-              {inspectionId && photoId && (
-                <Button onClick={saveAnnotations} disabled={saving} variant="ghost" size="sm" className="text-[#D4AF37] hover:text-white hover:bg-white/10 h-8 px-2 text-xs font-bold" data-testid="save-annotations-btn">
-                  <Save className="w-3.5 h-3.5 mr-1" /> {saving ? "..." : "Save"}
-                </Button>
-              )}
-              <Button onClick={openPreview} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="preview-photo-btn">
-                <Eye className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Preview</span>
-              </Button>
-              <Button onClick={openInspectionPicker} disabled={saving} variant="ghost" size="sm" className="text-[#D4AF37] hover:text-white hover:bg-white/10 h-8 px-2 text-xs font-bold" data-testid="add-to-inspection-btn">
-                <FolderPlus className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Inspection</span>
+              <Button onClick={saveAnnotations} disabled={saving} variant="ghost" size="sm" className="text-[#D4AF37] hover:text-white hover:bg-white/10 h-8 px-2 text-xs font-bold" data-testid="save-annotations-btn">
+                <Save className="w-3.5 h-3.5 mr-1" /> {saving ? "..." : "Save"}
               </Button>
             </div>
           )}
         </div>
       </div>
+
+      {/* UNIFIED ACTION BAR — Preview & Export + Save to Inspection (matches TieDown / Bridge Chart) */}
+      {image && (
+        <div className="sticky top-[53px] z-40 bg-white/95 backdrop-blur border-b border-[#E2E8F0] shadow-sm">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
+            <Button size="sm" onClick={openPreview} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export</Button>
+            <Button size="sm" onClick={openInspectionPicker} disabled={saving} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1 bg-white" data-testid="save-to-inspection-btn"><FolderPlus className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection</Button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-3xl mx-auto px-3 py-4 pb-24 space-y-3" ref={containerRef}>
         {!image && !storagePath && (
