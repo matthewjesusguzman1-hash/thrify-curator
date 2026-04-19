@@ -53,16 +53,6 @@ export default function SplashScreen({ onFinish }) {
             draggable={false}
           />
         </div>
-
-        {/* Brand text */}
-        <div className={`mt-6 text-center transition-all duration-700 ${phase === "arrive" ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
-          <div className="text-[11px] tracking-[0.3em] text-[#D4AF37] font-bold uppercase">Inspection</div>
-          <div className="text-2xl sm:text-3xl font-black text-white tracking-wide" style={{ fontFamily: "Outfit, sans-serif" }}>Navigator</div>
-        </div>
-
-        <button onClick={skip} className="absolute -bottom-16 text-[10px] uppercase tracking-[0.3em] text-white/30 hover:text-white/70 transition-colors" data-testid="skip-splash-btn">
-          Tap to skip
-        </button>
       </div>
 
       {/* Scoped styles */}
