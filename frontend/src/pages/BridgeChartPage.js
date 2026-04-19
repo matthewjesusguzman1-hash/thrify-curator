@@ -832,7 +832,7 @@ export default function BridgeChartPage() {
                     tabIndex={0}
                     onClick={() => updateGroup(gi, "_collapsed", !g._collapsed)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); updateGroup(gi, "_collapsed", !g._collapsed); } }}
-                    className={`w-full px-3 py-2.5 flex items-center justify-between text-left cursor-pointer border-b ${isOver ? (withinTol ? "bg-[#F97316] border-[#F97316]" : "bg-[#DC2626] border-[#DC2626]") : "bg-[#002855] border-[#002855]"}`}
+                    className={`w-full px-3 py-3 min-h-[52px] flex items-center justify-between text-left cursor-pointer border-b leading-6 ${isOver ? (withinTol ? "bg-[#F97316] border-[#F97316]" : "bg-[#DC2626] border-[#DC2626]") : "bg-[#002855] border-[#002855]"}`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white/20" style={{ background: COLORS[gi % COLORS.length] }} />
@@ -1008,7 +1008,7 @@ export default function BridgeChartPage() {
                   tabIndex={0}
                   onClick={() => setIsGrossCollapsed(v => !v)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsGrossCollapsed(v => !v); } }}
-                  className={`w-full px-3 py-2.5 flex items-center justify-between text-left cursor-pointer border-b ${grossOver ? "bg-[#DC2626] border-[#DC2626]" : "bg-[#002855] border-[#002855]"}`}
+                  className={`w-full px-3 py-3 min-h-[52px] flex items-center justify-between text-left cursor-pointer border-b leading-6 ${grossOver ? "bg-[#DC2626] border-[#DC2626]" : "bg-[#002855] border-[#002855]"}`}
                   data-testid="gross-toggle"
                 >
                   <div className="flex items-center gap-2 min-w-0">
@@ -1099,7 +1099,7 @@ export default function BridgeChartPage() {
           {/* ===== INTERIOR BRIDGE — optional extra bridge check A2 → last axle ===== */}
           {record.totalAxles >= 2 && (
             <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden" data-testid="interior-bridge-section">
-              <button type="button" onClick={() => setIsInteriorBridgeCollapsed(v => !v)} className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#F8FAFC] transition-colors border-l-4 border-[#D4AF37]" data-testid="toggle-interior-bridge">
+              <button type="button" onClick={() => setIsInteriorBridgeCollapsed(v => !v)} className="w-full flex items-center justify-between px-3 py-3 min-h-[52px] leading-6 hover:bg-[#F8FAFC] transition-colors border-l-4 border-[#D4AF37]" data-testid="toggle-interior-bridge">
                 <div className="flex items-center gap-2 min-w-0">
                   <Calculator className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
                   <span className="text-sm font-bold text-[#002855]">Interior Bridge</span>
