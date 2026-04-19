@@ -621,6 +621,38 @@ export default function BridgeChartPage() {
             const opt = sel.options[sel.selectedIndex];
             makePlain(sel, opt ? opt.textContent : "");
           });
+          // Force explicit padding/line-height on every collapsible toggle header and
+          // text inside them so html2canvas renders text with full vertical clearance
+          // (on mobile/high-DPI the Tailwind classes occasionally lose bottom descenders).
+          const headerSelectors = [
+            '[data-testid="gross-toggle"]',
+            '[data-testid="toggle-interior-bridge"]',
+          ];
+          const headers = Array.from(clonedDoc.querySelectorAll(headerSelectors.join(",")));
+          // also include every group header (divs inside a card with role=button and navy/red bg)
+          clonedDoc.querySelectorAll('div[role="button"]').forEach(el => {
+            if (el.className && /bg-\[#002855\]|bg-\[#DC2626\]|bg-\[#F97316\]/.test(el.className)) {
+              headers.push(el);
+            }
+          });
+          headers.forEach(h => {
+            h.style.minHeight = "72px";
+            h.style.padding = "20px 12px";
+            h.style.lineHeight = "1.5";
+            h.style.boxSizing = "border-box";
+            h.querySelectorAll("span, strong").forEach(s => {
+              s.style.lineHeight = "1.5";
+              s.style.display = "inline-block";
+              s.style.verticalAlign = "middle";
+              s.style.paddingTop = "2px";
+              s.style.paddingBottom = "2px";
+            });
+          });
+          // Also let the card container not clip the header bottom by softening
+          // overflow-hidden into overflow-visible during capture.
+          clonedDoc.querySelectorAll('.overflow-hidden').forEach(el => {
+            el.style.overflow = "visible";
+          });
         },
       });
       return await new Promise(r => canvas.toBlob(r, "image/png"));
