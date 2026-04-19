@@ -33,16 +33,7 @@ export default function SplashScreen({ onFinish }) {
       role="button"
       aria-label="Skip splash"
     >
-      {/* Flashing emergency lights — left = blue, right = red */}
-      <div
-        className={`absolute inset-0 pointer-events-none transition-opacity duration-500 ${phase === "flash" ? "opacity-100" : "opacity-0"}`}
-        aria-hidden="true"
-      >
-        <div className="splash-flash-blue absolute inset-y-0 left-0 w-1/2" />
-        <div className="splash-flash-red absolute inset-y-0 right-0 w-1/2" />
-      </div>
-
-      {/* Center stack: logo + truck */}
+      {/* Center stack: logo */}
       <div className="relative flex flex-col items-center justify-center select-none">
         <div className="relative w-[min(80vw,420px)] aspect-[5/6] flex items-center justify-center">
           {/* Logo — scales up as the splash begins */}
@@ -53,6 +44,15 @@ export default function SplashScreen({ onFinish }) {
             draggable={false}
           />
         </div>
+      </div>
+
+      {/* Flashing emergency lights — left = blue, right = red. Placed ABOVE the logo so mix-blend-mode: screen tints everything including the logo edges. */}
+      <div
+        className={`absolute inset-0 pointer-events-none transition-opacity duration-500 ${phase === "flash" ? "opacity-100" : "opacity-0"}`}
+        aria-hidden="true"
+      >
+        <div className="splash-flash-blue absolute inset-y-0 left-0 w-1/2" />
+        <div className="splash-flash-red absolute inset-y-0 right-0 w-1/2" />
       </div>
 
       {/* Scoped styles */}
