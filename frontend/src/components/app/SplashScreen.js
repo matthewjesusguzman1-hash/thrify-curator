@@ -49,7 +49,7 @@ export default function SplashScreen({ onFinish }) {
           <img
             src="/app-icon-180.png"
             alt="Inspection Navigator"
-            className={`w-full h-full object-cover rounded-3xl shadow-2xl transition-all duration-700 ease-out ${phase === "arrive" ? "scale-90 opacity-80" : "scale-100 opacity-100"}`}
+            className={`w-full h-full object-contain transition-all duration-700 ease-out ${phase === "arrive" ? "scale-90 opacity-80" : "scale-100 opacity-100"}`}
             draggable={false}
           />
         </div>
