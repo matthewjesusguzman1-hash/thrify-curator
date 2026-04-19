@@ -45,53 +45,13 @@ export default function SplashScreen({ onFinish }) {
       {/* Center stack: logo + truck */}
       <div className="relative flex flex-col items-center justify-center select-none">
         <div className="relative w-[min(80vw,340px)] aspect-square flex items-center justify-center">
-          {/* Logo — scales up as the truck arrives */}
+          {/* Logo — scales up as the splash begins */}
           <img
             src="/app-icon-180.png"
             alt="Inspection Navigator"
             className={`w-full h-full object-cover rounded-3xl shadow-2xl transition-all duration-700 ease-out ${phase === "arrive" ? "scale-90 opacity-80" : "scale-100 opacity-100"}`}
             draggable={false}
           />
-
-          {/* Truck — drives in from the left, lands on top of the logo */}
-          <svg
-            viewBox="0 0 220 120"
-            className={`absolute w-[58%] max-w-[220px] pointer-events-none ${phase === "arrive" ? "splash-truck-arrive" : "splash-truck-settle"}`}
-            style={{ top: "18%" }}
-            aria-hidden="true"
-          >
-            {/* Trailer */}
-            <rect x="6" y="18" width="120" height="56" rx="6" fill="#F8FAFC" stroke="#D4AF37" strokeWidth="2.5" />
-            <rect x="12" y="24" width="108" height="6" fill="#D4AF37" opacity="0.3" />
-            {/* Cab */}
-            <path d="M126 28 L168 28 L190 46 L190 74 L126 74 Z" fill="#D4AF37" stroke="#0F172A" strokeWidth="2" />
-            <rect x="148" y="34" width="30" height="20" rx="2" fill="#0F172A" />
-            {/* Bumper + grille */}
-            <rect x="188" y="64" width="10" height="10" rx="1" fill="#0F172A" />
-            {/* Headlight */}
-            <circle cx="190" cy="54" r="3" fill="#FEF3C7">
-              <animate attributeName="opacity" values="0.4;1;0.4" dur="0.9s" repeatCount="indefinite" />
-            </circle>
-            {/* Light bar on cab */}
-            <rect x="138" y="26" width="28" height="4" rx="1" fill="#0F172A" />
-            <rect x="141" y="27" width="10" height="2" fill="#3B82F6">
-              <animate attributeName="opacity" values="1;0.1;1" dur="0.6s" repeatCount="indefinite" />
-            </rect>
-            <rect x="153" y="27" width="10" height="2" fill="#DC2626">
-              <animate attributeName="opacity" values="0.1;1;0.1" dur="0.6s" repeatCount="indefinite" />
-            </rect>
-            {/* Wheels */}
-            <g>
-              <circle cx="34" cy="82" r="12" fill="#0F172A" />
-              <circle cx="34" cy="82" r="5" fill="#64748B" />
-              <circle cx="72" cy="82" r="12" fill="#0F172A" />
-              <circle cx="72" cy="82" r="5" fill="#64748B" />
-              <circle cx="170" cy="82" r="12" fill="#0F172A" />
-              <circle cx="170" cy="82" r="5" fill="#64748B" />
-            </g>
-            {/* Shadow */}
-            <ellipse cx="110" cy="98" rx="92" ry="4" fill="#000" opacity="0.35" />
-          </svg>
         </div>
 
         {/* Brand text */}
@@ -107,21 +67,6 @@ export default function SplashScreen({ onFinish }) {
 
       {/* Scoped styles */}
       <style>{`
-        @keyframes splash-truck-in {
-          0%   { transform: translateX(-140vw) translateY(0); opacity: 0; }
-          55%  { transform: translateX(-8%) translateY(0); opacity: 1; }
-          70%  { transform: translateX(2%) translateY(-2px); opacity: 1; }
-          85%  { transform: translateX(-1%) translateY(1px); opacity: 1; }
-          100% { transform: translateX(0) translateY(0); opacity: 1; }
-        }
-        .splash-truck-arrive {
-          animation: splash-truck-in 1.3s cubic-bezier(0.22, 0.68, 0.3, 1) both;
-        }
-        .splash-truck-settle {
-          transform: translateX(0) translateY(0);
-          opacity: 1;
-        }
-
         @keyframes splash-blue-pulse {
           0%, 100% { opacity: 0.0; }
           30%      { opacity: 0.55; }
@@ -146,7 +91,6 @@ export default function SplashScreen({ onFinish }) {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .splash-truck-arrive,
           .splash-flash-blue,
           .splash-flash-red { animation: none !important; }
         }
