@@ -33,7 +33,7 @@ const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"
    ================================================================ */
 function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolations = [], grossMax = null, grossOver = false, hideViolations = false, toleranceApplies = false, interior = null }) {
   // Larger viewBox aspect so diagram renders TALL when given full-width container
-  const w = 900, h = 760, mL = 90, mR = 90;
+  const w = 900, h = 760, mL = 140, mR = 140;
   const tTop = 150;                // trailer top
   const tH = 220;                  // trailer height
   const axleY = tTop + tH + 40;    // axle line y
@@ -102,17 +102,20 @@ function TruckDiagram({ groups, grossWeight, overallDist, svgRef, groupViolation
         const cx = (gm.startX + gm.endX) / 2;
         const color = gm.isOver ? (gm.withinTol ? WARN_ORANGE : OVER_RED) : (hideViolations ? "#D4AF37" : OK_GREEN);
         const pillW = 240, pillH = 96;
+        // Clamp banner center so the pill never overflows the canvas
+        const PAD = 10;
+        const pillCx = Math.max(pillW / 2 + PAD, Math.min(w - pillW / 2 - PAD, cx));
         return (
           <g key={`banner-${i}`}>
-            <rect x={cx - pillW / 2} y={14} width={pillW} height={pillH} rx="12" fill={gm.isOver ? (gm.withinTol ? "#3B2415" : "#3B1818") : (hideViolations ? "#1E293B" : "#0F2A1F")} stroke={color} strokeWidth="2.5" />
-            <text x={cx} y={38} textAnchor="middle" fill="#94A3B8" fontSize="18" fontWeight="bold">
+            <rect x={pillCx - pillW / 2} y={14} width={pillW} height={pillH} rx="12" fill={gm.isOver ? (gm.withinTol ? "#3B2415" : "#3B1818") : (hideViolations ? "#1E293B" : "#0F2A1F")} stroke={color} strokeWidth="2.5" />
+            <text x={pillCx} y={38} textAnchor="middle" fill="#94A3B8" fontSize="18" fontWeight="bold">
               {gm.endAxleNum !== gm.startAxleNum ? `A${gm.startAxleNum}-A${gm.endAxleNum}` : `A${gm.startAxleNum}`}
             </text>
-            <text x={cx} y={70} textAnchor="middle" fill={color} fontSize="28" fontWeight="900" fontFamily="monospace">{gm.gWeight > 0 ? gm.gWeight.toLocaleString() : "—"}</text>
+            <text x={pillCx} y={70} textAnchor="middle" fill={color} fontSize="28" fontWeight="900" fontFamily="monospace">{gm.gWeight > 0 ? gm.gWeight.toLocaleString() : "—"}</text>
             {!hideViolations && gm.isOver ? (
-              <text x={cx} y={94} textAnchor="middle" fill={color} fontSize="17" fontWeight="900">{`+${gm.overBy.toLocaleString()} OVER${gm.withinTol ? " (5% tol)" : ""}`}</text>
+              <text x={pillCx} y={94} textAnchor="middle" fill={color} fontSize="17" fontWeight="900">{`+${gm.overBy.toLocaleString()} OVER${gm.withinTol ? " (5% tol)" : ""}`}</text>
             ) : !hideViolations && gm.max ? (
-              <text x={cx} y={94} textAnchor="middle" fill="#64748B" fontSize="17" fontWeight="bold">{`max ${gm.max.toLocaleString()}`}</text>
+              <text x={pillCx} y={94} textAnchor="middle" fill="#64748B" fontSize="17" fontWeight="bold">{`max ${gm.max.toLocaleString()}`}</text>
             ) : null}
           </g>
         );
