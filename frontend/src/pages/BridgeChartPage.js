@@ -288,6 +288,7 @@ export default function BridgeChartPage() {
   const [isCustom, setIsCustom] = useState(false);
   const [showViolations, setShowViolations] = useState(true);
   const [isInputsCollapsed, setIsInputsCollapsed] = useState(false);
+  const [isGrossCollapsed, setIsGrossCollapsed] = useState(false);
   const captureRef = useRef(null);
   const makeGroup = (label, preset, axles) => ({
     label, preset, axles: String(axles), distFt: "", distFtReduced: "", useGroup: axles > 1, groupWeight: "", weights: Array(axles).fill(""), maxOverride: "", dummyAxle: false
@@ -979,8 +980,38 @@ export default function BridgeChartPage() {
           </div>
 
           {/* Overall + Gross */}
-          <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-3">
-            <div className={`grid gap-3 ${isCustom ? "grid-cols-3" : "grid-cols-2"}`}>
+          {(() => {
+            const grossOver = !!(record.grossMax && record.gross > record.grossMax);
+            return (
+              <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${grossOver ? "border-[#EF4444]/40" : "border-[#E2E8F0]"}`} data-testid="gross-panel">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setIsGrossCollapsed(v => !v)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsGrossCollapsed(v => !v); } }}
+                  className={`w-full px-3 py-2.5 flex items-center justify-between text-left cursor-pointer border-b ${grossOver ? "bg-[#DC2626] border-[#DC2626]" : "bg-[#002855] border-[#002855]"}`}
+                  data-testid="gross-toggle"
+                  data-html2canvas-ignore="true"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Scale className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
+                    <span className="text-sm font-bold text-white truncate">Gross Weight</span>
+                    {record.gross > 0 && <span className="text-xs font-black text-[#D4AF37] flex-shrink-0 font-mono">{record.gross.toLocaleString()}</span>}
+                    {grossOver && (
+                      <span className="text-[10px] font-bold flex-shrink-0 flex items-center gap-0.5 text-white bg-black/20 rounded px-1.5 py-0.5">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        +{(record.gross - record.grossMax).toLocaleString()}
+                      </span>
+                    )}
+                    {record.gross > 0 && record.grossMax && !grossOver && <CheckCircle2 className="w-3.5 h-3.5 text-[#22C55E] flex-shrink-0" />}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {isGrossCollapsed ? <ChevronDown className="w-4 h-4 text-white/80" /> : <ChevronUp className="w-4 h-4 text-white/80" />}
+                  </div>
+                </div>
+                {!isGrossCollapsed && (
+                <div className="p-3">
+                <div className={`grid gap-3 ${isCustom ? "grid-cols-3" : "grid-cols-2"}`}>
               <div className="space-y-1 flex flex-col">
                 <label className="text-[9px] font-bold text-[#94A3B8] uppercase block leading-tight min-h-[28px]">Overall Distance (ft)</label>
                 <input type="number" inputMode="numeric" value={overallDistFt} onChange={e => setOverallDistFt(e.target.value)} placeholder="—" className="w-full px-2 h-10 text-xs font-bold text-center rounded-lg border border-[#E2E8F0] outline-none" />
@@ -1022,8 +1053,8 @@ export default function BridgeChartPage() {
               </p>
             )}
             {record.dummyInfoList.some(di => di.disregarded) && (
-              <p className="mt-2 text-[10px] text-[#16A34A] bg-[#F0FDF4] border border-[#16A34A]/30 rounded-md px-2 py-1.5 flex items-start gap-1.5">
-                <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              <p className="mt-2 text-[10px] text-[#475569] bg-[#F8FAFC] border border-[#E2E8F0] rounded-md px-2 py-1.5 flex items-start gap-1.5">
+                <Info className="w-3 h-3 mt-0.5 flex-shrink-0 text-[#64748B]" />
                 <span>Dummy axle(s) disregarded from axle count (weight still counted in gross). Gross max uses {record.totalAxles} axles.</span>
               </p>
             )}
@@ -1040,7 +1071,11 @@ export default function BridgeChartPage() {
                 </div>
               );
             })()}
-          </div>
+                </div>
+                )}
+              </div>
+            );
+          })()}
           </>)}{/* end !isInputsCollapsed */}
 
           {/* ===== INTERIOR BRIDGE — optional extra bridge check A2 → last axle ===== */}
