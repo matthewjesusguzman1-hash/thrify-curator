@@ -1,6 +1,8 @@
 import "@/App.css";
+import React, { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./components/app/AuthContext";
+import SplashScreen from "./components/app/SplashScreen";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import InspectionsPage from "./pages/InspectionsPage";
@@ -11,6 +13,8 @@ import PhotoAnnotator from "./pages/PhotoAnnotator";
 import Level3InspectionTool from "./pages/Level3InspectionTool";
 import AdminPage from "./pages/AdminPage";
 import BridgeChartPage from "./pages/BridgeChartPage";
+
+const SPLASH_KEY = "inspnav_splash_v1";
 
 function AppRoutes() {
   const { isLoggedIn, login } = useAuth();
@@ -35,12 +39,23 @@ function AppRoutes() {
 }
 
 function App() {
+  // Show splash once per tab/session so returning to a tab does not replay it every time.
+  const [showSplash, setShowSplash] = useState(() => {
+    try { return sessionStorage.getItem(SPLASH_KEY) !== "1"; } catch { return true; }
+  });
+
+  const dismissSplash = () => {
+    try { sessionStorage.setItem(SPLASH_KEY, "1"); } catch {}
+    setShowSplash(false);
+  };
+
   return (
     <div className="App">
       <AuthProvider>
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>
+        {showSplash && <SplashScreen onFinish={dismissSplash} />}
       </AuthProvider>
     </div>
   );
