@@ -597,6 +597,20 @@ export default function BridgeChartPage() {
   const getCaptureBlob = useCallback(async () => {
     const node = captureRef.current;
     if (!node) return null;
+    // Temporarily force-expand every collapsible section so the capture always
+    // includes Gross, Interior Bridge, and each group's weight details even if
+    // the user has collapsed them on screen.
+    const prevGrossCollapsed = isGrossCollapsed;
+    const prevInteriorCollapsed = isInteriorBridgeCollapsed;
+    const prevGroupsCollapsed = groups.map(g => !!g._collapsed);
+    if (prevGrossCollapsed) setIsGrossCollapsed(false);
+    if (prevInteriorCollapsed) setIsInteriorBridgeCollapsed(false);
+    if (prevGroupsCollapsed.some(Boolean)) {
+      setGroups(curr => curr.map(g => ({ ...g, _collapsed: false })));
+    }
+    // Wait one paint tick so React commits the expansion before capture.
+    await new Promise(r => setTimeout(r, 80));
+
     try {
       const canvas = await html2canvas(node, {
         backgroundColor: "#F0F2F5",
@@ -627,8 +641,15 @@ export default function BridgeChartPage() {
     } catch (err) {
       console.error("Capture failed", err);
       return null;
+    } finally {
+      // Restore the user's previous collapse state
+      if (prevGrossCollapsed) setIsGrossCollapsed(true);
+      if (prevInteriorCollapsed) setIsInteriorBridgeCollapsed(true);
+      if (prevGroupsCollapsed.some(Boolean)) {
+        setGroups(curr => curr.map((g, i) => prevGroupsCollapsed[i] ? { ...g, _collapsed: true } : g));
+      }
     }
-  }, []);
+  }, [isGrossCollapsed, isInteriorBridgeCollapsed, groups]);
 
   const downloadDiag = async () => {
     const b = await getCaptureBlob();
