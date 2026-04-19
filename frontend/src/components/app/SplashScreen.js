@@ -44,16 +44,12 @@ export default function SplashScreen({ onFinish }) {
 
       {/* Center stack: logo + truck */}
       <div className="relative flex flex-col items-center justify-center select-none">
-        <div className="relative w-[min(80vw,340px)] aspect-square flex items-center justify-center">
+        <div className="relative w-[min(80vw,420px)] aspect-[5/6] flex items-center justify-center">
           {/* Logo — scales up as the splash begins */}
           <img
-            src="/app-icon-180.png"
+            src="/splash-logo.jpeg"
             alt="Inspection Navigator"
             className={`w-full h-full object-contain transition-all duration-700 ease-out ${phase === "arrive" ? "scale-90 opacity-80" : "scale-100 opacity-100"}`}
-            style={{
-              clipPath: "inset(1% round 18%)",
-              WebkitClipPath: "inset(1% round 18%)",
-            }}
             draggable={false}
           />
         </div>
