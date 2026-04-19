@@ -563,12 +563,16 @@ export default function BridgeChartPage() {
         isCustom: isCustom && !!customInteriorMax,
         over: interiorMax != null && interiorActual > interiorMax,
         overBy: interiorMax != null && interiorActual > interiorMax ? interiorActual - interiorMax : 0,
+        longerThanOverall: !!(interiorDistRound && overallRound && interiorDistRound > overallRound),
       };
       if (!isCustom && interiorDistRound && interiorAxleCount >= 2 && !interiorMax) {
         conflicts.push(`Interior bridge: no data for ${interiorDistRound}ft / ${interiorAxleCount} axles`);
       }
       if (!isCustom && interiorDistRound && (interiorDistRound < 4 || interiorDistRound > 60) && interiorAxleCount >= 2) {
         conflicts.push(`Interior bridge: ${interiorDistRound}ft outside bridge range (4-60)`);
+      }
+      if (interiorDistRound && overallRound && interiorDistRound > overallRound) {
+        conflicts.push(`Interior bridge (${interiorDistRound}ft) is longer than Overall Distance (${overallRound}ft) — geometrically impossible (A2→last must be shorter than A1→last)`);
       }
     }
 
@@ -1008,6 +1012,9 @@ export default function BridgeChartPage() {
                   {record.interior?.over && (
                     <span className="text-[9px] font-bold text-[#DC2626] bg-[#FEE2E2] px-2 py-0.5 rounded-full">OVER</span>
                   )}
+                  {record.interior?.longerThanOverall && (
+                    <span className="text-[9px] font-bold text-[#991B1B] bg-[#FEE2E2] px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Check distance</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {isInteriorBridgeCollapsed ? <ChevronDown className="w-4 h-4 text-[#64748B]" /> : <ChevronUp className="w-4 h-4 text-[#64748B]" />}
@@ -1015,6 +1022,14 @@ export default function BridgeChartPage() {
               </button>
               {!isInteriorBridgeCollapsed && (
                 <div className="p-3 space-y-3 border-t border-[#E2E8F0]">
+                  {record.interior?.longerThanOverall && (
+                    <div className="bg-[#FEE2E2] border border-[#DC2626]/40 rounded-md px-3 py-2 text-[11px] text-[#991B1B] flex items-start gap-2" data-testid="interior-longer-warning">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#DC2626]" />
+                      <span>
+                        Interior bridge (<strong>{record.interior.distFt} ft</strong>) is longer than the Overall Distance (<strong>{record.overallRound} ft</strong>). That's geometrically impossible — A{record.interior.startAxleNum}→A{record.interior.endAxleNum} must be shorter than A1→A{record.interior.endAxleNum}. Double-check your measurements.
+                      </span>
+                    </div>
+                  )}
                   <p className="text-[10px] text-[#64748B] leading-relaxed">
                     {isCustom
                       ? <>Set a <strong>custom max weight</strong> for the interior span (from <strong>A{record.interior?.startAxleNum || 2}</strong> to <strong>A{record.interior?.endAxleNum || record.totalAxles}</strong>, excluding the first axle). Useful for permits where the bridge chart doesn't apply. Distance is optional in custom mode.</>
