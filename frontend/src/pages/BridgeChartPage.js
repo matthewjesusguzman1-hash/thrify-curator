@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle, ChevronDown, ChevronUp, Camera } from "lucide-react";
+import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle, ChevronDown, ChevronUp, Camera, Ruler } from "lucide-react";
 import html2canvas from "html2canvas";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
@@ -266,6 +266,7 @@ export default function BridgeChartPage() {
   const photoRef = useRef(null);
   const [tab, setTab] = useState("chart");
   const [showRules, setShowRules] = useState(false);
+  const [showMeasure, setShowMeasure] = useState(false);
 
   // Chart tab
   const [cFt, setCFt] = useState(""); const [cIn, setCIn] = useState(""); const [cAxles, setCAxles] = useState(""); const [cActual, setCActual] = useState("");
@@ -666,6 +667,7 @@ export default function BridgeChartPage() {
                 <Button variant="ghost" size="sm" onClick={openInspPicker} className="text-[#D4AF37] hover:bg-white/10 h-8 px-2" title="Add to inspection" data-testid="header-inspection-btn"><FolderPlus className="w-4 h-4" /></Button>
               </>
             )}
+            <Button variant="ghost" size="sm" onClick={() => setShowMeasure(true)} className="text-xs h-8 px-3 text-[#D4AF37] hover:bg-white/10" data-testid="open-measure-guide-btn" title="How to measure axle groups"><Ruler className="w-3.5 h-3.5 mr-1" /><span className="hidden sm:inline">Measure</span></Button>
             <Button variant="ghost" size="sm" onClick={() => setShowRules(!showRules)} className={`text-xs h-8 px-3 ${showRules ? "bg-[#D4AF37] text-[#002855]" : "text-[#D4AF37] hover:bg-white/10"}`} data-testid="toggle-rules-btn"><Info className="w-3.5 h-3.5 mr-1" />Rules</Button>
           </div>
         </div>
@@ -678,6 +680,27 @@ export default function BridgeChartPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-3 sm:px-6 py-4 pb-20 space-y-4">
+        {showMeasure && (
+          <div className="fixed inset-0 z-50 bg-black/70 flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto" onClick={() => setShowMeasure(false)} data-testid="measure-guide-modal">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl my-auto overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="sticky top-0 bg-[#002855] px-4 py-3 flex items-center justify-between z-10">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Ruler className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
+                  <h2 className="text-sm font-bold text-white truncate">How to Measure Axle Groups</h2>
+                </div>
+                <button onClick={() => setShowMeasure(false)} className="text-white/60 hover:text-white p-1" data-testid="close-measure-guide-btn"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="p-3 sm:p-4 space-y-3 max-h-[80vh] overflow-y-auto">
+                <p className="text-[11px] text-[#64748B] leading-relaxed">
+                  Reference sheets — <strong>Interior Bridge</strong> is measured from the second axle to the last axle. <strong>Exterior Bridge</strong> is the overall distance from the first axle to the last axle. Not all measurements shown on all combinations.
+                </p>
+                <img src="https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/mr43ejti_IMG_1317.png" alt="Correct method for measuring groups of axles — page 1" className="w-full rounded-lg border border-[#E2E8F0] bg-white" loading="lazy" />
+                <img src="https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/fiw8pnld_IMG_1318.png" alt="Correct method for measuring groups of axles — page 2" className="w-full rounded-lg border border-[#E2E8F0] bg-white" loading="lazy" />
+              </div>
+            </div>
+          </div>
+        )}
+
         {showRules && (
           <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
             <div className="bg-[#0F172A] px-4 py-3 flex items-center justify-between"><div className="flex items-center gap-2"><Scale className="w-4 h-4 text-[#D4AF37]" /><h2 className="text-sm font-bold text-white">Size & Weight Rules</h2></div><button onClick={() => setShowRules(false)} className="text-white/40 hover:text-white"><X className="w-4 h-4" /></button></div>
