@@ -691,9 +691,6 @@ export default function BridgeChartPage() {
                 <button onClick={() => setShowMeasure(false)} className="text-white/60 hover:text-white p-1" data-testid="close-measure-guide-btn"><X className="w-5 h-5" /></button>
               </div>
               <div className="p-3 sm:p-4 space-y-3 max-h-[80vh] overflow-y-auto">
-                <p className="text-[11px] text-[#64748B] leading-relaxed">
-                  Reference sheets — <strong>Interior Bridge</strong> is measured from the second axle to the last axle. <strong>Exterior Bridge</strong> is the overall distance from the first axle to the last axle. Not all measurements shown on all combinations.
-                </p>
                 <img src="https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/mr43ejti_IMG_1317.png" alt="Correct method for measuring groups of axles — page 1" className="w-full rounded-lg border border-[#E2E8F0] bg-white" loading="lazy" />
                 <img src="https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/fiw8pnld_IMG_1318.png" alt="Correct method for measuring groups of axles — page 2" className="w-full rounded-lg border border-[#E2E8F0] bg-white" loading="lazy" />
               </div>
