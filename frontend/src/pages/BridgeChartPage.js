@@ -603,6 +603,25 @@ export default function BridgeChartPage() {
         scale: 2,
         useCORS: true,
         logging: false,
+        onclone: (clonedDoc) => {
+          // html2canvas cannot render live <input>/<textarea>/<select> values.
+          // Replace them with plain <div>s showing the current value so the capture
+          // faithfully includes every entered weight / distance / name.
+          const makePlain = (el, text) => {
+            const span = clonedDoc.createElement("div");
+            span.textContent = text || "";
+            span.className = el.className || "";
+            span.setAttribute("style", `${el.getAttribute("style") || ""}; display:flex; align-items:center; justify-content:${el.style.textAlign === "center" || (el.className || "").includes("text-center") ? "center" : "flex-start"}; white-space:nowrap; overflow:hidden;`);
+            el.parentNode && el.parentNode.replaceChild(span, el);
+          };
+          clonedDoc.querySelectorAll("input, textarea").forEach(el => {
+            makePlain(el, el.value);
+          });
+          clonedDoc.querySelectorAll("select").forEach(sel => {
+            const opt = sel.options[sel.selectedIndex];
+            makePlain(sel, opt ? opt.textContent : "");
+          });
+        },
       });
       return await new Promise(r => canvas.toBlob(r, "image/png"));
     } catch (err) {
