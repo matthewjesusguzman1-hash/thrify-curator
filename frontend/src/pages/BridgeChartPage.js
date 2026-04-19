@@ -597,20 +597,6 @@ export default function BridgeChartPage() {
   const getCaptureBlob = useCallback(async () => {
     const node = captureRef.current;
     if (!node) return null;
-    // Temporarily force-expand every collapsible section so the capture always
-    // includes Gross, Interior Bridge, and each group's weight details even if
-    // the user has collapsed them on screen.
-    const prevGrossCollapsed = isGrossCollapsed;
-    const prevInteriorCollapsed = isInteriorBridgeCollapsed;
-    const prevGroupsCollapsed = groups.map(g => !!g._collapsed);
-    if (prevGrossCollapsed) setIsGrossCollapsed(false);
-    if (prevInteriorCollapsed) setIsInteriorBridgeCollapsed(false);
-    if (prevGroupsCollapsed.some(Boolean)) {
-      setGroups(curr => curr.map(g => ({ ...g, _collapsed: false })));
-    }
-    // Wait one paint tick so React commits the expansion before capture.
-    await new Promise(r => setTimeout(r, 80));
-
     try {
       const canvas = await html2canvas(node, {
         backgroundColor: "#F0F2F5",
@@ -641,15 +627,8 @@ export default function BridgeChartPage() {
     } catch (err) {
       console.error("Capture failed", err);
       return null;
-    } finally {
-      // Restore the user's previous collapse state
-      if (prevGrossCollapsed) setIsGrossCollapsed(true);
-      if (prevInteriorCollapsed) setIsInteriorBridgeCollapsed(true);
-      if (prevGroupsCollapsed.some(Boolean)) {
-        setGroups(curr => curr.map((g, i) => prevGroupsCollapsed[i] ? { ...g, _collapsed: true } : g));
-      }
     }
-  }, [isGrossCollapsed, isInteriorBridgeCollapsed, groups]);
+  }, []);
 
   const downloadDiag = async () => {
     const b = await getCaptureBlob();
@@ -872,7 +851,7 @@ export default function BridgeChartPage() {
                       )}
                       {hasViol && !isOver && gWeight > 0 && <CheckCircle2 className="w-3.5 h-3.5 text-[#22C55E] flex-shrink-0" />}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0" data-html2canvas-ignore="true">
                       <select value={g.preset} onClick={e => e.stopPropagation()} onChange={e => updateGroup(gi, "preset", e.target.value)} className="text-[10px] bg-white/10 text-white border border-white/20 rounded px-1.5 py-0.5 outline-none">
                         {[{ l: "Single", v: "Single" }, { l: "Tandem", v: "Tandem (2)" }, { l: "Triple", v: "Triple (3)" }, { l: "Quad", v: "Quad (4)" }, { l: "Custom", v: "Custom" }].map(p => <option key={p.v} value={p.v} className="text-[#002855]">{p.l}</option>)}
                       </select>
@@ -1031,7 +1010,6 @@ export default function BridgeChartPage() {
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsGrossCollapsed(v => !v); } }}
                   className={`w-full px-3 py-2.5 flex items-center justify-between text-left cursor-pointer border-b ${grossOver ? "bg-[#DC2626] border-[#DC2626]" : "bg-[#002855] border-[#002855]"}`}
                   data-testid="gross-toggle"
-                  data-html2canvas-ignore="true"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <Scale className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
@@ -1045,7 +1023,7 @@ export default function BridgeChartPage() {
                     )}
                     {record.gross > 0 && record.grossMax && !grossOver && <CheckCircle2 className="w-3.5 h-3.5 text-[#22C55E] flex-shrink-0" />}
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0" data-html2canvas-ignore="true">
                     {isGrossCollapsed ? <ChevronDown className="w-4 h-4 text-white/80" /> : <ChevronUp className="w-4 h-4 text-white/80" />}
                   </div>
                 </div>
@@ -1121,7 +1099,7 @@ export default function BridgeChartPage() {
           {/* ===== INTERIOR BRIDGE — optional extra bridge check A2 → last axle ===== */}
           {record.totalAxles >= 2 && (
             <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden" data-testid="interior-bridge-section">
-              <button type="button" onClick={() => setIsInteriorBridgeCollapsed(v => !v)} className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#F8FAFC] transition-colors border-l-4 border-[#D4AF37]" data-testid="toggle-interior-bridge" data-html2canvas-ignore="true">
+              <button type="button" onClick={() => setIsInteriorBridgeCollapsed(v => !v)} className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#F8FAFC] transition-colors border-l-4 border-[#D4AF37]" data-testid="toggle-interior-bridge">
                 <div className="flex items-center gap-2 min-w-0">
                   <Calculator className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
                   <span className="text-sm font-bold text-[#002855]">Interior Bridge</span>
@@ -1133,7 +1111,7 @@ export default function BridgeChartPage() {
                     <span className="text-[9px] font-bold text-[#991B1B] bg-[#FEE2E2] px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Check distance</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0" data-html2canvas-ignore="true">
                   {isInteriorBridgeCollapsed ? <ChevronDown className="w-4 h-4 text-[#64748B]" /> : <ChevronUp className="w-4 h-4 text-[#64748B]" />}
                 </div>
               </button>
