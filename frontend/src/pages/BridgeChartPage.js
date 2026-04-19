@@ -336,6 +336,8 @@ export default function BridgeChartPage() {
   };
 
   const [showInspPicker, setShowInspPicker] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [inspections, setInspections] = useState([]);
   const [newInspTitle, setNewInspTitle] = useState("");
   const [saving, setSaving] = useState(false);
@@ -631,6 +633,17 @@ export default function BridgeChartPage() {
       downloadDiag();
     }
   };
+  const openPreview = async () => {
+    const b = await getCaptureBlob();
+    if (!b) { toast.error("Capture failed"); return; }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(b));
+    setShowPreview(true);
+  };
+  const closePreview = () => {
+    setShowPreview(false);
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
+  };
   const openInspPicker = async () => { setShowInspPicker(true); try { const r = await fetch(`${API}/api/inspections?badge=${badge}`); if (r.ok) { const d = await r.json(); setInspections(d.inspections || []); } } catch {} };
   const addToInsp = async (id) => {
     setSaving(true);
@@ -666,8 +679,8 @@ export default function BridgeChartPage() {
               <>
                 <Button variant="ghost" size="sm" onClick={() => photoRef.current?.click()} className="text-white hover:bg-white/10 h-8 px-2" title="Add photos" data-testid="header-photo-btn"><Camera className="w-4 h-4" /></Button>
                 <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} />
-                <Button variant="ghost" size="sm" onClick={shareDiag} className="text-white hover:bg-white/10 h-8 px-2" title="Share" data-testid="header-share-btn"><Share2 className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="sm" onClick={openInspPicker} className="text-[#D4AF37] hover:bg-white/10 h-8 px-2" title="Add to inspection" data-testid="header-inspection-btn"><FolderPlus className="w-4 h-4" /></Button>
+                <Button variant="ghost" size="sm" onClick={openPreview} className="text-white hover:bg-white/10 h-8 px-2 text-xs" title="Preview &amp; export" data-testid="header-preview-btn"><Eye className="w-3.5 h-3.5 sm:mr-1" /><span className="hidden sm:inline">Preview</span></Button>
+                <Button variant="ghost" size="sm" onClick={openInspPicker} className="text-[#D4AF37] hover:bg-white/10 h-8 px-2 text-xs font-bold" title="Save to inspection" data-testid="header-inspection-btn"><FolderPlus className="w-3.5 h-3.5 sm:mr-1" /><span className="hidden sm:inline">Inspection</span></Button>
               </>
             )}
             <Button variant="ghost" size="sm" onClick={() => setShowMeasure(true)} className="text-xs h-8 px-3 text-[#D4AF37] hover:bg-white/10" data-testid="open-measure-guide-btn" title="How to measure axle groups"><Ruler className="w-3.5 h-3.5 mr-1" /><span className="hidden sm:inline">Measure</span></Button>
@@ -1282,12 +1295,39 @@ export default function BridgeChartPage() {
         </>)}
       </main>
 
+      {showPreview && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/80 p-3 sm:p-6" style={{ zIndex: 2147483647 }} onClick={closePreview} data-testid="preview-modal">
+          <div className="bg-[#0F1D2F] rounded-2xl w-full max-w-3xl max-h-[95vh] overflow-hidden border border-white/10 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+              <h3 className="text-sm font-bold text-white">Preview & Export</h3>
+              <button onClick={closePreview} className="text-white/40 hover:text-white" data-testid="close-preview-btn"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-3 overflow-y-auto flex-1 bg-[#F0F2F5]">
+              {previewUrl && <img src={previewUrl} alt="Weight report preview" className="w-full h-auto rounded-lg shadow-lg" />}
+            </div>
+            <div className="px-3 py-3 border-t border-white/10 flex gap-2 flex-shrink-0">
+              <Button onClick={downloadDiag} className="flex-1 bg-white/10 text-white hover:bg-white/20 h-10 text-xs font-bold" data-testid="preview-download-btn"><Download className="w-4 h-4 mr-1.5" /> Download</Button>
+              <Button onClick={shareDiag} className="flex-1 bg-[#D4AF37] text-[#002855] hover:bg-[#BC9A2F] h-10 text-xs font-bold" data-testid="preview-share-btn"><Share2 className="w-4 h-4 mr-1.5" /> Share</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showInspPicker && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/70 p-4" style={{ zIndex: 2147483647 }} onClick={() => setShowInspPicker(false)}>
           <div className="bg-[#0F1D2F] rounded-2xl w-full sm:max-w-sm max-h-[80vh] overflow-hidden border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10"><h3 className="text-sm font-bold text-white">Add to Inspection</h3><button onClick={() => setShowInspPicker(false)} className="text-white/40 hover:text-white"><X className="w-4 h-4" /></button></div>
-            <div className="px-3 pt-3 pb-2 border-b border-white/10"><div className="flex gap-1.5"><input type="text" value={newInspTitle} onChange={e => setNewInspTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && createAndAdd()} placeholder="New inspection..." className="flex-1 px-2.5 py-2 rounded-lg border border-white/10 bg-white/5 text-white text-xs placeholder:text-white/30 outline-none" /><button onClick={createAndAdd} disabled={saving} className="px-3 py-2 rounded-lg bg-[#D4AF37] text-[#002855] text-xs font-bold disabled:opacity-50">{saving ? "..." : "Create & Add"}</button></div></div>
-            <div className="overflow-y-auto max-h-[50vh] p-2">{inspections.map(insp => <button key={insp.id} onClick={() => addToInsp(insp.id)} disabled={saving} className="w-full flex items-center justify-between px-3 py-3 rounded-lg hover:bg-white/5 text-left"><div><p className="text-xs font-medium text-white truncate">{insp.title}</p><p className="text-[10px] text-white/30">{new Date(insp.created_at).toLocaleDateString()}</p></div><FolderPlus className="w-4 h-4 text-white/20" /></button>)}</div>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10"><h3 className="text-sm font-bold text-white">Save to Inspection</h3><button onClick={() => setShowInspPicker(false)} className="text-white/40 hover:text-white"><X className="w-4 h-4" /></button></div>
+            <div className="px-3 pt-3 pb-2 border-b border-white/10">
+              <p className="text-[10px] text-white/40 font-medium mb-1.5">New Inspection</p>
+              <div className="flex gap-1.5"><input type="text" value={newInspTitle} onChange={e => setNewInspTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && createAndAdd()} placeholder="Inspection name..." className="flex-1 px-2.5 py-2 rounded-lg border border-white/10 bg-white/5 text-white text-xs placeholder:text-white/30 outline-none" data-testid="new-inspection-input" /><button onClick={createAndAdd} disabled={saving} className="px-3 py-2 rounded-lg bg-[#D4AF37] text-[#002855] text-xs font-bold disabled:opacity-50" data-testid="create-inspection-btn">{saving ? "..." : "Create & Add"}</button></div>
+            </div>
+            <div className="overflow-y-auto max-h-[50vh] p-2">
+              {inspections.length === 0 ? (
+                <div className="text-center py-6"><p className="text-xs text-white/40">No existing inspections</p><p className="text-[10px] text-white/25 mt-1">Create one above to get started</p></div>
+              ) : (
+                inspections.map(insp => <button key={insp.id} onClick={() => addToInsp(insp.id)} disabled={saving} className="w-full flex items-center justify-between px-3 py-3 rounded-lg hover:bg-white/5 text-left" data-testid={`insp-option-${insp.id}`}><div><p className="text-xs font-medium text-white truncate">{insp.title}</p><p className="text-[10px] text-white/30">{new Date(insp.created_at).toLocaleDateString()}</p></div><FolderPlus className="w-4 h-4 text-white/20" /></button>)
+              )}
+            </div>
           </div>
         </div>
       )}

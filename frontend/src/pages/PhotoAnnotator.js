@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2, Share2, FolderPlus, Check, X as XIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2, Share2, FolderPlus, Check, Eye, X as XIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
@@ -45,6 +45,8 @@ export default function PhotoAnnotator() {
   const [cursorPos, setCursorPos] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showInspPicker, setShowInspPicker] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [inspections, setInspections] = useState([]);
   const [loadingInsps, setLoadingInsps] = useState(false);
   const [newInspTitle, setNewInspTitle] = useState("");
@@ -403,6 +405,21 @@ export default function PhotoAnnotator() {
     } catch { downloadImage(); }
   };
 
+  const openPreview = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(blob));
+      setShowPreview(true);
+    } catch { toast.error("Preview failed"); }
+  };
+  const closePreview = () => {
+    setShowPreview(false);
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
+  };
+
   const openInspectionPicker = async () => {
     setShowInspPicker(true);
     setLoadingInsps(true);
@@ -475,11 +492,8 @@ export default function PhotoAnnotator() {
                   <Save className="w-3.5 h-3.5 mr-1" /> {saving ? "..." : "Save"}
                 </Button>
               )}
-              <Button onClick={downloadImage} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="download-photo-btn">
-                <Download className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Save</span>
-              </Button>
-              <Button onClick={shareImage} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="share-photo-btn">
-                <Share2 className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Share</span>
+              <Button onClick={openPreview} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs" data-testid="preview-photo-btn">
+                <Eye className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Preview</span>
               </Button>
               <Button onClick={openInspectionPicker} disabled={saving} variant="ghost" size="sm" className="text-[#D4AF37] hover:text-white hover:bg-white/10 h-8 px-2 text-xs font-bold" data-testid="add-to-inspection-btn">
                 <FolderPlus className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Inspection</span>
@@ -633,7 +647,7 @@ export default function PhotoAnnotator() {
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60" onClick={() => setShowInspPicker(false)}>
           <div className="bg-[#0F1D2F] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[70vh] overflow-hidden border border-white/10" onClick={(e) => e.stopPropagation()} data-testid="inspection-picker-modal">
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-              <h3 className="text-sm font-bold text-white">Add to Inspection</h3>
+              <h3 className="text-sm font-bold text-white">Save to Inspection</h3>
               <button onClick={() => setShowInspPicker(false)} className="text-white/40 hover:text-white p-1" data-testid="close-insp-picker">
                 <XIcon className="w-4 h-4" />
               </button>
@@ -687,6 +701,25 @@ export default function PhotoAnnotator() {
                   </button>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview & Export Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-3 sm:p-6" onClick={closePreview} data-testid="preview-modal">
+          <div className="bg-[#0F1D2F] rounded-2xl w-full max-w-3xl max-h-[95vh] overflow-hidden border border-white/10 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+              <h3 className="text-sm font-bold text-white">Preview & Export</h3>
+              <button onClick={closePreview} className="text-white/40 hover:text-white" data-testid="close-preview-btn"><XIcon className="w-4 h-4" /></button>
+            </div>
+            <div className="p-3 overflow-y-auto flex-1 bg-[#0B1729]">
+              {previewUrl && <img src={previewUrl} alt="Annotated photo preview" className="w-full h-auto rounded-lg shadow-lg" />}
+            </div>
+            <div className="px-3 py-3 border-t border-white/10 flex gap-2 flex-shrink-0">
+              <Button onClick={downloadImage} className="flex-1 bg-white/10 text-white hover:bg-white/20 h-10 text-xs font-bold" data-testid="preview-download-btn"><Download className="w-4 h-4 mr-1.5" /> Download</Button>
+              <Button onClick={shareImage} className="flex-1 bg-[#D4AF37] text-[#002855] hover:bg-[#BC9A2F] h-10 text-xs font-bold" data-testid="preview-share-btn"><Share2 className="w-4 h-4 mr-1.5" /> Share</Button>
             </div>
           </div>
         </div>

@@ -262,6 +262,7 @@ export default function TieDownCalculator() {
   const [showWllInfo, setShowWllInfo] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [newInspTitle, setNewInspTitle] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [inspections, setInspections] = useState([]);
   const [loadingInspections, setLoadingInspections] = useState(false);
@@ -331,6 +332,18 @@ export default function TieDownCalculator() {
     finally { setLoadingInspections(false); }
   };
   const openSaveModal = () => { fetchInspections(); setShowSaveModal(true); };
+  const createAndSave = async () => {
+    const title = newInspTitle.trim() || `Tie-Down ${new Date().toLocaleDateString()}`;
+    setSaving(true);
+    try {
+      const res = await axios.post(`${API}/inspections`, { title });
+      if (res.data?.id) {
+        setNewInspTitle("");
+        await saveToInspection(res.data.id);
+      }
+    } catch { toast.error("Failed to create inspection"); }
+    finally { setSaving(false); }
+  };
   const saveToInspection = async (inspectionId) => {
     setSaving(true);
     try {
@@ -653,11 +666,33 @@ export default function TieDownCalculator() {
             <h3 className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>Save to Inspection</h3>
             <p className="text-[10px] text-white/50">Attach {articles.length} article(s) as tie-down assessments</p>
           </div>
+          <div className="px-3 pt-3 pb-2 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+            <p className="text-[10px] text-[#64748B] font-medium mb-1.5 uppercase">New Inspection</p>
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={newInspTitle}
+                onChange={(e) => setNewInspTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && createAndSave()}
+                placeholder="Inspection name..."
+                className="flex-1 px-2.5 py-2 rounded-lg border border-[#E2E8F0] bg-white text-[#002855] text-xs placeholder:text-[#94A3B8] focus:ring-1 focus:ring-[#D4AF37] outline-none"
+                data-testid="new-inspection-input"
+              />
+              <button
+                onClick={createAndSave}
+                disabled={saving}
+                className="px-3 py-2 rounded-lg bg-[#D4AF37] text-[#002855] text-xs font-bold disabled:opacity-50 flex-shrink-0"
+                data-testid="create-inspection-btn"
+              >
+                {saving ? "..." : "Create & Add"}
+              </button>
+            </div>
+          </div>
           <div className="p-4 max-h-[50vh] overflow-y-auto space-y-2">
             {loadingInspections ? (
               <div className="flex items-center justify-center py-8"><div className="w-6 h-6 border-2 border-[#002855] border-t-transparent rounded-full animate-spin" /></div>
             ) : inspections.length === 0 ? (
-              <div className="text-center py-6"><ClipboardList className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" /><p className="text-sm text-[#64748B]">No inspections found</p></div>
+              <div className="text-center py-6"><ClipboardList className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" /><p className="text-sm text-[#64748B]">No existing inspections</p><p className="text-[10px] text-[#94A3B8] mt-1">Create one above to get started</p></div>
             ) : (
               inspections.map((insp) => (
                 <button key={insp.id} onClick={() => saveToInspection(insp.id)} disabled={saving} className="w-full text-left px-3 py-2.5 rounded-lg border border-[#E2E8F0] hover:border-[#002855]/30 hover:bg-[#F8FAFC] transition-colors disabled:opacity-50" data-testid={`save-to-${insp.id}`}>
