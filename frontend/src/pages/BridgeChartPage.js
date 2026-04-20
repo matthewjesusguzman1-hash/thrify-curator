@@ -7,7 +7,7 @@ import html2canvas from "html2canvas";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
-import { getDefaultInterstate } from "../components/app/userPrefs";
+import { getDefaultInterstate, savePrefs } from "../components/app/userPrefs";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -945,15 +945,31 @@ export default function BridgeChartPage() {
               <button onClick={() => switchMode(true)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-custom">Custom / Permit</button>
               {!isCustom && (() => {
                 const userDefault = getDefaultInterstate(badge);
+                const matches = userDefault === isInterstate;
                 return (
-                  <div className="flex items-center gap-0 rounded-full bg-white border border-[#E2E8F0] overflow-hidden" data-testid="interstate-toggle">
-                    <button onClick={() => setIsInterstate(true)} className={`relative px-3 py-1.5 text-[11px] font-bold ${isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-on" title={userDefault === true ? "Your saved default" : ""}>
-                      Interstate{userDefault === true && <span className="ml-1 text-[9px] font-black opacity-80">●</span>}
-                    </button>
-                    <button onClick={() => setIsInterstate(false)} className={`relative px-3 py-1.5 text-[11px] font-bold ${!isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-off" title={userDefault === false ? "Your saved default" : ""}>
-                      Non-interstate{userDefault === false && <span className="ml-1 text-[9px] font-black opacity-80">●</span>}
-                    </button>
-                  </div>
+                  <>
+                    <div className="flex items-center gap-0 rounded-full bg-white border border-[#E2E8F0] overflow-hidden" data-testid="interstate-toggle">
+                      <button onClick={() => setIsInterstate(true)} className={`relative px-3 py-1.5 text-[11px] font-bold ${isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-on" title={userDefault === true ? "Your saved default" : ""}>
+                        Interstate{userDefault === true && <span className="ml-1 text-[9px] font-black opacity-80">●</span>}
+                      </button>
+                      <button onClick={() => setIsInterstate(false)} className={`relative px-3 py-1.5 text-[11px] font-bold ${!isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-off" title={userDefault === false ? "Your saved default" : ""}>
+                        Non-interstate{userDefault === false && <span className="ml-1 text-[9px] font-black opacity-80">●</span>}
+                      </button>
+                    </div>
+                    {!matches && (
+                      <button
+                        onClick={() => {
+                          savePrefs(badge, { defaultInterstate: isInterstate });
+                          toast.success(`${isInterstate ? "Interstate" : "Non-interstate"} set as your default`);
+                        }}
+                        className="text-[10px] font-bold text-[#002855] underline decoration-dotted underline-offset-2 hover:text-[#D4AF37]"
+                        data-testid="set-default-interstate"
+                        title="Save the current selection as your default"
+                      >
+                        Set as default
+                      </button>
+                    )}
+                  </>
                 );
               })()}
             </div>
