@@ -272,7 +272,7 @@ export default function BridgeChartPage() {
   const photoRef = useRef(null);
   const [tab, setTab] = useState("chart");
   const [showRules, setShowRules] = useState(false);
-  const [showMeasure, setShowMeasure] = useState(false);
+  const [rulesTab, setRulesTab] = useState("rules"); // "rules" | "measure"
 
   // Chart tab
   const [cFt, setCFt] = useState(""); const [cIn, setCIn] = useState(""); const [cAxles, setCAxles] = useState(""); const [cActual, setCActual] = useState("");
@@ -857,7 +857,6 @@ export default function BridgeChartPage() {
                 <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} />
               </>
             )}
-            <Button variant="ghost" size="sm" onClick={() => setShowMeasure(true)} className="text-xs h-8 px-3 text-[#D4AF37] hover:bg-white/10" data-testid="open-measure-guide-btn" title="How to measure axle groups"><Ruler className="w-3.5 h-3.5 mr-1" /><span className="hidden sm:inline">Measure</span></Button>
             <Button variant="ghost" size="sm" onClick={() => setShowRules(!showRules)} className={`text-xs h-8 px-3 ${showRules ? "bg-[#D4AF37] text-[#002855]" : "text-[#D4AF37] hover:bg-white/10"}`} data-testid="toggle-rules-btn"><Info className="w-3.5 h-3.5 mr-1" />Rules</Button>
           </div>
         </div>
@@ -870,28 +869,47 @@ export default function BridgeChartPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-3 sm:px-6 py-4 pb-20 space-y-4">
-        {showMeasure && (
-          <div className="fixed inset-0 z-50 bg-black/70 flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto" onClick={() => setShowMeasure(false)} data-testid="measure-guide-modal">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl my-auto overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="sticky top-0 bg-[#002855] px-4 py-3 flex items-center justify-between z-10">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Ruler className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
-                  <h2 className="text-sm font-bold text-white truncate">How to Measure Axle Groups</h2>
-                </div>
-                <button onClick={() => setShowMeasure(false)} className="text-white/60 hover:text-white p-1" data-testid="close-measure-guide-btn"><X className="w-5 h-5" /></button>
+        {showRules && (
+          <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+            <div className="bg-[#0F172A] px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Scale className="w-4 h-4 text-[#D4AF37]" />
+                <h2 className="text-sm font-bold text-white">Size &amp; Weight Rules</h2>
               </div>
-              <div className="p-3 sm:p-4 space-y-3 max-h-[80vh] overflow-y-auto">
+              <button onClick={() => setShowRules(false)} className="text-white/40 hover:text-white" data-testid="close-rules-btn"><X className="w-4 h-4" /></button>
+            </div>
+            {/* Tabs */}
+            <div className="flex items-center border-b border-[#E2E8F0] bg-[#F8FAFC] px-2">
+              <button
+                onClick={() => setRulesTab("rules")}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-colors border-b-2 -mb-px ${rulesTab === "rules" ? "border-[#D4AF37] text-[#002855]" : "border-transparent text-[#64748B] hover:text-[#002855]"}`}
+                data-testid="rules-tab-rules"
+              >
+                <Info className="w-3.5 h-3.5" /> Rules
+              </button>
+              <button
+                onClick={() => setRulesTab("measure")}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-colors border-b-2 -mb-px ${rulesTab === "measure" ? "border-[#D4AF37] text-[#002855]" : "border-transparent text-[#64748B] hover:text-[#002855]"}`}
+                data-testid="rules-tab-measure"
+              >
+                <Ruler className="w-3.5 h-3.5" /> How to Measure Bridge
+              </button>
+            </div>
+            {rulesTab === "rules" ? (
+              <div className="divide-y divide-[#F1F5F9]">
+                {RULES.map((r, i) => (
+                  <div key={i} className={`px-4 py-2.5 ${r.hl ? "bg-[#D4AF37]/5" : ""}`}>
+                    <h3 className="text-xs font-bold text-[#002855] mb-1">{r.title}{r.cfr && <span className="ml-1 text-[10px] font-mono text-[#D4AF37]">{r.cfr}</span>}</h3>
+                    {r.items.map((it, j) => <p key={j} className="text-[11px] text-[#475569] leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-[6px] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#CBD5E1]">{it}</p>)}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-3 sm:p-4 space-y-3 max-h-[70vh] overflow-y-auto">
                 <img src="https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/mr43ejti_IMG_1317.png" alt="Correct method for measuring groups of axles — page 1" className="w-full rounded-lg border border-[#E2E8F0] bg-white" loading="lazy" />
                 <img src="https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/fiw8pnld_IMG_1318.png" alt="Correct method for measuring groups of axles — page 2" className="w-full rounded-lg border border-[#E2E8F0] bg-white" loading="lazy" />
               </div>
-            </div>
-          </div>
-        )}
-
-        {showRules && (
-          <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-            <div className="bg-[#0F172A] px-4 py-3 flex items-center justify-between"><div className="flex items-center gap-2"><Scale className="w-4 h-4 text-[#D4AF37]" /><h2 className="text-sm font-bold text-white">Size & Weight Rules</h2></div><button onClick={() => setShowRules(false)} className="text-white/40 hover:text-white"><X className="w-4 h-4" /></button></div>
-            <div className="divide-y divide-[#F1F5F9]">{RULES.map((r, i) => (<div key={i} className={`px-4 py-2.5 ${r.hl ? "bg-[#D4AF37]/5" : ""}`}><h3 className="text-xs font-bold text-[#002855] mb-1">{r.title}{r.cfr && <span className="ml-1 text-[10px] font-mono text-[#D4AF37]">{r.cfr}</span>}</h3>{r.items.map((it, j) => <p key={j} className="text-[11px] text-[#475569] leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-[6px] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#CBD5E1]">{it}</p>)}</div>))}</div>
+            )}
           </div>
         )}
 
