@@ -292,6 +292,9 @@ export default function BridgeChartPage() {
   const [showViolations, setShowViolations] = useState(true);
   const [isInputsCollapsed, setIsInputsCollapsed] = useState(false);
   const [isGrossCollapsed, setIsGrossCollapsed] = useState(false);
+  // React-controlled mirror of the saved default-interstate preference so the dot
+  // indicator updates immediately when the user taps "Set as default".
+  const [userDefaultInterstate, setUserDefaultInterstate] = useState(() => getDefaultInterstate(badge));
   const captureRef = useRef(null);
   const makeGroup = (label, preset, axles) => ({
     label, preset, axles: String(axles), distFt: "", distFtReduced: "", useGroup: axles > 1, groupWeight: "", weights: Array(axles).fill(""), maxOverride: "", dummyAxle: false
@@ -944,7 +947,7 @@ export default function BridgeChartPage() {
               <button onClick={() => switchMode(false)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${!isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-bridge">Bridge Formula</button>
               <button onClick={() => switchMode(true)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-custom">Custom / Permit</button>
               {!isCustom && (() => {
-                const userDefault = getDefaultInterstate(badge);
+                const userDefault = userDefaultInterstate;
                 const matches = userDefault === isInterstate;
                 return (
                   <>
@@ -960,6 +963,7 @@ export default function BridgeChartPage() {
                       <button
                         onClick={() => {
                           savePrefs(badge, { defaultInterstate: isInterstate });
+                          setUserDefaultInterstate(isInterstate);
                           toast.success(`${isInterstate ? "Interstate" : "Non-interstate"} set as your default`);
                         }}
                         className="text-[10px] font-bold text-[#002855] underline decoration-dotted underline-offset-2 hover:text-[#D4AF37]"

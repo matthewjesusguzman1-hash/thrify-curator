@@ -4,41 +4,6 @@ import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { NotesPanel } from "./NotesPanel";
-import { loadPrefs, savePrefs } from "./userPrefs";
-
-function InterstateDefaultToggle({ badge }) {
-  const [pref, setPref] = useState(() => {
-    const p = loadPrefs(badge);
-    return p.defaultInterstate !== undefined ? !!p.defaultInterstate : true;
-  });
-  const toggle = () => {
-    const next = !pref;
-    savePrefs(badge, { defaultInterstate: next });
-    setPref(next);
-  };
-  return (
-    <div className="px-2 pt-1 pb-2 border-b border-[#E2E8F0] mb-1">
-      <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider px-1 mb-1.5">Default Mode</p>
-      <div className="flex items-center rounded-md bg-[#F1F5F9] p-0.5">
-        <button
-          onClick={() => { savePrefs(badge, { defaultInterstate: true }); setPref(true); }}
-          className={`flex-1 text-[10px] font-bold py-1 rounded ${pref ? "bg-[#002855] text-white" : "text-[#64748B]"}`}
-          data-testid="pref-interstate-on"
-        >
-          Interstate
-        </button>
-        <button
-          onClick={() => { savePrefs(badge, { defaultInterstate: false }); setPref(false); }}
-          className={`flex-1 text-[10px] font-bold py-1 rounded ${!pref ? "bg-[#002855] text-white" : "text-[#64748B]"}`}
-          data-testid="pref-interstate-off"
-        >
-          Non-interstate
-        </button>
-      </div>
-      <p className="text-[9px] text-[#94A3B8] px-1 mt-1 leading-tight">Bridge Chart tab opens with this setting.</p>
-    </div>
-  );
-}
 import {
   Popover,
   PopoverContent,
@@ -220,7 +185,6 @@ function ChangePinPopover({ badge, navigate, logout }) {
   return (
     <>
       <p className="text-[10px] text-[#94A3B8] px-2 pb-1">Badge #{badge}</p>
-      <InterstateDefaultToggle badge={badge} />
       <button
         onClick={() => setMode("change")}
         className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
