@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus, Scale } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
@@ -221,7 +221,42 @@ export function Header({ onUploadClick, stats }) {
   const { badge, logout } = useAuth();
   const [openSections, setOpenSections] = useState({});
   const [notesOpen, setNotesOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const toggle = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const lastSeenKey = `inspnav_notes_lastSeen_${badge || "anon"}`;
+
+  // Poll latest note timestamp so the button can badge when a new note drops.
+  const refreshUnread = useCallback(async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notes`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const notes = data.notes || [];
+      if (notes.length === 0) { setUnreadCount(0); return; }
+      const lastSeen = parseInt(localStorage.getItem(lastSeenKey) || "0");
+      // Notes are sorted desc by created_at; count how many are newer than lastSeen
+      // and not authored by the current badge.
+      const unread = notes.filter(n => {
+        const t = Date.parse(n.created_at || "");
+        return t && t > lastSeen && n.badge !== badge;
+      }).length;
+      setUnreadCount(unread);
+    } catch {}
+  }, [badge, lastSeenKey]);
+
+  useEffect(() => {
+    refreshUnread();
+    const id = setInterval(refreshUnread, 30000);
+    return () => clearInterval(id);
+  }, [refreshUnread]);
+
+  const openNotes = () => {
+    setNotesOpen(true);
+    // Mark all as read the moment the panel opens.
+    try { localStorage.setItem(lastSeenKey, String(Date.now())); } catch {}
+    setUnreadCount(0);
+  };
   return (
     <>
     <header
@@ -242,12 +277,18 @@ export function Header({ onUploadClick, stats }) {
         </h1>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
-            onClick={() => setNotesOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 transition-colors"
+            onClick={openNotes}
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${unreadCount > 0 ? "bg-[#D4AF37] hover:bg-[#E0C14F] shadow-[0_0_0_2px_rgba(212,175,55,0.35)] animate-pulse" : "bg-white/10 hover:bg-white/15"}`}
             data-testid="notes-btn"
+            aria-label={unreadCount > 0 ? `${unreadCount} new note${unreadCount > 1 ? "s" : ""}` : "Notes"}
           >
-            <MessageSquarePlus className="w-4 h-4 text-[#8FAEC5]" />
-            <span className="text-xs text-[#8FAEC5] font-medium">Notes</span>
+            <MessageSquarePlus className={`w-4 h-4 ${unreadCount > 0 ? "text-[#002855]" : "text-[#8FAEC5]"}`} />
+            <span className={`text-xs font-medium ${unreadCount > 0 ? "text-[#002855] font-bold" : "text-[#8FAEC5]"}`}>Notes</span>
+            {unreadCount > 0 && (
+              <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#DC2626] text-white text-[10px] font-black flex items-center justify-center" data-testid="notes-unread-count">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </button>
           <Popover>
             <PopoverTrigger asChild>
@@ -466,7 +507,7 @@ export function Header({ onUploadClick, stats }) {
 
       <div className="gold-accent h-[2px]" />
     </header>
-    <NotesPanel open={notesOpen} onClose={() => setNotesOpen(false)} />
+    <NotesPanel open={notesOpen} onClose={() => { setNotesOpen(false); refreshUnread(); }} />
     </>
   );
 }
