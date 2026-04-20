@@ -283,7 +283,7 @@ export function Header({ onUploadClick, stats }) {
             aria-label={unreadCount > 0 ? `${unreadCount} new note${unreadCount > 1 ? "s" : ""}` : "Notes"}
           >
             <MessageSquarePlus className={`w-4 h-4 ${unreadCount > 0 ? "text-[#002855]" : "text-[#8FAEC5]"}`} />
-            <span className={`text-xs font-medium ${unreadCount > 0 ? "text-[#002855] font-bold" : "text-[#8FAEC5]"}`}>Notes</span>
+            <span className={`text-xs font-medium ${unreadCount > 0 ? "text-[#002855] font-bold" : "text-[#8FAEC5]"}`}>Test Notes</span>
             {unreadCount > 0 && (
               <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#DC2626] text-white text-[10px] font-black flex items-center justify-center" data-testid="notes-unread-count">
                 {unreadCount > 99 ? "99+" : unreadCount}
