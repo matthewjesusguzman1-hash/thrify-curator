@@ -1101,7 +1101,17 @@ export default function BridgeChartPage() {
                       {parseInt(g.axles) >= 2 && parseInt(g.axles) <= 4 && (
                         <div className="space-y-1">
                           <label className="flex items-center gap-1.5 text-[10px] text-[#64748B] cursor-pointer select-none" data-testid={`dummy-axle-toggle-${gi}`}>
-                            <input type="checkbox" checked={!!g.dummyAxle} onChange={e => updateGroup(gi, "dummyAxle", e.target.checked)} className="w-3 h-3 accent-[#D4AF37]" />
+                            <input type="checkbox" checked={!!g.dummyAxle} onChange={e => {
+                              const checked = e.target.checked;
+                              // When enabling a dummy, clear the distance field so the user is prompted
+                              // to enter the NEW full-span distance that now includes the dummy axle.
+                              // When disabling, also clear distFtReduced so stale values don't linger.
+                              setGroups(curr => curr.map((x, i) => i === gi ? {
+                                ...x,
+                                dummyAxle: checked,
+                                ...(checked ? { distFt: "", distFtReduced: "" } : { distFtReduced: "" }),
+                              } : x));
+                            }} className="w-3 h-3 accent-[#D4AF37]" />
                             <span>Add <strong className="text-[#D4AF37]">dummy axle</strong> <span className="text-[#94A3B8]">(counts if it meets either threshold: ≥ 8,000 lbs OR ≥ 8% of gross; otherwise disregarded)</span></span>
                           </label>
                           {g.dummyAxle && viol?.dummy?.dummyWeight > 0 && (() => {
