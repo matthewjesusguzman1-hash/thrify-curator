@@ -407,24 +407,24 @@ export default function TieDownCalculator() {
           return (
             <div key={art.id} className="bg-white rounded-xl border overflow-hidden" data-testid={`article-${artIdx}`}>
               {/* Article header */}
-              <div className="flex items-center gap-2 px-4 py-3 bg-[#002855]/[0.03] border-b cursor-pointer" onClick={() => toggleExpanded(art.id)}>
-                <Package className="w-4 h-4 text-[#002855]" />
+              <div className="flex items-center gap-2 px-4 py-3 bg-[#002855] border-b border-[#002855] cursor-pointer" onClick={() => toggleExpanded(art.id)}>
+                <Package className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
                 <input
                   value={art.label}
                   onChange={(e) => { e.stopPropagation(); updateArticle(art.id, { label: e.target.value }); }}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 bg-transparent text-sm font-bold text-[#002855] border-none outline-none"
+                  className="flex-1 bg-transparent text-sm font-bold text-white placeholder-white/40 border-none outline-none"
                   data-testid={`article-label-${artIdx}`}
                 />
                 {c.w > 0 && (
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${c.allOk ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${c.allOk ? "bg-[#16A34A]/20 text-[#86EFAC]" : "bg-[#DC2626]/25 text-[#FCA5A5]"}`}>
                     {c.allOk ? "OK" : "FAIL"}
                   </span>
                 )}
                 {articles.length > 1 && (
-                  <button onClick={(e) => { e.stopPropagation(); removeArticle(art.id); }} className="text-[#CBD5E1] hover:text-[#DC2626] transition-colors p-1" data-testid={`remove-article-${artIdx}`}><Trash2 className="w-3.5 h-3.5" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); removeArticle(art.id); }} className="text-white/50 hover:text-[#FCA5A5] transition-colors p-1" data-testid={`remove-article-${artIdx}`}><Trash2 className="w-3.5 h-3.5" /></button>
                 )}
-                <ChevronDown className={`w-4 h-4 text-[#64748B] transition-transform duration-200 ${art.expanded ? "rotate-180" : ""}`} />
+                <ChevronDown className={`w-4 h-4 text-white/80 transition-transform duration-200 ${art.expanded ? "rotate-180" : ""}`} />
               </div>
 
               {art.expanded && (
