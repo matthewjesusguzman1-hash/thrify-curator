@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import ReactDOM from "react-dom/client";
+import WeightReportPrintable from "../components/app/WeightReportPrintable";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle, ChevronDown, ChevronUp, Camera, Ruler } from "lucide-react";
 import html2canvas from "html2canvas";
@@ -694,74 +696,66 @@ export default function BridgeChartPage() {
 
   const handlePhoto = (e) => { Array.from(e.target.files || []).forEach(f => { const r = new FileReader(); r.onload = (ev) => setPhotos(p => [...p, { dataUrl: ev.target.result, file: f }]); r.readAsDataURL(f); }); e.target.value = ""; };
 
-  // Capture the ENTIRE record tab content (violations, inputs, diagram) as a single PNG
+  // Capture the Weight Report as a clean, printable PNG using the dedicated
+  // WeightReportPrintable layout (900px wide, structured for readability),
+  // rendered off-screen so the on-screen UI is unchanged.
   const getCaptureBlob = useCallback(async () => {
-    const node = captureRef.current;
-    if (!node) return null;
+    // Build photo URLs for thumbnails
+    const photoThumbs = photos.map((p, i) => ({ id: p.id || `p${i}`, url: p.dataUrl }));
+
+    // Grab the live truck diagram SVG HTML so we preserve all its styling.
+    const svgEl = svgRef.current;
+    const svgHTML = svgEl ? svgEl.outerHTML : "";
+
+    // Off-screen host
+    const host = document.createElement("div");
+    host.style.position = "fixed";
+    host.style.top = "-10000px";
+    host.style.left = "0";
+    host.style.width = "900px";
+    host.style.pointerEvents = "none";
+    host.style.zIndex = "-1";
+    document.body.appendChild(host);
+
+    let canvas;
     try {
-      const canvas = await html2canvas(node, {
-        backgroundColor: "#F0F2F5",
+      const root = ReactDOM.createRoot(host);
+      await new Promise((resolve) => {
+        root.render(
+          <WeightReportPrintable
+            groups={groups}
+            record={record}
+            overallDistFt={overallDistFt}
+            isCustom={isCustom}
+            isInterstate={isInterstate}
+            diagramSvgMarkup={svgHTML}
+            badge={badge}
+            photos={photoThumbs}
+            axleNumbers={axleNumbers}
+          />
+        );
+        // Wait two animation frames so React commits and images start loading
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
+      // Give image thumbnails a beat to decode
+      await new Promise((r) => setTimeout(r, 120));
+
+      const target = host.firstElementChild;
+      canvas = await html2canvas(target, {
+        backgroundColor: "#FFFFFF",
         scale: 2,
         useCORS: true,
         logging: false,
-        onclone: (clonedDoc) => {
-          // html2canvas cannot render live <input>/<textarea>/<select> values.
-          // Replace them with plain <div>s showing the current value so the capture
-          // faithfully includes every entered weight / distance / name.
-          const makePlain = (el, text) => {
-            const span = clonedDoc.createElement("div");
-            span.textContent = text || "";
-            span.className = el.className || "";
-            span.setAttribute("style", `${el.getAttribute("style") || ""}; display:flex; align-items:center; justify-content:${el.style.textAlign === "center" || (el.className || "").includes("text-center") ? "center" : "flex-start"}; white-space:nowrap; overflow:hidden;`);
-            el.parentNode && el.parentNode.replaceChild(span, el);
-          };
-          clonedDoc.querySelectorAll("input, textarea").forEach(el => {
-            makePlain(el, el.value);
-          });
-          clonedDoc.querySelectorAll("select").forEach(sel => {
-            const opt = sel.options[sel.selectedIndex];
-            makePlain(sel, opt ? opt.textContent : "");
-          });
-          // Force explicit padding/line-height on every collapsible toggle header and
-          // text inside them so html2canvas renders text with full vertical clearance
-          // (on mobile/high-DPI the Tailwind classes occasionally lose bottom descenders).
-          const headerSelectors = [
-            '[data-testid="gross-toggle"]',
-            '[data-testid="toggle-interior-bridge"]',
-          ];
-          const headers = Array.from(clonedDoc.querySelectorAll(headerSelectors.join(",")));
-          // also include every group header (divs inside a card with role=button and navy/red bg)
-          clonedDoc.querySelectorAll('div[role="button"]').forEach(el => {
-            if (el.className && /bg-\[#002855\]|bg-\[#DC2626\]|bg-\[#F97316\]/.test(el.className)) {
-              headers.push(el);
-            }
-          });
-          headers.forEach(h => {
-            h.style.minHeight = "72px";
-            h.style.padding = "20px 12px";
-            h.style.lineHeight = "1.5";
-            h.style.boxSizing = "border-box";
-            h.querySelectorAll("span, strong").forEach(s => {
-              s.style.lineHeight = "1.5";
-              s.style.display = "inline-block";
-              s.style.verticalAlign = "middle";
-              s.style.paddingTop = "2px";
-              s.style.paddingBottom = "2px";
-            });
-          });
-          // Also let the card container not clip the header bottom by softening
-          // overflow-hidden into overflow-visible during capture.
-          clonedDoc.querySelectorAll('.overflow-hidden').forEach(el => {
-            el.style.overflow = "visible";
-          });
-        },
       });
-      return await new Promise(r => canvas.toBlob(r, "image/png"));
+      root.unmount();
     } catch (err) {
       console.error("Capture failed", err);
+      document.body.removeChild(host);
       return null;
     }
-  }, []);
+    document.body.removeChild(host);
+    return await new Promise((r) => canvas.toBlob(r, "image/png"));
+  }, [groups, record, overallDistFt, isCustom, isInterstate, badge, photos, axleNumbers]);
 
   const downloadDiag = async () => {
     const b = await getCaptureBlob();
