@@ -515,15 +515,26 @@ export default function BridgeChartPage() {
       }
       else if (n === 2) { max = 34000; source = "Tandem"; }
 
-      // Secondary tandem 34k check — only needed when dummy is COUNTED on a base-tandem group.
-      // When disregarded, the main group check (n=2 → 34k) already covers base+dummy vs 34k.
+      // Secondary tandem 34k check — only when dummy is COUNTED AND we know the base-tandem
+      // sum without the dummy (individual-weights mode). In group-weights mode the app
+      // cannot separate base-tandem from dummy, so the new tandemSubsetChecks
+      // (on individual pairs) handles it instead when in individual mode, and group
+      // mode relies on the triple bridge formula for the whole group.
       let tandemCheck = null;
-      if (di.hasDummy && baseN === 2 && !di.disregarded && di.dummyWeight > 0) {
-        const tandemActual = baseWeight + di.dummyWeight;
+      if (di.hasDummy && baseN === 2 && !di.disregarded && di.dummyWeight > 0 && !g.useGroup) {
+        // Use the summed base-tandem weight (A1+A2), NOT the dummy, so we never double-count.
+        const w1 = parseInt(g.weights?.[0]) || 0;
+        const w2 = parseInt(g.weights?.[1]) || 0;
+        const tandemActual = w1 + w2;
         if (tandemActual > 0) {
-          tandemCheck = { actual: tandemActual, max: 34000, source: `Tandem (A${axleNumbers[gi].start}-A${axleNumbers[gi].start + 1}) — dummy applied` };
+          tandemCheck = { actual: tandemActual, max: 34000, source: `Base tandem (A${axleNumbers[gi].start}-A${axleNumbers[gi].start + 1}) — dummy counted as 3rd axle` };
         }
       }
+
+      // Remind the user to enter a distance for the triple when the dummy is counted
+      // and turns a tandem/base group into a triple. Without a distance, we can't do
+      // the proper bridge lookup and default to the tandem 34k cap which is often overly strict.
+      const needsTripleDistance = di.hasDummy && !di.disregarded && n >= 3 && !gDistFull;
 
       // Single-axle 20,000 lb rule — applies to every axle individually (base + dummy if counted)
       // Only evaluable in Individual weights mode
@@ -585,7 +596,7 @@ export default function BridgeChartPage() {
         }
       }
 
-      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, distFtFull: gDistFull, distFtReduced: gDistReduced, tandemCheck, dummy: di, axleOverages, tandemSubsetChecks };
+      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, distFtFull: gDistFull, distFtReduced: gDistReduced, tandemCheck, dummy: di, axleOverages, tandemSubsetChecks, needsTripleDistance };
     });
 
     // Count how many violations exist across all groups (for 5% tolerance rule)
@@ -1111,6 +1122,16 @@ export default function BridgeChartPage() {
                         </div>
                       )}
 
+                      {/* Reminder: dummy axle is counted → group is a triple. Needs the full-span distance for the bridge lookup. */}
+                      {showViolations && viol?.needsTripleDistance && (
+                        <div className="rounded-md border border-[#F59E0B]/40 bg-[#FEF3C7] px-2.5 py-2 text-[10px] text-[#92400E] flex items-start gap-2" data-testid={`triple-distance-reminder-${gi}`}>
+                          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#F59E0B]" />
+                          <span>
+                            <strong>Dummy axle counted</strong> (holds ≥ 8,000 lbs or ≥ 8% of gross) — this group is now a triple. Enter the distance across all {viol.n} axles above so the bridge formula can apply the correct triple max (otherwise only the tandem 34,000 rule is used).
+                          </span>
+                        </div>
+                      )}
+
                       {/* Secondary tandem check for dummy-axle groups */}
                       {showViolations && viol?.tandemCheck && (
                         <div className={`rounded px-2 py-1 text-[10px] flex items-center justify-between ${viol.tandemCheck.actual > viol.tandemCheck.max ? "bg-[#FEE2E2]" : "bg-[#F0FDF4]"}`}>
@@ -1118,7 +1139,7 @@ export default function BridgeChartPage() {
                           {viol.tandemCheck.actual > viol.tandemCheck.max ? (
                             <span className="font-bold text-[#DC2626]">+{(viol.tandemCheck.actual - viol.tandemCheck.max).toLocaleString()} over</span>
                           ) : (
-                            <span className="text-[#16A34A] font-bold">Tandem legal ({viol.tandemCheck.actual.toLocaleString()})</span>
+                            <span className="text-[#16A34A] font-bold">Base tandem legal ({viol.tandemCheck.actual.toLocaleString()})</span>
                           )}
                         </div>
                       )}
