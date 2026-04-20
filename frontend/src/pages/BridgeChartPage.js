@@ -943,12 +943,19 @@ export default function BridgeChartPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <button onClick={() => switchMode(false)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${!isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-bridge">Bridge Formula</button>
               <button onClick={() => switchMode(true)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-custom">Custom / Permit</button>
-              {!isCustom && (
-                <div className="flex items-center gap-0 rounded-full bg-white border border-[#E2E8F0] overflow-hidden" data-testid="interstate-toggle">
-                  <button onClick={() => setIsInterstate(true)} className={`px-3 py-1.5 text-[11px] font-bold ${isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-on">Interstate</button>
-                  <button onClick={() => setIsInterstate(false)} className={`px-3 py-1.5 text-[11px] font-bold ${!isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-off">Non-interstate</button>
-                </div>
-              )}
+              {!isCustom && (() => {
+                const userDefault = getDefaultInterstate(badge);
+                return (
+                  <div className="flex items-center gap-0 rounded-full bg-white border border-[#E2E8F0] overflow-hidden" data-testid="interstate-toggle">
+                    <button onClick={() => setIsInterstate(true)} className={`relative px-3 py-1.5 text-[11px] font-bold ${isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-on" title={userDefault === true ? "Your saved default" : ""}>
+                      Interstate{userDefault === true && <span className="ml-1 text-[9px] font-black opacity-80">●</span>}
+                    </button>
+                    <button onClick={() => setIsInterstate(false)} className={`relative px-3 py-1.5 text-[11px] font-bold ${!isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-off" title={userDefault === false ? "Your saved default" : ""}>
+                      Non-interstate{userDefault === false && <span className="ml-1 text-[9px] font-black opacity-80">●</span>}
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setIsInputsCollapsed(v => !v)} className="flex items-center gap-1 text-[11px] font-bold text-[#002855]" data-testid="toggle-inputs-collapse">
