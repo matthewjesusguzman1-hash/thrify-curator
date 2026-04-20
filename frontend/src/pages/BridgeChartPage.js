@@ -504,14 +504,27 @@ export default function BridgeChartPage() {
       const gDistFull = roundDist(g.distFt, "0");
       const gDistReduced = roundDist(g.distFtReduced, "0");
       const gDist = di.hasDummy && di.disregarded ? gDistReduced : gDistFull;
+      const baseDescMap = { 1: "Single", 2: "Tandem", 3: "Triple", 4: "Quad", 5: "5-axle", 6: "6-axle", 7: "7-axle" };
+      const baseDesc = baseDescMap[baseN] || `${baseN}-axle`;
+      const dummySuffix = di.hasDummy ? (di.disregarded ? "" : "+dummy") : "";
+      const configLabel = di.hasDummy ? `${baseDesc}${dummySuffix ? `+dummy` : ""}` : baseDesc;
+
       let max = null, source = "";
       if (isCustom && g.maxOverride) { max = parseInt(g.maxOverride); source = "Custom"; }
       else if (n === 1) { max = 20000; source = "Single axle"; }
       else if (n === 2 && !gDist) { max = 34000; source = "Tandem"; }
       else if (n >= 2 && gDist) {
         const lk = bridgeLookup(gDist, n);
-        if (lk) { max = lk; source = `Bridge (${gDist}ft, ${n}ax${di.hasDummy && !di.disregarded ? " +dummy" : di.hasDummy ? " (dummy disregarded)" : ""})`; }
-        else if (n === 2) { max = 34000; source = "Tandem"; }
+        if (lk) {
+          max = lk;
+          if (di.hasDummy && !di.disregarded) {
+            source = `${baseDesc}+dummy · Bridge ${gDist}ft, ${n} axles`;
+          } else if (di.hasDummy && di.disregarded) {
+            source = `${baseDesc} (dummy disregarded) · Bridge ${gDist}ft, ${n} axles`;
+          } else {
+            source = `${configLabel} · Bridge ${gDist}ft, ${n} axles`;
+          }
+        } else if (n === 2) { max = 34000; source = "Tandem"; }
       }
       else if (n === 2) { max = 34000; source = "Tandem"; }
 
@@ -531,10 +544,11 @@ export default function BridgeChartPage() {
         }
       }
 
-      // Remind the user to enter a distance for the triple when the dummy is counted
-      // and turns a tandem/base group into a triple. Without a distance, we can't do
-      // the proper bridge lookup and default to the tandem 34k cap which is often overly strict.
-      const needsTripleDistance = di.hasDummy && !di.disregarded && n >= 3 && !gDistFull;
+      // Reminder to enter a distance for any 3+ axle group so the bridge lookup can apply.
+      // When the dummy axle is what pushed the count past a tandem, this is extra critical —
+      // otherwise the app falls back to the 34,000 tandem cap which is overly strict for a triple+.
+      const needsTripleDistance = n >= 3 && !gDistFull;
+      const dummyCreatedTriple = di.hasDummy && !di.disregarded && baseN === 2 && n >= 3;
 
       // Single-axle 20,000 lb rule — applies to every axle individually (base + dummy if counted)
       // Only evaluable in Individual weights mode
@@ -596,7 +610,7 @@ export default function BridgeChartPage() {
         }
       }
 
-      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, distFtFull: gDistFull, distFtReduced: gDistReduced, tandemCheck, dummy: di, axleOverages, tandemSubsetChecks, needsTripleDistance };
+      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, distFtFull: gDistFull, distFtReduced: gDistReduced, tandemCheck, dummy: di, axleOverages, tandemSubsetChecks, needsTripleDistance, dummyCreatedTriple };
     });
 
     // Count how many violations exist across all groups (for 5% tolerance rule)
@@ -1122,14 +1136,24 @@ export default function BridgeChartPage() {
                         </div>
                       )}
 
-                      {/* Reminder: dummy axle is counted → group is a triple. Needs the full-span distance for the bridge lookup. */}
+                      {/* Firm reminder: 3+ axle group missing a distance → bridge formula can't apply. */}
                       {showViolations && viol?.needsTripleDistance && (
-                        <div className="rounded-md border border-[#F59E0B]/40 bg-[#FEF3C7] px-2.5 py-2 text-[10px] text-[#92400E] flex items-start gap-2" data-testid={`triple-distance-reminder-${gi}`}>
-                          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#F59E0B]" />
-                          <span>
-                            <strong>Dummy axle counted</strong> (holds ≥ 8,000 lbs or ≥ 8% of gross) — this group is now a triple. Enter the distance across all {viol.n} axles above so the bridge formula can apply the correct triple max (otherwise only the tandem 34,000 rule is used).
-                          </span>
-                        </div>
+                        viol.dummyCreatedTriple ? (
+                          <div className="rounded-md border-2 border-[#DC2626] bg-[#FEE2E2] px-3 py-2.5 text-[11px] text-[#991B1B] flex items-start gap-2" data-testid={`triple-distance-reminder-${gi}`}>
+                            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#DC2626]" />
+                            <div>
+                              <div className="font-bold">Distance required — dummy made this a triple</div>
+                              <div className="text-[10px] mt-0.5 leading-snug text-[#7F1D1D]">
+                                The dummy axle is being counted (≥ 8,000 lbs or ≥ 8% of gross), so this group is now <strong>{viol.n} axles</strong>. Enter the full-span distance above so the triple bridge formula applies. Without it the app cannot verify the group.
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-md border border-[#F59E0B]/50 bg-[#FEF3C7] px-2.5 py-2 text-[10px] text-[#92400E] flex items-start gap-2" data-testid={`triple-distance-reminder-${gi}`}>
+                            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#F59E0B]" />
+                            <span><strong>Enter a distance</strong> for this {viol.n}-axle group so the bridge formula can apply. Without it the group is only checked against the tandem 34,000 cap.</span>
+                          </div>
+                        )
                       )}
 
                       {/* Secondary tandem check for dummy-axle groups */}
