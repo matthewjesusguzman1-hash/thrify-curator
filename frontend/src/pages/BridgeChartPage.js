@@ -491,7 +491,45 @@ export default function BridgeChartPage() {
 
       const an = axleNumbers[gi];
       const axLabel = an.start === an.end ? `A${an.start}` : `A${an.start}-${an.end}`;
-      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, distFtFull: gDistFull, distFtReduced: gDistReduced, tandemCheck, dummy: di, axleOverages };
+
+      // Consecutive tandem-subset checks within groups of 3+ axles (triples, quads, ...)
+      // Each consecutive pair is checked against 34,000 lb (standard tandem max), or against
+      // the bridge formula if the user supplies a per-pair distance in g.tandemDists[i].
+      // Only evaluable in Individual weights mode and only when not in Custom / Permit mode.
+      const tandemSubsetChecks = [];
+      if (!g.useGroup && !isCustom && baseN >= 3) {
+        const pairCount = baseN - 1;
+        for (let i = 0; i < pairCount; i++) {
+          const w1 = parseInt(g.weights?.[i]) || 0;
+          const w2 = parseInt(g.weights?.[i + 1]) || 0;
+          const sum = w1 + w2;
+          if (sum <= 0) continue;
+          const pairDistRaw = g.tandemDists?.[i];
+          const pairDistRound = roundDist(pairDistRaw, "0");
+          let pairMax = 34000, pairSource = "Tandem";
+          if (pairDistRound) {
+            const lk = bridgeLookup(pairDistRound, 2);
+            if (lk) { pairMax = lk; pairSource = `Bridge (${pairDistRound}ft, 2ax)`; }
+          }
+          const startAn = an.start + i;
+          const endAn = an.start + i + 1;
+          tandemSubsetChecks.push({
+            pairIndex: i,
+            startAxleNum: startAn,
+            endAxleNum: endAn,
+            label: `A${startAn}-A${endAn}`,
+            actual: sum,
+            max: pairMax,
+            source: pairSource,
+            distFt: pairDistRound,
+            over: sum > pairMax,
+            overBy: sum > pairMax ? sum - pairMax : 0,
+            hasDistanceInput: !!pairDistRaw,
+          });
+        }
+      }
+
+      return { gi, label: g.label || axLabel, actual: gWeight, max, source, n, baseN, distRound: gDist, distFtFull: gDistFull, distFtReduced: gDistReduced, tandemCheck, dummy: di, axleOverages, tandemSubsetChecks };
     });
 
     // Count how many violations exist across all groups (for 5% tolerance rule)
@@ -501,6 +539,7 @@ export default function BridgeChartPage() {
       if (v.max && v.actual > v.max) violationCount++;
       if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) violationCount++;
       if (v.axleOverages) violationCount += v.axleOverages.length;
+      if (v.tandemSubsetChecks) violationCount += v.tandemSubsetChecks.filter(t => t.over).length;
     });
     // Note: gross weight never gets tolerance, so don't count it
 
@@ -852,7 +891,9 @@ export default function BridgeChartPage() {
               const mainOver = hasViol && gWeight > viol.max;
               const tandemOver = showViolations && viol?.tandemCheck && viol.tandemCheck.actual > viol.tandemCheck.max;
               const anyAxleOver = showViolations && (viol?.axleOverages?.length > 0);
-              const isOver = mainOver || tandemOver || anyAxleOver;
+              const tandemSubsetOvers = showViolations ? (viol?.tandemSubsetChecks || []).filter(t => t.over) : [];
+              const anyTandemSubsetOver = tandemSubsetOvers.length > 0;
+              const isOver = mainOver || tandemOver || anyAxleOver || anyTandemSubsetOver;
               const withinTol = hasViol && !isCustom && record.toleranceApplies && mainOver && gWeight <= Math.round(viol.max * 1.05);
               const isCollapsed = g._collapsed && gWeight > 0;
 
@@ -877,6 +918,7 @@ export default function BridgeChartPage() {
                           +{(
                             mainOver ? (gWeight - viol.max) :
                             tandemOver ? (viol.tandemCheck.actual - viol.tandemCheck.max) :
+                            anyTandemSubsetOver ? tandemSubsetOvers.reduce((s, t) => s + t.overBy, 0) :
                             anyAxleOver ? viol.axleOverages.reduce((s, o) => s + o.over, 0) : 0
                           ).toLocaleString()}
                         </span>
@@ -1018,6 +1060,44 @@ export default function BridgeChartPage() {
                           )}
                         </div>
                       )}
+
+                      {/* Tandem-subset checks within triples / quads / etc. */}
+                      {showViolations && viol?.tandemSubsetChecks?.length > 0 && (() => {
+                        const anyOver = viol.tandemSubsetChecks.some(t => t.over);
+                        if (!anyOver) return null;
+                        return (
+                          <div className="space-y-1 pt-1 border-t border-[#FEE2E2]" data-testid={`tandem-subset-${gi}`}>
+                            <p className="text-[9px] font-bold uppercase text-[#DC2626] tracking-wide">Tandem subset check</p>
+                            {viol.tandemSubsetChecks.filter(t => t.over).map(t => (
+                              <div key={`tsub-${t.pairIndex}`} className="rounded-md border border-[#DC2626]/30 bg-[#FEE2E2] p-2 space-y-1.5">
+                                <div className="flex items-center justify-between gap-2 text-[10px]">
+                                  <span className="text-[#64748B] font-medium">{t.label}: {t.actual.toLocaleString()} lbs</span>
+                                  <span className="font-bold text-[#DC2626]">+{t.overBy.toLocaleString()} over {t.max.toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center gap-2" data-html2canvas-ignore="true">
+                                  <label className="text-[9px] font-bold text-[#002855] uppercase whitespace-nowrap">{t.label} dist (ft)</label>
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    value={g.tandemDists?.[t.pairIndex] || ""}
+                                    onChange={e => {
+                                      const next = [...(g.tandemDists || [])];
+                                      next[t.pairIndex] = e.target.value;
+                                      updateGroup(gi, "tandemDists", next);
+                                    }}
+                                    placeholder="Std (34k)"
+                                    className="flex-1 px-2 h-7 text-[11px] font-bold text-center rounded-md border border-[#DC2626]/40 outline-none bg-white"
+                                    data-testid={`tandem-dist-${gi}-${t.pairIndex}`}
+                                  />
+                                </div>
+                                <p className="text-[9px] text-[#64748B] italic leading-snug" data-html2canvas-ignore="true">
+                                  Leave blank for the 34,000 lb standard tandem rule, or enter the distance between {t.label} to apply the bridge formula for a higher max.
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -1244,7 +1324,7 @@ export default function BridgeChartPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Violations</h3>
-                {!isCustom && !record.toleranceApplies && record.groupViolations.some(v => (v.max && v.actual > v.max) || (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) || (v.axleOverages && v.axleOverages.length > 0)) && (
+                {!isCustom && !record.toleranceApplies && record.groupViolations.some(v => (v.max && v.actual > v.max) || (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) || (v.axleOverages && v.axleOverages.length > 0) || (v.tandemSubsetChecks && v.tandemSubsetChecks.some(t => t.over))) && (
                   <span className="text-[9px] font-bold text-[#DC2626] bg-[#FEE2E2] px-2 py-0.5 rounded-full">5% tolerance does not apply (more than one violation)</span>
                 )}
               </div>
@@ -1252,6 +1332,7 @@ export default function BridgeChartPage() {
                 <React.Fragment key={i}>
                   {v.max && v.actual > 0 && <ViolationCard label={`${v.label} (${v.source})`} actual={v.actual} max={v.max} tolerance={!isCustom && record.toleranceApplies} />}
                   {v.tandemCheck && <ViolationCard label={v.tandemCheck.source} actual={v.tandemCheck.actual} max={v.tandemCheck.max} tolerance={!isCustom && record.toleranceApplies} />}
+                  {v.tandemSubsetChecks?.filter(t => t.over).map(t => <ViolationCard key={`tsub-v-${v.gi}-${t.pairIndex}`} label={`${v.label} · ${t.label} (${t.source})`} actual={t.actual} max={t.max} tolerance={!isCustom && record.toleranceApplies} />)}
                   {v.axleOverages?.map(o => <ViolationCard key={`axle-${o.axleNum}`} label={`A${o.axleNum}${o.isDummy ? " (dummy)" : ""} (Single axle max)`} actual={o.weight} max={o.max} tolerance={!isCustom && record.toleranceApplies} />)}
                 </React.Fragment>
               ))}
@@ -1259,7 +1340,7 @@ export default function BridgeChartPage() {
               {record.interior?.enabled && record.interior?.max && record.interior.over && (
                 <ViolationCard label={`Interior Bridge A${record.interior.startAxleNum}–A${record.interior.endAxleNum} (${record.interior.source})`} actual={record.interior.actual} max={record.interior.max} tolerance={false} />
               )}
-              {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max) && (!v.axleOverages || v.axleOverages.length === 0)) && (!record.grossMax || record.gross <= record.grossMax) && !(record.interior?.over) && record.gross > 0 && (
+              {record.groupViolations.every(v => (!v.max || v.actual <= (v.max || Infinity)) && (!v.tandemCheck || v.tandemCheck.actual <= v.tandemCheck.max) && (!v.axleOverages || v.axleOverages.length === 0) && (!v.tandemSubsetChecks || !v.tandemSubsetChecks.some(t => t.over))) && (!record.grossMax || record.gross <= record.grossMax) && !(record.interior?.over) && record.gross > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] border border-[#16A34A]/30 rounded-lg"><CheckCircle2 className="w-4 h-4 text-[#16A34A]" /><span className="text-xs font-bold text-[#16A34A]">All weights within legal limits</span></div>
               )}
             </div>
@@ -1309,6 +1390,11 @@ export default function BridgeChartPage() {
                       {v.axleOverages?.map(o => (
                         <p key={`axle-${o.axleNum}`} className="mt-1 font-mono text-[#DC2626]">
                           Single axle rule (A{o.axleNum}{o.isDummy ? " dummy" : ""}): {o.weight.toLocaleString()} exceeds {o.max.toLocaleString()} → <strong>+{o.over.toLocaleString()} OVER</strong>
+                        </p>
+                      ))}
+                      {v.tandemSubsetChecks?.filter(t => t.over).map(t => (
+                        <p key={`tsub-calc-${t.pairIndex}`} className="mt-1 font-mono text-[#DC2626]">
+                          Tandem subset {t.label}: {t.actual.toLocaleString()} exceeds {t.max.toLocaleString()}{t.distFt ? ` (Bridge at ${t.distFt}ft)` : " (Standard 34,000)"} → <strong>+{t.overBy.toLocaleString()} OVER</strong>
                         </p>
                       ))}
                     </div>
