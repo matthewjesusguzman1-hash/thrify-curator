@@ -307,32 +307,81 @@ export default function BridgeChartPage() {
     makeGroup("Trailer", "Tandem (2)", 2),
   ];
   const initial = loadSaved();
-  const [groups, setGroups] = useState(initial?.groups || defaultGroups());
-  const [overallDistFt, setOverallDistFt] = useState(initial?.overallDistFt || "");
-  const [customGrossMax, setCustomGrossMax] = useState(initial?.customGrossMax || "");
-  const [photos, setPhotos] = useState(initial?.photos || []);
-  const [interiorDistFt, setInteriorDistFt] = useState(initial?.interiorDistFt || "");
-  const [customInteriorMax, setCustomInteriorMax] = useState(initial?.customInteriorMax || "");
+  // Two fully independent slots: Bridge Formula vs Custom / Permit. Each preserves its own
+  // groups/weights/distances/gross max/interior/photos so switching tabs never mutates the other.
+  const loadSlot = (slotName) => {
+    const slot = initial?.slots?.[slotName];
+    return {
+      groups: slot?.groups || defaultGroups(),
+      overallDistFt: slot?.overallDistFt || "",
+      customGrossMax: slot?.customGrossMax || "",
+      photos: slot?.photos || [],
+      interiorDistFt: slot?.interiorDistFt || "",
+      customInteriorMax: slot?.customInteriorMax || "",
+    };
+  };
+  // Migrate legacy single-slot saves into the "bridge" slot on first load.
+  const legacyBridgeSlot = initial && !initial.slots ? {
+    groups: initial.groups || defaultGroups(),
+    overallDistFt: initial.overallDistFt || "",
+    customGrossMax: initial.customGrossMax || "",
+    photos: initial.photos || [],
+    interiorDistFt: initial.interiorDistFt || "",
+    customInteriorMax: initial.customInteriorMax || "",
+  } : null;
+
+  const initialBridge = legacyBridgeSlot && !initial?.isCustom ? legacyBridgeSlot : loadSlot("bridge");
+  const initialCustom = legacyBridgeSlot && initial?.isCustom ? legacyBridgeSlot : loadSlot("custom");
+  const initialActive = initial?.isCustom ? initialCustom : initialBridge;
+
+  const [groups, setGroups] = useState(initialActive.groups);
+  const [overallDistFt, setOverallDistFt] = useState(initialActive.overallDistFt);
+  const [customGrossMax, setCustomGrossMax] = useState(initialActive.customGrossMax);
+  const [photos, setPhotos] = useState(initialActive.photos);
+  const [interiorDistFt, setInteriorDistFt] = useState(initialActive.interiorDistFt);
+  const [customInteriorMax, setCustomInteriorMax] = useState(initialActive.customInteriorMax);
   const [isInteriorBridgeCollapsed, setIsInteriorBridgeCollapsed] = useState(true);
+  // Stored state for the inactive tab
+  const [otherSlot, setOtherSlot] = useState(initial?.isCustom ? initialBridge : initialCustom);
+
   useEffect(() => { if (initial?.isCustom) setIsCustom(true); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // Persist on change
+
+  const currentSlotObj = useCallback(() => ({ groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax }), [groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax]);
+
+  // Switch to the other tab: snapshot current → otherSlot, restore otherSlot → active state.
+  const switchMode = (newIsCustom) => {
+    if (newIsCustom === isCustom) return;
+    const snapshot = currentSlotObj();
+    const restore = otherSlot;
+    setOtherSlot(snapshot);
+    setGroups(restore.groups);
+    setOverallDistFt(restore.overallDistFt);
+    setCustomGrossMax(restore.customGrossMax);
+    setPhotos(restore.photos);
+    setInteriorDistFt(restore.interiorDistFt);
+    setCustomInteriorMax(restore.customInteriorMax);
+    setIsCustom(newIsCustom);
+  };
+
+  // Persist on change — both slots.
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt, customInteriorMax }));
+      const active = { groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax };
+      const slots = isCustom ? { bridge: otherSlot, custom: active } : { bridge: active, custom: otherSlot };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ slots, isCustom }));
     } catch {}
-  }, [STORAGE_KEY, groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt, customInteriorMax]);
+  }, [STORAGE_KEY, groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt, customInteriorMax, otherSlot]);
 
   const clearRecord = () => {
-    if (!window.confirm("Clear all recorded weights, distances, and photos?")) return;
+    if (!window.confirm("Clear all recorded weights, distances, and photos for this tab?")) return;
     setGroups(defaultGroups());
     setOverallDistFt("");
     setCustomGrossMax("");
     setPhotos([]);
-    setIsCustom(false);
     setInteriorDistFt("");
     setCustomInteriorMax("");
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    // leave otherSlot intact so switching tabs restores its data
     toast.success("Cleared");
   };
 
@@ -859,8 +908,8 @@ export default function BridgeChartPage() {
 
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <button onClick={() => setIsCustom(false)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${!isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-bridge">Bridge Formula</button>
-              <button onClick={() => setIsCustom(true)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-custom">Custom / Permit</button>
+              <button onClick={() => switchMode(false)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${!isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-bridge">Bridge Formula</button>
+              <button onClick={() => switchMode(true)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-custom">Custom / Permit</button>
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setIsInputsCollapsed(v => !v)} className="flex items-center gap-1 text-[11px] font-bold text-[#002855]" data-testid="toggle-inputs-collapse">
