@@ -7,6 +7,7 @@ import html2canvas from "html2canvas";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
+import { getDefaultInterstate } from "../components/app/userPrefs";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -320,7 +321,7 @@ export default function BridgeChartPage() {
       photos: slot?.photos || [],
       interiorDistFt: slot?.interiorDistFt || "",
       customInteriorMax: slot?.customInteriorMax || "",
-      isInterstate: slot?.isInterstate !== undefined ? slot.isInterstate : true,
+      isInterstate: slot?.isInterstate !== undefined ? slot.isInterstate : getDefaultInterstate(badge),
     };
   };
   // Migrate legacy single-slot saves into the "bridge" slot on first load.
@@ -331,7 +332,7 @@ export default function BridgeChartPage() {
     photos: initial.photos || [],
     interiorDistFt: initial.interiorDistFt || "",
     customInteriorMax: initial.customInteriorMax || "",
-    isInterstate: true,
+    isInterstate: getDefaultInterstate(badge),
   } : null;
 
   const initialBridge = legacyBridgeSlot && !initial?.isCustom ? legacyBridgeSlot : loadSlot("bridge");
@@ -366,7 +367,7 @@ export default function BridgeChartPage() {
     setPhotos(restore.photos);
     setInteriorDistFt(restore.interiorDistFt);
     setCustomInteriorMax(restore.customInteriorMax);
-    setIsInterstate(restore.isInterstate !== undefined ? restore.isInterstate : true);
+    setIsInterstate(restore.isInterstate !== undefined ? restore.isInterstate : getDefaultInterstate(badge));
     setIsCustom(newIsCustom);
   };
 
@@ -387,7 +388,7 @@ export default function BridgeChartPage() {
     setPhotos([]);
     setInteriorDistFt("");
     setCustomInteriorMax("");
-    setIsInterstate(true);
+    setIsInterstate(getDefaultInterstate(badge));
     // leave otherSlot intact so switching tabs restores its data
     toast.success("Cleared");
   };
