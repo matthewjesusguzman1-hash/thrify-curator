@@ -127,6 +127,19 @@ export default function HoursOfServicePage() {
   const overBy = Math.max(0, grandTotal - limit);
   const isOOS = grandTotal > limit;
 
+  // OOS-duration logic:
+  // When a driver goes OOS, the driver stays out for the remainder of the current day.
+  // At midnight the 7/8-day window rolls forward one day, dropping the oldest day from the calc.
+  // If the oldest day's hours are enough to bring the total under the limit, rest-of-day OOS is sufficient.
+  // Otherwise a 34-consecutive-hour restart is required to reset the clock.
+  const oldestDayHours = dayTotals.length > 0 ? dayTotals[0].value : 0;
+  const oldestDate = dateFor(0);
+  const oldestDayLabel = `${DAY_NAMES[oldestDate.getDay()]} ${oldestDate.getMonth() + 1}/${oldestDate.getDate()}`;
+  const totalAfterDrop = grandTotal - oldestDayHours;
+  const oneDayOffEnough = isOOS && totalAfterDrop <= limit;
+  const needsRestart = isOOS && !oneDayOffEnough;
+  const hoursAvailableAfterDrop = Math.max(0, limit - totalAfterDrop);
+
   const anchorIsToday = sameDay(anchor, today);
 
   return (
@@ -299,13 +312,44 @@ export default function HoursOfServicePage() {
             <div className="h-px bg-black/5" />
 
             {isOOS ? (
-              <div className="flex items-start gap-2" data-testid="hos-oos">
-                <AlertTriangle className="w-5 h-5 text-[#DC2626] flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <div className="text-sm font-black text-[#DC2626] uppercase tracking-wide">Out of Service</div>
-                  <div className="text-xs text-[#991B1B] mt-0.5">
-                    Exceeded the {limit}-hour limit by <strong>{fmt(overBy)} hr</strong>. Driver may not drive until available hours drop below the limit.
+              <div className="space-y-3" data-testid="hos-oos">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-5 h-5 text-[#DC2626] flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="text-sm font-black text-[#DC2626] uppercase tracking-wide">Out of Service</div>
+                    <div className="text-xs text-[#991B1B] mt-0.5">
+                      Exceeded the {limit}-hour limit by <strong>{fmt(overBy)} hr</strong>.
+                    </div>
                   </div>
+                </div>
+
+                {/* OOS duration detail */}
+                <div className="rounded-lg bg-white/70 border border-[#EF4444]/20 p-3 text-xs text-[#991B1B] leading-relaxed" data-testid="hos-oos-duration">
+                  {oneDayOffEnough ? (
+                    <>
+                      <div className="font-black text-[#002855] uppercase tracking-wide text-[11px] mb-1">
+                        OOS Duration: Remainder of Current Day
+                      </div>
+                      <p>
+                        Driver is out of service for the <strong>rest of today</strong>. At midnight the {dayCount}-day window moves forward one day, dropping the oldest log day (<strong>{oldestDayLabel} · {fmt(oldestDayHours)} hr</strong>) from the calculation.
+                      </p>
+                      <p className="mt-1.5">
+                        Tomorrow's total becomes <strong>{fmt(totalAfterDrop)} hr</strong>, giving the driver <strong>{fmt(hoursAvailableAfterDrop)} hr</strong> available under the {limit}-hour limit.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-black text-[#002855] uppercase tracking-wide text-[11px] mb-1">
+                        34-Hour Restart Required
+                      </div>
+                      <p>
+                        Dropping the oldest log day (<strong>{oldestDayLabel} · {fmt(oldestDayHours)} hr</strong>) alone is not enough — tomorrow's total would still be <strong>{fmt(totalAfterDrop)} hr</strong>, still over the {limit}-hour limit.
+                      </p>
+                      <p className="mt-1.5">
+                        Driver must take <strong>34 consecutive hours off duty</strong> to fully reset the {limit}-hour clock.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             ) : grandTotal > 0 ? (
