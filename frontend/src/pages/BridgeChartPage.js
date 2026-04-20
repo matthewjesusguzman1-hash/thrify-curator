@@ -21,7 +21,7 @@ const RULES = [
   {
     title: "Maximum Allowable Weights",
     cfr: "§60-6,294",
-    note: "(refer to bridge chart below)",
+    note: "(refer to bridge chart)",
     items: [
       "Any single axle - 20,000 lbs.",
       "Any tandem axle - 34,000 lbs.",
