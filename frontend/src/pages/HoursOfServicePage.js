@@ -27,7 +27,7 @@ export default function HoursOfServicePage() {
           Coming Soon
         </h1>
         <p className="mt-3 text-sm text-[#64748B] max-w-md">
-          Hours of Service help is on the way. This section will cover HOS limits, on-duty / off-duty rules, sleeper-berth provisions, and the short-haul exception.
+          Hours of Service help is on the way.
         </p>
         <Button onClick={() => navigate(-1)} className="mt-8 bg-[#002855] text-white hover:bg-[#001a3a] h-10 px-6 text-xs font-bold" data-testid="hos-return-btn">
           Return
