@@ -318,6 +318,7 @@ export default function BridgeChartPage() {
       photos: slot?.photos || [],
       interiorDistFt: slot?.interiorDistFt || "",
       customInteriorMax: slot?.customInteriorMax || "",
+      isInterstate: slot?.isInterstate !== undefined ? slot.isInterstate : true,
     };
   };
   // Migrate legacy single-slot saves into the "bridge" slot on first load.
@@ -328,6 +329,7 @@ export default function BridgeChartPage() {
     photos: initial.photos || [],
     interiorDistFt: initial.interiorDistFt || "",
     customInteriorMax: initial.customInteriorMax || "",
+    isInterstate: true,
   } : null;
 
   const initialBridge = legacyBridgeSlot && !initial?.isCustom ? legacyBridgeSlot : loadSlot("bridge");
@@ -340,6 +342,7 @@ export default function BridgeChartPage() {
   const [photos, setPhotos] = useState(initialActive.photos);
   const [interiorDistFt, setInteriorDistFt] = useState(initialActive.interiorDistFt);
   const [customInteriorMax, setCustomInteriorMax] = useState(initialActive.customInteriorMax);
+  const [isInterstate, setIsInterstate] = useState(initialActive.isInterstate);
   const [isInteriorBridgeCollapsed, setIsInteriorBridgeCollapsed] = useState(true);
   // Stored state for the inactive tab
   const [otherSlot, setOtherSlot] = useState(initial?.isCustom ? initialBridge : initialCustom);
@@ -347,7 +350,7 @@ export default function BridgeChartPage() {
   useEffect(() => { if (initial?.isCustom) setIsCustom(true); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const currentSlotObj = useCallback(() => ({ groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax }), [groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax]);
+  const currentSlotObj = useCallback(() => ({ groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax, isInterstate }), [groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax, isInterstate]);
 
   // Switch to the other tab: snapshot current → otherSlot, restore otherSlot → active state.
   const switchMode = (newIsCustom) => {
@@ -361,17 +364,18 @@ export default function BridgeChartPage() {
     setPhotos(restore.photos);
     setInteriorDistFt(restore.interiorDistFt);
     setCustomInteriorMax(restore.customInteriorMax);
+    setIsInterstate(restore.isInterstate !== undefined ? restore.isInterstate : true);
     setIsCustom(newIsCustom);
   };
 
   // Persist on change — both slots.
   useEffect(() => {
     try {
-      const active = { groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax };
+      const active = { groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax, isInterstate };
       const slots = isCustom ? { bridge: otherSlot, custom: active } : { bridge: active, custom: otherSlot };
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ slots, isCustom }));
     } catch {}
-  }, [STORAGE_KEY, groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt, customInteriorMax, otherSlot]);
+  }, [STORAGE_KEY, groups, overallDistFt, customGrossMax, photos, isCustom, interiorDistFt, customInteriorMax, isInterstate, otherSlot]);
 
   const clearRecord = () => {
     if (!window.confirm("Clear all recorded weights, distances, and photos for this tab?")) return;
@@ -381,6 +385,7 @@ export default function BridgeChartPage() {
     setPhotos([]);
     setInteriorDistFt("");
     setCustomInteriorMax("");
+    setIsInterstate(true);
     // leave otherSlot intact so switching tabs restores its data
     toast.success("Cleared");
   };
@@ -604,6 +609,14 @@ export default function BridgeChartPage() {
       const colMax = Math.max(...Object.values(BD).map(row => row[totalAxles] || 0));
       if (colMax > 0) { grossMax = colMax; grossSource = `Max for ${totalAxles} axles (enter distance for accuracy)`; }
     }
+    // Interstate rule: gross can never exceed 80,000 lb regardless of axles/bridge formula.
+    // Only applies in Bridge Formula mode (Custom / Permit uses whatever max the permit grants).
+    if (!isCustom && isInterstate) {
+      if (grossMax == null || grossMax > 80000) {
+        grossMax = 80000;
+        grossSource = grossSource ? `Interstate 80,000 cap (was ${grossSource})` : "Interstate 80,000 cap";
+      }
+    }
 
     const conflicts = [];
     if (totalAxles < 1) conflicts.push("No axles defined");
@@ -677,7 +690,7 @@ export default function BridgeChartPage() {
     const toleranceApplies = !isCustom && violationCount === 1;
 
     return { totalAxles, gross, rawGross, overallRound, groupViolations, grossMax, grossSource, grossNote, conflicts, valid: conflicts.length === 0 && totalAxles > 0, dummyInfoList, toleranceApplies, interior };
-  }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers, interiorDistFt, customInteriorMax]);
+  }, [groups, overallDistFt, isCustom, customGrossMax, axleNumbers, interiorDistFt, customInteriorMax, isInterstate]);
 
   const handlePhoto = (e) => { Array.from(e.target.files || []).forEach(f => { const r = new FileReader(); r.onload = (ev) => setPhotos(p => [...p, { dataUrl: ev.target.result, file: f }]); r.readAsDataURL(f); }); e.target.value = ""; };
 
@@ -907,9 +920,15 @@ export default function BridgeChartPage() {
           </div>
 
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button onClick={() => switchMode(false)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${!isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-bridge">Bridge Formula</button>
               <button onClick={() => switchMode(true)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${isCustom ? "bg-[#002855] text-white" : "bg-white text-[#64748B] border border-[#E2E8F0]"}`} data-testid="mode-custom">Custom / Permit</button>
+              {!isCustom && (
+                <div className="flex items-center gap-0 rounded-full bg-white border border-[#E2E8F0] overflow-hidden" data-testid="interstate-toggle">
+                  <button onClick={() => setIsInterstate(true)} className={`px-3 py-1.5 text-[11px] font-bold ${isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-on">Interstate</button>
+                  <button onClick={() => setIsInterstate(false)} className={`px-3 py-1.5 text-[11px] font-bold ${!isInterstate ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="interstate-off">Non-interstate</button>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setIsInputsCollapsed(v => !v)} className="flex items-center gap-1 text-[11px] font-bold text-[#002855]" data-testid="toggle-inputs-collapse">
