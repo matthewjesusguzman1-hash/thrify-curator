@@ -18,15 +18,75 @@ function bridgeLookup(d, a) { return d && a && BD[d] ? BD[d][a] || null : null; 
 function roundDist(ft, inc) { const f = parseInt(ft) || 0, i = parseInt(inc) || 0; if (!f && !i) return null; return Math.round((f * 12 + i) / 12); }
 
 const RULES = [
-  { title: "Maximum Allowable Weights", cfr: "§60-6,294", items: ["Any single axle — 20,000 lbs.", "Any tandem axle — 34,000 lbs.", "On State highways — 95,000 lbs.", "On Interstate — 80,000 lbs. or 95,000 lbs. with Conditional Interstate Use Permit"] },
-  { title: "Tandem Axle", items: ["Any two consecutive axles whose centers are more than 40\" and not more than 96\" apart."] },
-  { title: "Two-Axle Group (8' to 8'6\")", hl: true, items: ["Max gross load on group of two axles, distance > 8' but < 8'6\", shall be 38,000 lbs."] },
-  { title: "Measuring Distance", items: ["Measured to the nearest foot. At exactly 6\", round up.", "3 axle group max 34,000 lbs unless distance at least 96\"."] },
-  { title: "Tandem Exception (36'-38')", hl: true, items: ["Two consecutive tandem sets at 36'-38' may carry 34,000 lbs each."] },
-  { title: "Weight Tolerance (5% Shift)", hl: true, items: ["5% shift if only one axle/group overweight and distance 12' or less."] },
-  { title: "Dummy Axles", items: ["Counts when it meets EITHER threshold: ≥ 8,000 lbs OR ≥ 8% of gross.", "Disregarded only when under 8,000 lbs AND under 8% of gross.", "If it counts, its weight applies to the group check (e.g., tandem 34k rule)."] },
-  { title: "APU Allowance", items: ["Up to 550 lbs. Not in addition to 5% tolerance."] },
-  { title: "Natural Gas Vehicles", items: ["Up to 2,000 lbs extra. Max 82,000 lbs on Interstate."] },
+  {
+    title: "Maximum Allowable Weights",
+    cfr: "§60-6,294",
+    note: "(refer to bridge chart below)",
+    items: [
+      "Any single axle - 20,000 lbs.",
+      "Any tandem axle - 34,000 lbs.",
+      "On State highways - 95,000 lbs.",
+      "On Interstate - 80,000 lbs. or 95,000 lbs. with Conditional Interstate Use Permit",
+    ],
+  },
+  {
+    title: "Tandem Axle",
+    items: [
+      "Any two consecutive axles whose centers are more than 40\" and not more than 96\" apart, measured to the nearest inch between any two adjacent axles in the series.",
+    ],
+  },
+  {
+    title: "Two-Axle Group (8' to 8'6\")",
+    hl: true,
+    items: [
+      "The maximum gross load on any group of two axles, the distance between the extremes of which is more than 8' but less than 8'6\", shall be 38,000 lbs.",
+    ],
+  },
+  {
+    title: "Measuring Distance",
+    items: [
+      "The distance between axles shall be measured to the nearest foot. When a fraction is exactly one-half foot, the next larger whole number shall be used, except that any group of 3 axles shall be restricted to a maximum load of 34,000 lbs. unless the distance between the extremes of the first and third axle is at least 96\" in fact.",
+    ],
+  },
+  {
+    title: "Tandem Exception (36'-38')",
+    hl: true,
+    items: [
+      "Gross weights are subject to all wheel and axle load restrictions indicated in the bridge chart, except if you have two consecutive sets of tandem axles that measure a minimum of 36', 37', or 38', you may carry 34,000 lbs. each on such consecutive sets of tandem axles.",
+    ],
+  },
+  {
+    title: "Sliding Fifth-Wheel",
+    cfr: "§60-6,301",
+    items: [
+      "It shall be unlawful to reposition the fifth-wheel connection device of a truck-tractor and semitrailer combination carrying cargo and on the state highway system, except when done pursuant to state statute §60-6,301.",
+    ],
+  },
+  {
+    title: "Weight Tolerance",
+    hl: true,
+    items: [
+      "There is a 5% weight shift if only overweight on one axle, one tandem axle, or one group of axles when the distance between the first and last axle of such group of axles is 12' or less.",
+    ],
+  },
+  {
+    title: "Dummy Axles",
+    items: [
+      "Shall be disregarded in determining the legal weight of a vehicle or combination of vehicles if the dummy axle does not carry the lesser of 8,000 lbs. or 8% of the gross weight of the vehicle, or vehicle combination including the load.",
+    ],
+  },
+  {
+    title: "Idle Reduction Technology or APU",
+    items: [
+      "The maximum gross weight limit and the axle weight limit for any vehicle or combination of vehicles equipped with an APU may be increased by an amount necessary to cover the additional weight of the APU. The additional weight shall not exceed 550 lbs. or the weight specified on the unit, whichever is less. This shall not be in addition to the 5% shift tolerance.",
+    ],
+  },
+  {
+    title: "Natural Gas Powered Vehicles",
+    items: [
+      "A vehicle primarily fueled by natural gas may exceed any vehicle weight limit up to 2,000 lbs. to cover the difference between the natural gas fuel system and a comparable diesel fuel system. No vehicle using this exception may exceed 82,000 lbs. overall gross on the National System of Interstate and Defense Highways.",
+    ],
+  },
 ];
 
 const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"];
@@ -899,7 +959,11 @@ export default function BridgeChartPage() {
               <div className="divide-y divide-[#F1F5F9]">
                 {RULES.map((r, i) => (
                   <div key={i} className={`px-4 py-2.5 ${r.hl ? "bg-[#D4AF37]/5" : ""}`}>
-                    <h3 className="text-xs font-bold text-[#002855] mb-1">{r.title}{r.cfr && <span className="ml-1 text-[10px] font-mono text-[#D4AF37]">{r.cfr}</span>}</h3>
+                    <h3 className="text-xs font-bold text-[#002855] mb-1">
+                      {r.title}
+                      {r.cfr && <span className="ml-1 text-[10px] font-mono text-[#D4AF37]">{r.cfr}</span>}
+                      {r.note && <span className="ml-1 text-[10px] italic font-normal text-[#64748B]">{r.note}</span>}
+                    </h3>
                     {r.items.map((it, j) => <p key={j} className="text-[11px] text-[#475569] leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-[6px] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#CBD5E1]">{it}</p>)}
                   </div>
                 ))}
