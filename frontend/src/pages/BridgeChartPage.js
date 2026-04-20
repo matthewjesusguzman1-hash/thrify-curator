@@ -938,18 +938,18 @@ export default function BridgeChartPage() {
               </div>
               <button onClick={() => setShowRules(false)} className="text-white/40 hover:text-white" data-testid="close-rules-btn"><X className="w-4 h-4" /></button>
             </div>
-            {/* Tabs */}
-            <div className="flex items-center border-b border-[#E2E8F0] bg-[#F8FAFC] px-2">
+            {/* Tabs — pill style matching page-level tabs above */}
+            <div className="flex items-center gap-2 border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5">
               <button
                 onClick={() => setRulesTab("rules")}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-colors border-b-2 -mb-px ${rulesTab === "rules" ? "border-[#D4AF37] text-[#002855]" : "border-transparent text-[#64748B] hover:text-[#002855]"}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all ${rulesTab === "rules" ? "bg-[#D4AF37] text-[#002855] shadow-sm" : "bg-white text-[#64748B] border border-[#E2E8F0] hover:text-[#002855]"}`}
                 data-testid="rules-tab-rules"
               >
                 <Info className="w-3.5 h-3.5" /> Rules
               </button>
               <button
                 onClick={() => setRulesTab("measure")}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-colors border-b-2 -mb-px ${rulesTab === "measure" ? "border-[#D4AF37] text-[#002855]" : "border-transparent text-[#64748B] hover:text-[#002855]"}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all ${rulesTab === "measure" ? "bg-[#D4AF37] text-[#002855] shadow-sm" : "bg-white text-[#64748B] border border-[#E2E8F0] hover:text-[#002855]"}`}
                 data-testid="rules-tab-measure"
               >
                 <Ruler className="w-3.5 h-3.5" /> How to Measure Bridge
