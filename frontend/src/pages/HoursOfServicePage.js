@@ -47,7 +47,7 @@ function makeRows(n) {
     id: i,
     drive: "",
     onDuty: "",
-    total: "",
+    total: "10", // TEST: pre-fills each day with 10 hr so you don't have to type during testing
   }));
 }
 
