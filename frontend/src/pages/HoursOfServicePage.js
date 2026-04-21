@@ -163,13 +163,16 @@ export default function HoursOfServicePage() {
     let cumulativeOOS = hLeft;
     let runningTotal = grandTotal;
     let daysDropped = 1;
-    runningTotal = runningTotal - dayTotals[0].value;
+    const gained1 = dayTotals[0].value;
+    runningTotal = runningTotal - gained1;
     const oldestDate0 = addDays(anchor, -(dayCount - 1));
     steps.push({
       stepNum: 1,
       oosHours: cumulativeOOS,
-      description: `Rest remainder of today (${fmt(hLeft)} hr). At midnight, oldest day ${DAY_NAMES[oldestDate0.getDay()]} ${oldestDate0.getMonth() + 1}/${oldestDate0.getDate()} (${fmt(dayTotals[0].value)} hr) ages off.`,
+      description: `Rest remainder of today (${fmt(hLeft)} hr). At midnight, oldest day ${DAY_NAMES[oldestDate0.getDay()]} ${oldestDate0.getMonth() + 1}/${oldestDate0.getDate()} (${fmt(gained1)} hr) ages off.`,
+      gained: gained1,
       runningTotal,
+      available: Math.max(0, limit - runningTotal),
       passes: runningTotal <= limit,
     });
 
@@ -177,25 +180,33 @@ export default function HoursOfServicePage() {
       cumulativeOOS += 24;
       daysDropped += 1;
       const idx = daysDropped - 1;
-      runningTotal = runningTotal - dayTotals[idx].value;
+      const gainedN = dayTotals[idx].value;
+      runningTotal = runningTotal - gainedN;
       const dropDate = addDays(anchor, -(dayCount - 1 - idx));
       steps.push({
         stepNum: steps.length + 1,
         oosHours: cumulativeOOS,
-        description: `+24 hr rest. Next oldest day ${DAY_NAMES[dropDate.getDay()]} ${dropDate.getMonth() + 1}/${dropDate.getDate()} (${fmt(dayTotals[idx].value)} hr) ages off.`,
+        description: `+24 hr rest. Next oldest day ${DAY_NAMES[dropDate.getDay()]} ${dropDate.getMonth() + 1}/${dropDate.getDate()} (${fmt(gainedN)} hr) ages off.`,
+        gained: gainedN,
         runningTotal,
+        available: Math.max(0, limit - runningTotal),
         passes: runningTotal <= limit,
       });
     }
 
     const solved = runningTotal <= limit;
     const exceedsRestart = cumulativeOOS >= 34;
+    const finalAvailable = Math.max(0, limit - runningTotal);
+    // Low-availability warning: even if math "solves", driver might return with < 2 hr usable.
+    const lowAvailability = solved && finalAvailable < 2;
     return {
       needsInput: false,
       steps,
       cumulativeOOS,
       finalTotal: runningTotal,
+      finalAvailable,
       solved,
+      lowAvailability,
       recommendRestart: !solved || exceedsRestart,
     };
   }, [isOOS, hoursLeftFromStopTime, grandTotal, dayTotals, limit, anchor, dayCount]);
@@ -223,8 +234,18 @@ export default function HoursOfServicePage() {
     isOos: isOOS,
     overBy,
     hoursLeftToday: hoursLeftFromStopTime,
-    recoverySteps: oosSim && !oosSim.needsInput ? oosSim.steps : [],
+    recoverySteps: oosSim && !oosSim.needsInput ? oosSim.steps.map((s) => ({
+      stepNum: s.stepNum,
+      description: s.description,
+      oosHours: s.oosHours,
+      gained: s.gained,
+      runningTotal: s.runningTotal,
+      available: s.available,
+      passes: s.passes,
+    })) : [],
     oosDuration: oosSim && !oosSim.needsInput && !oosSim.recommendRestart ? oosSim.cumulativeOOS : null,
+    finalAvailable: oosSim && !oosSim.needsInput ? oosSim.finalAvailable : null,
+    lowAvailability: !!(oosSim && !oosSim.needsInput && oosSim.lowAvailability),
     recommendRestart: !!(oosSim && !oosSim.needsInput && oosSim.recommendRestart),
   }), [rows, ruleType, limit, dayCount, grandTotal, isOOS, overBy, hoursLeftFromStopTime, oosSim, anchor, dayTotals, today]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -250,9 +271,10 @@ export default function HoursOfServicePage() {
         is_oos: snapshot.isOos,
         over_by: snapshot.overBy,
         hours_left_today: snapshot.hoursLeftToday,
-        recovery_steps: snapshot.recoverySteps.map((s) => ({ step_num: s.stepNum, description: s.description, oos_hours: s.oosHours, running_total: s.runningTotal, passes: s.passes })),
+        recovery_steps: snapshot.recoverySteps.map((s) => ({ step_num: s.stepNum, description: s.description, oos_hours: s.oosHours, running_total: s.runningTotal, passes: s.passes, gained: s.gained, available: s.available })),
         oos_duration: snapshot.oosDuration,
         recommend_restart: snapshot.recommendRestart,
+        notes: snapshot.lowAvailability ? `Low availability (${fmt(snapshot.finalAvailable)} hr) after natural recovery — 34-hr restart advised.` : "",
       });
       toast.success("HOS recap saved to inspection");
       setShowSaveModal(false);
@@ -291,11 +313,17 @@ export default function HoursOfServicePage() {
         title: "34-Hour Restart Required",
         sub: `Driver must take 34 consecutive hours off duty to fully reset the ${limit}-hour clock.`,
       };
+    } else if (oosSim && !oosSim.needsInput && oosSim.lowAvailability) {
+      verdict = {
+        tone: "oos",
+        title: `Rest ${fmt(oosSim.cumulativeOOS)} hr — only ${fmt(oosSim.finalAvailable)} hr available`,
+        sub: `Driver would return with ${fmt(oosSim.finalAvailable)} hr left before hitting the ${limit}-hr limit again. Consider recommending a 34-hour restart for more runway.`,
+      };
     } else if (oosSim && !oosSim.needsInput) {
       verdict = {
         tone: "oos",
         title: `Rest ${fmt(oosSim.cumulativeOOS)} hr before driving`,
-        sub: `After ${fmt(oosSim.cumulativeOOS)} hours off duty, total drops to ${fmt(oosSim.finalTotal)} hr (under ${limit}).`,
+        sub: `After ${fmt(oosSim.cumulativeOOS)} hr off duty, total drops to ${fmt(oosSim.finalTotal)} hr — driver will have ${fmt(oosSim.finalAvailable)} hr available.`,
       };
     }
   }
@@ -563,18 +591,48 @@ export default function HoursOfServicePage() {
                             </span>
                             <div className="flex-1">
                               <div>{s.description}</div>
-                              <div className="mt-0.5 text-[9px]">
-                                <span className="text-[#64748B]">OOS:</span>{" "}
-                                <strong className="text-[#002855]">{fmt(s.oosHours)} hr</strong>
-                                <span className="mx-1 text-[#CBD5E1]">·</span>
-                                <strong className={s.passes ? "text-[#16A34A]" : "text-[#DC2626]"}>
-                                  {fmt(s.runningTotal)} hr {s.passes ? "✓ ok" : "— over"}
-                                </strong>
+                              <div className="mt-0.5 text-[9px] flex flex-wrap gap-x-1.5 gap-y-0.5">
+                                <span><span className="text-[#64748B]">OOS:</span> <strong className="text-[#002855]">{fmt(s.oosHours)} hr</strong></span>
+                                <span className="text-[#CBD5E1]">·</span>
+                                <span><span className="text-[#64748B]">Gained:</span> <strong className="text-[#16A34A]">+{fmt(s.gained)} hr</strong></span>
+                                <span className="text-[#CBD5E1]">·</span>
+                                <span><span className="text-[#64748B]">Total:</span> <strong className={s.passes ? "text-[#002855]" : "text-[#DC2626]"}>{fmt(s.runningTotal)} hr</strong></span>
+                                <span className="text-[#CBD5E1]">·</span>
+                                <span>
+                                  <span className="text-[#64748B]">Available:</span>{" "}
+                                  <strong className={s.passes ? (s.available < 2 ? "text-[#F59E0B]" : "text-[#16A34A]") : "text-[#DC2626]"}>
+                                    {s.passes ? fmt(s.available) : "0"} hr
+                                  </strong>
+                                  {s.passes && s.available < 2 && <span className="ml-1 text-[#F59E0B]">⚠</span>}
+                                </span>
                               </div>
                             </div>
                           </li>
                         ))}
                       </ol>
+
+                      {/* Summary bar */}
+                      <div className="border-t border-[#E2E8F0] pt-1.5 mt-1">
+                        {oosSim.solved ? (
+                          <div className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 ${oosSim.lowAvailability ? "bg-[#FEF3C7] border border-[#F59E0B]/40" : "bg-[#F0FDF4] border border-[#16A34A]/30"}`} data-testid="hos-oos-summary">
+                            <div className="text-[10px]">
+                              <span className="text-[#64748B]">After rest:</span>{" "}
+                              <strong className="text-[#002855]">{fmt(oosSim.finalTotal)} hr used</strong>
+                              <span className="mx-1 text-[#CBD5E1]">·</span>
+                              <strong className={oosSim.lowAvailability ? "text-[#92400E]" : "text-[#16A34A]"}>
+                                {fmt(oosSim.finalAvailable)} hr available
+                              </strong>
+                            </div>
+                            {oosSim.lowAvailability && (
+                              <span className="text-[9px] font-bold text-[#92400E] uppercase tracking-wide">⚠ Consider 34-hr restart</span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="rounded-md bg-[#FEE2E2] border border-[#DC2626]/40 px-2 py-1.5 text-[10px] text-[#991B1B]">
+                            Natural recovery won't bring driver under {limit} hr — <strong>34-hr restart required</strong>.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

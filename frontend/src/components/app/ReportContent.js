@@ -335,9 +335,17 @@ export function HosReportContent({ snapshot }) {
                 <div style={{ flex: 1 }}>
                   <div style={{ color: "#334155" }}>{s.description}</div>
                   <div style={{ fontSize: 10, color: "#64748B", marginTop: 2 }}>
-                    Cumulative OOS: <strong style={{ color: "#002855" }}>{Number(s.oosHours).toFixed(2)} hr</strong>
+                    OOS: <strong style={{ color: "#002855" }}>{Number(s.oosHours).toFixed(2)} hr</strong>
+                    {s.gained != null && <>
+                      <span style={{ margin: "0 6px", color: "#CBD5E1" }}>·</span>
+                      Gained: <strong style={{ color: "#10B981" }}>+{Number(s.gained).toFixed(2)} hr</strong>
+                    </>}
                     <span style={{ margin: "0 6px", color: "#CBD5E1" }}>·</span>
-                    New total: <strong style={{ color: s.passes ? "#10B981" : "#DC2626" }}>{Number(s.runningTotal).toFixed(2)} hr {s.passes ? "✓ under limit" : "— still over"}</strong>
+                    Total: <strong style={{ color: s.passes ? "#002855" : "#DC2626" }}>{Number(s.runningTotal).toFixed(2)} hr</strong>
+                    {s.available != null && <>
+                      <span style={{ margin: "0 6px", color: "#CBD5E1" }}>·</span>
+                      Available: <strong style={{ color: s.passes ? (s.available < 2 ? "#F59E0B" : "#10B981") : "#DC2626" }}>{s.passes ? Number(s.available).toFixed(2) : "0.00"} hr</strong>
+                    </>}
                   </div>
                 </div>
               </li>

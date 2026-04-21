@@ -195,6 +195,8 @@ class HosRecoveryStep(BaseModel):
     oos_hours: float = 0
     running_total: float = 0
     passes: bool = False
+    gained: float = 0
+    available: float = 0
 
 
 class SaveHosRequest(BaseModel):
