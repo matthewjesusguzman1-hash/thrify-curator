@@ -908,17 +908,18 @@ export default function BridgeChartPage() {
   const openInspPicker = async () => { setShowInspPicker(true); try { const r = await fetch(`${API}/api/inspections?badge=${badge}`); if (r.ok) { const d = await r.json(); setInspections(d.inspections || []); } } catch {} };
   const addToInsp = async (id) => {
     setSaving(true);
-    // Upload the bridge chart capture and capture its photo_id so we can link it
-    let mainPhotoId = null;
-    const b = await getCaptureBlob();
-    if (b) {
-      const fd = new FormData();
-      fd.append("file", b, "weight.png");
-      try {
-        const r = await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd });
-        if (r.ok) { const p = await r.json(); mainPhotoId = p.photo_id; }
-      } catch {}
-    }
+    // Capture the truck diagram SVG markup so we can embed it in the inspection view / PDF
+    let truckSvg = "";
+    try {
+      const svg = svgRef.current;
+      if (svg) {
+        // Clone + ensure proper xmlns for standalone rendering
+        const clone = svg.cloneNode(true);
+        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+        truckSvg = clone.outerHTML;
+      }
+    } catch {}
+    // Upload any inspector-taken photos (via camera icon) as general_photos
     for (const p of photos) {
       if (p.file) {
         const fd = new FormData();
@@ -926,7 +927,7 @@ export default function BridgeChartPage() {
         await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd });
       }
     }
-    // POST structured snapshot so inspection detail can display info + support Recreate
+    // POST structured snapshot (data only — no report PNG)
     try {
       await fetch(`${API}/api/inspections/${id}/weight-assessments`, {
         method: "POST",
@@ -951,7 +952,7 @@ export default function BridgeChartPage() {
             return s + c;
           }, 0) + (record.grossMax && record.gross > record.grossMax ? 1 : 0),
           mode_label: isCustom ? "Custom" : "Bridge Formula",
-          photo_id: mainPhotoId,
+          truck_diagram_svg: truckSvg,
         }),
       });
     } catch {}

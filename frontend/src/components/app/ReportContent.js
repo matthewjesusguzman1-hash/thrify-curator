@@ -397,7 +397,6 @@ export function InspectionReportContent({ inspection }) {
             Weight Assessments ({inspection.weight_assessments.length})
           </div>
           {inspection.weight_assessments.map((a, ai) => {
-            const linkedPhoto = (inspection.general_photos || []).find(p => p.photo_id === a.photo_id);
             const isOver = a.gross_max && a.gross_weight > a.gross_max;
             const hasViolations = a.violation_count > 0;
             return (
@@ -458,8 +457,8 @@ export function InspectionReportContent({ inspection }) {
                   </table>
                 )}
 
-                {linkedPhoto && (
-                  <img src={`${API}/files/${linkedPhoto.storage_path}`} alt="" style={{ width: "100%", borderRadius: 4, border: "1px solid #ddd" }} crossOrigin="anonymous" />
+                {a.truck_diagram_svg && (
+                  <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 4, padding: 6, overflowX: "auto" }} dangerouslySetInnerHTML={{ __html: a.truck_diagram_svg }} />
                 )}
               </div>
             );
@@ -467,24 +466,19 @@ export function InspectionReportContent({ inspection }) {
         </div>
       )}
 
-      {/* Orphan Weight Photos (not linked to any structured assessment) */}
-      {(() => {
-        const linked = new Set((inspection.weight_assessments || []).map(a => a.photo_id).filter(Boolean));
-        const orphans = (inspection.general_photos || []).filter(p => !linked.has(p.photo_id));
-        if (orphans.length === 0) return null;
-        return (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: "bold", color: "#002855", marginBottom: 6, borderBottom: "2px solid #D4AF37", paddingBottom: 4 }}>
-              Additional Photos ({orphans.length})
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {orphans.map((ph) => (
-                <img key={ph.photo_id} src={`${API}/files/${ph.storage_path}`} alt="" style={{ width: 260, maxWidth: "100%", borderRadius: 4, border: "1px solid #ddd" }} crossOrigin="anonymous" />
-              ))}
-            </div>
+      {/* Additional Photos (inspector-taken camera photos) */}
+      {(inspection.general_photos || []).length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: "bold", color: "#002855", marginBottom: 6, borderBottom: "2px solid #D4AF37", paddingBottom: 4 }}>
+            Additional Photos ({inspection.general_photos.length})
           </div>
-        );
-      })()}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {inspection.general_photos.map((ph) => (
+              <img key={ph.photo_id} src={`${API}/files/${ph.storage_path}`} alt="" style={{ width: 260, maxWidth: "100%", borderRadius: 4, border: "1px solid #ddd" }} crossOrigin="anonymous" />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -490,7 +490,6 @@ export default function InspectionDetail() {
             </div>
             <div className="space-y-3">
               {inspection.weight_assessments.map((a) => {
-                const linkedPhoto = (inspection.general_photos || []).find(p => p.photo_id === a.photo_id);
                 const isOver = a.gross_max && a.gross_weight > a.gross_max;
                 const hasViolations = a.violation_count > 0;
                 return (
@@ -568,15 +567,11 @@ export default function InspectionDetail() {
                       </div>
                     )}
 
-                    {/* Linked image */}
-                    {linkedPhoto && (
-                      <div className="mb-3">
-                        <img
-                          src={`${API}/files/${linkedPhoto.storage_path}`}
-                          alt="Weight capture"
-                          className="w-full rounded-md border cursor-pointer"
-                          onClick={() => setPreviewPhoto(`${API}/files/${linkedPhoto.storage_path}`)}
-                        />
+                    {/* Truck diagram (inline SVG) */}
+                    {a.truck_diagram_svg && (
+                      <div className="mb-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-md p-2 overflow-x-auto">
+                        <div className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Truck Diagram</div>
+                        <div dangerouslySetInnerHTML={{ __html: a.truck_diagram_svg }} className="[&_svg]:max-w-full [&_svg]:h-auto" />
                       </div>
                     )}
 
@@ -587,7 +582,7 @@ export default function InspectionDetail() {
                       className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-[#002855] text-white text-[11px] font-bold hover:bg-[#001a3a] transition-colors"
                       data-testid={`recreate-weight-${a.assessment_id}`}
                     >
-                      <Repeat className="w-3 h-3" /> Recreate in Bridge Chart
+                      <Repeat className="w-3 h-3" /> Recreate in Weights
                     </button>
                   </div>
                 );
@@ -596,21 +591,21 @@ export default function InspectionDetail() {
           </div>
         )}
 
-        {/* Orphan Weight Photos — photos not tied to a weight assessment */}
-        {(inspection.general_photos || []).filter(p => !(inspection.weight_assessments || []).some(a => a.photo_id === p.photo_id)).length > 0 && (
+        {/* Additional Photos — inspector-taken camera photos */}
+        {(inspection.general_photos || []).length > 0 && (
           <div data-testid="weight-photos-section">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                Additional Photos ({(inspection.general_photos || []).filter(p => !(inspection.weight_assessments || []).some(a => a.photo_id === p.photo_id)).length})
+                Additional Photos ({inspection.general_photos.length})
               </span>
             </div>
             <div className="bg-white rounded-lg border p-3">
               <div className="space-y-3">
-                {(inspection.general_photos || []).filter(p => !(inspection.weight_assessments || []).some(a => a.photo_id === p.photo_id)).map((photo) => (
+                {inspection.general_photos.map((photo) => (
                   <div key={photo.photo_id} className="relative group" data-testid={`weight-photo-${photo.photo_id}`}>
                     <img
                       src={`${API}/files/${photo.storage_path}`}
-                      alt={photo.original_filename || "Weight capture"}
+                      alt={photo.original_filename || "Inspection photo"}
                       className="w-full rounded-md border cursor-pointer bg-white"
                       onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
                     />

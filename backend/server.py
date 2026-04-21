@@ -223,8 +223,8 @@ class SaveWeightRequest(BaseModel):
     gross_max: Optional[float] = None
     violation_count: int = 0
     mode_label: str = ""  # "Bridge Formula" | "Custom"
-    # Optional link to the already-uploaded image
-    photo_id: Optional[str] = None
+    # Rendered SVG markup of the truck diagram
+    truck_diagram_svg: str = ""
 
 
 class SaveHosRequest(BaseModel):
