@@ -492,6 +492,20 @@ export default function InspectionDetail() {
               {inspection.weight_assessments.map((a) => {
                 const isOver = a.gross_max && a.gross_weight > a.gross_max;
                 const hasViolations = a.violation_count > 0;
+                // Recompute tolerance at render time: only applies when EXACTLY one overage
+                // (including gross) and we're in Bridge Formula mode.
+                const countOverages = () => {
+                  let c = 0;
+                  (a.group_violations || []).forEach((v) => {
+                    if (v.max && v.actual > v.max) c++;
+                    if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) c++;
+                    (v.axleOverages || []).forEach((ao) => { if ((ao.actual || 0) > (ao.max || 0)) c++; });
+                    (v.tandemSubsetChecks || []).forEach((t) => { if (t.over) c++; });
+                  });
+                  if (isOver) c++;
+                  return c;
+                };
+                const toleranceApplies = !a.is_custom && countOverages() === 1;
                 return (
                   <div key={a.assessment_id} className="bg-white rounded-lg border p-4" data-testid={`weight-assessment-${a.assessment_id}`}>
                     <div className="flex items-start justify-between gap-2 mb-3">
