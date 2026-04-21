@@ -59,6 +59,7 @@ export default function HoursOfServicePage() {
   const [rowsPass, setRowsPass] = useState(() => makeRows(7));
   const [anchorProp, setAnchorProp] = useState(() => startOfDay(new Date()));
   const [anchorPass, setAnchorPass] = useState(() => startOfDay(new Date()));
+  const [hoursLeftToday, setHoursLeftToday] = useState("");
 
   const rows = ruleType === "property" ? rowsProp : rowsPass;
   const setRows = ruleType === "property" ? setRowsProp : setRowsPass;
@@ -127,18 +128,62 @@ export default function HoursOfServicePage() {
   const overBy = Math.max(0, grandTotal - limit);
   const isOOS = grandTotal > limit;
 
-  // OOS-duration logic:
-  // When a driver goes OOS, the driver stays out for the remainder of the current day.
-  // At midnight the 7/8-day window rolls forward one day, dropping the oldest day from the calc.
-  // If the oldest day's hours are enough to bring the total under the limit, rest-of-day OOS is sufficient.
-  // Otherwise a 34-consecutive-hour restart is required to reset the clock.
-  const oldestDayHours = dayTotals.length > 0 ? dayTotals[0].value : 0;
-  const oldestDate = dateFor(0);
-  const oldestDayLabel = `${DAY_NAMES[oldestDate.getDay()]} ${oldestDate.getMonth() + 1}/${oldestDate.getDate()}`;
-  const totalAfterDrop = grandTotal - oldestDayHours;
-  const oneDayOffEnough = isOOS && totalAfterDrop <= limit;
-  const needsRestart = isOOS && !oneDayOffEnough;
-  const hoursAvailableAfterDrop = Math.max(0, limit - totalAfterDrop);
+  // OOS duration simulator:
+  // The driver rests for the remainder of today (hoursLeftToday).
+  // At midnight, the oldest log day rolls off, freeing up its hours.
+  // If that's still not enough, add another 24 hr (another full day of rest) — the next oldest day rolls off.
+  // Continue until the running total is ≤ limit — OR cumulative rest reaches 34 hr (then a 34-hour restart is recommended, since it fully resets the clock).
+  const oosSim = useMemo(() => {
+    if (!isOOS) return null;
+    const hLeft = parseHours(hoursLeftToday);
+    if (!hoursLeftToday || hLeft <= 0) return { needsInput: true };
+
+    // step 0: rest of today; drop oldest day
+    const steps = [];
+    let cumulativeOOS = hLeft;
+    let runningTotal = grandTotal;
+    let daysDropped = 0;
+
+    // First step: end rest-of-today → oldest day rolls off at midnight
+    daysDropped = 1;
+    runningTotal = runningTotal - dayTotals[0].value;
+    const oldestDate0 = addDays(anchor, -(dayCount - 1));
+    steps.push({
+      stepNum: 1,
+      oosHours: cumulativeOOS,
+      description: `Rest remainder of today (${fmt(hLeft)} hr). At midnight, oldest day ${DAY_NAMES[oldestDate0.getDay()]} ${oldestDate0.getMonth() + 1}/${oldestDate0.getDate()} (${fmt(dayTotals[0].value)} hr) ages off.`,
+      runningTotal,
+      passes: runningTotal <= limit,
+    });
+
+    while (runningTotal > limit && cumulativeOOS < 34 && daysDropped < dayTotals.length) {
+      cumulativeOOS += 24;
+      daysDropped += 1;
+      const idx = daysDropped - 1;
+      runningTotal = runningTotal - dayTotals[idx].value;
+      const dropDate = addDays(anchor, -(dayCount - 1 - idx));
+      steps.push({
+        stepNum: steps.length + 1,
+        oosHours: cumulativeOOS,
+        description: `+24 hr rest. Next oldest day ${DAY_NAMES[dropDate.getDay()]} ${dropDate.getMonth() + 1}/${dropDate.getDate()} (${fmt(dayTotals[idx].value)} hr) ages off.`,
+        runningTotal,
+        passes: runningTotal <= limit,
+      });
+    }
+
+    const solved = runningTotal <= limit;
+    const exceedsRestart = cumulativeOOS >= 34;
+
+    return {
+      needsInput: false,
+      steps,
+      cumulativeOOS,
+      finalTotal: runningTotal,
+      solved,
+      // Recommend restart when: natural recovery ≥ 34 hr, OR natural recovery never reaches under limit
+      recommendRestart: !solved || exceedsRestart,
+    };
+  }, [isOOS, hoursLeftToday, grandTotal, dayTotals, limit, anchor, dayCount]);
 
   const anchorIsToday = sameDay(anchor, today);
 
@@ -323,34 +368,84 @@ export default function HoursOfServicePage() {
                   </div>
                 </div>
 
-                {/* OOS duration detail */}
-                <div className="rounded-lg bg-white/70 border border-[#EF4444]/20 p-3 text-xs text-[#991B1B] leading-relaxed" data-testid="hos-oos-duration">
-                  {oneDayOffEnough ? (
-                    <>
-                      <div className="font-black text-[#002855] uppercase tracking-wide text-[11px] mb-1">
-                        OOS Duration: Remainder of Current Day
-                      </div>
-                      <p>
-                        Driver is out of service for the <strong>rest of today</strong>. At midnight the {dayCount}-day window moves forward one day, dropping the oldest log day (<strong>{oldestDayLabel} · {fmt(oldestDayHours)} hr</strong>) from the calculation.
-                      </p>
-                      <p className="mt-1.5">
-                        Tomorrow's total becomes <strong>{fmt(totalAfterDrop)} hr</strong>, giving the driver <strong>{fmt(hoursAvailableAfterDrop)} hr</strong> available under the {limit}-hour limit.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="font-black text-[#002855] uppercase tracking-wide text-[11px] mb-1">
-                        34-Hour Restart Required
-                      </div>
-                      <p>
-                        Dropping the oldest log day (<strong>{oldestDayLabel} · {fmt(oldestDayHours)} hr</strong>) alone is not enough — tomorrow's total would still be <strong>{fmt(totalAfterDrop)} hr</strong>, still over the {limit}-hour limit.
-                      </p>
-                      <p className="mt-1.5">
-                        Driver must take <strong>34 consecutive hours off duty</strong> to fully reset the {limit}-hour clock.
-                      </p>
-                    </>
-                  )}
+                {/* Hours left in today input */}
+                <div className="rounded-lg bg-white/80 border border-[#EF4444]/20 p-3 space-y-2" data-testid="hos-hours-left-card">
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase block">
+                    Hours remaining in today's log
+                    <span className="ml-1 font-normal normal-case text-[#94A3B8]">(until midnight)</span>
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.25"
+                    min="0"
+                    max="24"
+                    value={hoursLeftToday}
+                    onChange={(e) => setHoursLeftToday(e.target.value)}
+                    placeholder="e.g. 10"
+                    className="w-full px-3 py-2 text-sm font-bold rounded-lg border border-[#E2E8F0] outline-none focus:border-[#D4AF37]"
+                    data-testid="hos-hours-left-input"
+                  />
+                  <p className="text-[10px] text-[#64748B] italic">
+                    How much time is left in today's calendar day. Used to compute the first rest step.
+                  </p>
                 </div>
+
+                {/* Simulation result */}
+                {oosSim && !oosSim.needsInput && (
+                  <div className="rounded-lg bg-white/70 border border-[#EF4444]/20 p-3 space-y-2" data-testid="hos-oos-sim">
+                    <div className="text-[11px] font-black text-[#002855] uppercase tracking-wide">Recovery Logic</div>
+                    <ol className="space-y-1.5 text-[11px] text-[#475569] leading-relaxed">
+                      {oosSim.steps.map((s) => (
+                        <li key={s.stepNum} className="flex gap-2" data-testid={`hos-oos-step-${s.stepNum}`}>
+                          <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${s.passes ? "bg-[#16A34A] text-white" : "bg-[#CBD5E1] text-[#475569]"}`}>
+                            {s.stepNum}
+                          </span>
+                          <div className="flex-1">
+                            <div>{s.description}</div>
+                            <div className="mt-0.5 text-[10px]">
+                              <span className="text-[#64748B]">Cumulative OOS:</span> <strong className="text-[#002855]">{fmt(s.oosHours)} hr</strong>
+                              <span className="mx-1 text-[#CBD5E1]">·</span>
+                              <span className="text-[#64748B]">New total:</span>{" "}
+                              <strong className={s.passes ? "text-[#16A34A]" : "text-[#DC2626]"}>
+                                {fmt(s.runningTotal)} hr {s.passes ? "✓ under limit" : "— still over"}
+                              </strong>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+
+                    <div className="h-px bg-black/10 my-2" />
+
+                    {oosSim.recommendRestart ? (
+                      <div className="rounded-md bg-[#FEF3C7] border border-[#F59E0B]/40 p-2.5" data-testid="hos-restart-recommended">
+                        <div className="text-[11px] font-black text-[#92400E] uppercase tracking-wide mb-0.5">
+                          Recommend 34-Hour Restart
+                        </div>
+                        <p className="text-[11px] text-[#78350F] leading-relaxed">
+                          {oosSim.solved
+                            ? <>Natural recovery would require <strong>{fmt(oosSim.cumulativeOOS)} hr</strong> off duty. Since that meets or exceeds 34 hours, a <strong>34-hour restart</strong> is the better option — it fully resets the {limit}-hour clock.</>
+                            : <>Even dropping all eligible days within the window would not bring the driver under {limit} hours. Driver must take <strong>34 consecutive hours off duty</strong> to fully reset the clock.</>
+                          }
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-md bg-[#F0FDF4] border border-[#16A34A]/40 p-2.5" data-testid="hos-oos-total">
+                        <div className="text-[11px] font-black text-[#166534] uppercase tracking-wide mb-0.5">
+                          Total OOS Duration: {fmt(oosSim.cumulativeOOS)} hr
+                        </div>
+                        <p className="text-[11px] text-[#14532D] leading-relaxed">
+                          After <strong>{fmt(oosSim.cumulativeOOS)} hours off duty</strong>, the driver's {dayCount}-day total drops to <strong>{fmt(oosSim.finalTotal)} hr</strong>, leaving <strong>{fmt(limit - oosSim.finalTotal)} hr</strong> available under the {limit}-hour limit.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {oosSim?.needsInput && (
+                  <p className="text-[11px] text-[#64748B] italic">Enter hours remaining in today's log above to see the recovery calculation.</p>
+                )}
               </div>
             ) : grandTotal > 0 ? (
               <div className="flex items-start gap-2" data-testid="hos-ok">
@@ -376,6 +471,7 @@ export default function HoursOfServicePage() {
             <li>Or, type your own calculated <strong>Total</strong> directly into that column — it will clear Drive and On-Duty for that day.</li>
             <li>Tap any <strong>date</strong> to shift the whole {dayCount}-day window. All other dates update to match.</li>
             <li>The calculator sums all {dayCount} days and compares against the {limit}-hour limit.</li>
+            <li>If the driver is OOS, enter <strong>hours remaining in today's log</strong> to compute the required off-duty time. The logic drops the oldest day at midnight (+24 hr for each additional day). If total off-duty reaches 34 hr, a <strong>34-hour restart</strong> is recommended instead.</li>
           </ul>
         </div>
       </main>
