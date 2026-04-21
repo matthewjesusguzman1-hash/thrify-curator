@@ -168,7 +168,7 @@ export default function HoursOfServicePage() {
     steps.push({
       stepNum: 1,
       oosHours: cumulativeOOS,
-      description: `Rest remainder of today (${fmt(hLeft)} hr). At midnight, oldest day ${DAY_NAMES[oldestDate0.getDay()]} ${oldestDate0.getMonth() + 1}/${oldestDate0.getDate()} (${fmt(gained1)} hr) ages off.`,
+      description: `Rest remainder of today (${fmt(hLeft)} hr). At midnight, oldest day ${DAY_NAMES[oldestDate0.getDay()]} ${oldestDate0.getMonth() + 1}/${oldestDate0.getDate()} (${fmt(gained1)} hr) is no longer counted.`,
       gained: gained1,
       runningTotal,
       available: Math.max(0, limit - runningTotal),
@@ -185,7 +185,7 @@ export default function HoursOfServicePage() {
       steps.push({
         stepNum: steps.length + 1,
         oosHours: cumulativeOOS,
-        description: `+24 hr rest. Next oldest day ${DAY_NAMES[dropDate.getDay()]} ${dropDate.getMonth() + 1}/${dropDate.getDate()} (${fmt(gainedN)} hr) ages off.`,
+        description: `+24 hr rest. Next oldest day ${DAY_NAMES[dropDate.getDay()]} ${dropDate.getMonth() + 1}/${dropDate.getDate()} (${fmt(gainedN)} hr) is no longer counted.`,
         gained: gainedN,
         runningTotal,
         available: Math.max(0, limit - runningTotal),
@@ -415,7 +415,7 @@ export default function HoursOfServicePage() {
                       <div className="mt-1 text-[11px] flex flex-wrap gap-x-2 gap-y-0.5">
                         <span><span className="text-[#64748B]">OOS:</span> <strong className="text-[#002855]">{fmt(s.oosHours)} hr</strong></span>
                         <span className="text-[#CBD5E1]">·</span>
-                        <span><span className="text-[#64748B]">Aged off (not counted):</span> <strong className="text-[#475569]">−{fmt(s.gained)} hr</strong></span>
+                        <span><span className="text-[#64748B]">No longer counted:</span> <strong className="text-[#475569]">−{fmt(s.gained)} hr</strong></span>
                         <span className="text-[#CBD5E1]">·</span>
                         <span><span className="text-[#64748B]">Total:</span> <strong className={s.passes ? "text-[#002855]" : "text-[#DC2626]"}>{fmt(s.runningTotal)} hr</strong></span>
                         <span className="text-[#CBD5E1]">·</span>
