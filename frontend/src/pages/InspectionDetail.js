@@ -496,17 +496,34 @@ export default function InspectionDetail() {
                 // group/axle/tandem overage exists and we're in Bridge Formula mode.
                 // Gross weight and interior bridge are NEVER subject to the 5% tolerance
                 // and are NOT counted toward the one-violation threshold.
-                const countOverages = () => {
-                  let c = 0;
-                  (a.group_violations || []).forEach((v) => {
-                    if (v.max && v.actual > v.max) c++;
-                    if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) c++;
-                    (v.axleOverages || []).forEach((ao) => { if ((ao.actual || 0) > (ao.max || 0)) c++; });
-                    (v.tandemSubsetChecks || []).forEach((t) => { if (t.over) c++; });
+                let _overCount = 0;
+                let _toleranceSavedOne = false;
+                (a.group_violations || []).forEach((v) => {
+                  if (v.max && v.actual > v.max) {
+                    _overCount++;
+                    if (v.actual <= v.max * 1.05) _toleranceSavedOne = true;
+                  }
+                  if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) {
+                    _overCount++;
+                    if (v.tandemCheck.actual <= v.tandemCheck.max * 1.05) _toleranceSavedOne = true;
+                  }
+                  (v.axleOverages || []).forEach((ao) => {
+                    if ((ao.actual || 0) > (ao.max || 0)) {
+                      _overCount++;
+                      if (ao.actual <= ao.max * 1.05) _toleranceSavedOne = true;
+                    }
                   });
-                  return c;
-                };
-                const toleranceApplies = !a.is_custom && countOverages() === 1;
+                  (v.tandemSubsetChecks || []).forEach((t) => {
+                    if (t.over) {
+                      _overCount++;
+                      if (t.actual <= t.max * 1.05) _toleranceSavedOne = true;
+                    }
+                  });
+                });
+                // Tolerance is "applied" only if eligible (1 overage, not custom) AND
+                // that overage was actually forgiven (within 5%).
+                const toleranceEligible = !a.is_custom && _overCount === 1;
+                const toleranceApplies = toleranceEligible && _toleranceSavedOne;
                 return (
                   <div key={a.assessment_id} className="bg-white rounded-lg border p-4" data-testid={`weight-assessment-${a.assessment_id}`}>
                     <div className="flex items-start justify-between gap-2 mb-3">

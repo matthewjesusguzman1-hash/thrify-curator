@@ -404,13 +404,33 @@ export function InspectionReportContent({ inspection }) {
             // Gross weight and interior bridge are NEVER subject to the 5% tolerance
             // and are NOT counted toward the one-violation threshold.
             let _overCount = 0;
+            let _toleranceSavedOne = false;
             (a.group_violations || []).forEach((v) => {
-              if (v.max && v.actual > v.max) _overCount++;
-              if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) _overCount++;
-              (v.axleOverages || []).forEach((ao) => { if ((ao.actual || 0) > (ao.max || 0)) _overCount++; });
-              (v.tandemSubsetChecks || []).forEach((t) => { if (t.over) _overCount++; });
+              if (v.max && v.actual > v.max) {
+                _overCount++;
+                if (v.actual <= v.max * 1.05) _toleranceSavedOne = true;
+              }
+              if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) {
+                _overCount++;
+                if (v.tandemCheck.actual <= v.tandemCheck.max * 1.05) _toleranceSavedOne = true;
+              }
+              (v.axleOverages || []).forEach((ao) => {
+                if ((ao.actual || 0) > (ao.max || 0)) {
+                  _overCount++;
+                  if (ao.actual <= ao.max * 1.05) _toleranceSavedOne = true;
+                }
+              });
+              (v.tandemSubsetChecks || []).forEach((t) => {
+                if (t.over) {
+                  _overCount++;
+                  if (t.actual <= t.max * 1.05) _toleranceSavedOne = true;
+                }
+              });
             });
-            const toleranceApplies = !a.is_custom && _overCount === 1;
+            // Tolerance is "applied" only if eligible (1 overage, not custom) AND
+            // that overage was actually forgiven (within 5%).
+            const toleranceEligible = !a.is_custom && _overCount === 1;
+            const toleranceApplies = toleranceEligible && _toleranceSavedOne;
             return (
               <div key={a.assessment_id || ai} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 6, flexWrap: "wrap" }}>
