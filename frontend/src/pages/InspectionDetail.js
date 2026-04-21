@@ -469,26 +469,26 @@ export default function InspectionDetail() {
               </span>
             </div>
             <div className="bg-white rounded-lg border p-3">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-3">
                 <Scale className="w-4 h-4 text-[#002855]" />
                 <span className="text-sm font-bold text-[#002855]">Bridge Chart / Weight Exports</span>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-3">
                 {inspection.general_photos.map((photo) => (
                   <div key={photo.photo_id} className="relative group" data-testid={`weight-photo-${photo.photo_id}`}>
                     <img
                       src={`${API}/files/${photo.storage_path}`}
                       alt={photo.original_filename || "Weight capture"}
-                      className="w-20 h-20 object-cover rounded-md border cursor-pointer"
+                      className="w-full rounded-md border cursor-pointer bg-white"
                       onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); removeGeneralPhoto(photo.photo_id); }}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#DC2626] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-[#B91C1C]"
+                      className="absolute top-2 right-2 w-7 h-7 bg-[#DC2626] text-white rounded-full flex items-center justify-center shadow-md hover:bg-[#B91C1C]"
                       data-testid={`remove-weight-photo-${photo.photo_id}`}
                       aria-label="Remove photo"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 ))}

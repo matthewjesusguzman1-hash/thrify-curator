@@ -15,11 +15,64 @@ function calcMinByLength(l, w, b) {
   return 2 + Math.ceil((l - 10) / 10);
 }
 
+// Inline SVG WLL gauge for PDF rendering
+function PDFGauge({ pct, size = 72, stroke = 8 }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const display = Math.min(Math.max(pct, 0), 100);
+  const offset = circ - (display / 100) * circ;
+  const c = size / 2;
+  const color = pct >= 100 ? "#10B981" : pct >= 60 ? "#F59E0B" : "#EF4444";
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={c} cy={c} r={r} fill="none" stroke="#E2E8F0" strokeWidth={stroke} />
+        <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: 14, fontWeight: 900, lineHeight: 1, color }}>{Math.round(pct)}%</span>
+        <span style={{ fontSize: 7, color: "#94A3B8", fontWeight: 700, letterSpacing: 1.5, marginTop: 2 }}>WLL</span>
+      </div>
+    </div>
+  );
+}
+
+// Inline count dots (active/defective/missing)
+function PDFCountDots({ tiedowns = [], required = 0 }) {
+  const active = tiedowns.filter((t) => !t.defective).length;
+  const missing = Math.max(0, required - active);
+  const dots = [];
+  tiedowns.forEach((td, i) => {
+    dots.push(
+      td.defective ? (
+        <div key={`t${i}`} style={{ width: 18, height: 18, borderRadius: 9, background: "#fee2e2", border: "2px solid #f87171", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#DC2626", fontWeight: 900 }}>✕</div>
+      ) : (
+        <div key={`t${i}`} style={{ width: 18, height: 18, borderRadius: 9, background: "#10B981", border: "2px solid #059669", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "white", fontWeight: 900 }}>✓</div>
+      )
+    );
+  });
+  for (let i = 0; i < missing; i++) {
+    dots.push(<div key={`m${i}`} style={{ width: 18, height: 18, borderRadius: 9, border: "2px dashed #CBD5E1" }} />);
+  }
+  return <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>{dots}</div>;
+}
+
+// Uniform 4-stat row — same width / centered text
+function StatCell({ label, value, valueColor = "#002855", sub }) {
+  return (
+    <div style={{ flex: "1 1 0", minWidth: 0, background: "#f8fafc", padding: "6px 4px", borderRadius: 4, border: "1px solid #E2E8F0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: 42 }}>
+      <span style={{ color: "#94A3B8", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", lineHeight: 1 }}>{label}</span>
+      <strong style={{ color: valueColor, fontSize: 12, marginTop: 3, lineHeight: 1 }}>{value}</strong>
+      {sub && <span style={{ color: "#94A3B8", fontSize: 7, marginTop: 2, lineHeight: 1 }}>{sub}</span>}
+    </div>
+  );
+}
+
 export function TieDownReportContent({ articles }) {
   const now = new Date().toLocaleString();
   return (
     <div>
-      {/* Header — its own PDF section */}
+      {/* Header */}
       <div data-pdf-section="header" style={{ background: "#002855", color: "white", padding: "10px 14px", borderRadius: 6, marginBottom: 12 }}>
         <div style={{ fontSize: 16, fontWeight: "bold", margin: 0 }}>Tie-Down Assessment Report</div>
         <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>{now} | {articles.length} article(s) | 49 CFR 393</div>
@@ -37,49 +90,39 @@ export function TieDownReportContent({ articles }) {
         const wllOk = w > 0 && totWLL >= reqWLL;
         const countOk = w > 0 && active >= min;
         const allOk = wllOk && countOk;
-        const pct = reqWLL > 0 ? Math.round((totWLL / reqWLL) * 100) : 0;
-        const barColor = pct >= 100 ? "#10B981" : pct >= 60 ? "#F59E0B" : "#EF4444";
+        const pct = reqWLL > 0 ? (totWLL / reqWLL) * 100 : 0;
 
         return (
           <div key={a.id} data-pdf-section={`article-${ai}`} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 10 }}>
             {/* Article title + status inline */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <span style={{ fontSize: 13, fontWeight: "bold", color: "#002855" }}>Article {ai + 1}: {a.label}</span>
               <span style={{ background: allOk ? "#ecfdf5" : "#fef2f2", border: `1px solid ${allOk ? "#a7f3d0" : "#fecaca"}`, color: allOk ? "#10B981" : "#DC2626", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: "bold", display: "inline-block" }}>
                 {allOk ? "COMPLIANT" : "NOT COMPLIANT"}
               </span>
             </div>
 
-            {/* Compact stats — single row */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 8, fontSize: 11 }}>
-              <div style={{ background: "#f8fafc", padding: "4px 8px", borderRadius: 4, flex: 1, textAlign: "center" }}>
-                <span style={{ color: "#94A3B8", fontSize: 9 }}>WEIGHT </span>
-                <strong style={{ color: "#002855" }}>{w.toLocaleString()} lbs</strong>
-              </div>
-              <div style={{ background: "#f8fafc", padding: "4px 8px", borderRadius: 4, flex: 1, textAlign: "center" }}>
-                <span style={{ color: "#94A3B8", fontSize: 9 }}>LENGTH </span>
-                <strong style={{ color: "#002855" }}>{l} ft</strong>
-              </div>
-              <div style={{ background: "#f8fafc", padding: "4px 8px", borderRadius: 4, flex: 1, textAlign: "center" }}>
-                <span style={{ color: "#94A3B8", fontSize: 9 }}>REQ WLL </span>
-                <strong style={{ color: "#002855" }}>{reqWLL.toLocaleString()}</strong>
-              </div>
-              <div style={{ background: "#f8fafc", padding: "4px 8px", borderRadius: 4, flex: 1, textAlign: "center" }}>
-                <span style={{ color: "#94A3B8", fontSize: 9 }}>MIN </span>
-                <strong style={{ color: "#002855" }}>{min}</strong>
-                <span style={{ color: "#94A3B8", fontSize: 8 }}> (393.110{a.hasBlocking ? "c" : "b"})</span>
+            {/* WLL gauge + count dots */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 6, padding: 8 }}>
+              <PDFGauge pct={pct} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, color: "#64748B", marginBottom: 2, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Tie-Down Count</div>
+                <div style={{ fontSize: 12, color: wllOk && countOk ? "#002855" : "#DC2626", fontWeight: 900, marginBottom: 6 }}>
+                  {active} <span style={{ color: "#94A3B8", fontSize: 10 }}>/ {min} min</span>
+                </div>
+                <PDFCountDots tiedowns={a.tiedowns} required={min} />
+                <div style={{ fontSize: 9, color: "#64748B", marginTop: 4 }}>
+                  Total Eff. WLL: <strong style={{ color: "#002855" }}>{totWLL.toLocaleString()} / {reqWLL.toLocaleString()} lbs</strong>
+                </div>
               </div>
             </div>
 
-            {/* WLL bar — compact */}
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
-                <span style={{ color: "#64748B" }}>WLL: {totWLL.toLocaleString()} / {reqWLL.toLocaleString()} ({pct}%)</span>
-                <span style={{ color: "#64748B" }}>Active: {active}/{min} min</span>
-              </div>
-              <div style={{ height: 5, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${Math.min(pct, 100)}%`, background: barColor, borderRadius: 3 }} />
-              </div>
+            {/* Uniform stat row */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+              <StatCell label="Weight" value={`${w.toLocaleString()} lbs`} />
+              <StatCell label="Length" value={`${l} ft`} />
+              <StatCell label="Req. WLL" value={reqWLL.toLocaleString()} />
+              <StatCell label="Min Tie-Downs" value={min} sub={`393.110${a.hasBlocking ? "c" : "b"}`} />
             </div>
 
             {defective > 0 && (
@@ -88,11 +131,11 @@ export function TieDownReportContent({ articles }) {
               </div>
             )}
 
-            {/* Tie-down table — compact */}
+            {/* Tie-down table */}
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <thead>
                 <tr style={{ background: "#f8fafc" }}>
-                  <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: "#64748B" }}>#</th>
+                  <th style={{ padding: "4px 6px", textAlign: "center", fontSize: 9, color: "#64748B" }}>#</th>
                   <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: "#64748B" }}>Tie-Down</th>
                   <th style={{ padding: "4px 6px", textAlign: "center", fontSize: 9, color: "#64748B" }}>Method</th>
                   <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Rated</th>
@@ -104,7 +147,11 @@ export function TieDownReportContent({ articles }) {
                   const eff = effectiveWll(td);
                   return (
                     <tr key={td.id || i} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "3px 6px", fontWeight: "bold", color: td.defective ? "#DC2626" : "#334155" }}>{i + 1}</td>
+                      <td style={{ padding: "3px 6px", textAlign: "center" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 9, background: td.defective ? "#fee2e2" : "#002855", color: td.defective ? "#DC2626" : "white", fontSize: 10, fontWeight: 900, textDecoration: td.defective ? "line-through" : "none" }}>
+                          {i + 1}
+                        </span>
+                      </td>
                       <td style={{ padding: "3px 6px", textDecoration: td.defective ? "line-through" : "none", color: td.defective ? "#999" : "#334155" }}>{td.type}</td>
                       <td style={{ padding: "3px 6px", textAlign: "center" }}>
                         <span style={{ background: td.defective ? "#DC2626" : td.method === "indirect" ? "#10B981" : "#002855", color: "white", padding: "1px 6px", borderRadius: 3, fontSize: 9, fontWeight: "bold", display: "inline-block" }}>
@@ -186,54 +233,78 @@ export function InspectionReportContent({ inspection }) {
       )}
 
       {inspection.tiedown_assessments?.length > 0 && (
-        <div>
+        <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 13, fontWeight: "bold", color: "#002855", marginBottom: 6, borderBottom: "2px solid #D4AF37", paddingBottom: 4 }}>
             Tie-Down Assessments ({inspection.tiedown_assessments.length})
           </div>
           {inspection.tiedown_assessments.map((a, ai) => {
-            const pct = a.required_wll > 0 ? Math.round((a.total_effective_wll / a.required_wll) * 100) : 0;
+            const pct = a.required_wll > 0 ? (a.total_effective_wll / a.required_wll) * 100 : 0;
+            const active = (a.tiedowns || []).filter((t) => !t.defective).length;
+            const defective = (a.tiedowns || []).filter((t) => t.defective).length;
             return (
-              <div key={a.assessment_id || ai} data-pdf-section={`assessment-${ai}`} style={{ border: "1px solid #ddd", borderRadius: 4, padding: 8, marginBottom: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                  <strong style={{ fontSize: 12, color: "#002855" }}>Assessment {ai + 1}</strong>
+              <div key={a.assessment_id || ai} data-pdf-section={`assessment-${ai}`} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <strong style={{ fontSize: 13, color: "#002855" }}>Assessment {ai + 1}</strong>
                   <span style={{ background: a.compliant ? "#ecfdf5" : "#fef2f2", border: `1px solid ${a.compliant ? "#a7f3d0" : "#fecaca"}`, color: a.compliant ? "#10B981" : "#DC2626", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: "bold", display: "inline-block" }}>
                     {a.compliant ? "COMPLIANT" : "NOT COMPLIANT"}
                   </span>
                 </div>
-                <div style={{ display: "flex", gap: 6, marginBottom: 6, fontSize: 11 }}>
-                  <div style={{ background: "#f8fafc", padding: "3px 6px", borderRadius: 4, flex: 1, textAlign: "center" }}>
-                    <span style={{ color: "#94A3B8", fontSize: 8 }}>WT </span><strong style={{ color: "#002855" }}>{a.cargo_weight?.toLocaleString()}</strong>
-                  </div>
-                  <div style={{ background: "#f8fafc", padding: "3px 6px", borderRadius: 4, flex: 1, textAlign: "center" }}>
-                    <span style={{ color: "#94A3B8", fontSize: 8 }}>LEN </span><strong style={{ color: "#002855" }}>{a.cargo_length} ft</strong>
-                  </div>
-                  <div style={{ background: "#f8fafc", padding: "3px 6px", borderRadius: 4, flex: 1, textAlign: "center" }}>
-                    <span style={{ color: "#94A3B8", fontSize: 8 }}>WLL </span><strong style={{ color: pct >= 100 ? "#10B981" : "#EF4444" }}>{pct}%</strong>
-                  </div>
-                  <div style={{ background: "#f8fafc", padding: "3px 6px", borderRadius: 4, flex: 1, textAlign: "center" }}>
-                    <span style={{ color: "#94A3B8", fontSize: 8 }}>MIN </span><strong style={{ color: "#002855" }}>{a.min_tiedowns}</strong>
+
+                {/* Gauge + count dots */}
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 6, padding: 8 }}>
+                  <PDFGauge pct={pct} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 10, color: "#64748B", marginBottom: 2, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Tie-Down Count</div>
+                    <div style={{ fontSize: 12, color: a.compliant ? "#002855" : "#DC2626", fontWeight: 900, marginBottom: 6 }}>
+                      {active} <span style={{ color: "#94A3B8", fontSize: 10 }}>/ {a.min_tiedowns || 0} min</span>
+                    </div>
+                    <PDFCountDots tiedowns={a.tiedowns || []} required={a.min_tiedowns || 0} />
+                    <div style={{ fontSize: 9, color: "#64748B", marginTop: 4 }}>
+                      Total Eff. WLL: <strong style={{ color: "#002855" }}>{a.total_effective_wll?.toLocaleString() || 0} / {a.required_wll?.toLocaleString() || 0} lbs</strong>
+                    </div>
                   </div>
                 </div>
+
+                {/* Uniform 4-stat row */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                  <StatCell label="Weight" value={`${a.cargo_weight?.toLocaleString() || 0} lbs`} />
+                  <StatCell label="Length" value={`${a.cargo_length || 0} ft`} />
+                  <StatCell label="Req. WLL" value={a.required_wll?.toLocaleString() || 0} />
+                  <StatCell label="Min Tie-Downs" value={a.min_tiedowns || 0} />
+                </div>
+
+                {defective > 0 && (
+                  <div style={{ fontSize: 10, color: "#92400E", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 4, padding: "3px 8px", marginBottom: 6 }}>
+                    {defective} defective excluded
+                  </div>
+                )}
+
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                   <thead>
                     <tr style={{ background: "#f8fafc" }}>
-                      <th style={{ padding: "3px 5px", textAlign: "left", fontSize: 9, color: "#64748B" }}>Tie-Down</th>
-                      <th style={{ padding: "3px 5px", textAlign: "center", fontSize: 9, color: "#64748B" }}>Method</th>
-                      <th style={{ padding: "3px 5px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Rated</th>
-                      <th style={{ padding: "3px 5px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Eff.</th>
+                      <th style={{ padding: "4px 6px", textAlign: "center", fontSize: 9, color: "#64748B" }}>#</th>
+                      <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: "#64748B" }}>Tie-Down</th>
+                      <th style={{ padding: "4px 6px", textAlign: "center", fontSize: 9, color: "#64748B" }}>Method</th>
+                      <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Rated</th>
+                      <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Eff.</th>
                     </tr>
                   </thead>
                   <tbody>
                     {a.tiedowns?.map((td, i) => (
                       <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                        <td style={{ padding: "3px 5px", textDecoration: td.defective ? "line-through" : "none", color: td.defective ? "#999" : "#334155" }}>{i + 1}. {td.type}</td>
-                        <td style={{ padding: "3px 5px", textAlign: "center" }}>
+                        <td style={{ padding: "3px 6px", textAlign: "center" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 9, background: td.defective ? "#fee2e2" : "#002855", color: td.defective ? "#DC2626" : "white", fontSize: 10, fontWeight: 900, textDecoration: td.defective ? "line-through" : "none" }}>
+                            {i + 1}
+                          </span>
+                        </td>
+                        <td style={{ padding: "3px 6px", textDecoration: td.defective ? "line-through" : "none", color: td.defective ? "#999" : "#334155" }}>{td.type}</td>
+                        <td style={{ padding: "3px 6px", textAlign: "center" }}>
                           <span style={{ background: td.defective ? "#DC2626" : td.method === "indirect" ? "#10B981" : "#002855", color: "white", padding: "1px 6px", borderRadius: 3, fontSize: 9, fontWeight: "bold", display: "inline-block" }}>
                             {td.defective ? "DEF" : td.method === "indirect" ? "IND" : "DIR"}
                           </span>
                         </td>
-                        <td style={{ padding: "3px 5px", textAlign: "right" }}>{td.wll?.toLocaleString()}</td>
-                        <td style={{ padding: "3px 5px", textAlign: "right", fontWeight: "bold", color: td.defective ? "#DC2626" : "#002855" }}>{td.effective_wll?.toLocaleString()}</td>
+                        <td style={{ padding: "3px 6px", textAlign: "right" }}>{td.wll?.toLocaleString()}</td>
+                        <td style={{ padding: "3px 6px", textAlign: "right", fontWeight: "bold", color: td.defective ? "#DC2626" : "#002855" }}>{td.effective_wll?.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -248,6 +319,94 @@ export function InspectionReportContent({ inspection }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* HOS Recaps */}
+      {inspection.hos_assessments?.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: "bold", color: "#002855", marginBottom: 6, borderBottom: "2px solid #D4AF37", paddingBottom: 4 }}>
+            Hours of Service ({inspection.hos_assessments.length})
+          </div>
+          {inspection.hos_assessments.map((h, hi) => (
+            <div key={h.assessment_id || hi} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: "bold", color: "#002855" }}>
+                  HOS Recap {hi + 1} · {h.rule_type === "passenger" ? "Passenger 60/7" : "Property 70/8"}
+                </span>
+                <span style={{ background: h.is_oos ? "#fef2f2" : "#ecfdf5", border: `1px solid ${h.is_oos ? "#fecaca" : "#a7f3d0"}`, color: h.is_oos ? "#DC2626" : "#10B981", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: "bold" }}>
+                  {h.is_oos ? "OUT OF SERVICE" : "WITHIN LIMIT"}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                <StatCell label="Total" value={`${h.total_hours?.toFixed(1) || 0} / ${h.limit_hours || 0}`} valueColor={h.is_oos ? "#DC2626" : "#002855"} />
+                <StatCell label={h.is_oos ? "Over By" : "Available"} value={h.is_oos ? `+${h.over_by?.toFixed(1) || 0} hr` : `${((h.limit_hours || 0) - (h.total_hours || 0)).toFixed(1)} hr`} valueColor={h.is_oos ? "#DC2626" : "#10B981"} />
+                <StatCell label="Rest Needed" value={h.recommend_restart ? "34-hr Restart" : (h.oos_duration != null ? `${h.oos_duration.toFixed(1)} hr` : "—")} />
+              </div>
+
+              {h.days?.length > 0 && (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10, marginBottom: 6 }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc" }}>
+                      <th style={{ padding: "3px 6px", textAlign: "left", fontSize: 9, color: "#64748B" }}>Day</th>
+                      <th style={{ padding: "3px 6px", textAlign: "left", fontSize: 9, color: "#64748B" }}>Date</th>
+                      <th style={{ padding: "3px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Drive</th>
+                      <th style={{ padding: "3px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>On-Duty</th>
+                      <th style={{ padding: "3px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {h.days.map((d, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "3px 6px", fontWeight: "bold", color: "#334155" }}>{d.day_label || "—"}</td>
+                        <td style={{ padding: "3px 6px", color: "#64748B" }}>{d.date || "—"}</td>
+                        <td style={{ padding: "3px 6px", textAlign: "right" }}>{d.drive ? Number(d.drive).toFixed(1) : "—"}</td>
+                        <td style={{ padding: "3px 6px", textAlign: "right" }}>{d.on_duty ? Number(d.on_duty).toFixed(1) : "—"}</td>
+                        <td style={{ padding: "3px 6px", textAlign: "right", fontWeight: "bold", color: "#002855" }}>{d.total ? Number(d.total).toFixed(1) : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {h.recovery_steps?.length > 0 && (
+                <div style={{ fontSize: 10, color: "#475569", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 4, padding: 6 }}>
+                  <div style={{ fontSize: 9, fontWeight: 900, color: "#002855", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Recovery Logic</div>
+                  {h.recovery_steps.map((s, si) => (
+                    <div key={si} style={{ marginBottom: 3 }}>
+                      <strong style={{ color: "#002855" }}>{s.step_num}.</strong> {s.description}
+                      <div style={{ fontSize: 9, color: "#64748B", marginLeft: 12 }}>
+                        OOS: <strong style={{ color: "#002855" }}>{Number(s.oos_hours).toFixed(1)} hr</strong>
+                        {" · "}Total: <strong style={{ color: s.passes ? "#10B981" : "#DC2626" }}>{Number(s.running_total).toFixed(1)} hr</strong>
+                        {s.available != null && <> · Available: <strong style={{ color: s.passes ? "#10B981" : "#DC2626" }}>{s.passes ? Number(s.available).toFixed(1) : "0"} hr</strong></>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Weight Captures */}
+      {inspection.general_photos?.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: "bold", color: "#002855", marginBottom: 6, borderBottom: "2px solid #D4AF37", paddingBottom: 4 }}>
+            Weight Captures ({inspection.general_photos.length})
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {inspection.general_photos.map((ph) => (
+              <img
+                key={ph.photo_id}
+                src={`${API}/files/${ph.storage_path}`}
+                alt={ph.original_filename || "Weight capture"}
+                style={{ width: 260, maxWidth: "100%", borderRadius: 4, border: "1px solid #ddd" }}
+                crossOrigin="anonymous"
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
