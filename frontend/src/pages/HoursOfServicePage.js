@@ -305,7 +305,7 @@ export default function HoursOfServicePage() {
       verdict = {
         tone: "oos",
         title: "Out of Service",
-        sub: `Total ${fmt(grandTotal)} hr exceeds ${limit}-hour limit by ${fmt(overBy)} hr. Enter stop time below to see rest requirement.`,
+        sub: `Total ${fmt(grandTotal)} hr exceeds ${limit}-hour limit by ${fmt(overBy)} hr. Enter OOS start time below to see rest requirement.`,
       };
     } else if (oosSim && !oosSim.needsInput && oosSim.recommendRestart) {
       verdict = {
@@ -410,7 +410,7 @@ export default function HoursOfServicePage() {
             <div className="flex items-start gap-2 pr-5">
               <Lightbulb className="w-3.5 h-3.5 text-[#D4AF37] flex-shrink-0 mt-0.5" />
               <p className="text-[10px] text-[#475569] leading-snug">
-                <strong className="text-[#002855]">Quick steps:</strong> ① Pick rule · ② Enter each day's total · ③ If OOS, enter stop time.
+                <strong className="text-[#002855]">Quick steps:</strong> ① Pick rule · ② Enter each day's total · ③ If OOS, enter OOS start time.
               </p>
             </div>
           </div>
@@ -541,10 +541,10 @@ export default function HoursOfServicePage() {
           <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
             <div className="bg-[#002855] px-3 py-1.5 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center flex-shrink-0">3</span>
-              <h2 className="text-xs font-bold text-white">When did you stop them?</h2>
+              <h2 className="text-xs font-bold text-white">OOS start time</h2>
               <InfoHelp
-                title="Why we ask"
-                body={<>We use the stop time to compute how much of today's calendar day remains. The driver must rest until hours drop below the limit — or take a 34-hour restart.</>}
+                title="OOS start time"
+                body={<>The exact time the inspector declared the driver out of service. We use it to compute how much of today's calendar day remains. The driver must rest until hours drop below the limit — or take a 34-hour restart.</>}
                 testid="hos-stoptime-help"
               />
             </div>
@@ -567,7 +567,7 @@ export default function HoursOfServicePage() {
               </div>
               {!stopTime && (
                 <p className="text-[10px] text-[#D4AF37] italic">
-                  Enter stop time to calculate the required rest.
+                  Enter OOS start time to calculate the required rest.
                 </p>
               )}
 
