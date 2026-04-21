@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Header } from "../components/app/Header";
-import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert, XCircle, Eye } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert, XCircle, Eye, Hourglass, Scale } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -90,6 +90,12 @@ export default function InspectionDetail() {
     await axios.delete(`${API}/inspections/${id}/tiedown/${assessmentId}`);
     fetchInspection();
     toast.success("Tie-down assessment removed");
+  };
+
+  const removeHos = async (assessmentId) => {
+    await axios.delete(`${API}/inspections/${id}/hos/${assessmentId}`);
+    fetchInspection();
+    toast.success("HOS recap removed");
   };
 
   const handleAssessmentPhotoUpload = async (assessmentId, e) => {
@@ -376,6 +382,98 @@ export default function InspectionDetail() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* HOS Recaps */}
+        {inspection.hos_assessments?.length > 0 && (
+          <div data-testid="hos-assessments-section">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                Hours of Service ({inspection.hos_assessments.length})
+              </span>
+            </div>
+            <div className="space-y-3">
+              {inspection.hos_assessments.map((a) => (
+                <div key={a.assessment_id} className="bg-white rounded-lg border p-3" data-testid={`hos-assessment-${a.assessment_id}`}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Hourglass className="w-4 h-4 text-[#002855]" />
+                      <span className="text-sm font-bold text-[#002855]">HOS Recap</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#002855]/10 text-[#002855]">
+                        {a.rule_type === "passenger" ? "PASS · 60" : "PROP · 70"}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${a.is_oos ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                        {a.is_oos ? "OUT OF SERVICE" : "WITHIN LIMIT"}
+                      </span>
+                    </div>
+                    <button onClick={() => removeHos(a.assessment_id)} className="text-[#CBD5E1] hover:text-[#DC2626] transition-colors flex-shrink-0" data-testid={`remove-hos-${a.assessment_id}`}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mb-2 text-center">
+                    <div className="bg-[#F8FAFC] rounded p-1.5">
+                      <p className="text-[9px] text-[#94A3B8] uppercase">Total</p>
+                      <p className={`text-xs font-bold ${a.is_oos ? "text-[#DC2626]" : "text-[#002855]"}`}>{a.total_hours?.toFixed(1)} / {a.limit_hours} hr</p>
+                    </div>
+                    <div className="bg-[#F8FAFC] rounded p-1.5">
+                      <p className="text-[9px] text-[#94A3B8] uppercase">{a.is_oos ? "Over By" : "Available"}</p>
+                      <p className={`text-xs font-bold ${a.is_oos ? "text-[#DC2626]" : "text-emerald-600"}`}>
+                        {a.is_oos ? `+${a.over_by?.toFixed(1)}` : `${((a.limit_hours || 0) - (a.total_hours || 0)).toFixed(1)}`} hr
+                      </p>
+                    </div>
+                    <div className="bg-[#F8FAFC] rounded p-1.5">
+                      <p className="text-[9px] text-[#94A3B8] uppercase">Rest Needed</p>
+                      <p className="text-xs font-bold text-[#002855]">
+                        {a.recommend_restart ? "34-hr Restart" : (a.oos_duration != null ? `${a.oos_duration.toFixed(1)} hr` : "—")}
+                      </p>
+                    </div>
+                  </div>
+
+                  {a.days?.length > 0 && (
+                    <div className="space-y-0.5 mb-1.5">
+                      {a.days.map((d, i) => (
+                        <div key={i} className="flex items-center justify-between text-[11px] px-2 py-0.5 rounded bg-[#FAFBFC]">
+                          <span className="font-medium text-[#475569]">{d.day_label} {d.date}</span>
+                          <span className="font-bold text-[#002855] tabular-nums">{Number(d.total || 0).toFixed(1)} hr</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="text-[9px] text-[#94A3B8] mt-1">{a.created_at?.slice(0, 16).replace("T", " ")}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Weight / Bridge Chart Photos */}
+        {inspection.general_photos?.length > 0 && (
+          <div data-testid="weight-photos-section">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                Weight Captures ({inspection.general_photos.length})
+              </span>
+            </div>
+            <div className="bg-white rounded-lg border p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Scale className="w-4 h-4 text-[#002855]" />
+                <span className="text-sm font-bold text-[#002855]">Bridge Chart / Weight Exports</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {inspection.general_photos.map((photo) => (
+                  <img
+                    key={photo.photo_id}
+                    src={`${API}/files/${photo.storage_path}`}
+                    alt={photo.original_filename || "Weight capture"}
+                    className="w-20 h-20 object-cover rounded-md border cursor-pointer"
+                    onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         )}
