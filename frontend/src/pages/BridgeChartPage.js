@@ -880,6 +880,14 @@ export default function BridgeChartPage() {
     setShowPreview(false);
     if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
   };
+  // Close preview on Escape key
+  useEffect(() => {
+    if (!showPreview) return;
+    const onKey = (e) => { if (e.key === "Escape") closePreview(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showPreview]);
   const openInspPicker = async () => { setShowInspPicker(true); try { const r = await fetch(`${API}/api/inspections?badge=${badge}`); if (r.ok) { const d = await r.json(); setInspections(d.inspections || []); } } catch {} };
   const addToInsp = async (id) => {
     setSaving(true);

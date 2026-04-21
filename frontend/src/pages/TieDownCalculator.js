@@ -14,6 +14,7 @@ import { Toaster, toast } from "sonner";
 import { Dialog, DialogContent } from "../components/ui/dialog";
 import { PDFPreview } from "../components/app/PDFPreview";
 import { TieDownReportContent } from "../components/app/ReportContent";
+import { useAuth } from "../components/app/AuthContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -257,6 +258,7 @@ function WLLChartPicker({ onAdd, favorites, toggleFavorite }) {
    ================================================================ */
 export default function TieDownCalculator() {
   const navigate = useNavigate();
+  const { badge } = useAuth();
   const [articles, setArticles] = useState([newArticle(1)]);
   const [showRef, setShowRef] = useState(false);
   const [showWllInfo, setShowWllInfo] = useState(false);
@@ -327,7 +329,7 @@ export default function TieDownCalculator() {
   /* ── Save to inspection ── */
   const fetchInspections = async () => {
     setLoadingInspections(true);
-    try { const res = await axios.get(`${API}/inspections`); setInspections(res.data.inspections || []); }
+    try { const res = await axios.get(`${API}/inspections?badge=${badge}`); setInspections(res.data.inspections || []); }
     catch { toast.error("Failed to load inspections"); }
     finally { setLoadingInspections(false); }
   };
@@ -336,7 +338,7 @@ export default function TieDownCalculator() {
     const title = newInspTitle.trim() || `Tie-Down ${new Date().toLocaleDateString()}`;
     setSaving(true);
     try {
-      const res = await axios.post(`${API}/inspections`, { title });
+      const res = await axios.post(`${API}/inspections`, { title, badge });
       if (res.data?.id) {
         setNewInspTitle("");
         await saveToInspection(res.data.id);
