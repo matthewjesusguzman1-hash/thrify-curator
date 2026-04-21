@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus, Scale, Hourglass } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus, Scale, Hourglass, Settings2, ChevronLeft } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -119,8 +119,80 @@ const JOB_AIDS = [
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-function ChangePinPopover({ badge, navigate, logout }) {
-  const [mode, setMode] = useState("menu"); // menu | change
+// Nav buttons are data-driven so users can pick which ones appear in the header.
+// `style`: "primary" = gold pill, "outline" = ghost bordered. `kind`: button | resources.
+const NAV_BUTTONS = [
+  { id: "level3", label: "Level 3", short: "3", icon: null, path: "/level3", style: "primary", testid: "level3-nav-btn" },
+  { id: "tiedown", label: "Tie-Down Calc", icon: Calculator, path: "/calculator", style: "primary", testid: "calculator-nav-btn" },
+  { id: "bridge", label: "Bridge", icon: Scale, path: "/bridge-chart", style: "primary", testid: "bridge-chart-nav-btn" },
+  { id: "hos", label: "HOS", icon: Hourglass, path: "/hours-of-service", style: "primary", testid: "hos-nav-btn" },
+  { id: "hazmat", label: "HazMat", short: "HM", icon: null, path: "/hazmat-worksheet", style: "primary", testid: "hazmat-nav-btn" },
+  { id: "photo", label: "Photo", icon: Camera, path: "/photo-annotator", style: "outline", testid: "photo-annotator-nav-btn" },
+  { id: "inspections", label: "Inspections", icon: ClipboardList, path: "/inspections", style: "outline", testid: "inspections-nav-btn" },
+  { id: "resources", label: "Resources", icon: null, kind: "resources", style: "gold-outline", testid: "cvsa-btn" },
+];
+
+const DEFAULT_ENABLED = NAV_BUTTONS.map((b) => b.id);
+const prefsKey = (badge) => `inspnav_headerButtons_${badge || "anon"}`;
+
+function loadEnabled(badge) {
+  try {
+    const raw = localStorage.getItem(prefsKey(badge));
+    if (!raw) return DEFAULT_ENABLED;
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return DEFAULT_ENABLED;
+    return arr.filter((id) => NAV_BUTTONS.some((b) => b.id === id));
+  } catch { return DEFAULT_ENABLED; }
+}
+function saveEnabled(badge, ids) {
+  try { localStorage.setItem(prefsKey(badge), JSON.stringify(ids)); } catch {}
+}
+
+function CustomizeButtons({ badge, enabled, onChange, onBack }) {
+  const toggle = (id) => {
+    const next = enabled.includes(id) ? enabled.filter((x) => x !== id) : [...enabled, id];
+    onChange(next);
+  };
+  const resetDefaults = () => onChange(DEFAULT_ENABLED);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <button onClick={onBack} className="flex items-center gap-1 text-[10px] text-[#64748B] hover:text-[#002855]" data-testid="customize-back">
+          <ChevronLeft className="w-3 h-3" /> Back
+        </button>
+        <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Header Buttons</p>
+      </div>
+      <div className="max-h-[260px] overflow-y-auto space-y-0.5 -mx-1 px-1">
+        {NAV_BUTTONS.map((b) => {
+          const isOn = enabled.includes(b.id);
+          return (
+            <label
+              key={b.id}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[#F1F5F9] cursor-pointer"
+              data-testid={`customize-toggle-${b.id}`}
+            >
+              <input
+                type="checkbox"
+                checked={isOn}
+                onChange={() => toggle(b.id)}
+                className="w-3.5 h-3.5 accent-[#D4AF37]"
+              />
+              <span className="text-xs text-[#334155] flex-1">{b.label}</span>
+              {isOn && <span className="text-[9px] text-[#16A34A] font-bold">ON</span>}
+            </label>
+          );
+        })}
+      </div>
+      <div className="flex gap-1.5 pt-1 border-t border-[#E2E8F0]">
+        <button onClick={resetDefaults} className="flex-1 px-2 py-1.5 text-[10px] rounded-md bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]" data-testid="customize-reset">Reset</button>
+        <button onClick={onBack} className="flex-1 px-2 py-1.5 text-[10px] rounded-md bg-[#D4AF37] text-[#002855] font-bold hover:bg-[#c9a432]" data-testid="customize-done">Done</button>
+      </div>
+    </div>
+  );
+}
+
+function ChangePinPopover({ badge, navigate, logout, enabledButtons, setEnabledButtons }) {
+  const [mode, setMode] = useState("menu"); // menu | change | customize
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [error, setError] = useState("");
@@ -182,9 +254,28 @@ function ChangePinPopover({ badge, navigate, logout }) {
     );
   }
 
+  if (mode === "customize") {
+    return (
+      <CustomizeButtons
+        badge={badge}
+        enabled={enabledButtons}
+        onChange={setEnabledButtons}
+        onBack={() => setMode("menu")}
+      />
+    );
+  }
+
   return (
     <>
       <p className="text-[10px] text-[#94A3B8] px-2 pb-1">Badge #{badge}</p>
+      <button
+        onClick={() => setMode("customize")}
+        className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
+        data-testid="customize-header-link"
+      >
+        <Settings2 className="w-3.5 h-3.5 text-[#64748B]" />
+        Customize Header
+      </button>
       <button
         onClick={() => setMode("change")}
         className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
@@ -222,7 +313,20 @@ export function Header({ onUploadClick, stats }) {
   const [openSections, setOpenSections] = useState({});
   const [notesOpen, setNotesOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [enabledButtons, setEnabledButtonsState] = useState(() => loadEnabled(badge));
   const toggle = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+
+  // Reload prefs whenever badge changes (e.g., re-login).
+  useEffect(() => { setEnabledButtonsState(loadEnabled(badge)); }, [badge]);
+  const setEnabledButtons = useCallback((ids) => {
+    setEnabledButtonsState(ids);
+    saveEnabled(badge, ids);
+  }, [badge]);
+
+  const visibleButtons = useMemo(
+    () => NAV_BUTTONS.filter((b) => enabledButtons.includes(b.id)),
+    [enabledButtons]
+  );
 
   const lastSeenKey = `inspnav_notes_lastSeen_${badge || "anon"}`;
 
@@ -257,6 +361,159 @@ export function Header({ onUploadClick, stats }) {
     try { localStorage.setItem(lastSeenKey, String(Date.now())); } catch {}
     setUnreadCount(0);
   };
+
+  const renderNavButton = (b) => {
+    if (b.kind === "resources") {
+      return (
+        <Popover key={b.id}>
+          <PopoverTrigger asChild>
+            <Button
+              data-testid={b.testid}
+              variant="outline"
+              size="sm"
+              className="border-[#D4AF37]/40 text-[#D4AF37] bg-transparent hover:bg-[#D4AF37] hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs font-bold flex-shrink-0"
+            >
+              Resources
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-[280px] p-2 max-h-[480px] overflow-y-auto"
+            align="end"
+            data-testid="cvsa-popover"
+          >
+            {/* CVSA Resources — collapsible */}
+            <button onClick={() => toggle("cvsa")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
+              <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">CVSA Resources</p>
+              {openSections.cvsa ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
+            </button>
+            {openSections.cvsa && (
+              <div className="space-y-0.5 mb-1">
+                {CVSA_LINKS.map((link) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
+                    data-testid={`cvsa-link-${link.label.replace(/\s/g, '-').toLowerCase()}`}
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#002855]/10 flex-shrink-0">
+                      <link.icon className="w-4 h-4 text-[#002855]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                        {link.label}
+                        <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
+                      </p>
+                      <p className="text-[10px] text-[#64748B]">{link.description}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Flowcharts — collapsible */}
+            <div className="border-t border-[#E2E8F0] mt-1 pt-1">
+              <button onClick={() => toggle("flowcharts")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">Flowcharts / Visor Cards</p>
+                {openSections.flowcharts ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
+              </button>
+              {openSections.flowcharts && (
+                <div className="space-y-0.5 mb-1">
+                  {FLOWCHARTS.map((link) => (
+                    <a
+                      key={link.url}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
+                      data-testid={`flowchart-${link.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
+                    >
+                      <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#D4AF37]/10 flex-shrink-0">
+                        <link.icon className="w-4 h-4 text-[#D4AF37]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                          {link.label}
+                          <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
+                        </p>
+                        <p className="text-[10px] text-[#64748B]">{link.description}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Job Aids — collapsible */}
+            <div className="border-t border-[#E2E8F0] mt-1 pt-1">
+              <button onClick={() => toggle("jobaids")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">Job Aids</p>
+                {openSections.jobaids ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
+              </button>
+              {openSections.jobaids && (
+                <div className="space-y-0.5 mb-1">
+                  {JOB_AIDS.map((aid) => (
+                    <a
+                      key={aid.url}
+                      href={aid.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
+                      data-testid={`job-aid-${aid.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
+                    >
+                      <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#16A34A]/10 flex-shrink-0">
+                        <Briefcase className="w-4 h-4 text-[#16A34A]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
+                          {aid.label}
+                          <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
+                        </p>
+                        <p className="text-[10px] text-[#64748B]">{aid.description}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      );
+    }
+
+    const Icon = b.icon;
+    if (b.style === "primary") {
+      return (
+        <Button
+          key={b.id}
+          data-testid={b.testid}
+          size="sm"
+          onClick={() => navigate(b.path)}
+          className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
+        >
+          {b.short ? <span className="text-[11px] font-black sm:mr-1">{b.short}</span> : null}
+          {Icon ? <Icon className="w-3.5 h-3.5 sm:mr-1.5" /> : null}
+          <span className={b.short ? "hidden sm:inline" : "hidden sm:inline"}>{b.label}</span>
+        </Button>
+      );
+    }
+    // outline
+    return (
+      <Button
+        key={b.id}
+        data-testid={b.testid}
+        variant="outline"
+        size="sm"
+        onClick={() => navigate(b.path)}
+        className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs flex-shrink-0"
+      >
+        {Icon ? <Icon className="w-3.5 h-3.5 sm:mr-1.5" /> : null}
+        <span className="hidden sm:inline">{b.label}</span>
+      </Button>
+    );
+  };
+
   return (
     <>
     <header
@@ -297,210 +554,29 @@ export function Header({ onUploadClick, stats }) {
                 <span className="text-[11px] font-bold text-[#D4AF37] tracking-wider">{badge}</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-[220px] p-2" align="end">
-              <ChangePinPopover badge={badge} navigate={navigate} logout={logout} />
+            <PopoverContent className="w-[240px] p-2" align="end">
+              <ChangePinPopover
+                badge={badge}
+                navigate={navigate}
+                logout={logout}
+                enabledButtons={enabledButtons}
+                setEnabledButtons={setEnabledButtons}
+              />
             </PopoverContent>
           </Popover>
         </div>
       </div>
 
-      {/* Bottom row: nav buttons */}
+      {/* Bottom row: nav buttons (user-customizable) */}
       <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
-          {/* Level 3 Inspection */}
-          <Button
-            data-testid="level3-nav-btn"
-            size="sm"
-            onClick={() => navigate("/level3")}
-            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
-          >
-            <span className="text-[11px] font-black sm:hidden">3</span>
-            <span className="hidden sm:inline">Level 3</span>
-          </Button>
-
-          {/* Tie-Down Calculator */}
-          <Button
-            data-testid="calculator-nav-btn"
-            size="sm"
-            onClick={() => navigate("/calculator")}
-            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
-          >
-            <Calculator className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Tie-Down Calc</span>
-          </Button>
-
-          {/* Bridge Chart */}
-          <Button
-            data-testid="bridge-chart-nav-btn"
-            size="sm"
-            onClick={() => navigate("/bridge-chart")}
-            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
-          >
-            <Scale className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Bridge</span>
-          </Button>
-
-          {/* Hours of Service */}
-          <Button
-            data-testid="hos-nav-btn"
-            size="sm"
-            onClick={() => navigate("/hours-of-service")}
-            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
-          >
-            <Hourglass className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">HOS</span>
-          </Button>
-
-          {/* HazMat Worksheet */}
-          <Button
-            data-testid="hazmat-nav-btn"
-            size="sm"
-            onClick={() => navigate("/hazmat-worksheet")}
-            className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
-          >
-            <span className="text-[11px] font-black sm:mr-1">HM</span>
-            <span className="hidden sm:inline">HazMat</span>
-          </Button>
-
-          {/* Photo Annotator */}
-          <Button
-            data-testid="photo-annotator-nav-btn"
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/photo-annotator")}
-            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs flex-shrink-0"
-          >
-            <Camera className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Photo</span>
-          </Button>
-
-          {/* Inspections */}
-          <Button
-            data-testid="inspections-nav-btn"
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/inspections")}
-            className="border-white/30 text-white bg-transparent hover:bg-white hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs flex-shrink-0"
-          >
-            <ClipboardList className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Inspections</span>
-          </Button>
-
-          {/* CVSA Links */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                data-testid="cvsa-btn"
-                variant="outline"
-                size="sm"
-                className="border-[#D4AF37]/40 text-[#D4AF37] bg-transparent hover:bg-[#D4AF37] hover:text-[#002855] transition-colors h-8 px-2 sm:px-3 text-xs font-bold flex-shrink-0"
-              >
-                Resources
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-[280px] p-2 max-h-[480px] overflow-y-auto"
-              align="end"
-              data-testid="cvsa-popover"
-            >
-              {/* CVSA Resources — collapsible */}
-              <button onClick={() => toggle("cvsa")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
-                <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">CVSA Resources</p>
-                {openSections.cvsa ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
-              </button>
-              {openSections.cvsa && (
-                <div className="space-y-0.5 mb-1">
-                  {CVSA_LINKS.map((link) => (
-                    <a
-                      key={link.url}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
-                      data-testid={`cvsa-link-${link.label.replace(/\s/g, '-').toLowerCase()}`}
-                    >
-                      <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#002855]/10 flex-shrink-0">
-                        <link.icon className="w-4 h-4 text-[#002855]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
-                          {link.label}
-                          <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
-                        </p>
-                        <p className="text-[10px] text-[#64748B]">{link.description}</p>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              {/* Flowcharts — collapsible */}
-              <div className="border-t border-[#E2E8F0] mt-1 pt-1">
-                <button onClick={() => toggle("flowcharts")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
-                  <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">Flowcharts / Visor Cards</p>
-                  {openSections.flowcharts ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
-                </button>
-                {openSections.flowcharts && (
-                  <div className="space-y-0.5 mb-1">
-                    {FLOWCHARTS.map((link) => (
-                      <a
-                        key={link.url}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
-                        data-testid={`flowchart-${link.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
-                      >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#D4AF37]/10 flex-shrink-0">
-                          <link.icon className="w-4 h-4 text-[#D4AF37]" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
-                            {link.label}
-                            <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
-                          </p>
-                          <p className="text-[10px] text-[#64748B]">{link.description}</p>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Job Aids — collapsible */}
-              <div className="border-t border-[#E2E8F0] mt-1 pt-1">
-                <button onClick={() => toggle("jobaids")} className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
-                  <p className="text-[10px] font-bold tracking-widest uppercase text-[#94A3B8]">Job Aids</p>
-                  {openSections.jobaids ? <ChevronDown className="w-3 h-3 text-[#94A3B8]" /> : <ChevronRight className="w-3 h-3 text-[#94A3B8]" />}
-                </button>
-                {openSections.jobaids && (
-                  <div className="space-y-0.5 mb-1">
-                    {JOB_AIDS.map((aid) => (
-                      <a
-                        key={aid.url}
-                        href={aid.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-[#F1F5F9] transition-colors group"
-                        data-testid={`job-aid-${aid.label.replace(/[\s/()]/g, '-').toLowerCase()}`}
-                      >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#16A34A]/10 flex-shrink-0">
-                          <Briefcase className="w-4 h-4 text-[#16A34A]" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-[#0F172A] flex items-center gap-1">
-                            {aid.label}
-                            <ExternalLink className="w-2.5 h-2.5 text-[#94A3B8] group-hover:text-[#002855]" />
-                          </p>
-                          <p className="text-[10px] text-[#64748B]">{aid.description}</p>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
+          {visibleButtons.length === 0 ? (
+            <span className="text-[11px] text-white/40 italic px-2">
+              No buttons — tap your badge → Customize Header
+            </span>
+          ) : (
+            visibleButtons.map(renderNavButton)
+          )}
         </div>
 
         {stats && (
