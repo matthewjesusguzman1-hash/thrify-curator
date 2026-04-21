@@ -180,6 +180,37 @@ class SaveTieDownRequest(BaseModel):
     tiedowns: List[TieDownItemData] = []
     photos: List[dict] = []
 
+
+class HosDayData(BaseModel):
+    date: str = ""
+    day_label: str = ""
+    drive: float = 0
+    on_duty: float = 0
+    total: float = 0
+
+
+class HosRecoveryStep(BaseModel):
+    step_num: int = 0
+    description: str = ""
+    oos_hours: float = 0
+    running_total: float = 0
+    passes: bool = False
+
+
+class SaveHosRequest(BaseModel):
+    rule_type: str = "property"  # "property" | "passenger"
+    limit_hours: int = 70
+    day_count: int = 8
+    days: List[HosDayData] = []
+    total_hours: float = 0
+    is_oos: bool = False
+    over_by: float = 0
+    hours_left_today: Optional[float] = None
+    recovery_steps: List[HosRecoveryStep] = []
+    oos_duration: Optional[float] = None
+    recommend_restart: bool = False
+    notes: str = ""
+
 # Auth Models
 class RegisterRequest(BaseModel):
     badge: str
@@ -1450,6 +1481,39 @@ async def delete_tiedown_from_inspection(inspection_id: str, assessment_id: str)
         },
     )
     return {"message": "Tie-down assessment removed"}
+
+
+@api_router.post("/inspections/{inspection_id}/hos")
+async def save_hos_to_inspection(inspection_id: str, req: SaveHosRequest):
+    """Save an Hours-of-Service recap (daily grid + OOS recovery logic) to an inspection."""
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+
+    assessment = req.model_dump()
+    assessment["assessment_id"] = str(uuid.uuid4())
+    assessment["created_at"] = datetime.now(timezone.utc).isoformat()
+
+    await db.inspections.update_one(
+        {"id": inspection_id},
+        {
+            "$push": {"hos_assessments": assessment},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    return assessment
+
+
+@api_router.delete("/inspections/{inspection_id}/hos/{assessment_id}")
+async def delete_hos_from_inspection(inspection_id: str, assessment_id: str):
+    await db.inspections.update_one(
+        {"id": inspection_id},
+        {
+            "$pull": {"hos_assessments": {"assessment_id": assessment_id}},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    return {"message": "HOS assessment removed"}
 
 
 @api_router.post("/tiedown-photos")

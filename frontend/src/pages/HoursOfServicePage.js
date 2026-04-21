@@ -1,7 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info } from "lucide-react";
+import axios from "axios";
+import { Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info, Eye, Save, ClipboardList } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Dialog, DialogContent } from "../components/ui/dialog";
+import { toast, Toaster } from "sonner";
+import { useAuth } from "../components/app/AuthContext";
+import { PDFPreview } from "../components/app/PDFPreview";
+import { HosReportContent } from "../components/app/ReportContent";
 
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function parseHours(v) {
@@ -54,12 +62,21 @@ function makeRows(n) {
 
 export default function HoursOfServicePage() {
   const navigate = useNavigate();
+  const { badge } = useAuth();
   const [ruleType, setRuleType] = useState("property"); // "property" | "passenger"
   const [rowsProp, setRowsProp] = useState(() => makeRows(8));
   const [rowsPass, setRowsPass] = useState(() => makeRows(7));
   const [anchorProp, setAnchorProp] = useState(() => startOfDay(new Date()));
   const [anchorPass, setAnchorPass] = useState(() => startOfDay(new Date()));
   const [hoursLeftToday, setHoursLeftToday] = useState("");
+
+  // Save / Export state
+  const [showPreview, setShowPreview] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [inspections, setInspections] = useState([]);
+  const [loadingInspections, setLoadingInspections] = useState(false);
+  const [newInspTitle, setNewInspTitle] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const rows = ruleType === "property" ? rowsProp : rowsPass;
   const setRows = ruleType === "property" ? setRowsProp : setRowsPass;
@@ -187,8 +204,100 @@ export default function HoursOfServicePage() {
 
   const anchorIsToday = sameDay(anchor, today);
 
+  // Has-data gate: show the floating action bar only when there's meaningful input
+  const hasData = grandTotal > 0;
+
+  // Build a serializable snapshot for preview / save
+  const buildSnapshot = () => ({
+    ruleType,
+    limitHours: limit,
+    dayCount,
+    days: rows.map((r, idx) => {
+      const d = dateFor(idx);
+      const dt = dayTotals[idx];
+      return {
+        date: `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`,
+        dayLabel: idx === rows.length - 1 && sameDay(d, today) ? "Today" : DAY_NAMES[d.getDay()],
+        drive: parseHours(r.drive),
+        onDuty: parseHours(r.onDuty),
+        total: dt.value,
+      };
+    }),
+    grandTotal,
+    isOos: isOOS,
+    overBy,
+    hoursLeftToday: hoursLeftToday === "" ? null : parseHours(hoursLeftToday),
+    recoverySteps: oosSim && !oosSim.needsInput ? oosSim.steps.map((s) => ({
+      stepNum: s.stepNum,
+      description: s.description,
+      oosHours: s.oosHours,
+      runningTotal: s.runningTotal,
+      passes: s.passes,
+    })) : [],
+    oosDuration: oosSim && !oosSim.needsInput && !oosSim.recommendRestart ? oosSim.cumulativeOOS : null,
+    recommendRestart: !!(oosSim && !oosSim.needsInput && oosSim.recommendRestart),
+  });
+
+  const snapshot = useMemo(buildSnapshot, [rows, ruleType, limit, dayCount, grandTotal, isOOS, overBy, hoursLeftToday, oosSim, anchor]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save to inspection
+  const fetchInspections = async () => {
+    setLoadingInspections(true);
+    try {
+      const res = await axios.get(`${API}/inspections?badge=${badge}`);
+      setInspections(res.data.inspections || []);
+    } catch {
+      toast.error("Failed to load inspections");
+    } finally {
+      setLoadingInspections(false);
+    }
+  };
+  const openSaveModal = () => { fetchInspections(); setShowSaveModal(true); };
+
+  const saveToInspection = async (inspectionId) => {
+    setSaving(true);
+    try {
+      await axios.post(`${API}/inspections/${inspectionId}/hos`, {
+        rule_type: snapshot.ruleType,
+        limit_hours: snapshot.limitHours,
+        day_count: snapshot.dayCount,
+        days: snapshot.days.map((d) => ({ date: d.date, day_label: d.dayLabel, drive: d.drive, on_duty: d.onDuty, total: d.total })),
+        total_hours: snapshot.grandTotal,
+        is_oos: snapshot.isOos,
+        over_by: snapshot.overBy,
+        hours_left_today: snapshot.hoursLeftToday,
+        recovery_steps: snapshot.recoverySteps.map((s) => ({ step_num: s.stepNum, description: s.description, oos_hours: s.oosHours, running_total: s.runningTotal, passes: s.passes })),
+        oos_duration: snapshot.oosDuration,
+        recommend_restart: snapshot.recommendRestart,
+      });
+      toast.success("HOS recap saved to inspection");
+      setShowSaveModal(false);
+    } catch {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const createAndSave = async () => {
+    const title = newInspTitle.trim() || `HOS ${new Date().toLocaleDateString()}`;
+    setSaving(true);
+    try {
+      const res = await axios.post(`${API}/inspections`, { title, badge });
+      if (res.data?.id) {
+        setNewInspTitle("");
+        await saveToInspection(res.data.id);
+      }
+    } catch {
+      toast.error("Failed to create inspection");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F0F2F5]">
+      <Toaster position="top-right" richColors />
       <header className="sticky top-0 z-40 bg-[#002855] border-b border-[#001a3a]">
         <div className="max-w-[1440px] mx-auto px-3 sm:px-6 py-3 flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="text-white hover:text-[#D4AF37] flex items-center gap-1.5 text-sm font-medium" data-testid="hos-back-btn">
@@ -203,6 +312,20 @@ export default function HoursOfServicePage() {
           </button>
         </div>
       </header>
+
+      {/* FLOATING ACTION BAR — Preview & Export + Save to Inspection */}
+      {hasData && (
+        <div className="sticky top-[52px] z-30 bg-white/95 backdrop-blur border-b border-[#E2E8F0] shadow-sm">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
+            <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn">
+              <Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export
+            </Button>
+            <Button size="sm" onClick={openSaveModal} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1" data-testid="save-to-inspection-btn">
+              <Save className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection
+            </Button>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-3xl mx-auto px-3 sm:px-6 py-4 pb-20 space-y-4">
         {/* Title + rule toggle */}
@@ -475,6 +598,62 @@ export default function HoursOfServicePage() {
           </ul>
         </div>
       </main>
+
+      {/* PDF PREVIEW */}
+      <PDFPreview
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        title="Hours of Service Recap"
+        filename={`hos-recap-${new Date().toISOString().slice(0, 10)}`}
+      >
+        <HosReportContent snapshot={snapshot} />
+      </PDFPreview>
+
+      {/* SAVE MODAL */}
+      <Dialog open={showSaveModal} onOpenChange={setShowSaveModal}>
+        <DialogContent className="max-w-[400px] p-0 overflow-hidden" data-testid="save-modal">
+          <div className="bg-[#002855] px-4 py-3">
+            <h3 className="text-sm font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>Save to Inspection</h3>
+            <p className="text-[10px] text-white/50">Attach HOS recap ({ruleType === "passenger" ? "60 hr / 7 day" : "70 hr / 8 day"})</p>
+          </div>
+          <div className="px-3 pt-3 pb-2 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+            <p className="text-[10px] text-[#64748B] font-medium mb-1.5 uppercase">New Inspection</p>
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={newInspTitle}
+                onChange={(e) => setNewInspTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && createAndSave()}
+                placeholder="Inspection name..."
+                className="flex-1 px-2.5 py-2 rounded-lg border border-[#E2E8F0] bg-white text-[#002855] text-xs placeholder:text-[#94A3B8] focus:ring-1 focus:ring-[#D4AF37] outline-none"
+                data-testid="new-inspection-input"
+              />
+              <button
+                onClick={createAndSave}
+                disabled={saving}
+                className="px-3 py-2 rounded-lg bg-[#D4AF37] text-[#002855] text-xs font-bold disabled:opacity-50 flex-shrink-0"
+                data-testid="create-inspection-btn"
+              >
+                {saving ? "..." : "Create & Add"}
+              </button>
+            </div>
+          </div>
+          <div className="p-4 max-h-[50vh] overflow-y-auto space-y-2">
+            {loadingInspections ? (
+              <div className="flex items-center justify-center py-8"><div className="w-6 h-6 border-2 border-[#002855] border-t-transparent rounded-full animate-spin" /></div>
+            ) : inspections.length === 0 ? (
+              <div className="text-center py-6"><ClipboardList className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" /><p className="text-sm text-[#64748B]">No existing inspections</p><p className="text-[10px] text-[#94A3B8] mt-1">Create one above to get started</p></div>
+            ) : (
+              inspections.map((insp) => (
+                <button key={insp.id} onClick={() => saveToInspection(insp.id)} disabled={saving} className="w-full text-left px-3 py-2.5 rounded-lg border border-[#E2E8F0] hover:border-[#002855]/30 hover:bg-[#F8FAFC] transition-colors disabled:opacity-50" data-testid={`save-to-${insp.id}`}>
+                  <p className="text-sm font-semibold text-[#002855] truncate">{insp.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#94A3B8]"><span>{insp.items?.length || 0} violations</span><span>{insp.created_at?.slice(0, 10)}</span></div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -253,3 +253,116 @@ export function InspectionReportContent({ inspection }) {
     </div>
   );
 }
+
+
+export function HosReportContent({ snapshot }) {
+  if (!snapshot) return null;
+  const {
+    ruleType, limitHours, dayCount, days, grandTotal, isOos, overBy,
+    hoursLeftToday, recoverySteps, oosDuration, recommendRestart,
+  } = snapshot;
+  const now = new Date().toLocaleString();
+  const ruleLabel = ruleType === "passenger" ? "Passenger · 60 hr / 7 day" : "Property · 70 hr / 8 day";
+
+  return (
+    <div>
+      <div data-pdf-section="header" style={{ background: "#002855", color: "white", padding: "10px 14px", borderRadius: 6, marginBottom: 12 }}>
+        <div style={{ fontSize: 16, fontWeight: "bold" }}>Hours of Service — 60/70 Hour Rule</div>
+        <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>{now} &nbsp;|&nbsp; {ruleLabel} &nbsp;|&nbsp; Limit: {limitHours} hr / {dayCount} days</div>
+      </div>
+
+      {/* Totals banner */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, border: `1px solid ${isOos ? "#fecaca" : "#a7f3d0"}`, background: isOos ? "#fef2f2" : "#ecfdf5", padding: "8px 12px", borderRadius: 6 }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#64748B", textTransform: "uppercase", fontWeight: "bold" }}>Total Hours ({dayCount} days)</div>
+          <div style={{ fontSize: 20, fontWeight: "bold", color: isOos ? "#DC2626" : "#002855" }}>
+            {grandTotal?.toFixed(2)} <span style={{ fontSize: 12, color: "#64748B" }}>/ {limitHours}</span>
+          </div>
+        </div>
+        <span style={{ background: isOos ? "#DC2626" : "#10B981", color: "white", padding: "4px 10px", borderRadius: 4, fontSize: 11, fontWeight: "bold" }}>
+          {isOos ? `OUT OF SERVICE · +${overBy?.toFixed(2)} hr` : "WITHIN LIMIT"}
+        </span>
+      </div>
+
+      {/* Daily grid */}
+      <div style={{ fontSize: 12, fontWeight: "bold", color: "#002855", marginBottom: 4, borderBottom: "2px solid #D4AF37", paddingBottom: 3 }}>
+        Daily Log ({dayCount} days)
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, marginBottom: 12 }}>
+        <thead>
+          <tr style={{ background: "#f8fafc" }}>
+            <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: "#64748B" }}>Day</th>
+            <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: "#64748B" }}>Date</th>
+            <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Drive</th>
+            <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>On-Duty</th>
+            <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {days?.map((d, i) => (
+            <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <td style={{ padding: "3px 6px", fontWeight: "bold", color: "#334155" }}>{d.dayLabel || "—"}</td>
+              <td style={{ padding: "3px 6px", color: "#64748B" }}>{d.date || "—"}</td>
+              <td style={{ padding: "3px 6px", textAlign: "right" }}>{d.drive ? Number(d.drive).toFixed(2) : "—"}</td>
+              <td style={{ padding: "3px 6px", textAlign: "right" }}>{d.onDuty ? Number(d.onDuty).toFixed(2) : "—"}</td>
+              <td style={{ padding: "3px 6px", textAlign: "right", fontWeight: "bold", color: "#002855" }}>{d.total ? Number(d.total).toFixed(2) : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr style={{ borderTop: "2px solid #002855", background: "#f8fafc" }}>
+            <td colSpan={4} style={{ padding: "4px 6px", fontWeight: "bold", color: "#002855", fontSize: 11 }}>Total ({dayCount} days)</td>
+            <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: "bold", fontSize: 13, color: isOos ? "#DC2626" : "#10B981" }}>{grandTotal?.toFixed(2)} hr</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      {/* Recovery logic (only if OOS) */}
+      {isOos && recoverySteps?.length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: "bold", color: "#002855", marginBottom: 4, borderBottom: "2px solid #D4AF37", paddingBottom: 3 }}>
+            Recovery Logic
+          </div>
+          {hoursLeftToday != null && (
+            <p style={{ fontSize: 11, color: "#64748B", margin: "0 0 6px 0" }}>
+              Hours remaining in today's log at stop: <strong style={{ color: "#002855" }}>{Number(hoursLeftToday).toFixed(2)} hr</strong>
+            </p>
+          )}
+          <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {recoverySteps.map((s, i) => (
+              <li key={i} style={{ display: "flex", gap: 8, marginBottom: 6, fontSize: 11, lineHeight: 1.5 }}>
+                <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: 9, background: s.passes ? "#10B981" : "#CBD5E1", color: "white", fontSize: 10, fontWeight: "bold", textAlign: "center", lineHeight: "18px" }}>{s.stepNum}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: "#334155" }}>{s.description}</div>
+                  <div style={{ fontSize: 10, color: "#64748B", marginTop: 2 }}>
+                    Cumulative OOS: <strong style={{ color: "#002855" }}>{Number(s.oosHours).toFixed(2)} hr</strong>
+                    <span style={{ margin: "0 6px", color: "#CBD5E1" }}>·</span>
+                    New total: <strong style={{ color: s.passes ? "#10B981" : "#DC2626" }}>{Number(s.runningTotal).toFixed(2)} hr {s.passes ? "✓ under limit" : "— still over"}</strong>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          {recommendRestart ? (
+            <div style={{ border: "1px solid #F59E0B", background: "#FFFBEB", borderRadius: 4, padding: "6px 10px", marginTop: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: "#92400E", textTransform: "uppercase", letterSpacing: 0.5 }}>Recommendation: 34-Hour Restart</div>
+              <p style={{ fontSize: 11, color: "#78350F", margin: "2px 0 0" }}>Driver must take <strong>34 consecutive hours off duty</strong> to fully reset the {limitHours}-hour clock.</p>
+            </div>
+          ) : (
+            <div style={{ border: "1px solid #a7f3d0", background: "#ecfdf5", borderRadius: 4, padding: "6px 10px", marginTop: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: "#065F46", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Total OOS Duration: {oosDuration != null ? Number(oosDuration).toFixed(2) : "—"} hr
+              </div>
+              <p style={{ fontSize: 11, color: "#065F46", margin: "2px 0 0" }}>After this rest, the driver's {dayCount}-day total will be below the {limitHours}-hour limit.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div data-pdf-footer="true" style={{ fontSize: 9, color: "#94A3B8", fontStyle: "italic", marginTop: 12 }}>
+        49 CFR 395.3 — 60/70-hour rule. Recovery logic per FMCSA rolling-window interpretation.
+      </div>
+    </div>
+  );
+}
