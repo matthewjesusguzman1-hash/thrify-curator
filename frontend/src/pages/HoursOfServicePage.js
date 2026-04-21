@@ -306,17 +306,11 @@ export default function HoursOfServicePage() {
         title: "Out of Service",
         sub: `Total ${fmt(grandTotal)} hr exceeds ${limit}-hour limit by ${fmt(overBy)} hr. Enter OOS start time below to see rest requirement.`,
       };
-    } else if (oosSim && !oosSim.needsInput && oosSim.recommendRestart) {
+    } else if (oosSim && !oosSim.needsInput && !oosSim.solved) {
       verdict = {
         tone: "oos",
         title: "34-Hour Restart Required",
-        sub: `Driver must take 34 consecutive hours off duty to fully reset the ${limit}-hour clock.`,
-      };
-    } else if (oosSim && !oosSim.needsInput && oosSim.lowAvailability) {
-      verdict = {
-        tone: "oos",
-        title: `Rest ${fmt(oosSim.cumulativeOOS)} hr — only ${fmt(oosSim.finalAvailable)} hr available`,
-        sub: `Driver would return with ${fmt(oosSim.finalAvailable)} hr left before hitting the ${limit}-hr limit again. Consider recommending a 34-hour restart for more runway.`,
+        sub: `Natural recovery within the rolling ${dayCount}-day window won't bring the driver under ${limit} hr. A 34-hour restart is the only path to reset the clock.`,
       };
     } else if (oosSim && !oosSim.needsInput) {
       verdict = {
@@ -436,26 +430,29 @@ export default function HoursOfServicePage() {
                 ))}
               </ol>
 
-              {/* Summary bar */}
+              {/* Summary */}
               {oosSim.solved ? (
-                <div className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 ${oosSim.lowAvailability ? "bg-[#FEF3C7] border border-[#F59E0B]/40" : "bg-[#F0FDF4] border border-[#16A34A]/30"}`} data-testid="hos-oos-summary">
+                <div className="rounded-md bg-[#F0FDF4] border border-[#16A34A]/30 px-2 py-1.5" data-testid="hos-oos-summary">
                   <div className="text-[10px]">
                     <span className="text-[#64748B]">After rest:</span>{" "}
                     <strong className="text-[#002855]">{fmt(oosSim.finalTotal)} hr used</strong>
                     <span className="mx-1 text-[#CBD5E1]">·</span>
-                    <strong className={oosSim.lowAvailability ? "text-[#92400E]" : "text-[#16A34A]"}>
-                      {fmt(oosSim.finalAvailable)} hr available
-                    </strong>
+                    <strong className="text-[#16A34A]">{fmt(oosSim.finalAvailable)} hr available</strong>
                   </div>
-                  {oosSim.lowAvailability && (
-                    <span className="text-[9px] font-bold text-[#92400E] uppercase tracking-wide">⚠ Consider 34-hr restart</span>
-                  )}
                 </div>
               ) : (
                 <div className="rounded-md bg-[#FEE2E2] border border-[#DC2626]/40 px-2 py-1.5 text-[10px] text-[#991B1B]">
                   Natural recovery won't bring driver under {limit} hr — <strong>34-hr restart required</strong>.
                 </div>
               )}
+
+              {/* Plain-language note — only while OOS */}
+              <div className="rounded-md bg-[#FFFBEB] border border-[#F59E0B]/30 px-2 py-1.5 text-[10px] text-[#78350F] leading-snug flex items-start gap-1.5" data-testid="hos-restart-note">
+                <Info className="w-3 h-3 mt-0.5 flex-shrink-0 text-[#D4AF37]" />
+                <span>
+                  <strong className="text-[#92400E]">Tip:</strong> Consider recommending a <strong>34-hr restart</strong> if the driver returns with limited drive time — or if the required rest is already close to 34 hours. A restart fully resets the clock.
+                </span>
+              </div>
             </div>
           </div>
         )}
