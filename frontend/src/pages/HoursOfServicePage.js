@@ -1,10 +1,10 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info,
   Eye, Save, ClipboardList, HelpCircle, Clock,
-  Lightbulb, X,
+  Lightbulb, X, Share2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent } from "../components/ui/dialog";
@@ -13,6 +13,7 @@ import { toast, Toaster } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
 import { PDFPreview } from "../components/app/PDFPreview";
 import { HosReportContent } from "../components/app/ReportContent";
+import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -124,6 +125,8 @@ export default function HoursOfServicePage() {
   const [loadingInspections, setLoadingInspections] = useState(false);
   const [newInspTitle, setNewInspTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const hiddenReportRef = useRef(null);
 
   const rows = ruleType === "property" ? rowsProp : rowsPass;
   const setRows = ruleType === "property" ? setRowsProp : setRowsPass;
@@ -281,6 +284,27 @@ export default function HoursOfServicePage() {
   };
   const openSaveModal = () => { fetchInspections(); setShowSaveModal(true); };
 
+  const handleShare = useCallback(async () => {
+    if (!hiddenReportRef.current) {
+      toast.error("Report not ready");
+      return;
+    }
+    setSharing(true);
+    try {
+      await new Promise((r) => setTimeout(r, 50));
+      const blob = await generatePDFBlob(hiddenReportRef.current);
+      await sharePDFBlob(blob, `hos-recap-${new Date().toISOString().slice(0, 10)}.pdf`, {
+        title: "Hours of Service Recap",
+        text: `HOS Recap · ${ruleType === "property" ? "Property (70/8)" : "Passenger (60/7)"}`,
+      });
+    } catch (err) {
+      console.error("Share failed:", err);
+      toast.error("Could not generate the report. Try Preview.");
+    } finally {
+      setSharing(false);
+    }
+  }, [ruleType]);
+
   const saveToInspection = async (inspectionId) => {
     setSaving(true);
     try {
@@ -371,10 +395,13 @@ export default function HoursOfServicePage() {
         <div className="sticky top-[52px] z-30 bg-white/95 backdrop-blur border-b border-[#E2E8F0] shadow-sm">
           <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
             <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn">
-              <Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export
+              <Eye className="w-3.5 h-3.5 mr-1.5" /> Preview
+            </Button>
+            <Button size="sm" onClick={handleShare} disabled={sharing} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-9 text-xs font-bold flex-1" data-testid="share-btn">
+              <Share2 className="w-3.5 h-3.5 mr-1.5" /> {sharing ? "Preparing…" : "Share"}
             </Button>
             <Button size="sm" onClick={openSaveModal} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1" data-testid="save-to-inspection-btn">
-              <Save className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection
+              <Save className="w-3.5 h-3.5 mr-1.5" /> Save
             </Button>
           </div>
         </div>
@@ -664,12 +691,18 @@ export default function HoursOfServicePage() {
 
       </main>
 
+      {/* Hidden content for Share PDF generation */}
+      <div ref={hiddenReportRef} aria-hidden="true" style={{ position: "absolute", left: -99999, top: 0, width: 700, padding: "20px 16px", fontFamily: "'IBM Plex Sans', Arial, sans-serif", fontSize: 13, color: "#0F172A", lineHeight: 1.6, background: "#fff", pointerEvents: "none" }}>
+        <HosReportContent snapshot={snapshot} />
+      </div>
+
       {/* PDF PREVIEW */}
       <PDFPreview
         open={showPreview}
         onOpenChange={setShowPreview}
         title="Hours of Service Recap"
         filename={`hos-recap-${new Date().toISOString().slice(0, 10)}`}
+        hideShareButton
       >
         <HosReportContent snapshot={snapshot} />
       </PDFPreview>

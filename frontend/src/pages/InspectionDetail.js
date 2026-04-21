@@ -13,8 +13,7 @@ import {
 } from "../components/ui/dialog";
 import { PDFPreview } from "../components/app/PDFPreview";
 import { InspectionReportContent } from "../components/app/ReportContent";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -192,92 +191,16 @@ export default function InspectionDetail() {
     }
     setSharing(true);
     try {
-      // Mirror PDFPreview.generatePDF logic
-      const el = hiddenReportRef.current;
       await new Promise((r) => setTimeout(r, 50));
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth() - 16;
-      const pdfHeight = pdf.internal.pageSize.getHeight() - 16;
-
-      const captureElements = async (elements) => {
-        const wrapper = document.createElement("div");
-        wrapper.style.cssText = `position:absolute;left:-9999px;top:0;width:${el.scrollWidth}px;background:#fff;padding:20px 16px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;color:#0F172A;line-height:1.6;`;
-        elements.forEach((e) => wrapper.appendChild(e.cloneNode(true)));
-        document.body.appendChild(wrapper);
-        await new Promise((r) => setTimeout(r, 50));
-        const c = await html2canvas(wrapper, {
-          scale: 2, useCORS: true, allowTaint: true, logging: false,
-          backgroundColor: "#ffffff",
-          width: wrapper.scrollWidth, height: wrapper.scrollHeight,
-        });
-        document.body.removeChild(wrapper);
-        return c;
-      };
-
-      const addCanvasToPDF = (canvas, addPage) => {
-        if (addPage) pdf.addPage();
-        const imgData = canvas.toDataURL("image/jpeg", 0.92);
-        const imgH = (canvas.height * pdfWidth) / canvas.width;
-        if (imgH <= pdfHeight) {
-          pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth, imgH);
-        } else {
-          const scale = pdfHeight / imgH;
-          const sw = pdfWidth * scale;
-          pdf.addImage(imgData, "JPEG", 8 + (pdfWidth - sw) / 2, 8, sw, pdfHeight);
-        }
-      };
-
-      const headerEl = el.querySelector("[data-pdf-section='header']") || el.querySelector("[data-pdf-section='insp-header']");
-      const articleSections = Array.from(el.querySelectorAll("[data-pdf-section]")).filter(
-        (s) => s.dataset.pdfSection?.startsWith("article-") || s.dataset.pdfSection?.startsWith("assessment-")
-      );
-
-      if (articleSections.length <= 1) {
-        const canvas = await captureElements(Array.from(el.children));
-        addCanvasToPDF(canvas, false);
-      } else {
-        for (let i = 0; i < articleSections.length; i++) {
-          const parts = [];
-          if (headerEl) parts.push(headerEl);
-          parts.push(articleSections[i]);
-          const footer = el.querySelector("[data-pdf-footer]");
-          if (footer && i === articleSections.length - 1) parts.push(footer);
-          const canvas = await captureElements(parts);
-          addCanvasToPDF(canvas, i > 0);
-        }
-      }
-
-      const pdfBlob = pdf.output("blob");
+      const blob = await generatePDFBlob(hiddenReportRef.current);
       const safeTitle = (inspection.title || "inspection").replace(/[^a-z0-9_\-]+/gi, "_");
-      const filename = `${safeTitle}.pdf`;
-      const file = new File([pdfBlob], filename, { type: "application/pdf" });
-      const subject = inspection.title || "Inspection Report";
-      const text = `Inspection Report: ${inspection.title || ""}\nItems: ${inspection.items?.length || 0}`;
-
-      // Prefer Web Share API with file attachment
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: subject, text });
-          return;
-        } catch (err) {
-          if (err.name === "AbortError") return;
-          // fall through to download + mailto fallback
-        }
-      }
-
-      // Fallback: download the PDF and open mailto so user can manually attach
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement("a");
-      a.href = url; a.download = filename; a.style.display = "none";
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
-      toast.success("PDF downloaded — attach it to your email");
-      const mailSubject = encodeURIComponent(subject);
-      const mailBody = encodeURIComponent(`${text}\n\nThe full report PDF has been downloaded; please attach it to this email.`);
-      window.location.href = `mailto:?subject=${mailSubject}&body=${mailBody}`;
+      await sharePDFBlob(blob, `${safeTitle}.pdf`, {
+        title: inspection.title || "Inspection Report",
+        text: `Inspection Report: ${inspection.title || ""}\nItems: ${inspection.items?.length || 0}`,
+      });
     } catch (err) {
-      console.error("Email/Share failed:", err);
-      toast.error("Could not generate the report. Try Preview & Export.");
+      console.error("Share failed:", err);
+      toast.error("Could not generate the report. Try Preview.");
     } finally {
       setSharing(false);
     }

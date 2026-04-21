@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   ChevronLeft, Plus, Trash2, AlertTriangle, CheckCircle2, XCircle,
   Info, ChevronDown, Link2, ShieldAlert, RotateCcw, Save,
-  ClipboardList, GripVertical, Package, Eye, FileText
+  ClipboardList, GripVertical, Package, Eye, Share2
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -15,6 +15,7 @@ import { Dialog, DialogContent } from "../components/ui/dialog";
 import { PDFPreview } from "../components/app/PDFPreview";
 import { TieDownReportContent } from "../components/app/ReportContent";
 import { useAuth } from "../components/app/AuthContext";
+import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -292,6 +293,8 @@ export default function TieDownCalculator() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newInspTitle, setNewInspTitle] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const hiddenReportRef = useRef(null);
   const [inspections, setInspections] = useState([]);
   const [loadingInspections, setLoadingInspections] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -360,6 +363,28 @@ export default function TieDownCalculator() {
     finally { setLoadingInspections(false); }
   };
   const openSaveModal = () => { fetchInspections(); setShowSaveModal(true); };
+
+  const handleShare = useCallback(async () => {
+    if (!hiddenReportRef.current) {
+      toast.error("Report not ready");
+      return;
+    }
+    setSharing(true);
+    try {
+      await new Promise((r) => setTimeout(r, 50));
+      const blob = await generatePDFBlob(hiddenReportRef.current);
+      await sharePDFBlob(blob, `tiedown-assessment-${new Date().toISOString().slice(0, 10)}.pdf`, {
+        title: "Tie-Down Assessment Report",
+        text: `Tie-Down Assessment · ${articles.length} article(s) evaluated`,
+      });
+    } catch (err) {
+      console.error("Share failed:", err);
+      toast.error("Could not generate the report. Try Preview.");
+    } finally {
+      setSharing(false);
+    }
+  }, [articles.length]);
+
   const createAndSave = async () => {
     const title = newInspTitle.trim() || `Tie-Down ${new Date().toLocaleDateString()}`;
     setSaving(true);
@@ -415,12 +440,8 @@ export default function TieDownCalculator() {
         <div className="sticky top-[45px] z-40 bg-white/95 backdrop-blur border-b shadow-sm">
           <div className="max-w-[800px] mx-auto px-3 sm:px-6 py-2 flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export</Button>
-              <Button size="sm" onClick={() => {
-                const subject = encodeURIComponent("Tie-Down Assessment Report");
-                const body = encodeURIComponent(`Tie-Down Assessment\n\n${articles.length} article(s) evaluated\n\nGenerated from Violation Navigator`);
-                window.location.href = `mailto:?subject=${subject}&body=${body}`;
-              }} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1" data-testid="email-btn"><FileText className="w-3.5 h-3.5 mr-1.5" /> Email</Button>
+              <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview</Button>
+              <Button size="sm" onClick={handleShare} disabled={sharing} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1" data-testid="email-btn"><Share2 className="w-3.5 h-3.5 mr-1.5" /> {sharing ? "Preparing…" : "Share"}</Button>
             </div>
             <Button size="sm" onClick={openSaveModal} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-8 text-xs w-full" data-testid="save-to-inspection-btn"><Save className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection</Button>
           </div>
@@ -677,12 +698,18 @@ export default function TieDownCalculator() {
         </div>
       </main>
 
+      {/* Hidden content for Share PDF generation */}
+      <div ref={hiddenReportRef} aria-hidden="true" style={{ position: "absolute", left: -99999, top: 0, width: 700, padding: "20px 16px", fontFamily: "'IBM Plex Sans', Arial, sans-serif", fontSize: 13, color: "#0F172A", lineHeight: 1.6, background: "#fff", pointerEvents: "none" }}>
+        <TieDownReportContent articles={articles} />
+      </div>
+
       {/* PDF PREVIEW */}
       <PDFPreview
         open={showPreview}
         onOpenChange={setShowPreview}
         title="Tie-Down Assessment Report"
         filename={`tiedown-assessment-${new Date().toISOString().slice(0, 10)}`}
+        hideShareButton
       >
         <TieDownReportContent articles={articles} />
       </PDFPreview>
