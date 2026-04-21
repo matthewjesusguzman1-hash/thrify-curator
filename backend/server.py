@@ -225,6 +225,10 @@ class SaveWeightRequest(BaseModel):
     mode_label: str = ""  # "Bridge Formula" | "Custom"
     # Rendered SVG markup of the truck diagram
     truck_diagram_svg: str = ""
+    # Computed violation / calculation details
+    group_violations: List[dict] = []
+    tolerance_applies: bool = False
+    interior: Optional[dict] = None
 
 
 class SaveHosRequest(BaseModel):

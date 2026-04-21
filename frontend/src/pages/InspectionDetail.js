@@ -570,6 +570,84 @@ export default function InspectionDetail() {
                       </div>
                     )}
 
+                    {/* Calculation details (violations, tolerance, interior bridge) */}
+                    {(a.group_violations?.length > 0 || a.interior) && (
+                      <div className="mb-3 border border-[#E2E8F0] rounded-md overflow-hidden">
+                        <div className="px-3 py-1.5 bg-[#F8FAFC] text-[10px] font-bold text-[#64748B] uppercase tracking-wider border-b border-[#E2E8F0]">
+                          Calculation Details
+                          {a.tolerance_applies && <span className="ml-2 text-[#D4AF37] normal-case">· 5% tolerance applied</span>}
+                        </div>
+                        <div className="px-3 py-2 space-y-1.5">
+                          {a.group_violations?.map((v, vi) => {
+                            const overItems = [];
+                            if (v.max && v.actual > v.max) {
+                              const over = v.actual - v.max;
+                              const pct = v.max > 0 ? Math.round((over / v.max) * 1000) / 10 : 0;
+                              overItems.push({ key: `main-${vi}`, label: v.label || `A${vi + 1}`, actual: v.actual, max: v.max, over, pct, src: v.source });
+                            }
+                            if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) {
+                              const over = v.tandemCheck.actual - v.tandemCheck.max;
+                              overItems.push({ key: `t-${vi}`, label: `Tandem check (${v.label || `A${vi + 1}`})`, actual: v.tandemCheck.actual, max: v.tandemCheck.max, over, pct: Math.round((over / v.tandemCheck.max) * 1000) / 10, src: v.tandemCheck.source });
+                            }
+                            (v.axleOverages || []).forEach((ao, i) => {
+                              const over = (ao.actual || 0) - (ao.max || 0);
+                              if (over <= 0) return;
+                              overItems.push({ key: `ax-${vi}-${i}`, label: `Axle ${ao.axleNum} (${v.label || `A${vi + 1}`})`, actual: ao.actual, max: ao.max, over, pct: Math.round((over / ao.max) * 1000) / 10, src: "Single-axle 20,000 lb rule" });
+                            });
+                            (v.tandemSubsetChecks || []).filter(t => t.over).forEach((t, i) => {
+                              overItems.push({ key: `ts-${vi}-${i}`, label: `Tandem subset (${v.label || `A${vi + 1}`})`, actual: t.actual, max: t.max, over: t.actual - t.max, pct: Math.round(((t.actual - t.max) / t.max) * 1000) / 10, src: "Tandem-within-triple" });
+                            });
+                            if (overItems.length === 0 && v.max) {
+                              // Show an OK line per group
+                              return (
+                                <div key={`ok-${vi}`} className="text-[10px] text-[#16A34A] flex items-center gap-1">
+                                  <span className="font-bold">✓</span> {v.label || `A${vi + 1}`}: {(v.actual || 0).toLocaleString()} / {(v.max || 0).toLocaleString()} lbs — legal
+                                </div>
+                              );
+                            }
+                            return overItems.map((it) => {
+                              const tolerated = a.tolerance_applies && it.actual <= it.max * 1.05;
+                              const actualN = Number(it.actual) || 0;
+                              const maxN = Number(it.max) || 0;
+                              const overN = Math.max(0, actualN - maxN);
+                              return (
+                                <div key={it.key} className={`text-[10px] leading-snug ${tolerated ? "text-[#92570D]" : "text-[#991B1B]"}`}>
+                                  <div className="font-bold flex items-center gap-1">
+                                    <span>{tolerated ? "⚠" : "✗"}</span>
+                                    <span>{it.label}: +{overN.toLocaleString()} over ({it.pct}%)</span>
+                                    {tolerated && <span className="text-[9px] bg-[#FDE68A] text-[#78350F] px-1 rounded">within 5%</span>}
+                                  </div>
+                                  <div className="pl-4 text-[9px] text-[#64748B]">
+                                    Actual <strong className="text-[#002855]">{actualN.toLocaleString()}</strong> / Max <strong className="text-[#002855]">{maxN.toLocaleString()}</strong> lbs
+                                    {it.src && <span className="ml-1 italic">· {it.src}</span>}
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })}
+
+                          {a.gross_max && a.gross_weight > a.gross_max && (
+                            <div className="text-[10px] leading-snug text-[#991B1B] border-t border-[#F1F5F9] pt-1.5 mt-1.5">
+                              <div className="font-bold">✗ Gross: +{(a.gross_weight - a.gross_max).toLocaleString()} over</div>
+                              <div className="pl-4 text-[9px] text-[#64748B]">
+                                Actual <strong className="text-[#002855]">{a.gross_weight.toLocaleString()}</strong> / Max <strong className="text-[#002855]">{a.gross_max.toLocaleString()}</strong> lbs
+                              </div>
+                            </div>
+                          )}
+
+                          {a.interior && (
+                            <div className={`text-[10px] leading-snug border-t border-[#F1F5F9] pt-1.5 mt-1.5 ${a.interior.over > 0 ? "text-[#991B1B]" : "text-[#16A34A]"}`}>
+                              <div className="font-bold">
+                                {a.interior.over > 0 ? "✗" : "✓"} Interior bridge ({a.interior.axles} axles, {a.interior.dist}′):
+                                {" "}{(a.interior.actual || 0).toLocaleString()} / {(a.interior.max || 0).toLocaleString()} lbs
+                              </div>
+                              {a.interior.over > 0 && <div className="pl-4 text-[9px] text-[#64748B]">+{a.interior.over.toLocaleString()} lbs over (no tolerance on interior)</div>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Truck diagram (inline SVG) */}
                     {a.truck_diagram_svg && (
                       <div className="mb-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-md p-2 overflow-x-auto">

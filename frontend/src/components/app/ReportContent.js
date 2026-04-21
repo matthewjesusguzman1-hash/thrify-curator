@@ -460,6 +460,60 @@ export function InspectionReportContent({ inspection }) {
                   </table>
                 )}
 
+                {/* Calculation details — mirror inspection detail */}
+                {(a.group_violations?.length > 0 || a.interior) && (
+                  <div style={{ border: "1px solid #E2E8F0", borderRadius: 4, marginBottom: 6 }}>
+                    <div style={{ background: "#F8FAFC", padding: "3px 8px", fontSize: 9, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "1px solid #E2E8F0" }}>
+                      Calculation Details
+                      {a.tolerance_applies && <span style={{ color: "#D4AF37", marginLeft: 6, textTransform: "none" }}>· 5% tolerance applied</span>}
+                    </div>
+                    <div style={{ padding: "4px 8px" }}>
+                      {a.group_violations?.map((v, vi) => {
+                        const overItems = [];
+                        if (v.max && v.actual > v.max) overItems.push({ key: `m-${vi}`, label: v.label || `A${vi + 1}`, actual: v.actual, max: v.max, src: v.source });
+                        if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) overItems.push({ key: `t-${vi}`, label: `Tandem (${v.label || `A${vi + 1}`})`, actual: v.tandemCheck.actual, max: v.tandemCheck.max, src: v.tandemCheck.source });
+                        (v.axleOverages || []).forEach((ao, i) => {
+                          const over = (ao.actual || 0) - (ao.max || 0);
+                          if (over <= 0) return;
+                          overItems.push({ key: `ax-${vi}-${i}`, label: `Axle ${ao.axleNum}`, actual: ao.actual, max: ao.max, src: "20k single-axle rule" });
+                        });
+                        (v.tandemSubsetChecks || []).filter(t => t.over).forEach((t, i) => overItems.push({ key: `ts-${vi}-${i}`, label: `Tandem subset (${v.label || `A${vi + 1}`})`, actual: t.actual, max: t.max, src: "Tandem-in-triple" }));
+                        if (overItems.length === 0 && v.max) {
+                          return <div key={`ok-${vi}`} style={{ fontSize: 10, color: "#16A34A", marginBottom: 2 }}>✓ {v.label || `A${vi + 1}`}: {(v.actual || 0).toLocaleString()} / {(v.max || 0).toLocaleString()} — legal</div>;
+                        }
+                        return overItems.map((it) => {
+                          const actualN = Number(it.actual) || 0;
+                          const maxN = Number(it.max) || 0;
+                          const overN = Math.max(0, actualN - maxN);
+                          const tolerated = a.tolerance_applies && actualN <= maxN * 1.05;
+                          return (
+                            <div key={it.key} style={{ fontSize: 10, color: tolerated ? "#92570D" : "#991B1B", marginBottom: 2 }}>
+                              <div style={{ fontWeight: 700 }}>{tolerated ? "⚠" : "✗"} {it.label}: +{overN.toLocaleString()} over{tolerated ? " (within 5%)" : ""}</div>
+                              <div style={{ paddingLeft: 10, fontSize: 9, color: "#64748B" }}>
+                                Actual <strong style={{ color: "#002855" }}>{actualN.toLocaleString()}</strong> / Max <strong style={{ color: "#002855" }}>{maxN.toLocaleString()}</strong>
+                                {it.src && <span style={{ fontStyle: "italic", marginLeft: 4 }}>· {it.src}</span>}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })}
+                      {a.gross_max && a.gross_weight > a.gross_max && (
+                        <div style={{ fontSize: 10, color: "#991B1B", marginTop: 3, paddingTop: 3, borderTop: "1px solid #F1F5F9" }}>
+                          <div style={{ fontWeight: 700 }}>✗ Gross: +{(a.gross_weight - a.gross_max).toLocaleString()} over</div>
+                          <div style={{ paddingLeft: 10, fontSize: 9, color: "#64748B" }}>Actual <strong style={{ color: "#002855" }}>{a.gross_weight.toLocaleString()}</strong> / Max <strong style={{ color: "#002855" }}>{a.gross_max.toLocaleString()}</strong></div>
+                        </div>
+                      )}
+                      {a.interior && (
+                        <div style={{ fontSize: 10, color: a.interior.over > 0 ? "#991B1B" : "#16A34A", marginTop: 3, paddingTop: 3, borderTop: "1px solid #F1F5F9" }}>
+                          <div style={{ fontWeight: 700 }}>
+                            {a.interior.over > 0 ? "✗" : "✓"} Interior bridge ({a.interior.axles} axles, {a.interior.dist}′): {(a.interior.actual || 0).toLocaleString()} / {(a.interior.max || 0).toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {a.truck_diagram_svg && (
                   <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 4, padding: 6, overflowX: "auto" }} dangerouslySetInnerHTML={{ __html: a.truck_diagram_svg }} />
                 )}

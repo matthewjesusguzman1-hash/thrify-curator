@@ -955,6 +955,9 @@ export default function BridgeChartPage() {
           }, 0) + (record.grossMax && record.gross > record.grossMax ? 1 : 0),
           mode_label: isCustom ? "Custom" : "Bridge Formula",
           truck_diagram_svg: truckSvg,
+          group_violations: record.groupViolations || [],
+          tolerance_applies: !!record.toleranceApplies,
+          interior: record.interior || null,
         }),
       });
     } catch {}
