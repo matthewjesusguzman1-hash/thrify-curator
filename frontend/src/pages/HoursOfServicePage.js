@@ -419,7 +419,7 @@ export default function HoursOfServicePage() {
                       <div className="mt-0.5 text-[9px] flex flex-wrap gap-x-1.5 gap-y-0.5">
                         <span><span className="text-[#64748B]">OOS:</span> <strong className="text-[#002855]">{fmt(s.oosHours)} hr</strong></span>
                         <span className="text-[#CBD5E1]">·</span>
-                        <span><span className="text-[#64748B]">Gained:</span> <strong className="text-[#16A34A]">+{fmt(s.gained)} hr</strong></span>
+                        <span><span className="text-[#64748B]">Aged off (not counted):</span> <strong className="text-[#475569]">−{fmt(s.gained)} hr</strong></span>
                         <span className="text-[#CBD5E1]">·</span>
                         <span><span className="text-[#64748B]">Total:</span> <strong className={s.passes ? "text-[#002855]" : "text-[#DC2626]"}>{fmt(s.runningTotal)} hr</strong></span>
                         <span className="text-[#CBD5E1]">·</span>
