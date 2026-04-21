@@ -542,7 +542,10 @@ export default function InspectionDetail() {
                         </div>
                         {a.groups.map((g, gi) => {
                           const axles = (parseInt(g.axles) || 0) + (g.dummyAxle ? 1 : 0);
-                          const distStr = g.distFt ? `${g.distFt}'${g.distIn ? ` ${g.distIn}"` : ""}` : "—";
+                          const distStr = g.distFt ? `${g.distFt}'` : "—";
+                          const actual = g.useGroup
+                            ? (g.groupWeight ? Number(g.groupWeight) : 0)
+                            : (g.weights || []).reduce((s, w) => s + (Number(w) || 0), 0);
                           return (
                             <div key={gi} className="grid grid-cols-[1fr_70px_70px_90px] gap-2 px-3 py-1.5 border-t border-[#F1F5F9] text-xs">
                               <div className="font-medium text-[#334155] truncate">
@@ -552,7 +555,7 @@ export default function InspectionDetail() {
                               </div>
                               <div className="text-center text-[#475569]">{axles || "—"}</div>
                               <div className="text-center text-[#475569]">{distStr}</div>
-                              <div className="text-right font-bold text-[#002855]">{g.actualWeight ? Number(g.actualWeight).toLocaleString() : "—"}</div>
+                              <div className="text-right font-bold text-[#002855]">{actual > 0 ? actual.toLocaleString() : "—"}</div>
                             </div>
                           );
                         })}

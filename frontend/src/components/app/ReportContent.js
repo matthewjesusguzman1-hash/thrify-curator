@@ -430,7 +430,10 @@ export function InspectionReportContent({ inspection }) {
                     <tbody>
                       {a.groups.map((g, gi) => {
                         const axles = (parseInt(g.axles) || 0) + (g.dummyAxle ? 1 : 0);
-                        const distStr = g.distFt ? `${g.distFt}'${g.distIn ? ` ${g.distIn}"` : ""}` : "—";
+                        const distStr = g.distFt ? `${g.distFt}'` : "—";
+                        const actual = g.useGroup
+                          ? (g.groupWeight ? Number(g.groupWeight) : 0)
+                          : (g.weights || []).reduce((s, w) => s + (Number(w) || 0), 0);
                         return (
                           <tr key={gi} style={{ borderBottom: "1px solid #f1f5f9" }}>
                             <td style={{ padding: "3px 6px", color: "#334155" }}>
@@ -439,7 +442,7 @@ export function InspectionReportContent({ inspection }) {
                             </td>
                             <td style={{ padding: "3px 6px", textAlign: "center" }}>{axles || "—"}</td>
                             <td style={{ padding: "3px 6px", textAlign: "center" }}>{distStr}</td>
-                            <td style={{ padding: "3px 6px", textAlign: "right", fontWeight: "bold", color: "#002855" }}>{g.actualWeight ? Number(g.actualWeight).toLocaleString() : "—"}</td>
+                            <td style={{ padding: "3px 6px", textAlign: "right", fontWeight: "bold", color: "#002855" }}>{actual > 0 ? actual.toLocaleString() : "—"}</td>
                           </tr>
                         );
                       })}
