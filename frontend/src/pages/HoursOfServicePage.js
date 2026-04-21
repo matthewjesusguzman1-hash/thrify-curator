@@ -396,21 +396,21 @@ export default function HoursOfServicePage() {
 
         {/* RECOVERY LOGIC — pinned near the banner, always visible when OOS + stopTime */}
         {isOOS && oosSim && !oosSim.needsInput && (
-          <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden" data-testid="hos-oos-sim">
-            <div className="bg-[#002855] px-3 py-1.5 flex items-center gap-2">
-              <span className="text-[9px] font-black text-white uppercase tracking-widest">Recovery Logic</span>
-              <span className="text-[10px] text-white/60 ml-auto">Cumulative rest → time driver returns to service</span>
+          <div className="bg-white rounded-xl border-2 border-[#002855]/20 shadow-md overflow-hidden" data-testid="hos-oos-sim">
+            <div className="bg-[#002855] px-4 py-2.5 flex items-center gap-2">
+              <span className="text-xs font-black text-white uppercase tracking-wider">Recovery Logic</span>
+              <span className="text-[10px] text-white/60 ml-auto hidden sm:block">Cumulative rest → time driver returns to service</span>
             </div>
-            <div className="p-2 space-y-1.5">
-              <ol className="space-y-1.5 text-[10px] text-[#475569] leading-snug">
+            <div className="p-3 space-y-2.5">
+              <ol className="space-y-2.5 text-xs text-[#475569] leading-snug">
                 {oosSim.steps.map((s) => (
-                  <li key={s.stepNum} className="flex gap-1.5" data-testid={`hos-oos-step-${s.stepNum}`}>
-                    <span className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ${s.passes ? "bg-[#16A34A] text-white" : "bg-[#CBD5E1] text-[#475569]"}`}>
+                  <li key={s.stepNum} className="flex gap-2" data-testid={`hos-oos-step-${s.stepNum}`}>
+                    <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black ${s.passes ? "bg-[#16A34A] text-white" : "bg-[#CBD5E1] text-[#475569]"}`}>
                       {s.stepNum}
                     </span>
                     <div className="flex-1">
-                      <div>{s.description}</div>
-                      <div className="mt-0.5 text-[9px] flex flex-wrap gap-x-1.5 gap-y-0.5">
+                      <div className="text-[12px] text-[#334155]">{s.description}</div>
+                      <div className="mt-1 text-[11px] flex flex-wrap gap-x-2 gap-y-0.5">
                         <span><span className="text-[#64748B]">OOS:</span> <strong className="text-[#002855]">{fmt(s.oosHours)} hr</strong></span>
                         <span className="text-[#CBD5E1]">·</span>
                         <span><span className="text-[#64748B]">Aged off (not counted):</span> <strong className="text-[#475569]">−{fmt(s.gained)} hr</strong></span>
@@ -432,23 +432,23 @@ export default function HoursOfServicePage() {
 
               {/* Summary */}
               {oosSim.solved ? (
-                <div className="rounded-md bg-[#F0FDF4] border border-[#16A34A]/30 px-2 py-1.5" data-testid="hos-oos-summary">
-                  <div className="text-[10px]">
-                    <span className="text-[#64748B]">After rest:</span>{" "}
+                <div className="rounded-lg bg-[#F0FDF4] border border-[#16A34A]/30 px-3 py-2" data-testid="hos-oos-summary">
+                  <div className="text-xs">
+                    <span className="text-[#64748B] font-medium">After rest:</span>{" "}
                     <strong className="text-[#002855]">{fmt(oosSim.finalTotal)} hr used</strong>
-                    <span className="mx-1 text-[#CBD5E1]">·</span>
+                    <span className="mx-1.5 text-[#CBD5E1]">·</span>
                     <strong className="text-[#16A34A]">{fmt(oosSim.finalAvailable)} hr available</strong>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-md bg-[#FEE2E2] border border-[#DC2626]/40 px-2 py-1.5 text-[10px] text-[#991B1B]">
+                <div className="rounded-lg bg-[#FEE2E2] border border-[#DC2626]/40 px-3 py-2 text-xs text-[#991B1B]">
                   Natural recovery won't bring driver under {limit} hr — <strong>34-hr restart required</strong>.
                 </div>
               )}
 
               {/* Plain-language note — only while OOS */}
-              <div className="rounded-md bg-[#FFFBEB] border border-[#F59E0B]/30 px-2 py-1.5 text-[10px] text-[#78350F] leading-snug flex items-start gap-1.5" data-testid="hos-restart-note">
-                <Info className="w-3 h-3 mt-0.5 flex-shrink-0 text-[#D4AF37]" />
+              <div className="rounded-lg bg-[#FFFBEB] border border-[#F59E0B]/30 px-3 py-2 text-[11px] text-[#78350F] leading-relaxed flex items-start gap-2" data-testid="hos-restart-note">
+                <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#D4AF37]" />
                 <span>
                   <strong className="text-[#92400E]">Tip:</strong> Consider recommending a <strong>34-hr restart</strong> if the driver returns with limited drive time — or if the required rest is already close to 34 hours. A restart fully resets the clock.
                 </span>
