@@ -16,6 +16,48 @@ import { InspectionReportContent } from "../components/app/ReportContent";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Circular WLL gauge matching the TieDown Calculator preview
+function WLLGauge({ pct, size = 84, stroke = 9 }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const display = Math.min(Math.max(pct || 0, 0), 100);
+  const offset = circ - (display / 100) * circ;
+  const c = size / 2;
+  const color = pct >= 100 ? "#10B981" : pct >= 60 ? "#F59E0B" : "#EF4444";
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={c} cy={c} r={r} fill="none" stroke="#E2E8F0" strokeWidth={stroke} />
+        <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-base font-black leading-none" style={{ color }}>{Math.round(pct || 0)}%</span>
+        <span className="text-[8px] font-bold tracking-widest text-[#94A3B8] mt-1">WLL</span>
+      </div>
+    </div>
+  );
+}
+
+// Count dots: green check = active, red X = defective, dashed circle = missing
+function CountDots({ tiedowns = [], required = 0 }) {
+  const active = tiedowns.filter((t) => !t.defective).length;
+  const missing = Math.max(0, required - active);
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tiedowns.map((td, i) =>
+        td.defective ? (
+          <div key={`t${i}`} className="w-5 h-5 rounded-full bg-red-100 border-2 border-red-400 flex items-center justify-center text-[10px] font-black text-red-600">✕</div>
+        ) : (
+          <div key={`t${i}`} className="w-5 h-5 rounded-full bg-emerald-500 border-2 border-emerald-600 flex items-center justify-center text-[10px] font-black text-white">✓</div>
+        )
+      )}
+      {Array.from({ length: missing }).map((_, i) => (
+        <div key={`m${i}`} className="w-5 h-5 rounded-full border-2 border-dashed border-[#CBD5E1]" />
+      ))}
+    </div>
+  );
+}
+
 export default function InspectionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -333,6 +375,21 @@ export default function InspectionDetail() {
                       </button>
                     </div>
 
+                    <div className="grid grid-cols-[auto_1fr] gap-3 mb-3 items-center">
+                      <WLLGauge pct={pct} />
+                      <div className="space-y-2 min-w-0">
+                        <div className="text-xs text-[#64748B]">
+                          Total Eff. WLL: <strong className="text-[#002855]">{a.total_effective_wll?.toLocaleString() || 0}</strong> / <strong className="text-[#002855]">{a.required_wll?.toLocaleString() || 0}</strong> lbs
+                        </div>
+                        <div>
+                          <div className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8] mb-1">
+                            Tie-Downs ({a.active_count || 0}/{a.min_tiedowns || 0} required)
+                          </div>
+                          <CountDots tiedowns={a.tiedowns || []} required={a.min_tiedowns || 0} />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-4 gap-2 mb-2 text-center">
                       <div className="bg-[#F8FAFC] rounded p-1.5">
                         <p className="text-[9px] text-[#94A3B8] uppercase">Weight</p>
@@ -347,8 +404,8 @@ export default function InspectionDetail() {
                         <p className={`text-xs font-bold ${pct >= 100 ? "text-emerald-600" : "text-[#EF4444]"}`}>{a.total_effective_wll?.toLocaleString()}</p>
                       </div>
                       <div className="bg-[#F8FAFC] rounded p-1.5">
-                        <p className="text-[9px] text-[#94A3B8] uppercase">WLL %</p>
-                        <p className={`text-xs font-bold ${pct >= 100 ? "text-emerald-600" : "text-[#EF4444]"}`}>{pct}%</p>
+                        <p className="text-[9px] text-[#94A3B8] uppercase">Req. WLL</p>
+                        <p className="text-xs font-bold text-[#002855]">{a.required_wll?.toLocaleString()}</p>
                       </div>
                     </div>
 
@@ -578,25 +635,49 @@ export default function InspectionDetail() {
                           const actual = g.useGroup
                             ? (g.groupWeight ? Number(g.groupWeight) : 0)
                             : (g.weights || []).reduce((s, w) => s + (Number(w) || 0), 0);
+                          // Determine legality for this group from saved violations
+                          const v = (a.group_violations || [])[gi] || {};
+                          const isGroupOver = (v.max && v.actual > v.max)
+                            || (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max)
+                            || (v.axleOverages || []).some((ao) => (ao.actual || 0) > (ao.max || 0))
+                            || (v.tandemSubsetChecks || []).some((t) => t.over);
+                          const hasRule = !!v.max || !!v.tandemCheck;
+                          // Tolerance-saved styling (orange) when this single overage is within 5% and tolerance applies
+                          const groupWithinTol = toleranceApplies && v.max && v.actual > v.max && v.actual <= v.max * 1.05;
+                          const rowBg = isGroupOver
+                            ? (groupWithinTol ? "bg-[#FFF7ED]" : "bg-[#FEF2F2]")
+                            : hasRule ? "bg-[#F0FDF4]" : "";
+                          const rowText = isGroupOver
+                            ? (groupWithinTol ? "text-[#92400E]" : "text-[#991B1B]")
+                            : hasRule ? "text-[#166534]" : "text-[#334155]";
+                          const labelText = isGroupOver
+                            ? (groupWithinTol ? "text-[#92400E]" : "text-[#991B1B]")
+                            : hasRule ? "text-[#166534]" : "text-[#002855]";
                           return (
-                            <div key={gi} className="grid grid-cols-[1fr_70px_70px_90px] gap-2 px-3 py-1.5 border-t border-[#F1F5F9] text-xs">
-                              <div className="font-medium text-[#334155] truncate">
-                                <span className="font-bold text-[#002855]">A{gi + 1}</span>
+                            <div key={gi} className={`grid grid-cols-[1fr_70px_70px_90px] gap-2 px-3 py-1.5 border-t border-[#F1F5F9] text-xs ${rowBg} ${rowText}`}>
+                              <div className="font-medium truncate flex items-center gap-1">
+                                {hasRule && (
+                                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${isGroupOver ? (groupWithinTol ? "bg-[#F59E0B]" : "bg-[#DC2626]") : "bg-[#16A34A]"}`} />
+                                )}
+                                <span className={`font-bold ${labelText}`}>A{gi + 1}</span>
                                 {g.label ? ` · ${g.label}` : ` · ${g.preset || "Group"}`}
                                 {g.dummyAxle && <span className="ml-1 text-[10px] text-[#D4AF37]">+dummy</span>}
                               </div>
-                              <div className="text-center text-[#475569]">{axles || "—"}</div>
-                              <div className="text-center text-[#475569]">{distStr}</div>
-                              <div className="text-right font-bold text-[#002855]">{actual > 0 ? actual.toLocaleString() : "—"}</div>
+                              <div className="text-center">{axles || "—"}</div>
+                              <div className="text-center">{distStr}</div>
+                              <div className={`text-right font-bold ${labelText}`}>{actual > 0 ? actual.toLocaleString() : "—"}</div>
                             </div>
                           );
                         })}
                         {a.overall_dist_ft && (
-                          <div className="grid grid-cols-[1fr_70px_70px_90px] gap-2 px-3 py-1.5 border-t-2 border-[#002855] bg-[#F8FAFC] text-xs">
-                            <div className="font-bold text-[#002855]">Overall</div>
-                            <div className="text-center text-[#475569]">{a.total_axles}</div>
-                            <div className="text-center text-[#475569]">{a.overall_dist_ft}'</div>
-                            <div className="text-right font-bold text-[#002855]">{a.gross_weight?.toLocaleString() || "—"}</div>
+                          <div className={`grid grid-cols-[1fr_70px_70px_90px] gap-2 px-3 py-1.5 border-t-2 border-[#002855] text-xs ${isOver ? "bg-[#FEF2F2] text-[#991B1B]" : "bg-[#F0FDF4] text-[#166534]"}`}>
+                            <div className="font-bold flex items-center gap-1">
+                              <span className={`inline-block w-1.5 h-1.5 rounded-full ${isOver ? "bg-[#DC2626]" : "bg-[#16A34A]"}`} />
+                              Overall (Gross)
+                            </div>
+                            <div className="text-center">{a.total_axles}</div>
+                            <div className="text-center">{a.overall_dist_ft}'</div>
+                            <div className="text-right font-bold">{a.gross_weight?.toLocaleString() || "—"}</div>
                           </div>
                         )}
                       </div>
