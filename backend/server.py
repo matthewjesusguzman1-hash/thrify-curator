@@ -1338,6 +1338,21 @@ async def upload_annotated_photo(inspection_id: str, file: UploadFile = File(...
     return photo
 
 
+@api_router.delete("/inspections/{inspection_id}/annotated-photos/{photo_id}")
+async def delete_annotated_photo(inspection_id: str, photo_id: str):
+    """Remove a single annotated/general photo from the inspection."""
+    res = await db.inspections.update_one(
+        {"id": inspection_id},
+        {
+            "$pull": {"general_photos": {"photo_id": photo_id}},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    return {"message": "Photo removed"}
+
+
 
 
 class AnnotationUpdate(BaseModel):

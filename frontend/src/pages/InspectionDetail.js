@@ -98,6 +98,16 @@ export default function InspectionDetail() {
     toast.success("HOS recap removed");
   };
 
+  const removeGeneralPhoto = async (photoId) => {
+    try {
+      await axios.delete(`${API}/inspections/${id}/annotated-photos/${photoId}`);
+      fetchInspection();
+      toast.success("Photo removed");
+    } catch {
+      toast.error("Failed to remove photo");
+    }
+  };
+
   const handleAssessmentPhotoUpload = async (assessmentId, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -465,13 +475,22 @@ export default function InspectionDetail() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {inspection.general_photos.map((photo) => (
-                  <img
-                    key={photo.photo_id}
-                    src={`${API}/files/${photo.storage_path}`}
-                    alt={photo.original_filename || "Weight capture"}
-                    className="w-20 h-20 object-cover rounded-md border cursor-pointer"
-                    onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
-                  />
+                  <div key={photo.photo_id} className="relative group" data-testid={`weight-photo-${photo.photo_id}`}>
+                    <img
+                      src={`${API}/files/${photo.storage_path}`}
+                      alt={photo.original_filename || "Weight capture"}
+                      className="w-20 h-20 object-cover rounded-md border cursor-pointer"
+                      onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
+                    />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeGeneralPhoto(photo.photo_id); }}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#DC2626] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-[#B91C1C]"
+                      data-testid={`remove-weight-photo-${photo.photo_id}`}
+                      aria-label="Remove photo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
