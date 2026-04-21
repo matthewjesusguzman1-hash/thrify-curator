@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info,
-  Eye, Save, ClipboardList, ChevronDown, ChevronUp, HelpCircle, Clock,
+  Eye, Save, ClipboardList, HelpCircle, Clock,
   Lightbulb, X,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -82,7 +82,6 @@ export default function HoursOfServicePage() {
   const [stopTime, setStopTime] = useState("");
 
   // UX toggles
-  const [showMath, setShowMath] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [walkthroughOpen, setWalkthroughOpen] = useState(true);
 
@@ -381,6 +380,11 @@ export default function HoursOfServicePage() {
                 <AlertTriangle className="w-5 h-5 text-[#DC2626] flex-shrink-0" />
               )}
               <div className="flex-1 min-w-0">
+                {verdict.tone === "oos" && (
+                  <span className="inline-block text-[9px] font-black tracking-widest text-white bg-[#DC2626] rounded px-1.5 py-0.5 uppercase mb-0.5">
+                    Out of Service
+                  </span>
+                )}
                 <div className={`text-base sm:text-lg font-black leading-tight ${verdict.tone === "ok" ? "text-[#14532D]" : "text-[#7F1D1D]"}`} data-testid="hos-verdict-title">
                   {verdict.title}
                 </div>
@@ -392,6 +396,66 @@ export default function HoursOfServicePage() {
                 </div>
                 <div className="text-[9px] text-[#64748B] font-bold uppercase tracking-wider">/ {limit} hr</div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* RECOVERY LOGIC — pinned near the banner, always visible when OOS + stopTime */}
+        {isOOS && oosSim && !oosSim.needsInput && (
+          <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden" data-testid="hos-oos-sim">
+            <div className="bg-[#002855] px-3 py-1.5 flex items-center gap-2">
+              <span className="text-[9px] font-black text-white uppercase tracking-widest">Recovery Logic</span>
+              <span className="text-[10px] text-white/60 ml-auto">Cumulative rest → time driver returns to service</span>
+            </div>
+            <div className="p-2 space-y-1.5">
+              <ol className="space-y-1.5 text-[10px] text-[#475569] leading-snug">
+                {oosSim.steps.map((s) => (
+                  <li key={s.stepNum} className="flex gap-1.5" data-testid={`hos-oos-step-${s.stepNum}`}>
+                    <span className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ${s.passes ? "bg-[#16A34A] text-white" : "bg-[#CBD5E1] text-[#475569]"}`}>
+                      {s.stepNum}
+                    </span>
+                    <div className="flex-1">
+                      <div>{s.description}</div>
+                      <div className="mt-0.5 text-[9px] flex flex-wrap gap-x-1.5 gap-y-0.5">
+                        <span><span className="text-[#64748B]">OOS:</span> <strong className="text-[#002855]">{fmt(s.oosHours)} hr</strong></span>
+                        <span className="text-[#CBD5E1]">·</span>
+                        <span><span className="text-[#64748B]">Gained:</span> <strong className="text-[#16A34A]">+{fmt(s.gained)} hr</strong></span>
+                        <span className="text-[#CBD5E1]">·</span>
+                        <span><span className="text-[#64748B]">Total:</span> <strong className={s.passes ? "text-[#002855]" : "text-[#DC2626]"}>{fmt(s.runningTotal)} hr</strong></span>
+                        <span className="text-[#CBD5E1]">·</span>
+                        <span>
+                          <span className="text-[#64748B]">Available:</span>{" "}
+                          <strong className={s.passes ? (s.available < 2 ? "text-[#F59E0B]" : "text-[#16A34A]") : "text-[#DC2626]"}>
+                            {s.passes ? fmt(s.available) : "0"} hr
+                          </strong>
+                          {s.passes && s.available < 2 && <span className="ml-1 text-[#F59E0B]">⚠</span>}
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              {/* Summary bar */}
+              {oosSim.solved ? (
+                <div className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 ${oosSim.lowAvailability ? "bg-[#FEF3C7] border border-[#F59E0B]/40" : "bg-[#F0FDF4] border border-[#16A34A]/30"}`} data-testid="hos-oos-summary">
+                  <div className="text-[10px]">
+                    <span className="text-[#64748B]">After rest:</span>{" "}
+                    <strong className="text-[#002855]">{fmt(oosSim.finalTotal)} hr used</strong>
+                    <span className="mx-1 text-[#CBD5E1]">·</span>
+                    <strong className={oosSim.lowAvailability ? "text-[#92400E]" : "text-[#16A34A]"}>
+                      {fmt(oosSim.finalAvailable)} hr available
+                    </strong>
+                  </div>
+                  {oosSim.lowAvailability && (
+                    <span className="text-[9px] font-bold text-[#92400E] uppercase tracking-wide">⚠ Consider 34-hr restart</span>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-md bg-[#FEE2E2] border border-[#DC2626]/40 px-2 py-1.5 text-[10px] text-[#991B1B]">
+                  Natural recovery won't bring driver under {limit} hr — <strong>34-hr restart required</strong>.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -569,75 +633,6 @@ export default function HoursOfServicePage() {
                 <p className="text-[10px] text-[#D4AF37] italic">
                   Enter OOS start time to calculate the required rest.
                 </p>
-              )}
-
-              {oosSim && !oosSim.needsInput && (
-                <div className="border-t border-[#F1F5F9] pt-2">
-                  <button
-                    onClick={() => setShowMath(!showMath)}
-                    className="text-[10px] font-bold text-[#002855] hover:text-[#D4AF37] flex items-center gap-1"
-                    data-testid="hos-toggle-math-btn"
-                  >
-                    {showMath ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                    {showMath ? "Hide" : "Show"} the math
-                  </button>
-
-                  {showMath && (
-                    <div className="mt-2 rounded-md bg-[#F8FAFC] border border-[#E2E8F0] p-2 space-y-1.5" data-testid="hos-oos-sim">
-                      <div className="text-[9px] font-black text-[#002855] uppercase tracking-wide">Recovery Logic</div>
-                      <ol className="space-y-1.5 text-[10px] text-[#475569] leading-snug">
-                        {oosSim.steps.map((s) => (
-                          <li key={s.stepNum} className="flex gap-1.5" data-testid={`hos-oos-step-${s.stepNum}`}>
-                            <span className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ${s.passes ? "bg-[#16A34A] text-white" : "bg-[#CBD5E1] text-[#475569]"}`}>
-                              {s.stepNum}
-                            </span>
-                            <div className="flex-1">
-                              <div>{s.description}</div>
-                              <div className="mt-0.5 text-[9px] flex flex-wrap gap-x-1.5 gap-y-0.5">
-                                <span><span className="text-[#64748B]">OOS:</span> <strong className="text-[#002855]">{fmt(s.oosHours)} hr</strong></span>
-                                <span className="text-[#CBD5E1]">·</span>
-                                <span><span className="text-[#64748B]">Gained:</span> <strong className="text-[#16A34A]">+{fmt(s.gained)} hr</strong></span>
-                                <span className="text-[#CBD5E1]">·</span>
-                                <span><span className="text-[#64748B]">Total:</span> <strong className={s.passes ? "text-[#002855]" : "text-[#DC2626]"}>{fmt(s.runningTotal)} hr</strong></span>
-                                <span className="text-[#CBD5E1]">·</span>
-                                <span>
-                                  <span className="text-[#64748B]">Available:</span>{" "}
-                                  <strong className={s.passes ? (s.available < 2 ? "text-[#F59E0B]" : "text-[#16A34A]") : "text-[#DC2626]"}>
-                                    {s.passes ? fmt(s.available) : "0"} hr
-                                  </strong>
-                                  {s.passes && s.available < 2 && <span className="ml-1 text-[#F59E0B]">⚠</span>}
-                                </span>
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ol>
-
-                      {/* Summary bar */}
-                      <div className="border-t border-[#E2E8F0] pt-1.5 mt-1">
-                        {oosSim.solved ? (
-                          <div className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 ${oosSim.lowAvailability ? "bg-[#FEF3C7] border border-[#F59E0B]/40" : "bg-[#F0FDF4] border border-[#16A34A]/30"}`} data-testid="hos-oos-summary">
-                            <div className="text-[10px]">
-                              <span className="text-[#64748B]">After rest:</span>{" "}
-                              <strong className="text-[#002855]">{fmt(oosSim.finalTotal)} hr used</strong>
-                              <span className="mx-1 text-[#CBD5E1]">·</span>
-                              <strong className={oosSim.lowAvailability ? "text-[#92400E]" : "text-[#16A34A]"}>
-                                {fmt(oosSim.finalAvailable)} hr available
-                              </strong>
-                            </div>
-                            {oosSim.lowAvailability && (
-                              <span className="text-[9px] font-bold text-[#92400E] uppercase tracking-wide">⚠ Consider 34-hr restart</span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="rounded-md bg-[#FEE2E2] border border-[#DC2626]/40 px-2 py-1.5 text-[10px] text-[#991B1B]">
-                            Natural recovery won't bring driver under {limit} hr — <strong>34-hr restart required</strong>.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
               )}
             </div>
           </div>
