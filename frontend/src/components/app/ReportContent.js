@@ -338,7 +338,7 @@ export function HosReportContent({ snapshot }) {
                     OOS: <strong style={{ color: "#002855" }}>{Number(s.oosHours).toFixed(2)} hr</strong>
                     {s.gained != null && <>
                       <span style={{ margin: "0 6px", color: "#CBD5E1" }}>·</span>
-                      No longer counted: <strong style={{ color: "#475569" }}>−{Number(s.gained).toFixed(2)} hr</strong>
+                      Removed from calculation: <strong style={{ color: "#475569" }}>−{Number(s.gained).toFixed(2)} hr</strong>
                     </>}
                     <span style={{ margin: "0 6px", color: "#CBD5E1" }}>·</span>
                     Total: <strong style={{ color: s.passes ? "#002855" : "#DC2626" }}>{Number(s.runningTotal).toFixed(2)} hr</strong>
