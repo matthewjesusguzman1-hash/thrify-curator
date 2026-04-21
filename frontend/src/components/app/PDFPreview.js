@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
-export function PDFPreview({ open, onOpenChange, title, filename, children }) {
+export function PDFPreview({ open, onOpenChange, title, filename, children, hideShareButton = false }) {
   const contentRef = useRef(null);
   const [generating, setGenerating] = useState(false);
 
@@ -128,12 +128,14 @@ export function PDFPreview({ open, onOpenChange, title, filename, children }) {
             {children}
           </div>
         </div>
-        <div className="flex-shrink-0 border-t px-4 py-3 pb-6 bg-white">
-          <Button onClick={handleSave} disabled={generating} className="w-full bg-[#002855] text-white hover:bg-[#001a3a] h-11 text-sm font-semibold" data-testid="pdf-save-btn">
-            {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Share2 className="w-4 h-4 mr-2" />}
-            {generating ? "Generating PDF..." : "Save / Share PDF"}
-          </Button>
-        </div>
+        {!hideShareButton && (
+          <div className="flex-shrink-0 border-t px-4 py-3 pb-6 bg-white">
+            <Button onClick={handleSave} disabled={generating} className="w-full bg-[#002855] text-white hover:bg-[#001a3a] h-11 text-sm font-semibold" data-testid="pdf-save-btn">
+              {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Share2 className="w-4 h-4 mr-2" />}
+              {generating ? "Generating PDF..." : "Save / Share PDF"}
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -324,10 +324,10 @@ export default function InspectionDetail() {
         {/* Actions bar — sticky like calculator */}
         <div className="sticky top-[45px] z-40 bg-white/95 backdrop-blur border rounded-xl shadow-sm -mx-1 px-3 py-2 flex items-center gap-2">
           <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1 sm:flex-none" data-testid="export-btn">
-            <Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export
+            <Eye className="w-3.5 h-3.5 mr-1.5" /> Preview
           </Button>
           <Button size="sm" onClick={handleEmail} disabled={sharing} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1 sm:flex-none" data-testid="email-btn">
-            <Share2 className="w-3.5 h-3.5 mr-1.5" /> {sharing ? "Preparing…" : "Email / Share"}
+            <Share2 className="w-3.5 h-3.5 mr-1.5" /> {sharing ? "Preparing…" : "Share"}
           </Button>
         </div>
 
@@ -954,6 +954,7 @@ export default function InspectionDetail() {
         onOpenChange={setShowPreview}
         title={inspection?.title || "Inspection Report"}
         filename={`inspection-${inspection?.title?.replace(/\s+/g, "-").toLowerCase() || id}-${new Date().toISOString().slice(0, 10)}`}
+        hideShareButton
       >
         <InspectionReportContent inspection={inspection} />
       </PDFPreview>
