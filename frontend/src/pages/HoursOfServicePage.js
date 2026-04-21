@@ -448,13 +448,15 @@ export default function HoursOfServicePage() {
                 </div>
               )}
 
-              {/* Plain-language note — only while OOS */}
-              <div className="rounded-lg bg-[#FFFBEB] border border-[#F59E0B]/30 px-3 py-2 text-[11px] text-[#78350F] leading-relaxed flex items-start gap-2" data-testid="hos-restart-note">
-                <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#D4AF37]" />
-                <span>
-                  <strong className="text-[#92400E]">Tip:</strong> Consider recommending a <strong>34-hr restart</strong> if the driver returns with limited drive time — or if the required rest is already close to 34 hours. A restart fully resets the clock.
-                </span>
-              </div>
+              {/* Plain-language note — only when the 34-hr restart isn't already required */}
+              {oosSim.solved && oosSim.cumulativeOOS < 34 && (
+                <div className="rounded-lg bg-[#FFFBEB] border border-[#F59E0B]/30 px-3 py-2 text-[11px] text-[#78350F] leading-relaxed flex items-start gap-2" data-testid="hos-restart-note">
+                  <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#D4AF37]" />
+                  <span>
+                    <strong className="text-[#92400E]">Tip:</strong> Consider recommending a <strong>34-hr restart</strong> if the driver returns with limited drive time — or if the required rest is already close to 34 hours. A restart fully resets the clock.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
