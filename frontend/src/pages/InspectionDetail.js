@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Header } from "../components/app/Header";
-import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert, XCircle, Eye, Hourglass, Scale, Repeat } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, Camera, Pencil, Check, X, Image, ShieldAlert, XCircle, Eye, Hourglass, Scale, Repeat, Share2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -13,6 +13,8 @@ import {
 } from "../components/ui/dialog";
 import { PDFPreview } from "../components/app/PDFPreview";
 import { InspectionReportContent } from "../components/app/ReportContent";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -71,6 +73,9 @@ export default function InspectionDetail() {
   const [itemNotesDraft, setItemNotesDraft] = useState("");
   const [previewPhoto, setPreviewPhoto] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  // Hidden content ref used to render the full report invisibly for PDF generation
+  const hiddenReportRef = useRef(null);
 
   const fetchInspection = useCallback(async () => {
     try {
@@ -180,12 +185,103 @@ export default function InspectionDetail() {
     window.open(url, "_blank");
   };
 
-  const handleEmail = () => {
-    const exportUrl = `${API}/inspections/${id}/export?include_photos=Y`;
-    const subject = encodeURIComponent(inspection?.title || "Inspection Report");
-    const body = encodeURIComponent(`Inspection Report: ${inspection?.title}\n\nView the full report here:\n${exportUrl}\n\nViolations: ${inspection?.items?.length || 0}`);
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-  };
+  const handleEmail = useCallback(async () => {
+    if (!hiddenReportRef.current || !inspection) {
+      toast.error("Report not ready");
+      return;
+    }
+    setSharing(true);
+    try {
+      // Mirror PDFPreview.generatePDF logic
+      const el = hiddenReportRef.current;
+      await new Promise((r) => setTimeout(r, 50));
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth() - 16;
+      const pdfHeight = pdf.internal.pageSize.getHeight() - 16;
+
+      const captureElements = async (elements) => {
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = `position:absolute;left:-9999px;top:0;width:${el.scrollWidth}px;background:#fff;padding:20px 16px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;color:#0F172A;line-height:1.6;`;
+        elements.forEach((e) => wrapper.appendChild(e.cloneNode(true)));
+        document.body.appendChild(wrapper);
+        await new Promise((r) => setTimeout(r, 50));
+        const c = await html2canvas(wrapper, {
+          scale: 2, useCORS: true, allowTaint: true, logging: false,
+          backgroundColor: "#ffffff",
+          width: wrapper.scrollWidth, height: wrapper.scrollHeight,
+        });
+        document.body.removeChild(wrapper);
+        return c;
+      };
+
+      const addCanvasToPDF = (canvas, addPage) => {
+        if (addPage) pdf.addPage();
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        const imgH = (canvas.height * pdfWidth) / canvas.width;
+        if (imgH <= pdfHeight) {
+          pdf.addImage(imgData, "JPEG", 8, 8, pdfWidth, imgH);
+        } else {
+          const scale = pdfHeight / imgH;
+          const sw = pdfWidth * scale;
+          pdf.addImage(imgData, "JPEG", 8 + (pdfWidth - sw) / 2, 8, sw, pdfHeight);
+        }
+      };
+
+      const headerEl = el.querySelector("[data-pdf-section='header']") || el.querySelector("[data-pdf-section='insp-header']");
+      const articleSections = Array.from(el.querySelectorAll("[data-pdf-section]")).filter(
+        (s) => s.dataset.pdfSection?.startsWith("article-") || s.dataset.pdfSection?.startsWith("assessment-")
+      );
+
+      if (articleSections.length <= 1) {
+        const canvas = await captureElements(Array.from(el.children));
+        addCanvasToPDF(canvas, false);
+      } else {
+        for (let i = 0; i < articleSections.length; i++) {
+          const parts = [];
+          if (headerEl) parts.push(headerEl);
+          parts.push(articleSections[i]);
+          const footer = el.querySelector("[data-pdf-footer]");
+          if (footer && i === articleSections.length - 1) parts.push(footer);
+          const canvas = await captureElements(parts);
+          addCanvasToPDF(canvas, i > 0);
+        }
+      }
+
+      const pdfBlob = pdf.output("blob");
+      const safeTitle = (inspection.title || "inspection").replace(/[^a-z0-9_\-]+/gi, "_");
+      const filename = `${safeTitle}.pdf`;
+      const file = new File([pdfBlob], filename, { type: "application/pdf" });
+      const subject = inspection.title || "Inspection Report";
+      const text = `Inspection Report: ${inspection.title || ""}\nItems: ${inspection.items?.length || 0}`;
+
+      // Prefer Web Share API with file attachment
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: subject, text });
+          return;
+        } catch (err) {
+          if (err.name === "AbortError") return;
+          // fall through to download + mailto fallback
+        }
+      }
+
+      // Fallback: download the PDF and open mailto so user can manually attach
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.style.display = "none";
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+      toast.success("PDF downloaded — attach it to your email");
+      const mailSubject = encodeURIComponent(subject);
+      const mailBody = encodeURIComponent(`${text}\n\nThe full report PDF has been downloaded; please attach it to this email.`);
+      window.location.href = `mailto:?subject=${mailSubject}&body=${mailBody}`;
+    } catch (err) {
+      console.error("Email/Share failed:", err);
+      toast.error("Could not generate the report. Try Preview & Export.");
+    } finally {
+      setSharing(false);
+    }
+  }, [inspection]);
 
   if (loading) {
     return (
@@ -230,8 +326,8 @@ export default function InspectionDetail() {
           <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1 sm:flex-none" data-testid="export-btn">
             <Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export
           </Button>
-          <Button size="sm" onClick={handleEmail} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1 sm:flex-none" data-testid="email-btn">
-            <FileText className="w-3.5 h-3.5 mr-1.5" /> Email
+          <Button size="sm" onClick={handleEmail} disabled={sharing} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1 sm:flex-none" data-testid="email-btn">
+            <Share2 className="w-3.5 h-3.5 mr-1.5" /> {sharing ? "Preparing…" : "Email / Share"}
           </Button>
         </div>
 
@@ -844,6 +940,12 @@ export default function InspectionDetail() {
           </div>
         )}
       </main>
+
+      {/* Hidden report content for Email/Share PDF generation — rendered off-screen,
+          so the Email button can attach a full PDF without opening the preview modal. */}
+      <div ref={hiddenReportRef} aria-hidden="true" style={{ position: "absolute", left: -99999, top: 0, width: 700, padding: "20px 16px", fontFamily: "'IBM Plex Sans', Arial, sans-serif", fontSize: 13, color: "#0F172A", lineHeight: 1.6, background: "#fff", pointerEvents: "none" }}>
+        <InspectionReportContent inspection={inspection} />
+      </div>
 
       {/* Photo preview */}
       {/* PDF PREVIEW */}
