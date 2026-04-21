@@ -1,0 +1,57 @@
+{
+  "summary": "E2E validation of Save-to-Inspection + Preview & Export flows on HOS, Tie-Down, and Bridge Chart pages. Backend pytest 4/4 PASS (HOS persist, Tie-down persist, BridgeChart annotated-photo, auth login). UI: HOS flow ✅ fully works end-to-end and persists exactly as spec'd; Bridge Chart save ✅ works (general_photos += 1 PNG); Tie-Down save fires (toast 'article(s) saved to inspection') BUT the created inspection is NOT badge-tagged so it disappears from the user's `?badge=042` listing — root cause: TieDownCalculator.createAndSave omits the `badge` field on POST /api/inspections.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "TieDownCalculator", "issue": "createAndSave() omits `badge` when POSTing /api/inspections, so the inspection is created with badge='' and is invisible in the user's badge-filtered Inspections list. The tiedown_assessment IS attached, but the parent inspection is orphaned from the badge.", "selector": "[data-testid=\"create-inspection-btn\"] (TieDownCalculator.js line 339)", "priority": "HIGH"},
+      {"component": "BridgeChartPage Preview modal", "issue": "Pressing Escape does NOT close the [data-testid=\"preview-modal\"] (only the X button works). Both HOS and (presumably) TieDown preview dialogs close on Escape because they use Radix Dialog; BridgeChart uses a plain div modal with no Escape handler.", "selector": "[data-testid=\"preview-modal\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Tie-Down → Save to Inspection → Inspections list", "issue": "After 'Create & Add', the new inspection is not visible to the user under their badge. Backend persists tiedown_assessments correctly (verified via pytest), but parent inspection lacks badge attribution.", "affected_selectors": ["[data-testid=\"create-inspection-btn\"]"]}
+    ],
+    "design_issues": [
+      {"screen": "All Save-to-Inspection modals", "issues": ["Console warning: '`DialogContent` requires a `DialogTitle` for accessibility' fires on every save modal (HOS / TieDown / BridgeChart). Add a (visually-hidden if needed) DialogTitle for screen-reader compliance."]}
+    ]
+  },
+  "tests_executed": [
+    "Backend pytest /app/backend/tests/test_save_to_inspection.py — 4/4 PASS",
+    "  • TestHosSaveToInspection: POST /api/inspections/{id}/hos with property/70/8days/total=80/oos=true persists correctly; GET returns hos_assessments[0] with all fields intact (rule_type, limit_hours=70, total_hours=80, is_oos=true, days length=8, recovery_steps>=1)",
+    "  • TestTieDownSaveToInspection: POST /api/inspections/{id}/tiedown persists tiedown_assessments[0]",
+    "  • TestBridgeChartAnnotatedPhotos: POST /api/inspections/{id}/annotated-photos with PNG persists into general_photos[0] with photo_id + storage_path",
+    "  • TestAuthRegression: POST /api/auth/login badge=042/pin=1234 → 200",
+    "UI E2E (Playwright):",
+    "  • Login (042/1234) → dashboard ✅",
+    "  • /hours-of-service: action bar visible, OOS time set 14:00, Preview opens with 'Hours of Service Recap' header, Escape closes ✅, Save→Create&Add → toast 'HOS recap saved to inspection' → API GET shows hos_assessments[0] with rule=property, limit=70, total=80, is_oos=true, days=8, recovery_steps=1 ✅",
+    "  • /calculator (NOTE: TieDown route is /calculator, not /tiedown): filled cargo-weight-0=5000, cargo-length-0=10, added Custom WLL=5000, action bar appears, Preview opens with 'Tie-Down Assessment Report' header ✅, Save→Create&Add toast '1 article(s) saved to inspection' ✅, BUT inspection NOT in /api/inspections?badge=042 listing — found in unfiltered list with badge='' ❌",
+    "  • /bridge-chart Record Weights: filled axle weight, action bar appears, Preview & Export opens (blob PNG via html2canvas) ✅, Save→Create&Add → toast 'Added to inspection', API GET shows general_photos[0] persisted ✅. Escape does NOT close preview modal (X button works)."
+  ],
+  "critical_code_review_comments": [
+    "BUG (HIGH): /app/frontend/src/pages/TieDownCalculator.js line 339 — `axios.post(`${API}/inspections`, { title })` is missing the `badge` field. Compare with HoursOfServicePage.js line 288: `axios.post(`${API}/inspections`, { title, badge })`. Fix: change to `{ title, badge }`. Also fetchInspections() at line 330 uses `axios.get(`${API}/inspections`)` (no badge filter) — should be `${API}/inspections?badge=${badge}` to be consistent with HOS.",
+    "BUG (LOW): /app/frontend/src/pages/BridgeChartPage.js — preview-modal (line ~1703) is a plain div modal without an Escape key handler nor a Radix Dialog wrapper. Add a useEffect that listens for keydown 'Escape' and calls closePreview(), or wrap in <Dialog> like the other pages do.",
+    "ACCESSIBILITY: All three pages' DialogContent (save-modal) emit 'DialogContent requires a DialogTitle' Radix warnings. Add a DialogTitle (use VisuallyHidden if you want it hidden).",
+    "MINOR: TieDownCalculator's saveToInspection toast says '${articles.length} article(s) saved to inspection' even when only some articles had data (others are skipped via `if (c.w <= 0 && a.tiedowns.length === 0) continue;`). Better to count actually saved ones."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_save_to_inspection.py",
+    "/app/test_reports/pytest/pytest_save_to_inspection.xml"
+  ],
+  "action_items": [
+    "MUST FIX: TieDownCalculator.js line 339 — add `badge` to inspection POST body so created inspections appear in the user's badge-filtered list (root cause of user's complaint 'not attaching to inspection when chosen'). Also update fetchInspections (line 330) to filter by badge.",
+    "SHOULD FIX: BridgeChartPage.js preview-modal — add Escape key handler to closePreview() (or convert to Radix Dialog).",
+    "NICE TO HAVE: Add DialogTitle (VisuallyHidden) to save-modal in all 3 pages to silence Radix a11y warning.",
+    "After fix, re-run /app/backend/tests/test_save_to_inspection.py and the UI E2E to confirm tie-down inspection appears in the badge listing."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_save_to_inspection.py (created — 4 tests covering HOS/TieDown/BC annotated-photo save flows + auth)"
+  ],
+  "success_rate": {"backend": "100% (4/4 pytest)", "frontend": "67% (HOS ✅, BridgeChart ✅, TieDown ⚠️ saves to wrong/empty badge)"},
+  "test_credentials": "Badge 042 / PIN 1234 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "All TEST_UI_* and TEST_* inspections created during testing have been deleted via DELETE /api/inspections/{id}. No leftover test data.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "TieDown route is /calculator (NOT /tiedown). Test IDs: cargo-weight-{idx}, cargo-length-{idx}, add-custom-{idx}, save-to-inspection-btn, export-standalone-btn, save-modal, new-inspection-input, create-inspection-btn. BridgeChart preview-modal has its own [data-testid='preview-modal'] but no Escape handler — close via the X button (first button inside the modal). After fix, the assertion `inspections from GET /api/inspections?badge=042` should include the newly created tie-down inspection. Backend pytest file at /app/backend/tests/test_save_to_inspection.py is the regression suite.",
+  "rca of the issue": "User report 'not attaching to inspection when chosen' for the TieDown flow root-causes to TieDownCalculator.js line 339: the POST /api/inspections payload is `{ title }` only (no `badge`), so MongoDB stores the inspection with badge='' / null. The subsequent POST /api/inspections/{id}/tiedown DOES correctly persist the tiedown_assessment under that inspection, but because the parent inspection has no badge, it never shows up in the user-facing list which queries with `?badge=042`. To the user it appears the save 'didn't attach'. Fix is one-line: `axios.post(\\`${API}/inspections\\`, { title, badge });` — same pattern as HOS (line 288) and BridgeChart (line 903)."
+}
