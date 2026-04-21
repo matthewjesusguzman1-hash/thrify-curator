@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import WeightReportPrintable from "../components/app/WeightReportPrintable";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, Calculator, Scale, AlertTriangle, Info, X, Download, Share2, FolderPlus, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle, ChevronDown, ChevronUp, Camera, Ruler } from "lucide-react";
 import html2canvas from "html2canvas";
 import { Button } from "../components/ui/button";
@@ -327,6 +327,7 @@ function ViolationCard({ label, actual, max, tolerance }) {
    ================================================================ */
 export default function BridgeChartPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { badge } = useAuth();
   const svgRef = useRef(null);
   const photoRef = useRef(null);
@@ -414,6 +415,22 @@ export default function BridgeChartPage() {
   const [otherSlot, setOtherSlot] = useState(initial?.isCustom ? initialBridge : initialCustom);
 
   useEffect(() => { if (initial?.isCustom) setIsCustom(true); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Rehydrate from saved weight assessment (via "Recreate in Section")
+  useEffect(() => {
+    const saved = location.state?.recreateWeight;
+    if (!saved) return;
+    if (saved.is_custom) setIsCustom(true); else setIsCustom(false);
+    if (saved.groups?.length) setGroups(saved.groups);
+    if (saved.overall_dist_ft != null) setOverallDistFt(saved.overall_dist_ft);
+    if (saved.custom_gross_max != null) setCustomGrossMax(saved.custom_gross_max);
+    if (saved.interior_dist_ft != null) setInteriorDistFt(saved.interior_dist_ft);
+    if (saved.custom_interior_max != null) setCustomInteriorMax(saved.custom_interior_max);
+    if (saved.is_interstate != null) setIsInterstate(saved.is_interstate);
+    // Clear the state so a refresh doesn't re-hydrate
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const currentSlotObj = useCallback(() => ({ groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax, isInterstate }), [groups, overallDistFt, customGrossMax, photos, interiorDistFt, customInteriorMax, isInterstate]);
@@ -891,11 +908,16 @@ export default function BridgeChartPage() {
   const openInspPicker = async () => { setShowInspPicker(true); try { const r = await fetch(`${API}/api/inspections?badge=${badge}`); if (r.ok) { const d = await r.json(); setInspections(d.inspections || []); } } catch {} };
   const addToInsp = async (id) => {
     setSaving(true);
+    // Upload the bridge chart capture and capture its photo_id so we can link it
+    let mainPhotoId = null;
     const b = await getCaptureBlob();
     if (b) {
       const fd = new FormData();
       fd.append("file", b, "weight.png");
-      await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd });
+      try {
+        const r = await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd });
+        if (r.ok) { const p = await r.json(); mainPhotoId = p.photo_id; }
+      } catch {}
     }
     for (const p of photos) {
       if (p.file) {
@@ -904,6 +926,35 @@ export default function BridgeChartPage() {
         await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd });
       }
     }
+    // POST structured snapshot so inspection detail can display info + support Recreate
+    try {
+      await fetch(`${API}/api/inspections/${id}/weight-assessments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          is_custom: !!isCustom,
+          is_interstate: !!isInterstate,
+          groups,
+          overall_dist_ft: overallDistFt,
+          custom_gross_max: customGrossMax,
+          interior_dist_ft: interiorDistFt,
+          custom_interior_max: customInteriorMax,
+          total_axles: record.totalAxles || 0,
+          gross_weight: record.gross || 0,
+          gross_max: record.grossMax || null,
+          violation_count: (record.groupViolations || []).reduce((s, v) => {
+            let c = 0;
+            if (v.max && v.actual > v.max) c++;
+            if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) c++;
+            if (v.axleOverages) c += v.axleOverages.length;
+            if (v.tandemSubsetChecks) c += v.tandemSubsetChecks.filter(t => t.over).length;
+            return s + c;
+          }, 0) + (record.grossMax && record.gross > record.grossMax ? 1 : 0),
+          mode_label: isCustom ? "Custom" : "Bridge Formula",
+          photo_id: mainPhotoId,
+        }),
+      });
+    } catch {}
     toast.success("Added to inspection");
     setShowInspPicker(false);
     setSaving(false);

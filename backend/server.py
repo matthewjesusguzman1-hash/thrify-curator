@@ -9,7 +9,7 @@ import re
 import requests as http_requests
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
+from typing import List, Optional, Any
 import uuid
 from datetime import datetime, timezone
 
@@ -197,6 +197,34 @@ class HosRecoveryStep(BaseModel):
     passes: bool = False
     gained: float = 0
     available: float = 0
+
+
+class WeightGroupSnapshot(BaseModel):
+    label: str = ""
+    preset: str = ""
+    axles: Any = ""
+    distFt: Any = ""
+    distIn: Any = ""
+    actualWeight: Any = ""
+    dummyAxle: bool = False
+
+
+class SaveWeightRequest(BaseModel):
+    is_custom: bool = False
+    is_interstate: bool = True
+    groups: List[dict] = []  # full group state for perfect rehydrate
+    overall_dist_ft: Any = ""
+    custom_gross_max: Any = ""
+    interior_dist_ft: Any = ""
+    custom_interior_max: Any = ""
+    # Summary (computed on client) for quick display
+    total_axles: int = 0
+    gross_weight: float = 0
+    gross_max: Optional[float] = None
+    violation_count: int = 0
+    mode_label: str = ""  # "Bridge Formula" | "Custom"
+    # Optional link to the already-uploaded image
+    photo_id: Optional[str] = None
 
 
 class SaveHosRequest(BaseModel):
@@ -1531,6 +1559,37 @@ async def delete_hos_from_inspection(inspection_id: str, assessment_id: str):
         },
     )
     return {"message": "HOS assessment removed"}
+
+
+@api_router.post("/inspections/{inspection_id}/weight-assessments")
+async def save_weight_to_inspection(inspection_id: str, req: SaveWeightRequest):
+    """Save a structured Bridge Chart / Weight recap to an inspection."""
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    assessment = req.model_dump()
+    assessment["assessment_id"] = str(uuid.uuid4())
+    assessment["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.inspections.update_one(
+        {"id": inspection_id},
+        {
+            "$push": {"weight_assessments": assessment},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    return assessment
+
+
+@api_router.delete("/inspections/{inspection_id}/weight-assessments/{assessment_id}")
+async def delete_weight_from_inspection(inspection_id: str, assessment_id: str):
+    await db.inspections.update_one(
+        {"id": inspection_id},
+        {
+            "$pull": {"weight_assessments": {"assessment_id": assessment_id}},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    return {"message": "Weight assessment removed"}
 
 
 @api_router.post("/tiedown-photos")

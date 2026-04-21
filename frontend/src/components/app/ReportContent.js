@@ -390,25 +390,101 @@ export function InspectionReportContent({ inspection }) {
         </div>
       )}
 
-      {/* Weight Captures */}
-      {inspection.general_photos?.length > 0 && (
+      {/* Weight Assessments (structured) */}
+      {inspection.weight_assessments?.length > 0 && (
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 13, fontWeight: "bold", color: "#002855", marginBottom: 6, borderBottom: "2px solid #D4AF37", paddingBottom: 4 }}>
-            Weight Captures ({inspection.general_photos.length})
+            Weight Assessments ({inspection.weight_assessments.length})
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {inspection.general_photos.map((ph) => (
-              <img
-                key={ph.photo_id}
-                src={`${API}/files/${ph.storage_path}`}
-                alt={ph.original_filename || "Weight capture"}
-                style={{ width: 260, maxWidth: "100%", borderRadius: 4, border: "1px solid #ddd" }}
-                crossOrigin="anonymous"
-              />
-            ))}
-          </div>
+          {inspection.weight_assessments.map((a, ai) => {
+            const linkedPhoto = (inspection.general_photos || []).find(p => p.photo_id === a.photo_id);
+            const isOver = a.gross_max && a.gross_weight > a.gross_max;
+            const hasViolations = a.violation_count > 0;
+            return (
+              <div key={a.assessment_id || ai} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12, fontWeight: "bold", color: "#002855" }}>
+                    Weight Report {ai + 1} · {a.mode_label || (a.is_custom ? "Custom" : "Bridge Formula")}
+                    {!a.is_custom && <span style={{ marginLeft: 6, fontSize: 10, color: "#92570D" }}>{a.is_interstate ? "INTERSTATE" : "NON-INTERSTATE"}</span>}
+                  </span>
+                  <span style={{ background: hasViolations ? "#fef2f2" : "#ecfdf5", border: `1px solid ${hasViolations ? "#fecaca" : "#a7f3d0"}`, color: hasViolations ? "#DC2626" : "#10B981", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: "bold" }}>
+                    {hasViolations ? `${a.violation_count} VIOLATION${a.violation_count === 1 ? "" : "S"}` : "COMPLIANT"}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                  <StatCell label="Gross Weight" value={`${a.gross_weight?.toLocaleString() || 0} lbs`} valueColor={isOver ? "#DC2626" : "#002855"} />
+                  <StatCell label="Gross Max" value={a.gross_max ? `${a.gross_max.toLocaleString()} lbs` : "—"} />
+                  <StatCell label="Axles" value={a.total_axles || 0} />
+                </div>
+
+                {a.groups?.length > 0 && (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10, marginBottom: 6 }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc" }}>
+                        <th style={{ padding: "3px 6px", textAlign: "left", fontSize: 9, color: "#64748B" }}>Group</th>
+                        <th style={{ padding: "3px 6px", textAlign: "center", fontSize: 9, color: "#64748B" }}>Axles</th>
+                        <th style={{ padding: "3px 6px", textAlign: "center", fontSize: 9, color: "#64748B" }}>Dist</th>
+                        <th style={{ padding: "3px 6px", textAlign: "right", fontSize: 9, color: "#64748B" }}>Actual</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {a.groups.map((g, gi) => {
+                        const axles = (parseInt(g.axles) || 0) + (g.dummyAxle ? 1 : 0);
+                        const distStr = g.distFt ? `${g.distFt}'${g.distIn ? ` ${g.distIn}"` : ""}` : "—";
+                        return (
+                          <tr key={gi} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                            <td style={{ padding: "3px 6px", color: "#334155" }}>
+                              <strong style={{ color: "#002855" }}>A{gi + 1}</strong>{g.label ? ` · ${g.label}` : ` · ${g.preset || "Group"}`}
+                              {g.dummyAxle && <span style={{ color: "#D4AF37", marginLeft: 4 }}>+dummy</span>}
+                            </td>
+                            <td style={{ padding: "3px 6px", textAlign: "center" }}>{axles || "—"}</td>
+                            <td style={{ padding: "3px 6px", textAlign: "center" }}>{distStr}</td>
+                            <td style={{ padding: "3px 6px", textAlign: "right", fontWeight: "bold", color: "#002855" }}>{g.actualWeight ? Number(g.actualWeight).toLocaleString() : "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    {a.overall_dist_ft && (
+                      <tfoot>
+                        <tr style={{ borderTop: "2px solid #002855", background: "#f8fafc" }}>
+                          <td style={{ padding: "4px 6px", fontWeight: "bold", color: "#002855" }}>Overall</td>
+                          <td style={{ padding: "4px 6px", textAlign: "center", color: "#475569" }}>{a.total_axles}</td>
+                          <td style={{ padding: "4px 6px", textAlign: "center", color: "#475569" }}>{a.overall_dist_ft}'</td>
+                          <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: "bold", fontSize: 12, color: isOver ? "#DC2626" : "#002855" }}>{a.gross_weight?.toLocaleString()}</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                )}
+
+                {linkedPhoto && (
+                  <img src={`${API}/files/${linkedPhoto.storage_path}`} alt="" style={{ width: "100%", borderRadius: 4, border: "1px solid #ddd" }} crossOrigin="anonymous" />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
+
+      {/* Orphan Weight Photos (not linked to any structured assessment) */}
+      {(() => {
+        const linked = new Set((inspection.weight_assessments || []).map(a => a.photo_id).filter(Boolean));
+        const orphans = (inspection.general_photos || []).filter(p => !linked.has(p.photo_id));
+        if (orphans.length === 0) return null;
+        return (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: "bold", color: "#002855", marginBottom: 6, borderBottom: "2px solid #D4AF37", paddingBottom: 4 }}>
+              Additional Photos ({orphans.length})
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {orphans.map((ph) => (
+                <img key={ph.photo_id} src={`${API}/files/${ph.storage_path}`} alt="" style={{ width: 260, maxWidth: "100%", borderRadius: 4, border: "1px solid #ddd" }} crossOrigin="anonymous" />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

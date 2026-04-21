@@ -98,6 +98,12 @@ export default function InspectionDetail() {
     toast.success("HOS recap removed");
   };
 
+  const removeWeight = async (assessmentId) => {
+    await axios.delete(`${API}/inspections/${id}/weight-assessments/${assessmentId}`);
+    fetchInspection();
+    toast.success("Weight assessment removed");
+  };
+
   const removeGeneralPhoto = async (photoId) => {
     try {
       await axios.delete(`${API}/inspections/${id}/annotated-photos/${photoId}`);
@@ -474,21 +480,133 @@ export default function InspectionDetail() {
           </div>
         )}
 
-        {/* Weight / Bridge Chart Photos */}
-        {inspection.general_photos?.length > 0 && (
+        {/* Weight Assessments — structured Bridge Chart recaps */}
+        {inspection.weight_assessments?.length > 0 && (
+          <div data-testid="weight-assessments-section">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                Weight Assessments ({inspection.weight_assessments.length})
+              </span>
+            </div>
+            <div className="space-y-3">
+              {inspection.weight_assessments.map((a) => {
+                const linkedPhoto = (inspection.general_photos || []).find(p => p.photo_id === a.photo_id);
+                const isOver = a.gross_max && a.gross_weight > a.gross_max;
+                const hasViolations = a.violation_count > 0;
+                return (
+                  <div key={a.assessment_id} className="bg-white rounded-lg border p-4" data-testid={`weight-assessment-${a.assessment_id}`}>
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Scale className="w-5 h-5 text-[#002855]" />
+                        <span className="text-base font-bold text-[#002855]">Weight Report</span>
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-[#002855]/10 text-[#002855]">
+                          {a.mode_label || (a.is_custom ? "Custom" : "Bridge Formula")}
+                        </span>
+                        {!a.is_custom && (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-[#D4AF37]/20 text-[#92570D]">
+                            {a.is_interstate ? "INTERSTATE" : "NON-INTERSTATE"}
+                          </span>
+                        )}
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${hasViolations ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                          {hasViolations ? `${a.violation_count} VIOLATION${a.violation_count === 1 ? "" : "S"}` : "COMPLIANT"}
+                        </span>
+                      </div>
+                      <button onClick={() => removeWeight(a.assessment_id)} className="text-[#CBD5E1] hover:text-[#DC2626] transition-colors flex-shrink-0" data-testid={`remove-weight-${a.assessment_id}`}>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Uniform 3-stat row */}
+                    <div className="grid grid-cols-3 gap-2 mb-3 text-center">
+                      <div className="bg-[#F8FAFC] rounded p-2">
+                        <p className="text-[10px] text-[#94A3B8] uppercase font-bold tracking-wider">Gross Weight</p>
+                        <p className={`text-base font-bold ${isOver ? "text-[#DC2626]" : "text-[#002855]"}`}>{a.gross_weight?.toLocaleString() || "—"} <span className="text-[10px] text-[#64748B] font-normal">lbs</span></p>
+                      </div>
+                      <div className="bg-[#F8FAFC] rounded p-2">
+                        <p className="text-[10px] text-[#94A3B8] uppercase font-bold tracking-wider">Gross Max</p>
+                        <p className="text-base font-bold text-[#002855]">{a.gross_max?.toLocaleString() || "—"} <span className="text-[10px] text-[#64748B] font-normal">lbs</span></p>
+                      </div>
+                      <div className="bg-[#F8FAFC] rounded p-2">
+                        <p className="text-[10px] text-[#94A3B8] uppercase font-bold tracking-wider">Axles</p>
+                        <p className="text-base font-bold text-[#002855]">{a.total_axles || 0}</p>
+                      </div>
+                    </div>
+
+                    {/* Axle groups table */}
+                    {a.groups?.length > 0 && (
+                      <div className="mb-3 border border-[#E2E8F0] rounded-md overflow-hidden">
+                        <div className="grid grid-cols-[1fr_70px_70px_90px] gap-2 px-3 py-1.5 bg-[#F8FAFC] text-[10px] font-bold text-[#64748B] uppercase tracking-wider">
+                          <div>Group</div>
+                          <div className="text-center">Axles</div>
+                          <div className="text-center">Dist</div>
+                          <div className="text-right">Actual</div>
+                        </div>
+                        {a.groups.map((g, gi) => {
+                          const axles = (parseInt(g.axles) || 0) + (g.dummyAxle ? 1 : 0);
+                          const distStr = g.distFt ? `${g.distFt}'${g.distIn ? ` ${g.distIn}"` : ""}` : "—";
+                          return (
+                            <div key={gi} className="grid grid-cols-[1fr_70px_70px_90px] gap-2 px-3 py-1.5 border-t border-[#F1F5F9] text-xs">
+                              <div className="font-medium text-[#334155] truncate">
+                                <span className="font-bold text-[#002855]">A{gi + 1}</span>
+                                {g.label ? ` · ${g.label}` : ` · ${g.preset || "Group"}`}
+                                {g.dummyAxle && <span className="ml-1 text-[10px] text-[#D4AF37]">+dummy</span>}
+                              </div>
+                              <div className="text-center text-[#475569]">{axles || "—"}</div>
+                              <div className="text-center text-[#475569]">{distStr}</div>
+                              <div className="text-right font-bold text-[#002855]">{g.actualWeight ? Number(g.actualWeight).toLocaleString() : "—"}</div>
+                            </div>
+                          );
+                        })}
+                        {a.overall_dist_ft && (
+                          <div className="grid grid-cols-[1fr_70px_70px_90px] gap-2 px-3 py-1.5 border-t-2 border-[#002855] bg-[#F8FAFC] text-xs">
+                            <div className="font-bold text-[#002855]">Overall</div>
+                            <div className="text-center text-[#475569]">{a.total_axles}</div>
+                            <div className="text-center text-[#475569]">{a.overall_dist_ft}'</div>
+                            <div className="text-right font-bold text-[#002855]">{a.gross_weight?.toLocaleString() || "—"}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Linked image */}
+                    {linkedPhoto && (
+                      <div className="mb-3">
+                        <img
+                          src={`${API}/files/${linkedPhoto.storage_path}`}
+                          alt="Weight capture"
+                          className="w-full rounded-md border cursor-pointer"
+                          onClick={() => setPreviewPhoto(`${API}/files/${linkedPhoto.storage_path}`)}
+                        />
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-[#94A3B8] mb-2">{a.created_at?.slice(0, 16).replace("T", " ")}</p>
+
+                    <button
+                      onClick={() => navigate("/bridge-chart", { state: { recreateWeight: a } })}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-[#002855] text-white text-[11px] font-bold hover:bg-[#001a3a] transition-colors"
+                      data-testid={`recreate-weight-${a.assessment_id}`}
+                    >
+                      <Repeat className="w-3 h-3" /> Recreate in Bridge Chart
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Orphan Weight Photos — photos not tied to a weight assessment */}
+        {(inspection.general_photos || []).filter(p => !(inspection.weight_assessments || []).some(a => a.photo_id === p.photo_id)).length > 0 && (
           <div data-testid="weight-photos-section">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                Weight Captures ({inspection.general_photos.length})
+                Additional Photos ({(inspection.general_photos || []).filter(p => !(inspection.weight_assessments || []).some(a => a.photo_id === p.photo_id)).length})
               </span>
             </div>
             <div className="bg-white rounded-lg border p-3">
-              <div className="flex items-center gap-2 mb-3">
-                <Scale className="w-4 h-4 text-[#002855]" />
-                <span className="text-sm font-bold text-[#002855]">Bridge Chart / Weight Exports</span>
-              </div>
               <div className="space-y-3">
-                {inspection.general_photos.map((photo) => (
+                {(inspection.general_photos || []).filter(p => !(inspection.weight_assessments || []).some(a => a.photo_id === p.photo_id)).map((photo) => (
                   <div key={photo.photo_id} className="relative group" data-testid={`weight-photo-${photo.photo_id}`}>
                     <img
                       src={`${API}/files/${photo.storage_path}`}
