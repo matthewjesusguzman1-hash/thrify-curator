@@ -602,83 +602,109 @@ export default function InspectionDetail() {
                       </div>
                     )}
 
-                    {/* Calculation details (violations, tolerance, interior bridge) */}
-                    {(a.group_violations?.length > 0 || a.interior) && (
-                      <div className="mb-3 border border-[#E2E8F0] rounded-md overflow-hidden">
-                        <div className="px-3 py-1.5 bg-[#F8FAFC] text-[10px] font-bold text-[#64748B] uppercase tracking-wider border-b border-[#E2E8F0]">
-                          Calculation Details
-                          {toleranceApplies && <span className="ml-2 text-[#D4AF37] normal-case">· 5% tolerance applied</span>}
-                        </div>
-                        <div className="px-3 py-2 space-y-1.5">
-                          {a.group_violations?.map((v, vi) => {
-                            const overItems = [];
-                            if (v.max && v.actual > v.max) {
-                              const over = v.actual - v.max;
-                              const pct = v.max > 0 ? Math.round((over / v.max) * 1000) / 10 : 0;
-                              overItems.push({ key: `main-${vi}`, label: v.label || `A${vi + 1}`, actual: v.actual, max: v.max, over, pct, src: v.source });
-                            }
-                            if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) {
-                              const over = v.tandemCheck.actual - v.tandemCheck.max;
-                              overItems.push({ key: `t-${vi}`, label: `Tandem check (${v.label || `A${vi + 1}`})`, actual: v.tandemCheck.actual, max: v.tandemCheck.max, over, pct: Math.round((over / v.tandemCheck.max) * 1000) / 10, src: v.tandemCheck.source });
-                            }
-                            (v.axleOverages || []).forEach((ao, i) => {
-                              const over = (ao.actual || 0) - (ao.max || 0);
-                              if (over <= 0) return;
-                              overItems.push({ key: `ax-${vi}-${i}`, label: `Axle ${ao.axleNum} (${v.label || `A${vi + 1}`})`, actual: ao.actual, max: ao.max, over, pct: Math.round((over / ao.max) * 1000) / 10, src: "Single-axle 20,000 lb rule" });
-                            });
-                            (v.tandemSubsetChecks || []).filter(t => t.over).forEach((t, i) => {
-                              overItems.push({ key: `ts-${vi}-${i}`, label: `Tandem subset (${v.label || `A${vi + 1}`})`, actual: t.actual, max: t.max, over: t.actual - t.max, pct: Math.round(((t.actual - t.max) / t.max) * 1000) / 10, src: "Tandem-within-triple" });
-                            });
-                            if (overItems.length === 0 && v.max) {
-                              // Show an OK line per group
+                    {/* Calculation Details — mirrors the live Bridge Chart section */}
+                    {(a.group_violations?.length > 0 || (a.interior && a.interior.enabled)) && a.gross_weight > 0 && (() => {
+                      // Reconstruct axle numbering from saved groups for backward compatibility
+                      const axleStart = (idx) => {
+                        if (Array.isArray(a.axle_numbers) && a.axle_numbers[idx]?.start) return a.axle_numbers[idx].start;
+                        let s = 1;
+                        for (let k = 0; k < idx; k++) {
+                          const gk = a.groups?.[k] || {};
+                          s += (parseInt(gk.axles) || 0) + (gk.dummyAxle ? 1 : 0);
+                        }
+                        return s;
+                      };
+                      const grossSrcLabel = a.gross_source || (a.is_custom ? "Custom" : (a.overall_dist_ft && a.total_axles >= 2 ? `Bridge (${a.overall_dist_ft}ft, ${a.total_axles}ax)` : "Bridge formula"));
+                      return (
+                        <div className="mb-3 bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+                          <div className="px-4 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                            <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">
+                              Calculation Details
+                              {toleranceApplies && <span className="ml-2 text-[#D4AF37] normal-case">· 5% tolerance applied</span>}
+                            </h3>
+                          </div>
+                          <div className="divide-y divide-[#F1F5F9]">
+                            {a.group_violations?.map((v, i) => {
+                              const g = a.groups?.[i] || {};
+                              const baseN = v.baseN || (parseInt(g.axles) || 0);
+                              const baseW = g.useGroup
+                                ? (parseInt(g.groupWeight) || 0)
+                                : (g.weights || []).slice(0, baseN).reduce((s, w) => s + (parseInt(w) || 0), 0);
+                              const di = v.dummy || {};
+                              const overVal = v.max && v.actual > v.max ? v.actual - v.max : 0;
+                              const withinTol5 = v.max && v.actual > v.max && v.actual <= Math.round(v.max * 1.05) && toleranceApplies;
+                              const start = axleStart(i);
+                              const parts = [];
+                              if (g.useGroup) parts.push(`${baseW.toLocaleString()} (combined)`);
+                              else (g.weights || []).slice(0, baseN).forEach((w, k) => parts.push(`A${start + k}=${(parseInt(w) || 0).toLocaleString()}`));
+                              if (di.hasDummy && di.dummyWeight > 0) parts.push(`A${start + baseN}(dummy)=${di.dummyWeight.toLocaleString()}`);
+                              const sum = baseW + (di.dummyWeight || 0);
                               return (
-                                <div key={`ok-${vi}`} className="text-[10px] text-[#16A34A] flex items-center gap-1">
-                                  <span className="font-bold">✓</span> {v.label || `A${vi + 1}`}: {(v.actual || 0).toLocaleString()} / {(v.max || 0).toLocaleString()} lbs — legal
+                                <div key={i} className="px-4 py-2.5 text-[11px] leading-relaxed">
+                                  <p className="font-bold text-[#002855] mb-0.5">{v.label || `A${i + 1}`} <span className="font-normal text-[#94A3B8]">· {baseN} axle{baseN > 1 ? "s" : ""}{di.hasDummy ? " + 1 dummy" : ""}</span></p>
+                                  <p className="text-[#475569] font-mono">{parts.join(" + ")} = <strong>{sum.toLocaleString()} lbs</strong></p>
+                                  {di.hasDummy && di.dummyWeight > 0 && (
+                                    <p className={`mt-1 ${di.disregarded ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
+                                      Dummy discount check: {di.dummyWeight.toLocaleString()} meets 8,000? <strong>{di.dummyWeight >= 8000 ? "YES" : "NO"}</strong> · {di.dummyWeight.toLocaleString()} meets 8% of {a.gross_weight.toLocaleString()} ({Math.round(a.gross_weight * 0.08).toLocaleString()})? <strong>{di.dummyWeight >= a.gross_weight * 0.08 ? "YES" : "NO"}</strong> → {di.disregarded ? "DISREGARDED (neither threshold met)" : "COUNTS (at least one threshold met)"}
+                                    </p>
+                                  )}
+                                  {v.max ? (
+                                    <p className={`mt-1 font-mono ${overVal > 0 ? (withinTol5 ? "text-[#F97316]" : "text-[#DC2626]") : "text-[#16A34A]"}`}>
+                                      {v.source}: {sum.toLocaleString()} {overVal > 0 ? "exceeds" : "within"} {v.max.toLocaleString()} → <strong>{overVal > 0 ? `+${overVal.toLocaleString()} OVER${withinTol5 ? ` (within 5% tol ${Math.round(v.max * 1.05).toLocaleString()})` : ""}` : "LEGAL"}</strong>
+                                    </p>
+                                  ) : (
+                                    <p className="mt-1 text-[#94A3B8] italic">No max rule applied (enter distance or set Custom).</p>
+                                  )}
+                                  {v.tandemCheck && (
+                                    <p className={`mt-1 font-mono ${v.tandemCheck.actual > v.tandemCheck.max ? "text-[#DC2626]" : "text-[#16A34A]"}`}>
+                                      {v.tandemCheck.source}: {v.tandemCheck.actual.toLocaleString()} {v.tandemCheck.actual > v.tandemCheck.max ? "exceeds" : "within"} {v.tandemCheck.max.toLocaleString()} → <strong>{v.tandemCheck.actual > v.tandemCheck.max ? `+${(v.tandemCheck.actual - v.tandemCheck.max).toLocaleString()} OVER` : "LEGAL"}</strong>
+                                    </p>
+                                  )}
+                                  {v.axleOverages?.map(o => (
+                                    <p key={`axle-${o.axleNum}`} className="mt-1 font-mono text-[#DC2626]">
+                                      Single axle rule (A{o.axleNum}{o.isDummy ? " dummy" : ""}): {o.weight.toLocaleString()} exceeds {o.max.toLocaleString()} → <strong>+{o.over.toLocaleString()} OVER</strong>
+                                    </p>
+                                  ))}
+                                  {v.tandemSubsetChecks?.filter(t => t.over).map(t => (
+                                    <p key={`tsub-${t.pairIndex}`} className="mt-1 font-mono text-[#DC2626]">
+                                      Tandem subset {t.label}: {t.actual.toLocaleString()} exceeds {t.max.toLocaleString()}{t.distFt ? ` (Bridge at ${t.distFt}ft)` : " (Standard 34,000)"} → <strong>+{t.overBy.toLocaleString()} OVER</strong>
+                                    </p>
+                                  ))}
                                 </div>
                               );
-                            }
-                            return overItems.map((it) => {
-                              const tolerated = toleranceApplies && it.actual <= it.max * 1.05;
-                              const actualN = Number(it.actual) || 0;
-                              const maxN = Number(it.max) || 0;
-                              const overN = Math.max(0, actualN - maxN);
-                              return (
-                                <div key={it.key} className={`text-[10px] leading-snug ${tolerated ? "text-[#92570D]" : "text-[#991B1B]"}`}>
-                                  <div className="font-bold flex items-center gap-1">
-                                    <span>{tolerated ? "⚠" : "✗"}</span>
-                                    <span>{it.label}: +{overN.toLocaleString()} over ({it.pct}%)</span>
-                                    {tolerated && <span className="text-[9px] bg-[#FDE68A] text-[#78350F] px-1 rounded">within 5%</span>}
-                                  </div>
-                                  <div className="pl-4 text-[9px] text-[#64748B]">
-                                    Actual <strong className="text-[#002855]">{actualN.toLocaleString()}</strong> / Max <strong className="text-[#002855]">{maxN.toLocaleString()}</strong> lbs
-                                    {it.src && <span className="ml-1 italic">· {it.src}</span>}
-                                  </div>
-                                </div>
-                              );
-                            });
-                          })}
-
-                          {a.gross_max && a.gross_weight > a.gross_max && (
-                            <div className="text-[10px] leading-snug text-[#991B1B] border-t border-[#F1F5F9] pt-1.5 mt-1.5">
-                              <div className="font-bold">✗ Gross: +{(a.gross_weight - a.gross_max).toLocaleString()} over</div>
-                              <div className="pl-4 text-[9px] text-[#64748B]">
-                                Actual <strong className="text-[#002855]">{a.gross_weight.toLocaleString()}</strong> / Max <strong className="text-[#002855]">{a.gross_max.toLocaleString()}</strong> lbs
-                              </div>
+                            })}
+                            <div className="px-4 py-2.5 text-[11px] bg-[#F8FAFC]">
+                              <p className="font-bold text-[#002855] mb-0.5">Gross Weight</p>
+                              <p className="text-[#475569] font-mono">
+                                {a.group_violations?.map((v, i) => `${v.label || `A${i + 1}`}=${(v.actual || 0).toLocaleString()}`).join(" + ")} = <strong>{a.gross_weight.toLocaleString()} lbs</strong>
+                              </p>
+                              {a.gross_max ? (
+                                <p className={`mt-1 font-mono ${a.gross_weight > a.gross_max ? "text-[#DC2626]" : "text-[#16A34A]"}`}>
+                                  {grossSrcLabel}: {a.gross_weight.toLocaleString()} {a.gross_weight > a.gross_max ? "exceeds" : "within"} {a.gross_max.toLocaleString()} → <strong>{a.gross_weight > a.gross_max ? `+${(a.gross_weight - a.gross_max).toLocaleString()} OVER (no tolerance on gross)` : "LEGAL"}</strong>
+                                </p>
+                              ) : (
+                                <p className="mt-1 text-[#94A3B8] italic">No gross max recorded.</p>
+                              )}
                             </div>
-                          )}
-
-                          {a.interior && (
-                            <div className={`text-[10px] leading-snug border-t border-[#F1F5F9] pt-1.5 mt-1.5 ${a.interior.over > 0 ? "text-[#991B1B]" : "text-[#16A34A]"}`}>
-                              <div className="font-bold">
-                                {a.interior.over > 0 ? "✗" : "✓"} Interior bridge ({a.interior.axles} axles, {a.interior.dist}′):
-                                {" "}{(a.interior.actual || 0).toLocaleString()} / {(a.interior.max || 0).toLocaleString()} lbs
+                            {a.interior?.enabled && (
+                              <div className="px-4 py-2.5 text-[11px]">
+                                <p className="font-bold text-[#002855] mb-0.5">Interior Bridge <span className="font-normal text-[#94A3B8]">· A{a.interior.startAxleNum} → A{a.interior.endAxleNum} ({a.interior.axleCount} axles)</span></p>
+                                <p className="text-[#475569] font-mono">
+                                  Gross {a.gross_weight.toLocaleString()} − A{a.interior.startAxleNum - 1} ({(a.interior.a1Weight || 0).toLocaleString()}) = <strong>{(a.interior.actual || 0).toLocaleString()} lbs</strong>
+                                </p>
+                                {a.interior.max ? (
+                                  <p className={`mt-1 font-mono ${a.interior.over ? "text-[#DC2626]" : "text-[#16A34A]"}`}>
+                                    {a.interior.source}: {(a.interior.actual || 0).toLocaleString()} {a.interior.over ? "exceeds" : "within"} {a.interior.max.toLocaleString()} → <strong>{a.interior.over ? `+${(a.interior.overBy || 0).toLocaleString()} OVER` : "LEGAL"}</strong>
+                                  </p>
+                                ) : (
+                                  <p className="mt-1 text-[#94A3B8] italic">No bridge data for {a.interior.distFt}ft / {a.interior.axleCount} axles.</p>
+                                )}
                               </div>
-                              {a.interior.over > 0 && <div className="pl-4 text-[9px] text-[#64748B]">+{a.interior.over.toLocaleString()} lbs over (no tolerance on interior)</div>}
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Truck diagram (inline SVG) */}
                     {a.truck_diagram_svg && (

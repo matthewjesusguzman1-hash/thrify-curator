@@ -23,10 +23,16 @@ Full-stack application to search and filter FMCSA roadside violation data and as
 ## Changelog
 
 ### 2026-02 — Session (current)
-- **Fixed:** "5% tolerance applied" incorrectly shown in saved Weight Reports.
-  - Previous agent's first attempt computed a local `toleranceApplies` but never used it in the render (stale `a.tolerance_applies` still driving the banner) and incorrectly counted gross weight toward the tolerance threshold.
-  - Now: `InspectionDetail.js` and `ReportContent.js` both recompute tolerance at render time using the correct rule (gross weight and interior bridge excluded from the count; tolerance only when exactly one group/axle/tandem overage AND not Custom mode).
-- **Retained (from earlier in session):** Full structured weight reports, inline SVG truck diagrams, HOS calculator, Recreate-in-Section hydration, unified TieDown PDF styling.
+- **Fixed:** "5% tolerance applied" banner on saved Weight Reports now only appears when tolerance was **actually applied** — i.e., exactly one non-gross, non-interior overage exists AND that overage was forgiven (within 5%). Gross weight and interior bridge are excluded from the count per statutory rule. Custom/Permit mode never shows tolerance.
+- **Fixed:** Interior Bridge now only renders in the saved report when the interior distance was entered (`a.interior.enabled === true`). Prevents misleading "Interior bridge 0/0" lines when the check was never performed.
+- **Enhanced:** Saved Weight Report Calculation Details now mirrors the live Bridge Chart Record Weights → Calculation Details card: per-group weight breakdown, dummy discount narrative, rule checks with source & tolerance notes, separate Gross Weight and Interior Bridge sections with full subtraction narrative.
+- **Enhanced:** `BridgeChartPage` now persists `gross_source` and `axle_numbers` on save so legacy source labels (`Interstate 80,000 cap`, `Bridge (52ft, 5ax)`, etc.) render exactly as seen live. Backward-compat fallback in place for older saves.
+
+### Earlier this session
+- HOS Calculator (60/70-Hour with Property/Passenger toggles, OOS simulator)
+- TieDown PDF styling unification (circular WLL gauges)
+- Recreate-in-Section hydration for HOS / Tie-Down / Bridge Chart
+- Weight Reports store structured data + inline SVG (no PNG)
 
 ## Backlog (P0 → P2)
 - **P1**: Offline/cached mode for field use

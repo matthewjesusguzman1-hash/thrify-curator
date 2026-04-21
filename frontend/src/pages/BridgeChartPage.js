@@ -945,6 +945,9 @@ export default function BridgeChartPage() {
           total_axles: record.totalAxles || 0,
           gross_weight: record.gross || 0,
           gross_max: record.grossMax || null,
+          gross_source: record.grossSource || "",
+          gross_note: record.grossNote || "",
+          axle_numbers: axleNumbers,
           violation_count: (record.groupViolations || []).reduce((s, v) => {
             let c = 0;
             if (v.max && v.actual > v.max) c++;
