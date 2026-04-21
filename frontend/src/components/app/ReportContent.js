@@ -399,6 +399,18 @@ export function InspectionReportContent({ inspection }) {
           {inspection.weight_assessments.map((a, ai) => {
             const isOver = a.gross_max && a.gross_weight > a.gross_max;
             const hasViolations = a.violation_count > 0;
+            // Recompute tolerance at render time: only applies when EXACTLY one
+            // group/axle/tandem overage exists and we're in Bridge Formula mode.
+            // Gross weight and interior bridge are NEVER subject to the 5% tolerance
+            // and are NOT counted toward the one-violation threshold.
+            let _overCount = 0;
+            (a.group_violations || []).forEach((v) => {
+              if (v.max && v.actual > v.max) _overCount++;
+              if (v.tandemCheck && v.tandemCheck.actual > v.tandemCheck.max) _overCount++;
+              (v.axleOverages || []).forEach((ao) => { if ((ao.actual || 0) > (ao.max || 0)) _overCount++; });
+              (v.tandemSubsetChecks || []).forEach((t) => { if (t.over) _overCount++; });
+            });
+            const toleranceApplies = !a.is_custom && _overCount === 1;
             return (
               <div key={a.assessment_id || ai} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 6, flexWrap: "wrap" }}>
@@ -465,7 +477,7 @@ export function InspectionReportContent({ inspection }) {
                   <div style={{ border: "1px solid #E2E8F0", borderRadius: 4, marginBottom: 6 }}>
                     <div style={{ background: "#F8FAFC", padding: "3px 8px", fontSize: 9, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "1px solid #E2E8F0" }}>
                       Calculation Details
-                      {a.tolerance_applies && <span style={{ color: "#D4AF37", marginLeft: 6, textTransform: "none" }}>· 5% tolerance applied</span>}
+                      {toleranceApplies && <span style={{ color: "#D4AF37", marginLeft: 6, textTransform: "none" }}>· 5% tolerance applied</span>}
                     </div>
                     <div style={{ padding: "4px 8px" }}>
                       {a.group_violations?.map((v, vi) => {
@@ -485,7 +497,7 @@ export function InspectionReportContent({ inspection }) {
                           const actualN = Number(it.actual) || 0;
                           const maxN = Number(it.max) || 0;
                           const overN = Math.max(0, actualN - maxN);
-                          const tolerated = a.tolerance_applies && actualN <= maxN * 1.05;
+                          const tolerated = toleranceApplies && actualN <= maxN * 1.05;
                           return (
                             <div key={it.key} style={{ fontSize: 10, color: tolerated ? "#92570D" : "#991B1B", marginBottom: 2 }}>
                               <div style={{ fontWeight: 700 }}>{tolerated ? "⚠" : "✗"} {it.label}: +{overN.toLocaleString()} over{tolerated ? " (within 5%)" : ""}</div>

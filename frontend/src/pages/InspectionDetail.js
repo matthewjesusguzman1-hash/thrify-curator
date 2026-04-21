@@ -492,8 +492,10 @@ export default function InspectionDetail() {
               {inspection.weight_assessments.map((a) => {
                 const isOver = a.gross_max && a.gross_weight > a.gross_max;
                 const hasViolations = a.violation_count > 0;
-                // Recompute tolerance at render time: only applies when EXACTLY one overage
-                // (including gross) and we're in Bridge Formula mode.
+                // Recompute tolerance at render time: only applies when EXACTLY one
+                // group/axle/tandem overage exists and we're in Bridge Formula mode.
+                // Gross weight and interior bridge are NEVER subject to the 5% tolerance
+                // and are NOT counted toward the one-violation threshold.
                 const countOverages = () => {
                   let c = 0;
                   (a.group_violations || []).forEach((v) => {
@@ -502,7 +504,6 @@ export default function InspectionDetail() {
                     (v.axleOverages || []).forEach((ao) => { if ((ao.actual || 0) > (ao.max || 0)) c++; });
                     (v.tandemSubsetChecks || []).forEach((t) => { if (t.over) c++; });
                   });
-                  if (isOver) c++;
                   return c;
                 };
                 const toleranceApplies = !a.is_custom && countOverages() === 1;
@@ -589,7 +590,7 @@ export default function InspectionDetail() {
                       <div className="mb-3 border border-[#E2E8F0] rounded-md overflow-hidden">
                         <div className="px-3 py-1.5 bg-[#F8FAFC] text-[10px] font-bold text-[#64748B] uppercase tracking-wider border-b border-[#E2E8F0]">
                           Calculation Details
-                          {a.tolerance_applies && <span className="ml-2 text-[#D4AF37] normal-case">· 5% tolerance applied</span>}
+                          {toleranceApplies && <span className="ml-2 text-[#D4AF37] normal-case">· 5% tolerance applied</span>}
                         </div>
                         <div className="px-3 py-2 space-y-1.5">
                           {a.group_violations?.map((v, vi) => {
@@ -620,7 +621,7 @@ export default function InspectionDetail() {
                               );
                             }
                             return overItems.map((it) => {
-                              const tolerated = a.tolerance_applies && it.actual <= it.max * 1.05;
+                              const tolerated = toleranceApplies && it.actual <= it.max * 1.05;
                               const actualN = Number(it.actual) || 0;
                               const maxN = Number(it.max) || 0;
                               const overN = Math.max(0, actualN - maxN);
