@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   ChevronLeft, Plus, Trash2, AlertTriangle, CheckCircle2, XCircle,
@@ -258,8 +258,34 @@ function WLLChartPicker({ onAdd, favorites, toggleFavorite }) {
    ================================================================ */
 export default function TieDownCalculator() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { badge } = useAuth();
-  const [articles, setArticles] = useState([newArticle(1)]);
+
+  // Hydrate from saved assessment (via "Recreate in Section")
+  const initialArticles = (() => {
+    const saved = location.state?.recreateTiedown;
+    if (saved) {
+      return [{
+        id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+        label: "Article 1 (from saved)",
+        cargoWeight: String(saved.cargo_weight || ""),
+        cargoLength: String(saved.cargo_length || ""),
+        hasBlocking: !!saved.has_blocking,
+        tiedowns: (saved.tiedowns || []).map((td) => ({
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+          type: td.type || "Custom",
+          method: td.method || "indirect",
+          wll: Number(td.wll) || 0,
+          defective: !!td.defective,
+        })),
+        photos: [],
+        expanded: true,
+      }];
+    }
+    return [newArticle(1)];
+  })();
+
+  const [articles, setArticles] = useState(initialArticles);
   const [showRef, setShowRef] = useState(false);
   const [showWllInfo, setShowWllInfo] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState(null);

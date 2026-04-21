@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Header } from "../components/app/Header";
-import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert, XCircle, Eye, Hourglass, Scale } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, Camera, FileText, Pencil, Check, X, Image, ShieldAlert, XCircle, Eye, Hourglass, Scale, Repeat } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -389,6 +389,13 @@ export default function InspectionDetail() {
                       <span>Add photo</span>
                       <input type="file" accept="image/*" capture="environment" onChange={(e) => handleAssessmentPhotoUpload(a.assessment_id, e)} className="hidden" />
                     </label>
+                    <button
+                      onClick={() => navigate("/calculator", { state: { recreateTiedown: a } })}
+                      className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-[#002855] text-white text-[11px] font-bold hover:bg-[#001a3a] transition-colors"
+                      data-testid={`recreate-tiedown-${a.assessment_id}`}
+                    >
+                      <Repeat className="w-3 h-3" /> Recreate in Tie-Down Calculator
+                    </button>
                   </div>
                 );
               })}
@@ -454,6 +461,13 @@ export default function InspectionDetail() {
                   )}
 
                   <p className="text-[9px] text-[#94A3B8] mt-1">{a.created_at?.slice(0, 16).replace("T", " ")}</p>
+                  <button
+                    onClick={() => navigate("/hours-of-service", { state: { recreateHos: a } })}
+                    className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-[#002855] text-white text-[11px] font-bold hover:bg-[#001a3a] transition-colors"
+                    data-testid={`recreate-hos-${a.assessment_id}`}
+                  >
+                    <Repeat className="w-3 h-3" /> Recreate in HOS Calculator
+                  </button>
                 </div>
               ))}
             </div>
@@ -484,11 +498,11 @@ export default function InspectionDetail() {
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); removeGeneralPhoto(photo.photo_id); }}
-                      className="absolute top-2 right-2 w-7 h-7 bg-[#DC2626] text-white rounded-full flex items-center justify-center shadow-md hover:bg-[#B91C1C]"
+                      className="absolute top-2 right-2 w-7 h-7 bg-white/90 hover:bg-white text-[#CBD5E1] hover:text-[#DC2626] rounded-full flex items-center justify-center shadow-md border border-[#E2E8F0] transition-colors"
                       data-testid={`remove-weight-photo-${photo.photo_id}`}
                       aria-label="Remove photo"
                     >
-                      <X className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}

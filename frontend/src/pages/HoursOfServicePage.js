@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info,
@@ -70,16 +70,39 @@ function InfoHelp({ title, body, testid }) {
 
 export default function HoursOfServicePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { badge } = useAuth();
 
-  const [ruleType, setRuleType] = useState("property");
-  const [rowsProp, setRowsProp] = useState(() => makeRows(8));
-  const [rowsPass, setRowsPass] = useState(() => makeRows(7));
+  // Hydrate from saved HOS recap (via "Recreate in Section")
+  const saved = location.state?.recreateHos;
+  const buildRowsFromSaved = (savedDays) => savedDays.map((d, i) => ({
+    id: i,
+    drive: d.drive ? String(d.drive) : "",
+    onDuty: d.on_duty != null ? String(d.on_duty) : (d.onDuty != null ? String(d.onDuty) : ""),
+    total: d.total ? String(d.total) : "",
+  }));
+
+  const [ruleType, setRuleType] = useState(saved?.rule_type || "property");
+  const [rowsProp, setRowsProp] = useState(() =>
+    saved?.rule_type === "property" ? buildRowsFromSaved(saved.days || []) : makeRows(8)
+  );
+  const [rowsPass, setRowsPass] = useState(() =>
+    saved?.rule_type === "passenger" ? buildRowsFromSaved(saved.days || []) : makeRows(7)
+  );
   const [anchorProp, setAnchorProp] = useState(() => startOfDay(new Date()));
   const [anchorPass, setAnchorPass] = useState(() => startOfDay(new Date()));
 
   // Time of stop picker (HH:MM) — the inspector enters this when the inspection concludes
-  const [stopTime, setStopTime] = useState("");
+  // For recreate: convert hoursLeftToday back to a stop time (24 - hoursLeft = stop hour)
+  const [stopTime, setStopTime] = useState(() => {
+    if (saved?.hours_left_today != null && saved.hours_left_today > 0) {
+      const decimal = Math.max(0, 24 - Number(saved.hours_left_today));
+      const h = Math.floor(decimal);
+      const m = Math.round((decimal - h) * 60);
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+    return "";
+  });
 
   // UX toggles
   const [showSplit, setShowSplit] = useState(false);
