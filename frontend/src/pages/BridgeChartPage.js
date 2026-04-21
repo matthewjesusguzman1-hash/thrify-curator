@@ -417,7 +417,7 @@ export default function BridgeChartPage() {
   useEffect(() => { if (initial?.isCustom) setIsCustom(true); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Rehydrate from saved weight assessment (via "Recreate in Section")
+  // Rehydrate from saved weight assessment (via "Recreate in Weights")
   useEffect(() => {
     const saved = location.state?.recreateWeight;
     if (!saved) return;
@@ -428,6 +428,8 @@ export default function BridgeChartPage() {
     if (saved.interior_dist_ft != null) setInteriorDistFt(saved.interior_dist_ft);
     if (saved.custom_interior_max != null) setCustomInteriorMax(saved.custom_interior_max);
     if (saved.is_interstate != null) setIsInterstate(saved.is_interstate);
+    // Jump to the Record Weights tab so data lands exactly where it was saved from
+    setTab("record");
     // Clear the state so a refresh doesn't re-hydrate
     navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
