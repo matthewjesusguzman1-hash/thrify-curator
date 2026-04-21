@@ -47,7 +47,7 @@ function makeRows(n) {
     id: i,
     drive: "",
     onDuty: "",
-    total: "10", // TEST: pre-fills each day with 10 hr so you don't have to type during testing
+    total: "",
   }));
 }
 
@@ -309,7 +309,7 @@ export default function HoursOfServicePage() {
     } else if (oosSim && !oosSim.needsInput && (!oosSim.solved || oosSim.cumulativeOOS >= 34)) {
       verdict = {
         tone: "oos",
-        title: "34-Hour Restart Required",
+        title: "34-Hour Restart",
         sub: !oosSim.solved
           ? `Natural recovery within the rolling ${dayCount}-day window won't bring the driver under ${limit} hr. A 34-hour restart is the only path to reset the clock.`
           : `Natural recovery would require ${fmt(oosSim.cumulativeOOS)} hr off duty. At or above 34 hr, a 34-hour restart is the better choice — it fully resets the ${limit}-hour clock.`,
