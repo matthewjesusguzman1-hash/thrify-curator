@@ -78,8 +78,11 @@ export default function HoursOfServicePage() {
   const [anchorProp, setAnchorProp] = useState(() => startOfDay(new Date()));
   const [anchorPass, setAnchorPass] = useState(() => startOfDay(new Date()));
 
-  // Time of stop picker (HH:MM) — replaces "hours remaining" text input
-  const [stopTime, setStopTime] = useState("");
+  // Time of stop picker (HH:MM) — defaults to current time for convenience
+  const [stopTime, setStopTime] = useState(() => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  });
 
   // UX toggles
   const [showMath, setShowMath] = useState(false);
@@ -127,7 +130,8 @@ export default function HoursOfServicePage() {
   const clearAll = () => {
     setRows(makeRows(dayCount));
     resetToToday();
-    setStopTime("");
+    const d = new Date();
+    setStopTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
   };
 
   const dayTotals = useMemo(
