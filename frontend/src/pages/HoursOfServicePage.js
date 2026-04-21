@@ -334,137 +334,113 @@ export default function HoursOfServicePage() {
         </div>
       )}
 
-      <main className="max-w-3xl mx-auto px-3 sm:px-6 py-4 pb-20 space-y-4">
+      <main className="max-w-3xl mx-auto px-3 sm:px-6 py-3 pb-16 space-y-3">
 
         {/* VERDICT BANNER — big, clear answer up top */}
         {verdict && (
           <div
-            className={`rounded-xl border-2 p-4 shadow-sm ${
+            className={`rounded-lg border-2 px-3 py-2 shadow-sm ${
               verdict.tone === "ok"
                 ? "bg-[#F0FDF4] border-[#16A34A]"
                 : "bg-[#FEE2E2] border-[#DC2626]"
             }`}
             data-testid="hos-verdict-banner"
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-2">
               {verdict.tone === "ok" ? (
-                <CheckCircle2 className="w-7 h-7 text-[#16A34A] flex-shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-5 h-5 text-[#16A34A] flex-shrink-0" />
               ) : (
-                <AlertTriangle className="w-7 h-7 text-[#DC2626] flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="w-5 h-5 text-[#DC2626] flex-shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                <div className={`text-[10px] font-black uppercase tracking-widest ${verdict.tone === "ok" ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
-                  {verdict.tone === "ok" ? "Legal" : "Out of Service"}
-                </div>
-                <div className={`text-xl sm:text-2xl font-black leading-tight mt-0.5 ${verdict.tone === "ok" ? "text-[#14532D]" : "text-[#7F1D1D]"}`} data-testid="hos-verdict-title">
+                <div className={`text-base sm:text-lg font-black leading-tight ${verdict.tone === "ok" ? "text-[#14532D]" : "text-[#7F1D1D]"}`} data-testid="hos-verdict-title">
                   {verdict.title}
                 </div>
-                <div className="text-xs text-[#475569] mt-1 leading-relaxed">{verdict.sub}</div>
+                <div className="text-[11px] text-[#475569] leading-snug mt-0.5">{verdict.sub}</div>
               </div>
-              <div className="text-right flex-shrink-0">
-                <div className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider">Total</div>
-                <div className={`text-2xl font-black tabular-nums ${isOOS ? "text-[#DC2626]" : "text-[#002855]"}`}>
+              <div className="text-right flex-shrink-0 pl-2 border-l border-black/10">
+                <div className={`text-xl font-black tabular-nums leading-none ${isOOS ? "text-[#DC2626]" : "text-[#002855]"}`}>
                   {fmt(grandTotal)}
                 </div>
-                <div className="text-[10px] text-[#64748B] font-medium">/ {limit} hr</div>
+                <div className="text-[9px] text-[#64748B] font-bold uppercase tracking-wider">/ {limit} hr</div>
               </div>
             </div>
           </div>
         )}
 
-        {/* 3-STEP WALKTHROUGH (dismissible) */}
+        {/* 3-STEP WALKTHROUGH (dismissible, compact) */}
         {walkthroughOpen && (
-          <div className="bg-[#D4AF37]/10 rounded-xl border border-[#D4AF37]/40 p-3 relative" data-testid="hos-walkthrough">
+          <div className="bg-[#D4AF37]/10 rounded-lg border border-[#D4AF37]/40 px-3 py-2 relative" data-testid="hos-walkthrough">
             <button
               onClick={dismissWalkthrough}
-              className="absolute top-2 right-2 w-6 h-6 rounded-full hover:bg-[#D4AF37]/20 flex items-center justify-center text-[#64748B]"
+              className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full hover:bg-[#D4AF37]/20 flex items-center justify-center text-[#64748B]"
               data-testid="hos-walkthrough-close"
               aria-label="Dismiss walkthrough"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
             </button>
-            <div className="flex items-center gap-2 mb-2">
-              <Lightbulb className="w-4 h-4 text-[#D4AF37]" />
-              <h3 className="text-xs font-black text-[#002855] uppercase tracking-wider">New here? Three quick steps.</h3>
+            <div className="flex items-start gap-2 pr-5">
+              <Lightbulb className="w-3.5 h-3.5 text-[#D4AF37] flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] text-[#475569] leading-snug">
+                <strong className="text-[#002855]">Quick steps:</strong> ① Pick rule · ② Enter each day's total · ③ If OOS, enter stop time.
+              </p>
             </div>
-            <ol className="space-y-1 text-[11px] text-[#475569] pr-6">
-              <li className="flex gap-2"><span className="flex-shrink-0 w-4 h-4 rounded-full bg-[#002855] text-white text-[9px] font-black text-center leading-4">1</span>Pick the rule type — <strong>Property</strong> (70 hr) or <strong>Passenger</strong> (60 hr).</li>
-              <li className="flex gap-2"><span className="flex-shrink-0 w-4 h-4 rounded-full bg-[#002855] text-white text-[9px] font-black text-center leading-4">2</span>Enter each day's total hours (or expand to split Drive &amp; On-Duty).</li>
-              <li className="flex gap-2"><span className="flex-shrink-0 w-4 h-4 rounded-full bg-[#002855] text-white text-[9px] font-black text-center leading-4">3</span>If OUT OF SERVICE, enter the stop time to get the required rest.</li>
-            </ol>
           </div>
         )}
 
-        {/* STEP 1: RULE TYPE */}
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-          <div className="bg-[#002855] px-4 py-2.5 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center">1</span>
-            <h2 className="text-sm font-bold text-white">Choose the rule</h2>
-            <InfoHelp
-              title="Rule type"
-              body={
-                <>
-                  <strong>Property</strong> carrier: 70 hr on duty in any rolling 8 days.<br />
-                  <strong>Passenger</strong> carrier: 60 hr on duty in any rolling 7 days.<br />
-                  Driving after reaching the limit = Out of Service until hours drop back below.
-                </>
-              }
-              testid="hos-ruletype-help"
-            />
-          </div>
-          <div className="p-4">
-            <div className="flex items-center gap-0 rounded-full bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden w-fit" data-testid="hos-rule-toggle">
-              <button onClick={() => setRuleType("property")} className={`px-4 py-2 text-xs font-bold ${ruleType === "property" ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="hos-rule-property">
-                Property · 70 hr / 8 day
-              </button>
-              <button onClick={() => setRuleType("passenger")} className={`px-4 py-2 text-xs font-bold ${ruleType === "passenger" ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="hos-rule-passenger">
-                Passenger · 60 hr / 7 day
-              </button>
-            </div>
+        {/* STEP 1: RULE TYPE — compact inline row, no card */}
+        <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm px-3 py-2 flex items-center gap-2 flex-wrap">
+          <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center flex-shrink-0">1</span>
+          <h2 className="text-xs font-bold text-[#002855]">Rule</h2>
+          <InfoHelp
+            title="Rule type"
+            body={<><strong>Property:</strong> 70 hr in 8 days. <strong>Passenger:</strong> 60 hr in 7 days.</>}
+            testid="hos-ruletype-help"
+          />
+          <div className="flex items-center gap-0 rounded-full bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden ml-auto" data-testid="hos-rule-toggle">
+            <button onClick={() => setRuleType("property")} className={`px-3 py-1 text-[11px] font-bold ${ruleType === "property" ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="hos-rule-property">
+              Property · 70
+            </button>
+            <button onClick={() => setRuleType("passenger")} className={`px-3 py-1 text-[11px] font-bold ${ruleType === "passenger" ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="hos-rule-passenger">
+              Passenger · 60
+            </button>
           </div>
         </div>
 
         {/* STEP 2: DAILY HOURS */}
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-          <div className="bg-[#002855] px-4 py-2.5 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center">2</span>
-            <h2 className="text-sm font-bold text-white">Enter daily hours</h2>
+        <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+          <div className="bg-[#002855] px-3 py-1.5 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center flex-shrink-0">2</span>
+            <h2 className="text-xs font-bold text-white">Daily hours</h2>
             <InfoHelp
               title="How to enter"
-              body={
-                <>
-                  Enter each day's <strong>total on-duty hours</strong> (drive + on-duty not driving). If you want to show the split, toggle <em>"Show split"</em> and enter Drive and On-Duty separately — the Total will auto-fill.<br /><br />
-                  Tap any <strong>date</strong> to shift the whole {dayCount}-day window.
-                </>
-              }
+              body={<>Enter each day's <strong>total on-duty hours</strong>. Toggle <em>Split</em> for Drive / On-Duty columns. Tap any date to shift the window.</>}
               testid="hos-daily-help"
             />
-          </div>
-
-          {/* Split toggle + window reset */}
-          <div className="px-3 sm:px-4 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0] flex items-center justify-between flex-wrap gap-2">
-            <label className="flex items-center gap-2 text-[11px] text-[#475569] cursor-pointer" data-testid="hos-split-toggle">
-              <input
-                type="checkbox"
-                checked={showSplit}
-                onChange={(e) => setShowSplit(e.target.checked)}
-                className="w-3.5 h-3.5 accent-[#D4AF37]"
-              />
-              Show Drive / On-Duty split
-            </label>
-            {!anchorIsToday && (
-              <button onClick={resetToToday} className="text-[10px] font-bold text-[#D4AF37] hover:text-[#002855] underline" data-testid="hos-reset-today-btn">
-                Reset to today
-              </button>
-            )}
+            <div className="ml-auto flex items-center gap-3">
+              <label className="flex items-center gap-1.5 text-[10px] text-white/80 cursor-pointer" data-testid="hos-split-toggle">
+                <input
+                  type="checkbox"
+                  checked={showSplit}
+                  onChange={(e) => setShowSplit(e.target.checked)}
+                  className="w-3 h-3 accent-[#D4AF37]"
+                />
+                Split
+              </label>
+              {!anchorIsToday && (
+                <button onClick={resetToToday} className="text-[10px] font-bold text-[#D4AF37] hover:text-white" data-testid="hos-reset-today-btn">
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Column headers */}
-          <div className={`px-3 sm:px-4 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0] grid gap-2 items-center text-[9px] font-bold text-[#64748B] uppercase tracking-wider ${showSplit ? "grid-cols-[110px_1fr_1fr_1fr]" : "grid-cols-[110px_1fr]"}`}>
+          <div className={`px-3 py-1 bg-[#F8FAFC] border-b border-[#E2E8F0] grid gap-2 items-center text-[9px] font-bold text-[#64748B] uppercase tracking-wider ${showSplit ? "grid-cols-[90px_1fr_1fr_1fr]" : "grid-cols-[90px_1fr]"}`}>
             <div>Day</div>
-            {showSplit && <div className="text-center">Drive (hr)</div>}
-            {showSplit && <div className="text-center">On-Duty (hr)</div>}
-            <div className="text-center">Total (hr)</div>
+            {showSplit && <div className="text-center">Drive</div>}
+            {showSplit && <div className="text-center">On-Duty</div>}
+            <div className="text-center">Total</div>
           </div>
 
           {rows.map((r, idx) => {
@@ -478,16 +454,16 @@ export default function HoursOfServicePage() {
             return (
               <div
                 key={r.id}
-                className={`px-3 sm:px-4 py-2.5 grid gap-2 items-center border-b border-[#F1F5F9] ${showSplit ? "grid-cols-[110px_1fr_1fr_1fr]" : "grid-cols-[110px_1fr]"} ${isAnchor ? "bg-[#D4AF37]/5" : ""}`}
+                className={`px-3 py-1 grid gap-2 items-center border-b border-[#F1F5F9] ${showSplit ? "grid-cols-[90px_1fr_1fr_1fr]" : "grid-cols-[90px_1fr]"} ${isAnchor ? "bg-[#D4AF37]/5" : ""}`}
                 data-testid={`hos-row-${r.id}`}
               >
-                <div className="flex flex-col gap-0.5">
-                  <div className="text-[11px] font-bold text-[#002855] leading-tight">{dayLabel}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-[#002855] flex-shrink-0 w-8">{dayLabel}</span>
                   <input
                     type="date"
                     value={toDateInput(d)}
                     onChange={(e) => updateRowDate(idx, e.target.value)}
-                    className="text-[10px] text-[#475569] leading-tight bg-transparent border-0 outline-none focus:text-[#002855] cursor-pointer p-0 w-full"
+                    className="text-[9px] text-[#475569] bg-transparent border-0 outline-none focus:text-[#002855] cursor-pointer p-0 flex-1 min-w-0"
                     data-testid={`hos-date-${r.id}`}
                   />
                 </div>
@@ -497,7 +473,7 @@ export default function HoursOfServicePage() {
                     value={r.drive}
                     onChange={(e) => updateDriveOrOnDuty(r.id, "drive", e.target.value)}
                     placeholder="0"
-                    className="w-full px-2 py-2 text-sm font-bold text-center rounded-lg border border-[#E2E8F0] outline-none focus:border-[#D4AF37] placeholder:text-[#CBD5E1]"
+                    className="w-full px-1.5 py-1 text-xs font-bold text-center rounded-md border border-[#E2E8F0] outline-none focus:border-[#D4AF37] placeholder:text-[#CBD5E1]"
                     data-testid={`hos-drive-${r.id}`}
                   />
                 )}
@@ -507,7 +483,7 @@ export default function HoursOfServicePage() {
                     value={r.onDuty}
                     onChange={(e) => updateDriveOrOnDuty(r.id, "onDuty", e.target.value)}
                     placeholder="0"
-                    className="w-full px-2 py-2 text-sm font-bold text-center rounded-lg border border-[#E2E8F0] outline-none focus:border-[#D4AF37] placeholder:text-[#CBD5E1]"
+                    className="w-full px-1.5 py-1 text-xs font-bold text-center rounded-md border border-[#E2E8F0] outline-none focus:border-[#D4AF37] placeholder:text-[#CBD5E1]"
                     data-testid={`hos-onduty-${r.id}`}
                   />
                 )}
@@ -516,7 +492,7 @@ export default function HoursOfServicePage() {
                   value={totalDisplay}
                   onChange={(e) => updateTotal(r.id, e.target.value)}
                   placeholder="0"
-                  className={`w-full px-2 py-2 text-sm font-black text-center rounded-lg border outline-none focus:border-[#D4AF37] ${
+                  className={`w-full px-1.5 py-1 text-xs font-black text-center rounded-md border outline-none focus:border-[#D4AF37] ${
                     totalEntered
                       ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#002855]"
                       : dt.value > 0
@@ -532,73 +508,67 @@ export default function HoursOfServicePage() {
 
         {/* STEP 3: OOS DETAILS (only if OOS) */}
         {isOOS && (
-          <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-            <div className="bg-[#7F1D1D] px-4 py-2.5 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center">3</span>
-              <h2 className="text-sm font-bold text-white">When did you stop them?</h2>
+          <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+            <div className="bg-[#7F1D1D] px-3 py-1.5 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center flex-shrink-0">3</span>
+              <h2 className="text-xs font-bold text-white">When did you stop them?</h2>
               <InfoHelp
                 title="Why we ask"
-                body={
-                  <>
-                    The driver must rest for the remainder of today first. We use the stop time to calculate how much of today is left, then roll the window forward to see if that's enough — or if a 34-hour restart is required.
-                  </>
-                }
+                body={<>We use the stop time to compute how much of today's calendar day remains. The driver must rest until hours drop below the limit — or take a 34-hour restart.</>}
                 testid="hos-stoptime-help"
               />
             </div>
-            <div className="p-4 space-y-3">
-              <div>
-                <label className="text-[10px] font-bold text-[#64748B] uppercase block mb-1.5 flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> Stop time
-                </label>
+            <div className="p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-[#64748B] flex-shrink-0" />
                 <input
                   type="time"
                   value={stopTime}
                   onChange={(e) => setStopTime(e.target.value)}
-                  className="w-full px-3 py-2.5 text-base font-bold rounded-lg border border-[#E2E8F0] outline-none focus:border-[#D4AF37] font-mono"
+                  placeholder="--:--"
+                  className="flex-1 px-2.5 py-1.5 text-sm font-bold rounded-md border border-[#E2E8F0] outline-none focus:border-[#D4AF37] font-mono"
                   data-testid="hos-stoptime-input"
                 />
                 {stopTime && hoursLeftFromStopTime != null && (
-                  <p className="mt-1.5 text-[11px] text-[#64748B]">
-                    <strong>{fmt(hoursLeftFromStopTime)} hr</strong> remain in today's calendar day (until midnight).
-                  </p>
-                )}
-                {!stopTime && (
-                  <p className="mt-1.5 text-[11px] text-[#D4AF37] italic">
-                    Enter stop time to calculate the rest requirement.
-                  </p>
+                  <span className="text-[10px] text-[#64748B] whitespace-nowrap">
+                    <strong>{fmt(hoursLeftFromStopTime)} hr</strong> until midnight
+                  </span>
                 )}
               </div>
+              {!stopTime && (
+                <p className="text-[10px] text-[#D4AF37] italic">
+                  Enter stop time to calculate the required rest.
+                </p>
+              )}
 
               {oosSim && !oosSim.needsInput && (
-                <div className="border-t border-[#F1F5F9] pt-3">
+                <div className="border-t border-[#F1F5F9] pt-2">
                   <button
                     onClick={() => setShowMath(!showMath)}
-                    className="text-[11px] font-bold text-[#002855] hover:text-[#D4AF37] flex items-center gap-1"
+                    className="text-[10px] font-bold text-[#002855] hover:text-[#D4AF37] flex items-center gap-1"
                     data-testid="hos-toggle-math-btn"
                   >
-                    {showMath ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    {showMath ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     {showMath ? "Hide" : "Show"} the math
                   </button>
 
                   {showMath && (
-                    <div className="mt-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] p-3 space-y-2" data-testid="hos-oos-sim">
-                      <div className="text-[10px] font-black text-[#002855] uppercase tracking-wide">Recovery Logic</div>
-                      <ol className="space-y-2 text-[11px] text-[#475569] leading-relaxed">
+                    <div className="mt-2 rounded-md bg-[#F8FAFC] border border-[#E2E8F0] p-2 space-y-1.5" data-testid="hos-oos-sim">
+                      <div className="text-[9px] font-black text-[#002855] uppercase tracking-wide">Recovery Logic</div>
+                      <ol className="space-y-1.5 text-[10px] text-[#475569] leading-snug">
                         {oosSim.steps.map((s) => (
-                          <li key={s.stepNum} className="flex gap-2" data-testid={`hos-oos-step-${s.stepNum}`}>
-                            <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${s.passes ? "bg-[#16A34A] text-white" : "bg-[#CBD5E1] text-[#475569]"}`}>
+                          <li key={s.stepNum} className="flex gap-1.5" data-testid={`hos-oos-step-${s.stepNum}`}>
+                            <span className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ${s.passes ? "bg-[#16A34A] text-white" : "bg-[#CBD5E1] text-[#475569]"}`}>
                               {s.stepNum}
                             </span>
                             <div className="flex-1">
                               <div>{s.description}</div>
-                              <div className="mt-0.5 text-[10px]">
-                                <span className="text-[#64748B]">Cumulative OOS:</span>{" "}
+                              <div className="mt-0.5 text-[9px]">
+                                <span className="text-[#64748B]">OOS:</span>{" "}
                                 <strong className="text-[#002855]">{fmt(s.oosHours)} hr</strong>
                                 <span className="mx-1 text-[#CBD5E1]">·</span>
-                                <span className="text-[#64748B]">New total:</span>{" "}
                                 <strong className={s.passes ? "text-[#16A34A]" : "text-[#DC2626]"}>
-                                  {fmt(s.runningTotal)} hr {s.passes ? "✓ under limit" : "— still over"}
+                                  {fmt(s.runningTotal)} hr {s.passes ? "✓ ok" : "— over"}
                                 </strong>
                               </div>
                             </div>
