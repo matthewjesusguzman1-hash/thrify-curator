@@ -416,22 +416,24 @@ export default function HoursOfServicePage() {
           </div>
         )}
 
-        {/* STEP 1: RULE TYPE — compact inline row, no card */}
-        <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm px-3 py-2 flex items-center gap-2 flex-wrap">
-          <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center flex-shrink-0">1</span>
-          <h2 className="text-xs font-bold text-[#002855]">Rule</h2>
-          <InfoHelp
-            title="Rule type"
-            body={<><strong>Property:</strong> 70 hr in 8 days. <strong>Passenger:</strong> 60 hr in 7 days.</>}
-            testid="hos-ruletype-help"
-          />
-          <div className="flex items-center gap-0 rounded-full bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden ml-auto" data-testid="hos-rule-toggle">
-            <button onClick={() => setRuleType("property")} className={`px-3 py-1 text-[11px] font-bold ${ruleType === "property" ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="hos-rule-property">
-              Property · 70
-            </button>
-            <button onClick={() => setRuleType("passenger")} className={`px-3 py-1 text-[11px] font-bold ${ruleType === "passenger" ? "bg-[#D4AF37] text-[#002855]" : "text-[#64748B]"}`} data-testid="hos-rule-passenger">
-              Passenger · 60
-            </button>
+        {/* STEP 1: RULE TYPE — compact inline row, blue header bar to match other steps */}
+        <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+          <div className="bg-[#002855] px-3 py-1.5 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center flex-shrink-0">1</span>
+            <h2 className="text-xs font-bold text-white">Rule</h2>
+            <InfoHelp
+              title="Rule type"
+              body={<><strong>Property:</strong> 70 hr in 8 days. <strong>Passenger:</strong> 60 hr in 7 days.</>}
+              testid="hos-ruletype-help"
+            />
+            <div className="flex items-center gap-0 rounded-full bg-white/10 border border-white/20 overflow-hidden ml-auto" data-testid="hos-rule-toggle">
+              <button onClick={() => setRuleType("property")} className={`px-3 py-0.5 text-[11px] font-bold ${ruleType === "property" ? "bg-[#D4AF37] text-[#002855]" : "text-white/70 hover:text-white"}`} data-testid="hos-rule-property">
+                Property · 70
+              </button>
+              <button onClick={() => setRuleType("passenger")} className={`px-3 py-0.5 text-[11px] font-bold ${ruleType === "passenger" ? "bg-[#D4AF37] text-[#002855]" : "text-white/70 hover:text-white"}`} data-testid="hos-rule-passenger">
+                Passenger · 60
+              </button>
+            </div>
           </div>
         </div>
 
@@ -537,7 +539,7 @@ export default function HoursOfServicePage() {
         {/* STEP 3: OOS DETAILS (only if OOS) */}
         {isOOS && (
           <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
-            <div className="bg-[#7F1D1D] px-3 py-1.5 flex items-center gap-2">
+            <div className="bg-[#002855] px-3 py-1.5 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] text-[10px] font-black flex items-center justify-center flex-shrink-0">3</span>
               <h2 className="text-xs font-bold text-white">When did you stop them?</h2>
               <InfoHelp
