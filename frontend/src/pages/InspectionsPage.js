@@ -144,18 +144,36 @@ export default function InspectionsPage() {
   };
 
   /**
-   * Bulk export flow — produces a SINGLE combined PDF with one page per
-   * inspection (page break between them). iOS opens it instantly on tap in
-   * Files / Mail / anywhere, no ZIP extraction required.
+   * Bulk export entry point. When 2+ are selected, asks the user whether
+   * they want a single combined PDF or one file per inspection, then routes.
    */
-  const runBulkExport = async () => {
+  const [bulkModeChooser, setBulkModeChooser] = useState(false);
+
+  const startBulkShare = () => {
+    if (selectedIds.size === 0) return;
+    if (selectedIds.size === 1) {
+      runBulkExport("combined");
+      return;
+    }
+    setBulkModeChooser(true);
+  };
+
+  /**
+   * Bulk export flow.
+   *   mode = "combined" → one PDF with all inspections, page break between.
+   *   mode = "separate" → one PDF per inspection, shared via Web Share with
+   *     multiple files (iOS 15+ / Chrome Android support this). Falls back to
+   *     sequential downloads when multi-file share is unavailable.
+   */
+  const runBulkExport = async (mode = "combined") => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+    setBulkModeChooser(false);
     setBulkExporting(true);
     setBulkProgress({ current: 0, total: ids.length, title: "" });
 
-    // Single shared jsPDF that every inspection appends into.
-    const combined = new jsPDF("p", "mm", "a4");
+    const combined = mode === "combined" ? new jsPDF("p", "mm", "a4") : null;
+    const separateFiles = []; // [{ name, blob }]
     let successCount = 0;
     let firstTitle = "";
 
@@ -172,18 +190,21 @@ export default function InspectionsPage() {
         }
         setBulkProgress({ current: i + 1, total: ids.length, title: full.title || "Inspection" });
         if (i === 0) firstTitle = full.title || "";
-        setBulkMeta({ index: i + 1, total: ids.length });
+        // Banner only in combined mode; separate PDFs already have their own headers.
+        setBulkMeta(mode === "combined" ? { index: i + 1, total: ids.length } : null);
         setRenderQueue(full);
         await new Promise((r) => setTimeout(r, 400));
         if (!hiddenRef.current) {
           await new Promise((r) => setTimeout(r, 200));
         }
         try {
-          // Append this inspection's content into the shared combined PDF.
-          // generatePDFBlob, when given an existing jsPDF, adds a new page
-          // before each capture, so the original blank page 1 will be
-          // discarded at the end via deletePage(1).
-          await generatePDFBlob(hiddenRef.current, combined);
+          if (mode === "combined") {
+            await generatePDFBlob(hiddenRef.current, combined);
+          } else {
+            const blob = await generatePDFBlob(hiddenRef.current);
+            const safeTitle = (full.title || `inspection-${i + 1}`).replace(/[^a-z0-9_\-]+/gi, "_");
+            separateFiles.push({ name: `${safeTitle}.pdf`, blob });
+          }
           successCount++;
         } catch (err) {
           console.error("PDF gen failed", err);
@@ -198,25 +219,59 @@ export default function InspectionsPage() {
         return;
       }
 
-      // Combined pdf started with a blank page; every append added a new
-      // page before writing, so the very first page is always blank. Remove it.
-      try { combined.deletePage(1); } catch { /* ignore */ }
-
-      const blob = finalizePdf(combined);
-      const dateTag = new Date().toISOString().slice(0, 10);
-      const filename = successCount === 1
-        ? `${(firstTitle || "inspection").replace(/[^a-z0-9_\-]+/gi, "_")}.pdf`
-        : `inspections-${dateTag}-${successCount}.pdf`;
-
-      await sharePDFBlob(blob, filename, {
-        title: successCount === 1 ? firstTitle || "Inspection Report" : `${successCount} Inspection Reports`,
-        text: successCount === 1 ? "Inspection Report" : `${successCount} inspections combined into one PDF`,
-      });
+      if (mode === "combined") {
+        try { combined.deletePage(1); } catch { /* ignore */ }
+        const blob = finalizePdf(combined);
+        const dateTag = new Date().toISOString().slice(0, 10);
+        const filename = successCount === 1
+          ? `${(firstTitle || "inspection").replace(/[^a-z0-9_\-]+/gi, "_")}.pdf`
+          : `inspections-${dateTag}-${successCount}.pdf`;
+        await sharePDFBlob(blob, filename, {
+          title: successCount === 1 ? firstTitle || "Inspection Report" : `${successCount} Inspection Reports`,
+          text: successCount === 1 ? "Inspection Report" : `${successCount} inspections combined into one PDF`,
+        });
+      } else {
+        // Separate files path
+        const files = separateFiles.map(f => new File([f.blob], f.name, { type: "application/pdf" }));
+        if (files.length === 1) {
+          await sharePDFBlob(separateFiles[0].blob, separateFiles[0].name, {
+            title: separateFiles[0].name.replace(/\.pdf$/i, ""),
+            text: "Inspection Report",
+          });
+        } else if (navigator.canShare && navigator.canShare({ files })) {
+          try {
+            await navigator.share({ files, title: `${files.length} Inspection Reports`, text: `${files.length} separate inspection PDFs` });
+            // Successful share counts as an export.
+            try { (await import("../lib/storageManager")).markInspectionExported(); } catch {}
+          } catch (err) {
+            if (err?.name !== "AbortError") {
+              sequentialDownload(separateFiles);
+            }
+          }
+        } else {
+          sequentialDownload(separateFiles);
+        }
+      }
       exitSelectMode();
     } finally {
       setBulkExporting(false);
       setBulkProgress({ current: 0, total: 0, title: "" });
     }
+  };
+
+  // Fallback for browsers without multi-file Web Share — triggers one download
+  // per file with a small delay between so the browser queues them properly.
+  const sequentialDownload = async (files) => {
+    for (let i = 0; i < files.length; i++) {
+      const url = URL.createObjectURL(files[i].blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = files[i].name; a.style.display = "none";
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    try { (await import("../lib/storageManager")).markInspectionExported(); } catch {}
+    toast.success(`${files.length} PDFs downloaded to your device`);
   };
 
   const selectedCount = selectedIds.size;
@@ -364,7 +419,7 @@ export default function InspectionsPage() {
               <p className="text-sm font-bold text-[#002855]">{selectedCount} inspection{selectedCount === 1 ? "" : "s"}</p>
             </div>
             <Button
-              onClick={runBulkExport}
+              onClick={startBulkShare}
               className="bg-[#002855] text-white hover:bg-[#001a3a] h-11 px-5 font-bold"
               data-testid="bulk-share-btn"
             >
@@ -399,6 +454,41 @@ export default function InspectionsPage() {
       )}
 
       <HiddenReport inspection={renderQueue} bulkMeta={bulkMeta} containerRef={hiddenRef} />
+
+      {/* Mode chooser — combined vs separate */}
+      {bulkModeChooser && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" data-testid="bulk-mode-chooser" onClick={() => setBulkModeChooser(false)}>
+          <div className="bg-white rounded-xl p-5 w-full max-w-[440px] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-[#002855] mb-1" style={{ fontFamily: "Outfit, sans-serif" }}>How would you like to share?</h3>
+            <p className="text-xs text-[#64748B] mb-4">{selectedCount} inspections selected</p>
+            <div className="space-y-2">
+              <button
+                onClick={() => runBulkExport("separate")}
+                className="w-full text-left rounded-lg border-2 border-[#D4AF37] bg-[#FFFBEB] hover:bg-[#FEF3C7] p-3 transition-colors"
+                data-testid="bulk-mode-separate-btn"
+              >
+                <p className="text-sm font-bold text-[#002855]">Separate PDFs (recommended)</p>
+                <p className="text-[11px] text-[#64748B] mt-0.5">One file per inspection. Saves as individual files in your Files app or wherever you share them.</p>
+              </button>
+              <button
+                onClick={() => runBulkExport("combined")}
+                className="w-full text-left rounded-lg border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] p-3 transition-colors"
+                data-testid="bulk-mode-combined-btn"
+              >
+                <p className="text-sm font-bold text-[#002855]">Combined PDF</p>
+                <p className="text-[11px] text-[#64748B] mt-0.5">All inspections merged into one file with page breaks between them. Good for emailing a whole shift as one attachment.</p>
+              </button>
+            </div>
+            <button
+              onClick={() => setBulkModeChooser(false)}
+              className="w-full mt-3 py-2 text-xs text-[#64748B] hover:text-[#002855]"
+              data-testid="bulk-mode-cancel-btn"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
