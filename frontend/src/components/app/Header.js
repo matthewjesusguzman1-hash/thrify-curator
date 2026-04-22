@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus, Scale, Hourglass, Settings2, ChevronLeft } from "lucide-react";
+import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus, Scale, Hourglass, Settings2, ChevronLeft, HardDrive } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { NotesPanel } from "./NotesPanel";
+import { StorageInfoDialog } from "./StorageInfoDialog";
+import { requestPersistentStorage, shouldNudgeExport, daysSinceLastExport } from "../../lib/storageManager";
+import { toast } from "sonner";
 import {
   Popover,
   PopoverContent,
@@ -277,6 +280,14 @@ function ChangePinPopover({ badge, navigate, logout, enabledButtons, setEnabledB
         Customize Header
       </button>
       <button
+        onClick={openStorageInfo}
+        className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
+        data-testid="about-storage-link"
+      >
+        <HardDrive className="w-3.5 h-3.5 text-[#64748B]" />
+        About Photo Storage
+      </button>
+      <button
         onClick={() => setMode("change")}
         className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
         data-testid="change-pin-link"
@@ -314,7 +325,39 @@ export function Header({ onUploadClick, stats }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [enabledButtons, setEnabledButtonsState] = useState(() => loadEnabled(badge));
+  const [storageInfoOpen, setStorageInfoOpen] = useState(false);
   const toggle = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+
+  // Silently request persistent storage once per badge. No prompt if already granted.
+  useEffect(() => {
+    if (!badge) return;
+    (async () => {
+      try { await requestPersistentStorage(); } catch { /* ignore */ }
+    })();
+  }, [badge]);
+
+  // Gentle reminder to export inspections after every EXPORT_NUDGE_INTERVAL_DAYS
+  // of no exports. Only shows once per session per badge.
+  useEffect(() => {
+    if (!badge) return;
+    const sessKey = `inspnav_exportNudgeShown_${badge}`;
+    if (sessionStorage.getItem(sessKey)) return;
+    if (!shouldNudgeExport()) return;
+    const days = daysSinceLastExport();
+    const msg = days === null
+      ? "Reminder: export/share your inspection reports to keep a permanent copy."
+      : `It's been ${days} days since you last exported. Share your inspections to keep a permanent copy.`;
+    // Fire after a short delay so it doesn't collide with login.
+    const t = setTimeout(() => {
+      toast.message("Retention reminder", {
+        description: msg,
+        action: { label: "Learn more", onClick: () => setStorageInfoOpen(true) },
+        duration: 8000,
+      });
+      sessionStorage.setItem(sessKey, "1");
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [badge]);
 
   // Reload prefs whenever badge changes (e.g., re-login).
   useEffect(() => { setEnabledButtonsState(loadEnabled(badge)); }, [badge]);
@@ -561,6 +604,7 @@ export function Header({ onUploadClick, stats }) {
                 logout={logout}
                 enabledButtons={enabledButtons}
                 setEnabledButtons={setEnabledButtons}
+                openStorageInfo={() => setStorageInfoOpen(true)}
               />
             </PopoverContent>
           </Popover>
@@ -595,6 +639,7 @@ export function Header({ onUploadClick, stats }) {
       <div className="gold-accent h-[2px]" />
     </header>
     <NotesPanel open={notesOpen} onClose={() => { setNotesOpen(false); refreshUnread(); }} />
+    <StorageInfoDialog open={storageInfoOpen} onOpenChange={setStorageInfoOpen} />
     </>
   );
 }

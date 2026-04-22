@@ -4,6 +4,7 @@
 
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { markInspectionExported } from "./storageManager";
 
 /**
  * Render a content element (and its [data-pdf-section] children) into a PDF Blob.
@@ -81,6 +82,8 @@ export async function sharePDFBlob(blob, filename, { title, text } = {}) {
   if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title, text });
+      // Track successful export for retention reminder.
+      markInspectionExported();
       return "shared";
     } catch (err) {
       if (err && err.name === "AbortError") return "aborted";
@@ -94,6 +97,8 @@ export async function sharePDFBlob(blob, filename, { title, text } = {}) {
   a.href = url; a.download = safeName; a.style.display = "none";
   document.body.appendChild(a); a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+  // Count the download as an export — the PDF is now off the device.
+  markInspectionExported();
 
   const mailSubject = encodeURIComponent(title || "Report");
   const mailBody = encodeURIComponent(
