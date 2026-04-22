@@ -52,6 +52,11 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - Regression file: `/app/backend/tests/test_lite_mode_and_quickphotos.py`.
 
 ## Backlog (P0 → P2)
+- **P0**: **Photo Annotator needs a revisit** — user reports it's not flowing right. Current implementation (multi-select from Quick Photos → annotate in queue → Done saves back to library → library save-to-inspection moves blobs) compiles and lints clean, but the end-to-end feel is off. Action items when we pick this up:
+  - Reproduce on-device (iOS Safari + desktop) with a real photo: capture → annotate → Done → verify it appears in Quick Photos with annotations baked in.
+  - Audit coordinate math in `renderEntryBlob` (PhotoAnnotator.js) — non-active queue entries skip annotation bake; need to persist each entry's `imgDimensions` at annotation time so multi-photo batches stay aligned.
+  - Decide whether to keep the dual entry points (Quick Photos preview → Annotate vs. /photo-annotator entry screen) or collapse to one canonical flow.
+  - Consider an "Unassign / back to Quick Photos" action on inspection photos so annotated shots can be re-edited.
 - **P1**: Offline/cached mode for field use (cache violation tree + last N inspections for offline access)
 - **P2**: Refactor `server.py` into modular routes (`/app/backend/routes/*`)
 - **P2**: Refactor `BridgeChartPage.js` / `HoursOfServicePage.js` / `HazMatHelpers.js` into smaller components
