@@ -45,6 +45,23 @@ export default function QuickPhotos() {
 
   const cameraRef = useRef(null);
   const libraryRef = useRef(null);
+  // Back-to-back capture toggle. When on, the camera is re-invoked immediately
+  // after each successful shot so the inspector can snap a sequence without
+  // returning to the page between shots. Persisted per badge so the setting
+  // survives sign-out.
+  const CAM_KEY = (b) => `inspnav_continuous_camera_${b || "anon"}`;
+  const [continuousCapture, setContinuousCapture] = useState(true);
+  useEffect(() => {
+    if (!badge) return;
+    try {
+      const raw = localStorage.getItem(CAM_KEY(badge));
+      if (raw !== null) setContinuousCapture(raw === "1");
+    } catch { /* ignore */ }
+  }, [badge]);
+  const toggleContinuous = (next) => {
+    setContinuousCapture(next);
+    try { localStorage.setItem(CAM_KEY(badge), next ? "1" : "0"); } catch { /* ignore */ }
+  };
 
   // Restore draft metadata
   useEffect(() => {
@@ -88,7 +105,7 @@ export default function QuickPhotos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleFiles = useCallback(async (fileList) => {
+  const handleFiles = useCallback(async (fileList, source) => {
     if (!fileList || fileList.length === 0) return;
     const added = [];
     for (const f of Array.from(fileList)) {
@@ -99,7 +116,12 @@ export default function QuickPhotos() {
       } catch { toast.error(`Failed to save ${f.name}`); }
     }
     if (added.length > 0) setPhotos((prev) => [...prev, ...added]);
-  }, []);
+    // Back-to-back capture: immediately re-open the camera after a successful
+    // camera shot so the inspector keeps snapping without returning to the UI.
+    if (source === "camera" && continuousCapture && added.length > 0) {
+      setTimeout(() => { try { cameraRef.current?.click(); } catch { /* ignore */ } }, 250);
+    }
+  }, [continuousCapture]);
 
   const updateNote = (pid, note) => {
     setPhotos((prev) => prev.map((p) => p.photo_id === pid ? { ...p, note } : p));
@@ -289,11 +311,14 @@ export default function QuickPhotos() {
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => cameraRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[#D4AF37]/50 bg-gradient-to-br from-[#002855] to-[#001a3a] text-white py-4 hover:border-[#D4AF37] transition-colors"
+            className="relative flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[#D4AF37]/50 bg-gradient-to-br from-[#002855] to-[#001a3a] text-white py-4 hover:border-[#D4AF37] transition-colors"
             data-testid="take-photo-btn"
           >
             <Camera className="w-5 h-5 text-[#D4AF37]" />
             <span className="text-xs font-bold">Take Photo</span>
+            {continuousCapture && (
+              <span className="absolute top-1.5 right-1.5 text-[9px] font-black tracking-widest text-[#002855] bg-[#D4AF37] rounded px-1 py-px">BURST</span>
+            )}
           </button>
           <button
             onClick={() => libraryRef.current?.click()}
@@ -303,8 +328,30 @@ export default function QuickPhotos() {
             <Upload className="w-5 h-5 text-[#64748B]" />
             <span className="text-xs font-bold">Choose Photos</span>
           </button>
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
-          <input ref={libraryRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files, "camera"); e.target.value = ""; }} />
+          <input ref={libraryRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files, "library"); e.target.value = ""; }} />
+        </div>
+
+        {/* Burst-mode toggle — keeps the camera open for back-to-back shots */}
+        <div className="flex items-center justify-between bg-white rounded-lg border border-[#E2E8F0] px-3 py-2">
+          <div className="flex-1 min-w-0 pr-2">
+            <p className="text-xs font-semibold text-[#002855]">Burst capture</p>
+            <p className="text-[10px] text-[#64748B] leading-tight">
+              {continuousCapture
+                ? "Camera reopens automatically after each shot. Tap Cancel on the camera to stop."
+                : "Camera closes after each shot — one photo at a time."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => toggleContinuous(!continuousCapture)}
+            role="switch"
+            aria-checked={continuousCapture}
+            className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${continuousCapture ? "bg-[#D4AF37]" : "bg-[#CBD5E1]"}`}
+            data-testid="burst-capture-toggle"
+          >
+            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${continuousCapture ? "left-[22px]" : "left-0.5"}`} />
+          </button>
         </div>
 
         {/* Storage-first GRID (compact thumbnails) */}
