@@ -495,9 +495,8 @@ export default function QuickPhotos() {
                     <Button variant="outline" className="flex-1" onClick={() => { setNoteEditorId(previewId); setPreviewId(null); }} data-testid="preview-edit-note">
                       <Pencil className="w-3.5 h-3.5 mr-1" /> {p?.note ? "Edit note" : "Add note"}
                     </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => { navigate(`/photo-annotator?quickphoto=${previewId}`); }} data-testid="preview-annotate">
-                      <Pencil className="w-3.5 h-3.5 mr-1" /> Annotate
-                    </Button>
+                    {/* Photo Annotator is hidden until it passes full QA. Re-enable the
+                        Annotate button here when the annotator flow is verified. */}
                     <Button variant="outline" className="text-[#DC2626] border-[#FECACA]" onClick={() => { removeOne(previewId); setPreviewId(null); }} data-testid="preview-delete">
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>

@@ -363,14 +363,17 @@ export default function InspectionDetail() {
                           <div className="absolute top-0 left-0 w-3 h-3 bg-[#D4AF37] rounded-full border border-white" title="Has annotations" />
                         )}
                         <div className="absolute -top-1 -right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 sm:opacity-100">
-                          <button
-                            onClick={() => navigate(`/photo-annotator?inspection=${inspection.id}&photo=${photo.photo_id}`)}
-                            className="w-4 h-4 bg-[#002855] text-white rounded-full flex items-center justify-center text-[8px]"
-                            title="Edit annotations"
-                            data-testid={`edit-photo-${photo.photo_id}`}
-                          >
-                            <Pencil className="w-2.5 h-2.5" />
-                          </button>
+                          {/* Annotator hidden until it passes full QA. Re-enable when ready. */}
+                          {false && (
+                            <button
+                              onClick={() => navigate(`/photo-annotator?inspection=${inspection.id}&photo=${photo.photo_id}`)}
+                              className="w-4 h-4 bg-[#002855] text-white rounded-full flex items-center justify-center text-[8px]"
+                              title="Edit annotations"
+                              data-testid={`edit-photo-${photo.photo_id}`}
+                            >
+                              <Pencil className="w-2.5 h-2.5" />
+                            </button>
+                          )}
                           <button
                             onClick={() => removePhoto(item.item_id, photo.photo_id)}
                             className="w-4 h-4 bg-[#DC2626] text-white rounded-full flex items-center justify-center text-[8px]"

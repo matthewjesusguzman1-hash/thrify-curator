@@ -1,6 +1,6 @@
 import "@/App.css";
 import React, { useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./components/app/AuthContext";
 import { LiteModeProvider } from "./components/app/LiteModeContext";
 import SplashScreen from "./components/app/SplashScreen";
@@ -10,7 +10,8 @@ import InspectionsPage from "./pages/InspectionsPage";
 import InspectionDetail from "./pages/InspectionDetail";
 import TieDownCalculator from "./pages/TieDownCalculator";
 import HazMatWorksheet from "./pages/HazMatWorksheet";
-import PhotoAnnotator from "./pages/PhotoAnnotator";
+// Photo Annotator hidden for pre-launch — pending full QA. Re-enable when ready.
+// import PhotoAnnotator from "./pages/PhotoAnnotator";
 import QuickPhotos from "./pages/QuickPhotos";
 import Level3InspectionTool from "./pages/Level3InspectionTool";
 import AdminPage from "./pages/AdminPage";
@@ -33,7 +34,9 @@ function AppRoutes() {
       <Route path="/inspections/:id" element={<InspectionDetail />} />
       <Route path="/calculator" element={<TieDownCalculator />} />
       <Route path="/hazmat-worksheet" element={<HazMatWorksheet />} />
-      <Route path="/photo-annotator" element={<PhotoAnnotator />} />
+      {/* Photo Annotator hidden pre-launch — direct URL falls through to
+          Quick Photos so linked photos still land somewhere useful. */}
+      <Route path="/photo-annotator" element={<Navigate to="/quick-photos" replace />} />
       <Route path="/quick-photos" element={<QuickPhotos />} />
       <Route path="/level3" element={<Level3InspectionTool />} />
       <Route path="/admin" element={<AdminPage />} />
