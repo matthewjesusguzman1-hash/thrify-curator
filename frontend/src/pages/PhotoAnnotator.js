@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2, Share2, FolderPlus, Check, Eye, X as XIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Camera, Upload, Pencil, Circle, ArrowUp, Type, Undo2, Download, Trash2, Save, ZoomIn, ZoomOut, MousePointer2, Share2, FolderPlus, Check, Eye, X as XIcon, Images } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
-import { savePhoto as savePhotoToDevice } from "../lib/devicePhotos";
+import { savePhoto as savePhotoToDevice, listAllMetadata, getPhotoBlob } from "../lib/devicePhotos";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const COLORS = ["#FF0000", "#FFFF00", "#00FF00", "#0088FF", "#FF00FF", "#FFFFFF", "#000000"];
@@ -51,6 +51,14 @@ export default function PhotoAnnotator() {
   const [inspections, setInspections] = useState([]);
   const [loadingInsps, setLoadingInsps] = useState(false);
   const [newInspTitle, setNewInspTitle] = useState("");
+  // Device-photo picker (IndexedDB Quick Photos)
+  const [showDevicePicker, setShowDevicePicker] = useState(false);
+  const [deviceMetas, setDeviceMetas] = useState([]);
+  const [deviceThumbs, setDeviceThumbs] = useState({}); // photo_id -> objectURL
+  const [deviceSelected, setDeviceSelected] = useState({}); // photo_id -> true
+  const [loadingDevice, setLoadingDevice] = useState(false);
+  // Which queue entries to include when batch-saving to inspection.
+  const [saveSelected, setSaveSelected] = useState({}); // idx -> true
 
   // URL params for editing inspection photos
   const inspectionId = searchParams.get("inspection");
@@ -84,8 +92,8 @@ export default function PhotoAnnotator() {
     }
   }, [storagePath, inspectionId, photoId, image]);
 
-  /* Load local image */
-  const loadImage = useCallback((file) => {
+  /* Load a File or Blob into the canvas */
+  const loadImage = useCallback((source) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const img = new Image();
@@ -103,17 +111,32 @@ export default function PhotoAnnotator() {
       };
       img.src = ev.target.result;
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(source);
   }, []);
 
-  /* Load multiple files into queue */
+  /* Load multiple Files into queue (from upload / camera) */
   const loadFiles = useCallback((files) => {
     const fileArr = Array.from(files);
     if (fileArr.length === 0) return;
-    const queue = fileArr.map(f => ({ file: f, annotations: [] }));
+    const queue = fileArr.map(f => ({ file: f, annotations: [], name: f.name }));
     setPhotoQueue(queue);
     setCurrentIdx(0);
     loadImage(queue[0].file);
+  }, [loadImage]);
+
+  /* Load a batch of device photos (IndexedDB) into the queue */
+  const loadDevicePhotos = useCallback(async (metaList) => {
+    if (!metaList || metaList.length === 0) return;
+    const queue = [];
+    for (const m of metaList) {
+      const blob = await getPhotoBlob(m.photo_id);
+      if (!blob) continue;
+      queue.push({ blob, photo_id: m.photo_id, annotations: [], name: m.original_filename || `photo-${m.photo_id}.jpg` });
+    }
+    if (queue.length === 0) { toast.error("No photos found on this device"); return; }
+    setPhotoQueue(queue);
+    setCurrentIdx(0);
+    loadImage(queue[0].blob);
   }, [loadImage]);
 
   /* Save current annotations before switching */
@@ -133,7 +156,7 @@ export default function PhotoAnnotator() {
     saveCurrentAnnotations();
     setCurrentIdx(idx);
     const entry = photoQueue[idx];
-    loadImage(entry.file);
+    loadImage(entry.file || entry.blob);
     setTimeout(() => setHistory(entry.annotations || []), 100);
   }, [photoQueue, saveCurrentAnnotations, loadImage]);
 
@@ -435,6 +458,10 @@ export default function PhotoAnnotator() {
   };
 
   const addToInspection = async (targetInspectionId) => {
+    // If there's a queue with multiple entries, use batch save. Otherwise,
+    // fall back to the single-canvas path (preserves existing behavior for
+    // camera / upload single-shot flows).
+    if (photoQueue.length > 1) return batchSaveToInspection(targetInspectionId);
     const canvas = canvasRef.current;
     if (!canvas) return;
     setSaving(true);
@@ -483,6 +510,175 @@ export default function PhotoAnnotator() {
     setSaving(false);
   };
 
+  /* === Device-photo picker (IndexedDB) === */
+  const openDevicePicker = useCallback(async () => {
+    setShowDevicePicker(true);
+    setLoadingDevice(true);
+    try {
+      const all = await listAllMetadata();
+      // Sort newest first, prefer quickphoto & burst captures.
+      all.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+      setDeviceMetas(all);
+      setDeviceSelected({});
+      // Lazy-load thumbnails
+      const thumbs = {};
+      for (const m of all) {
+        const blob = await getPhotoBlob(m.photo_id);
+        if (blob) thumbs[m.photo_id] = URL.createObjectURL(blob);
+      }
+      setDeviceThumbs((prev) => {
+        Object.values(prev).forEach((u) => URL.revokeObjectURL(u));
+        return thumbs;
+      });
+    } catch { toast.error("Failed to load device photos"); }
+    setLoadingDevice(false);
+  }, []);
+
+  const closeDevicePicker = useCallback(() => {
+    setShowDevicePicker(false);
+    setDeviceThumbs((prev) => {
+      Object.values(prev).forEach((u) => URL.revokeObjectURL(u));
+      return {};
+    });
+    setDeviceSelected({});
+  }, []);
+
+  const toggleDeviceSelect = (pid) => {
+    setDeviceSelected((prev) => ({ ...prev, [pid]: !prev[pid] }));
+  };
+
+  const confirmDevicePick = useCallback(async () => {
+    const picked = deviceMetas.filter((m) => deviceSelected[m.photo_id]);
+    if (picked.length === 0) { toast.message("Select at least one photo"); return; }
+    closeDevicePicker();
+    await loadDevicePhotos(picked);
+  }, [deviceMetas, deviceSelected, loadDevicePhotos, closeDevicePicker]);
+
+  /* === Batch save: render a queue entry's annotated PNG blob === */
+  const renderEntryBlob = useCallback(async (entry) => {
+    const src = entry.file || entry.blob;
+    if (!src) return null;
+    // Decode image
+    const img = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = (ev) => {
+        const im = new Image();
+        im.onload = () => resolve(im);
+        im.onerror = reject;
+        im.src = ev.target.result;
+      };
+      r.onerror = reject;
+      r.readAsDataURL(src);
+    });
+    // Render at source resolution (annotations were drawn in canvas pixels, which
+    // matches imgDimensions for whichever entry was current — but each queue
+    // entry has its own annotation coords. For simplicity we render at the
+    // canvas-scale dimensions stored on the entry when it was last visited;
+    // fall back to source image size.)
+    const cnv = document.createElement("canvas");
+    cnv.width = img.width;
+    cnv.height = img.height;
+    const ctx = cnv.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    // Figure out the scale used at annotate time — the canvas saved coords are
+    // in the scaled preview space. We compute a factor from the current
+    // imgDimensions if this entry is the active one; otherwise skip drawing
+    // annotations for non-visited entries to avoid misalignment.
+    const isActive = photoQueue[currentIdx] === entry;
+    const anno = isActive ? history : entry.annotations || [];
+    if (anno.length > 0 && isActive && imgDimensions.w > 0) {
+      const sx = img.width / imgDimensions.w;
+      const sy = img.height / imgDimensions.h;
+      ctx.save();
+      ctx.scale(sx, sy);
+      for (const item of anno) {
+        ctx.strokeStyle = item.color;
+        ctx.fillStyle = item.color;
+        ctx.lineWidth = item.lineWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        if (item.type === "freehand" && item.points?.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(item.points[0].x, item.points[0].y);
+          for (let i = 1; i < item.points.length; i++) ctx.lineTo(item.points[i].x, item.points[i].y);
+          ctx.stroke();
+        } else if (item.type === "circle" && item.start && item.end) {
+          const dx = item.end.x - item.start.x, dy = item.end.y - item.start.y;
+          ctx.beginPath();
+          ctx.arc(item.start.x, item.start.y, Math.sqrt(dx * dx + dy * dy), 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (item.type === "arrow" && item.start && item.end) {
+          const angle = Math.atan2(item.end.y - item.start.y, item.end.x - item.start.x);
+          const headLen = 15;
+          ctx.beginPath();
+          ctx.moveTo(item.start.x, item.start.y);
+          ctx.lineTo(item.end.x, item.end.y);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(item.end.x, item.end.y);
+          ctx.lineTo(item.end.x - headLen * Math.cos(angle - Math.PI / 6), item.end.y - headLen * Math.sin(angle - Math.PI / 6));
+          ctx.moveTo(item.end.x, item.end.y);
+          ctx.lineTo(item.end.x - headLen * Math.cos(angle + Math.PI / 6), item.end.y - headLen * Math.sin(angle + Math.PI / 6));
+          ctx.stroke();
+        } else if (item.type === "text" && item.pos) {
+          const fs = item.fontSize || 16;
+          ctx.font = `bold ${fs}px sans-serif`;
+          const metrics = ctx.measureText(item.text);
+          ctx.fillStyle = "rgba(0,0,0,0.65)";
+          ctx.fillRect(item.pos.x - 2, item.pos.y - fs + 2, metrics.width + 4, fs + 4);
+          ctx.fillStyle = item.color;
+          ctx.fillText(item.text, item.pos.x, item.pos.y);
+        }
+      }
+      ctx.restore();
+    }
+    return await new Promise((resolve) => cnv.toBlob(resolve, "image/png"));
+  }, [photoQueue, currentIdx, history, imgDimensions]);
+
+  const openSavePicker = useCallback(() => {
+    saveCurrentAnnotations();
+    // Default: select all photos in queue
+    const initial = {};
+    photoQueue.forEach((_, i) => { initial[i] = true; });
+    setSaveSelected(initial);
+    openInspectionPicker();
+  }, [photoQueue, saveCurrentAnnotations]);
+
+  const batchSaveToInspection = async (targetInspectionId) => {
+    const chosen = photoQueue
+      .map((entry, idx) => ({ entry, idx }))
+      .filter(({ idx }) => saveSelected[idx]);
+    if (chosen.length === 0) { toast.message("Select at least one photo to save"); return; }
+    setSaving(true);
+    let ok = 0;
+    try {
+      for (const { entry } of chosen) {
+        const blob = await renderEntryBlob(entry);
+        if (!blob) continue;
+        const deviceMeta = await savePhotoToDevice(blob, {
+          inspectionId: targetInspectionId,
+          category: "annotated",
+          originalFilename: entry.name?.replace(/\.[a-z]+$/i, ".png") || `annotated-${Date.now()}.png`,
+        });
+        const res = await fetch(`${API}/api/inspections/${targetInspectionId}/annotated-photos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            photo_id: deviceMeta.photo_id,
+            original_filename: deviceMeta.original_filename,
+            mime: deviceMeta.mime,
+            size: deviceMeta.size,
+          }),
+        });
+        if (res.ok) ok += 1;
+      }
+      if (ok > 0) toast.success(`${ok} photo${ok === 1 ? "" : "s"} added to inspection`);
+      else toast.error("Failed to save photos");
+      setShowInspPicker(false);
+    } catch { toast.error("Failed to save photos"); }
+    setSaving(false);
+  };
+
 
   return (
     <div className="min-h-screen bg-[#0B1729]" data-testid="photo-annotator">
@@ -513,7 +709,7 @@ export default function PhotoAnnotator() {
           <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
             <Button size="sm" onClick={openPreview} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview</Button>
             <Button size="sm" onClick={shareImage} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-9 text-xs font-bold flex-1" data-testid="share-btn"><Share2 className="w-3.5 h-3.5 mr-1.5" /> Share</Button>
-            <Button size="sm" onClick={openInspectionPicker} disabled={saving} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1 bg-white" data-testid="save-to-inspection-btn"><FolderPlus className="w-3.5 h-3.5 mr-1.5" /> Save</Button>
+            <Button size="sm" onClick={openSavePicker} disabled={saving} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1 bg-white" data-testid="save-to-inspection-btn"><FolderPlus className="w-3.5 h-3.5 mr-1.5" /> {photoQueue.length > 1 ? `Save ${photoQueue.length}` : "Save"}</Button>
           </div>
         </div>
       )}
@@ -521,19 +717,23 @@ export default function PhotoAnnotator() {
       <div className="max-w-3xl mx-auto px-3 py-4 pb-24 space-y-3" ref={containerRef}>
         {!image && !storagePath && (
           <div className="space-y-3">
-            <div className="flex gap-3">
-              <button onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center gap-2 px-4 py-8 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#002855]/30 hover:bg-[#002855]/50 transition-colors" data-testid="take-photo-btn">
-                <Camera className="w-8 h-8 text-[#D4AF37]" />
-                <span className="text-xs font-semibold text-white/80">Take Photo</span>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <button onClick={() => cameraInputRef.current?.click()} className="flex flex-col items-center gap-2 px-2 py-6 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#002855]/30 hover:bg-[#002855]/50 transition-colors" data-testid="take-photo-btn">
+                <Camera className="w-6 h-6 text-[#D4AF37]" />
+                <span className="text-[11px] font-semibold text-white/80 text-center leading-tight">Take Photo</span>
               </button>
-              <button onClick={() => fileInputRef.current?.click()} className="flex-1 flex flex-col items-center gap-2 px-4 py-8 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#002855]/30 hover:bg-[#002855]/50 transition-colors" data-testid="upload-photo-btn">
-                <Upload className="w-8 h-8 text-[#D4AF37]" />
-                <span className="text-xs font-semibold text-white/80">Upload Photo</span>
+              <button onClick={openDevicePicker} className="flex flex-col items-center gap-2 px-2 py-6 rounded-xl border-2 border-dashed border-[#D4AF37]/60 bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 transition-colors" data-testid="from-device-btn">
+                <Images className="w-6 h-6 text-[#D4AF37]" />
+                <span className="text-[11px] font-semibold text-[#D4AF37] text-center leading-tight">From Quick Photos</span>
+              </button>
+              <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2 px-2 py-6 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#002855]/30 hover:bg-[#002855]/50 transition-colors" data-testid="upload-photo-btn">
+                <Upload className="w-6 h-6 text-[#D4AF37]" />
+                <span className="text-[11px] font-semibold text-white/80 text-center leading-tight">Upload</span>
               </button>
             </div>
             <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files[0] && loadFiles(e.target.files)} />
             <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files?.length && loadFiles(e.target.files)} />
-            <p className="text-[11px] text-white/40 text-center">Take a photo or select one or more to annotate.</p>
+            <p className="text-[11px] text-white/40 text-center">Select photos to annotate, then save the annotated set to an inspection.</p>
           </div>
         )}
 
@@ -657,6 +857,73 @@ export default function PhotoAnnotator() {
         )}
       </div>
 
+      {/* Device-photo picker — multi-select from IndexedDB */}
+      {showDevicePicker && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60" onClick={closeDevicePicker}>
+          <div className="bg-[#0F1D2F] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[80vh] overflow-hidden border border-white/10 flex flex-col" onClick={(e) => e.stopPropagation()} data-testid="device-picker-modal">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+              <div>
+                <h3 className="text-sm font-bold text-white">Pick Quick Photos</h3>
+                <p className="text-[10px] text-white/40">Select photos from this device to annotate</p>
+              </div>
+              <button onClick={closeDevicePicker} className="text-white/40 hover:text-white p-1" data-testid="close-device-picker">
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-3">
+              {loadingDevice ? (
+                <p className="text-xs text-white/40 text-center py-8">Loading photos…</p>
+              ) : deviceMetas.length === 0 ? (
+                <div className="text-center py-8">
+                  <Images className="w-8 h-8 text-white/20 mx-auto mb-2" />
+                  <p className="text-xs text-white/40">No photos on this device</p>
+                  <p className="text-[10px] text-white/30 mt-1">Snap some from Quick Photos first.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                  {deviceMetas.map((m) => {
+                    const sel = !!deviceSelected[m.photo_id];
+                    return (
+                      <button
+                        key={m.photo_id}
+                        onClick={() => toggleDeviceSelect(m.photo_id)}
+                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${sel ? "border-[#D4AF37] ring-2 ring-[#D4AF37]/40" : "border-white/10 hover:border-white/30"}`}
+                        data-testid={`device-photo-${m.photo_id}`}
+                      >
+                        {deviceThumbs[m.photo_id] ? (
+                          <img src={deviceThumbs[m.photo_id]} alt="Device photo" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-white/5 animate-pulse" />
+                        )}
+                        {sel && (
+                          <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] flex items-center justify-center">
+                            <Check className="w-3 h-3" />
+                          </div>
+                        )}
+                        {m.inspection_id && (
+                          <span className="absolute bottom-0 left-0 right-0 text-[8px] bg-black/70 text-white/80 px-1 py-px text-center">In inspection</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="px-3 py-3 border-t border-white/10 flex gap-2 flex-shrink-0 bg-[#0B1729]">
+              <Button onClick={closeDevicePicker} variant="outline" className="flex-1 border-white/10 text-white/80 hover:bg-white/5 h-10 text-xs">Cancel</Button>
+              <Button
+                onClick={confirmDevicePick}
+                disabled={Object.values(deviceSelected).filter(Boolean).length === 0}
+                className="flex-1 bg-[#D4AF37] text-[#002855] hover:bg-[#BC9A2F] h-10 text-xs font-bold disabled:opacity-50"
+                data-testid="device-picker-confirm"
+              >
+                <Check className="w-4 h-4 mr-1.5" /> Annotate {Object.values(deviceSelected).filter(Boolean).length || ""}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Inspection Picker Modal */}
       {showInspPicker && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60" onClick={() => setShowInspPicker(false)}>
@@ -667,6 +934,43 @@ export default function PhotoAnnotator() {
                 <XIcon className="w-4 h-4" />
               </button>
             </div>
+            {photoQueue.length > 1 && (
+              <div className="px-3 py-2 border-b border-white/10 bg-[#0B1729]">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[10px] text-white/60 font-bold uppercase tracking-wider">Which photos?</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { const all = {}; photoQueue.forEach((_, i) => { all[i] = true; }); setSaveSelected(all); }}
+                      className="text-[10px] text-[#D4AF37] hover:underline"
+                      data-testid="save-select-all"
+                    >All</button>
+                    <button
+                      onClick={() => setSaveSelected({})}
+                      className="text-[10px] text-white/40 hover:text-white/70"
+                      data-testid="save-select-none"
+                    >None</button>
+                  </div>
+                </div>
+                <div className="flex gap-1.5 overflow-x-auto py-0.5">
+                  {photoQueue.map((entry, idx) => {
+                    const sel = !!saveSelected[idx];
+                    const annoCount = (idx === currentIdx ? history : entry.annotations || []).length;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setSaveSelected((p) => ({ ...p, [idx]: !p[idx] }))}
+                        className={`flex-shrink-0 w-12 h-12 rounded-md border-2 flex flex-col items-center justify-center text-[9px] font-bold transition-all ${sel ? "border-[#D4AF37] bg-[#D4AF37]/20 text-[#D4AF37]" : "border-white/10 bg-white/5 text-white/40 hover:border-white/30"}`}
+                        data-testid={`save-pick-${idx}`}
+                        title={entry.name || `Photo ${idx + 1}`}
+                      >
+                        <span>{idx + 1}</span>
+                        {annoCount > 0 && <span className="text-[8px] leading-none mt-0.5">{annoCount} note{annoCount === 1 ? "" : "s"}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="px-3 pt-3 pb-2 border-b border-white/10">
               <p className="text-[10px] text-white/40 font-medium mb-1.5">New Inspection</p>
               <div className="flex gap-1.5">
