@@ -1,14 +1,15 @@
-import { ShieldAlert, X } from "lucide-react";
+import { ShieldAlert, ShieldCheck, X } from "lucide-react";
 
 /**
  * LiteFilterBar — the simplified filter row shown when Inspection Navigator
- * Lite mode is on. Just one prominent "Show OOS only" toggle, and an implicit
- * note that Level III is forced on.
+ * Lite mode is on. Two mutually-exclusive toggles — OOS only and Non-OOS only.
+ * With neither toggled, both OOS and non-OOS violations are shown (default).
  *
  * Full FilterBar is still used outside lite mode.
  */
 export function LiteFilterBar({ filters, onFilterChange }) {
   const oosActive = filters.oos === "Y";
+  const nonOosActive = filters.oos === "N";
 
   return (
     <div data-testid="lite-filter-bar" className="bg-white rounded-lg border border-[#E2E8F0] p-2 flex items-center gap-2 flex-wrap">
@@ -27,8 +28,29 @@ export function LiteFilterBar({ filters, onFilterChange }) {
         aria-pressed={oosActive}
       >
         <ShieldAlert className="w-4 h-4" />
-        <span>{oosActive ? "OOS ONLY — tap to clear" : "Show OOS only"}</span>
+        <span>{oosActive ? "OOS only · tap to clear" : "OOS only"}</span>
       </button>
+
+      <button
+        onClick={() => onFilterChange("oos", nonOosActive ? "" : "N")}
+        className={`flex items-center gap-2 px-3 h-10 rounded-lg font-bold text-sm transition-all flex-1 sm:flex-none ${
+          nonOosActive
+            ? "bg-[#047857] text-white border-2 border-[#065F46] shadow-sm"
+            : "bg-white text-[#047857] border-2 border-[#047857]/40 hover:border-[#047857]"
+        }`}
+        data-testid="lite-non-oos-toggle"
+        aria-pressed={nonOosActive}
+      >
+        <ShieldCheck className="w-4 h-4" />
+        <span>{nonOosActive ? "Non-OOS · tap to clear" : "Non-OOS only"}</span>
+      </button>
+
+      {/* Subtle hint when neither toggle is on */}
+      {!oosActive && !nonOosActive && (
+        <span className="text-[10px] text-[#94A3B8] italic px-1 hidden sm:inline">
+          Showing both OOS and non-OOS
+        </span>
+      )}
 
       {/* Clear all shortcut if any active filter besides level_iii exists */}
       {Object.entries(filters).some(([k, v]) => v !== "" && k !== "level_iii") && (
