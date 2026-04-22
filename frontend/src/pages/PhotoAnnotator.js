@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Camera, Upload, Pencil, Circle, ArrowUp, Typ
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
-import { savePhoto as savePhotoToDevice, listAllMetadata, getPhotoBlob } from "../lib/devicePhotos";
+import { savePhoto as savePhotoToDevice, listAllMetadata, getPhotoBlob, deletePhoto as deletePhotoFromDevice } from "../lib/devicePhotos";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const COLORS = ["#FF0000", "#FFFF00", "#00FF00", "#0088FF", "#FF00FF", "#FFFFFF", "#000000"];
@@ -699,6 +699,48 @@ export default function PhotoAnnotator() {
     setSaving(false);
   };
 
+  /* Save annotated canvas back to the Quick Photos library.
+     - Renders the current canvas at source resolution with annotations baked in.
+     - Writes a NEW IndexedDB photo record (category "quickphoto").
+     - Updates the Quick Photos draft in localStorage: replaces the original
+       photo_id with the new one (keeps any note already attached).
+     - Deletes the original Quick Photo so the library shows the annotated
+       version in its place.
+     - Navigates back to /quick-photos. */
+  const saveBackToQuickPhotos = useCallback(async () => {
+    if (!quickphotoId) return;
+    saveCurrentAnnotations();
+    const entry = photoQueue[0];
+    if (!entry) { navigate("/quick-photos"); return; }
+    setSaving(true);
+    try {
+      const blob = await renderEntryBlob({ ...entry, annotations: history });
+      if (!blob) { toast.error("Failed to render photo"); setSaving(false); return; }
+      const newMeta = await savePhotoToDevice(blob, {
+        category: "quickphoto",
+        originalFilename: `annotated-${new Date().toISOString().slice(0, 10)}.png`,
+      });
+      // Update draft so the Quick Photos grid shows the annotated version.
+      const DRAFT_KEY = `inspnav_quickphotos_draft_${badge || "anon"}`;
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        let draft = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(draft)) draft = [];
+        const origIdx = draft.findIndex((x) => x.photo_id === quickphotoId);
+        if (origIdx >= 0) {
+          draft[origIdx] = { photo_id: newMeta.photo_id, note: draft[origIdx].note || "" };
+        } else {
+          draft.push({ photo_id: newMeta.photo_id, note: "" });
+        }
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      } catch { /* ignore draft-update failures */ }
+      try { await deletePhotoFromDevice(quickphotoId); } catch { /* ignore */ }
+      toast.success("Annotated photo saved to Quick Photos");
+      navigate("/quick-photos");
+    } catch { toast.error("Failed to save annotated photo"); }
+    setSaving(false);
+  }, [quickphotoId, photoQueue, history, renderEntryBlob, saveCurrentAnnotations, navigate, badge]);
+
 
   return (
     <div className="min-h-screen bg-[#0B1729]" data-testid="photo-annotator">
@@ -729,7 +771,13 @@ export default function PhotoAnnotator() {
           <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
             <Button size="sm" onClick={openPreview} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview</Button>
             <Button size="sm" onClick={shareImage} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-9 text-xs font-bold flex-1" data-testid="share-btn"><Share2 className="w-3.5 h-3.5 mr-1.5" /> Share</Button>
-            <Button size="sm" onClick={openSavePicker} disabled={saving} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1 bg-white" data-testid="save-to-inspection-btn"><FolderPlus className="w-3.5 h-3.5 mr-1.5" /> {photoQueue.length > 1 ? `Save ${photoQueue.length}` : "Save"}</Button>
+            {quickphotoId ? (
+              <Button size="sm" onClick={saveBackToQuickPhotos} disabled={saving} className="bg-[#D4AF37] text-[#002855] hover:bg-[#BC9A2F] h-9 text-xs font-bold flex-1" data-testid="done-to-quickphotos-btn">
+                <Check className="w-3.5 h-3.5 mr-1.5" /> {saving ? "Saving…" : "Done"}
+              </Button>
+            ) : (
+              <Button size="sm" onClick={openSavePicker} disabled={saving} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1 bg-white" data-testid="save-to-inspection-btn"><FolderPlus className="w-3.5 h-3.5 mr-1.5" /> {photoQueue.length > 1 ? `Save ${photoQueue.length}` : "Save"}</Button>
+            )}
           </div>
         </div>
       )}

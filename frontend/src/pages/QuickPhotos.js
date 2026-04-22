@@ -192,11 +192,20 @@ export default function QuickPhotos() {
       for (const p of targets) {
         const blob = await getPhotoBlob(p.photo_id);
         if (!blob) continue;
+        // MOVE the photo into the inspection: clone the blob under a new
+        // IndexedDB record tagged with the target inspection_id, register
+        // metadata on the server with the new photo_id, then delete the
+        // original Quick Photo record so the library is cleared.
+        const movedMeta = await savePhotoToDevice(blob, {
+          inspectionId,
+          category: "inspection_photo",
+          originalFilename: `quickphoto-${new Date().toISOString().slice(0, 10)}.${(blob.type || "image/jpeg").split("/")[1] || "jpg"}`,
+        });
         await axios.post(`${API}/inspections/${inspectionId}/annotated-photos`, {
-          photo_id: p.photo_id,
-          original_filename: `quickphoto-${new Date().toISOString().slice(0, 10)}.jpg`,
-          mime: blob.type || "image/jpeg",
-          size: blob.size || 0,
+          photo_id: movedMeta.photo_id,
+          original_filename: movedMeta.original_filename,
+          mime: movedMeta.mime,
+          size: movedMeta.size,
         });
         if (p.note && p.note.trim()) {
           const { data: insp } = await axios.get(`${API}/inspections/${inspectionId}`);
@@ -205,9 +214,12 @@ export default function QuickPhotos() {
           const appended = `${existing ? existing + "\n\n" : ""}[Photo note · ${stamp}]\n${p.note.trim()}`;
           await axios.put(`${API}/inspections/${inspectionId}`, { notes: appended });
         }
+        // Delete the original Quick Photo record — the blob now lives under
+        // movedMeta.photo_id attached to the inspection.
+        try { await deletePhotoFromDevice(p.photo_id); } catch { /* ignore */ }
       }
-      toast.success(`${targets.length} photo${targets.length === 1 ? "" : "s"} saved`);
-      // Remove saved items from the local set (kept in IndexedDB under the inspection).
+      toast.success(`${targets.length} photo${targets.length === 1 ? "" : "s"} moved to inspection`);
+      // Remove moved items from the local Quick Photos set.
       const savedIds = new Set(targets.map((t) => t.photo_id));
       setPhotos((prev) => {
         prev.forEach((p) => {
