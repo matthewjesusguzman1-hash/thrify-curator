@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { zipSync, strToU8 } from "fflate";
 import { Plus, Trash2, ChevronRight, ClipboardList, ChevronLeft, CheckSquare, Square, X, Share2, Loader2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -10,7 +9,7 @@ import { Badge } from "../components/ui/badge";
 import { Toaster, toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
 import { InspectionReportContent } from "../components/app/ReportContent";
-import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
+import { generatePDFBlob, sharePDFBlob, finalizePdf, jsPDF } from "../lib/pdfShare";
 import { markInspectionExported } from "../lib/storageManager";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -113,23 +112,24 @@ export default function InspectionsPage() {
   };
 
   /**
-   * Bulk export flow:
-   * 1. For each selected inspection, fetch its full record (so all nested data is present).
-   * 2. Render it into the off-screen hidden div (via state → React renders → useEffect fires).
-   * 3. Capture PDF via generatePDFBlob.
-   * 4. If only 1 inspection → share the single PDF.
-   *    If 2+ → add each PDF to a ZIP, then share the ZIP.
+   * Bulk export flow — produces a SINGLE combined PDF with one page per
+   * inspection (page break between them). iOS opens it instantly on tap in
+   * Files / Mail / anywhere, no ZIP extraction required.
    */
   const runBulkExport = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     setBulkExporting(true);
     setBulkProgress({ current: 0, total: ids.length, title: "" });
-    const pdfs = [];
+
+    // Single shared jsPDF that every inspection appends into.
+    const combined = new jsPDF("p", "mm", "a4");
+    let successCount = 0;
+    let firstTitle = "";
+
     try {
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i];
-        // Fetch full inspection
         let full;
         try {
           const res = await axios.get(`${API}/inspections/${id}`);
@@ -139,80 +139,50 @@ export default function InspectionsPage() {
           continue;
         }
         setBulkProgress({ current: i + 1, total: ids.length, title: full.title || "Inspection" });
-        // Render off-screen
+        if (i === 0) firstTitle = full.title || "";
         setRenderQueue(full);
-        // Wait for the DOM to render + images/photos to resolve
         await new Promise((r) => setTimeout(r, 400));
         if (!hiddenRef.current) {
-          toast.error("Report container not ready, retrying");
           await new Promise((r) => setTimeout(r, 200));
         }
         try {
-          const blob = await generatePDFBlob(hiddenRef.current);
-          const safeTitle = (full.title || "inspection").replace(/[^a-z0-9_\-]+/gi, "_");
-          pdfs.push({ name: `${safeTitle}.pdf`, blob });
+          // Append this inspection's content into the shared combined PDF.
+          // generatePDFBlob, when given an existing jsPDF, adds a new page
+          // before each capture, so the original blank page 1 will be
+          // discarded at the end via deletePage(1).
+          await generatePDFBlob(hiddenRef.current, combined);
+          successCount++;
         } catch (err) {
           console.error("PDF gen failed", err);
-          toast.error(`Failed to generate PDF for "${full.title || id}"`);
+          toast.error(`Failed to add "${full.title || id}"`);
         }
       }
       setRenderQueue(null);
 
-      if (pdfs.length === 0) {
+      if (successCount === 0) {
         toast.error("No PDFs were generated");
         return;
       }
 
-      if (pdfs.length === 1) {
-        await sharePDFBlob(pdfs[0].blob, pdfs[0].name, {
-          title: pdfs[0].name.replace(/\.pdf$/i, ""),
-          text: "Inspection Report",
-        });
-      } else {
-        // Build a ZIP with fflate (synchronous, no streaming needed for small report PDFs)
-        const files = {};
-        for (const p of pdfs) {
-          const ab = await p.blob.arrayBuffer();
-          files[p.name] = new Uint8Array(ab);
-        }
-        const zipped = zipSync(files, { level: 0 }); // level 0 — PDFs are already compressed
-        const zipBlob = new Blob([zipped], { type: "application/zip" });
-        const dateTag = new Date().toISOString().slice(0, 10);
-        const zipName = `inspections-${dateTag}-${pdfs.length}.zip`;
+      // Combined pdf started with a blank page; every append added a new
+      // page before writing, so the very first page is always blank. Remove it.
+      try { combined.deletePage(1); } catch { /* ignore */ }
 
-        // Web Share with ZIP
-        const file = new File([zipBlob], zipName, { type: "application/zip" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({ files: [file], title: `${pdfs.length} Inspection Reports`, text: `${pdfs.length} inspection PDFs` });
-            markInspectionExported();
-          } catch (err) {
-            if (err?.name !== "AbortError") {
-              // Fallback to download
-              downloadBlob(zipBlob, zipName);
-              markInspectionExported();
-            }
-          }
-        } else {
-          // Fallback: download the ZIP
-          downloadBlob(zipBlob, zipName);
-          markInspectionExported();
-          toast.success(`${pdfs.length} reports downloaded as a ZIP`);
-        }
-      }
+      const blob = finalizePdf(combined);
+      const dateTag = new Date().toISOString().slice(0, 10);
+      const filename = successCount === 1
+        ? `${(firstTitle || "inspection").replace(/[^a-z0-9_\-]+/gi, "_")}.pdf`
+        : `inspections-${dateTag}-${successCount}.pdf`;
+
+      await sharePDFBlob(blob, filename, {
+        title: successCount === 1 ? firstTitle || "Inspection Report" : `${successCount} Inspection Reports`,
+        text: successCount === 1 ? "Inspection Report" : `${successCount} inspections combined into one PDF`,
+      });
       exitSelectMode();
     } finally {
       setBulkExporting(false);
       setBulkProgress({ current: 0, total: 0, title: "" });
     }
-  };
-
-  const downloadBlob = (blob, filename) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename; a.style.display = "none";
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
   };
 
   const selectedCount = selectedIds.size;

@@ -7,16 +7,26 @@ import { jsPDF } from "jspdf";
 import { markInspectionExported } from "./storageManager";
 
 /**
- * Render a content element (and its [data-pdf-section] children) into a PDF Blob.
- * Mirrors the PDFPreview.generatePDF layout: one page for single-section content,
- * per-article pages when multiple article/assessment sections are present.
+ * Render a content element (and its [data-pdf-section] children) into a PDF.
+ *
+ * If `existingPdf` is provided, the content is APPENDED to it (starts on a new
+ * page — used by bulk export to produce a single multi-inspection PDF).
+ * If not provided, a fresh PDF is created and returned as a Blob.
+ *
+ * Returns:
+ *   - When existingPdf is null: the finalized PDF Blob.
+ *   - When existingPdf is provided: the same jsPDF instance (for chaining).
  */
-export async function generatePDFBlob(el) {
+export async function generatePDFBlob(el, existingPdf = null) {
   if (!el) throw new Error("No content element provided");
 
-  const pdf = new jsPDF("p", "mm", "a4");
+  const pdf = existingPdf || new jsPDF("p", "mm", "a4");
   const pdfWidth = pdf.internal.pageSize.getWidth() - 16;
   const pdfHeight = pdf.internal.pageSize.getHeight() - 16;
+  const isAppending = !!existingPdf;
+  // Track whether this is the very first page being written; when appending
+  // we always start on a fresh page.
+  let wroteFirstPage = false;
 
   const captureElements = async (elements) => {
     const wrapper = document.createElement("div");
@@ -33,8 +43,9 @@ export async function generatePDFBlob(el) {
     return c;
   };
 
-  const addCanvasToPDF = (canvas, addPage) => {
-    if (addPage) pdf.addPage();
+  const addCanvasToPDF = (canvas, forceNewPage) => {
+    if (forceNewPage || (isAppending && !wroteFirstPage)) pdf.addPage();
+    wroteFirstPage = true;
     const imgData = canvas.toDataURL("image/jpeg", 0.92);
     const imgH = (canvas.height * pdfWidth) / canvas.width;
     if (imgH <= pdfHeight) {
@@ -66,8 +77,15 @@ export async function generatePDFBlob(el) {
     }
   }
 
+  return isAppending ? pdf : pdf.output("blob");
+}
+
+/** Finalize an in-progress jsPDF into a Blob. */
+export function finalizePdf(pdf) {
   return pdf.output("blob");
 }
+
+export { jsPDF };
 
 /**
  * Share a PDF blob via the native Web Share API when possible (attaches the file).
