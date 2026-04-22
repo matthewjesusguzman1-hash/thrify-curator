@@ -3,6 +3,7 @@ import { Search, Sparkles, Loader2, X } from "lucide-react";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
+import { QuickNotesButton } from "./QuickNotesButton";
 
 export function SearchBar({
   keyword,
@@ -130,6 +131,9 @@ export function SearchBar({
           AI Search
         </Label>
       </div>
+
+      {/* Quick Notes — sits next to AI Search on large screens, wraps below on mobile */}
+      <QuickNotesButton />
     </div>
   );
 }
