@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info,
-  Eye, Save, ClipboardList, HelpCircle, Clock, GraduationCap,
+  Eye, Save, ClipboardList, HelpCircle, Clock,
   Lightbulb, X, Share2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -386,16 +386,6 @@ export default function HoursOfServicePage() {
           </div>
           <button onClick={clearAll} className="text-white/70 hover:text-white flex items-center gap-1.5 text-xs font-medium" data-testid="hos-clear-btn">
             <RotateCcw className="w-3.5 h-3.5" /> Clear
-          </button>
-        </div>
-        {/* Training sub-bar */}
-        <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pb-2 flex justify-end">
-          <button
-            onClick={() => navigate("/hours-of-service/training")}
-            className="flex items-center gap-1.5 text-[11px] font-bold text-[#D4AF37] hover:text-white bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/40 rounded-md px-2.5 py-1"
-            data-testid="hos-training-btn"
-          >
-            <GraduationCap className="w-3.5 h-3.5" /> Log Book Training
           </button>
         </div>
       </header>
