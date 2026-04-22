@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Shield, Users, Eye, EyeOff, Search, RotateCcw, X, RefreshCw, Upload } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { toast } from "sonner";
+import { toast, Toaster } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
 import { UploadDialog } from "../components/app/UploadDialog";
 
@@ -31,18 +31,31 @@ export default function AdminPage() {
   const [newPin, setNewPin] = useState("");
   const [resetting, setResetting] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const isAdmin = badge === "121";
 
-  const fetchUsers = async () => {
+  const fetchUsers = async ({ showToast = false } = {}) => {
+    setRefreshing(true);
     try {
-      const res = await fetch(`${API}/api/admin/users?badge=${badge}`);
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data.users || []);
-        setTotal(data.total || 0);
+      // Append a timestamp to bypass any HTTP cache along the path.
+      const res = await fetch(`${API}/api/admin/users?badge=${badge}&_=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        toast.error(body.detail || `Failed to load users (${res.status})`);
+        return;
       }
-    } catch { toast.error("Failed to load users"); }
+      const data = await res.json();
+      setUsers(data.users || []);
+      setTotal(data.total || 0);
+      if (showToast) toast.success(`Refreshed · ${data.total || 0} user${data.total === 1 ? "" : "s"}`);
+    } catch {
+      toast.error("Failed to load users");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => { if (isAdmin) fetchUsers(); }, [isAdmin]);
@@ -88,6 +101,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#F0F2F5]" data-testid="admin-page">
+      <Toaster position="top-right" richColors />
       <header className="sticky top-0 z-50 bg-[#002855] border-b border-[#001a3a]">
         <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2 sm:py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -113,12 +127,14 @@ export default function AdminPage() {
               <h2 className="text-lg font-bold text-[#0F172A]">Registered Users</h2>
               <span className="text-xs bg-[#002855] text-white px-2 py-0.5 rounded-full font-bold">{total}</span>
               <button
-                onClick={fetchUsers}
-                className="p-1.5 rounded-lg text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9] transition-colors"
+                onClick={() => fetchUsers({ showToast: true })}
+                disabled={refreshing}
+                className="p-1.5 rounded-lg text-[#64748B] hover:text-[#002855] hover:bg-[#F1F5F9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Refresh"
                 data-testid="admin-refresh-btn"
+                aria-label="Refresh user list"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
               </button>
             </div>
             <button
