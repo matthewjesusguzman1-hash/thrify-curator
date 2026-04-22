@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, ChevronRight, ClipboardCheck } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { Button } from "../ui/button";
@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
 } from "../ui/dialog";
+import { useLiteMode } from "./LiteModeContext";
 
 const INSPECTIONS = [
   {
@@ -236,7 +237,20 @@ const INSPECTIONS = [
 ];
 
 export function InspectionProcedures({ open, onOpenChange }) {
+  const { liteMode } = useLiteMode();
   const [expanded, setExpanded] = useState({});
+
+  // In Lite mode, show only the Level III — Driver Only entry.
+  const visibleInspections = useMemo(
+    () => (liteMode ? INSPECTIONS.filter((i) => /Level III/.test(i.name)) : INSPECTIONS),
+    [liteMode]
+  );
+
+  // Auto-expand the single Level III entry when the dialog opens in Lite mode.
+  useEffect(() => {
+    if (open && liteMode) setExpanded({ 0: true });
+    else if (open) setExpanded({});
+  }, [open, liteMode]);
 
   const toggle = (idx) => setExpanded((p) => ({ ...p, [idx]: !p[idx] }));
 
@@ -247,7 +261,7 @@ export function InspectionProcedures({ open, onOpenChange }) {
           <div className="flex items-center gap-2">
             <ClipboardCheck className="w-4 h-4 text-[#D4AF37]" />
             <h2 className="text-sm sm:text-base font-semibold text-white" style={{ fontFamily: "Outfit, sans-serif" }}>
-              Inspection Procedures
+              {liteMode ? "Level III Procedure" : "Inspection Procedures"}
             </h2>
           </div>
           <Button
@@ -262,10 +276,12 @@ export function InspectionProcedures({ open, onOpenChange }) {
 
         <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-2" data-testid="inspection-procedures-list">
           <p className="text-xs text-[#64748B] mb-3">
-            CVSA North American Standard inspection steps. Tap a level to view its procedure.
+            {liteMode
+              ? "CVSA North American Standard — Level III Driver-Only inspection: schematic and step sequence."
+              : "CVSA North American Standard inspection steps. Tap a level to view its procedure."}
           </p>
 
-          {INSPECTIONS.map((insp, idx) => {
+          {visibleInspections.map((insp, idx) => {
             const isOpen = expanded[idx];
             return (
               <div key={idx} className="border rounded-lg overflow-hidden" data-testid={`procedure-${idx}`}>
