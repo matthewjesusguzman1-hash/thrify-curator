@@ -240,10 +240,10 @@ export default function InspectionsPage() {
           });
         } else if (navigator.canShare && navigator.canShare({ files })) {
           try {
-            // Omit `text` on purpose — iOS writes it out as a separate .txt
-            // snippet file when "Save to Files" is used.
-            await navigator.share({ files, title: `${files.length} Inspection Reports` });
-            // Successful share counts as an export.
+            // iOS writes both `text` AND `title` out as separate .txt files
+            // alongside multi-file shares when "Save to Files" is picked.
+            // Pass only the files to keep the output clean.
+            await navigator.share({ files });
             try { (await import("../lib/storageManager")).markInspectionExported(); } catch {}
           } catch (err) {
             if (err?.name !== "AbortError") {
