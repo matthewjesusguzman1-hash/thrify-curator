@@ -64,6 +64,26 @@ export default function PhotoAnnotator() {
   const inspectionId = searchParams.get("inspection");
   const photoId = searchParams.get("photo");
   const storagePath = searchParams.get("path");
+  const quickphotoId = searchParams.get("quickphoto");
+
+  // Load a Quick Photo (device IndexedDB) directly when navigated from the
+  // Quick Photos preview dialog (/photo-annotator?quickphoto=<id>).
+  useEffect(() => {
+    if (!quickphotoId || image) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const blob = await getPhotoBlob(quickphotoId);
+        if (cancelled) return;
+        if (!blob) { toast.error("Photo not found on this device"); return; }
+        setPhotoQueue([{ blob, photo_id: quickphotoId, annotations: [], name: `quickphoto-${quickphotoId}.jpg` }]);
+        setCurrentIdx(0);
+        loadImage(blob);
+      } catch { toast.error("Failed to open photo"); }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quickphotoId]);
 
   // Load photo from inspection if params present
   useEffect(() => {
@@ -715,7 +735,7 @@ export default function PhotoAnnotator() {
       )}
 
       <div className="max-w-3xl mx-auto px-3 py-4 pb-24 space-y-3" ref={containerRef}>
-        {!image && !storagePath && (
+        {!image && !storagePath && !quickphotoId && (
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <button onClick={() => cameraInputRef.current?.click()} className="flex flex-col items-center gap-2 px-2 py-6 rounded-xl border-2 border-dashed border-[#D4AF37]/40 bg-[#002855]/30 hover:bg-[#002855]/50 transition-colors" data-testid="take-photo-btn">
