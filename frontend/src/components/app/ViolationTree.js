@@ -110,7 +110,7 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
           </div>
         )}
 
-        {SECTIONS.map((section) => {
+        {SECTIONS.filter((s) => !(liteMode && s.key === "_other")).map((section) => {
           const data = getData(section.key);
           if (!data || data.count === 0) return null;
           const sKey = section.key;
