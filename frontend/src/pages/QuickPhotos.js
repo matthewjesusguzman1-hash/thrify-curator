@@ -10,6 +10,7 @@ import { toast, Toaster } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
 import { savePhoto as savePhotoToDevice, deletePhoto as deletePhotoFromDevice, getPhotoBlob } from "../lib/devicePhotos";
 import { DevicePhoto } from "../components/app/DevicePhoto";
+import { CameraCapture } from "../components/app/CameraCapture";
 import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
 import { jsPDF } from "jspdf";
 
@@ -45,10 +46,12 @@ export default function QuickPhotos() {
 
   const cameraRef = useRef(null);
   const libraryRef = useRef(null);
-  // Back-to-back capture toggle. When on, the camera is re-invoked immediately
-  // after each successful shot so the inspector can snap a sequence without
-  // returning to the page between shots. Persisted per badge so the setting
-  // survives sign-out.
+  // In-page camera overlay for true back-to-back burst capture. Works around
+  // iOS Safari's gesture-chain restriction on the native file input.
+  const [burstOpen, setBurstOpen] = useState(false);
+  // Back-to-back capture toggle. When on, tapping "Take Photo" opens the
+  // in-page camera overlay which stays open until the inspector taps Done.
+  // Persisted per badge so the setting survives sign-out.
   const CAM_KEY = (b) => `inspnav_continuous_camera_${b || "anon"}`;
   const [continuousCapture, setContinuousCapture] = useState(true);
   useEffect(() => {
@@ -105,7 +108,7 @@ export default function QuickPhotos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleFiles = useCallback(async (fileList, source) => {
+  const handleFiles = useCallback(async (fileList) => {
     if (!fileList || fileList.length === 0) return;
     const added = [];
     for (const f of Array.from(fileList)) {
@@ -116,11 +119,21 @@ export default function QuickPhotos() {
       } catch { toast.error(`Failed to save ${f.name}`); }
     }
     if (added.length > 0) setPhotos((prev) => [...prev, ...added]);
-    // Back-to-back capture: immediately re-open the camera after a successful
-    // camera shot so the inspector keeps snapping without returning to the UI.
-    if (source === "camera" && continuousCapture && added.length > 0) {
-      setTimeout(() => { try { cameraRef.current?.click(); } catch { /* ignore */ } }, 250);
-    }
+  }, []);
+
+  // Burst capture — save each blob produced by the in-page camera overlay.
+  const handleBurstCapture = useCallback(async (blob) => {
+    if (!blob) return;
+    try {
+      const file = new File([blob], `burst-${Date.now()}.jpg`, { type: blob.type || "image/jpeg" });
+      const meta = await savePhotoToDevice(file, { category: "quickphoto", originalFilename: file.name });
+      setPhotos((prev) => [...prev, { photo_id: meta.photo_id, note: "", thumbUrl: null, selected: false }]);
+    } catch { toast.error("Failed to save photo"); }
+  }, []);
+
+  const handleTakePhotoTap = useCallback(() => {
+    if (continuousCapture) setBurstOpen(true);
+    else cameraRef.current?.click();
   }, [continuousCapture]);
 
   const updateNote = (pid, note) => {
@@ -310,7 +323,7 @@ export default function QuickPhotos() {
         {/* Capture row — always visible so back-to-back snapping stays fast */}
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => cameraRef.current?.click()}
+            onClick={handleTakePhotoTap}
             className="relative flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[#D4AF37]/50 bg-gradient-to-br from-[#002855] to-[#001a3a] text-white py-4 hover:border-[#D4AF37] transition-colors"
             data-testid="take-photo-btn"
           >
@@ -328,8 +341,8 @@ export default function QuickPhotos() {
             <Upload className="w-5 h-5 text-[#64748B]" />
             <span className="text-xs font-bold">Choose Photos</span>
           </button>
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files, "camera"); e.target.value = ""; }} />
-          <input ref={libraryRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files, "library"); e.target.value = ""; }} />
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+          <input ref={libraryRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
         </div>
 
         {/* Burst-mode toggle — keeps the camera open for back-to-back shots */}
@@ -517,6 +530,11 @@ export default function QuickPhotos() {
       )}
 
       {/* Inspection picker */}
+      <CameraCapture
+        open={burstOpen}
+        onClose={() => setBurstOpen(false)}
+        onCapture={handleBurstCapture}
+      />
       <Dialog open={showPicker} onOpenChange={(o) => { if (!o) { setShowPicker(false); setCreatingNew(false); setNewInspTitle(""); } }}>
         <DialogContent className="max-w-[480px] w-[95vw] max-h-[80vh] p-0 gap-0 overflow-hidden flex flex-col rounded-xl" data-testid="inspection-picker">
           <div className="flex items-center justify-between px-4 py-3 border-b bg-[#002855] rounded-t-xl flex-shrink-0">
