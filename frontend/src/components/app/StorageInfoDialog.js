@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { Button } from "../ui/button";
 import {
@@ -20,6 +21,7 @@ import { listAllMetadata } from "../../lib/devicePhotos";
  * storage used? days since last export?) and gives clear actions.
  */
 export function StorageInfoDialog({ open, onOpenChange }) {
+  const navigate = useNavigate();
   const [persist, setPersist] = useState({ supported: false, persisted: false });
   const [estimate, setEstimate] = useState(null);
   const [pwa, setPwa] = useState({ installed: false, ios: false });
@@ -223,8 +225,12 @@ export function StorageInfoDialog({ open, onOpenChange }) {
           </section>
 
           <div className="pt-2">
-            <Button onClick={() => onOpenChange(false)} className="w-full bg-[#002855] text-white hover:bg-[#001a3a] h-10 text-sm font-semibold" data-testid="storage-info-close-btn">
-              <Download className="w-4 h-4 mr-2" /> Got it — time to export my inspections
+            <Button
+              onClick={() => { onOpenChange(false); navigate("/inspections"); }}
+              className="w-full bg-[#002855] text-white hover:bg-[#001a3a] h-10 text-sm font-semibold"
+              data-testid="storage-info-goto-inspections-btn"
+            >
+              <Download className="w-4 h-4 mr-2" /> Go to my inspections to export
             </Button>
           </div>
         </div>
