@@ -67,7 +67,7 @@ export function SearchBar({
     <div className="flex flex-col gap-3">
       {/* Row 1: search input (full width on mobile) */}
       <div
-        className="search-glow flex items-center border border-[#CBD5E1] rounded-lg bg-white overflow-hidden transition-all"
+        className="search-glow flex items-center border border-[#94A3B8] rounded-lg bg-white shadow-sm overflow-hidden transition-all focus-within:border-[#002855] focus-within:shadow-md"
         data-testid="search-container"
       >
         <div className="pl-3 text-[#64748B]">

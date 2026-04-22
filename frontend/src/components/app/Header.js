@@ -130,7 +130,7 @@ const NAV_BUTTONS = [
   { id: "bridge", label: "Bridge", icon: Scale, path: "/bridge-chart", style: "primary", testid: "bridge-chart-nav-btn" },
   { id: "hos", label: "HOS", icon: Hourglass, path: "/hours-of-service", style: "primary", testid: "hos-nav-btn" },
   { id: "hazmat", label: "HazMat", short: "HM", icon: null, path: "/hazmat-worksheet", style: "primary", testid: "hazmat-nav-btn" },
-  { id: "photo", label: "Photo", icon: Camera, path: "/photo-annotator", style: "outline", testid: "photo-annotator-nav-btn" },
+  { id: "photo", label: "Photos", icon: Camera, path: "/quick-photos", style: "outline", testid: "photo-annotator-nav-btn" },
   { id: "inspections", label: "Inspections", icon: ClipboardList, path: "/inspections", style: "outline", testid: "inspections-nav-btn" },
   { id: "resources", label: "Resources", icon: null, kind: "resources", style: "gold-outline", testid: "cvsa-btn" },
 ];
