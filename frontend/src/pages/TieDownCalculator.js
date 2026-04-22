@@ -435,15 +435,13 @@ export default function TieDownCalculator() {
         <div className="gold-accent h-[2px]" />
       </div>
 
-      {/* FLOATING ACTION BAR */}
+      {/* FLOATING ACTION BAR — Preview + Share + Save (matches HOS / Bridge Chart / Photo) */}
       {hasData && (
         <div className="sticky top-[45px] z-40 bg-white/95 backdrop-blur border-b shadow-sm">
-          <div className="max-w-[800px] mx-auto px-3 sm:px-6 py-2 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-8 text-xs flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview</Button>
-              <Button size="sm" onClick={handleShare} disabled={sharing} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-8 text-xs flex-1" data-testid="email-btn"><Share2 className="w-3.5 h-3.5 mr-1.5" /> {sharing ? "Preparing…" : "Share"}</Button>
-            </div>
-            <Button size="sm" onClick={openSaveModal} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-8 text-xs w-full" data-testid="save-to-inspection-btn"><Save className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection</Button>
+          <div className="max-w-[800px] mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
+            <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview</Button>
+            <Button size="sm" onClick={handleShare} disabled={sharing} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-9 text-xs font-bold flex-1" data-testid="share-btn"><Share2 className="w-3.5 h-3.5 mr-1.5" /> {sharing ? "Preparing…" : "Share"}</Button>
+            <Button size="sm" onClick={openSaveModal} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1" data-testid="save-to-inspection-btn"><Save className="w-3.5 h-3.5 mr-1.5" /> Save</Button>
           </div>
         </div>
       )}

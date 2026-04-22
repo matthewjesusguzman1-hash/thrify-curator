@@ -495,12 +495,13 @@ export default function PhotoAnnotator() {
         </div>
       </div>
 
-      {/* UNIFIED ACTION BAR — Preview & Export + Save to Inspection (matches TieDown / Bridge Chart) */}
+      {/* UNIFIED ACTION BAR — Preview + Share + Save (matches TieDown / Bridge Chart / HOS) */}
       {image && (
         <div className="sticky top-[53px] z-40 bg-white/95 backdrop-blur border-b border-[#E2E8F0] shadow-sm">
           <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
-            <Button size="sm" onClick={openPreview} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export</Button>
-            <Button size="sm" onClick={openInspectionPicker} disabled={saving} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1 bg-white" data-testid="save-to-inspection-btn"><FolderPlus className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection</Button>
+            <Button size="sm" onClick={openPreview} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview</Button>
+            <Button size="sm" onClick={shareImage} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-9 text-xs font-bold flex-1" data-testid="share-btn"><Share2 className="w-3.5 h-3.5 mr-1.5" /> Share</Button>
+            <Button size="sm" onClick={openInspectionPicker} disabled={saving} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1 bg-white" data-testid="save-to-inspection-btn"><FolderPlus className="w-3.5 h-3.5 mr-1.5" /> Save</Button>
           </div>
         </div>
       )}

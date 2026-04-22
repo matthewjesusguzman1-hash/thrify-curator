@@ -1084,11 +1084,12 @@ export default function BridgeChartPage() {
 
         {/* ===== RECORD TAB ===== */}
         {tab === "record" && (<>
-          {/* UNIFIED ACTION BAR — Preview & Export + Save to Inspection */}
+          {/* UNIFIED ACTION BAR — Preview + Share + Save to Inspection */}
           <div className="sticky top-[86px] z-40 -mx-3 sm:-mx-6 px-3 sm:px-6 py-2 bg-white/95 backdrop-blur border-b border-[#E2E8F0] shadow-sm" data-html2canvas-ignore="true">
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={openPreview} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview &amp; Export</Button>
-              <Button size="sm" onClick={openInspPicker} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1" data-testid="save-to-inspection-btn"><FolderPlus className="w-3.5 h-3.5 mr-1.5" /> Save to Inspection</Button>
+              <Button size="sm" onClick={openPreview} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn"><Eye className="w-3.5 h-3.5 mr-1.5" /> Preview</Button>
+              <Button size="sm" onClick={shareDiag} variant="outline" className="border-[#D4AF37] text-[#002855] hover:bg-[#D4AF37]/10 h-9 text-xs font-bold flex-1" data-testid="share-btn"><Share2 className="w-3.5 h-3.5 mr-1.5" /> Share</Button>
+              <Button size="sm" onClick={openInspPicker} variant="outline" className="border-[#002855]/20 text-[#002855] hover:bg-[#002855]/5 h-9 text-xs font-bold flex-1" data-testid="save-to-inspection-btn"><FolderPlus className="w-3.5 h-3.5 mr-1.5" /> Save</Button>
             </div>
           </div>
 
