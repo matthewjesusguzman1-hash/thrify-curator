@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { FolderTree, ClipboardCheck, Calculator } from "lucide-react";
 import { Header } from "../components/app/Header";
@@ -94,17 +94,17 @@ export default function Dashboard() {
     fetchStats();
   }, []);
 
-  // Fetch violations when filters, page, or sort change
+  // Fetch violations when filters, page, sort, OR lite mode changes.
+  // We track the latest request so out-of-order responses (e.g. an initial
+  // non-lite fetch resolving after a later lite-mode fetch) are ignored.
+  const fetchSeqRef = useRef(0);
   useEffect(() => {
-    fetchViolations();
+    const seq = ++fetchSeqRef.current;
+    (async () => {
+      await fetchViolations(undefined, seq);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, page, sortBy, sortDir]);
-
-  // Initial load
-  useEffect(() => {
-    fetchViolations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filters, page, sortBy, sortDir, liteMode]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -124,10 +124,10 @@ export default function Dashboard() {
     }
   };
 
-  const fetchViolations = useCallback(async (searchKeyword) => {
+  const fetchViolations = useCallback(async (searchKeyword, seq) => {
     setIsLoading(true);
     try {
-      const effectiveFilters = liteMode ? { ...filters, level_iii: "Y" } : filters;
+      const effectiveFilters = liteMode ? { ...filters, level_iii: "Y", lite: "Y" } : filters;
       const params = {
         keyword: searchKeyword !== undefined ? searchKeyword : (aiKeyword || keyword),
         page,
@@ -141,6 +141,8 @@ export default function Dashboard() {
         params.sort_dir = sortDir;
       }
       const res = await axios.get(`${API}/violations`, { params });
+      // Drop out-of-order responses — only apply if we're the latest request.
+      if (seq !== undefined && seq !== fetchSeqRef.current) return;
       setViolations(res.data.violations);
       setTotal(res.data.total);
       setTotalPages(res.data.total_pages);
@@ -162,7 +164,7 @@ export default function Dashboard() {
         const res = await axios.post(`${API}/violations/smart-search`, {
           query: searchKeyword,
           ...Object.fromEntries(
-            Object.entries(liteMode ? { ...filters, level_iii: "Y" } : filters).filter(([, v]) => v !== "")
+            Object.entries(liteMode ? { ...filters, level_iii: "Y", lite: "Y" } : filters).filter(([, v]) => v !== "")
           ),
         });
         setViolations(res.data.violations);

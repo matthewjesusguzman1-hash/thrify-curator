@@ -74,6 +74,7 @@ class SmartSearchRequest(BaseModel):
     violation_class: str = ""
     violation_category: str = ""
     reg_base: str = ""
+    lite: str = ""
 
 
 class SmartSearchResponse(BaseModel):
@@ -403,6 +404,7 @@ async def search_violations(
     hazmat: str = Query("", description="Filter hazmat only (Y=only hazmat, N=exclude hazmat)"),
     level_iii: str = Query("", description="Filter by Level III (Y/N)"),
     critical: str = Query("", description="Filter by Critical (Y/N)"),
+    lite: str = Query("", description="Y to apply Lite-mode exclusions (hide HazMat class and 'All Other Vehicle Defects' category)"),
     sort_by: str = Query("", description="Sort by field name"),
     sort_dir: str = Query("asc", description="Sort direction: asc or desc"),
     page: int = Query(1, ge=1),
@@ -489,6 +491,18 @@ async def search_violations(
         query["level_iii"] = level_iii.upper()
     if critical:
         query["critical"] = critical.upper()
+    if lite.upper() == "Y":
+        # Hide HazMat class outright and the catch-all "All Other Vehicle Defects"
+        # category so the list mirrors exactly what's navigable in the Lite tree.
+        query.setdefault("$and", []).extend([
+            {"violation_class": {"$ne": "Hazardous Materials"}},
+            {"$nor": [
+                {"$and": [
+                    {"violation_class": "Vehicle"},
+                    {"violation_category": {"$regex": r"all\s+other", "$options": "i"}},
+                ]}
+            ]},
+        ])
 
     total = await db.violations.count_documents(query)
     skip = (page - 1) * page_size
@@ -891,6 +905,16 @@ Example for "driver on phone": ["392.80", "392.82", "handheld mobile telephone",
         mongo_query["level_iii"] = request.level_iii.upper()
     if request.critical:
         mongo_query["critical"] = request.critical.upper()
+    if request.lite.upper() == "Y":
+        mongo_query.setdefault("$and", []).extend([
+            {"violation_class": {"$ne": "Hazardous Materials"}},
+            {"$nor": [
+                {"$and": [
+                    {"violation_class": "Vehicle"},
+                    {"violation_category": {"$regex": r"all\s+other", "$options": "i"}},
+                ]}
+            ]},
+        ])
 
     total = await db.violations.count_documents(mongo_query)
     cursor = db.violations.find(mongo_query, {"_id": 0}).limit(100)
