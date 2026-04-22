@@ -194,7 +194,7 @@ function CustomizeButtons({ badge, enabled, onChange, onBack }) {
   );
 }
 
-function ChangePinPopover({ badge, navigate, logout, enabledButtons, setEnabledButtons }) {
+function ChangePinPopover({ badge, navigate, logout, enabledButtons, setEnabledButtons, openStorageInfo }) {
   const [mode, setMode] = useState("menu"); // menu | change | customize
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
