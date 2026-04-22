@@ -4,6 +4,7 @@ import { FolderTree, ClipboardCheck, Calculator } from "lucide-react";
 import { Header } from "../components/app/Header";
 import { SearchBar } from "../components/app/SearchBar";
 import { FilterBar } from "../components/app/FilterBar";
+import { LiteFilterBar } from "../components/app/LiteFilterBar";
 import { ActiveFilters } from "../components/app/ActiveFilters";
 import { ViolationTable, ALL_COLUMNS } from "../components/app/ViolationTable";
 import { UploadDialog } from "../components/app/UploadDialog";
@@ -14,6 +15,7 @@ import { ScrollArea } from "../components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
+import { useLiteMode } from "../components/app/LiteModeContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -29,6 +31,7 @@ const INITIAL_FILTERS = {
 
 export default function Dashboard() {
   const { badge } = useAuth();
+  const { liteMode } = useLiteMode();
   const [keyword, setKeyword] = useState("");
   const [aiMode, setAiMode] = useState(false);
   const [aiKeyword, setAiKeyword] = useState(""); // persists the AI-selected term across filter changes
@@ -118,12 +121,13 @@ export default function Dashboard() {
   const fetchViolations = useCallback(async (searchKeyword) => {
     setIsLoading(true);
     try {
+      const effectiveFilters = liteMode ? { ...filters, level_iii: "Y" } : filters;
       const params = {
         keyword: searchKeyword !== undefined ? searchKeyword : (aiKeyword || keyword),
         page,
         page_size: pageSize,
         ...Object.fromEntries(
-          Object.entries(filters).filter(([, v]) => v !== "")
+          Object.entries(effectiveFilters).filter(([, v]) => v !== "")
         ),
       };
       if (sortBy) {
@@ -140,7 +144,7 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [keyword, aiKeyword, page, pageSize, filters, sortBy, sortDir]);
+  }, [keyword, aiKeyword, page, pageSize, filters, sortBy, sortDir, liteMode]);
 
   const handleSearch = async (searchKeyword) => {
     setPage(1);
@@ -152,7 +156,7 @@ export default function Dashboard() {
         const res = await axios.post(`${API}/violations/smart-search`, {
           query: searchKeyword,
           ...Object.fromEntries(
-            Object.entries(filters).filter(([, v]) => v !== "")
+            Object.entries(liteMode ? { ...filters, level_iii: "Y" } : filters).filter(([, v]) => v !== "")
           ),
         });
         setViolations(res.data.violations);
@@ -241,6 +245,7 @@ export default function Dashboard() {
               favorites={favorites}
               onToggleFavorite={toggleFavorite}
               onFavoriteClick={handleViolationClick}
+              liteMode={liteMode}
             />
           </ScrollArea>
         </aside>
@@ -264,7 +269,7 @@ export default function Dashboard() {
               title="Inspection procedures"
             >
               <ClipboardCheck className="w-4 h-4" />
-              <span className="text-xs font-medium">Steps</span>
+              <span className="text-xs font-medium">{liteMode ? "Level 3 Steps" : "Steps"}</span>
             </button>
           </div>
 
@@ -280,12 +285,16 @@ export default function Dashboard() {
             />
           </div>
 
-        {/* Filters */}
-        <FilterBar
-          filters={filters}
-          filterOptions={filterOptions}
-          onFilterChange={handleFilterChange}
-        />
+        {/* Filters — lite mode gets the simplified single-toggle bar */}
+        {liteMode ? (
+          <LiteFilterBar filters={filters} onFilterChange={handleFilterChange} />
+        ) : (
+          <FilterBar
+            filters={filters}
+            filterOptions={filterOptions}
+            onFilterChange={handleFilterChange}
+          />
+        )}
 
         {/* Active Filters */}
         <ActiveFilters
@@ -334,6 +343,7 @@ export default function Dashboard() {
         favorites={favorites}
         onToggleFavorite={toggleFavorite}
         onFavoriteClick={handleViolationClick}
+        liteMode={liteMode}
       />
 
       {/* Upload Dialog */}

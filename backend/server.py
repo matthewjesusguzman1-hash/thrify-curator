@@ -585,11 +585,20 @@ async def get_filter_options():
 
 
 @api_router.get("/violations/tree")
-async def get_violation_tree():
+async def get_violation_tree(level_iii: Optional[str] = None):
+    # Optional filter so the Inspection Navigator Lite mode can render a tree
+    # that only shows categories/regs that actually contain Level III rows.
+    match_stage = {}
+    if level_iii in ("Y", "N"):
+        match_stage["level_iii"] = level_iii
+
     # 3-level tree: class → category → regulation section with labels
     # Get descriptive labels per (category + regulatory_reference) pair
     # For multi-violation refs, prefer the shortest/most general description
-    label_pipeline = [
+    label_pipeline = []
+    if match_stage:
+        label_pipeline.append({"$match": match_stage})
+    label_pipeline += [
         {"$addFields": {
             "desc": {
                 "$cond": {
@@ -658,7 +667,10 @@ async def get_violation_tree():
             ref_labels[f"{cat}|{ref}"] = label
 
     # Main tree aggregation — use full regulatory_reference for each violation
-    pipeline = [
+    pipeline = []
+    if match_stage:
+        pipeline.append({"$match": match_stage})
+    pipeline += [
         {"$addFields": {
             "reg_base": {"$arrayElemAt": [{"$split": ["$regulatory_reference", "("]}, 0]}
         }},
@@ -671,7 +683,7 @@ async def get_violation_tree():
             },
             "count": {"$sum": 1}
         }},
-        {"$sort": {"_id.violation_class": 1, "_id.violation_category": 1, "_id.reg_ref": 1}}
+        {"$sort": {"_id.violation_class": 1, "_id.violation_category": 1, "_id.reg_ref": 1}},
     ]
     results = await db.violations.aggregate(pipeline).to_list(5000)
 

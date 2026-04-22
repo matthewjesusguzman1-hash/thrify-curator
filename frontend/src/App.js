@@ -2,6 +2,7 @@ import "@/App.css";
 import React, { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./components/app/AuthContext";
+import { LiteModeProvider } from "./components/app/LiteModeContext";
 import SplashScreen from "./components/app/SplashScreen";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
@@ -56,10 +57,12 @@ function App() {
   return (
     <div className="App">
       <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-        {showSplash && <SplashScreen onFinish={dismissSplash} />}
+        <LiteModeProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+          {showSplash && <SplashScreen onFinish={dismissSplash} />}
+        </LiteModeProvider>
       </AuthProvider>
     </div>
   );

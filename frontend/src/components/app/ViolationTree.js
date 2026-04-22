@@ -18,7 +18,7 @@ function sortCatNum(name) {
   return m ? parseInt(m[1], 10) : 9999;
 }
 
-export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSelect, className = "", mobile = false, favorites = [], onToggleFavorite, onFavoriteClick }) {
+export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSelect, className = "", mobile = false, favorites = [], onToggleFavorite, onFavoriteClick, liteMode = false }) {
   const [tree, setTree] = useState({});
   const [loading, setLoading] = useState(true);
   const [favOpen, setFavOpen] = useState(false);
@@ -27,11 +27,13 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
   // Reg section expand state (deepest level)
   const [regOpen, setRegOpen] = useState({});
 
-  useEffect(() => { fetchTree(); }, []);
+  useEffect(() => { fetchTree(); }, [liteMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchTree = async () => {
+    setLoading(true);
     try {
-      const res = await axios.get(`${API}/violations/tree`);
+      const url = liteMode ? `${API}/violations/tree?level_iii=Y` : `${API}/violations/tree`;
+      const res = await axios.get(url);
       setTree(res.data.tree || {});
     } catch { /* ignore */ }
     finally { setLoading(false); }
@@ -253,7 +255,7 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
   );
 }
 
-export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCategory, activeRegBase, onSelect, favorites = [], onToggleFavorite, onFavoriteClick }) {
+export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCategory, activeRegBase, onSelect, favorites = [], onToggleFavorite, onFavoriteClick, liteMode = false }) {
   const [splitPct, setSplitPct] = useState(50);
   const [headerH, setHeaderH] = useState(70);
 
@@ -320,6 +322,7 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
                 favorites={favorites}
                 onToggleFavorite={onToggleFavorite}
                 onFavoriteClick={onFavoriteClick}
+                liteMode={liteMode}
               />
             </ScrollArea>
             {/* Drag handle to resize */}
