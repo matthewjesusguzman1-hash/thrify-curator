@@ -62,11 +62,17 @@ export default function Dashboard() {
   const [treeDrawerOpen, setTreeDrawerOpen] = useState(false);
   const [proceduresOpen, setProceduresOpen] = useState(false);
 
-  // Favorites — stored in localStorage, scoped by badge
-  const FAV_KEY = `violation-favorites-${badge}`;
-  const [favorites, setFavorites] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { return []; }
-  });
+  // Favorites — stored in localStorage, scoped by badge AND lite/full mode so
+  // Level III inspectors can keep a lean Lite favorites list separate from the
+  // full-mode favorites they build during Level I / II inspections.
+  const FAV_KEY = `violation-favorites-${badge}${liteMode ? "-lite" : ""}`;
+  const [favorites, setFavorites] = useState([]);
+  // Re-load favorites whenever the mode (or badge) changes so the right list
+  // is shown for the active mode.
+  useEffect(() => {
+    try { setFavorites(JSON.parse(localStorage.getItem(FAV_KEY)) || []); }
+    catch { setFavorites([]); }
+  }, [FAV_KEY]);
   const toggleFavorite = useCallback((v) => {
     setFavorites(prev => {
       const key = v.violation_code || v.regulatory_reference;
@@ -80,7 +86,7 @@ export default function Dashboard() {
       localStorage.setItem(FAV_KEY, JSON.stringify(next));
       return next;
     });
-  }, []);
+  }, [FAV_KEY]);
 
   // Load filter options and stats on mount
   useEffect(() => {

@@ -117,7 +117,17 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
           const isOpen = sectionOpen[sKey];
           const isActive = sKey !== "_other" && activeClass === sKey && !activeCategory && !activeRegBase;
           const Icon = section.icon;
-          const sortedCats = [...data.categories].sort((a, b) => sortCatNum(a.name) - sortCatNum(b.name));
+          // In Lite mode, hide the "All Other Vehicle Defects" catch-all so Level III
+          // inspectors see only the specific defect categories they actually inspect.
+          const filteredCats = liteMode && sKey === "Vehicle"
+            ? data.categories.filter((c) => !/all\s+other/i.test(c.name))
+            : data.categories;
+          const sortedCats = [...filteredCats].sort((a, b) => sortCatNum(a.name) - sortCatNum(b.name));
+          // When filtering happens, recompute the displayed count from remaining categories.
+          const displayCount = filteredCats === data.categories
+            ? data.count
+            : filteredCats.reduce((s, c) => s + (c.count || 0), 0);
+          if (displayCount === 0) return null;
 
           return (
             <div key={sKey}>
@@ -149,7 +159,7 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
                 <span className={`flex-1 text-left font-semibold ${mobile ? "text-sm" : "text-xs"} ${isActive ? "text-white" : "text-[#334155]"}`}>
                   {section.label}
                 </span>
-                <span className={`${mobile ? "text-xs" : "text-[9px]"} px-2 py-0.5 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>{data.count}</span>
+                <span className={`${mobile ? "text-xs" : "text-[9px]"} px-2 py-0.5 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#64748B]"}`}>{displayCount}</span>
               </div>
 
               {/* Categories — visible when section is open */}
