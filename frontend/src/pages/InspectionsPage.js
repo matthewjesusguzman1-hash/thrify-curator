@@ -17,7 +17,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // Hidden off-screen container that we render one inspection's report into so
 // html2canvas can capture it. Using a portal on document.body sidesteps any
 // scroll container clipping issues.
-function HiddenReport({ inspection, containerRef }) {
+function HiddenReport({ inspection, bulkMeta, containerRef }) {
   if (!inspection) return null;
   return createPortal(
     <div
@@ -37,6 +37,37 @@ function HiddenReport({ inspection, containerRef }) {
         pointerEvents: "none",
       }}
     >
+      {/* Bulk separator banner — prints as the first block on each
+          inspection's page(s) so the combined PDF has obvious dividers. */}
+      {bulkMeta && (
+        <div
+          data-pdf-section="bulk-banner"
+          style={{
+            borderRadius: 8,
+            border: "2px solid #D4AF37",
+            background: "linear-gradient(135deg, #002855 0%, #001a3a 100%)",
+            color: "#fff",
+            padding: "10px 14px",
+            marginBottom: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#D4AF37", textTransform: "uppercase" }}>
+              Inspection {bulkMeta.index} of {bulkMeta.total}
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>
+              {inspection.title || "Untitled inspection"}
+            </div>
+          </div>
+          <div style={{ textAlign: "right", fontSize: 10, color: "#8FAEC5" }}>
+            <div>Badge {inspection.badge || "—"}</div>
+            <div>{(inspection.created_at || "").slice(0, 10)}</div>
+          </div>
+        </div>
+      )}
       <InspectionReportContent inspection={inspection} />
     </div>,
     document.body
@@ -55,6 +86,7 @@ export default function InspectionsPage() {
   const [bulkExporting, setBulkExporting] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, title: "" });
   const [renderQueue, setRenderQueue] = useState(null); // inspection currently being rendered off-screen
+  const [bulkMeta, setBulkMeta] = useState(null); // { index, total } during bulk export
   const hiddenRef = useRef(null);
 
   const fetchInspections = async () => {
@@ -140,6 +172,7 @@ export default function InspectionsPage() {
         }
         setBulkProgress({ current: i + 1, total: ids.length, title: full.title || "Inspection" });
         if (i === 0) firstTitle = full.title || "";
+        setBulkMeta({ index: i + 1, total: ids.length });
         setRenderQueue(full);
         await new Promise((r) => setTimeout(r, 400));
         if (!hiddenRef.current) {
@@ -158,6 +191,7 @@ export default function InspectionsPage() {
         }
       }
       setRenderQueue(null);
+      setBulkMeta(null);
 
       if (successCount === 0) {
         toast.error("No PDFs were generated");
@@ -321,9 +355,9 @@ export default function InspectionsPage() {
         )}
       </main>
 
-      {/* Floating bulk-export bar */}
+      {/* Floating bulk-export bar — raised above the Emergent watermark */}
       {selectMode && selectedCount > 0 && !bulkExporting && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-[600px]">
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-[600px]">
           <div className="bg-white rounded-xl border-2 border-[#D4AF37] shadow-2xl p-3 flex items-center gap-2">
             <div className="flex-1">
               <p className="text-xs text-[#64748B]">Ready to share</p>
@@ -364,7 +398,7 @@ export default function InspectionsPage() {
         </div>
       )}
 
-      <HiddenReport inspection={renderQueue} containerRef={hiddenRef} />
+      <HiddenReport inspection={renderQueue} bulkMeta={bulkMeta} containerRef={hiddenRef} />
     </div>
   );
 }
