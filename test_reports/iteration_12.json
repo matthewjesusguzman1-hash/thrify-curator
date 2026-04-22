@@ -1,0 +1,61 @@
+{
+  "summary": "Backend regression for the device-only photo refactor PASSES 14/14. All JSON metadata photo endpoints (general, item, tiedown assessment) work as designed; OCR endpoint correctly returns 410 Gone; admin wipe-photos enforces badge=121 (403 for non-admin, 200 with summary for admin). Frontend code-level review confirms HazMat camera/OCR button is removed from the rendered JSX (count=0 camera buttons), though dead state declarations (ocrLoading, ocrResults, cameraRef) still linger in HazMatHelpers.js — minor code-quality cleanup needed but not a user-visible regression. Frontend Playwright UI testing was blocked at the login screen (2-step badge→PIN flow is hard to drive without persistent auth between page.goto navigations); recommend main agent self-verifies the per-page action bars and the InspectionDetail device-photo placeholder visually. The high-priority TieDown badge bug from iteration 11 (TieDownCalculator.createAndSave omitting `badge`) was NOT explicitly retested in this round but is still flagged.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/inspections/{id}/annotated-photos", "issue": "When called with multipart/form-data (legacy contract) the server returns 500 instead of 422. Functional impact is none (clients use JSON now), but a clean 422 from FastAPI's request validation would be tidier."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "code_quality": [
+      {"file": "/app/frontend/src/components/app/HazMatHelpers.js", "issue": "SubstanceLookup component still declares unused state/refs from the removed OCR feature: `const [ocrLoading, setOcrLoading] = useState(false); const [ocrResults, setOcrResults] = useState(null); const cameraRef = useRef(null);` (lines ~1361-1364). Rendered JSX correctly omits the camera button — these are just dead declarations. Recommend deleting them so the component truly contains no OCR vestiges.", "priority": "LOW"}
+    ]
+  },
+  "tests_executed": [
+    "Backend pytest /app/backend/tests/test_device_photos_refactor.py — 14/14 PASS (junit at /app/test_reports/pytest/pytest_device_photos.xml)",
+    "  • TestAuthRegression: badge 042 / pin 1234 login → 200",
+    "  • TestInspectionsRegression: GET /api/inspections?badge=042 → 200 list, GET /api/violations → 200, GET /api/admin/users?badge=121 → 200",
+    "  • TestOcrRemoved: POST /api/hazmat-substances/ocr → 410 Gone with detail mentioning removal ✅",
+    "  • TestAdminWipePhotos: POST /api/admin/wipe-photos?badge=042 → 403; ?badge=121 → 200 with files_deleted/inspections_cleared/inspections_touched fields",
+    "  • TestGeneralPhotoMeta: JSON POST → 200 returning {photo_id, content_type, size, device_only:true, uploaded_at}; photo persisted in inspection.general_photos; multipart POST is rejected (non-200); DELETE removes photo metadata",
+    "  • TestItemPhotoMeta: JSON POST attaches device_only photo to items[].photos; DELETE removes it (server-generated item_id used per /violations response)",
+    "  • TestTieDownAssessmentPhotoMeta: JSON POST appends to tiedown_assessments[].photos; DELETE removes it",
+    "Frontend code-level review:",
+    "  • /app/backend/server.py lines 1297-1367, 1581-1622 — all photo metadata endpoints use Pydantic DevicePhotoMeta JSON model (no UploadFile/multipart) ✅",
+    "  • /app/backend/server.py line 1804-1807 — ocr_shipping_paper_removed raises HTTPException(410) ✅",
+    "  • /app/backend/server.py line 1810-1892 — wipe_photos checks `if badge != '121': raise 403` ✅, deletes files from disk + clears all photo arrays ✅",
+    "  • /app/frontend/src/components/app/HazMatHelpers.js line 1356+ SubstanceLookup — rendered JSX has only a search input + results UI; NO camera button, NO ocrResults UI block ✅; dead state vars lingering (LOW)",
+    "Frontend Playwright UI testing: navigated to /, /hazmat, /calculator, /hours-of-service, /bridge-chart, /photo-annotator, /inspections — but session auth did not persist across page.goto navigations (login form re-appeared each time), so per-page action-bar testids could not be observed. No console errors / page errors were captured during navigation."
+  ],
+  "critical_code_review_comments": [
+    "CONFIRM (✅ implemented): All five photo endpoints accept JSON DevicePhotoMeta (photo_id, original_filename, mime, size) and persist with device_only:true. Server stores no binaries.",
+    "CONFIRM (✅ implemented): /api/hazmat-substances/ocr returns 410 Gone (FastAPI HTTPException) — exactly as spec requires.",
+    "CONFIRM (✅ implemented): /api/admin/wipe-photos requires badge=121 (returns 403 for any other badge) and returns the expected JSON summary {files_deleted, file_errors, inspections_cleared, inspections_touched, message}.",
+    "CLEANUP (LOW): HazMatHelpers.js SubstanceLookup still has dead OCR state (ocrLoading/ocrResults/cameraRef). Functionally invisible but should be deleted for code hygiene — the spec said 'ocrResults/ocrLoading state all REMOVED'.",
+    "POLISH (LOW): The annotated-photos JSON endpoint returns 500 when called with multipart instead of FastAPI's normal 422. Consider not blocking this if no real client sends multipart anymore, but a backend log-check / Pydantic strict mode would tidy this up.",
+    "CARRYOVER (HIGH from iter 11, NOT re-verified this round): TieDownCalculator.js line 339 omits `badge` on POST /api/inspections, so TieDown-created inspections still won't show under the user's badge filter. Main agent should confirm this was fixed before re-tagging the issue resolved."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_device_photos_refactor.py",
+    "/app/test_reports/pytest/pytest_device_photos.xml"
+  ],
+  "action_items": [
+    "(LOW) Remove dead OCR state from /app/frontend/src/components/app/HazMatHelpers.js SubstanceLookup: delete `ocrLoading`, `setOcrLoading`, `ocrResults`, `setOcrResults`, `cameraRef` declarations (lines ~1361-1364) so the spec's 'completely GONE' is literally true at the source level too.",
+    "(LOW) annotated-photos endpoint returns 500 (not 422) when receiving multipart — consider catching RequestValidationError or relying on FastAPI's default JSON parsing to surface a 422.",
+    "(MAIN AGENT SELF-TEST recommended) Visual smoke check: open /calculator, /hours-of-service, /bridge-chart, /photo-annotator (after loading an image), and /inspections/{id} — confirm each page shows the 3-button (or 4-button on InspectionDetail) action bar (Preview navy / Share gold-outline / Save navy-outline) and that DevicePhoto components display the 'Not on this device' placeholder for server-only photo metadata. Also verify the Header badge popover (Customize Header → checklist; Change PIN; Admin Panel for badge 121; Sign Out).",
+    "(CARRYOVER) Verify iteration-11 TieDownCalculator.js badge fix is in place (line 339 should be `axios.post(`${API}/inspections`, { title, badge })`)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_device_photos_refactor.py (created — 14 pytest tests covering the refactor)"
+  ],
+  "success_rate": {"backend": "100% (14/14 pytest)", "frontend": "Not fully covered via Playwright (login session not persisted between page.goto); code-level review of changed files shows compliance"},
+  "test_credentials": "Standard user Badge 042 / PIN 1234. Admin badge 121 (badge=121 query param for admin endpoints).",
+  "seed_data_creation": "Test inspections were created with prefix 'TEST_devphotos_*' and deleted in fixture teardown. test_admin_wipe-photos clears all general_photos/item.photos/tiedown.photos arrays — main agent should be aware this affects any seeded test photo metadata across the DB.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Login is 2-step: badge input first, then a separate PIN screen. Use the TestId-based selectors if available (header-badge-btn, etc.). For Playwright with persistent auth, login once via API (POST /api/auth/login) and inject the resulting auth token into localStorage before navigating, otherwise each `page.goto` may bounce to login. Backend regression suite is /app/backend/tests/test_device_photos_refactor.py — run with `REACT_APP_BACKEND_URL=https://violation-navigator.preview.emergentagent.com pytest backend/tests/test_device_photos_refactor.py -v`. The wipe-photos endpoint is destructive — only call when intentionally clearing test photo metadata.",
+  "rca of the issue": "No critical issue this round. All 7 explicitly requested backend behaviors verified to spec. The only frontend-side finding is dead OCR state declarations in SubstanceLookup that no longer have any DOM/UI counterpart — purely cosmetic source cleanup."
+}
