@@ -51,7 +51,27 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
     count: otherKeys.reduce((s, k) => s + (tree[k]?.count || 0), 0),
     categories: otherKeys.flatMap((k) => (tree[k]?.categories || []).map((c) => ({ ...c, parentClass: k }))),
   };
-  const getData = (key) => key === "_other" ? otherData : (tree[key] || { count: 0, categories: [] });
+
+  // Lite mode: merge non-"All Other" Vehicle categories into the Driver section
+  // so Level III inspectors see one combined list, and drop Vehicle + HazMat
+  // as standalone sections. Categories keep parentClass="Vehicle" so clicking
+  // them still filters by the correct class.
+  const liteDriverData = (() => {
+    const driver = tree["Driver"] || { count: 0, categories: [] };
+    const vehicle = tree["Vehicle"] || { count: 0, categories: [] };
+    const vehCats = vehicle.categories
+      .filter((c) => !/all\s+other/i.test(c.name))
+      .map((c) => ({ ...c, parentClass: "Vehicle" }));
+    const driverCats = driver.categories.map((c) => ({ ...c, parentClass: "Driver" }));
+    const cats = [...driverCats, ...vehCats];
+    return { count: cats.reduce((s, c) => s + (c.count || 0), 0), categories: cats };
+  })();
+
+  const getData = (key) => {
+    if (key === "_other") return otherData;
+    if (liteMode && key === "Driver") return liteDriverData;
+    return tree[key] || { count: 0, categories: [] };
+  };
 
   return (
     <div className={className} data-testid="violation-tree">
@@ -110,23 +130,15 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
           </div>
         )}
 
-        {SECTIONS.filter((s) => !(liteMode && s.key === "_other")).map((section) => {
+        {SECTIONS.filter((s) => !(liteMode && (s.key === "_other" || s.key === "Vehicle" || s.key === "Hazardous Materials"))).map((section) => {
           const data = getData(section.key);
           if (!data || data.count === 0) return null;
           const sKey = section.key;
           const isOpen = sectionOpen[sKey];
           const isActive = sKey !== "_other" && activeClass === sKey && !activeCategory && !activeRegBase;
           const Icon = section.icon;
-          // In Lite mode, hide the "All Other Vehicle Defects" catch-all so Level III
-          // inspectors see only the specific defect categories they actually inspect.
-          const filteredCats = liteMode && sKey === "Vehicle"
-            ? data.categories.filter((c) => !/all\s+other/i.test(c.name))
-            : data.categories;
-          const sortedCats = [...filteredCats].sort((a, b) => sortCatNum(a.name) - sortCatNum(b.name));
-          // When filtering happens, recompute the displayed count from remaining categories.
-          const displayCount = filteredCats === data.categories
-            ? data.count
-            : filteredCats.reduce((s, c) => s + (c.count || 0), 0);
+          const sortedCats = [...data.categories].sort((a, b) => sortCatNum(a.name) - sortCatNum(b.name));
+          const displayCount = data.count;
           if (displayCount === 0) return null;
 
           return (
