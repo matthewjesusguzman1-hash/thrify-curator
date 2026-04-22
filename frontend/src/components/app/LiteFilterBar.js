@@ -28,7 +28,7 @@ export function LiteFilterBar({ filters, onFilterChange }) {
         aria-pressed={oosActive}
       >
         <ShieldAlert className="w-4 h-4" />
-        <span>{oosActive ? "OOS · tap to clear" : "OOS"}</span>
+        <span>OOS</span>
       </button>
 
       <button
@@ -42,7 +42,7 @@ export function LiteFilterBar({ filters, onFilterChange }) {
         aria-pressed={nonOosActive}
       >
         <ShieldCheck className="w-4 h-4" />
-        <span>{nonOosActive ? "Non-OOS · tap to clear" : "Non-OOS"}</span>
+        <span>Non-OOS</span>
       </button>
 
       {/* Subtle hint when neither toggle is on */}
