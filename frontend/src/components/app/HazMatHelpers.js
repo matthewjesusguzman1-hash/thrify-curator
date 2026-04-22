@@ -1358,10 +1358,7 @@ export function SubstanceLookup({ onNavigate }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [ocrLoading, setOcrLoading] = useState(false);
-  const [ocrResults, setOcrResults] = useState(null);
   const debounceRef = useRef(null);
-  const cameraRef = useRef(null);
 
   const search = useCallback((q) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

@@ -1,44 +1,52 @@
 # Inspection Navigator — PRD
 
 ## Original Problem Statement
-Full-stack application to search and filter FMCSA roadside violation data and assist in field inspections. Target user: CMV inspectors / DOT enforcement.
+Full-stack application for CMV inspectors / DOT enforcement to search and filter FMCSA roadside violation data and assist in field inspections.
 
 ## Core Requirements
 - 7-step HazMat Inspection Worksheet with interactive helpers
-- Optimized AI + keyword violation search
-- OCR for shipping papers
+- AI + keyword violation search
 - Dedicated Level 1 / 2 / 3 Inspection Guidance
-- Photo annotation tools
+- Photo annotation tools (device-only storage)
 - Admin panel with biometric login
-- Interactive Bridge Chart / Weight Calculator (Interstate/Non-Interstate/Custom modes)
+- Interactive Bridge Chart / Weight Calculator
 - Tie-Down (Cargo Securement) Calculator
-- Hours of Service (HOS) 60/70 Hour Calculator with OOS recovery simulator
-- Unified "Saved Inspection" store: rich structured data for every assessment + "Recreate in Section" hydration
+- Hours of Service 60/70-Hour Calculator with OOS recovery simulator
+- Rich "Saved Inspection" store with Recreate-in-Section hydration
+
+## Security Policy
+**Photos are stored ONLY on the inspector's device (IndexedDB).** The server never receives photo bytes. Only metadata (photo_id, filename, mime, size, timestamps) is persisted to MongoDB. If the device is lost, the photos are lost — agency has accepted this trade-off.
 
 ## Architecture
-- Frontend: React + Tailwind + Shadcn UI
+- Frontend: React + Tailwind + Shadcn UI + IndexedDB (device photos)
 - Backend: FastAPI + Motor (MongoDB)
-- LLM: OpenAI (GPT-4.1-mini / 4o Vision) via Emergent Universal Key
+- LLM: OpenAI (GPT-4.1-mini) via Emergent Universal Key — text-only, never for photos
+- Auth: badge + PIN; admin badge 121
 
 ## Changelog
 
-### 2026-02 — Session (current)
-- **Fixed:** "5% tolerance applied" banner on saved Weight Reports now only appears when tolerance was **actually applied** — i.e., exactly one non-gross, non-interior overage exists AND that overage was forgiven (within 5%). Gross weight and interior bridge are excluded from the count per statutory rule. Custom/Permit mode never shows tolerance.
-- **Fixed:** Interior Bridge now only renders in the saved report when the interior distance was entered (`a.interior.enabled === true`). Prevents misleading "Interior bridge 0/0" lines when the check was never performed.
-- **Enhanced:** Saved Weight Report Calculation Details now mirrors the live Bridge Chart Record Weights → Calculation Details card: per-group weight breakdown, dummy discount narrative, rule checks with source & tolerance notes, separate Gross Weight and Interior Bridge sections with full subtraction narrative.
-- **Enhanced:** `BridgeChartPage` now persists `gross_source` and `axle_numbers` on save so legacy source labels (`Interstate 80,000 cap`, `Bridge (52ft, 5ax)`, etc.) render exactly as seen live. Backward-compat fallback in place for older saves.
+### 2026-02 — Device-only photos + UI consolidation (current session)
+- **Device-only photos**: IndexedDB library (`devicePhotos.js`) + `<DevicePhoto>` component. All upload flows converted to local-save + JSON metadata POST. Server photo endpoints refactored to JSON-only (no multipart). One-time wipe endpoint runs on /api/admin/wipe-photos?badge=121 (executed; 3 inspections cleared).
+- **Shipping-paper OCR removed entirely** — camera UI, state, handler, and backend endpoint all deleted. Endpoint returns 410 Gone.
+- **Unified 3-button action bar** (Preview · Share · Save) across InspectionDetail, TieDown, HOS, BridgeChart, PhotoAnnotator.
+- **Header customization**: tap badge → Customize Header → checklist of nav buttons, saved per-badge in localStorage.
+- **Admin refresh button**: loading spinner + success/error toasts + cache-busting query param.
+- **Weight Report tolerance logic**: "5% tolerance applied" only shows when it was actually applied (one non-gross overage within 5%). Gross & interior bridge excluded from the count.
+- **Interior Bridge** hidden in saved reports when distance wasn't entered.
+- **Calculation Details** now mirrors the live Bridge Chart section exactly.
+- **Inspection view enhancements**: WLL gauge + count dots for tie-down assessments; green/red row coloring per axle group for weight assessments.
+- **Shared PDF utility** (`/lib/pdfShare.js`) used by all pages — generates PDF and triggers native Web Share API (with download+mailto fallback).
 
-### Earlier this session
-- HOS Calculator (60/70-Hour with Property/Passenger toggles, OOS simulator)
-- TieDown PDF styling unification (circular WLL gauges)
-- Recreate-in-Section hydration for HOS / Tie-Down / Bridge Chart
-- Weight Reports store structured data + inline SVG (no PNG)
+### 2026-02 test_reports/iteration_12.json
+- Backend: 14/14 PASS for photo refactor + regression (auth, inspections, violations, admin users, OCR=410, wipe=403/200).
+- Frontend: code-level review confirmed. Live Playwright blocked by 2-step badge→PIN flow, deferred to manual verification.
 
 ## Backlog (P0 → P2)
 - **P1**: Offline/cached mode for field use
-- **P2**: Refactor `server.py` (~2000 lines) into modular routes (`/app/backend/routes/*`)
+- **P2**: Refactor `server.py` into modular routes (`/app/backend/routes/*`)
 - **P2**: Refactor `BridgeChartPage.js` / `HoursOfServicePage.js` / `HazMatHelpers.js` into smaller components
 - **P2**: Additional Inspector Tools — Spec Marking Decoder, Retest Date Calculator, OOS Quick Reference
+- **P2**: Device-storage indicator in the Customize Header / admin menu (show IndexedDB usage)
 
 ## Test Credentials
 - Standard User — Badge `042`, PIN `1234`
