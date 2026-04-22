@@ -246,11 +246,11 @@ export default function Dashboard() {
         </aside>
 
         <main className={`flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 pb-20 space-y-3 sm:space-y-5 transition-all ${treeDrawerOpen ? "lg:pt-4 pt-[52vh]" : ""}`}>
-          {/* Mobile tree and procedures buttons + Search */}
-          <div className="flex gap-2 items-stretch">
+          {/* Mobile: Tree + Steps on their own row so the Search row below can use full width */}
+          <div className="flex gap-2 items-stretch lg:hidden">
             <button
               onClick={() => setTreeDrawerOpen(!treeDrawerOpen)}
-              className={`lg:hidden flex items-center justify-center gap-1.5 h-10 px-3 border rounded-lg transition-colors flex-shrink-0 ${treeDrawerOpen ? "bg-[#001a3a] border-[#001a3a] text-white" : "bg-[#002855] border-[#002855] text-white hover:bg-[#001a3a]"}`}
+              className={`flex items-center justify-center gap-1.5 h-10 px-3 border rounded-lg transition-colors flex-1 ${treeDrawerOpen ? "bg-[#001a3a] border-[#001a3a] text-white" : "bg-[#002855] border-[#002855] text-white hover:bg-[#001a3a]"}`}
               data-testid="tree-drawer-btn"
               title="Browse by type"
             >
@@ -259,23 +259,25 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => setProceduresOpen(true)}
-              className="lg:hidden flex items-center justify-center gap-1.5 h-10 px-3 border border-[#CBD5E1] rounded-lg bg-white text-[#64748B] hover:text-[#002855] hover:border-[#002855] transition-colors flex-shrink-0"
+              className="flex items-center justify-center gap-1.5 h-10 px-3 border border-[#CBD5E1] rounded-lg bg-white text-[#64748B] hover:text-[#002855] hover:border-[#002855] transition-colors flex-1"
               data-testid="procedures-btn"
               title="Inspection procedures"
             >
               <ClipboardCheck className="w-4 h-4" />
               <span className="text-xs font-medium">Steps</span>
             </button>
-            <div className="flex-1">
-              <SearchBar
-                keyword={keyword}
-                onKeywordChange={setKeyword}
-                onSearch={handleSearch}
-                aiMode={aiMode}
-                onAiModeChange={setAiMode}
-                isSearching={isSearching}
-              />
-            </div>
+          </div>
+
+          {/* Search row */}
+          <div className="w-full">
+            <SearchBar
+              keyword={keyword}
+              onKeywordChange={setKeyword}
+              onSearch={handleSearch}
+              aiMode={aiMode}
+              onAiModeChange={setAiMode}
+              isSearching={isSearching}
+            />
           </div>
 
         {/* Filters */}

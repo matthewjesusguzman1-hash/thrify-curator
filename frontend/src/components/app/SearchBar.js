@@ -64,9 +64,10 @@ export function SearchBar({
   }, [keyword]);
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+    <div className="flex flex-col gap-3">
+      {/* Row 1: search input (full width on mobile) */}
       <div
-        className="search-glow flex-1 flex items-center border border-[#CBD5E1] rounded-lg bg-white overflow-hidden transition-all"
+        className="search-glow flex items-center border border-[#CBD5E1] rounded-lg bg-white overflow-hidden transition-all"
         data-testid="search-container"
       >
         <div className="pl-3 text-[#64748B]">
@@ -109,31 +110,34 @@ export function SearchBar({
         </button>
       </div>
 
-      <div
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#CBD5E1] bg-white"
-        data-testid="ai-toggle-container"
-      >
-        <Sparkles
-          className={`w-4 h-4 transition-colors ${
-            aiMode ? "text-[#D4AF37]" : "text-[#94A3B8]"
-          }`}
-        />
-        <Switch
-          data-testid="ai-toggle"
-          checked={aiMode}
-          onCheckedChange={onAiModeChange}
-          className={aiMode ? "ai-toggle-active" : ""}
-        />
-        <Label
-          className="text-xs font-medium cursor-pointer whitespace-nowrap"
-          style={{ color: aiMode ? "#B8960E" : "#64748B" }}
+      {/* Row 2: AI toggle (stretches) + Quick Notes button, side-by-side so
+          there's no awkward negative space on either side on mobile. */}
+      <div className="flex items-stretch gap-2">
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#CBD5E1] bg-white flex-1"
+          data-testid="ai-toggle-container"
         >
-          AI Search
-        </Label>
-      </div>
+          <Sparkles
+            className={`w-4 h-4 transition-colors ${
+              aiMode ? "text-[#D4AF37]" : "text-[#94A3B8]"
+            }`}
+          />
+          <Switch
+            data-testid="ai-toggle"
+            checked={aiMode}
+            onCheckedChange={onAiModeChange}
+            className={aiMode ? "ai-toggle-active" : ""}
+          />
+          <Label
+            className="text-xs font-medium cursor-pointer whitespace-nowrap"
+            style={{ color: aiMode ? "#B8960E" : "#64748B" }}
+          >
+            AI Search
+          </Label>
+        </div>
 
-      {/* Quick Notes — sits next to AI Search on large screens, wraps below on mobile */}
-      <QuickNotesButton />
+        <QuickNotesButton />
+      </div>
     </div>
   );
 }
