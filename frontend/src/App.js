@@ -16,6 +16,7 @@ import Level3InspectionTool from "./pages/Level3InspectionTool";
 import AdminPage from "./pages/AdminPage";
 import BridgeChartPage from "./pages/BridgeChartPage";
 import HoursOfServicePage from "./pages/HoursOfServicePage";
+import HosTrainingPage from "./pages/HosTrainingPage";
 
 const SPLASH_KEY = "inspnav_splash_v1";
 
@@ -39,6 +40,7 @@ function AppRoutes() {
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/bridge-chart" element={<BridgeChartPage />} />
       <Route path="/hours-of-service" element={<HoursOfServicePage />} />
+      <Route path="/hours-of-service/training" element={<HosTrainingPage />} />
     </Routes>
   );
 }
