@@ -111,20 +111,31 @@ export function StorageInfoDialog({ open, onOpenChange }) {
                   {persist.persisted ? <CheckCircle2 className="w-4 h-4 text-[#16A34A] flex-shrink-0 mt-0.5" /> : <AlertTriangle className="w-4 h-4 text-[#D97706] flex-shrink-0 mt-0.5" />}
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-[#0F172A]">
-                      {persist.persisted ? "Permanent storage enabled" : "Permanent storage NOT enabled"}
+                      {persist.persisted ? "Permanent storage enabled" : "Permanent storage not yet granted"}
                     </p>
-                    <p className="text-[11px] text-[#475569] mt-0.5">
-                      {persist.persisted
-                        ? "Your browser will not auto-delete photos when storage gets low. Photos stay until you clear them yourself."
-                        : "Your browser may auto-delete photos if the device runs low on storage. Click 'Enable permanent storage' below to protect them."}
-                    </p>
-                    {!persist.persisted && persist.supported && (
-                      <Button onClick={enablePersistent} disabled={persistLoading} size="sm" className="mt-2 bg-[#002855] text-white h-8 text-xs" data-testid="enable-persist-btn">
-                        {persistLoading ? "Requesting…" : "Enable permanent storage"}
-                      </Button>
-                    )}
-                    {!persist.supported && (
-                      <p className="text-[10px] text-[#94A3B8] italic mt-1">This browser doesn't support storage protection.</p>
+                    {persist.persisted ? (
+                      <p className="text-[11px] text-[#475569] mt-0.5">
+                        Your browser will not auto-delete photos when storage gets low. Photos stay until you clear them yourself.
+                      </p>
+                    ) : (
+                      <div className="text-[11px] text-[#475569] mt-0.5 space-y-1.5">
+                        <p>The app already asked the browser to protect your photos from auto-deletion when you signed in. Browsers sometimes deny the first request for a few reasons:</p>
+                        <ul className="list-disc pl-4 space-y-0.5">
+                          <li><strong>iOS Safari</strong> usually requires the app to be added to your Home Screen first (see the next card).</li>
+                          <li><strong>Chrome / Edge</strong> often wants a little "engagement" — usage over a day or two, or the app pinned/installed.</li>
+                          <li><strong>Private / Incognito mode</strong> always denies it (data is always temporary in private mode).</li>
+                          <li><strong>Enterprise-managed devices</strong> may have IT-controlled storage policies.</li>
+                        </ul>
+                        <p className="pt-0.5">
+                          <strong>Recommended action:</strong> if you just added this app to your Home Screen, tap the button below to try again. If the button stays amber, don't worry — your photos are still stored; they may just be auto-evicted if the device hits critically low storage. The safest habit is still to tap <strong>Share</strong> on each inspection as soon as it's complete.
+                        </p>
+                        <Button onClick={enablePersistent} disabled={persistLoading || !persist.supported} size="sm" className="mt-1 bg-[#002855] text-white h-8 text-xs" data-testid="enable-persist-btn">
+                          {persistLoading ? "Requesting…" : "Try enabling permanent storage"}
+                        </Button>
+                        {!persist.supported && (
+                          <p className="text-[10px] text-[#94A3B8] italic mt-1">This browser doesn't support storage protection at all — use Chrome, Edge, Firefox, or Safari.</p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
