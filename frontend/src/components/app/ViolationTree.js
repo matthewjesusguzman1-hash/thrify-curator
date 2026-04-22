@@ -325,12 +325,9 @@ export function ViolationTreeDrawer({ open, onOpenChange, activeClass, activeCat
     <>
       {open && (
         <>
-          {/* Backdrop — tap to close */}
-          <div
-            className="fixed inset-0 z-30 lg:hidden"
-            onClick={() => onOpenChange(false)}
-            data-testid="tree-drawer-backdrop"
-          />
+          {/* No backdrop — the drawer stays open while the inspector scrolls the
+              violation list below. Dismiss via the "Done" button or by dragging
+              the resize handle below ~15vh. */}
           <div className="fixed inset-x-0 z-40 lg:hidden" style={{ top: `${headerH}px`, height: `calc(${splitPct}vh - ${headerH}px)` }}>
             <div className="h-full bg-white flex flex-col shadow-lg">
               <div className="flex items-center justify-between px-4 py-2.5 border-b bg-[#002855] flex-shrink-0">
