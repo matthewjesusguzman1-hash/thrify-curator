@@ -22,8 +22,14 @@ export function ViolationTree({ activeClass, activeCategory, activeRegBase, onSe
   const [tree, setTree] = useState({});
   const [loading, setLoading] = useState(true);
   const [favOpen, setFavOpen] = useState(false);
-  // Section expand state (Driver, Vehicle, HazMat, Other) — start collapsed
-  const [sectionOpen, setSectionOpen] = useState({});
+  // Section expand state (Driver, Vehicle, HazMat, Other). In Lite mode we
+  // auto-expand Driver since it's the only section shown and the drawer is a
+  // roadside tool where one less tap matters.
+  const [sectionOpen, setSectionOpen] = useState(() => liteMode ? { Driver: true } : {});
+  // Keep the auto-expand in sync if liteMode flips while mounted.
+  useEffect(() => {
+    if (liteMode) setSectionOpen((p) => ({ Driver: true, ...p, Driver: true }));
+  }, [liteMode]);
   // Reg section expand state (deepest level)
   const [regOpen, setRegOpen] = useState({});
 
