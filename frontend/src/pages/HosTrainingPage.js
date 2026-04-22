@@ -2,8 +2,14 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, BookOpen, Target, Layers, CheckCircle2, XCircle, Trophy, RotateCcw } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { LESSONS, SCENARIOS, STATUS_META, validateSplit, hmToMin, fmtDur } from "../lib/hosRules";
+import { LESSONS, SCENARIOS, validateSplit, hmToMin } from "../lib/hosRules";
 import { useAuth } from "../components/app/AuthContext";
+
+/** "HH:MM" formatter from minutes-from-midnight. Handles 24:00 cleanly. */
+function minToHm(m) {
+  const h = Math.floor(m / 60), r = m % 60;
+  return `${h.toString().padStart(2, "0")}:${r.toString().padStart(2, "0")}`;
+}
 
 const PROGRESS_KEY = (badge) => `inspnav_hos_training_${badge || "anon"}`;
 
@@ -178,7 +184,7 @@ function ScenariosTab({ progress, persist }) {
 
       <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 space-y-3">
         <p className="text-[13px] text-[#334155] leading-relaxed whitespace-pre-line">{scenario.prompt}</p>
-        {scenario.log && <Timeline entries={scenario.log} />}
+        {scenario.log && <EldGrid entries={scenario.log} />}
         <div className="border-t border-[#F1F5F9] pt-3">
           <p className="text-sm font-bold text-[#002855] mb-2">{scenario.question}</p>
           <div className="space-y-1.5">
@@ -234,30 +240,127 @@ function ScenariosTab({ progress, persist }) {
   );
 }
 
-/* Simple horizontal Gantt-style timeline for a day's log entries. */
-function Timeline({ entries }) {
-  const start = Math.min(...entries.map((e) => hmToMin(e.start)));
-  const end = Math.max(...entries.map((e) => hmToMin(e.end)));
-  const total = Math.max(end - start, 1);
+/* Classic ELD-style log grid — 4 rows (OFF / SB / D / OD), 24 hourly columns,
+ * quarter-hour tick marks, stepped status line, and a totals column on the
+ * right. This mirrors what inspectors see roadside on a driver's ELD record. */
+function EldGrid({ entries }) {
+  // SVG dimensions. Horizontal scroll kicks in on narrow phones.
+  const HOUR_W = 28;
+  const ROW_H = 32;
+  const LABEL_W = 74;
+  const TOTAL_W = 58;
+  const HEADER_H = 22;
+  const HOURS = 24;
+  const gridW = HOURS * HOUR_W;
+  const svgW = LABEL_W + gridW + TOTAL_W;
+  const svgH = HEADER_H + 4 * ROW_H + 14;
+
+  // Pad input entries so they always cover the full 24-hour day (00:00 → 24:00)
+  // with OFF-duty status filling any gaps. Makes the log look like a real ELD.
+  const padded = [];
+  const sorted = [...entries].sort((a, b) => hmToMin(a.start) - hmToMin(b.start));
+  let cursor = 0;
+  for (const e of sorted) {
+    const s = hmToMin(e.start);
+    if (s > cursor) padded.push({ status: "OFF", start: minToHm(cursor), end: minToHm(s) });
+    padded.push(e);
+    cursor = hmToMin(e.end);
+  }
+  if (cursor < 24 * 60) padded.push({ status: "OFF", start: minToHm(cursor), end: "24:00" });
+
+  const ROWS = [
+    { key: "OFF", label: "Off Duty",      bg: "#CFE2F3" },
+    { key: "SB",  label: "Sleeper Berth", bg: "#5A88B0" },
+    { key: "D",   label: "Driving",       bg: "#F0C674" },
+    { key: "OD",  label: "On Duty",       bg: "#F5E0A8" },
+  ];
+  const rowY = (key) => HEADER_H + ROWS.findIndex((r) => r.key === key) * ROW_H + ROW_H / 2;
+  const xFor = (hm) => LABEL_W + (hmToMin(hm) / 60) * HOUR_W;
+
+  // Totals per row in minutes
+  const totals = { OFF: 0, SB: 0, D: 0, OD: 0 };
+  for (const e of padded) {
+    const dur = hmToMin(e.end) - hmToMin(e.start);
+    if (dur > 0 && totals[e.status] !== undefined) totals[e.status] += dur;
+  }
+
+  // Build the stepped trace as an SVG polyline. Vertical jumps happen at the
+  // shared x coordinate between consecutive entries.
+  const tracePts = [];
+  padded.forEach((e, i) => {
+    const y = rowY(e.status);
+    tracePts.push([xFor(e.start), y]);
+    tracePts.push([xFor(e.end), y]);
+    if (i < padded.length - 1) {
+      const nextY = rowY(padded[i + 1].status);
+      tracePts.push([xFor(e.end), nextY]);
+    }
+  });
+  const traceStr = tracePts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+
   return (
-    <div className="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-2" data-testid="scn-timeline">
-      <div className="flex h-7 rounded-md overflow-hidden">
-        {entries.map((e, i) => {
-          const meta = STATUS_META[e.status] || STATUS_META.OFF;
-          const dur = hmToMin(e.end) - hmToMin(e.start);
-          const pct = (dur / total) * 100;
+    <div className="overflow-x-auto -mx-1 rounded-lg border border-[#CBD5E1] bg-white" data-testid="eld-grid">
+      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="block">
+        {/* Hour labels */}
+        {Array.from({ length: HOURS + 1 }).map((_, h) => {
+          const x = LABEL_W + h * HOUR_W;
+          const label = h === 0 ? "Midnight" : h === 12 ? "Noon" : h === 24 ? "" : (h > 12 ? h - 12 : h);
           return (
-            <div key={i} style={{ width: `${pct}%`, backgroundColor: meta.color }} className="flex items-center justify-center text-[9px] font-bold text-white tracking-wider" title={`${meta.label} ${e.start}–${e.end}`}>
-              {pct > 10 ? meta.short : ""}
-            </div>
+            <text key={h} x={x} y={13} textAnchor="middle" fontSize="9" fill="#475569" fontFamily="sans-serif">
+              {label}
+            </text>
           );
         })}
-      </div>
-      <div className="flex justify-between mt-1 text-[9px] text-[#94A3B8] font-mono">
-        <span>{entries[0].start}</span>
-        <span>Total: {fmtDur(total)}</span>
-        <span>{entries[entries.length - 1].end}</span>
-      </div>
+
+        {/* Row backgrounds + labels + totals column */}
+        {ROWS.map((r, i) => {
+          const y = HEADER_H + i * ROW_H;
+          const min = totals[r.key];
+          const h = Math.floor(min / 60);
+          const m = min % 60;
+          return (
+            <g key={r.key}>
+              <rect x={LABEL_W} y={y} width={gridW} height={ROW_H} fill={r.bg} />
+              <text x={LABEL_W - 6} y={y + ROW_H / 2 + 3.5} textAnchor="end" fontSize="10" fontWeight="700" fill="#1E293B">
+                {r.label}
+              </text>
+              <rect x={LABEL_W + gridW + 2} y={y + 4} width={TOTAL_W - 6} height={ROW_H - 8} fill="#FFFFFF" stroke="#CBD5E1" />
+              <text x={LABEL_W + gridW + TOTAL_W / 2} y={y + ROW_H / 2 + 3.5} textAnchor="middle" fontSize="10" fontWeight="700" fill="#1E293B" fontFamily="monospace">
+                {h.toString().padStart(2, "0")}:{m.toString().padStart(2, "0")}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Hour gridlines (full height through rows) */}
+        {Array.from({ length: HOURS + 1 }).map((_, h) => {
+          const x = LABEL_W + h * HOUR_W;
+          return (
+            <line key={`g${h}`} x1={x} y1={HEADER_H} x2={x} y2={HEADER_H + 4 * ROW_H} stroke="#1E293B" strokeWidth={h % 6 === 0 ? 0.8 : 0.35} opacity="0.55" />
+          );
+        })}
+
+        {/* Quarter-hour tick marks inside each row (short vertical lines at top of each row) */}
+        {Array.from({ length: HOURS }).map((_, h) => {
+          const baseX = LABEL_W + h * HOUR_W;
+          return ROWS.map((r, ri) => {
+            const topY = HEADER_H + ri * ROW_H;
+            return [1, 2, 3].map((q) => {
+              const x = baseX + (HOUR_W / 4) * q;
+              // Longer tick at :30, shorter at :15 / :45
+              const len = q === 2 ? 6 : 3;
+              return (
+                <line key={`t${h}-${ri}-${q}`} x1={x} y1={topY} x2={x} y2={topY + len} stroke="#1E293B" strokeWidth={0.5} opacity="0.6" />
+              );
+            });
+          });
+        })}
+
+        {/* The worm — stepped duty-status trace */}
+        {tracePts.length > 0 && (
+          <polyline points={traceStr} fill="none" stroke="#002855" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" />
+        )}
+      </svg>
     </div>
   );
 }
@@ -287,6 +390,11 @@ function SplitTrainerTab() {
 
         <PeriodEditor label="Period A" hrs={aHrs} setHrs={setAHrs} type={aType} setType={setAType} testid="split-a" />
         <PeriodEditor label="Period B" hrs={bHrs} setHrs={setBHrs} type={bType} setType={setBType} testid="split-b" />
+
+        {/* Visual preview — shows how the two periods + driving blocks lay out
+            on a real ELD day. Makes the "shorter period doesn't count against
+            the 14-hr window" easier to see. */}
+        <SplitPreview aHrs={aHrs} aType={aType} bHrs={bHrs} bType={bType} />
 
         <div className={`rounded-lg p-3 border ${result.legal ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#DC2626] bg-[#FEE2E2]"}`} data-testid="split-result">
           <div className="flex items-center gap-2 mb-1">
@@ -363,6 +471,34 @@ function PeriodEditor({ label, hrs, setHrs, type, setType, testid }) {
         />
         <span className="w-16 text-right text-sm font-bold text-[#002855] font-mono">{hrs.toFixed(1)} h</span>
       </div>
+    </div>
+  );
+}
+
+/* Render a 24-hr ELD grid illustrating the split-sleeper pairing:
+ *   Period A → 5h driving → Period B → 5h driving → OFF to end of day.
+ * Hours past midnight wrap forward; we clamp at 24:00 so the grid stays on
+ * one day even when total hrs exceed 24. */
+function SplitPreview({ aHrs, aType, bHrs, bType }) {
+  const entries = [];
+  let t = 0; // minutes from midnight
+  const push = (status, dur) => {
+    if (dur <= 0 || t >= 24 * 60) return;
+    const end = Math.min(t + dur, 24 * 60);
+    entries.push({ status, start: minToHm(t), end: minToHm(end) });
+    t = end;
+  };
+  push(aType, Math.round(aHrs * 60));
+  push("D", 5 * 60);
+  push(bType, Math.round(bHrs * 60));
+  push("D", 5 * 60);
+  // Remaining hours fill naturally via EldGrid's OFF padding.
+  return (
+    <div className="space-y-1 pt-1">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
+        Day preview · Period A → 5h drive → Period B → 5h drive
+      </p>
+      <EldGrid entries={entries} />
     </div>
   );
 }

@@ -28,7 +28,7 @@ export const STATUS_META = {
   OFF: { label: "Off duty",    color: "#10B981", short: "OFF" },
 };
 
-/** Parse "HH:MM" to minutes from midnight. */
+/** Parse "HH:MM" to minutes from midnight. Accepts "24:00". */
 export function hmToMin(hm) {
   const [h, m] = hm.split(":").map(Number);
   return h * 60 + m;
