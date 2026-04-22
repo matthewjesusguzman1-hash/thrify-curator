@@ -1,4 +1,5 @@
 import { CheckCircle2, XCircle } from "lucide-react";
+import { DevicePhoto } from "./DevicePhoto";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -175,7 +176,7 @@ export function TieDownReportContent({ articles }) {
             {a.photos?.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
                 {a.photos.map((ph) => (
-                  <img key={ph.photo_id} src={`${API}/files/${ph.storage_path}`} alt="" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4, border: "1px solid #ddd" }} crossOrigin="anonymous" />
+                  <DevicePhoto key={ph.photo_id} photoId={ph.photo_id} alt="" className="" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4, border: "1px solid #ddd", display: "inline-block" }} />
                 ))}
               </div>
             )}
@@ -223,7 +224,7 @@ export function InspectionReportContent({ inspection }) {
               {item.photos?.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
                   {item.photos.map((ph) => (
-                    <img key={ph.photo_id} src={`${API}/files/${ph.storage_path}`} alt="" style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 4, border: "1px solid #ddd" }} crossOrigin="anonymous" />
+                    <DevicePhoto key={ph.photo_id} photoId={ph.photo_id} alt="" className="" style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 4, border: "1px solid #ddd", display: "inline-block" }} />
                   ))}
                 </div>
               )}
@@ -312,7 +313,7 @@ export function InspectionReportContent({ inspection }) {
                 {a.photos?.length > 0 && (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
                     {a.photos.map((ph) => (
-                      <img key={ph.photo_id} src={`${API}/files/${ph.storage_path}`} alt="" style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 4, border: "1px solid #ddd" }} crossOrigin="anonymous" />
+                      <DevicePhoto key={ph.photo_id} photoId={ph.photo_id} alt="" className="" style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 4, border: "1px solid #ddd", display: "inline-block" }} />
                     ))}
                   </div>
                 )}
@@ -608,7 +609,7 @@ export function InspectionReportContent({ inspection }) {
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {inspection.general_photos.map((ph) => (
-              <img key={ph.photo_id} src={`${API}/files/${ph.storage_path}`} alt="" style={{ width: 260, maxWidth: "100%", borderRadius: 4, border: "1px solid #ddd" }} crossOrigin="anonymous" />
+              <DevicePhoto key={ph.photo_id} photoId={ph.photo_id} alt="" className="" style={{ width: 260, maxWidth: "100%", borderRadius: 4, border: "1px solid #ddd", display: "block" }} />
             ))}
           </div>
         </div>

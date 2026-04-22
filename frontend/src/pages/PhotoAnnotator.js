@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Camera, Upload, Pencil, Circle, ArrowUp, Typ
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
+import { savePhoto as savePhotoToDevice } from "../lib/devicePhotos";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const COLORS = ["#FF0000", "#FFFF00", "#00FF00", "#0088FF", "#FF00FF", "#FFFFFF", "#000000"];
@@ -439,14 +440,25 @@ export default function PhotoAnnotator() {
     setSaving(true);
     try {
       const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-      const formData = new FormData();
-      formData.append("file", blob, `annotated-${new Date().toISOString().slice(0, 10)}.png`);
+      // Store the image bytes on-device only (IndexedDB).
+      const deviceMeta = await savePhotoToDevice(blob, {
+        inspectionId: targetInspectionId,
+        category: "annotated",
+        originalFilename: `annotated-${new Date().toISOString().slice(0, 10)}.png`,
+      });
+      // Then register metadata with the server so the inspection knows about it.
       const res = await fetch(`${API}/api/inspections/${targetInspectionId}/annotated-photos`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          photo_id: deviceMeta.photo_id,
+          original_filename: deviceMeta.original_filename,
+          mime: deviceMeta.mime,
+          size: deviceMeta.size,
+        }),
       });
       if (res.ok) {
-        toast.success("Photo added to inspection");
+        toast.success("Photo added to inspection (stored on this device only)");
         setShowInspPicker(false);
       } else toast.error("Failed to add photo");
     } catch { toast.error("Failed to add photo"); }

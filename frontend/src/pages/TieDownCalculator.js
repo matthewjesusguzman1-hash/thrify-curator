@@ -16,6 +16,8 @@ import { PDFPreview } from "../components/app/PDFPreview";
 import { TieDownReportContent } from "../components/app/ReportContent";
 import { useAuth } from "../components/app/AuthContext";
 import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
+import { savePhoto as savePhotoToDevice, getPhotoBlob } from "../lib/devicePhotos";
+import { DevicePhoto } from "../components/app/DevicePhoto";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -335,19 +337,20 @@ export default function TieDownCalculator() {
   const handlePhotoUpload = async (artId, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
     try {
-      const res = await axios.post(`${API}/tiedown-photos`, formData);
+      // Pre-assessment photos: saved only on this device. They'll inherit the
+      // inspection_id when the user later saves the tie-down assessment.
+      const meta = await savePhotoToDevice(file, { category: "tiedown-pre", originalFilename: file.name });
       const art = articles.find((a) => a.id === artId);
-      updateArticle(artId, { photos: [...art.photos, res.data] });
-      toast.success("Photo added");
-    } catch { toast.error("Photo upload failed"); }
+      updateArticle(artId, { photos: [...art.photos, meta] });
+      toast.success("Photo saved on this device");
+    } catch { toast.error("Photo save failed"); }
     finally { e.target.value = ""; }
   };
-  const removePhoto = (artId, photoId) => {
+  const removePhoto = async (artId, photoId) => {
     const art = articles.find((a) => a.id === artId);
     updateArticle(artId, { photos: art.photos.filter((p) => p.photo_id !== photoId) });
+    try { const { deletePhoto: dp } = await import("../lib/devicePhotos"); await dp(photoId); } catch {}
   };
 
   const resetAll = () => setArticles([newArticle(1)]);
@@ -638,7 +641,7 @@ export default function TieDownCalculator() {
                       <div className="flex flex-wrap gap-2">
                         {art.photos.map((ph) => (
                           <div key={ph.photo_id} className="relative group">
-                            <img src={`${API}/files/${ph.storage_path}`} alt={ph.original_filename} className="w-20 h-20 object-cover rounded-lg border cursor-pointer" onClick={() => setPreviewPhoto(`${API}/files/${ph.storage_path}`)} />
+                            <DevicePhoto photoId={ph.photo_id} alt={ph.original_filename} className="w-20 h-20 object-cover rounded-lg border cursor-pointer" onClick={() => setPreviewPhoto(ph.photo_id)} />
                             <button onClick={() => removePhoto(art.id, ph.photo_id)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#DC2626] text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity shadow-sm"><XCircle className="w-3 h-3" /></button>
                           </div>
                         ))}
@@ -758,11 +761,11 @@ export default function TieDownCalculator() {
         </DialogContent>
       </Dialog>
 
-      {/* PHOTO PREVIEW */}
+      {/* PHOTO PREVIEW (on-device) */}
       {previewPhoto && (
         <Dialog open={!!previewPhoto} onOpenChange={() => setPreviewPhoto(null)}>
           <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
-            <img src={previewPhoto} alt="Photo" className="w-full h-auto max-h-[80vh] object-contain rounded" />
+            <DevicePhoto photoId={previewPhoto} alt="Photo" className="w-full h-auto max-h-[80vh] object-contain rounded" />
             <Button onClick={() => setPreviewPhoto(null)} className="w-full mt-2 bg-[#002855] text-white">Close</Button>
           </DialogContent>
         </Dialog>

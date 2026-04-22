@@ -1382,73 +1382,6 @@ export function SubstanceLookup({ onNavigate }) {
     search(v);
   };
 
-  const handleCameraCapture = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setOcrLoading(true);
-    setOcrResults(null);
-    try {
-      // Resize image to max 1024px to keep payload small
-      const base64 = await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 1024;
-          let w = img.width, h = img.height;
-          if (w > maxDim || h > maxDim) {
-            const scale = maxDim / Math.max(w, h);
-            w = Math.round(w * scale);
-            h = Math.round(h * scale);
-          }
-          const canvas = document.createElement("canvas");
-          canvas.width = w;
-          canvas.height = h;
-          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-          resolve(dataUrl.split(",")[1]);
-        };
-        img.onerror = () => reject(new Error("Failed to load image"));
-        img.src = URL.createObjectURL(file);
-      });
-
-      // Send to OCR endpoint with timeout
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25000);
-      const res = await fetch(`${API}/api/hazmat-substances/ocr`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image_base64: base64 }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.substances && data.substances.length > 0) {
-          const allResults = [];
-          for (const name of data.substances.slice(0, 5)) {
-            try {
-              const sr = await fetch(`${API}/api/hazmat-substances/search?q=${encodeURIComponent(name)}`);
-              if (sr.ok) {
-                const matches = await sr.json();
-                allResults.push({ searchedName: name, matches });
-              }
-            } catch { /* skip individual search errors */ }
-          }
-          setOcrResults(allResults);
-        } else {
-          setOcrResults([]);
-        }
-      } else {
-        setOcrResults([]);
-      }
-    } catch (err) {
-      console.error("OCR error:", err);
-      setOcrResults([]);
-    }
-    setOcrLoading(false);
-    if (cameraRef.current) cameraRef.current.value = "";
-  };
-
   return (
     <div className="bg-white rounded-xl border overflow-hidden" data-testid="substance-lookup">
       <button
@@ -1480,86 +1413,12 @@ export function SubstanceLookup({ onNavigate }) {
               value={query}
               onChange={handleChange}
               placeholder="Search by substance name (e.g., chlorine, benzene, aldrin)..."
-              className="w-full pl-9 pr-12 py-2.5 rounded-lg border border-[#E2E8F0] text-[12px] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#002855] focus:ring-1 focus:ring-[#002855] outline-none"
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-[#E2E8F0] text-[12px] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#002855] focus:ring-1 focus:ring-[#002855] outline-none"
               data-testid="substance-search-input"
             />
-            {loading && <div className="absolute right-10 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-[#002855] border-t-transparent rounded-full animate-spin" />}
-            {/* Camera button */}
-            <button
-              onClick={() => cameraRef.current?.click()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-[#F1F5F9] text-[#64748B] hover:text-[#002855] transition-colors"
-              title="Scan shipping paper with camera"
-              data-testid="substance-camera-btn"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-            </button>
-            <input ref={cameraRef} type="file" accept="image/*" className="hidden" onChange={handleCameraCapture} data-testid="substance-camera-input" />
+            {loading && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-[#002855] border-t-transparent rounded-full animate-spin" />}
           </div>
-          <p className="text-[10px] text-[#64748B] italic">Search by substance name or tap the camera icon to scan a shipping paper.</p>
-
-          {/* OCR Loading */}
-          {ocrLoading && (
-            <div className="flex items-center gap-2 py-3 px-3 rounded-lg bg-[#EFF6FF] border border-[#BFDBFE]">
-              <div className="w-4 h-4 border-2 border-[#002855] border-t-transparent rounded-full animate-spin flex-shrink-0" />
-              <span className="text-[11px] text-[#1E40AF]">Reading image... this may take a few seconds</span>
-              <button onClick={() => { setOcrLoading(false); setOcrResults(null); }} className="ml-auto text-[10px] text-[#64748B] hover:text-[#002855]">Cancel</button>
-            </div>
-          )}
-
-          {/* OCR Results */}
-          {ocrResults !== null && !ocrLoading && (
-            <div className="space-y-2">
-              {ocrResults.length === 0 ? (
-                <div className="text-center py-3 px-3 rounded-lg bg-[#FEF2F2] border border-red-200 text-[11px] text-red-600">
-                  No substance names detected in the photo. Try again with a clearer image of the shipping paper.
-                </div>
-              ) : (
-                <>
-                  <div className="rounded-lg bg-[#F0FDF4] border border-green-200 px-3 py-2">
-                    <p className="text-[10px] font-bold text-green-700">Found {ocrResults.reduce((a, r) => a + (r.matches?.length || 0), 0)} matches from {ocrResults.length} substance(s) detected:</p>
-                  </div>
-                  {ocrResults.map((ocrItem, oi) => (
-                    <div key={oi}>
-                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider px-1 mb-1">Detected: "{ocrItem.searchedName}"</p>
-                      {ocrItem.matches && ocrItem.matches.length > 0 ? (
-                        ocrItem.matches.slice(0, 3).map((r, i) => (
-                          <div key={i} className="rounded-lg border bg-[#FAFBFC] p-3 mb-1.5" data-testid={`ocr-result-${oi}-${i}`}>
-                            <p className="text-[12px] font-bold text-[#0F172A] mb-1.5">{r.name}</p>
-                            <div className="flex flex-wrap gap-2">
-                              {r.is_hazardous_substance ? (
-                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#002855] text-white">
-                                  <span className="text-[10px] font-bold">RQ: {r.rq_lbs?.toLocaleString()} lbs</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#F1F5F9] text-[#94A3B8]">
-                                  <span className="text-[10px]">Not a Hazardous Substance</span>
-                                </div>
-                              )}
-                              {r.is_marine_pollutant ? (
-                                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${r.is_severe_marine_pollutant ? "bg-red-500 text-white" : "bg-yellow-400 text-yellow-900"}`}>
-                                  <span className="text-[10px] font-bold">{r.is_severe_marine_pollutant ? "Severe Marine Pollutant (PP)" : "Marine Pollutant"}</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#F1F5F9] text-[#94A3B8]">
-                                  <span className="text-[10px]">Not a Marine Pollutant</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-[10px] text-[#94A3B8] italic px-1">No matches in Appendix A/B database</p>
-                      )}
-                    </div>
-                  ))}
-                  <button onClick={() => setOcrResults(null)} className="text-[10px] text-[#94A3B8] hover:text-[#002855] transition-colors">Clear scan results</button>
-                </>
-              )}
-            </div>
-          )}
+          <p className="text-[10px] text-[#64748B] italic">Search by substance name in Appendix A (RQ) and Appendix B (Marine Pollutant) lists.</p>
 
           {/* Results */}
           {results && results.length === 0 && query.length >= 2 && (

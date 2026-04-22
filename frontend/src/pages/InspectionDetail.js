@@ -14,6 +14,8 @@ import {
 import { PDFPreview } from "../components/app/PDFPreview";
 import { InspectionReportContent } from "../components/app/ReportContent";
 import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
+import { savePhoto as savePhotoToDevice, deletePhoto as deletePhotoFromDevice, getPhotoBlob } from "../lib/devicePhotos";
+import { DevicePhoto } from "../components/app/DevicePhoto";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -70,7 +72,8 @@ export default function InspectionDetail() {
   const [notesDraft, setNotesDraft] = useState("");
   const [editingItemNotes, setEditingItemNotes] = useState(null);
   const [itemNotesDraft, setItemNotesDraft] = useState("");
-  const [previewPhoto, setPreviewPhoto] = useState(null);
+  const [previewPhoto, setPreviewPhoto] = useState(null); // photo_id
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [sharing, setSharing] = useState(false);
   // Hidden content ref used to render the full report invisibly for PDF generation
@@ -88,6 +91,24 @@ export default function InspectionDetail() {
   }, [id]);
 
   useEffect(() => { fetchInspection(); }, [fetchInspection]);
+
+  // Resolve preview URL from device IndexedDB whenever a photo id is selected.
+  useEffect(() => {
+    let url = null;
+    let cancelled = false;
+    (async () => {
+      if (!previewPhoto) { setPreviewPhotoUrl(null); return; }
+      const blob = await getPhotoBlob(previewPhoto);
+      if (cancelled) return;
+      if (blob) {
+        url = URL.createObjectURL(blob);
+        setPreviewPhotoUrl(url);
+      } else {
+        setPreviewPhotoUrl(null);
+      }
+    })();
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [previewPhoto]);
 
   const saveTitle = async () => {
     await axios.put(`${API}/inspections/${id}`, { title: titleDraft });
@@ -116,19 +137,21 @@ export default function InspectionDetail() {
   const handlePhotoUpload = async (itemId, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
     try {
-      await axios.post(`${API}/inspections/${id}/violations/${itemId}/photos`, formData);
+      const meta = await savePhotoToDevice(file, { inspectionId: id, category: "item", itemId, originalFilename: file.name });
+      await axios.post(`${API}/inspections/${id}/violations/${itemId}/photos`, {
+        photo_id: meta.photo_id, original_filename: meta.original_filename, mime: meta.mime, size: meta.size,
+      });
       fetchInspection();
-      toast.success("Photo added");
+      toast.success("Photo saved on this device");
     } catch {
-      toast.error("Photo upload failed");
+      toast.error("Photo save failed");
     }
   };
 
   const removePhoto = async (itemId, photoId) => {
     await axios.delete(`${API}/inspections/${id}/violations/${itemId}/photos/${photoId}`);
+    await deletePhotoFromDevice(photoId);
     fetchInspection();
   };
 
@@ -153,6 +176,7 @@ export default function InspectionDetail() {
   const removeGeneralPhoto = async (photoId) => {
     try {
       await axios.delete(`${API}/inspections/${id}/annotated-photos/${photoId}`);
+      await deletePhotoFromDevice(photoId);
       fetchInspection();
       toast.success("Photo removed");
     } catch {
@@ -163,19 +187,21 @@ export default function InspectionDetail() {
   const handleAssessmentPhotoUpload = async (assessmentId, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
     try {
-      await axios.post(`${API}/inspections/${id}/tiedown/${assessmentId}/photos`, formData);
+      const meta = await savePhotoToDevice(file, { inspectionId: id, category: "tiedown", assessmentId, originalFilename: file.name });
+      await axios.post(`${API}/inspections/${id}/tiedown/${assessmentId}/photos`, {
+        photo_id: meta.photo_id, original_filename: meta.original_filename, mime: meta.mime, size: meta.size,
+      });
       fetchInspection();
-      toast.success("Photo added to assessment");
+      toast.success("Photo saved on this device");
     } catch {
-      toast.error("Photo upload failed");
+      toast.error("Photo save failed");
     }
   };
 
   const removeAssessmentPhoto = async (assessmentId, photoId) => {
     await axios.delete(`${API}/inspections/${id}/tiedown/${assessmentId}/photos/${photoId}`);
+    await deletePhotoFromDevice(photoId);
     fetchInspection();
   };
 
@@ -327,18 +353,18 @@ export default function InspectionDetail() {
                   <div className="flex flex-wrap gap-2 mb-2">
                     {item.photos?.map((photo) => (
                       <div key={photo.photo_id} className="relative group">
-                        <img
-                          src={`${API}/files/${photo.storage_path}`}
+                        <DevicePhoto
+                          photoId={photo.photo_id}
                           alt={photo.original_filename}
                           className="w-16 h-16 object-cover rounded-md border cursor-pointer"
-                          onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
+                          onClick={() => setPreviewPhoto(photo.photo_id)}
                         />
                         {photo.annotations?.length > 0 && (
                           <div className="absolute top-0 left-0 w-3 h-3 bg-[#D4AF37] rounded-full border border-white" title="Has annotations" />
                         )}
                         <div className="absolute -top-1 -right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 sm:opacity-100">
                           <button
-                            onClick={() => navigate(`/photo-annotator?inspection=${inspection.id}&photo=${photo.photo_id}&path=${encodeURIComponent(photo.storage_path)}`)}
+                            onClick={() => navigate(`/photo-annotator?inspection=${inspection.id}&photo=${photo.photo_id}`)}
                             className="w-4 h-4 bg-[#002855] text-white rounded-full flex items-center justify-center text-[8px]"
                             title="Edit annotations"
                             data-testid={`edit-photo-${photo.photo_id}`}
@@ -451,11 +477,11 @@ export default function InspectionDetail() {
                     <div className="flex flex-wrap gap-2 mt-2">
                       {a.photos?.map((photo) => (
                         <div key={photo.photo_id} className="relative group">
-                          <img
-                            src={`${API}/files/${photo.storage_path}`}
+                          <DevicePhoto
+                            photoId={photo.photo_id}
                             alt={photo.original_filename}
                             className="w-16 h-16 object-cover rounded-md border cursor-pointer"
-                            onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
+                            onClick={() => setPreviewPhoto(photo.photo_id)}
                           />
                           <button
                             onClick={() => removeAssessmentPhoto(a.assessment_id, photo.photo_id)}
@@ -842,11 +868,12 @@ export default function InspectionDetail() {
               <div className="space-y-3">
                 {inspection.general_photos.map((photo) => (
                   <div key={photo.photo_id} className="relative group" data-testid={`weight-photo-${photo.photo_id}`}>
-                    <img
-                      src={`${API}/files/${photo.storage_path}`}
+                    <DevicePhoto
+                      photoId={photo.photo_id}
                       alt={photo.original_filename || "Inspection photo"}
                       className="w-full rounded-md border cursor-pointer bg-white"
-                      onClick={() => setPreviewPhoto(`${API}/files/${photo.storage_path}`)}
+                      style={{ minHeight: 120 }}
+                      onClick={() => setPreviewPhoto(photo.photo_id)}
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); removeGeneralPhoto(photo.photo_id); }}
@@ -885,7 +912,15 @@ export default function InspectionDetail() {
       {previewPhoto && (
         <Dialog open={!!previewPhoto} onOpenChange={() => setPreviewPhoto(null)}>
           <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
-            <img src={previewPhoto} alt="Photo" className="w-full h-auto max-h-[80vh] object-contain rounded" />
+            {previewPhotoUrl ? (
+              <img src={previewPhotoUrl} alt="Photo" className="w-full h-auto max-h-[80vh] object-contain rounded" />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-[#64748B]">
+                <XCircle className="w-10 h-10 text-[#CBD5E1] mb-2" />
+                <p className="text-sm font-semibold text-[#334155]">Photo not on this device</p>
+                <p className="text-xs mt-1">Photos are stored only on the device they were captured on.</p>
+              </div>
+            )}
             <Button onClick={() => setPreviewPhoto(null)} className="w-full mt-2 bg-[#002855] text-white">Close</Button>
           </DialogContent>
         </Dialog>

@@ -8,6 +8,7 @@ import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "../components/app/AuthContext";
 import { getDefaultInterstate, savePrefs } from "../components/app/userPrefs";
+import { savePhoto as savePhotoToDevice } from "../lib/devicePhotos";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -921,12 +922,26 @@ export default function BridgeChartPage() {
         truckSvg = clone.outerHTML;
       }
     } catch {}
-    // Upload any inspector-taken photos (via camera icon) as general_photos
+    // Save inspector-taken camera photos to the device and register metadata.
     for (const p of photos) {
       if (p.file) {
-        const fd = new FormData();
-        fd.append("file", p.file, p.file.name);
-        await fetch(`${API}/api/inspections/${id}/annotated-photos`, { method: "POST", body: fd });
+        try {
+          const deviceMeta = await savePhotoToDevice(p.file, {
+            inspectionId: id,
+            category: "bridge_chart",
+            originalFilename: p.file.name,
+          });
+          await fetch(`${API}/api/inspections/${id}/annotated-photos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              photo_id: deviceMeta.photo_id,
+              original_filename: deviceMeta.original_filename,
+              mime: deviceMeta.mime,
+              size: deviceMeta.size,
+            }),
+          });
+        } catch { /* non-fatal */ }
       }
     }
     // POST structured snapshot (data only — no report PNG)

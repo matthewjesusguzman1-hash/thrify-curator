@@ -1294,36 +1294,31 @@ async def update_item_notes(inspection_id: str, item_id: str, req: UpdateItemNot
     return {"message": "Notes updated"}
 
 
+class DevicePhotoMeta(BaseModel):
+    photo_id: str
+    original_filename: str = ""
+    mime: str = "image/jpeg"
+    size: int = 0
+
+
 @api_router.post("/inspections/{inspection_id}/violations/{item_id}/photos")
-async def upload_photo(inspection_id: str, item_id: str, file: UploadFile = File(...)):
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image files allowed")
-
-    data = await file.read()
-    if len(data) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
-
-    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-    storage_path = f"{APP_NAME}/inspections/{inspection_id}/{item_id}/{uuid.uuid4()}.{ext}"
-
-    try:
-        result = put_object(storage_path, data, file.content_type)
-    except Exception as e:
-        logger.error(f"Photo upload failed: {e}")
-        raise HTTPException(status_code=500, detail="Photo upload failed")
-
+async def attach_item_photo_meta(inspection_id: str, item_id: str, meta: DevicePhotoMeta):
+    """Attach photo metadata to a violation item. The binary is stored on the
+    inspector's device only (IndexedDB) — the server never receives image bytes."""
     photo = {
-        "photo_id": str(uuid.uuid4()),
-        "storage_path": result["path"],
-        "original_filename": file.filename,
-        "content_type": file.content_type,
+        "photo_id": meta.photo_id,
+        "original_filename": meta.original_filename,
+        "content_type": meta.mime,
+        "size": meta.size,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "device_only": True,
     }
-
-    await db.inspections.update_one(
+    result = await db.inspections.update_one(
         {"id": inspection_id, "items.item_id": item_id},
         {"$push": {"items.$.photos": photo}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
     )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
     return photo
 
 
@@ -1337,36 +1332,23 @@ async def delete_photo(inspection_id: str, item_id: str, photo_id: str):
 
 
 @api_router.post("/inspections/{inspection_id}/annotated-photos")
-async def upload_annotated_photo(inspection_id: str, file: UploadFile = File(...)):
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image files allowed")
-
-    data = await file.read()
-    if len(data) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
-
-    ext = file.filename.split(".")[-1] if "." in file.filename else "png"
-    storage_path = f"{APP_NAME}/inspections/{inspection_id}/annotated/{uuid.uuid4()}.{ext}"
-
-    try:
-        result = put_object(storage_path, data, file.content_type)
-    except Exception as e:
-        logger.error(f"Annotated photo upload failed: {e}")
-        raise HTTPException(status_code=500, detail="Photo upload failed")
-
+async def attach_general_photo_meta(inspection_id: str, meta: DevicePhotoMeta):
+    """Attach general/annotated photo metadata. Photo binary lives on-device only."""
     photo = {
-        "photo_id": str(uuid.uuid4()),
-        "storage_path": result["path"],
-        "original_filename": file.filename,
-        "content_type": file.content_type,
+        "photo_id": meta.photo_id,
+        "original_filename": meta.original_filename,
+        "content_type": meta.mime,
+        "size": meta.size,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "annotations": [],
+        "device_only": True,
     }
-
-    await db.inspections.update_one(
+    result = await db.inspections.update_one(
         {"id": inspection_id},
         {"$push": {"general_photos": photo}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
     )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Inspection not found")
     return photo
 
 
@@ -1596,52 +1578,16 @@ async def delete_weight_from_inspection(inspection_id: str, assessment_id: str):
     return {"message": "Weight assessment removed"}
 
 
-@api_router.post("/tiedown-photos")
-async def upload_tiedown_photo(file: UploadFile = File(...)):
-    """Upload a photo from the calculator (standalone, before saving to inspection)."""
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image files allowed")
-    data = await file.read()
-    if len(data) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
-    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-    storage_path = f"{APP_NAME}/tiedown-photos/{uuid.uuid4()}.{ext}"
-    try:
-        result = put_object(storage_path, data, file.content_type)
-    except Exception as e:
-        logger.error(f"Tiedown photo upload failed: {e}")
-        raise HTTPException(status_code=500, detail="Photo upload failed")
-    photo = {
-        "photo_id": str(uuid.uuid4()),
-        "storage_path": result["path"],
-        "original_filename": file.filename,
-        "content_type": file.content_type,
-        "uploaded_at": datetime.now(timezone.utc).isoformat(),
-    }
-    return photo
-
-
 @api_router.post("/inspections/{inspection_id}/tiedown/{assessment_id}/photos")
-async def upload_assessment_photo(inspection_id: str, assessment_id: str, file: UploadFile = File(...)):
-    """Add a photo to a tie-down assessment attached to an inspection."""
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image files allowed")
-    data = await file.read()
-    if len(data) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
-    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-    storage_path = f"{APP_NAME}/tiedown-photos/{inspection_id}/{assessment_id}/{uuid.uuid4()}.{ext}"
-    try:
-        result = put_object(storage_path, data, file.content_type)
-    except Exception as e:
-        logger.error(f"Assessment photo upload failed: {e}")
-        raise HTTPException(status_code=500, detail="Photo upload failed")
+async def attach_assessment_photo_meta(inspection_id: str, assessment_id: str, meta: DevicePhotoMeta):
+    """Attach a photo to a tie-down assessment. Binary is device-only."""
     photo = {
-        "photo_id": str(uuid.uuid4()),
-        "storage_path": result["path"],
-        "original_filename": file.filename,
-        "content_type": file.content_type,
+        "photo_id": meta.photo_id,
+        "original_filename": meta.original_filename,
+        "content_type": meta.mime,
+        "size": meta.size,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "device_only": True,
     }
     doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
     if not doc:
@@ -1854,39 +1800,96 @@ async def search_hazmat_substances(q: str = Query("", min_length=1)):
 class OCRRequest(BaseModel):
     image_base64: str
 
+
 @api_router.post("/hazmat-substances/ocr")
-async def ocr_shipping_paper(req: OCRRequest):
-    """Use AI vision to extract substance names from a photo of a shipping paper."""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
-    api_key = os.environ.get("EMERGENT_LLM_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="LLM key not configured")
-    try:
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"ocr-{uuid.uuid4()}",
-            system_message="You extract hazardous material substance names from photos of shipping papers. Return ONLY a JSON array of substance name strings found in the image. Look for proper shipping names, chemical names, UN numbers, and any substance identifiers. If you cannot read any substance names, return an empty array []. Do not include any explanation, just the JSON array."
-        ).with_model("openai", "gpt-4.1-mini")
-        
-        image_content = ImageContent(image_base64=req.image_base64)
-        user_message = UserMessage(
-            text="Extract all hazardous material substance names from this shipping paper photo. Return only a JSON array of substance name strings.",
-            file_contents=[image_content]
-        )
-        response = await chat.send_message(user_message)
-        # Parse the response as JSON array
-        import json as _json
-        cleaned = response.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
-            cleaned = cleaned.rsplit("```", 1)[0]
-        names = _json.loads(cleaned)
-        if not isinstance(names, list):
-            names = []
-        return {"substances": names}
-    except Exception as e:
-        logger.error(f"OCR error: {e}")
-        return {"substances": [], "error": str(e)}
+async def ocr_shipping_paper_removed(req: OCRRequest):
+    """Removed for security policy — photos never leave the inspector's device."""
+    raise HTTPException(status_code=410, detail="Shipping paper OCR has been removed. Photos are not uploaded to the server.")
+
+
+@api_router.post("/admin/wipe-photos")
+async def wipe_photos(badge: str):
+    """One-time wipe of every photo binary + path ever stored on the server.
+    Removes files from disk and clears all legacy storage_path/annotations so
+    the app operates in device-only mode going forward. Admin-only."""
+    if badge != "121":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    wiped_files = 0
+    wiped_paths_errors = 0
+
+    # 1) Collect every storage_path referenced anywhere in any inspection.
+    paths = set()
+    async for doc in db.inspections.find({}, {"_id": 0}):
+        def _collect(photos):
+            for p in photos or []:
+                sp = p.get("storage_path")
+                if sp:
+                    paths.add(sp)
+        _collect(doc.get("general_photos"))
+        for item in doc.get("items", []) or []:
+            _collect(item.get("photos"))
+        for a in doc.get("tiedown_assessments", []) or []:
+            _collect(a.get("photos"))
+
+    # 2) Delete each file from disk (uses the same backend as put_object / get_object).
+    for sp in paths:
+        try:
+            # Try the configured storage backend's delete if available.
+            try:
+                from pathlib import Path as _Path
+                # Files are stored under a local uploads dir when s3/minio isn't configured.
+                uploads_root = os.environ.get("LOCAL_UPLOADS_DIR", "/app/backend/uploads")
+                fp = _Path(uploads_root) / sp
+                if fp.exists():
+                    fp.unlink()
+                    wiped_files += 1
+            except Exception:
+                wiped_paths_errors += 1
+        except Exception:
+            wiped_paths_errors += 1
+
+    # 3) Clear all photo arrays so the UI won't try to fetch from /files anymore.
+    res = await db.inspections.update_many(
+        {},
+        {"$set": {
+            "general_photos": [],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+
+    # Clear per-item and per-assessment photo arrays.
+    docs_cleared = 0
+    async for doc in db.inspections.find({}, {"_id": 0, "id": 1, "items": 1, "tiedown_assessments": 1}):
+        changed = False
+        items = doc.get("items", []) or []
+        for it in items:
+            if it.get("photos"):
+                it["photos"] = []
+                changed = True
+        tdas = doc.get("tiedown_assessments", []) or []
+        for a in tdas:
+            if a.get("photos"):
+                a["photos"] = []
+                changed = True
+        if changed:
+            await db.inspections.update_one(
+                {"id": doc["id"]},
+                {"$set": {
+                    "items": items,
+                    "tiedown_assessments": tdas,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }}
+            )
+            docs_cleared += 1
+
+    return {
+        "message": "All server-side photos wiped. App is now device-only for photos.",
+        "files_deleted": wiped_files,
+        "file_errors": wiped_paths_errors,
+        "inspections_cleared": docs_cleared,
+        "inspections_touched": res.modified_count,
+    }
 
 
 app.include_router(api_router)
