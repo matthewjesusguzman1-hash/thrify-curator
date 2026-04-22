@@ -99,7 +99,10 @@ export async function sharePDFBlob(blob, filename, { title, text } = {}) {
 
   if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title, text });
+      // Intentionally omit `text` when sharing a file — on iOS the `text`
+      // field is saved as a separate .txt snippet alongside the PDF when the
+      // user picks "Save to Files", creating a spurious second file.
+      await navigator.share({ files: [file], title });
       // Track successful export for retention reminder.
       markInspectionExported();
       return "shared";
