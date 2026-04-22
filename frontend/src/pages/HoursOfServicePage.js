@@ -382,7 +382,7 @@ export default function HoursOfServicePage() {
           </button>
           <div className="flex items-center gap-2 text-white">
             <Hourglass className="w-5 h-5 text-[#D4AF37]" />
-            <span className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Hours of Service</span>
+            <span className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>60/70 Hour Calculator</span>
           </div>
           <button onClick={clearAll} className="text-white/70 hover:text-white flex items-center gap-1.5 text-xs font-medium" data-testid="hos-clear-btn">
             <RotateCcw className="w-3.5 h-3.5" /> Clear
