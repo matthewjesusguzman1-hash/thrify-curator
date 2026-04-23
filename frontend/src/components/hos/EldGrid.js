@@ -228,12 +228,16 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           let badgeX = isEnd ? x - flagW : x;
           if (badgeX < LABEL_W) badgeX = LABEL_W;
           if (badgeX + flagW > LABEL_W + gridW) badgeX = LABEL_W + gridW - flagW;
+          // Label alignment: clamp to 'start' for markers near the left edge,
+          // 'end' for markers near the right edge, 'middle' otherwise — prevents
+          // long pre-split labels at x=0 from clipping past the SVG bounds.
+          const labelAnchor = sm.min < 60 ? "start" : (sm.min >= 23 * 60 ? "end" : "middle");
           return (
             <g key={`shift${i}`} data-testid={`shift-marker-${sm.kind || i}`}>
               <line x1={x} y1={HEADER_H - 1} x2={x} y2={HEADER_H + 4 * ROW_H + 4} stroke={color} strokeWidth="2" strokeDasharray="5 3" />
               <rect x={badgeX} y={HEADER_H - flagH - 2} width={flagW} height={flagH} rx={2} fill={color} />
               <text x={badgeX + flagW / 2} y={HEADER_H - 4} textAnchor="middle" fontSize={compact ? "8.5" : "9.5"} fontWeight="800" fill="#FFFFFF" fontFamily="sans-serif" letterSpacing="0.3">{flagText}</text>
-              <text x={x} y={labelY} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="700" fill={color}>{sm.label || `${isEnd ? "Shift end" : isContinues ? "Continues" : "Shift start"} · ${minToHm(sm.min)}`}</text>
+              <text x={x} y={labelY} textAnchor={labelAnchor} fontSize={compact ? "9" : "10"} fontWeight="700" fill={color}>{sm.label || `${isEnd ? "Shift end" : isContinues ? "Continues" : "Shift start"} · ${minToHm(sm.min)}`}</text>
             </g>
           );
         })}

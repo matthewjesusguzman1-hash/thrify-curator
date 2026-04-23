@@ -34,9 +34,17 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - EldGrid received `data-testid="eld-entry-{idx}"` on selectable duty blocks (testing agent helper — no behavior change).
 - **PriorResetBanner**: added a blue-chip banner ("Assume prior day ended with a full 10-hour OFF reset — driver's clocks are fresh at 00:00 of this log.") above every single-day Learn card, every single-day extra example, and every Practice scenario. Multi-day scenarios (SL5, SL5-b, SL5-c) intentionally omit it since they already show the overnight rest themselves.
 
-### 2026-02 test_reports/iteration_28.json + iteration_29.json — 100% frontend pass
-- iteration_28: 13/13 checkpoints — CVSA bullets visible · SL1-SL5 + extras · SP1-SP4 full 4-question flow · shift-time ±10 min · hours ±0.5.
-- iteration_29: 7/7 checkpoints — PriorResetBanner renders on SL1-SL4 + extras + SP1-SP4 (not SL5 multi-day); DOM position above ELD grid; iteration_28 shift markers still green.
+### 2026-02 — 10-hour-rest-break shift windows + splits available (current session)
+- Every single-day Split Sleeper Learn scenario now surfaces the **pre-split shift** running under the 10-hr continuous rule (slate #64748B markers from end of prior 10h reset → start of first qualifying rest) alongside the **CVSA split shift** (primary-color markers between the two qualifying segments).
+- SL1 main, SL2 main, and all their single-day extras got 4 shift markers each (Pre-split START/END + CVSA split START/END) with slate + gold countedBrackets showing hours per shift.
+- SL3 main: reinterpreted 00:00-12:00 (OFF + SB at start of day) as *extended pre-shift rest* (not a failed split) per CVSA; shift START = 12:00, continues past 24:00. SL3 extras retain 06:00/20:00 14h wall-clock.
+- SL4 main + '3h SB + 7h OFF' extra: shift markers 00:00 START + 14:00 END, description enumerates alternative splits that WOULD have worked on the same log shape.
+- SL4 extra '10h straight OFF': now renders TWO shifts (Shift 1 slate 00-06, 10h OFF = full reset, Shift 2 green 16:00 START + orange CONTINUES near 24:00).
+- EldGrid: label text-anchor clamps to 'start' for markers at <60 min and 'end' for markers at ≥23:00 — prevents long edge labels from clipping past the SVG bounds.
+- Descriptions uniformly call out: (a) prior 10h reset ended at 00:00, (b) pre-split shift duration/hours, (c) CVSA split boundaries, (d) alternative split pairings that would have been valid.
+
+### 2026-02 test_reports/iteration_30.json — 100% frontend pass
+- 11/11 checkpoints: SL1/SL2 4-marker grids · SL3/SL4 enriched narratives · extras expand with correct marker pairs · SL5 multi-day unchanged · prior-reset banner regression preserved · Practice tab untouched.
 
 ### 2026-02 — Device-only photos + UI consolidation (current session)
 - **Device-only photos**: IndexedDB library (`devicePhotos.js`) + `<DevicePhoto>` component. All upload flows converted to local-save + JSON metadata POST. Server photo endpoints refactored to JSON-only (no multipart). One-time wipe endpoint runs on /api/admin/wipe-photos?badge=121 (executed; 3 inspections cleared).
