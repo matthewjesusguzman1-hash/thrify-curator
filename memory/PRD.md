@@ -141,6 +141,7 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - **P2**: Refactor `server.py` into modular routes (`/app/backend/routes/*`)
 - **P2**: Refactor `BridgeChartPage.js` / `HoursOfServicePage.js` / `HazMatHelpers.js` into smaller components
 - **P2**: Additional Inspector Tools — Spec Marking Decoder, Retest Date Calculator, OOS Quick Reference
+- **Tabled (re-raise later)**: ELD Training module (49 CFR §395.8 + §395.20-§395.38) — candidate topics: ELD vs Paper Log + exemptions, Required Data/Display, Data Transfer methods, Malfunctions & Data Diagnostic Events, Unidentified Driving Records, Edits/Annotations/Certification, Supporting Docs, ELD Registration & Revocation, AOBRD historical context. User opted to table in favor of other priorities.
 - **P2**: Device-storage indicator in the Customize Header / admin menu
 
 ## Test Credentials
