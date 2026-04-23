@@ -1,0 +1,48 @@
+{
+  "summary": "Frontend-only verification of ambiguous-pairing rebuild for Split Sleeper Learn + Practice scenarios. All four required scenarios (SL1, SL2, SP1, SP2) now contain EXACTLY ONE >=7h SB block and EXACTLY ONE >=2h SB/OFF block on their 24-hr log, making the pairing unambiguous. SP3/SP4 (invalid cases) correctly retain qualifyingBlockIdx=[].",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "runtime_verification": {
+    "login_badge042_pin1234": "PASS (keyboard type + Enter)",
+    "split_sleeper_page_loads": "PASS — /hours-of-service/split-sleeper",
+    "module_subtitle_qualifying_rest_pairings": "PASS — HosTrainingPage.js line 31: subtitle: 'Qualifying rest pairings' on module-split",
+    "SL1_card_renders": "PASS — [data-testid=learn-card-SL1] visible",
+    "SL1_log_structure": "PASS — code confirms: OD 00-01 -> D 01-06 -> SB 06-13 (7h, only >=7h SB) -> D 13-17 -> OFF 17-20 (3h, only >=2h OFF) -> OD 20-24. No pre-shift OFF block.",
+    "SL1_description_exactly_one": "PASS — SL1 description contains 'exactly one Sleeper Berth block of at least 7 hrs and exactly one Off-Duty block of at least 2 hrs'",
+    "SL1_description_unambiguous": "PASS — contains 'so the pairing is unambiguous'",
+    "SL1_description_cfr": "PASS — cites §395.1(g)(1)(ii)",
+    "SL2_card_renders": "PASS — [data-testid=learn-card-SL2]",
+    "SL2_last_block_is_OD_21_24": "PASS — log ends 'OD 21-24' (3h OD as new shift). The old '21-22 OD + 22-24 OFF' pattern is gone. Only qualifying rests are 2h OFF 06-08 and 8h SB 13-21.",
+    "SP1_qualifying_block_idx": "PASS — qualifyingBlockIdx=[2,4]; idx 2 = SB 06-13 (7h), idx 4 = OFF 17-20 (3h). No other OFF/SB >=2h block exists on the log.",
+    "SP1_counted_hours": "PASS — counted14Hours=10, counted11Hours=9 (per request: '14=10, 11=9')",
+    "SP1_no_violation_validSplit_true": "PASS — validSplit=true, splitType='7+3', violation11=false, violation14=false",
+    "SP2_qualifying_block_idx": "PASS — qualifyingBlockIdx=[2,6]; idx 2 = OFF 05-07 (2h), idx 6 = SB 16-24 (8h). Log has exactly one >=7h SB and exactly one >=2h OFF.",
+    "SP2_counted_hours": "PASS — counted14Hours=14, counted11Hours=12 (per request: '14=14, 11=12 (not 13 as before)')",
+    "SP2_11hr_violation_detected": "PASS — violation11=true, explanation.violation explains '4+5+3=12h driving' exceeds 11-hr limit",
+    "SP3_no_qualifying_pairing": "PASS — qualifyingBlockIdx=[], validSplit=false (SB block is only 4h, no >=7h SB)",
+    "SP4_no_qualifying_pairing": "PASS — qualifyingBlockIdx=[], validSplit=false (8h OFF + 2h SB -> no >=7h SB), violation14=true",
+    "practice_tab_renders_SP1_grid": "PASS — screenshot confirms SP1 chart shows OD 00-01, D 01-06, SB 06-13, D 13-17, OFF 17-20, OD 20-24",
+    "page_cfr_link_in_header": "PASS — 'Property-carrying · 49 CFR §395.1(g)(1)(ii)' shown in header"
+  },
+  "code_review_observations": [
+    "hosScenarios.js SL1 (lines 776-795): log now begins with 'OD 00-01 -> D 01-06' instead of the previous '4-hr OFF at start of day'. This eliminates the original ambiguity the user flagged (the old 4-hr pre-shift OFF could have paired with the 7h SB too). Now only ONE >=2h OFF block exists (17-20), so pairing is unambiguous. Description explicitly uses 'exactly one' twice and 'unambiguous', and cites §395.1(g)(1)(ii). FIX VERIFIED.",
+    "hosScenarios.js SL2 (lines 797-816): log restructured to end with 'OD 21-24' instead of the old 'OD 21-22 + OFF 22-24'. That previous OFF 22-24 block could have been interpreted as a second >=2h OFF qualifying block, making the pairing ambiguous. Now the only qualifying rests are the 2h OFF (06-08) and the 8h SB (13-21) — pairing is unambiguous. Description highlights 'either order' and cites §395.1(g)(1)(ii). FIX VERIFIED.",
+    "hosScenarios.js SP1 (lines 858-882): counted11Hours changed from 7 -> 9 and counted14Hours is 10. Log has exactly one >=7h SB (idx 2, 06-13) and exactly one >=2h OFF (idx 4, 17-20). No other >=2h SB/OFF block exists — unambiguous. explanation.hours math checks out: 1h OD + 5h D + 4h D = 10h counted_14; 5h + 4h = 9h counted_11. FIX VERIFIED.",
+    "hosScenarios.js SP2 (lines 883-908): counted11Hours changed from 13 -> 12 and counted14Hours is 14. Log has exactly one >=7h SB (idx 6, 16-24) and exactly one >=2h OFF (idx 2, 05-07). No other >=2h SB/OFF block. Math: 1h OD + 4h D + 5h D + 1h OD + 3h D = 14h counted_14; 4+5+3 = 12h driving (11-hr violation, as expected). FIX VERIFIED.",
+    "SP3 / SP4 untouched for the invalid cases — qualifyingBlockIdx=[] still correctly identifies 'no qualifying pairing' (regression preserved).",
+    "HosTrainingPage.js line 31: module-split subtitle is 'Qualifying rest pairings' (matches the request wording). The inner SplitSleeperPage header still reads 'Split Sleeper Trainer' — that is intentional as the user only renamed the outer pill subtitle, not the page title."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "All user-requested ambiguity removals in SL1, SL2, SP1, SP2 are implemented correctly. Each targeted 24-hr log now contains EXACTLY ONE >=7h SB block and EXACTLY ONE >=2h SB/OFF block, so the split-sleeper pairing is unambiguous. Counted-hour totals (SP1 counted11=9, SP2 counted11=12) match the updated logs. SP3/SP4 invalid cases remain correct. No bugs found."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per task)", "frontend": "100% — all required checks PASS"},
+  "test_credentials": "Badge 042 / PIN 1234",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Split-sleeper ambiguity fix is complete and verified. Each Learn+Practice scenario's 24-hr log now has exactly one >=7h SB and exactly one >=2h SB/OFF block. Module pill subtitle on Training page reads 'Qualifying rest pairings' (HosTrainingPage.js line 31). Inner page title is still 'Split Sleeper Trainer' (SplitSleeperPage.js line 32) — intentional. Login gotcha: use page.focus + keyboard.type + keyboard.press('Enter') for badge/PIN submission (plain button clicks intermittently miss).",
+  "rca of the issue": "Original bug: SL1 log had a 4-hr OFF at 00:00-04:00 which could pair with the 7h SB (two valid >=2h OFF candidates existed: the pre-shift OFF AND the 3h OFF at 17-20), making the 'correct' pairing ambiguous. Fix: removed the pre-shift OFF and replaced with OD 00-01 + D 01-06, so now only ONE >=2h OFF block (17-20) exists. Same class of ambiguity fixed in SL2 (removed trailing OFF 22-24), SP1 (same restructure + counted11 7->9), and SP2 (removed a stray second >=2h OFF + counted11 13->12). All fixes are data-only changes in /app/frontend/src/lib/hosScenarios.js — no component logic needed changes."
+}
