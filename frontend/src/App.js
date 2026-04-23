@@ -18,6 +18,7 @@ import AdminPage from "./pages/AdminPage";
 import BridgeChartPage from "./pages/BridgeChartPage";
 import HoursOfServicePage from "./pages/HoursOfServicePage";
 import HosTrainingPage from "./pages/HosTrainingPage";
+import SplitSleeperPage from "./pages/SplitSleeperPage";
 
 const SPLASH_KEY = "inspnav_splash_v1";
 
@@ -43,6 +44,7 @@ function AppRoutes() {
       <Route path="/bridge-chart" element={<BridgeChartPage />} />
       <Route path="/hours-of-service" element={<HoursOfServicePage />} />
       <Route path="/hours-of-service/training" element={<HosTrainingPage />} />
+      <Route path="/hours-of-service/split-sleeper" element={<SplitSleeperPage />} />
     </Routes>
   );
 }

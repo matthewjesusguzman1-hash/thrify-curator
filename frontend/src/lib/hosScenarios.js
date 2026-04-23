@@ -1,15 +1,9 @@
 /**
- * hosScenarios.js — Training content sourced verbatim from the 2024 NASI-A
- * Participant Manual (CVSA North American Standard Inspection Part A).
- * Every scenario cites its manual page so inspectors can cross-reference.
- * Property-carrying CMV only.
+ * hosScenarios.js — HOS training content for property-carrying CMVs.
+ * All citations are 49 CFR Part 395 regulations only.
  */
 
-/* Page numbers reference the ORIGINAL 2024 NASI-A Part A Participant Manual.
- * The HOS section spans pp. 93–196. Drill references below use the original
- * PDF page numbers so inspectors can open the exact page in the source doc. */
-
-/* ─── Module 1: Duty Status Classifier ─── NASI-A pp. 96–97 ─── */
+/* ─── Module 1: Duty Status Classifier ─── 49 CFR §395.2 ─── */
 export const DUTY_STATUS_QUIZ = [
   { id: "ds1",  situation: "Vehicle is broken down on the side of the road awaiting help.", answer: "OD" },
   { id: "ds2",  situation: "Supervising the loading of a trailer.",                         answer: "OD" },
@@ -23,14 +17,13 @@ export const DUTY_STATUS_QUIZ = [
   { id: "ds10", situation: "Working a second job as a real estate agent.",                  answer: "OFF" },
 ];
 
-/* ─── Module 2: 14-Hour Rule scenarios ─── NASI-A pp. 111–113 ─── */
+/* ─── Module 2: 14-Hour Rule scenarios ─── 49 CFR §395.3(a)(2) ─── */
 /* Each scenario is a full 24-hr day log. `violationMinute` is the exact clock
  * time (minutes from midnight) when driving-past-14-hrs first occurs, OR null
  * if no 14-hr violation. Shift starts when first on-duty/driving entry begins. */
 export const FOURTEEN_HOUR_SCENARIOS = [
   {
     id: "14-A",
-    manualRef: "NASI-A p. 111, Example 01-01",
     log: [
       { status: "OFF", start: "00:00", end: "11:00" },
       { status: "D",   start: "11:00", end: "19:00" },
@@ -42,7 +35,6 @@ export const FOURTEEN_HOUR_SCENARIOS = [
   },
   {
     id: "14-B",
-    manualRef: "NASI-A p. 111, Example 02-01",
     log: [
       { status: "OFF", start: "00:00", end: "06:00" },
       { status: "OD",  start: "06:00", end: "08:00" },
@@ -52,12 +44,11 @@ export const FOURTEEN_HOUR_SCENARIOS = [
       { status: "OFF", start: "21:00", end: "24:00" },
     ],
     hasViolation: true,
-    violationMinute: 20 * 60, // 20:00 — the 14-hr window from 06:00 closes at 20:00
+    violationMinute: 20 * 60,
     answerExplain: "Work shift started at 06:00 (first on-duty entry). The 14-hour window closes at 20:00. The driver was still driving from 15:00–21:00 — driving between 20:00 and 21:00 is a violation.",
   },
   {
     id: "14-C",
-    manualRef: "NASI-A p. 112, Example 03-02",
     log: [
       { status: "OFF", start: "00:00", end: "09:00" },
       { status: "D",   start: "09:00", end: "13:00" },
@@ -70,7 +61,6 @@ export const FOURTEEN_HOUR_SCENARIOS = [
   },
   {
     id: "14-D",
-    manualRef: "NASI-A p. 112, Example 04-02",
     log: [
       { status: "OFF", start: "00:00", end: "07:00" },
       { status: "D",   start: "07:00", end: "11:00" },
@@ -81,12 +71,11 @@ export const FOURTEEN_HOUR_SCENARIOS = [
       { status: "OFF", start: "23:00", end: "24:00" },
     ],
     hasViolation: true,
-    violationMinute: 21 * 60, // shift start 07:00 + 14h = 21:00
+    violationMinute: 21 * 60,
     answerExplain: "Shift started at 07:00. The 14-hour window closes at 21:00. The driver was driving from 19:00–23:00 — driving between 21:00 and 23:00 is a violation.",
   },
   {
     id: "14-E",
-    manualRef: "NASI-A p. 113, Example 05-02",
     log: [
       { status: "OFF", start: "00:00", end: "07:00" },
       { status: "D",   start: "07:00", end: "11:00" },
@@ -102,11 +91,10 @@ export const FOURTEEN_HOUR_SCENARIOS = [
   },
 ];
 
-/* ─── Module 3: 11-Hour Rule scenarios ─── NASI-A pp. 122–124 ─── */
+/* ─── Module 3: 11-Hour Rule scenarios ─── 49 CFR §395.3(a)(3) ─── */
 export const ELEVEN_HOUR_SCENARIOS = [
   {
     id: "11-A",
-    manualRef: "NASI-A p. 122, Example 03-01",
     log: [
       { status: "OFF", start: "00:00", end: "08:00" },
       { status: "D",   start: "08:00", end: "12:00" },
@@ -121,7 +109,6 @@ export const ELEVEN_HOUR_SCENARIOS = [
   },
   {
     id: "11-B",
-    manualRef: "NASI-A p. 123, Example 04-01",
     log: [
       { status: "OFF", start: "00:00", end: "08:00" },
       { status: "D",   start: "08:00", end: "12:00" },
@@ -136,7 +123,6 @@ export const ELEVEN_HOUR_SCENARIOS = [
   },
   {
     id: "11-C",
-    manualRef: "NASI-A p. 123, Example 04-02",
     log: [
       { status: "OFF", start: "00:00", end: "07:00" },
       { status: "D",   start: "07:00", end: "11:00" },
@@ -147,12 +133,11 @@ export const ELEVEN_HOUR_SCENARIOS = [
       { status: "OFF", start: "23:00", end: "24:00" },
     ],
     hasViolation: true,
-    violationMinute: 22 * 60, // 11th hour of driving ends at 22:00 (7+4 = 11 hours driven by 22:00)
+    violationMinute: 22 * 60,
     answerExplain: "Driving segments: 4h + 4h + 4h = 12 hours. The 11th hour of driving ends at 22:00 — any driving from 22:00 onward is a violation.",
   },
   {
     id: "11-D",
-    manualRef: "NASI-A p. 124, Example 05-02",
     log: [
       { status: "OFF", start: "00:00", end: "07:00" },
       { status: "D",   start: "07:00", end: "11:00" },
@@ -168,11 +153,10 @@ export const ELEVEN_HOUR_SCENARIOS = [
   },
 ];
 
-/* ─── Module 4: 30-Minute Break scenarios ─── NASI-A p. 132 ─── */
+/* ─── Module 4: 30-Minute Break scenarios ─── 49 CFR §395.3(a)(3)(ii) ─── */
 export const BREAK_SCENARIOS = [
   {
     id: "BRK-A",
-    manualRef: "NASI-A p. 132, Example 1",
     log: [
       { status: "D",   start: "00:00", end: "08:00" },
       { status: "D",   start: "08:00", end: "12:00" },
@@ -184,7 +168,6 @@ export const BREAK_SCENARIOS = [
   },
   {
     id: "BRK-B",
-    manualRef: "NASI-A p. 40, Example 2",
     log: [
       { status: "D",   start: "00:00", end: "08:00" },
       { status: "OFF", start: "08:00", end: "08:30" },
@@ -196,7 +179,6 @@ export const BREAK_SCENARIOS = [
   },
   {
     id: "BRK-C",
-    manualRef: "NASI-A p. 132, derived scenario",
     log: [
       { status: "D",   start: "06:00", end: "10:00" },
       { status: "OD",  start: "10:00", end: "11:00" },
@@ -209,13 +191,12 @@ export const BREAK_SCENARIOS = [
   },
 ];
 
-/* ─── Module 5: 70-Hour Recap ─── NASI-A pp. 136–141 ─── */
+/* ─── Module 5: 70-Hour Recap ─── 49 CFR §395.3(b)(2) / §395.3(c) ─── */
 /* Note: the classic recap test is a rolling 8-day total ≤ 70 hours INCLUDING today.
  * Pre-shift: sum the last 7 days. Available hours today = 70 − that sum. */
 export const RECAP_SCENARIOS = [
   {
     id: "REC-A",
-    manualRef: "NASI-A pp. 44–46, Driver 1 style",
     days: [
       { label: "Day −7", onDuty: 10 },
       { label: "Day −6", onDuty: 8 },
@@ -231,7 +212,6 @@ export const RECAP_SCENARIOS = [
   },
   {
     id: "REC-B",
-    manualRef: "NASI-A pp. 139–141, Driver 2 style",
     days: [
       { label: "Day −7", onDuty: 14 },
       { label: "Day −6", onDuty: 11 },
@@ -247,7 +227,6 @@ export const RECAP_SCENARIOS = [
   },
   {
     id: "REC-C",
-    manualRef: "NASI-A p. 135 · 34-hr restart drill",
     days: [
       { label: "Day −7", onDuty: 12 },
       { label: "Day −6", onDuty: 11 },
@@ -259,15 +238,6 @@ export const RECAP_SCENARIOS = [
     ],
     todayQuestion: "After the 34-hr restart, how many on-duty hours are available today?",
     answer: 49,
-    answerExplain: "The 34-hr restart zeros the recap. Count only hours AFTER the restart completed: Day −2 (11) + Day −1 (10) = 21. Available today = 70 − 21 = 49 hours. (Restart eligibility: §395.3(c))",
+    answerExplain: "The 34-hr restart zeros the recap. Count only hours AFTER the restart completed: Day −2 (11) + Day −1 (10) = 21. Available today = 70 − 21 = 49 hours. (Restart eligibility: 49 CFR §395.3(c))",
   },
-];
-
-/* ─── Encouragement copy ─── small touches that keep inspectors coming back */
-export const BADGES = [
-  { id: "first-perfect", label: "First Perfect Drill",     desc: "Get every answer right in a module.",            icon: "🎯" },
-  { id: "streak-3",      label: "3-Day Streak",            desc: "Train 3 days in a row.",                          icon: "🔥" },
-  { id: "streak-7",      label: "Week-Long Streak",        desc: "Train 7 days in a row.",                          icon: "⭐" },
-  { id: "hundred",       label: "100 Correct Answers",     desc: "Nail 100 scenarios total.",                       icon: "💯" },
-  { id: "all-modules",   label: "Full Tour",               desc: "Complete every training module at least once.",   icon: "🏆" },
 ];

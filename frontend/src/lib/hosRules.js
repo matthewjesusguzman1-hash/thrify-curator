@@ -1,9 +1,7 @@
 /**
- * hosRules.js — Pure rule engine + scenarios sourced from the 2024 NASI-A
- * Participant Manual (FMCSA / CVSA North American Standard Inspection Part A),
- * Hours of Service section, pages 93–196. Property-carrying CMV only.
+ * hosRules.js — Pure rule engine for property-carrying HOS calculations.
  *
- * Citations cross-reference 49 CFR Part 395 (current text).
+ * Citations cross-reference 49 CFR Part 395.
  */
 
 export const STATUS_META = {

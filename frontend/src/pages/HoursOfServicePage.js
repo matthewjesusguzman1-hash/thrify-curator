@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info,
-  Eye, Save, ClipboardList, HelpCircle, Clock, GraduationCap,
+  Eye, Save, ClipboardList, HelpCircle, Clock, GraduationCap, Layers,
   Lightbulb, X, Share2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -409,21 +409,37 @@ export default function HoursOfServicePage() {
 
       <main className="max-w-3xl mx-auto px-3 sm:px-6 py-3 pb-16 space-y-3">
 
-        {/* TRAINING CTA — prominent, gold/navy, single tap to the training zone */}
-        <button
-          onClick={() => navigate("/hours-of-service/training")}
-          className="w-full rounded-xl border border-[#D4AF37]/40 bg-gradient-to-r from-[#002855] to-[#003366] hover:from-[#001a3a] hover:to-[#002855] text-white px-3 py-2.5 flex items-center gap-3 transition-all shadow-sm active:scale-[0.99]"
-          data-testid="hos-training-cta"
-        >
-          <div className="w-9 h-9 rounded-lg bg-[#D4AF37] text-[#002855] flex items-center justify-center flex-shrink-0">
-            <GraduationCap className="w-5 h-5" />
-          </div>
-          <div className="flex-1 text-left min-w-0">
-            <p className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Log Book Training</p>
-            <p className="text-[11px] text-white/70 leading-tight">6 quiz drills · NASI-A 2024 Part A · pp. 93–196</p>
-          </div>
-          <ChevronLeft className="w-4 h-4 text-white/60 rotate-180" />
-        </button>
+        {/* TRAINING CTAs — two separate tools, kept independent from the 70-hr calc */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button
+            onClick={() => navigate("/hours-of-service/training")}
+            className="w-full rounded-xl border border-[#D4AF37]/40 bg-gradient-to-r from-[#002855] to-[#003366] hover:from-[#001a3a] hover:to-[#002855] text-white px-3 py-2.5 flex items-center gap-3 transition-all shadow-sm active:scale-[0.99]"
+            data-testid="hos-training-cta"
+          >
+            <div className="w-9 h-9 rounded-lg bg-[#D4AF37] text-[#002855] flex items-center justify-center flex-shrink-0">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Log Book Training</p>
+              <p className="text-[11px] text-white/70 leading-tight">5 quiz drills · property-carrying rules</p>
+            </div>
+            <ChevronLeft className="w-4 h-4 text-white/60 rotate-180" />
+          </button>
+          <button
+            onClick={() => navigate("/hours-of-service/split-sleeper")}
+            className="w-full rounded-xl border border-[#D4AF37]/40 bg-white hover:bg-[#F8FAFC] text-[#002855] px-3 py-2.5 flex items-center gap-3 transition-all shadow-sm active:scale-[0.99]"
+            data-testid="hos-split-sleeper-cta"
+          >
+            <div className="w-9 h-9 rounded-lg bg-[#002855] text-[#D4AF37] flex items-center justify-center flex-shrink-0">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Split Sleeper Trainer</p>
+              <p className="text-[11px] text-[#64748B] leading-tight">Interactive 7+3 / 8+2 walkthrough</p>
+            </div>
+            <ChevronLeft className="w-4 h-4 text-[#64748B] rotate-180" />
+          </button>
+        </div>
 
         {/* VERDICT BANNER — big, clear answer up top */}
         {verdict && (

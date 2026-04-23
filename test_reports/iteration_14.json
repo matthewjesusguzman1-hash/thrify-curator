@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only verification of Split Sleeper Trainer decoupling and NASI-A scrub. Login (Badge 042 / PIN 1234) OK. /hours-of-service shows both [hos-training-cta] (Log Book Training) and [hos-split-sleeper-cta] (Split Sleeper Trainer) side-by-side; training CTA caption is clean of NASI-A / pp. 93-196. Clicking the split CTA routes correctly to /hours-of-service/split-sleeper and renders [split-sleeper-page]. Learn tab is default active; walk-w1..w4 all present, expand, expose next/back/replay, and Takeaway appears on final step. Practice tab renders EldGrid, block editor (add/remove working), totals row, and all four presets. preset-valid-7-3 → green 'Legal 7/3 split detected' (text uses slash '7/3' instead of '+' — minor copy deviation from spec), preset-invalid-6-4 → red 'No valid split', preset-invalid-5-5-sb → red 'No valid split'. HosTrainingPage has no NASI-A anywhere, 49 CFR citations present, no [split-verdict], no range sliders — old SplitModule is gone. One real bug found: preset-valid-8-2 renders as 'No valid split' because its 18:00 SB block (8h) is truncated at the 24:00 day boundary to 6h.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SplitSleeperPage › PracticeTab › preset-valid-8-2", "issue": "Preset schedules an 8-hour SB block starting at 18:00. PracticeTab clamps segments at 24:00 (minToHm(Math.min(24*60, hmToMin(start)+hours*60))), so the block is truncated to 6h and the verdict returns red 'No valid split – Two periods must total at least 10 hours combined.' The example meant to demonstrate a legal 8+2 split therefore demonstrates the opposite. Fix: either start the SB block earlier (e.g. 16:00 for 8h) or split the preset across a synthetic 'next-day' entry.", "selector": "[data-testid=preset-valid-8-2]", "priority": "HIGH"},
+      {"component": "SplitSleeperPage › PracticeTab › practice-verdict", "issue": "Legal-split copy reads 'Legal 7/3 split detected' / 'Legal 8/2 split detected' (forward slash). Spec text in review request expects '+' (e.g. 'Legal 7+3 split detected'). Minor but user-visible inconsistency with the walkthrough/preset labels that use '+'.", "selector": "[data-testid=practice-verdict]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix preset-valid-8-2 so the 8h SB block doesn't straddle midnight (start <= 16:00), otherwise the flagship 'valid 8+2' example produces a red verdict and contradicts the Learn tab.",
+    "Consider aligning verdict copy to '+' separator ('Legal 7+3 split detected') to match the preset labels, walkthrough titles, and problem statement.",
+    "(Optional hardening) In PracticeTab.entries, skip or wrap blocks that exceed 24:00 instead of silently truncating, so any future preset bugs surface immediately."
+  ],
+  "critical_code_review_comments": [
+    "SplitSleeperPage.js PracticeTab hard-clamps end-of-day at 24:00 via Math.min(24*60, ...). This silently shortens any block that crosses midnight. The Learn walkthrough w3 even documents a split that ends next-day (17:00 SB for 8h) — Practice cannot faithfully represent that case today.",
+    "hosRules.validateSplit is only invoked on pairs from restCandidates that are ≥2h (good), but because the pair iteration starts at the first legal-looking pair, the feedback text shown for invalid days depends on which two restCandidates exist — that's why Valid 8+2 after clamping returns the generic 'Two periods must total at least 10 hours combined' message. Consider tailoring the fallback to the actual minimum-length failure mode."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (not tested per request)", "frontend": "~90% (7/8 review-request checks pass, preset-valid-8-2 verdict fails)"},
+  "test_credentials": "Badge 042 / PIN 1234 (standard user) — confirmed working",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "App uses Badge 042 / PIN 1234 two-step login. Route /hours-of-service/split-sleeper is live with tabs [tab-learn]/[tab-practice]. All four presets render [practice-verdict] correctly EXCEPT preset-valid-8-2 (midnight clamp bug in PracticeTab entries mapping). Training page /hours-of-service/training is clean of NASI-A (verified via full body-text grep). HosTrainingPage drills: 'Duty Status', '14-Hour Window', '11-Hour Driving', '70-Hour Recap' text confirmed; '30-Minute Break' text not matched verbatim but likely uses shorter wording — not a regression.",
+  "rca of the issue": "In /app/frontend/src/pages/SplitSleeperPage.js, the PracticeTab builds ELD entries with end = minToHm(Math.min(24*60, hmToMin(start) + hours*60)). The preset-valid-8-2 block { status:'SB', start:'18:00', hours:8 } therefore collapses to 18:00–24:00 (6h). validateSplit then sees a 6h SB + 2h OFF pair which fails the 7- or 8-hour longer-period requirement, producing the red verdict. Fix options: (1) shift the SB start to 16:00 so the block fully fits the day; (2) allow multi-day segments by emitting a wrap-around second entry 00:00–02:00 on the next 'virtual' day and sum its duration; (3) compute duration directly from the block object (b.hours) rather than end−start so clamping doesn't affect validation."
+}
