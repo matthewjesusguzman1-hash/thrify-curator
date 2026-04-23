@@ -65,6 +65,33 @@ function LearnTab() {
         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#D4AF37]" /><p className="text-[10.5px] text-[#475569] font-bold">Counts toward 11 &amp; 14</p></div>
       </div>
 
+      <section className="bg-white rounded-xl border-2 border-[#D4AF37]/50 overflow-hidden" data-testid="shift-identification-card">
+        <div className="bg-[#FFFBEB] border-b border-[#D4AF37]/30 px-4 py-2 flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full bg-[#D4AF37] text-[#002855] flex items-center justify-center text-[11px] font-bold">!</div>
+          <p className="text-sm font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>How to identify the work shift</p>
+        </div>
+        <div className="p-4 space-y-2.5">
+          <p className="text-[12.5px] text-[#334155] leading-relaxed">
+            Before you can count a driver's hours, you must know exactly when their work shift starts and ends. Every 11/14 calculation depends on this. The green <span className="inline-block w-4 h-3 align-middle rounded-[2px] bg-[#10B981]" /> <span className="font-bold">START</span> flag and red <span className="inline-block w-4 h-3 align-middle rounded-[2px] bg-[#DC2626]" /> <span className="font-bold">END</span> flag on each example grid below mark these boundaries.
+          </p>
+          <div className="bg-[#F8FAFC] rounded-lg border border-[#E2E8F0] p-3 space-y-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#10B981]">Shift START</p>
+            <p className="text-[12px] text-[#334155] leading-relaxed">
+              The <span className="font-bold">first on-duty entry</span> (Driving OR On-Duty not driving) AFTER the driver's most recent qualifying rest (10 consecutive hours off-duty/sleeper OR the completion of a valid split-sleeper pairing per §395.1(g)(1)(ii)). Pre-trip inspection at 06:00? Shift started at 06:00 — even if wheels didn't turn until 07:00.
+            </p>
+          </div>
+          <div className="bg-[#F8FAFC] rounded-lg border border-[#E2E8F0] p-3 space-y-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#DC2626]">Shift END</p>
+            <p className="text-[12px] text-[#334155] leading-relaxed">
+              Whichever comes FIRST: (a) the end of a new qualifying rest — 10 consecutive hrs off-duty/sleeper, or the end of the <span className="font-bold">LATER</span> of a valid split pairing under §395.1(g)(1)(ii); or (b) <span className="font-bold">14 wall-clock hours after the shift START</span> (§395.3(a)(2)). If no qualifying rest is taken, the 14-hr wall-clock hits first and any work past that point is a violation.
+            </p>
+          </div>
+          <p className="text-[11.5px] text-[#64748B] leading-relaxed italic pt-1">
+            Roadside rule of thumb: scan down the log, find the first on-duty entry coming out of a reset — that's START. Then look for the next qualifying rest or add 14 hrs — that's END. Only the D and OD hours between those two flags count toward this shift's 11 &amp; 14 (with qualifying split-rest hours excluded per §395.1(g)(1)(ii)(E)).
+          </p>
+        </div>
+      </section>
+
       {SPLIT_LEARN_SCENARIOS.map((s) => (
         <LearnCard key={s.id} s={s} />
       ))}
@@ -89,7 +116,12 @@ function LearnCard({ s }) {
                   <p className="text-[9.5px] text-[#94A3B8] italic">continues overnight ↓</p>
                 )}
               </div>
-              <EldGrid entries={d.log} brackets={[...(d.qualifyingBrackets || []), ...(d.countedBrackets || [])]} compact />
+              <EldGrid
+                entries={d.log}
+                brackets={[...(d.qualifyingBrackets || []), ...(d.countedBrackets || [])]}
+                shiftMarkers={d.shiftMarkers || []}
+                compact
+              />
             </div>
           ))}
           <p className="text-[12.5px] text-[#334155] leading-relaxed pt-1"><CfrText text={s.description} /></p>
@@ -104,7 +136,7 @@ function LearnCard({ s }) {
         <p className="text-sm font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>{s.title}</p>
       </div>
       <div className="p-3 space-y-3">
-        <EldGrid entries={s.log} brackets={brackets} compact />
+        <EldGrid entries={s.log} brackets={brackets} shiftMarkers={s.shiftMarkers || []} compact />
         <p className="text-[12.5px] text-[#334155] leading-relaxed"><CfrText text={s.description} /></p>
       </div>
     </section>

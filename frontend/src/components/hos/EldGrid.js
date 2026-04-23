@@ -20,8 +20,11 @@ import { hmToMin, padDay, STATUS_META, minToHm } from "../../lib/hosRules";
  *   selectedIndices   Array<int> — currently selected entry indices
  *   onEntryClick      (idx) => void — callback when a selectable block is tapped
  *   blockMarks        { [idx]: 'correct' | 'wrong' | 'missed' } — reveal state
+ *   shiftMarkers      Array<{min, label, color?, kind?}> — vertical dashed
+ *                     markers (e.g. "SHIFT START", "SHIFT END") drawn across
+ *                     the duty rows with a labeled flag below the grid
  */
-export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {} }) {
+export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {}, shiftMarkers = [] }) {
   const HOUR_W = compact ? 20 : 28;
   const ROW_H = compact ? 26 : 32;
   const LABEL_W = compact ? 62 : 74;
@@ -29,9 +32,10 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   const HEADER_H = compact ? 18 : 22;
   const HOURS = 24;
   const BRACKET_H = brackets && brackets.length > 0 ? 26 : 0;
+  const MARKER_LABEL_H = shiftMarkers && shiftMarkers.length > 0 ? 14 : 0;
   const gridW = HOURS * HOUR_W;
   const svgW = LABEL_W + gridW + TOTAL_W;
-  const svgH = BRACKET_H + HEADER_H + 4 * ROW_H + 12;
+  const svgH = BRACKET_H + HEADER_H + 4 * ROW_H + 12 + MARKER_LABEL_H;
 
   const ROWS = ["OFF", "SB", "D", "OD"].map((k) => STATUS_META[k]);
   const rowIdx = (k) => ROWS.findIndex((r) => r.key === k);
@@ -193,6 +197,22 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
                   {mark === "correct" ? "✓" : mark === "wrong" ? "✕" : "!"}
                 </text>
               )}
+            </g>
+          );
+        })}
+
+        {/* Shift boundary markers — vertical dashed bars with labeled flags below */}
+        {shiftMarkers.map((sm, i) => {
+          const x = xForMin(sm.min);
+          const color = sm.color || (sm.kind === "end" ? "#DC2626" : "#10B981");
+          const labelY = HEADER_H + 4 * ROW_H + 22;
+          return (
+            <g key={`shift${i}`} data-testid={`shift-marker-${sm.kind || i}`}>
+              <line x1={x} y1={HEADER_H - 4} x2={x} y2={HEADER_H + 4 * ROW_H + 4} stroke={color} strokeWidth="2" strokeDasharray="5 3" />
+              {/* Pennant flag */}
+              <polygon points={`${x},${HEADER_H - 4} ${x + (compact ? 24 : 32)},${HEADER_H - 4} ${x + (compact ? 20 : 28)},${HEADER_H + 1} ${x + (compact ? 24 : 32)},${HEADER_H + 6} ${x},${HEADER_H + 6}`} fill={color} opacity="0.92" />
+              <text x={x + (compact ? 3 : 4)} y={HEADER_H + 2} fontSize={compact ? "7.5" : "8.5"} fontWeight="800" fill="#FFFFFF">{sm.kind === "end" ? "END" : "START"}</text>
+              <text x={x} y={labelY} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="700" fill={color}>{sm.label || `${sm.kind === "end" ? "Shift end" : "Shift start"} · ${minToHm(sm.min)}`}</text>
             </g>
           );
         })}

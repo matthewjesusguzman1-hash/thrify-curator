@@ -791,7 +791,11 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 0 * 60,  endMin: 6 * 60,  label: "Counted · 6h", color: "#D4AF37" },
       { startMin: 13 * 60, endMin: 17 * 60, label: "Counted · 4h", color: "#D4AF37" },
     ],
-    description: "This log has exactly one Sleeper Berth block of at least 7 hrs and exactly one Off-Duty block of at least 2 hrs — so the pairing is unambiguous: 7h SB (06-13) + 3h OFF (17-20). Under §395.1(g)(1)(ii) any combination of ≥7h SB + ≥2h SB/OFF totaling ≥10h qualifies, in any order. Per §395.1(g)(1)(ii)(E), the hours inside these two qualifying rest periods are EXCLUDED from both the 11-hr driving limit and the 14-hr work-shift calculation — the wall-clock doesn't pause, but those rest hours simply don't count. Only the 6 hrs before Period A (06:00) and the 4 hrs between A and B (13:00-17:00) count toward this shift's 11 & 14. After Period B ends at 20:00, a new shift begins with a fresh 11/14.",
+    shiftMarkers: [
+      { min: 0, kind: "start", label: "Shift start · 00:00 (first OD)" },
+      { min: 20 * 60, kind: "end", label: "Shift end · 20:00 (end of Period B)" },
+    ],
+    description: "This log has exactly one Sleeper Berth block of at least 7 hrs and exactly one Off-Duty block of at least 2 hrs — so the pairing is unambiguous: 7h SB (06-13) + 3h OFF (17-20). Under §395.1(g)(1)(ii) any combination of ≥7h SB + ≥2h SB/OFF totaling ≥10h qualifies, in any order. Per §395.1(g)(1)(ii)(E), the hours inside these two qualifying rest periods are EXCLUDED from both the 11-hr driving limit and the 14-hr work-shift calculation — the wall-clock doesn't pause, but those rest hours simply don't count. Only the 6 hrs before Period A (06:00) and the 4 hrs between A and B (13:00-17:00) count toward this shift's 11 & 14. The shift starts at 00:00 (first on-duty entry) and ends at 20:00 (end of the second qualifying rest, Period B) — a new shift begins with a fresh 11/14 at 20:00.",
   },
   {
     id: "SL2",
@@ -812,7 +816,11 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 0 * 60,  endMin: 6 * 60,  label: "Counted · 6h", color: "#D4AF37" },
       { startMin: 8 * 60,  endMin: 13 * 60, label: "Counted · 5h", color: "#D4AF37" },
     ],
-    description: "Order doesn't matter under §395.1(g)(1)(ii) — the 2h OFF here came BEFORE the 8h SB and the pairing is still valid. Per §395.1(g)(1)(ii)(E), hours inside qualifying rest periods are EXCLUDED from the 11-hr and 14-hr calculations (they don't count toward either, even though the wall-clock keeps ticking). Counted toward this shift: 6h before Period B + 5h between the two periods = 11h. After Period A ends at 21:00 a new work shift begins — the 3h OD after starts the new shift's clocks.",
+    shiftMarkers: [
+      { min: 0, kind: "start", label: "Shift start · 00:00 (first OD)" },
+      { min: 21 * 60, kind: "end", label: "Shift end · 21:00 (end of Period A)" },
+    ],
+    description: "Order doesn't matter under §395.1(g)(1)(ii) — the 2h OFF here came BEFORE the 8h SB and the pairing is still valid. Per §395.1(g)(1)(ii)(E), hours inside qualifying rest periods are EXCLUDED from the 11-hr and 14-hr calculations (they don't count toward either, even though the wall-clock keeps ticking). Counted toward this shift: 6h before Period B + 5h between the two periods = 11h. The shift starts at 00:00 and ends at 21:00 (end of the LATER of the two qualifying rest periods, which is Period A here). After 21:00 a new work shift begins.",
   },
   {
     id: "SL3",
@@ -829,7 +837,11 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 6 * 60,  endMin: 12 * 60, label: "6h SB — too short", color: "#DC2626" },
       { startMin: 17 * 60, endMin: 21 * 60, label: "4h OFF — no pair", color: "#DC2626" },
     ],
-    description: "Neither period qualifies under §395.1(g)(1)(ii). The rule requires at least 7 consecutive hours in the Sleeper Berth as one of the two periods — here the only SB block is 6 hours. Because no qualifying SB period exists, no hours get excluded from the 11/14 calculations — every D and OD hour counts the whole day, and the 14-hr clock closes 14 wall-clock hours after the first on-duty entry (§395.3(a)(2)).",
+    shiftMarkers: [
+      { min: 6 * 60, kind: "start", label: "Shift start · 06:00 (first D)" },
+      { min: 20 * 60, kind: "end", label: "Shift end · 20:00 (14h wall-clock)" },
+    ],
+    description: "Neither period qualifies under §395.1(g)(1)(ii). The rule requires at least 7 consecutive hours in the Sleeper Berth as one of the two periods — here the only SB block is 6 hours. Because no qualifying SB period exists, no hours get excluded from the 11/14 calculations — every D and OD hour counts the whole day, and the 14-hr clock closes 14 wall-clock hours after the first on-duty entry (§395.3(a)(2)). Shift start = 06:00 (first on-duty). Shift end = 20:00 (14 wall-clock hours later), regardless of the rest blocks in between.",
   },
   {
     id: "SL4",
@@ -847,7 +859,11 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 8 * 60,  endMin: 16 * 60, label: "8h OFF — not sleeper", color: "#DC2626" },
       { startMin: 19 * 60, endMin: 21 * 60, label: "2h SB — no ≥7h SB pair", color: "#DC2626" },
     ],
-    description: "The rule in §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth as one of the two periods. Here the longer rest is Off Duty (not SB) and the only SB block is 2 hours. Even though the totals look right (8 + 2 = 10), no qualifying SB period exists, so the pairing fails. Because no period qualifies, no hours are excluded from the 11/14 calculations — the driver is treated as having taken no split at all.",
+    shiftMarkers: [
+      { min: 0, kind: "start", label: "Shift start · 00:00 (first OD)" },
+      { min: 14 * 60, kind: "end", label: "Shift end · 14:00 (14h wall-clock)" },
+    ],
+    description: "The rule in §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth as one of the two periods. Here the longer rest is Off Duty (not SB) and the only SB block is 2 hours. Even though the totals look right (8 + 2 = 10), no qualifying SB period exists, so the pairing fails. Because no period qualifies, no hours are excluded from the 11/14 calculations — the driver is treated as having taken no split at all. Shift start = 00:00 (first on-duty). Shift end = 14:00 (14 wall-clock hours later). Any driving or on-duty work after 14:00 is a 14-hr violation.",
   },
   {
     id: "SL5",
@@ -872,6 +888,9 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 6 * 60,  endMin: 12 * 60, label: "Counted · 6h", color: "#D4AF37" },
           { startMin: 14 * 60, endMin: 19 * 60, label: "Counted · 5h", color: "#D4AF37" },
         ],
+        shiftMarkers: [
+          { min: 6 * 60, kind: "start", label: "Shift start · 06:00" },
+        ],
       },
       {
         label: "Day 2 · Tue",
@@ -886,6 +905,10 @@ export const SPLIT_LEARN_SCENARIOS = [
         ],
         countedBrackets: [
           { startMin: 3 * 60,  endMin: 10 * 60, label: "New shift · 7h", color: "#D4AF37" },
+        ],
+        shiftMarkers: [
+          { min: 3 * 60, kind: "end", label: "Day 1 shift ENDS · 03:00 (end of Period A)" },
+          { min: 3 * 60, kind: "start", color: "#2563EB", label: "Day 2 shift STARTS · 03:00" },
         ],
       },
     ],
