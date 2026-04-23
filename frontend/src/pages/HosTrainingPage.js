@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft, BookOpen, Target, Calendar, RotateCcw, CheckCircle2, XCircle,
   ChevronRight, GraduationCap, Zap, Award, Clock, Layers, Lightbulb, FileText,
+  ShieldCheck, Plus, Minus,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { EldGrid } from "../components/hos/EldGrid";
@@ -10,6 +11,7 @@ import { STATUS_META, minToHm } from "../lib/hosRules";
 import {
   DUTY_STATUS_QUIZ, FOURTEEN_HOUR_SCENARIOS, ELEVEN_HOUR_SCENARIOS,
   BREAK_SCENARIOS, RECAP_SCENARIOS, LEARN_CONTENT, onDutyBrackets, synthesizeDayLog,
+  EXEMPTIONS_TOP, EXEMPTIONS_OTHERS,
 } from "../lib/hosScenarios";
 
 /**
@@ -26,6 +28,7 @@ const MODULES = [
   { id: "break", learnKey: "break", title: "30-Min Break",      subtitle: "Find the missed interruption", icon: Zap,       color: "#10B981", minutes: 3, quiz: BREAK_SCENARIOS },
   { id: "recap", learnKey: "recap", title: "70-Hour Recap",     subtitle: "Count rolling 8-day hours",    icon: Calendar,  color: "#7C3AED", minutes: 4, quiz: RECAP_SCENARIOS },
   { id: "split", learnKey: null,    title: "Split Sleeper Trainer", subtitle: "Interactive 7+3 / 8+2",    icon: Layers,    color: "#0EA5E9", minutes: 6, quiz: null, route: "/hours-of-service/split-sleeper" },
+  { id: "exempt", learnKey: "exempt", title: "HOS Exemptions",  subtitle: "Top roadside + others",        icon: ShieldCheck, color: "#475569", minutes: 6, quiz: null, custom: "exemptions" },
 ];
 
 export default function HosTrainingPage() {
@@ -43,6 +46,9 @@ export default function HosTrainingPage() {
   const goToQuiz = () => setPhase("quiz");
   const exitModule = () => { setActive(null); setPhase("learn"); };
 
+  if (mod && mod.custom === "exemptions") {
+    return <ExemptionsView onBack={exitModule} />;
+  }
   if (mod && phase === "learn") {
     return <LearnView mod={mod} onBack={exitModule} onQuiz={goToQuiz} />;
   }
@@ -338,8 +344,8 @@ function DutyStatusQuiz({ onBack }) {
               {isCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
               <p className="text-sm font-bold text-[#334155]">{isCorrect ? "Correct" : `Correct answer: ${STATUS_META[q.answer].label}`}</p>
             </div>
-            <p className="text-[12px] text-[#334155] leading-relaxed">{DUTY_STATUS_EXPLAIN[q.answer]}</p>
-            <p className="text-[10px] text-[#64748B] font-mono">49 CFR §395.2</p>
+            <p className="text-[12px] text-[#334155] leading-relaxed">{q.explain || DUTY_STATUS_EXPLAIN[q.answer]}</p>
+            <p className="text-[10px] text-[#64748B] font-mono">{q.cfr || "49 CFR §395.2"}</p>
           </div>
         )}
         <Button onClick={next} disabled={!revealed} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="ds-next-btn">
@@ -525,3 +531,105 @@ const QUIZ_COMPONENTS = {
   break: BreakQuiz,
   recap: RecapQuiz,
 };
+
+/* ═══════════════ Exemptions view ═══════════════ */
+
+function ExemptionsView({ onBack }) {
+  const [showOthers, setShowOthers] = useState(false);
+  return (
+    <div className="min-h-screen bg-[#F0F2F5] pb-8" data-testid="exemptions-view">
+      <header className="sticky top-0 z-30 bg-[#002855] text-white border-b border-[#D4AF37]/30">
+        <div className="max-w-[900px] mx-auto px-3 py-2.5 flex items-center gap-2">
+          <button onClick={onBack} className="text-white/70 hover:text-white p-1" data-testid="exempt-back-btn">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <p className="text-sm font-bold leading-tight truncate" style={{ fontFamily: "Outfit, sans-serif" }}>HOS Exemptions</p>
+            </div>
+            <p className="text-[10px] text-white/50 font-mono">49 CFR §395.1</p>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-[900px] mx-auto px-3 py-4 space-y-3">
+        <section className="bg-white rounded-xl border border-[#E2E8F0] p-4">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Lightbulb className="w-4 h-4 text-[#D4AF37]" />
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">How exemptions work</p>
+          </div>
+          <p className="text-[12.5px] text-[#334155] leading-relaxed">
+            49 CFR §395.1 lists conditions under which the standard HOS rules are relaxed — either waived entirely, time-extended, or recordkeeping-only. Always verify the driver meets EVERY condition of a claimed exemption. Most exemptions require specific vehicle use, geographic limits, or carrier recordkeeping. Source: NASI-A Part A Module 6.
+          </p>
+        </section>
+
+        <div className="flex items-center gap-2 px-1">
+          <div className="w-1 h-5 bg-[#D4AF37] rounded" />
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#002855]">Top exemptions</p>
+          <p className="text-[10px] text-[#94A3B8]">· most cited roadside</p>
+        </div>
+        <div className="space-y-2">
+          {EXEMPTIONS_TOP.map((ex) => <ExemptionCard key={ex.id} ex={ex} top />)}
+        </div>
+
+        <div className="pt-2">
+          <button
+            onClick={() => setShowOthers((v) => !v)}
+            className="w-full flex items-center justify-between bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2.5 hover:bg-white transition-colors"
+            data-testid="toggle-others-btn"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-5 bg-[#94A3B8] rounded" />
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#002855]">Other exemptions</p>
+              <p className="text-[10px] text-[#94A3B8]">· {EXEMPTIONS_OTHERS.length} less common</p>
+            </div>
+            {showOthers ? <Minus className="w-4 h-4 text-[#64748B]" /> : <Plus className="w-4 h-4 text-[#64748B]" />}
+          </button>
+          {showOthers && (
+            <div className="space-y-2 mt-2" data-testid="others-list">
+              {EXEMPTIONS_OTHERS.map((ex) => <ExemptionCard key={ex.id} ex={ex} />)}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function ExemptionCard({ ex, top }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`exempt-${ex.id}`}>
+      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-[#F8FAFC]">
+        <div className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 ${top ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-[#475569]/20 text-[#475569]"}`}>
+          <ShieldCheck className="w-3.5 h-3.5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-bold text-[#002855] leading-tight">{ex.title}</p>
+          <p className="text-[10px] text-[#64748B] font-mono leading-tight">{ex.cfr}</p>
+        </div>
+        {open ? <Minus className="w-4 h-4 text-[#64748B]" /> : <Plus className="w-4 h-4 text-[#64748B]" />}
+      </button>
+      {open && (
+        <div className="px-3 pb-3 pt-1 border-t border-[#F1F5F9] space-y-2">
+          <p className="text-[12px] text-[#334155] leading-relaxed">{ex.summary}</p>
+          {ex.conditions && ex.conditions.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] mb-1">Conditions to qualify</p>
+              <ul className="space-y-1">
+                {ex.conditions.map((c, i) => (
+                  <li key={i} className="text-[12px] text-[#334155] leading-relaxed pl-3 relative">
+                    <span className="absolute left-0 top-[6px] w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+

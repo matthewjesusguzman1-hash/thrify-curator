@@ -9,7 +9,9 @@ export const DUTY_STATUS_QUIZ = [
   { id: "ds2",  situation: "Supervising the loading of a trailer.",                         answer: "OD" },
   { id: "ds3",  situation: "Sleeping in the sleeper berth.",                                answer: "SB" },
   { id: "ds4",  situation: "On vacation.",                                                  answer: "OFF" },
-  { id: "ds5",  situation: "Sitting in the passenger seat reading a road map for a co-driver for 4 hours (drove before and will drive immediately after).", answer: "OD" },
+  { id: "ds5",  situation: "Sitting in the passenger seat reading a road map for a co-driver for 4 hours (drove before and will drive immediately after).", answer: "OD",
+    explain: "Time in or on a CMV that's being operated counts as On Duty — the driver is still available to the motor carrier even when not behind the wheel. The only passenger-seat carve-out is up to 3 hours immediately before or after at least 7 consecutive hours in a qualifying sleeper berth (49 CFR §395.1(g)(1)(i)(A)). This driver was on duty before, sat 4 hours in the passenger seat (over the 3-hr max and not paired with ≥7 hrs in the SB), and will drive immediately after — so the full 4 hours is On-Duty not driving.",
+    cfr: "49 CFR §395.2 · §395.1(g)(1)(i)(A)" },
   { id: "ds6",  situation: "Driving a personal vehicle to work.",                           answer: "OFF" },
   { id: "ds7",  situation: "Stopped at a weigh station for a vehicle inspection.",          answer: "OD" },
   { id: "ds8",  situation: "At the scene of an accident collecting information.",           answer: "OD" },
@@ -565,4 +567,393 @@ export function synthesizeDayLog(onDutyHours) {
   }
   return entries;
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EXEMPTIONS — source: NASI-A Part A Module 6 (HOS), organized by roadside
+   frequency. Top list is drilled; the rest live under "Others".
+   ══════════════════════════════════════════════════════════════════════════ */
+
+export const EXEMPTIONS_TOP = [
+  {
+    id: "short-haul-150",
+    title: "150 Air-Mile Short-Haul",
+    cfr: "49 CFR §395.1(e)(1) · CDL · §395.1(e)(2) · non-CDL",
+    summary: "Exempts the driver from preparing a RODS and supporting documents roadside — the driver still follows the 11/14/70-hr rules, but recordkeeping shifts to the motor carrier.",
+    conditions: [
+      "Operates within a 150 air-mile radius of the normal work-reporting location.",
+      "Returns to that reporting location each day.",
+      "Released from work within 14 hrs of starting and gets ≥10 consecutive hrs off duty. (Non-CDL: ≤14 hrs on-duty 5 of 7 days, ≤16 hrs on the other 2.)",
+      "Motor carrier keeps duty status records: report time, release time, total on-duty hrs.",
+    ],
+  },
+  {
+    id: "16-hour",
+    title: "16-Hour Short-Haul Exception",
+    cfr: "49 CFR §395.1(o)",
+    summary: "Extends the 14-hr work shift to 16 hrs — one time per 60/70-hr cycle.",
+    conditions: [
+      "Driver returned to the normal work-reporting location for the last 5 days.",
+      "Released from duty with 10 consecutive hrs off by the time the 16th hour is reached.",
+      "Can only be used once between required off-duty periods of ≥34 consecutive hrs.",
+      "RODS IS required on the day the exception is used (no short-haul exemption from RODS).",
+    ],
+  },
+  {
+    id: "adverse-driving",
+    title: "Adverse Driving Conditions",
+    cfr: "49 CFR §395.1(b)(1)",
+    summary: "Allows driving and the 14-hr work shift to be extended by up to 2 hrs when the driver encounters unforeseen adverse conditions.",
+    conditions: [
+      "Snow, sleet, fog, ice, unusual road/traffic conditions, etc.",
+      "Conditions were NOT known (or knowable) before dispatch or the most recent rest break.",
+      "Applies to property-carrying CMVs only.",
+      "Short-haul drivers may use this to extend driving time; ELD users must annotate the log.",
+    ],
+  },
+  {
+    id: "emergency",
+    title: "Emergency Conditions",
+    cfr: "49 CFR §395.1(b)(2)",
+    summary: "Driver may complete the run without violating HOS if an emergency arose and the run would otherwise have been completed legally.",
+    conditions: [
+      "A genuine emergency situation (not the carrier's dispatch planning).",
+      "The run reasonably could have been completed within HOS but for the emergency.",
+      "Driver must still drive safely; the exemption doesn't override fatigue rules or CDL standards.",
+    ],
+  },
+  {
+    id: "driver-salesperson",
+    title: "Driver-Salesperson",
+    cfr: "49 CFR §395.1(c)",
+    summary: "Exempt from the 60/70-hr rule as long as weekly driving time stays below 40 hrs.",
+    conditions: [
+      "Meets the §395.2 definition of a driver-salesperson.",
+      "Total DRIVING time does not exceed 40 hrs in any 7 consecutive days.",
+      "On-duty time above the 40-hr driving cap still counts against other limits.",
+    ],
+  },
+  {
+    id: "oilfield",
+    title: "Oilfield Operations",
+    cfr: "49 CFR §395.1(d)",
+    summary: "Waiting time at a well site is off-duty (doesn't burn the 14-hr window). 70/8 can be reset with 24 consecutive hrs off.",
+    conditions: [
+      "CMV is used exclusively to transport oilfield equipment (stringing/picking up pipe, servicing wells, etc.).",
+      "Specially trained drivers servicing oil wells: waiting time at the well site = Off Duty even if recorded on-duty elsewhere.",
+      "These CMVs are NOT eligible for the 150-mile short-haul exemption.",
+    ],
+  },
+  {
+    id: "agricultural",
+    title: "Agricultural Operations",
+    cfr: "49 CFR §395.1(k)",
+    summary: "Transport of non-processed agricultural commodities, livestock, bees, insects, and farm supplies within specified radii is fully exempt from HOS and RODS.",
+    conditions: [
+      "Non-processed food, feed, fiber, or livestock: exempt within 150 air-mi of the COMMODITY SOURCE (exemption continues outside the radius).",
+      "Livestock/bees/insects: exempt within 150 air-mi of the FINAL DESTINATION.",
+      "Farm supplies wholesale→farm or wholesale→retail: transport time counts as Off Duty (can satisfy the 10-hr reset).",
+    ],
+  },
+  {
+    id: "covered-farm-vehicle",
+    title: "Covered Farm Vehicle",
+    cfr: "49 CFR §395.1(s)",
+    summary: "Farm-plated vehicles (owner/employee-operated, not-for-hire) have weight-graduated geographic exemption from HOS.",
+    conditions: [
+      "Straight or articulated truck registered as a farm vehicle.",
+      "Operated by the owner or an employee of the farm; not for hire.",
+      "≤ 26,001 lbs: exempt anywhere in the U.S.",
+      "> 26,001 lbs: exempt inside the state of registration plus 150 miles across any state line.",
+    ],
+  },
+  {
+    id: "utility-service",
+    title: "Utility Service Vehicle",
+    cfr: "49 CFR §395.1(n) · definition §395.2",
+    summary: "Vehicles meeting the §395.2 utility-service-vehicle definition are exempt from HOS entirely.",
+    conditions: [
+      "Vehicle is used primarily in construction, operation, or maintenance of utility service infrastructure.",
+      "Not used in for-hire carriage.",
+    ],
+  },
+];
+
+export const EXEMPTIONS_OTHERS = [
+  {
+    id: "construction",
+    title: "Construction Materials & Equipment",
+    cfr: "49 CFR §395.1(m)",
+    summary: "Drivers transporting construction materials/equipment may reset the 60/70-hr rule with 24 consecutive hrs off (instead of 34).",
+    conditions: ["CMV used primarily to haul construction materials and equipment."],
+  },
+  {
+    id: "motion-picture",
+    title: "Motion Picture Production Site",
+    cfr: "49 CFR §395.1(p)",
+    summary: "Within a 100 air-mi production radius, the 11/14/30-min rules are replaced by a 10-hr drive / 15-hr duty limit after 8 hrs off.",
+    conditions: [
+      "Transport to/from a motion picture production site.",
+      "Within 100 air-mi of the driver's work-reporting location.",
+      "Drive ≤10 hrs after 8 consecutive hrs off; no driving after 15 hrs on-duty in the same shift.",
+    ],
+  },
+  {
+    id: "alaska",
+    title: "State of Alaska",
+    cfr: "49 CFR §395.1(h)",
+    summary: "Property-carrying Alaska drivers: 15 hrs driving / 20 hrs on-duty after 10 hrs off; 70/7 or 80/8 cycle; no 30-min break rule. Adverse conditions may extend further.",
+    conditions: ["Operation within Alaska."],
+  },
+  {
+    id: "hawaii",
+    title: "State of Hawaii",
+    cfr: "49 CFR §395.1(i)",
+    summary: "Hawaii drivers may skip RODS if the motor carrier retains accurate daily on-duty records (report/release times + totals) for 6 months.",
+    conditions: [
+      "Driver is employed by a motor carrier.",
+      "Carrier maintains & retains records for 6 months.",
+    ],
+  },
+  {
+    id: "retail-holiday",
+    title: "Retail-Store Holiday Deliveries",
+    cfr: "49 CFR §395.1(f)",
+    summary: "During Dec 10–25 each year, local retail-delivery drivers within 100 air-mi are exempt from 11/14/30-min/60-70 rules.",
+    conditions: [
+      "Local deliveries from retail stores / catalog businesses to the end consumer.",
+      "Within 100 air-mi of the driver's work-reporting location.",
+      "ONLY Dec 10–25 inclusive.",
+    ],
+  },
+  {
+    id: "bees",
+    title: "Commercial Bee Transport",
+    cfr: "49 CFR §395.1(u)",
+    summary: "Interstate bee transport is exempt from the 30-min break rule if bees are loaded.",
+    conditions: ["Interstate transport of commercial bees by CMV with bees loaded."],
+  },
+  {
+    id: "livestock",
+    title: "Commercial Livestock Transport",
+    cfr: "49 CFR §395.1(v)",
+    summary: "Interstate livestock transport is exempt from the 30-min break rule if livestock are loaded.",
+    conditions: ["Interstate transport of livestock by CMV with livestock loaded."],
+  },
+  {
+    id: "hi-rail",
+    title: "Hi-Rail Vehicle",
+    cfr: "49 CFR §395.1(w)",
+    summary: "Travel time to/from assignment doesn't count against max on-duty, subject to caps.",
+    conditions: [
+      "Driver of a hi-rail vehicle.",
+      "Travel time ≤2 hrs/day and ≤30 hrs/month, logged by the motor carrier.",
+      "Records made available to FMCSA/FRA on request.",
+    ],
+  },
+  {
+    id: "pipeline-welding",
+    title: "Pipeline Welding Truck",
+    cfr: "49 CFR §395.1(x) · definition §390.38(b)",
+    summary: "Vehicles meeting the §390.38(b) pipeline-welding-truck definition are exempt from HOS.",
+    conditions: ["Vehicle meets the §390.38(b) pipeline-welding-truck definition."],
+  },
+];
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SPLIT SLEEPER — Learn scenarios (bracketed qualifying periods + counted
+   hours) and Practice scenarios (select qualifying blocks, then answer Q's).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Each learn entry is a full 24-hr day log. `qualifyingBrackets` = the green
+ * rest brackets (qualifying for a split); `countedBrackets` = gold brackets on
+ * spans that count toward the 11 & 14 clocks; `description` explains the math. */
+export const SPLIT_LEARN_SCENARIOS = [
+  {
+    id: "SL1",
+    title: "Legal 7+3 — how the clocks work",
+    log: [
+      { status: "OFF", start: "00:00", end: "04:00" },
+      { status: "OD",  start: "04:00", end: "05:00" },
+      { status: "D",   start: "05:00", end: "09:00" },
+      { status: "SB",  start: "09:00", end: "16:00" }, // Period A · 7h
+      { status: "D",   start: "16:00", end: "20:00" },
+      { status: "OFF", start: "20:00", end: "23:00" }, // Period B · 3h
+      { status: "OFF", start: "23:00", end: "24:00" },
+    ],
+    qualifyingBrackets: [
+      { startMin: 9 * 60,  endMin: 16 * 60, label: "Period A · 7h SB ✓", color: "#10B981" },
+      { startMin: 20 * 60, endMin: 23 * 60, label: "Period B · 3h OFF ✓", color: "#10B981" },
+    ],
+    countedBrackets: [
+      { startMin: 4 * 60,  endMin: 9 * 60,  label: "Counted · 5h", color: "#D4AF37" },
+      { startMin: 16 * 60, endMin: 20 * 60, label: "Counted · 4h", color: "#D4AF37" },
+    ],
+    description: "Period A (7 hrs in the Sleeper Berth) and Period B (3 hrs off duty) together form a valid 7+3 split. Both rest periods pause the 11-hr driving clock AND the 14-hr work-shift clock. Only the 4 hrs before Period A, the 5 hrs between A and B, and any work after Period B count toward the 11 & 14. Hours inside a qualifying rest period are NOT counted.",
+  },
+  {
+    id: "SL2",
+    title: "Legal 8+2 — longer period can be first OR second",
+    log: [
+      { status: "OD",  start: "00:00", end: "01:00" },
+      { status: "D",   start: "01:00", end: "06:00" },
+      { status: "OFF", start: "06:00", end: "08:00" }, // Period B · 2h OFF (shorter, first)
+      { status: "D",   start: "08:00", end: "13:00" },
+      { status: "SB",  start: "13:00", end: "21:00" }, // Period A · 8h SB (longer, second)
+      { status: "OD",  start: "21:00", end: "22:00" },
+      { status: "OFF", start: "22:00", end: "24:00" },
+    ],
+    qualifyingBrackets: [
+      { startMin: 6 * 60,  endMin: 8 * 60,  label: "2h OFF ✓",  color: "#10B981" },
+      { startMin: 13 * 60, endMin: 21 * 60, label: "8h SB ✓ (longer)", color: "#10B981" },
+    ],
+    countedBrackets: [
+      { startMin: 0 * 60,  endMin: 6 * 60,  label: "Counted · 6h", color: "#D4AF37" },
+      { startMin: 8 * 60,  endMin: 13 * 60, label: "Counted · 5h", color: "#D4AF37" },
+      { startMin: 21 * 60, endMin: 22 * 60, label: "+1h", color: "#D4AF37" },
+    ],
+    description: "Shorter period (2h OFF) came first; the longer period (8h SB) came second — order doesn't matter as long as the LONGER period is in the Sleeper Berth. 14-hr clock math: 6h before Period B + 5h in the middle + 1h after Period A = 12h counted. Hours inside Period A and Period B don't count toward the 14.",
+  },
+  {
+    id: "SL3",
+    title: "Invalid — 6h SB + 4h OFF",
+    log: [
+      { status: "OFF", start: "00:00", end: "06:00" },
+      { status: "SB",  start: "06:00", end: "12:00" }, // 6h — too short
+      { status: "D",   start: "12:00", end: "17:00" },
+      { status: "OFF", start: "17:00", end: "21:00" }, // 4h — not paired with ≥7h SB
+      { status: "D",   start: "21:00", end: "24:00" },
+    ],
+    qualifyingBrackets: [],
+    countedBrackets: [
+      { startMin: 6 * 60,  endMin: 12 * 60, label: "6h SB — NOT qualifying", color: "#DC2626" },
+      { startMin: 17 * 60, endMin: 21 * 60, label: "4h OFF — NOT qualifying", color: "#DC2626" },
+    ],
+    description: "Neither period qualifies. The shorter period must pair with a sleeper-berth period of at least 7 hrs (for 7+3) or at least 8 hrs (for 8+2). A 6-hr SB doesn't meet either threshold. Because neither period qualifies, BOTH clock windows keep running the whole day — no pause — and the driver's 14-hr window closes based on first on-duty regardless.",
+  },
+  {
+    id: "SL4",
+    title: "Invalid — longer period not in Sleeper Berth",
+    log: [
+      { status: "OD",  start: "00:00", end: "02:00" },
+      { status: "D",   start: "02:00", end: "08:00" },
+      { status: "OFF", start: "08:00", end: "16:00" }, // 8h OFF — but not SB
+      { status: "D",   start: "16:00", end: "19:00" },
+      { status: "SB",  start: "19:00", end: "21:00" }, // 2h SB — shorter
+      { status: "OFF", start: "21:00", end: "24:00" },
+    ],
+    qualifyingBrackets: [],
+    countedBrackets: [
+      { startMin: 8 * 60,  endMin: 16 * 60, label: "8h OFF — wrong status", color: "#DC2626" },
+      { startMin: 19 * 60, endMin: 21 * 60, label: "2h SB — shorter period", color: "#DC2626" },
+    ],
+    description: "The LONGER of the two periods must be in the Sleeper Berth. Here the 8-hr block is Off Duty instead of Sleeper Berth, so even though the totals look right (8 + 2 = 10), the pairing fails. No pause on the 11/14 clocks — they keep running as if the driver took no split at all.",
+  },
+];
+
+/* ─── Practice scenarios ─── user (1) selects qualifying rest blocks then
+ * answers (2) valid split? (3) 11/14 violation? (4) counted hours.
+ * `qualifyingBlockIdx` = the indices of entries that should be selected. */
+export const SPLIT_PRACTICE_SCENARIOS = [
+  {
+    id: "SP1",
+    prompt: "Review this driver's day. Tap the rest blocks you believe qualify for a split-sleeper pairing.",
+    log: [
+      { status: "OFF", start: "00:00", end: "04:00" },
+      { status: "OD",  start: "04:00", end: "05:00" },
+      { status: "D",   start: "05:00", end: "09:00" },
+      { status: "SB",  start: "09:00", end: "16:00" }, // idx 3 — qualifying 7h SB
+      { status: "D",   start: "16:00", end: "19:00" },
+      { status: "OFF", start: "19:00", end: "22:00" }, // idx 5 — qualifying 3h OFF
+      { status: "OFF", start: "22:00", end: "24:00" },
+    ],
+    qualifyingBlockIdx: [3, 5],
+    validSplit: true,
+    splitType: "7+3",
+    violation11: false,
+    violation14: false,
+    counted14Hours: 10,
+    counted11Hours: 7, // only D segments within counted on-duty
+    explanation: {
+      qualifying: "The 7-hr SB from 09:00-16:00 (idx 3) and the 3-hr OFF from 19:00-22:00 (idx 5) together form a legal 7+3 split. The 4-hr OFF at the start (idx 0) isn't selectable as a split period — it's the pre-shift rest.",
+      split: "Valid 7+3. Longer period (7h) is in Sleeper Berth. Shorter period (3h) is Off Duty. Both periods pause the 11-hr and 14-hr clocks.",
+      violation: "No violation. Counted on-duty (D+OD, excluding the two qualifying rest periods) totals 10 hrs — well within 14. Counted driving totals 7 hrs — within 11.",
+      hours: "14-hr counted = 1h OD (04-05) + 4h D (05-09) + 3h D (16-19) + nothing in Period B or after = 8 hrs counted work toward the 14. (Period A pause: 09-16. Period B pause: 19-22.) Wait — the last OFF (22-24) is post-Period-B so still no extension. Driving counted = 4h + 3h = 7 hrs.",
+    },
+  },
+  {
+    id: "SP2",
+    prompt: "Same question — identify the qualifying split-sleeper periods in this log.",
+    log: [
+      { status: "OD",  start: "00:00", end: "01:00" },
+      { status: "D",   start: "01:00", end: "09:00" },
+      { status: "OFF", start: "09:00", end: "11:00" }, // idx 2 — 2h OFF (shorter)
+      { status: "D",   start: "11:00", end: "14:00" },
+      { status: "SB",  start: "14:00", end: "22:00" }, // idx 4 — 8h SB (longer)
+      { status: "D",   start: "22:00", end: "24:00" },
+    ],
+    qualifyingBlockIdx: [2, 4],
+    validSplit: true,
+    splitType: "8+2",
+    violation11: true,
+    violation14: false,
+    counted14Hours: 14, // 1 + 8 + 3 + 2 = 14
+    counted11Hours: 13, // 8 + 3 + 2 = 13h driving counted — over 11
+    explanation: {
+      qualifying: "2h OFF (idx 2) pairs with 8h SB (idx 4) to form a legal 8+2 split. The longer period is in the Sleeper Berth, as required.",
+      split: "Valid 8+2 — longer period (8h) is in the Sleeper Berth, shorter period (2h) is Off Duty.",
+      violation: "11-hr DRIVING VIOLATION. The counted driving time (8h + 3h + 2h = 13h) exceeds the 11-hr limit. 14-hr is within limits (14 hrs counted = at the cap but not over).",
+      hours: "14-hr counted: 1h OD (00-01) + 8h D (01-09) + 3h D (11-14) + 2h D (22-24) = 14 hrs. 11-hr counted (driving only): 8 + 3 + 2 = 13 hrs — 2 hrs over limit.",
+    },
+  },
+  {
+    id: "SP3",
+    prompt: "Does this log include any qualifying split-sleeper rest periods?",
+    log: [
+      { status: "OFF", start: "00:00", end: "06:00" },
+      { status: "D",   start: "06:00", end: "12:00" },
+      { status: "OFF", start: "12:00", end: "16:00" }, // idx 2 — 4h OFF, not qualifying
+      { status: "D",   start: "16:00", end: "20:00" },
+      { status: "SB",  start: "20:00", end: "24:00" }, // idx 4 — 4h SB, not qualifying
+    ],
+    qualifyingBlockIdx: [],
+    validSplit: false,
+    splitType: null,
+    violation11: false,
+    violation14: false,
+    counted14Hours: 14,
+    counted11Hours: 10,
+    explanation: {
+      qualifying: "Neither rest period qualifies. A 4h OFF + 4h SB pairing fails both thresholds — the longer period needs to be ≥7h in Sleeper Berth (7+3) or ≥8h SB (8+2). Neither block meets that bar.",
+      split: "No valid split. Because no period qualifies, neither clock ever pauses.",
+      violation: "No 11 or 14 violation — but only because total driving is exactly 10 hrs and total on-duty is 14 hrs. Every block counts toward the clocks the whole day.",
+      hours: "14-hr counted = full day from first on-duty (06:00) to last entry in shift (24:00) = 18 hrs of wall-clock elapsed … wait, max 14 counted. Actually: counted on-duty = 6h D + 4h D = 10h D + nothing else (OFF and SB don't count toward the 14/11). The 14-hr clock is wall-clock from 06:00 — closes at 20:00. The driver finished driving before 20:00 so no 14-hr violation.",
+    },
+  },
+  {
+    id: "SP4",
+    prompt: "Identify the qualifying rest periods on this log.",
+    log: [
+      { status: "OD",  start: "00:00", end: "01:00" },
+      { status: "D",   start: "01:00", end: "06:00" },
+      { status: "OFF", start: "06:00", end: "14:00" }, // idx 2 — 8h OFF, NOT qualifying (wrong status)
+      { status: "D",   start: "14:00", end: "17:00" },
+      { status: "SB",  start: "17:00", end: "19:00" }, // idx 4 — 2h SB, not qualifying alone
+      { status: "OFF", start: "19:00", end: "24:00" },
+    ],
+    qualifyingBlockIdx: [],
+    validSplit: false,
+    splitType: null,
+    violation11: false,
+    violation14: true,
+    counted14Hours: 19, // wall clock 00:00 to 19:00 = 19hrs (no qualifying pause)
+    counted11Hours: 8,
+    explanation: {
+      qualifying: "The 8h OFF (idx 2) looks appealing but the longer period in a valid split MUST be in the Sleeper Berth — off duty doesn't qualify. The 2h SB (idx 4) is too short to pair with anything else on this log. No qualifying rest periods.",
+      split: "No valid split. 8 OFF + 2 SB fails because the longer period is not in the Sleeper Berth.",
+      violation: "14-hr VIOLATION. Without a qualifying split, the 14-hr clock started at 00:00 and closed at 14:00. Driving resumed at 14:00 and continued to 17:00 — that's driving past the 14th hour.",
+      hours: "14-hr counted: wall-clock from 00:00, so the window closes at 14:00. Driving from 14:00-17:00 is past the window = violation. Driving counted: 5h + 3h = 8h (under 11).",
+    },
+  },
+];
 

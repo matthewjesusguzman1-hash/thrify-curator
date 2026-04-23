@@ -15,8 +15,13 @@ import { hmToMin, padDay, STATUS_META, minToHm } from "../../lib/hosRules";
  *                     (e.g. the 14-hr window, 8-hr driving block, on-duty segment)
  *   shade             Array<{startMin, endMin, color?}> — soft column shading
  *                     across all rows to accent a region of the log
+ *   selectableIndices Array<int> — entry indices the user may click to select
+ *                     (shown with a subtle hover outline)
+ *   selectedIndices   Array<int> — currently selected entry indices
+ *   onEntryClick      (idx) => void — callback when a selectable block is tapped
+ *   blockMarks        { [idx]: 'correct' | 'wrong' | 'missed' } — reveal state
  */
-export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [] }) {
+export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {} }) {
   const HOUR_W = compact ? 20 : 28;
   const ROW_H = compact ? 26 : 32;
   const LABEL_W = compact ? 62 : 74;
@@ -155,6 +160,42 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
         {pts.length > 0 && (
           <polyline points={traceStr} fill="none" stroke="#002855" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter" />
         )}
+
+        {/* Selectable entry overlays — clickable rects over rest blocks */}
+        {selectableIndices.length > 0 && entries.map((e, idx) => {
+          if (!selectableIndices.includes(idx)) return null;
+          const x = xFor(e.start);
+          const w = xFor(e.end) - x;
+          if (w <= 0) return null;
+          const y = HEADER_H + rowIdx(e.status) * ROW_H;
+          const selected = selectedIndices.includes(idx);
+          const mark = blockMarks[idx];
+          const fill = mark === "correct" ? "#10B981" :
+                       mark === "wrong"   ? "#DC2626" :
+                       mark === "missed"  ? "#F59E0B" :
+                       selected           ? "#2563EB" : "transparent";
+          const fillOpacity = mark ? 0.45 : (selected ? 0.35 : 0);
+          const strokeColor = mark === "correct" ? "#059669" :
+                              mark === "wrong"   ? "#B91C1C" :
+                              mark === "missed"  ? "#D97706" :
+                              selected           ? "#1D4ED8" : "#002855";
+          const strokeW = mark || selected ? 2.2 : 1.2;
+          const strokeOpacity = mark || selected ? 1 : 0.55;
+          return (
+            <g key={`sel${idx}`} style={{ cursor: onEntryClick && !mark ? "pointer" : "default" }}
+               onClick={(ev) => { if (onEntryClick && !mark) { ev.stopPropagation(); onEntryClick(idx); } }}>
+              <rect x={x + 1} y={y + 2} width={Math.max(0, w - 2)} height={ROW_H - 4}
+                fill={fill} fillOpacity={fillOpacity}
+                stroke={strokeColor} strokeWidth={strokeW} strokeOpacity={strokeOpacity}
+                strokeDasharray={!mark && !selected ? "3 2" : ""} rx={3} />
+              {mark && (
+                <text x={x + w / 2} y={y + ROW_H / 2 + 3.5} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="800" fill="#FFFFFF">
+                  {mark === "correct" ? "✓" : mark === "wrong" ? "✕" : "!"}
+                </text>
+              )}
+            </g>
+          );
+        })}
 
         {/* Correct-answer highlight (red) */}
         {highlightMinute !== null && highlightMinute !== undefined && (
