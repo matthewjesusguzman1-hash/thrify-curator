@@ -56,7 +56,7 @@ function PriorResetBanner() {
       className="flex items-center gap-2 rounded-md border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1.5"
       data-testid="prior-reset-banner"
     >
-      <Moon className="w-3.5 h-3.5 text-[#1D4ED8] flex-shrink-0" />
+      <Moon className="w-3.5 h-3.5 text-[#1D4ED8] flex-shrink-0" aria-hidden="true" />
       <p className="text-[11px] text-[#1E3A8A] leading-snug">
         <span className="font-bold">Assume prior day ended with a full 10-hour OFF reset</span>
         {" "}— driver's clocks are fresh at 00:00 of this log.

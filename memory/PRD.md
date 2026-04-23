@@ -32,9 +32,11 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - Fixed SP1 (shift 13:00-17:00, counted 4/4), SP3 (counted 10/10 — was 14/10), SP4 (counted 6/8 — was 19/8). SL3, SL4, SP3, SP4 invalid-split scenarios retain 14-hr wall-clock boundaries.
 - Updated QuestionsStack hint in SplitSleeperPage.js to cite CVSA rule verbatim.
 - EldGrid received `data-testid="eld-entry-{idx}"` on selectable duty blocks (testing agent helper — no behavior change).
+- **PriorResetBanner**: added a blue-chip banner ("Assume prior day ended with a full 10-hour OFF reset — driver's clocks are fresh at 00:00 of this log.") above every single-day Learn card, every single-day extra example, and every Practice scenario. Multi-day scenarios (SL5, SL5-b, SL5-c) intentionally omit it since they already show the overnight rest themselves.
 
-### 2026-02 test_reports/iteration_28.json — 100% frontend pass
-- 13/13 checkpoints: CVSA bullets visible · SL1-SL5 + extras · SP1-SP4 full 4-question flow · shift-time validation tolerates ±10 min · hours ±0.5. No runtime errors.
+### 2026-02 test_reports/iteration_28.json + iteration_29.json — 100% frontend pass
+- iteration_28: 13/13 checkpoints — CVSA bullets visible · SL1-SL5 + extras · SP1-SP4 full 4-question flow · shift-time ±10 min · hours ±0.5.
+- iteration_29: 7/7 checkpoints — PriorResetBanner renders on SL1-SL4 + extras + SP1-SP4 (not SL5 multi-day); DOM position above ELD grid; iteration_28 shift markers still green.
 
 ### 2026-02 — Device-only photos + UI consolidation (current session)
 - **Device-only photos**: IndexedDB library (`devicePhotos.js`) + `<DevicePhoto>` component. All upload flows converted to local-save + JSON metadata POST. Server photo endpoints refactored to JSON-only (no multipart). One-time wipe endpoint runs on /api/admin/wipe-photos?badge=121 (executed; 3 inspections cleared).
