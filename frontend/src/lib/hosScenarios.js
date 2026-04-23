@@ -320,11 +320,11 @@ export const LEARN_CONTENT = {
   "14hr": {
     title: "14-Hour Window",
     cfr: "49 CFR §395.3(a)(2)",
-    intro: "Once a driver comes on-duty after a 10-hr rest, they have a 14-consecutive-hour window in which any driving must occur. The window runs on wall-clock time — it does NOT pause for breaks.",
+    intro: "Once a driver comes on-duty after a 10-hour rest, they have 14 TOTAL hours to complete the work shift. The shift is capped at 14 hours of elapsed time — driving and on-duty work both have to be done by the 14th hour. The clock runs on wall-clock time — it does NOT pause for breaks.",
     sections: [
       {
         heading: "Window opens at first on-duty",
-        body: "The clock starts the moment the driver goes on-duty (D or OD) — not when they begin driving. A pre-trip inspection at 06:00 means the window closes at 20:00 even if the driver doesn't leave the yard until 07:00.",
+        body: "The clock starts the moment the driver goes on-duty (D or OD) — not when they begin driving. A pre-trip inspection at 06:00 means the work shift ends at 20:00 even if the driver doesn't actually pull out of the yard until 07:00.",
         exampleLog: [
           { status: "OFF", start: "00:00", end: "06:00" },
           { status: "OD",  start: "06:00", end: "07:00" },
@@ -334,12 +334,12 @@ export const LEARN_CONTENT = {
           { status: "OFF", start: "19:00", end: "24:00" },
         ],
         brackets: [
-          { startMin: MIN(6), endMin: MIN(20), label: "14-hr window", color: "#D4AF37" },
+          { startMin: MIN(6), endMin: MIN(20), label: "14-hr work shift", color: "#D4AF37" },
         ],
       },
       {
-        heading: "No driving past the 14th hour",
-        body: "Once the window closes, driving is prohibited. The driver CAN keep doing on-duty not-driving tasks past the 14th hour — they just can't be behind the wheel.",
+        heading: "Work shift ends at the 14th hour",
+        body: "Once the 14th hour is reached, the driver must stop. Any driving OR on-duty time past the 14th hour is a violation. The only way to start a new work shift is to take a qualifying rest (10 consecutive hours off-duty/sleeper or a valid 7+3 / 8+2 split).",
         exampleLog: [
           { status: "OFF", start: "00:00", end: "07:00" },
           { status: "D",   start: "07:00", end: "13:00" },
@@ -348,13 +348,13 @@ export const LEARN_CONTENT = {
           { status: "OFF", start: "22:00", end: "24:00" },
         ],
         brackets: [
-          { startMin: MIN(7), endMin: MIN(21), label: "Window · driving legal", color: "#D4AF37" },
+          { startMin: MIN(7), endMin: MIN(21), label: "Legal work shift · 14h", color: "#D4AF37" },
           { startMin: MIN(21), endMin: MIN(22), label: "VIOLATION", color: "#DC2626" },
         ],
       },
       {
         heading: "Breaks do NOT reset the window",
-        body: "Even a 3-hour off-duty break in the middle of the day does not extend the 14-hour window. The window only resets with a full 10 consecutive hours off duty or sleeper (or a valid split).",
+        body: "Even a 3-hour off-duty break in the middle of the day does not extend the 14-hour work shift. The window only resets with a full 10 consecutive hours off duty or sleeper (or a valid split).",
         exampleLog: [
           { status: "OFF", start: "00:00", end: "06:00" },
           { status: "D",   start: "06:00", end: "12:00" },
@@ -363,11 +363,11 @@ export const LEARN_CONTENT = {
           { status: "OFF", start: "20:00", end: "24:00" },
         ],
         brackets: [
-          { startMin: MIN(6), endMin: MIN(20), label: "14-hr window still closes at 20:00", color: "#D4AF37" },
+          { startMin: MIN(6), endMin: MIN(20), label: "14-hr shift still ends at 20:00", color: "#D4AF37" },
         ],
       },
     ],
-    summary: "When reviewing a log roadside: find the first on-duty entry after a qualifying rest, add 14 hours, and check whether any driving extends past that clock time. The off-duty blocks in between don't count.",
+    summary: "When reading a log roadside: find the first on-duty entry after a qualifying rest, add 14 hours — that's the end of the work shift. Any driving or on-duty work after that clock time is a violation. The off-duty blocks in between do NOT pause the clock.",
   },
 
   "11hr": {
