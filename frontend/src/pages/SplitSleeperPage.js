@@ -72,22 +72,25 @@ function LearnTab() {
         </div>
         <div className="p-4 space-y-2.5">
           <p className="text-[12.5px] text-[#334155] leading-relaxed">
-            Before you can count a driver's hours, you must know exactly when their work shift starts and ends. Every 11/14 calculation depends on this. The green <span className="inline-block w-4 h-3 align-middle rounded-[2px] bg-[#10B981]" /> <span className="font-bold">START</span> flag and red <span className="inline-block w-4 h-3 align-middle rounded-[2px] bg-[#DC2626]" /> <span className="font-bold">END</span> flag on each example grid below mark these boundaries.
+            Every 11/14 calculation depends on knowing exactly when the work shift STARTS and ENDS. The CVSA procedure (Step 10) gives two rules — one for a standard 10-hr reset, and one for the sleeper-berth provision.
           </p>
           <div className="bg-[#F8FAFC] rounded-lg border border-[#E2E8F0] p-3 space-y-1.5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#10B981]">Shift START</p>
-            <p className="text-[12px] text-[#334155] leading-relaxed">
-              The <span className="font-bold">first on-duty entry</span> (Driving OR On-Duty not driving) AFTER the driver's most recent qualifying rest (10 consecutive hours off-duty/sleeper OR the completion of a valid split-sleeper pairing per §395.1(g)(1)(ii)). Pre-trip inspection at 06:00? Shift started at 06:00 — even if wheels didn't turn until 07:00.
-            </p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#10B981]">Locate the START of the work shift</p>
+            <ul className="space-y-1 pl-4">
+              <li className="text-[12px] text-[#334155] leading-relaxed list-disc"><span className="font-bold">10-Hour Continuous Break:</span> ALWAYS start counting at the END of a full 10-hour off-duty break.</li>
+              <li className="text-[12px] text-[#334155] leading-relaxed list-disc"><span className="font-bold">Sleeper Berth Provision:</span> ALWAYS start counting at the END of the FIRST segment of a qualifying split (§395.1(g)(1)(ii)).</li>
+            </ul>
           </div>
           <div className="bg-[#F8FAFC] rounded-lg border border-[#E2E8F0] p-3 space-y-1.5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#DC2626]">Shift END</p>
-            <p className="text-[12px] text-[#334155] leading-relaxed">
-              Whichever comes FIRST: (a) the end of a new qualifying rest — 10 consecutive hrs off-duty/sleeper, or the end of the <span className="font-bold">LATER</span> of a valid split pairing under §395.1(g)(1)(ii); or (b) <span className="font-bold">14 wall-clock hours after the shift START</span> (§395.3(a)(2)). If no qualifying rest is taken, the 14-hr wall-clock hits first and any work past that point is a violation.
-            </p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#DC2626]">Locate the STOPPING LINE</p>
+            <ul className="space-y-1 pl-4">
+              <li className="text-[12px] text-[#334155] leading-relaxed list-disc"><span className="font-bold">10-Hour Continuous Break:</span> ALWAYS stop counting at the BEGINNING of a full 10-hour off-duty break.</li>
+              <li className="text-[12px] text-[#334155] leading-relaxed list-disc"><span className="font-bold">Sleeper Berth Provision:</span> ALWAYS stop counting at the BEGINNING of the SECOND segment of a qualifying split.</li>
+            </ul>
           </div>
           <p className="text-[11.5px] text-[#64748B] leading-relaxed italic pt-1">
-            Roadside rule of thumb: scan down the log, find the first on-duty entry coming out of a reset — that's START. Then look for the next qualifying rest or add 14 hrs — that's END. Only the D and OD hours between those two flags count toward this shift's 11 &amp; 14 (with qualifying split-rest hours excluded per §395.1(g)(1)(ii)(E)).
+            <span className="font-bold">14-hr rule:</span> count all driving AND on-duty time between the start and stop lines. Off-duty and sleeper-berth time inside the window ALSO counts toward the 14 UNLESS it's part of a qualifying split-sleeper pairing (§395.1(g)(1)(ii)(E)).<br/>
+            <span className="font-bold">11-hr rule:</span> count all DRIVING time between the start and stop lines.
           </p>
         </div>
       </section>
