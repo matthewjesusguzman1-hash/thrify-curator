@@ -123,12 +123,6 @@ export default function HosTrainingPage() {
             <p className="text-[10px] text-white/50">Property-carrying CMV · 49 CFR Part 395 · NASI-A material</p>
           </div>
         </div>
-        {/* Stats strip */}
-        <div className="max-w-[900px] mx-auto px-3 pb-3 grid grid-cols-3 gap-2">
-          <Stat icon={Flame} label="Streak" value={`${progress.streak || 0}d`} color="#F59E0B" testid="stat-streak" />
-          <Stat icon={Sparkles} label="XP" value={progress.xp || 0} color="#D4AF37" testid="stat-xp" />
-          <Stat icon={Trophy} label="Badges" value={progress.badges?.length || 0} color="#10B981" testid="stat-badges" />
-        </div>
       </div>
 
       <main className="max-w-[900px] mx-auto px-3 pt-4 space-y-3">
@@ -166,44 +160,56 @@ export default function HosTrainingPage() {
           })}
         </div>
 
-        {/* Badges */}
-        <p className="text-[11px] font-bold uppercase tracking-wider text-[#64748B] px-1 pt-2">Badges</p>
-        <div className="bg-white rounded-xl border border-[#E2E8F0] p-3 grid grid-cols-5 gap-2" data-testid="badge-tray">
-          {BADGES.map((b) => {
-            const earned = progress.badges?.includes(b.id);
-            return (
-              <div key={b.id} className={`flex flex-col items-center gap-1 text-center py-1.5 rounded-lg transition-all ${earned ? "bg-[#FFFBEB] ring-1 ring-[#D4AF37]/40" : "opacity-40"}`} title={b.desc}>
-                <span className="text-xl">{b.icon}</span>
-                <p className="text-[9px] font-bold leading-tight text-[#334155]">{b.label}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Reset */}
-        <div className="pt-2">
-          <button
-            onClick={() => { if (window.confirm("Reset all training progress for this badge?")) { const fresh = loadProgress("__reset__"); persist({ ...fresh, streak: 0, lastTrainedDate: null }); }}}
-            className="text-[10px] text-[#94A3B8] hover:text-[#DC2626] flex items-center gap-1"
-            data-testid="reset-progress-btn"
-          >
-            <RotateCcw className="w-3 h-3" /> Reset progress
-          </button>
-        </div>
+        {/* Progress — collapsible, opt-in. Keeps gamification secondary to training. */}
+        <details className="bg-white rounded-xl border border-[#E2E8F0] group" data-testid="progress-panel">
+          <summary className="flex items-center gap-2 px-3 py-2.5 cursor-pointer list-none">
+            <Trophy className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#64748B] flex-1">Your progress</p>
+            <span className="text-[10px] text-[#94A3B8]">
+              {progress.correctTotal || 0} correct · streak {progress.streak || 0}d · {progress.badges?.length || 0} badge{(progress.badges?.length || 0) === 1 ? "" : "s"}
+            </span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#94A3B8] transition-transform group-open:rotate-90" />
+          </summary>
+          <div className="px-3 pb-3 pt-1 space-y-3 border-t border-[#F1F5F9]">
+            <div className="grid grid-cols-3 gap-2">
+              <MiniStat icon={Flame} label="Streak" value={`${progress.streak || 0}d`} color="#F59E0B" />
+              <MiniStat icon={Sparkles} label="XP" value={progress.xp || 0} color="#D4AF37" />
+              <MiniStat icon={Trophy} label="Badges" value={progress.badges?.length || 0} color="#10B981" />
+            </div>
+            <div className="grid grid-cols-5 gap-2" data-testid="badge-tray">
+              {BADGES.map((b) => {
+                const earned = progress.badges?.includes(b.id);
+                return (
+                  <div key={b.id} className={`flex flex-col items-center gap-1 text-center py-1.5 rounded-lg transition-all ${earned ? "bg-[#FFFBEB] ring-1 ring-[#D4AF37]/40" : "opacity-40"}`} title={b.desc}>
+                    <span className="text-xl">{b.icon}</span>
+                    <p className="text-[9px] font-bold leading-tight text-[#334155]">{b.label}</p>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => { if (window.confirm("Reset all training progress for this badge?")) { const fresh = loadProgress("__reset__"); persist({ ...fresh, streak: 0, lastTrainedDate: null }); }}}
+              className="text-[10px] text-[#94A3B8] hover:text-[#DC2626] flex items-center gap-1"
+              data-testid="reset-progress-btn"
+            >
+              <RotateCcw className="w-3 h-3" /> Reset progress
+            </button>
+          </div>
+        </details>
       </main>
     </div>
   );
 }
 
-function Stat({ icon: Icon, label, value, color, testid }) {
+function MiniStat({ icon: Icon, label, value, color }) {
   return (
-    <div className="bg-white/10 rounded-lg border border-white/10 px-2 py-2 flex items-center gap-2" data-testid={testid}>
-      <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${color}30`, color }}>
+    <div className="bg-[#F8FAFC] rounded-md px-2 py-2 flex items-center gap-2">
+      <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${color}22`, color }}>
         <Icon className="w-4 h-4" />
       </div>
       <div>
-        <p className="text-[9px] uppercase tracking-wider text-white/60 font-bold">{label}</p>
-        <p className="text-sm font-bold text-white font-mono">{value}</p>
+        <p className="text-[9px] uppercase tracking-wider text-[#94A3B8] font-bold">{label}</p>
+        <p className="text-sm font-bold text-[#002855] font-mono">{value}</p>
       </div>
     </div>
   );
@@ -271,22 +277,24 @@ function DutyStatusModule({ onFinish, onBack }) {
   const [pick, setPick] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const [correct, setCorrect] = useState(0);
-  const q = DUTY_STATUS_QUIZ[idx];
-  const isCorrect = pick === q.answer;
+  const [showWhy, setShowWhy] = useState(false);
   const done = idx >= DUTY_STATUS_QUIZ.length;
+  // Guard q read until after `done` check — avoids reading .answer from undefined.
+  const q = done ? null : DUTY_STATUS_QUIZ[idx];
+  const isCorrect = q && pick === q.answer;
 
   const choose = (s) => {
-    if (revealed) return;
+    if (revealed || !q) return;
     setPick(s); setRevealed(true);
     if (s === q.answer) setCorrect((c) => c + 1);
   };
 
-  const next = () => { setPick(null); setRevealed(false); setIdx((i) => i + 1); };
+  const next = () => { setPick(null); setRevealed(false); setShowWhy(false); setIdx((i) => i + 1); };
 
-  if (done) return <DrillShell title="Duty Status 101" manualRef="NASI-A pp. 4–5" onBack={onBack} onFinish={onFinish} correct={correct} total={DUTY_STATUS_QUIZ.length} done />;
+  if (done) return <DrillShell title="Duty Status 101" manualRef="NASI-A pp. 96–97" onBack={onBack} onFinish={onFinish} correct={correct} total={DUTY_STATUS_QUIZ.length} done />;
 
   return (
-    <DrillShell title="Duty Status 101" manualRef="NASI-A pp. 4–5" onBack={onBack} step={idx} total={DUTY_STATUS_QUIZ.length} onFinish={onFinish} correct={correct}>
+    <DrillShell title="Duty Status 101" manualRef="NASI-A pp. 96–97" onBack={onBack} step={idx} total={DUTY_STATUS_QUIZ.length} onFinish={onFinish} correct={correct}>
       <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 space-y-4">
         <p className="text-sm text-[#334155]">{q.situation}</p>
         <div className="grid grid-cols-2 gap-2">
@@ -314,11 +322,23 @@ function DutyStatusModule({ onFinish, onBack }) {
           })}
         </div>
         {revealed && (
-          <div className={`rounded-lg p-3 border ${isCorrect ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`} data-testid="ds-feedback">
-            <div className="flex items-center gap-2 mb-1">
+          <div className={`rounded-lg p-3 border space-y-2 ${isCorrect ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`} data-testid="ds-feedback">
+            <div className="flex items-center gap-2">
               {isCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
-              <p className="text-xs font-bold text-[#334155]">{isCorrect ? "Correct!" : `Correct answer: ${STATUS_META[q.answer].label}`}</p>
+              <p className="text-sm font-bold text-[#334155] flex-1">{isCorrect ? "Correct" : `Correct answer: ${STATUS_META[q.answer].label}`}</p>
+              <button
+                onClick={() => setShowWhy((v) => !v)}
+                className="text-[11px] font-bold text-[#002855] bg-white border border-[#CBD5E1] rounded-md px-2 py-0.5 hover:bg-[#F1F5F9]"
+                data-testid="ds-why-btn"
+              >
+                {showWhy ? "Hide" : "Why?"}
+              </button>
             </div>
+            {showWhy && (
+              <p className="text-[12px] text-[#334155] leading-relaxed bg-white rounded-md border border-[#E2E8F0] p-2">
+                {DUTY_STATUS_EXPLAIN[q.answer]} <span className="block mt-1 text-[10px] font-mono text-[#64748B]">49 CFR §395.2 · NASI-A pp. 96–97</span>
+              </p>
+            )}
           </div>
         )}
         <Button onClick={next} disabled={!revealed} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="ds-next-btn">
@@ -328,6 +348,14 @@ function DutyStatusModule({ onFinish, onBack }) {
     </DrillShell>
   );
 }
+
+/* Short explanations per duty status — shown when the inspector taps "Why?" */
+const DUTY_STATUS_EXPLAIN = {
+  OFF:  "Off Duty is time when the driver is relieved of all responsibilities, including to the vehicle. Personal activities (commuting, second non-CMV jobs, vacation) count here.",
+  SB:   "Sleeper Berth is time spent resting inside a qualifying sleeper berth. It counts toward the 10-hour reset and valid 7/3 or 8/2 splits.",
+  D:    "Driving is time at the controls of a CMV in operation on a public road. Deadheading a tractor across town to pick up a trailer still counts as Driving.",
+  OD:   "On-Duty (not driving) is all other work — loading/unloading supervision, inspections, fueling, stopped at a scale, waiting on repairs, and time in the passenger seat ready to resume driving.",
+};
 
 /* ════════════════════════════════════════════════════════════════════════════
    Modules 2 & 3 & 4: Violation-finder pattern — tap the grid where the
@@ -342,7 +370,7 @@ function ViolationFinderModule({ title, manualRef, scenarios, tolerance = 30, on
   const [correct, setCorrect] = useState(0);
 
   const done = idx >= scenarios.length;
-  const s = scenarios[idx] || scenarios[scenarios.length - 1];
+  const s = done ? scenarios[scenarios.length - 1] : scenarios[idx];
 
   const reveal = (didCorrect) => {
     setRevealed(true);
@@ -442,8 +470,8 @@ function RecapModule({ onBack, onFinish }) {
   const [entry, setEntry] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [correct, setCorrect] = useState(0);
-  const s = RECAP_SCENARIOS[idx];
   const done = idx >= RECAP_SCENARIOS.length;
+  const s = done ? RECAP_SCENARIOS[RECAP_SCENARIOS.length - 1] : RECAP_SCENARIOS[idx];
 
   const submit = () => {
     const val = parseFloat(entry);
