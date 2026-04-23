@@ -380,7 +380,7 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone })
       key: "shift",
       type: "twoTime",
       prompt: "Identify the work shift — when does it START and END?",
-      hint: "START = first on-duty (D or OD) after the most recent qualifying reset. END = whichever comes first: end of the LATER qualifying rest in a valid split, OR 14 wall-clock hours after START.",
+      hint: "Split-sleeper: START = END of the FIRST qualifying rest segment · END = BEGINNING of the SECOND qualifying rest segment. No valid split: START = end of prior 10-hr reset (or first on-duty after it), END = 14 wall-clock hours later (or beginning of the next 10-hr reset, whichever is first).",
       correct: { start: scenario.shiftStartMin, end: scenario.shiftEndMin },
       explanation: scenario.explanation.shift,
     },

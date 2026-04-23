@@ -788,14 +788,13 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 17 * 60, endMin: 20 * 60, label: "3h OFF ✓", color: "#10B981" },
     ],
     countedBrackets: [
-      { startMin: 0 * 60,  endMin: 6 * 60,  label: "Counted · 6h", color: "#D4AF37" },
-      { startMin: 13 * 60, endMin: 17 * 60, label: "Counted · 4h", color: "#D4AF37" },
+      { startMin: 13 * 60, endMin: 17 * 60, label: "Counted · 4h (D+OD)", color: "#D4AF37" },
     ],
     shiftMarkers: [
-      { min: 0, kind: "start", label: "Shift start · 00:00 (first OD)" },
-      { min: 20 * 60, kind: "end", label: "Shift end · 20:00 (end of Period B)" },
+      { min: 13 * 60, kind: "start", label: "Shift START · 13:00 (end of Period A · 7h SB)" },
+      { min: 17 * 60, kind: "end", label: "Shift END · 17:00 (beginning of Period B · 3h OFF)" },
     ],
-    description: "This log has exactly one Sleeper Berth block of at least 7 hrs and exactly one Off-Duty block of at least 2 hrs — so the pairing is unambiguous: 7h SB (06-13) + 3h OFF (17-20). Under §395.1(g)(1)(ii) any combination of ≥7h SB + ≥2h SB/OFF totaling ≥10h qualifies, in any order. Per §395.1(g)(1)(ii)(E), the hours inside these two qualifying rest periods are EXCLUDED from both the 11-hr driving limit and the 14-hr work-shift calculation — the wall-clock doesn't pause, but those rest hours simply don't count. Only the 6 hrs before Period A (06:00) and the 4 hrs between A and B (13:00-17:00) count toward this shift's 11 & 14. The shift starts at 00:00 (first on-duty entry) and ends at 20:00 (end of the second qualifying rest, Period B) — a new shift begins with a fresh 11/14 at 20:00.",
+    description: "CVSA Split-Sleeper rule — the work shift STARTS at the END of the FIRST qualifying rest segment and ENDS at the BEGINNING of the SECOND qualifying rest segment (§395.1(g)(1)(ii)). Here Period A (7h SB, 06-13) is the first qualifying segment, so the shift STARTS at 13:00. Period B (3h OFF, 17-20) is the second qualifying segment, so the shift ENDS at 17:00. Counted toward this shift's 11 & 14 = only the D and OD time between 13:00 and 17:00 → 4h driving. The 1h OD + 5h D before 06:00 belong to the PREVIOUS shift; after Period B ends at 20:00, another NEW shift begins.",
     extraExamples: [
       {
         name: "7.5h SB + 2.5h OFF",
@@ -812,14 +811,13 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 17 * 60 + 30, endMin: 20 * 60, label: "2.5h OFF ✓", color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 0,  endMin: 6 * 60, label: "Counted · 6h", color: "#D4AF37" },
-          { startMin: 13 * 60 + 30, endMin: 17 * 60 + 30, label: "Counted · 4h", color: "#D4AF37" },
+          { startMin: 13 * 60 + 30, endMin: 17 * 60 + 30, label: "Counted · 4h (D)", color: "#D4AF37" },
         ],
         shiftMarkers: [
-          { min: 0, kind: "start", label: "Shift start · 00:00" },
-          { min: 20 * 60, kind: "end", label: "Shift end · 20:00" },
+          { min: 13 * 60 + 30, kind: "start", label: "Shift START · 13:30 (end of 7.5h SB)" },
+          { min: 17 * 60 + 30, kind: "end", label: "Shift END · 17:30 (beginning of 2.5h OFF)" },
         ],
-        description: "Non-standard pairing that still qualifies: 7.5h SB + 2.5h OFF = 10h. The rule doesn't require whole-hour periods — any combination that meets the three thresholds (≥7h SB, ≥2h SB/OFF, ≥10h total) is legal under §395.1(g)(1)(ii).",
+        description: "Non-standard pairing that still qualifies: 7.5h SB + 2.5h OFF = 10h. Any combination meeting the three thresholds (≥7h SB, ≥2h SB/OFF, ≥10h total) is legal under §395.1(g)(1)(ii). CVSA boundaries: shift STARTS at 13:30 (end of first segment · 7.5h SB) and ENDS at 17:30 (beginning of second segment · 2.5h OFF). 4h counted.",
       },
       {
         name: "Short period FIRST, then ≥7h SB",
@@ -836,14 +834,13 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 14 * 60, endMin: 21 * 60, label: "7h SB ✓",  color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 0,  endMin: 6 * 60,  label: "Counted · 6h", color: "#D4AF37" },
-          { startMin: 9 * 60, endMin: 14 * 60, label: "Counted · 5h", color: "#D4AF37" },
+          { startMin: 9 * 60, endMin: 14 * 60, label: "Counted · 5h (D)", color: "#D4AF37" },
         ],
         shiftMarkers: [
-          { min: 0, kind: "start", label: "Shift start · 00:00" },
-          { min: 21 * 60, kind: "end", label: "Shift end · 21:00 (end of SB)" },
+          { min: 9 * 60, kind: "start", label: "Shift START · 09:00 (end of 3h OFF · first segment)" },
+          { min: 14 * 60, kind: "end", label: "Shift END · 14:00 (beginning of 7h SB · second segment)" },
         ],
-        description: "Same legal 7+3 split, but the order is reversed — the 3h OFF came FIRST, then the 7h SB. Order doesn't matter under §395.1(g)(1)(ii). Because Period A (the 7h SB) ends at 21:00 and that's LATER than Period B, the shift ends at 21:00.",
+        description: "Same legal 7+3 split, but the order is reversed — the 3h OFF came FIRST, then the 7h SB. Order doesn't matter under §395.1(g)(1)(ii). CVSA boundaries: shift STARTS at 09:00 (end of the FIRST qualifying segment · 3h OFF), shift ENDS at 14:00 (beginning of the SECOND qualifying segment · 7h SB). Counted = 5h driving between them.",
       },
     ],
   },
@@ -863,14 +860,13 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 13 * 60, endMin: 21 * 60, label: "8h SB ✓", color: "#10B981" },
     ],
     countedBrackets: [
-      { startMin: 0 * 60,  endMin: 6 * 60,  label: "Counted · 6h", color: "#D4AF37" },
-      { startMin: 8 * 60,  endMin: 13 * 60, label: "Counted · 5h", color: "#D4AF37" },
+      { startMin: 8 * 60,  endMin: 13 * 60, label: "Counted · 5h (D)", color: "#D4AF37" },
     ],
     shiftMarkers: [
-      { min: 0, kind: "start", label: "Shift start · 00:00 (first OD)" },
-      { min: 21 * 60, kind: "end", label: "Shift end · 21:00 (end of Period A)" },
+      { min: 8 * 60, kind: "start", label: "Shift START · 08:00 (end of 2h OFF · first segment)" },
+      { min: 13 * 60, kind: "end", label: "Shift END · 13:00 (beginning of 8h SB · second segment)" },
     ],
-    description: "Order doesn't matter under §395.1(g)(1)(ii) — the 2h OFF here came BEFORE the 8h SB and the pairing is still valid. Per §395.1(g)(1)(ii)(E), hours inside qualifying rest periods are EXCLUDED from the 11-hr and 14-hr calculations (they don't count toward either, even though the wall-clock keeps ticking). Counted toward this shift: 6h before Period B + 5h between the two periods = 11h. The shift starts at 00:00 and ends at 21:00 (end of the LATER of the two qualifying rest periods, which is Period A here). After 21:00 a new work shift begins.",
+    description: "CVSA Split-Sleeper rule applied: the shift STARTS at the END of the FIRST qualifying segment (here the 2h OFF at 06-08, so start = 08:00) and ENDS at the BEGINNING of the SECOND qualifying segment (here the 8h SB beginning at 13:00). Order doesn't matter under §395.1(g)(1)(ii) — only chronological order of the two rest segments determines which is 'first' for CVSA purposes. Counted toward this shift's 11 & 14 = 5h driving (08-13). The work before 06:00 belongs to the prior shift; after 21:00 (end of the 8h SB) another new shift begins.",
     extraExamples: [
       {
         name: "9h SB + 2h OFF",
@@ -888,14 +884,13 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 12 * 60, endMin: 21 * 60, label: "9h SB ✓",  color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 0,  endMin: 5 * 60,  label: "Counted · 5h", color: "#D4AF37" },
-          { startMin: 7 * 60, endMin: 12 * 60, label: "Counted · 5h", color: "#D4AF37" },
+          { startMin: 7 * 60, endMin: 12 * 60, label: "Counted · 5h (4h D + 1h OD)", color: "#D4AF37" },
         ],
         shiftMarkers: [
-          { min: 0, kind: "start", label: "Shift start · 00:00" },
-          { min: 21 * 60, kind: "end", label: "Shift end · 21:00" },
+          { min: 7 * 60, kind: "start", label: "Shift START · 07:00 (end of 2h OFF · first segment)" },
+          { min: 12 * 60, kind: "end", label: "Shift END · 12:00 (beginning of 9h SB · second segment)" },
         ],
-        description: "9+2 pairing — the SB period doesn't have to be exactly 8h. Anything ≥7h SB paired with ≥2h SB/OFF totaling ≥10h qualifies.",
+        description: "9+2 pairing — SB period doesn't have to be exactly 8h. CVSA boundaries: shift STARTS at 07:00 (end of 2h OFF · first qualifying segment) and ENDS at 12:00 (beginning of 9h SB · second qualifying segment). Counted: 4h D (07-11) + 1h OD (11-12) = 5h on-duty; 4h driving.",
       },
       {
         name: "8h SB FIRST, then 2h OFF",
@@ -913,14 +908,13 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 18 * 60, endMin: 20 * 60, label: "2h OFF ✓", color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 0, endMin: 1 * 60, label: "+1h", color: "#D4AF37" },
-          { startMin: 9 * 60, endMin: 18 * 60, label: "Counted · 9h", color: "#D4AF37" },
+          { startMin: 9 * 60, endMin: 18 * 60, label: "Counted · 9h (8h D + 1h OD)", color: "#D4AF37" },
         ],
         shiftMarkers: [
-          { min: 0, kind: "start", label: "Shift start · 00:00" },
-          { min: 20 * 60, kind: "end", label: "Shift end · 20:00 (end of 2h OFF)" },
+          { min: 9 * 60, kind: "start", label: "Shift START · 09:00 (end of 8h SB · first segment)" },
+          { min: 18 * 60, kind: "end", label: "Shift END · 18:00 (beginning of 2h OFF · second segment)" },
         ],
-        description: "Same 8+2 legal pairing, but the 8h SB came first. Since the 2h OFF ends LATER (at 20:00), that's the end of the work shift — not the end of the earlier SB.",
+        description: "Same 8+2 legal pairing, but the 8h SB came first chronologically. CVSA boundaries: shift STARTS at 09:00 (end of the FIRST qualifying segment · 8h SB) and ENDS at 18:00 (beginning of the SECOND qualifying segment · 2h OFF). Counted: 5h D (09-14) + 1h OD (14-15) + 3h D (15-18) = 9h on-duty; 8h driving.",
       },
     ],
   },
@@ -1068,16 +1062,15 @@ export const SPLIT_LEARN_SCENARIOS = [
           { status: "SB",  start: "19:00", end: "24:00" },  // Period A starts — 5h Day 1 portion
         ],
         qualifyingBrackets: [
-          { startMin: 12 * 60, endMin: 14 * 60, label: "2h OFF ✓ (Period B)", color: "#10B981" },
-          { startMin: 19 * 60, endMin: 24 * 60, label: "Period A · 5h ⟶", color: "#10B981" },
+          { startMin: 12 * 60, endMin: 14 * 60, label: "2h OFF ✓ (Period B · first segment)", color: "#10B981" },
+          { startMin: 19 * 60, endMin: 24 * 60, label: "Period A · 5h ⟶ (second segment)", color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 6 * 60,  endMin: 12 * 60, label: "Counted · 6h", color: "#D4AF37" },
-          { startMin: 14 * 60, endMin: 19 * 60, label: "Counted · 5h", color: "#D4AF37" },
+          { startMin: 14 * 60, endMin: 19 * 60, label: "Counted · 5h (D)", color: "#D4AF37" },
         ],
         shiftMarkers: [
-          { min: 6 * 60, kind: "start", label: "Shift start · 06:00" },
-          { min: 24 * 60 - 1, kind: "continues", label: "Continues → Day 2" },
+          { min: 14 * 60, kind: "start", label: "Shift START · 14:00 (end of 2h OFF · first segment)" },
+          { min: 19 * 60, kind: "end", label: "Shift END · 19:00 (beginning of SB · second segment)" },
         ],
       },
       {
@@ -1092,15 +1085,15 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 0, endMin: 3 * 60, label: "⟵ Period A · 3h (8h total SB)", color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 3 * 60,  endMin: 10 * 60, label: "New shift · 7h", color: "#D4AF37" },
+          { startMin: 3 * 60,  endMin: 10 * 60, label: "Next shift · 7h (1h OD + 6h D)", color: "#D4AF37" },
         ],
         shiftMarkers: [
-          { min: 3 * 60, kind: "end", label: "Day 1 shift END · 03:00", labelRow: 0 },
-          { min: 3 * 60, kind: "start", color: "#2563EB", label: "Day 2 shift START · 03:00", labelRow: 1 },
+          { min: 3 * 60, kind: "start", label: "Next shift START · 03:00 (end of Period A · 8h SB reset)", labelRow: 0 },
+          { min: 10 * 60, kind: "end", label: "Next shift END · 10:00 (beginning of 14h OFF reset)", labelRow: 1 },
         ],
       },
     ],
-    description: "An overnight run where the Sleeper Berth period straddles midnight. Day 1 has the 2h OFF at 12:00-14:00 (Period B). The driver then drives 14:00-19:00 and enters the Sleeper Berth at 19:00, continuing across midnight until 03:00 Day 2 — an 8-hour SB block that counts as a single qualifying Period A under §395.1(g)(1)(ii). Per §395.1(g)(1)(ii)(E), the hours inside both qualifying rest periods are EXCLUDED from the 11-hr and 14-hr calculations. Counted toward this shift = 6h (Day 1 pre-Period-B) + 5h (between B and A) = 11h work, with 5h + 5h = 10h driving. After Period A ends at 03:00 Day 2, a new 14-hr window begins — the 1h OD + 6h D on Day 2 start a new shift.",
+    description: "Overnight trip where the Sleeper Berth period straddles midnight. CVSA Split-Sleeper rule: Period B (the 2h OFF at 12-14 Day 1) is the FIRST qualifying segment, so the work shift STARTS at 14:00 Day 1. Period A (the 8h SB running 19 Day 1 → 03 Day 2) is the SECOND qualifying segment, so the work shift ENDS at 19:00 Day 1 (beginning of that segment). Counted toward this shift's 11 & 14 = just the 5h driving between them (14-19 Day 1). After Period A completes at 03:00 Day 2, that 8h SB plus the earlier 2h OFF equal a full 10h pair-reset — a NEW shift begins at 03:00 Day 2. The 1h OD + 6h D on Day 2 belong to that next shift. Per §395.1(g)(1)(ii)(E) the qualifying rest hours don't count toward the 11 or 14 of either shift.",
     extraExamples: [
       {
         id: "SL5-b",
@@ -1117,15 +1110,14 @@ export const SPLIT_LEARN_SCENARIOS = [
               { status: "D",   start: "23:30", end: "24:00" },
             ],
             qualifyingBrackets: [
-              { startMin: 21 * 60, endMin: 23 * 60 + 30, label: "2.5h OFF ✓", color: "#10B981" },
+              { startMin: 21 * 60, endMin: 23 * 60 + 30, label: "2.5h OFF ✓ (first segment)", color: "#10B981" },
             ],
             countedBrackets: [
-              { startMin: 16 * 60, endMin: 21 * 60, label: "Counted · 5h", color: "#D4AF37" },
-              { startMin: 23 * 60 + 30, endMin: 24 * 60, label: "+0.5h", color: "#D4AF37" },
+              { startMin: 23 * 60 + 30, endMin: 24 * 60, label: "Counted · 0.5h D", color: "#D4AF37" },
             ],
             shiftMarkers: [
-              { min: 16 * 60, kind: "start", label: "Shift start · 16:00" },
-              { min: 24 * 60 - 1, kind: "continues", label: "Continues → Day 2" },
+              { min: 23 * 60 + 30, kind: "start", label: "Shift START · 23:30 (end of 2.5h OFF · first segment)" },
+              { min: 24 * 60 - 1, kind: "continues", label: "Shift continues → Day 2" },
             ],
           },
           {
@@ -1137,18 +1129,17 @@ export const SPLIT_LEARN_SCENARIOS = [
               { status: "OFF", start: "11:00", end: "24:00" },
             ],
             qualifyingBrackets: [
-              { startMin: 2 * 60, endMin: 10 * 60, label: "8h SB ✓", color: "#10B981" },
+              { startMin: 2 * 60, endMin: 10 * 60, label: "8h SB ✓ (second segment)", color: "#10B981" },
             ],
             countedBrackets: [
-              { startMin: 0, endMin: 2 * 60, label: "+2h", color: "#D4AF37" },
-              { startMin: 10 * 60, endMin: 11 * 60, label: "+1h", color: "#D4AF37" },
+              { startMin: 0, endMin: 2 * 60, label: "Counted · 2h D", color: "#D4AF37" },
             ],
             shiftMarkers: [
-              { min: 10 * 60, kind: "end", label: "Shift end · 10:00 (end of SB)", labelRow: 0 },
+              { min: 2 * 60, kind: "end", label: "Shift END · 02:00 (beginning of 8h SB · second segment)", labelRow: 0 },
             ],
           },
         ],
-        description: "Evening-start run. The shift begins at 16:00 Day 1, the 2.5h OFF (21:00-23:30) is Period B, and the 8h SB (02:00-10:00 Day 2) is Period A. Even though the pairing straddles midnight, it's still one continuous shift — ending at 10:00 Day 2 when the SB completes. Counted toward 11/14: 5h (16-21) + 0.5h (23:30-24) + 2h (00-02) + 1h (10-11) = 8.5h on-duty. Driving = 4h + 0.5h + 2h = 6.5h.",
+        description: "Evening-start run where the work shift itself CROSSES midnight under CVSA. First segment = 2.5h OFF (21:00-23:30 Day 1) → shift STARTS at 23:30 Day 1. Second segment = 8h SB (02:00-10:00 Day 2) → shift ENDS at 02:00 Day 2. Counted (D+OD between 23:30 Day 1 and 02:00 Day 2) = 0.5h D + 2h D = 2.5h driving. The 16-21 D/OD block on Day 1 belongs to the PRIOR shift; the 10-11 OD on Day 2 is a new shift (after the 8h SB + prior 2.5h OFF = 10h pair-reset).",
       },
       {
         id: "SL5-c",
@@ -1166,15 +1157,15 @@ export const SPLIT_LEARN_SCENARIOS = [
               { status: "SB",  start: "19:00", end: "24:00" },
             ],
             qualifyingBrackets: [
-              { startMin: 19 * 60, endMin: 24 * 60, label: "SB continues →", color: "#10B981" },
+              { startMin: 19 * 60, endMin: 24 * 60, label: "10h SB reset → (not a split)", color: "#10B981" },
             ],
             countedBrackets: [
               { startMin: 6 * 60, endMin: 15 * 60, label: "Counted · 9h", color: "#D4AF37" },
               { startMin: 15 * 60 + 30, endMin: 19 * 60, label: "+3.5h", color: "#D4AF37" },
             ],
             shiftMarkers: [
-              { min: 6 * 60, kind: "start", label: "Shift start · 06:00" },
-              { min: 24 * 60 - 1, kind: "continues", label: "Continues → Day 2" },
+              { min: 6 * 60, kind: "start", label: "Shift START · 06:00 (end of prior 10h reset)" },
+              { min: 19 * 60, kind: "end", label: "Shift END · 19:00 (beginning of 10h SB reset)" },
             ],
           },
           {
@@ -1186,18 +1177,18 @@ export const SPLIT_LEARN_SCENARIOS = [
               { status: "OFF", start: "11:00", end: "24:00" },
             ],
             qualifyingBrackets: [
-              { startMin: 0, endMin: 5 * 60, label: "← SB ends · 10h total", color: "#10B981" },
+              { startMin: 0, endMin: 5 * 60, label: "← 10h SB reset ends (not a split)", color: "#10B981" },
             ],
             countedBrackets: [
-              { startMin: 5 * 60, endMin: 11 * 60, label: "New shift · 6h", color: "#D4AF37" },
+              { startMin: 5 * 60, endMin: 11 * 60, label: "Next shift · 6h (1h OD + 5h D)", color: "#D4AF37" },
             ],
             shiftMarkers: [
-              { min: 5 * 60, kind: "end", label: "Day 1 shift END · 05:00", labelRow: 0 },
-              { min: 5 * 60, kind: "start", color: "#2563EB", label: "Day 2 shift START · 05:00", labelRow: 1 },
+              { min: 5 * 60, kind: "start", label: "Next shift START · 05:00 (end of 10h SB reset)", labelRow: 0 },
+              { min: 11 * 60, kind: "end", label: "Next shift END · 11:00 (beginning of 13h OFF reset)", labelRow: 1 },
             ],
           },
         ],
-        description: "A 10-hour SB straight through midnight (19:00 Day 1 → 05:00 Day 2) is a complete 10-hr reset on its own — NOT a split. One long rest replaces the whole reset, and the driver starts fresh after it. Day 1 shift ran from 06:00 to 05:00 Day 2; Day 2's new shift begins at 05:00 with a fresh 11/14.",
+        description: "A 10-hour SB straight through midnight (19:00 Day 1 → 05:00 Day 2) is a complete 10-hr reset on its own — NOT a split. CVSA 10-Hour Continuous Break rule applies: shift STARTS at the end of the prior 10-hr reset (06:00 Day 1) and ENDS at the BEGINNING of the 10-hr reset (19:00 Day 1). After the 10h SB completes at 05:00 Day 2, a new shift begins with a fresh 11/14 — the 1h OD + 5h D on Day 2 are the next shift, ending at 11:00 when the 13h OFF reset begins.",
       },
     ],
   },
@@ -1223,45 +1214,43 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     splitType: "7+3",
     violation11: false,
     violation14: false,
-    counted14Hours: 10,
-    counted11Hours: 9,
-    shiftStartMin: 0,       // 00:00 — first OD entry
-    shiftEndMin: 20 * 60,   // 20:00 — end of Period B (the LATER qualifying rest)
+    counted14Hours: 4,
+    counted11Hours: 4,
+    shiftStartMin: 13 * 60,  // 13:00 — end of Period A (7h SB · first qualifying segment)
+    shiftEndMin: 17 * 60,    // 17:00 — beginning of Period B (3h OFF · second qualifying segment)
     explanation: {
       qualifying: "This log has exactly one Sleeper Berth block of at least 7 hrs (06-13) and exactly one Off-Duty block of at least 2 hrs (17-20), so the pairing is unambiguous. Under §395.1(g)(1)(ii) the SB period must be ≥7h and the other must be ≥2h SB/OFF, combined ≥10h.",
-      shift: "Shift START = 00:00 (the first on-duty entry after the prior reset). Shift END = 20:00 (end of Period B, the LATER of the two qualifying rest periods under §395.1(g)(1)(ii)). A new shift begins immediately after Period B at 20:00.",
+      shift: "CVSA Split-Sleeper rule: shift STARTS at 13:00 (end of the FIRST qualifying segment — the 7h SB) and ENDS at 17:00 (beginning of the SECOND qualifying segment — the 3h OFF). The 1h OD + 5h D before 06:00 belong to the PRIOR shift; the 4h OD after 20:00 begins ANOTHER new shift.",
       split: "Valid split. The 7h SB meets the minimum sleeper-berth requirement. The 3h OFF meets the minimum 2-hour pair. Combined = 10 hours. Order doesn't matter.",
-      violation: "No violation. Per §395.1(g)(1)(ii)(E), the hours inside the qualifying rest periods are excluded from the 11/14 calculations. Counted on-duty totals 10 hrs (within 14) and counted driving totals 9 hrs (within 11).",
-      hours: "14-hr counted (D+OD, excluding qualifying rests) = 1h OD (00-01) + 5h D (01-06) + 4h D (13-17) = 10h. The 7h SB and the 3h OFF are excluded from the 14. Driving counted = 5h + 4h = 9h.",
+      violation: "No violation. Between CVSA shift START (13:00) and END (17:00), driving = 4h (under 11) and on-duty = 4h (under 14).",
+      hours: "Counted between CVSA shift START (13:00) and END (17:00): 4h D (13-17). Toward 14 = 4h. Toward 11 = 4h.",
     },
   },
   {
     id: "SP2",
     prompt: "Same question — identify the qualifying split-sleeper periods in this log.",
     log: [
-      { status: "OD",  start: "00:00", end: "01:00" },
-      { status: "D",   start: "01:00", end: "05:00" },
-      { status: "OFF", start: "05:00", end: "07:00" }, // idx 2 — 2h OFF (Period B)
-      { status: "D",   start: "07:00", end: "12:00" },
+      { status: "SB",  start: "00:00", end: "08:00" }, // idx 0 — 8h SB (Period A · first segment)
+      { status: "D",   start: "08:00", end: "12:00" },
       { status: "OD",  start: "12:00", end: "13:00" },
-      { status: "D",   start: "13:00", end: "16:00" },
-      { status: "SB",  start: "16:00", end: "24:00" }, // idx 6 — 8h SB (Period A)
+      { status: "D",   start: "13:00", end: "21:00" },
+      { status: "OFF", start: "21:00", end: "24:00" }, // idx 4 — 3h OFF (Period B · second segment, ≥2h)
     ],
-    qualifyingBlockIdx: [2, 6],
+    qualifyingBlockIdx: [0, 4],
     validSplit: true,
     splitType: "8+2",
     violation11: true,
     violation14: false,
-    counted14Hours: 14,
+    counted14Hours: 13,
     counted11Hours: 12,
-    shiftStartMin: 0,       // 00:00 — first OD entry
-    shiftEndMin: 24 * 60,   // 24:00 — end of Period A (the 8h SB, LATER qualifying rest)
+    shiftStartMin: 8 * 60,   // 08:00 — end of Period A (8h SB · first qualifying segment)
+    shiftEndMin: 21 * 60,    // 21:00 — beginning of Period B (3h OFF · second qualifying segment)
     explanation: {
-      qualifying: "The 8h SB from 16:00-24:00 is the qualifying Sleeper Berth period. The 2h OFF from 05:00-07:00 meets the minimum 2-hour pair. Only one ≥7h SB and one ≥2h OFF block exist on this log, so the pairing is unambiguous. Order doesn't matter under §395.1(g)(1)(ii).",
-      shift: "Shift START = 00:00 (first on-duty). Shift END = 24:00 (end of the 8h SB, which is the LATER of the two qualifying rest periods). The shift spans the entire 24 hours of the log because the Period A SB runs all the way to midnight.",
-      split: "Valid split — 8h SB satisfies the ≥7h Sleeper Berth requirement and the 2h OFF satisfies the minimum pair. Combined = 10 hrs.",
-      violation: "11-hr DRIVING VIOLATION. Per §395.1(g)(1)(ii)(E), the qualifying rest hours are excluded, but all D and OD time still counts. Counted driving (4h + 5h + 3h = 12h) exceeds the 11-hr limit. 14-hr is exactly at the cap (14h) but not over.",
-      hours: "14-hr counted (D+OD, excluding qualifying rests) = 1h OD (00-01) + 4h D (01-05) + 5h D (07-12) + 1h OD (12-13) + 3h D (13-16) = 14 hrs. Driving counted = 4 + 5 + 3 = 12 hrs — 1h over limit.",
+      qualifying: "The 8h SB from 00:00-08:00 is the ≥7h Sleeper Berth period (first segment). The 3h OFF from 21:00-24:00 satisfies the ≥2h pair (second segment). Combined = 11h, meeting the ≥10h total under §395.1(g)(1)(ii).",
+      shift: "CVSA Split-Sleeper rule: shift STARTS at 08:00 (end of the 8h SB · first qualifying segment) and ENDS at 21:00 (beginning of the 3h OFF · second qualifying segment).",
+      split: "Valid split — 8h SB satisfies the ≥7h Sleeper Berth requirement and the 3h OFF satisfies the ≥2h pair. Combined = 11 hrs.",
+      violation: "11-hr DRIVING VIOLATION. Between CVSA shift START (08:00) and END (21:00), driving = 4h (08-12) + 8h (13-21) = 12h. That exceeds the 11-hr limit. Total on-duty counted = 13h (under 14, so no 14-hr violation).",
+      hours: "Counted between CVSA shift START (08:00) and END (21:00): 4h D (08-12) + 1h OD (12-13) + 8h D (13-21) = 13h on-duty. Toward 14 = 13h. Toward 11 (driving only) = 4 + 8 = 12h — 1h over the limit.",
     },
   },
   {
@@ -1279,16 +1268,16 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     splitType: null,
     violation11: false,
     violation14: false,
-    counted14Hours: 14,
+    counted14Hours: 10,
     counted11Hours: 10,
-    shiftStartMin: 6 * 60,  // 06:00 — first on-duty (D) after the 10h pre-shift OFF
+    shiftStartMin: 6 * 60,  // 06:00 — first on-duty (D) after the prior reset
     shiftEndMin: 20 * 60,   // 20:00 — 14h wall-clock limit (no qualifying split applies)
     explanation: {
       qualifying: "Neither rest period qualifies. §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — the only SB block here is 4 hrs. Without a qualifying SB period, the 4h OFF has nothing to pair with.",
-      shift: "Shift START = 06:00 (first D entry — that's the first on-duty coming out of the 10h pre-shift OFF reset). Shift END = 20:00 — because no split applies, the 14-hr wall-clock from 06:00 is what closes the shift (§395.3(a)(2)). The 4h OFF and 4h SB in the middle do NOT extend the window.",
-      split: "No valid split. Without a qualifying ≥7h SB period, the §395.1(g)(1)(ii)(E) exclusion does not apply — every hour of D and OD counts normally toward the 11 and 14.",
-      violation: "No 11 or 14 violation — but only because total driving is exactly 10 hrs and the 14-hr clock doesn't expire until 20:00. Every D and OD hour counts the whole day; nothing is excluded.",
-      hours: "14-hr counted (D+OD with no split exclusion) = 6h D (06-12) + 4h D (16-20) = 10h. The 14-hr wall-clock from first on-duty (06:00) closes at 20:00; the driver stopped driving at 20:00 exactly. Driving counted = 10 hrs (at limit, not over).",
+      shift: "No valid split, so CVSA 14-hr wall-clock rule applies. Shift START = 06:00 (first on-duty after the prior reset). Shift END = 20:00 (14h wall-clock later, §395.3(a)(2)). The 4h OFF and 4h SB in the middle do NOT extend the window.",
+      split: "No valid split. Without a qualifying ≥7h SB period, the §395.1(g)(1)(ii)(E) exclusion does not apply.",
+      violation: "No 11 or 14 violation. Driving total is exactly 10h (within 11) and the last driving ends at 20:00 — exactly at the 14-hr wall-clock limit, not over.",
+      hours: "Toward 14 (D+OD within the 06-20 wall-clock window) = 6h D (06-12) + 4h D (16-20) = 10h. Toward 11 (total driving since prior reset) = 10h.",
     },
   },
   {
@@ -1307,16 +1296,16 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     splitType: null,
     violation11: false,
     violation14: true,
-    counted14Hours: 19, // wall clock 00:00 to 19:00 = 19hrs (no qualifying pause)
-    counted11Hours: 8,
+    counted14Hours: 6, // D+OD within 14h wall-clock window (00:00-14:00): 1h OD + 5h D
+    counted11Hours: 8, // total driving since prior reset: 5h + 3h
     shiftStartMin: 0,       // 00:00 — first OD entry
     shiftEndMin: 14 * 60,   // 14:00 — 14h wall-clock limit (no qualifying split applies)
     explanation: {
       qualifying: "The 8h OFF looks appealing but §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — Off Duty doesn't substitute. The 2h SB is too short to be the qualifying Sleeper Berth period on its own. No qualifying rest periods.",
-      shift: "Shift START = 00:00 (first on-duty). Shift END = 14:00 — no valid split means the 14-hr wall-clock closes the shift 14 hours after the first on-duty (§395.3(a)(2)). Any driving or on-duty work after 14:00 is a 14-hr violation.",
+      shift: "No valid split, so CVSA 14-hr wall-clock rule applies. Shift START = 00:00 (first on-duty). Shift END = 14:00 (14 wall-clock hours later, §395.3(a)(2)). Any driving or on-duty work after 14:00 is a 14-hr violation.",
       split: "No valid split. 8 OFF + 2 SB fails because no period has the required ≥7h in the Sleeper Berth.",
-      violation: "14-hr VIOLATION. Without a qualifying split, §395.1(g)(1)(ii)(E) does not apply, so no hours are excluded. The 14-hr wall-clock started at 00:00 and closed at 14:00. Driving from 14:00-17:00 is past the 14-hr work-shift limit — violation.",
-      hours: "14-hr counted (no split exclusion) = 2h OD + 6h D + 3h D + 2h SB* = all D and OD time in the shift (*SB counts here only because no qualifying split exists; normally SB doesn't count but neither does it trigger exclusion here). Wall-clock 14-hr window: 00:00 → 14:00. Driving from 14:00-17:00 = violation. Driving total = 5h + 3h = 8h (under 11).",
+      violation: "14-hr VIOLATION. Without a qualifying split, §395.1(g)(1)(ii)(E) does not apply. The 14-hr wall-clock started at 00:00 and closed at 14:00. Driving from 14:00-17:00 is past the 14-hr work-shift limit — violation.",
+      hours: "Toward 14 (D+OD within the 00:00-14:00 wall-clock window) = 1h OD (00-01) + 5h D (01-06) = 6h. The 3h D from 14-17 is PAST the 14, not 'counted toward' it — it's the violation itself. Toward 11 (total driving since last 10h reset) = 5h + 3h = 8h.",
     },
   },
 ];

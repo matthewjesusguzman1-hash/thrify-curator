@@ -1,0 +1,44 @@
+{
+  "summary": "Frontend-only regression for CVSA Split-Sleeper rule pivot in Split Sleeper Trainer. All 13 requested test points verified end-to-end: Learn tab CVSA bullets + shift markers on SL1-SL5 (including 'Show more examples' extras), Practice tab SP1-SP4 full 4-question flow with all answers (split?, shift START/END, counted hours, violation). 100% pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_28.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Note: /app/memory/test_credentials.md references button id `badge-continue` but the live component uses `badge-continue-btn`; memory doc and PIN flow (no `pin-continue`, enter-key auto-submit) should be updated for future testing agents.",
+    "hosScenarios.js is ~1300 lines and growing — consider splitting SPLIT_LEARN_SCENARIOS / SPLIT_PRACTICE_SCENARIOS / LEARN_CONTENT into separate modules for maintainability.",
+    "SplitSleeperPage imports useMemo (unused in LearnTab scope — only in PracticeTab) — minor lint, no impact."
+  ],
+  "updated_files": [
+    "/app/frontend/src/components/hos/EldGrid.js (added data-testid=\"eld-entry-{idx}\" to the selectable <g> group so Playwright can click individual duty-status blocks; no behavior change)"
+  ],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100%"},
+  "test_credentials": "Badge 042 / PIN 1234 (auto-submits on Enter; button data-testid is `badge-continue-btn`, not `badge-continue`).",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login flow: #badge-input → click #badge-continue-btn → #pin-input (4-digit PIN auto-submits via Enter; no pin-continue btn). Split Sleeper page route: /hours-of-service/split-sleeper. EldGrid now exposes data-testid eld-entry-{idx} on each selectable duty block (added this iteration). Learn cards: learn-card-{SL_ID}, multi-day: learn-card-{SL_ID}-day-{i}, extras: learn-extras-{SL_ID}. Practice questions: q-split / q-shift / q-hours / q-violation with -start/-end/-h14/-h11/-submit/-next/-feedback suffixes and answer buttons q-split-yes|no, q-violation-none|11|14|both. Tolerance on shift-time question is ±10 min; hours question ±0.5.",
+  "verified_checkpoints": [
+    "Login 042/1234 reaches dashboard",
+    "Split Sleeper page renders without errors",
+    "'How to identify the work shift' card shows both CVSA bullets (START=END of FIRST segment, STOP=BEGINNING of SECOND segment)",
+    "SL1: Shift START 13:00 / END 17:00, 4h gold bracket",
+    "SL2: Shift START 08:00 / END 13:00, 5h gold bracket",
+    "SL3: 14h wall-clock preserved (invalid split)",
+    "SL4: 00:00 → 14:00 wall-clock preserved",
+    "SL5 Day1: START 14:00 END 19:00 (both on Day 1); Day2: Next shift START 03:00 END 10:00",
+    "SL1 extras render: 13:30/17:30 and 09:00/14:00 markers",
+    "SL2 extras render: 07:00/12:00 and 09:00/18:00 markers",
+    "SP1 (7+3): blocks [2,4] correct; shift 13:00/17:00 accepted; hours 4/4; no violation",
+    "SP2 (8 SB + 2 OFF): blocks [0,4] correct; shift 08:00/21:00; hours 13/12; violation=11",
+    "SP3 (invalid 4h OFF + 4h SB): no blocks; shift 06:00/20:00; hours 10/10; no violation",
+    "SP4 (invalid 8 OFF + 2 SB): no blocks; shift 00:00/14:00; hours 6/8; violation=14",
+    "No JS runtime errors / no blank renders across all flows"
+  ]
+}

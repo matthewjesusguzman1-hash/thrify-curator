@@ -197,7 +197,7 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const strokeW = mark || selected ? 2.2 : 1.2;
           const strokeOpacity = mark || selected ? 1 : 0.55;
           return (
-            <g key={`sel${idx}`} style={{ cursor: onEntryClick && !mark ? "pointer" : "default" }}
+            <g key={`sel${idx}`} data-testid={`eld-entry-${idx}`} style={{ cursor: onEntryClick && !mark ? "pointer" : "default" }}
                onClick={(ev) => { if (onEntryClick && !mark) { ev.stopPropagation(); onEntryClick(idx); } }}>
               <rect x={x + 1} y={y + 2} width={Math.max(0, w - 2)} height={ROW_H - 4}
                 fill={fill} fillOpacity={fillOpacity}
