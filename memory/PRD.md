@@ -51,14 +51,21 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - Frontend Playwright: login → badge popover → lite-mode-toggle → LITE pill → LiteFilterBar → "Level 3 Steps" relabel → toggle off → full bar restored. QuickPhotos: empty state, upload thumb renders, note editor saves, save-to-new-inspection creates inspection with attached photo.
 - Regression file: `/app/backend/tests/test_lite_mode_and_quickphotos.py`.
 
+### 2026-02 — Split Sleeper Trainer decoupled + NASI-A references stripped
+- **Dedicated Split Sleeper Trainer**: new `/hours-of-service/split-sleeper` route rendering `SplitSleeperPage.js` with two tabs — **Learn** (4 step-by-step walkthroughs: 10-hr reset, 7+3 split, 8+2 split, invalid pairings) and **Practice** (block editor + live verdict for arbitrary day builds; 4 preset days: valid 7+3, valid 8+2, invalid 6+4, invalid 5+5-SB).
+- **HoursOfServicePage CTA redesign**: two side-by-side buttons — `hos-training-cta` (Log Book Training, navy/gold) and `hos-split-sleeper-cta` (Split Sleeper Trainer, white/navy) — kept independent from the 70-hr calc below.
+- **Removed embedded `SplitModule` + `PeriodSlider`** from `HosTrainingPage.js` to eliminate duplication.
+- **Stripped every NASI-A manual reference** from the UI: scenario `manualRef` fields gone, drill header subtitles cleaned, HoS page caption rewritten to "5 quiz drills · property-carrying rules". Only **49 CFR Part 395** citations remain.
+- **Removed `BADGES` export** from `hosScenarios.js` (gamification had been pulled from UI earlier; the dead export is now gone too).
+- **Bug fix**: `validateSplit` used "7/3"/"8/2" labels — changed to "7+3"/"8+2" to match preset buttons and walkthroughs.
+- **Bug fix**: PracticeTab split validation used clamped-at-midnight entries, making `preset-valid-8-2` render red. Now derives rest-candidate durations from raw `blocks[].hours` so midnight wrapping doesn't affect the verdict.
+
+### 2026-02 test_reports/iteration_15.json
+- Frontend Playwright: 6/6 assertions PASS. Login → /hours-of-service/split-sleeper → Practice tab → all 4 presets produce correct verdict (7+3/8+2 green, 6+4/5+5-SB red). Zero NASI-A references on either HoS route.
+
 ## Backlog (P0 → P2)
-- **P0**: **Photo Annotator needs a revisit** — user reports it's not flowing right. Current implementation (multi-select from Quick Photos → annotate in queue → Done saves back to library → library save-to-inspection moves blobs) compiles and lints clean, but the end-to-end feel is off. Action items when we pick this up:
-  - Reproduce on-device (iOS Safari + desktop) with a real photo: capture → annotate → Done → verify it appears in Quick Photos with annotations baked in.
-  - Audit coordinate math in `renderEntryBlob` (PhotoAnnotator.js) — non-active queue entries skip annotation bake; need to persist each entry's `imgDimensions` at annotation time so multi-photo batches stay aligned.
-  - Decide whether to keep the dual entry points (Quick Photos preview → Annotate vs. /photo-annotator entry screen) or collapse to one canonical flow.
-  - Consider an "Unassign / back to Quick Photos" action on inspection photos so annotated shots can be re-edited.
-- **P1**: **HOS Log Book Training** — ✅ **SHIPPED 2026-02-23**. Built from NASI-A 2024 Part A Participant Manual (pp. 93–196, stored in `/app/memory/references/hos-section.pdf`). Six modules: Duty Status Classifier, 14-Hour Window, 11-Hour Driving, 30-Minute Break, 70-Hour Recap, Split Sleeper Trainer. Tap-to-mark interactive ELD grids, XP/streak/badge system, per-badge progress persistence. Entry point: gold CTA on `/hours-of-service`. Files: `/app/frontend/src/pages/HosTrainingPage.js`, `/app/frontend/src/lib/hosRules.js`, `/app/frontend/src/lib/hosScenarios.js`, `/app/frontend/src/components/hos/EldGrid.js`.
-  - **Future expansions**: passenger-carrying rules, short-haul exemptions, adverse driving, RODS falsification drill. Source material is in the PDF (pp. 132–196 covers more than we mined).
+- **P0 ON HOLD**: **Photo Annotator + Quick Photos** — UI entirely hidden (header buttons, per-violation attach, routes redirect to /inspections) pending the user's agency decision on whether to store photos at all. Code kept intact for later reactivation. When resumed: (1) audit coord math in `renderEntryBlob`; (2) reproduce on iOS Safari; (3) decide single-vs-dual entry-point flow; (4) add "re-attach photo" fallback for IndexedDB eviction.
+- **P1 ✅ SHIPPED** — HOS Log Book Training + Split Sleeper Trainer (decoupled). Property-carrying only. Extension ideas: passenger-carrying rules, short-haul exemption, adverse driving, RODS falsification drill (source material in `/app/memory/references/hos-section.pdf`).
 - **P1**: Offline/cached mode for field use (cache violation tree + last N inspections for offline access)
 - **P2**: Refactor `server.py` into modular routes (`/app/backend/routes/*`)
 - **P2**: Refactor `BridgeChartPage.js` / `HoursOfServicePage.js` / `HazMatHelpers.js` into smaller components
