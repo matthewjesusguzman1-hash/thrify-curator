@@ -1,0 +1,34 @@
+{
+  "summary": "Frontend-only test of the new 'Show more examples' collapse feature on Split Sleeper Trainer Learn tab (Badge 042 / PIN 1234 → /hours-of-service/split-sleeper → Learn). All acceptance criteria pass.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Note: the review_request mentioned the route as '/hos/training/module-split', but the actual route in App.js is '/hours-of-service/split-sleeper'. Documentation mismatch only — feature works."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a", "frontend": "100%" },
+  "test_credentials": "Badge 042 / PIN 1234 (two-step login: badge → Continue → PIN → Continue)",
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Split Sleeper is at /hours-of-service/split-sleeper (not /hos/training/module-split). Login is a 2-step flow: enter badge, click Continue, then enter PIN. All learn-more-btn-SLx and learn-extras-SLx / learn-extra-SLx-N data-testids are wired and verified.",
+  "detailed_results": {
+    "SL1": { "card": true, "btn": true, "extras_toggle": "0→1→0→1 verified", "extras_titles": ["7.5h SB + 2.5h OFF ✓", "Short period FIRST, then ≥7h SB ✓"], "svg_grids": 2, "primary_title_has_'7h SB + 3h OFF'": true, "btn_text_when_open": "− Hide extra examples · subtitle lists both extras" },
+    "SL2": { "card": true, "btn": true, "extras_titles": ["9h SB + 2h OFF ✓", "8h SB FIRST, then 2h OFF ✓"], "svg_grids": 2 },
+    "SL3": { "card": true, "btn": true, "extras_titles": ["6.5h SB + 3.5h OFF — still too short ✓", "Two SB blocks but neither is ≥7h ✓"], "svg_grids": 2 },
+    "SL4": { "card": true, "btn": true, "extras_titles": ["10h straight OFF — no SB anywhere ✓", "3h SB + 7h OFF — longer is OFF, not SB ✓"], "svg_grids": 2 },
+    "SL5": { "card": true, "btn": true, "extras_titles": ["Evening start · SB period split by midnight ✓", "10h straight SB across midnight — NOT a split ✓"], "svg_grids_per_extra": "2 each (Day1 + Day2)", "multi_day_badges_inside_extras": 2, "primary_days_rendered": "day-0 and day-1 both present" }
+  },
+  "regression": {
+    "SL1_primary_title": "contains '7h SB + 3h OFF' ✓",
+    "SL5_primary_multi_day": "Day 1 + Day 2 grids both render ✓",
+    "totals_strip": "OFF/SB/D/OD chips with TOTAL 24:00 visible in screenshot ✓",
+    "brackets_and_shift_markers": "green qualifying brackets, gold counted brackets, START/END flags visible in screenshot ✓"
+  }
+}

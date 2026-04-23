@@ -796,6 +796,56 @@ export const SPLIT_LEARN_SCENARIOS = [
       { min: 20 * 60, kind: "end", label: "Shift end · 20:00 (end of Period B)" },
     ],
     description: "This log has exactly one Sleeper Berth block of at least 7 hrs and exactly one Off-Duty block of at least 2 hrs — so the pairing is unambiguous: 7h SB (06-13) + 3h OFF (17-20). Under §395.1(g)(1)(ii) any combination of ≥7h SB + ≥2h SB/OFF totaling ≥10h qualifies, in any order. Per §395.1(g)(1)(ii)(E), the hours inside these two qualifying rest periods are EXCLUDED from both the 11-hr driving limit and the 14-hr work-shift calculation — the wall-clock doesn't pause, but those rest hours simply don't count. Only the 6 hrs before Period A (06:00) and the 4 hrs between A and B (13:00-17:00) count toward this shift's 11 & 14. The shift starts at 00:00 (first on-duty entry) and ends at 20:00 (end of the second qualifying rest, Period B) — a new shift begins with a fresh 11/14 at 20:00.",
+    extraExamples: [
+      {
+        name: "7.5h SB + 2.5h OFF",
+        log: [
+          { status: "OD",  start: "00:00", end: "01:00" },
+          { status: "D",   start: "01:00", end: "06:00" },
+          { status: "SB",  start: "06:00", end: "13:30" },
+          { status: "D",   start: "13:30", end: "17:30" },
+          { status: "OFF", start: "17:30", end: "20:00" },
+          { status: "OFF", start: "20:00", end: "24:00" },
+        ],
+        qualifyingBrackets: [
+          { startMin: 6 * 60,  endMin: 13 * 60 + 30, label: "7.5h SB ✓", color: "#10B981" },
+          { startMin: 17 * 60 + 30, endMin: 20 * 60, label: "2.5h OFF ✓", color: "#10B981" },
+        ],
+        countedBrackets: [
+          { startMin: 0,  endMin: 6 * 60, label: "Counted · 6h", color: "#D4AF37" },
+          { startMin: 13 * 60 + 30, endMin: 17 * 60 + 30, label: "Counted · 4h", color: "#D4AF37" },
+        ],
+        shiftMarkers: [
+          { min: 0, kind: "start", label: "Shift start · 00:00" },
+          { min: 20 * 60, kind: "end", label: "Shift end · 20:00" },
+        ],
+        description: "Non-standard pairing that still qualifies: 7.5h SB + 2.5h OFF = 10h. The rule doesn't require whole-hour periods — any combination that meets the three thresholds (≥7h SB, ≥2h SB/OFF, ≥10h total) is legal under §395.1(g)(1)(ii).",
+      },
+      {
+        name: "Short period FIRST, then ≥7h SB",
+        log: [
+          { status: "OD",  start: "00:00", end: "01:00" },
+          { status: "D",   start: "01:00", end: "06:00" },
+          { status: "OFF", start: "06:00", end: "09:00" },
+          { status: "D",   start: "09:00", end: "14:00" },
+          { status: "SB",  start: "14:00", end: "21:00" },
+          { status: "OD",  start: "21:00", end: "24:00" },
+        ],
+        qualifyingBrackets: [
+          { startMin: 6 * 60,  endMin: 9 * 60,  label: "3h OFF ✓",  color: "#10B981" },
+          { startMin: 14 * 60, endMin: 21 * 60, label: "7h SB ✓",  color: "#10B981" },
+        ],
+        countedBrackets: [
+          { startMin: 0,  endMin: 6 * 60,  label: "Counted · 6h", color: "#D4AF37" },
+          { startMin: 9 * 60, endMin: 14 * 60, label: "Counted · 5h", color: "#D4AF37" },
+        ],
+        shiftMarkers: [
+          { min: 0, kind: "start", label: "Shift start · 00:00" },
+          { min: 21 * 60, kind: "end", label: "Shift end · 21:00 (end of SB)" },
+        ],
+        description: "Same legal 7+3 split, but the order is reversed — the 3h OFF came FIRST, then the 7h SB. Order doesn't matter under §395.1(g)(1)(ii). Because Period A (the 7h SB) ends at 21:00 and that's LATER than Period B, the shift ends at 21:00.",
+      },
+    ],
   },
   {
     id: "SL2",
@@ -821,6 +871,58 @@ export const SPLIT_LEARN_SCENARIOS = [
       { min: 21 * 60, kind: "end", label: "Shift end · 21:00 (end of Period A)" },
     ],
     description: "Order doesn't matter under §395.1(g)(1)(ii) — the 2h OFF here came BEFORE the 8h SB and the pairing is still valid. Per §395.1(g)(1)(ii)(E), hours inside qualifying rest periods are EXCLUDED from the 11-hr and 14-hr calculations (they don't count toward either, even though the wall-clock keeps ticking). Counted toward this shift: 6h before Period B + 5h between the two periods = 11h. The shift starts at 00:00 and ends at 21:00 (end of the LATER of the two qualifying rest periods, which is Period A here). After 21:00 a new work shift begins.",
+    extraExamples: [
+      {
+        name: "9h SB + 2h OFF",
+        log: [
+          { status: "OD",  start: "00:00", end: "01:00" },
+          { status: "D",   start: "01:00", end: "05:00" },
+          { status: "OFF", start: "05:00", end: "07:00" },
+          { status: "D",   start: "07:00", end: "11:00" },
+          { status: "OD",  start: "11:00", end: "12:00" },
+          { status: "SB",  start: "12:00", end: "21:00" },
+          { status: "OFF", start: "21:00", end: "24:00" },
+        ],
+        qualifyingBrackets: [
+          { startMin: 5 * 60,  endMin: 7 * 60,  label: "2h OFF ✓",  color: "#10B981" },
+          { startMin: 12 * 60, endMin: 21 * 60, label: "9h SB ✓",  color: "#10B981" },
+        ],
+        countedBrackets: [
+          { startMin: 0,  endMin: 5 * 60,  label: "Counted · 5h", color: "#D4AF37" },
+          { startMin: 7 * 60, endMin: 12 * 60, label: "Counted · 5h", color: "#D4AF37" },
+        ],
+        shiftMarkers: [
+          { min: 0, kind: "start", label: "Shift start · 00:00" },
+          { min: 21 * 60, kind: "end", label: "Shift end · 21:00" },
+        ],
+        description: "9+2 pairing — the SB period doesn't have to be exactly 8h. Anything ≥7h SB paired with ≥2h SB/OFF totaling ≥10h qualifies.",
+      },
+      {
+        name: "8h SB FIRST, then 2h OFF",
+        log: [
+          { status: "OD",  start: "00:00", end: "01:00" },
+          { status: "SB",  start: "01:00", end: "09:00" },
+          { status: "D",   start: "09:00", end: "14:00" },
+          { status: "OD",  start: "14:00", end: "15:00" },
+          { status: "D",   start: "15:00", end: "18:00" },
+          { status: "OFF", start: "18:00", end: "20:00" },
+          { status: "OFF", start: "20:00", end: "24:00" },
+        ],
+        qualifyingBrackets: [
+          { startMin: 1 * 60, endMin: 9 * 60,  label: "8h SB ✓",  color: "#10B981" },
+          { startMin: 18 * 60, endMin: 20 * 60, label: "2h OFF ✓", color: "#10B981" },
+        ],
+        countedBrackets: [
+          { startMin: 0, endMin: 1 * 60, label: "+1h", color: "#D4AF37" },
+          { startMin: 9 * 60, endMin: 18 * 60, label: "Counted · 9h", color: "#D4AF37" },
+        ],
+        shiftMarkers: [
+          { min: 0, kind: "start", label: "Shift start · 00:00" },
+          { min: 20 * 60, kind: "end", label: "Shift end · 20:00 (end of 2h OFF)" },
+        ],
+        description: "Same 8+2 legal pairing, but the 8h SB came first. Since the 2h OFF ends LATER (at 20:00), that's the end of the work shift — not the end of the earlier SB.",
+      },
+    ],
   },
   {
     id: "SL3",
@@ -842,6 +944,49 @@ export const SPLIT_LEARN_SCENARIOS = [
       { min: 20 * 60, kind: "end", label: "Shift end · 20:00 (14h wall-clock)" },
     ],
     description: "Neither period qualifies under §395.1(g)(1)(ii). The rule requires at least 7 consecutive hours in the Sleeper Berth as one of the two periods — here the only SB block is 6 hours. Because no qualifying SB period exists, no hours get excluded from the 11/14 calculations — every D and OD hour counts the whole day, and the 14-hr clock closes 14 wall-clock hours after the first on-duty entry (§395.3(a)(2)). Shift start = 06:00 (first on-duty). Shift end = 20:00 (14 wall-clock hours later), regardless of the rest blocks in between.",
+    extraExamples: [
+      {
+        name: "6.5h SB + 3.5h OFF — still too short",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "D",   start: "06:00", end: "11:00" },
+          { status: "SB",  start: "11:00", end: "17:30" },
+          { status: "D",   start: "17:30", end: "20:00" },
+          { status: "OFF", start: "20:00", end: "23:30" },
+          { status: "D",   start: "23:30", end: "24:00" },
+        ],
+        qualifyingBrackets: [],
+        countedBrackets: [
+          { startMin: 11 * 60, endMin: 17 * 60 + 30, label: "6.5h SB — too short", color: "#DC2626" },
+          { startMin: 20 * 60, endMin: 23 * 60 + 30, label: "3.5h OFF — no pair", color: "#DC2626" },
+        ],
+        shiftMarkers: [
+          { min: 6 * 60, kind: "start", label: "Shift start · 06:00" },
+          { min: 20 * 60, kind: "end", label: "Shift end · 20:00 (14h wall-clock)" },
+        ],
+        description: "Close but not quite. 6.5h SB falls short of the ≥7h Sleeper-Berth threshold, so the pairing fails even though the combined total is 10 hrs. The 14-hr wall-clock starts at 06:00 (first D) and closes at 20:00 — driving at 23:30 = violation.",
+      },
+      {
+        name: "Two SB blocks but neither is ≥7h",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "D",   start: "06:00", end: "12:00" },
+          { status: "SB",  start: "12:00", end: "17:00" },
+          { status: "D",   start: "17:00", end: "19:00" },
+          { status: "SB",  start: "19:00", end: "24:00" },
+        ],
+        qualifyingBrackets: [],
+        countedBrackets: [
+          { startMin: 12 * 60, endMin: 17 * 60, label: "5h SB — too short", color: "#DC2626" },
+          { startMin: 19 * 60, endMin: 24 * 60, label: "5h SB — too short", color: "#DC2626" },
+        ],
+        shiftMarkers: [
+          { min: 6 * 60, kind: "start", label: "Shift start · 06:00" },
+          { min: 20 * 60, kind: "end", label: "Shift end · 20:00 (14h wall-clock)" },
+        ],
+        description: "Two sleeper-berth blocks, but neither is ≥7h. The rule isn't 'two periods totaling 10h' — ONE of the two periods must be at least 7h in the Sleeper Berth.",
+      },
+    ],
   },
   {
     id: "SL4",
@@ -864,6 +1009,48 @@ export const SPLIT_LEARN_SCENARIOS = [
       { min: 14 * 60, kind: "end", label: "Shift end · 14:00 (14h wall-clock)" },
     ],
     description: "The rule in §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth as one of the two periods. Here the longer rest is Off Duty (not SB) and the only SB block is 2 hours. Even though the totals look right (8 + 2 = 10), no qualifying SB period exists, so the pairing fails. Because no period qualifies, no hours are excluded from the 11/14 calculations — the driver is treated as having taken no split at all. Shift start = 00:00 (first on-duty). Shift end = 14:00 (14 wall-clock hours later). Any driving or on-duty work after 14:00 is a 14-hr violation.",
+    extraExamples: [
+      {
+        name: "10h straight OFF — no SB anywhere",
+        log: [
+          { status: "OD",  start: "00:00", end: "01:00" },
+          { status: "D",   start: "01:00", end: "06:00" },
+          { status: "OFF", start: "06:00", end: "16:00" },
+          { status: "D",   start: "16:00", end: "19:00" },
+          { status: "OFF", start: "19:00", end: "24:00" },
+        ],
+        qualifyingBrackets: [],
+        countedBrackets: [
+          { startMin: 6 * 60, endMin: 16 * 60, label: "10h OFF — not sleeper", color: "#DC2626" },
+        ],
+        shiftMarkers: [
+          { min: 0, kind: "start", label: "Shift start · 00:00" },
+          { min: 16 * 60, kind: "end", label: "Shift end · 16:00 (10h OFF reset complete)" },
+        ],
+        description: "10 consecutive hours Off Duty IS a valid 10-hr reset — but it's NOT a split-sleeper pairing (no SB time). A 10-hr OFF completes the full reset on its own, so the shift ENDS at 16:00 when the 10h OFF finishes. The 3h D + 5h OFF after that is part of a new shift.",
+      },
+      {
+        name: "3h SB + 7h OFF — longer is OFF, not SB",
+        log: [
+          { status: "OD",  start: "00:00", end: "01:00" },
+          { status: "D",   start: "01:00", end: "06:00" },
+          { status: "SB",  start: "06:00", end: "09:00" },
+          { status: "D",   start: "09:00", end: "14:00" },
+          { status: "OFF", start: "14:00", end: "21:00" },
+          { status: "D",   start: "21:00", end: "24:00" },
+        ],
+        qualifyingBrackets: [],
+        countedBrackets: [
+          { startMin: 6 * 60,  endMin: 9 * 60,  label: "3h SB — too short", color: "#DC2626" },
+          { startMin: 14 * 60, endMin: 21 * 60, label: "7h OFF — not sleeper", color: "#DC2626" },
+        ],
+        shiftMarkers: [
+          { min: 0, kind: "start", label: "Shift start · 00:00" },
+          { min: 14 * 60, kind: "end", label: "Shift end · 14:00 (14h wall-clock)" },
+        ],
+        description: "3+7 pairing fails two ways: the SB is too short (<7h) AND the 7h rest is Off Duty, not Sleeper Berth. No split applies, 14-hr wall-clock closes at 14:00, driving at 21:00 is a violation.",
+      },
+    ],
   },
   {
     id: "SL5",
@@ -914,6 +1101,105 @@ export const SPLIT_LEARN_SCENARIOS = [
       },
     ],
     description: "An overnight run where the Sleeper Berth period straddles midnight. Day 1 has the 2h OFF at 12:00-14:00 (Period B). The driver then drives 14:00-19:00 and enters the Sleeper Berth at 19:00, continuing across midnight until 03:00 Day 2 — an 8-hour SB block that counts as a single qualifying Period A under §395.1(g)(1)(ii). Per §395.1(g)(1)(ii)(E), the hours inside both qualifying rest periods are EXCLUDED from the 11-hr and 14-hr calculations. Counted toward this shift = 6h (Day 1 pre-Period-B) + 5h (between B and A) = 11h work, with 5h + 5h = 10h driving. After Period A ends at 03:00 Day 2, a new 14-hr window begins — the 1h OD + 6h D on Day 2 start a new shift.",
+    extraExamples: [
+      {
+        id: "SL5-b",
+        multiDay: true,
+        name: "Evening start · SB period split by midnight",
+        days: [
+          {
+            label: "Day 1 · Fri",
+            log: [
+              { status: "OFF", start: "00:00", end: "16:00" },
+              { status: "OD",  start: "16:00", end: "17:00" },
+              { status: "D",   start: "17:00", end: "21:00" },
+              { status: "OFF", start: "21:00", end: "23:30" },
+              { status: "D",   start: "23:30", end: "24:00" },
+            ],
+            qualifyingBrackets: [
+              { startMin: 21 * 60, endMin: 23 * 60 + 30, label: "2.5h OFF ✓", color: "#10B981" },
+            ],
+            countedBrackets: [
+              { startMin: 16 * 60, endMin: 21 * 60, label: "Counted · 5h", color: "#D4AF37" },
+              { startMin: 23 * 60 + 30, endMin: 24 * 60, label: "+0.5h", color: "#D4AF37" },
+            ],
+            shiftMarkers: [
+              { min: 16 * 60, kind: "start", label: "Shift start · 16:00" },
+              { min: 24 * 60 - 1, kind: "continues", label: "Continues → Day 2" },
+            ],
+          },
+          {
+            label: "Day 2 · Sat",
+            log: [
+              { status: "D",   start: "00:00", end: "02:00" },
+              { status: "SB",  start: "02:00", end: "10:00" },
+              { status: "OD",  start: "10:00", end: "11:00" },
+              { status: "OFF", start: "11:00", end: "24:00" },
+            ],
+            qualifyingBrackets: [
+              { startMin: 2 * 60, endMin: 10 * 60, label: "8h SB ✓", color: "#10B981" },
+            ],
+            countedBrackets: [
+              { startMin: 0, endMin: 2 * 60, label: "+2h", color: "#D4AF37" },
+              { startMin: 10 * 60, endMin: 11 * 60, label: "+1h", color: "#D4AF37" },
+            ],
+            shiftMarkers: [
+              { min: 10 * 60, kind: "end", label: "Shift end · 10:00 (end of SB)", labelRow: 0 },
+            ],
+          },
+        ],
+        description: "Evening-start run. The shift begins at 16:00 Day 1, the 2.5h OFF (21:00-23:30) is Period B, and the 8h SB (02:00-10:00 Day 2) is Period A. Even though the pairing straddles midnight, it's still one continuous shift — ending at 10:00 Day 2 when the SB completes. Counted toward 11/14: 5h (16-21) + 0.5h (23:30-24) + 2h (00-02) + 1h (10-11) = 8.5h on-duty. Driving = 4h + 0.5h + 2h = 6.5h.",
+      },
+      {
+        id: "SL5-c",
+        multiDay: true,
+        name: "10h straight SB across midnight — NOT a split",
+        days: [
+          {
+            label: "Day 1 · Mon",
+            log: [
+              { status: "OFF", start: "00:00", end: "06:00" },
+              { status: "OD",  start: "06:00", end: "07:00" },
+              { status: "D",   start: "07:00", end: "15:00" },
+              { status: "OFF", start: "15:00", end: "15:30" },
+              { status: "D",   start: "15:30", end: "19:00" },
+              { status: "SB",  start: "19:00", end: "24:00" },
+            ],
+            qualifyingBrackets: [
+              { startMin: 19 * 60, endMin: 24 * 60, label: "SB continues →", color: "#10B981" },
+            ],
+            countedBrackets: [
+              { startMin: 6 * 60, endMin: 15 * 60, label: "Counted · 9h", color: "#D4AF37" },
+              { startMin: 15 * 60 + 30, endMin: 19 * 60, label: "+3.5h", color: "#D4AF37" },
+            ],
+            shiftMarkers: [
+              { min: 6 * 60, kind: "start", label: "Shift start · 06:00" },
+              { min: 24 * 60 - 1, kind: "continues", label: "Continues → Day 2" },
+            ],
+          },
+          {
+            label: "Day 2 · Tue",
+            log: [
+              { status: "SB",  start: "00:00", end: "05:00" },
+              { status: "OD",  start: "05:00", end: "06:00" },
+              { status: "D",   start: "06:00", end: "11:00" },
+              { status: "OFF", start: "11:00", end: "24:00" },
+            ],
+            qualifyingBrackets: [
+              { startMin: 0, endMin: 5 * 60, label: "← SB ends · 10h total", color: "#10B981" },
+            ],
+            countedBrackets: [
+              { startMin: 5 * 60, endMin: 11 * 60, label: "New shift · 6h", color: "#D4AF37" },
+            ],
+            shiftMarkers: [
+              { min: 5 * 60, kind: "end", label: "Day 1 shift END · 05:00", labelRow: 0 },
+              { min: 5 * 60, kind: "start", color: "#2563EB", label: "Day 2 shift START · 05:00", labelRow: 1 },
+            ],
+          },
+        ],
+        description: "A 10-hour SB straight through midnight (19:00 Day 1 → 05:00 Day 2) is a complete 10-hr reset on its own — NOT a split. One long rest replaces the whole reset, and the driver starts fresh after it. Day 1 shift ran from 06:00 to 05:00 Day 2; Day 2's new shift begins at 05:00 with a fresh 11/14.",
+      },
+    ],
   },
 ];
 

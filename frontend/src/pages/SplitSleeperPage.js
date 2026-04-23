@@ -100,20 +100,96 @@ function LearnTab() {
 }
 
 function LearnCard({ s }) {
-  if (s.multiDay) {
-    return (
-      <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`learn-card-${s.id}`}>
-        <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 py-2 flex items-center gap-2">
-          <span className="text-[9px] font-bold uppercase tracking-wider bg-[#002855] text-[#D4AF37] rounded px-1.5 py-0.5">Multi-day</span>
-          <p className="text-sm font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>{s.title}</p>
+  const [showMore, setShowMore] = useState(false);
+  const hasExtras = s.extraExamples && s.extraExamples.length > 0;
+
+  const body = s.multiDay ? (
+    <>
+      {s.days.map((d, i) => (
+        <div key={i} className="space-y-1" data-testid={`learn-card-${s.id}-day-${i}`}>
+          <div className="flex items-center justify-between px-1">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#64748B]">{d.label}</p>
+            {i < s.days.length - 1 && (
+              <p className="text-[9.5px] text-[#94A3B8] italic">continues overnight ↓</p>
+            )}
+          </div>
+          <EldGrid
+            entries={d.log}
+            brackets={[...(d.qualifyingBrackets || []), ...(d.countedBrackets || [])]}
+            shiftMarkers={d.shiftMarkers || []}
+            compact
+          />
         </div>
-        <div className="p-3 space-y-3">
-          {s.days.map((d, i) => (
-            <div key={i} className="space-y-1" data-testid={`learn-card-${s.id}-day-${i}`}>
+      ))}
+      <p className="text-[12.5px] text-[#334155] leading-relaxed pt-1"><CfrText text={s.description} /></p>
+    </>
+  ) : (
+    <>
+      <EldGrid
+        entries={s.log}
+        brackets={[...(s.qualifyingBrackets || []), ...(s.countedBrackets || [])]}
+        shiftMarkers={s.shiftMarkers || []}
+        compact
+      />
+      <p className="text-[12.5px] text-[#334155] leading-relaxed"><CfrText text={s.description} /></p>
+    </>
+  );
+
+  return (
+    <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`learn-card-${s.id}`}>
+      <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 py-2 flex items-center gap-2">
+        {s.multiDay && <span className="text-[9px] font-bold uppercase tracking-wider bg-[#002855] text-[#D4AF37] rounded px-1.5 py-0.5">Multi-day</span>}
+        <p className="text-sm font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>{s.title}</p>
+      </div>
+      <div className="p-3 space-y-3">{body}</div>
+
+      {hasExtras && (
+        <div className="border-t border-[#E2E8F0] bg-[#F8FAFC]">
+          <button
+            onClick={() => setShowMore((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-2 hover:bg-white transition-colors"
+            data-testid={`learn-more-btn-${s.id}`}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center text-[12px] font-bold">
+                {showMore ? "−" : "+"}
+              </div>
+              <p className="text-[12px] font-bold text-[#002855]">
+                {showMore ? "Hide extra examples" : `Show ${s.extraExamples.length} more example${s.extraExamples.length > 1 ? "s" : ""}`}
+              </p>
+            </div>
+            <p className="text-[10px] text-[#64748B]">{s.extraExamples.map((e) => e.name).join(" · ")}</p>
+          </button>
+          {showMore && (
+            <div className="px-3 pb-3 pt-1 space-y-3 bg-white" data-testid={`learn-extras-${s.id}`}>
+              {s.extraExamples.map((ex, i) => (
+                <LearnExtra key={i} ex={ex} parentId={s.id} idx={i} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function LearnExtra({ ex, parentId, idx }) {
+  const testid = `learn-extra-${parentId}-${idx}`;
+  return (
+    <div className="border border-[#E2E8F0] rounded-lg overflow-hidden" data-testid={testid}>
+      <div className="bg-[#FFFBEB] border-b border-[#D4AF37]/40 px-3 py-1.5 flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-wider text-[#D4AF37]">Example {idx + 2}</span>
+        <p className="text-[12px] font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>{ex.name}</p>
+        {ex.multiDay && <span className="text-[9px] font-bold uppercase tracking-wider bg-[#002855] text-[#D4AF37] rounded px-1 py-0.5 ml-auto">Multi-day</span>}
+      </div>
+      <div className="p-2.5 space-y-2">
+        {ex.multiDay ? (
+          ex.days.map((d, i) => (
+            <div key={i} className="space-y-1">
               <div className="flex items-center justify-between px-1">
-                <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#64748B]">{d.label}</p>
-                {i < s.days.length - 1 && (
-                  <p className="text-[9.5px] text-[#94A3B8] italic">continues overnight ↓</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">{d.label}</p>
+                {i < ex.days.length - 1 && (
+                  <p className="text-[9px] text-[#94A3B8] italic">continues overnight ↓</p>
                 )}
               </div>
               <EldGrid
@@ -123,23 +199,18 @@ function LearnCard({ s }) {
                 compact
               />
             </div>
-          ))}
-          <p className="text-[12.5px] text-[#334155] leading-relaxed pt-1"><CfrText text={s.description} /></p>
-        </div>
-      </section>
-    );
-  }
-  const brackets = [...(s.qualifyingBrackets || []), ...(s.countedBrackets || [])];
-  return (
-    <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`learn-card-${s.id}`}>
-      <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 py-2">
-        <p className="text-sm font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>{s.title}</p>
+          ))
+        ) : (
+          <EldGrid
+            entries={ex.log}
+            brackets={[...(ex.qualifyingBrackets || []), ...(ex.countedBrackets || [])]}
+            shiftMarkers={ex.shiftMarkers || []}
+            compact
+          />
+        )}
+        <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={ex.description} /></p>
       </div>
-      <div className="p-3 space-y-3">
-        <EldGrid entries={s.log} brackets={brackets} shiftMarkers={s.shiftMarkers || []} compact />
-        <p className="text-[12.5px] text-[#334155] leading-relaxed"><CfrText text={s.description} /></p>
-      </div>
-    </section>
+    </div>
   );
 }
 
