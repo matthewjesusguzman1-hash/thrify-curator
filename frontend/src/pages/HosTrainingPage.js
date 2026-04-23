@@ -22,7 +22,6 @@ export default function HosTrainingPage() {
     { id: "11hr",   title: "11-Hour Driving",   subtitle: "Count the driving time",       icon: Target,   color: "#F59E0B", component: ElevenHourModule, count: ELEVEN_HOUR_SCENARIOS.length, minutes: 4 },
     { id: "break",  title: "30-Min Break",      subtitle: "Find the missed interruption", icon: Zap,      color: "#10B981", component: BreakModule, count: BREAK_SCENARIOS.length, minutes: 3 },
     { id: "recap",  title: "70-Hour Recap",     subtitle: "Count rolling 8-day hours",    icon: Calendar, color: "#7C3AED", component: RecapModule, count: RECAP_SCENARIOS.length, minutes: 4 },
-    { id: "split",  title: "Split Sleeper",     subtitle: "Pair rest periods legally",    icon: Layers,   color: "#0891B2", component: SplitModule, count: null, minutes: 3 },
   ];
 
   const ModuleComp = MODULES.find((m) => m.id === activeModule)?.component;
@@ -43,7 +42,7 @@ export default function HosTrainingPage() {
               <GraduationCap className="w-4 h-4 text-[#D4AF37]" />
               <h1 className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>HOS Log Book Training</h1>
             </div>
-            <p className="text-[10px] text-white/50">Property-carrying CMV · 49 CFR Part 395 · NASI-A material</p>
+            <p className="text-[10px] text-white/50">Property-carrying CMV · 49 CFR Part 395</p>
           </div>
         </div>
       </div>
@@ -143,10 +142,10 @@ function DutyStatusModule({ onBack }) {
   };
   const next = () => { setPick(null); setRevealed(false); setIdx((i) => i + 1); };
 
-  if (done) return <DrillShell title="Duty Status 101" manualRef="NASI-A pp. 96–97" onBack={onBack} correct={correct} total={DUTY_STATUS_QUIZ.length} done onDone={onBack} />;
+  if (done) return <DrillShell title="Duty Status 101" onBack={onBack} correct={correct} total={DUTY_STATUS_QUIZ.length} done onDone={onBack} />;
 
   return (
-    <DrillShell title="Duty Status 101" manualRef="NASI-A pp. 96–97" onBack={onBack} step={idx} total={DUTY_STATUS_QUIZ.length} correct={correct}>
+    <DrillShell title="Duty Status 101" onBack={onBack} step={idx} total={DUTY_STATUS_QUIZ.length} correct={correct}>
       <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 space-y-4">
         <p className="text-sm text-[#334155]">{q.situation}</p>
         <div className="grid grid-cols-2 gap-2">
@@ -179,7 +178,7 @@ function DutyStatusModule({ onBack }) {
               <p className="text-sm font-bold text-[#334155]">{isCorrect ? "Correct" : `Correct answer: ${STATUS_META[q.answer].label}`}</p>
             </div>
             <p className="text-[12px] text-[#334155] leading-relaxed">{DUTY_STATUS_EXPLAIN[q.answer]}</p>
-            <p className="text-[10px] text-[#64748B] font-mono">49 CFR §395.2 · NASI-A pp. 96–97</p>
+            <p className="text-[10px] text-[#64748B] font-mono">49 CFR §395.2</p>
           </div>
         )}
         <Button onClick={next} disabled={!revealed} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="ds-next-btn">
@@ -219,7 +218,7 @@ function ViolationFinderModule({ title, manualRef, scenarios, tolerance = 30, on
   };
   const next = () => { setMark(null); setRevealed(false); setPickedNone(false); setIdx((i) => i + 1); };
 
-  if (done) return <DrillShell title={title} manualRef={manualRef} onBack={onBack} correct={correct} total={scenarios.length} done onDone={onBack} />;
+  if (done) return <DrillShell title={title} onBack={onBack} correct={correct} total={scenarios.length} done onDone={onBack} />;
 
   const wasCorrect = revealed && (
     (pickedNone && !s.hasViolation) ||
@@ -227,7 +226,7 @@ function ViolationFinderModule({ title, manualRef, scenarios, tolerance = 30, on
   );
 
   return (
-    <DrillShell title={title} manualRef={s.manualRef} onBack={onBack} step={idx} total={scenarios.length} correct={correct}>
+    <DrillShell title={title} onBack={onBack} step={idx} total={scenarios.length} correct={correct}>
       <div className="bg-white rounded-xl border border-[#E2E8F0] p-3 sm:p-4 space-y-3">
         <p className="text-[13px] text-[#334155] leading-relaxed">
           Tap the grid at the exact time the violation begins.
@@ -258,7 +257,7 @@ function ViolationFinderModule({ title, manualRef, scenarios, tolerance = 30, on
               <p className="text-sm font-bold text-[#334155]">{wasCorrect ? "Correct" : s.hasViolation ? "Not quite — here's where it starts" : "No violation on this log"}</p>
             </div>
             <p className="text-[12px] text-[#334155] leading-relaxed">{s.answerExplain}</p>
-            <p className="text-[10px] text-[#64748B] font-mono pt-1">{s.manualRef}</p>
+            <p className="text-[10px] text-[#64748B] font-mono pt-1">49 CFR Part 395</p>
           </div>
         )}
 
@@ -293,14 +292,14 @@ function RecapModule({ onBack }) {
   };
   const next = () => { setEntry(""); setRevealed(false); setIdx((i) => i + 1); };
 
-  if (done) return <DrillShell title="70-Hour Recap Drill" manualRef="NASI-A pp. 136–141" onBack={onBack} correct={correct} total={RECAP_SCENARIOS.length} done onDone={onBack} />;
+  if (done) return <DrillShell title="70-Hour Recap Drill" onBack={onBack} correct={correct} total={RECAP_SCENARIOS.length} done onDone={onBack} />;
 
   const total7 = s.days.reduce((sum, d) => sum + d.onDuty, 0);
   const val = parseFloat(entry);
   const wasCorrect = revealed && !isNaN(val) && Math.abs(val - s.answer) < 0.25;
 
   return (
-    <DrillShell title="70-Hour Recap Drill" manualRef={s.manualRef} onBack={onBack} step={idx} total={RECAP_SCENARIOS.length} correct={correct}>
+    <DrillShell title="70-Hour Recap Drill" onBack={onBack} step={idx} total={RECAP_SCENARIOS.length} correct={correct}>
       <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 space-y-4">
         <p className="text-sm text-[#002855] font-bold">{s.todayQuestion}</p>
         <div className="space-y-1.5">
@@ -336,7 +335,7 @@ function RecapModule({ onBack }) {
               <p className="text-sm font-bold text-[#334155]">{wasCorrect ? "Correct" : `Correct answer: ${s.answer} hours`}</p>
             </div>
             <p className="text-[12px] text-[#334155] leading-relaxed">{s.answerExplain}</p>
-            <p className="text-[10px] text-[#64748B] font-mono pt-1">{s.manualRef}</p>
+            <p className="text-[10px] text-[#64748B] font-mono pt-1">49 CFR Part 395</p>
           </div>
         )}
 
