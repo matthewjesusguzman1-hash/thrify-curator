@@ -71,6 +71,21 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - **70-Hour Recap upgrade**: each day in both Learn visual and Quiz now renders as a **miniature ELD log** (synthesized via `synthesizeDayLog`) with gold brackets drawn over the on-duty (D+OD) runs — so inspectors practice reading a log the way they would roadside, instead of staring at a single abstracted number.
 - **Helpers added**: `onDutyBrackets(entries)` auto-derives bracket sets from duty runs; `synthesizeDayLog(onDutyHours)` generates a realistic mixed log for a given total.
 
+### 2026-02 test_reports/iteration_18.json
+- Source review: 100% PASS for (1) ds5 per-question CFR/explanation override, (2) 7th module tile `module-exempt` + ExemptionsView accordion, (3) SplitSleeperPage Learn/Practice rewrite.
+- Playwright runtime couldn't assert across routes due to an auth-session quirk with programmatic pushState navigation (real user clicks work — iteration_17 already validated in-app nav path).
+
+### 2026-02 — Duty Status #5 clarified + HOS Exemptions + Split Sleeper redesign
+- **Duty Status ds5** (passenger seat): per-question `explain` + `cfr` override. Feedback now cites **49 CFR §395.2 · §395.1(g)(1)(i)(A)** and explains the 3-hour passenger-seat carve-out (requires ≥7 consecutive hours in sleeper berth). `DutyStatusQuiz` uses `q.explain || DUTY_STATUS_EXPLAIN[q.answer]` and `q.cfr || "49 CFR §395.2"` so only edge-case scenarios need overrides.
+- **HOS Exemptions module** (7th training tile `module-exempt`) — dedicated `ExemptionsView` with two accordion groups:
+  - **Top (9)**: 150-mi short-haul, 16-hr short-haul, adverse driving, emergency, driver-salesperson, oilfield, agricultural, covered farm vehicle, utility service.
+  - **Others (9)**: construction, motion picture, Alaska, Hawaii, retail-holiday, bees, livestock, hi-rail, pipeline welding.
+  - Each card expands to show summary + bulleted qualifying conditions + CFR citation. Source: NASI-A Part A Module 6.
+- **Split Sleeper Learn tab** rewritten — 4 scenario cards (legal 7+3, legal 8+2, invalid 6+4, invalid longer-period-not-SB) with GREEN brackets on qualifying rest periods and GOLD brackets on hours that count toward 11 & 14. Each has an inspector's-math description.
+- **Split Sleeper Practice tab** rewritten — interactive flow: (1) user taps rest blocks on the grid to identify qualifying split periods; (2) submit reveals correct/wrong/missed via in-grid color marks; (3) three graded follow-up questions stack: valid split (Y/N), 11/14 violation (none/11/14/both), counted hours toward 11 & 14 (two numeric inputs). Every answer gets a per-scenario explanation. 4 scenarios cycle.
+- **EldGrid** got `selectableIndices`, `selectedIndices`, `onEntryClick`, `blockMarks` props for the interactive block-selection overlay.
+
+
 ## Backlog (P0 → P2)
 - **P0 ON HOLD**: **Photo Annotator + Quick Photos** — UI entirely hidden (header buttons, per-violation attach, routes redirect to /inspections) pending the user's agency decision on whether to store photos at all. Code kept intact for later reactivation.
 - **P1 ✅ SHIPPED** — HOS Log Book Training: Learn-first flow + 6 modules + bracket-annotated ELD grids + standalone Split Sleeper Trainer. Property-carrying only. Extension ideas: passenger-carrying rules, short-haul exemption, adverse driving, RODS falsification drill (source material in `/app/memory/references/hos-section.pdf`).
