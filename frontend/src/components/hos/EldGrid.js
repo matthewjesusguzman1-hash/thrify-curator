@@ -218,8 +218,8 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const labelY = HEADER_H + 4 * ROW_H + 22 + labelRow * 12;
           const flagW = compact ? 30 : 40;
           const flagText = isEnd ? "END" : isContinues ? "→" : "START";
-          // Alternate pennant direction so overlapping start+end at same X don't collide
-          const flagRightward = !isEnd; // start + continues point right; end points left
+          // Pennant direction: start points right, end + continues point left
+          const flagRightward = !isEnd && !isContinues;
           const flagX1 = flagRightward ? x : x - flagW;
           const flagX2 = flagRightward ? x + flagW : x;
           const tipX = flagRightward ? x + flagW - 4 : x - flagW + 4;
