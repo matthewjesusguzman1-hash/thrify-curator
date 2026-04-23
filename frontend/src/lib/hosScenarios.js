@@ -1225,8 +1225,11 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     violation14: false,
     counted14Hours: 10,
     counted11Hours: 9,
+    shiftStartMin: 0,       // 00:00 — first OD entry
+    shiftEndMin: 20 * 60,   // 20:00 — end of Period B (the LATER qualifying rest)
     explanation: {
       qualifying: "This log has exactly one Sleeper Berth block of at least 7 hrs (06-13) and exactly one Off-Duty block of at least 2 hrs (17-20), so the pairing is unambiguous. Under §395.1(g)(1)(ii) the SB period must be ≥7h and the other must be ≥2h SB/OFF, combined ≥10h.",
+      shift: "Shift START = 00:00 (the first on-duty entry after the prior reset). Shift END = 20:00 (end of Period B, the LATER of the two qualifying rest periods under §395.1(g)(1)(ii)). A new shift begins immediately after Period B at 20:00.",
       split: "Valid split. The 7h SB meets the minimum sleeper-berth requirement. The 3h OFF meets the minimum 2-hour pair. Combined = 10 hours. Order doesn't matter.",
       violation: "No violation. Per §395.1(g)(1)(ii)(E), the hours inside the qualifying rest periods are excluded from the 11/14 calculations. Counted on-duty totals 10 hrs (within 14) and counted driving totals 9 hrs (within 11).",
       hours: "14-hr counted (D+OD, excluding qualifying rests) = 1h OD (00-01) + 5h D (01-06) + 4h D (13-17) = 10h. The 7h SB and the 3h OFF are excluded from the 14. Driving counted = 5h + 4h = 9h.",
@@ -1251,8 +1254,11 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     violation14: false,
     counted14Hours: 14,
     counted11Hours: 12,
+    shiftStartMin: 0,       // 00:00 — first OD entry
+    shiftEndMin: 24 * 60,   // 24:00 — end of Period A (the 8h SB, LATER qualifying rest)
     explanation: {
       qualifying: "The 8h SB from 16:00-24:00 is the qualifying Sleeper Berth period. The 2h OFF from 05:00-07:00 meets the minimum 2-hour pair. Only one ≥7h SB and one ≥2h OFF block exist on this log, so the pairing is unambiguous. Order doesn't matter under §395.1(g)(1)(ii).",
+      shift: "Shift START = 00:00 (first on-duty). Shift END = 24:00 (end of the 8h SB, which is the LATER of the two qualifying rest periods). The shift spans the entire 24 hours of the log because the Period A SB runs all the way to midnight.",
       split: "Valid split — 8h SB satisfies the ≥7h Sleeper Berth requirement and the 2h OFF satisfies the minimum pair. Combined = 10 hrs.",
       violation: "11-hr DRIVING VIOLATION. Per §395.1(g)(1)(ii)(E), the qualifying rest hours are excluded, but all D and OD time still counts. Counted driving (4h + 5h + 3h = 12h) exceeds the 11-hr limit. 14-hr is exactly at the cap (14h) but not over.",
       hours: "14-hr counted (D+OD, excluding qualifying rests) = 1h OD (00-01) + 4h D (01-05) + 5h D (07-12) + 1h OD (12-13) + 3h D (13-16) = 14 hrs. Driving counted = 4 + 5 + 3 = 12 hrs — 1h over limit.",
@@ -1275,8 +1281,11 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     violation14: false,
     counted14Hours: 14,
     counted11Hours: 10,
+    shiftStartMin: 6 * 60,  // 06:00 — first on-duty (D) after the 10h pre-shift OFF
+    shiftEndMin: 20 * 60,   // 20:00 — 14h wall-clock limit (no qualifying split applies)
     explanation: {
       qualifying: "Neither rest period qualifies. §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — the only SB block here is 4 hrs. Without a qualifying SB period, the 4h OFF has nothing to pair with.",
+      shift: "Shift START = 06:00 (first D entry — that's the first on-duty coming out of the 10h pre-shift OFF reset). Shift END = 20:00 — because no split applies, the 14-hr wall-clock from 06:00 is what closes the shift (§395.3(a)(2)). The 4h OFF and 4h SB in the middle do NOT extend the window.",
       split: "No valid split. Without a qualifying ≥7h SB period, the §395.1(g)(1)(ii)(E) exclusion does not apply — every hour of D and OD counts normally toward the 11 and 14.",
       violation: "No 11 or 14 violation — but only because total driving is exactly 10 hrs and the 14-hr clock doesn't expire until 20:00. Every D and OD hour counts the whole day; nothing is excluded.",
       hours: "14-hr counted (D+OD with no split exclusion) = 6h D (06-12) + 4h D (16-20) = 10h. The 14-hr wall-clock from first on-duty (06:00) closes at 20:00; the driver stopped driving at 20:00 exactly. Driving counted = 10 hrs (at limit, not over).",
@@ -1300,8 +1309,11 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     violation14: true,
     counted14Hours: 19, // wall clock 00:00 to 19:00 = 19hrs (no qualifying pause)
     counted11Hours: 8,
+    shiftStartMin: 0,       // 00:00 — first OD entry
+    shiftEndMin: 14 * 60,   // 14:00 — 14h wall-clock limit (no qualifying split applies)
     explanation: {
       qualifying: "The 8h OFF looks appealing but §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — Off Duty doesn't substitute. The 2h SB is too short to be the qualifying Sleeper Berth period on its own. No qualifying rest periods.",
+      shift: "Shift START = 00:00 (first on-duty). Shift END = 14:00 — no valid split means the 14-hr wall-clock closes the shift 14 hours after the first on-duty (§395.3(a)(2)). Any driving or on-duty work after 14:00 is a 14-hr violation.",
       split: "No valid split. 8 OFF + 2 SB fails because no period has the required ≥7h in the Sleeper Berth.",
       violation: "14-hr VIOLATION. Without a qualifying split, §395.1(g)(1)(ii)(E) does not apply, so no hours are excluded. The 14-hr wall-clock started at 00:00 and closed at 14:00. Driving from 14:00-17:00 is past the 14-hr work-shift limit — violation.",
       hours: "14-hr counted (no split exclusion) = 2h OD + 6h D + 3h D + 2h SB* = all D and OD time in the shift (*SB counts here only because no qualifying split exists; normally SB doesn't count but neither does it trigger exclusion here). Wall-clock 14-hr window: 00:00 → 14:00. Driving from 14:00-17:00 = violation. Driving total = 5h + 3h = 8h (under 11).",

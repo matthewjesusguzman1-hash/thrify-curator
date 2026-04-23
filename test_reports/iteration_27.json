@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only test of the new Q-shift step in the Split Sleeper Practice tab (Badge 042 / PIN 1234 → /hours-of-service/split-sleeper → Practice). All 4 scenarios (SP1-SP4) pass end-to-end including the new shift-start/end question with markers rendering on the grid AFTER the user submits. Regression on Learn tab show-more-examples verified.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Minor: the review-request path 'HoS → Training → module-split' doesn't match the actual route '/hours-of-service/split-sleeper' — documentation mismatch only, feature works.",
+    "Minor: SP2 shift explanation text doesn't explicitly cite §395.1(g)(1)(ii) in the shift block (it references 'Period A' only). SP1/SP3/SP4 do cite the CFR. Non-blocking — just a content consistency note."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a", "frontend": "100%" },
+  "test_credentials": "Badge 042 / PIN 1234 (2-step: badge → Continue → PIN → Sign In)",
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Practice tab questions now have keys: q-split, q-shift (NEW twoTime), q-hours, q-violation. Shift markers [data-testid=shift-marker-start/end] render on the main EldGrid only after answers.shift is set. q-shift testids: q-shift, q-shift-start, q-shift-end, q-shift-submit, q-shift-feedback, q-shift-next. Selectable blocks in EldGrid are <g style=cursor:pointer> (no testid) — click by index order matches entry order filtered to SB/OFF.",
+  "detailed_results": {
+    "SP1": { "prompt_ok": true, "hint_ok": true, "graded_correct": true, "cfr_cite_Period_B": true, "markers_drawn_after_submit": true, "markers_hidden_before_submit": true, "scenario_done": true },
+    "SP2": { "end_00_00_normalizes_to_24_00": true, "graded_correct": true, "markers_drawn": true, "scenario_done": true },
+    "SP3_wrong_attempt": { "graded_amber": true, "explanation_cites_first_D_06_00": true },
+    "SP3_retry_correct": { "06_00_20_00_graded_correct": true },
+    "SP4": { "graded_correct": true, "markers_drawn": true, "scenario_done": true },
+    "regression_learn_show_more_SL1": "extras panel opens ✓"
+  }
+}

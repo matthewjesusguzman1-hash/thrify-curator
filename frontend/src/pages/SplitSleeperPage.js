@@ -298,6 +298,10 @@ function PracticeTab() {
           selectedIndices={selected}
           onEntryClick={phase === "select" ? toggle : null}
           blockMarks={blockMarks}
+          shiftMarkers={answers.shift ? [
+            { min: scenario.shiftStartMin, kind: "start", label: `Shift START · ${fmtMin(scenario.shiftStartMin)}` },
+            { min: scenario.shiftEndMin, kind: "end", label: `Shift END · ${fmtMin(scenario.shiftEndMin)}` },
+          ] : []}
         />
 
         {phase === "select" && (
@@ -370,6 +374,14 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone })
       explanation: scenario.explanation.split,
     },
     {
+      key: "shift",
+      type: "twoTime",
+      prompt: "Identify the work shift — when does it START and END?",
+      hint: "START = first on-duty (D or OD) after the most recent qualifying reset. END = whichever comes first: end of the LATER qualifying rest in a valid split, OR 14 wall-clock hours after START.",
+      correct: { start: scenario.shiftStartMin, end: scenario.shiftEndMin },
+      explanation: scenario.explanation.shift,
+    },
+    {
       key: "hours",
       type: "twoNum",
       prompt: "How many counted hours (D + OD that count against the clocks)?",
@@ -421,17 +433,31 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone })
 function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast }) {
   const [h14, setH14] = useState("");
   const [h11, setH11] = useState("");
+  const [tStart, setTStart] = useState("");
+  const [tEnd, setTEnd] = useState("");
   const submitTwoNum = () => {
     const v14 = parseFloat(h14);
     const v11 = parseFloat(h11);
     if (isNaN(v14) || isNaN(v11)) return;
     setAnswer({ h14: v14, h11: v11 });
   };
+  const submitTwoTime = () => {
+    const sMin = timeStrToMin(tStart);
+    const eMin = timeStrToMin(tEnd);
+    if (sMin === null || eMin === null) return;
+    setAnswer({ start: sMin, end: eMin });
+  };
 
   let correct = false;
   if (answered) {
     if (q.type === "twoNum") {
       correct = Math.abs(answer.h14 - q.correct.h14) < 0.5 && Math.abs(answer.h11 - q.correct.h11) < 0.5;
+    } else if (q.type === "twoTime") {
+      // ±10 min tolerance on start and end so HH:00 vs HH:05 still reads correct.
+      // Also: <input type="time"> can't produce "24:00" — treat user 00:00 as
+      // equivalent to 24*60 when the correct answer is a full-day shift.
+      const normAnsEnd = answer.end === 0 && q.correct.end === 24 * 60 ? 24 * 60 : answer.end;
+      correct = Math.abs(answer.start - q.correct.start) <= 10 && Math.abs(normAnsEnd - q.correct.end) <= 10;
     } else {
       correct = answer === q.correct;
     }
@@ -488,6 +514,36 @@ function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast }
         </div>
       )}
 
+      {q.type === "twoTime" && !answered && (
+        <div className="space-y-2">
+          {q.hint && (
+            <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">{q.hint}</p>
+          )}
+          <div className="flex gap-2 items-center">
+            <label className="text-[11px] font-bold text-[#475569] w-28">Shift START:</label>
+            <input type="time" value={tStart} onChange={(e) => setTStart(e.target.value)}
+              className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#10B981] focus:border-[#002855] focus:outline-none"
+              data-testid={`${testid}-start`} />
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="text-[11px] font-bold text-[#475569] w-28">Shift END:</label>
+            <input type="time" value={tEnd} onChange={(e) => setTEnd(e.target.value)}
+              className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#DC2626] focus:border-[#002855] focus:outline-none"
+              data-testid={`${testid}-end`} />
+          </div>
+          <Button onClick={submitTwoTime} disabled={!tStart || !tEnd} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-submit`}>
+            Submit
+          </Button>
+        </div>
+      )}
+
+      {q.type === "twoTime" && answered && (
+        <div className="space-y-1 text-[12px] font-mono">
+          <div className="flex justify-between"><span>Shift START:</span><span className="font-bold">Your: {minToTimeStr(answer.start)} &nbsp;·&nbsp; Correct: {minToTimeStr(q.correct.start)}</span></div>
+          <div className="flex justify-between"><span>Shift END:</span><span className="font-bold">Your: {minToTimeStr(answer.end)} &nbsp;·&nbsp; Correct: {minToTimeStr(q.correct.end)}</span></div>
+        </div>
+      )}
+
       {q.type === "twoNum" && !answered && (
         <div className="space-y-2">
           <div className="flex gap-2 items-center">
@@ -535,3 +591,27 @@ function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast }
 }
 
 
+
+
+/* Time helpers — convert between "HH:MM" strings and minutes-from-midnight.
+ * Shift END on an overnight scenario may be >24:00 (not used in SP1-SP4,
+ * which are single-day). 24:00 is treated as equivalent to "00:00 next day"
+ * for input/display purposes. */
+function timeStrToMin(str) {
+  if (!str) return null;
+  const [hh, mm] = str.split(":").map(Number);
+  if (isNaN(hh) || isNaN(mm)) return null;
+  return hh * 60 + mm;
+}
+function minToTimeStr(min) {
+  if (min === null || min === undefined) return "—";
+  const m = min % (24 * 60);
+  const hh = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+function fmtMin(min) {
+  if (min === null || min === undefined) return "—";
+  if (min === 24 * 60) return "24:00";
+  return minToTimeStr(min);
+}
