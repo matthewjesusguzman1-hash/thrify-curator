@@ -110,26 +110,32 @@ export function analyzeShift(entries) {
   };
 }
 
-/** Validate a split-sleeper pairing (property-carrying, post-2020: 7+3 or longer).
- *  Longer period MUST be sleeper berth; shorter may be SB or Off Duty; neither
- *  counts against the 14-hr window when correctly paired. */
+/** Validate a split-sleeper pairing (property-carrying, post-2020).
+ *  Per 49 CFR §395.1(g)(1)(ii):
+ *    - One period must be ≥7 consecutive hours in the Sleeper Berth.
+ *    - The other period must be ≥2 consecutive hours (SB or Off Duty).
+ *    - The two periods combined must total ≥10 hours.
+ *    - Order does not matter. Neither period counts against the 14-hr clock.
+ *  NOTE: "7+3" / "8+2" are common examples of the rule, not the full rule.
+ *  A 7.5+2.5 pair is also legal as long as combined ≥ 10. */
 export function validateSplit(a, b) {
   const [big, sml] = [a, b].sort((x, y) => y.hours - x.hours);
-  if (big.hours + sml.hours < 10) {
-    return { legal: false, reason: "Two periods must total at least 10 hours combined.", cfr: "49 CFR §395.1(g)(1)(ii)" };
-  }
   if (big.type !== "SB") {
-    return { legal: false, reason: "The longer period must be spent in the Sleeper Berth.", cfr: "49 CFR §395.1(g)(1)(ii)" };
+    return { legal: false, reason: "At least one period must be spent in the Sleeper Berth (the longer one).", cfr: "49 CFR §395.1(g)(1)(ii)" };
   }
-  if (big.hours >= 8 && sml.hours >= 2) {
-    return { legal: true, type: "8+2", reason: `Valid 8+2 split — ${big.hours}h SB + ${sml.hours}h ${sml.type}.`, cfr: "49 CFR §395.1(g)(1)(ii)(A)" };
+  if (big.hours < 7) {
+    return { legal: false, reason: "The Sleeper Berth period must be at least 7 consecutive hours.", cfr: "49 CFR §395.1(g)(1)(ii)" };
   }
-  if (big.hours >= 7 && sml.hours >= 3) {
-    return { legal: true, type: "7+3", reason: `Valid 7+3 split — ${big.hours}h SB + ${sml.hours}h ${sml.type}.`, cfr: "49 CFR §395.1(g)(1)(ii)(B)" };
+  if (sml.hours < 2) {
+    return { legal: false, reason: "The shorter period must be at least 2 consecutive hours (sleeper berth or off duty).", cfr: "49 CFR §395.1(g)(1)(ii)" };
+  }
+  if (big.hours + sml.hours < 10) {
+    return { legal: false, reason: "The two periods must total at least 10 hours combined.", cfr: "49 CFR §395.1(g)(1)(ii)" };
   }
   return {
-    legal: false,
-    reason: "Minimum pairings are 7 hrs SB + 3 hrs (SB/Off) OR 8 hrs SB + 2 hrs (SB/Off). The values entered don't satisfy either.",
+    legal: true,
+    type: `${big.hours}+${sml.hours}`,
+    reason: `Valid split — ${big.hours}h SB + ${sml.hours}h ${sml.type}.`,
     cfr: "49 CFR §395.1(g)(1)(ii)",
   };
 }

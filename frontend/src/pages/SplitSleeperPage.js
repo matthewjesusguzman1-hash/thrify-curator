@@ -57,7 +57,7 @@ function LearnTab() {
           Hours spent inside a <span className="font-bold text-[#10B981]">qualifying rest period</span> pause
           BOTH the 11-hr driving clock AND the 14-hr work-shift clock.
           Hours spent in <span className="font-bold text-[#D4AF37]">on-duty or driving segments</span> count toward both limits.
-          Valid pairings: <span className="font-bold">7 hrs SB + 3 hrs SB/OFF</span> or <span className="font-bold">8 hrs SB + 2 hrs SB/OFF</span>. The longer period MUST be in the Sleeper Berth.
+          Valid pairing (<a href="https://www.ecfr.gov/current/title-49/section-395.1" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR §395.1(g)(1)(ii)</a>): <span className="font-bold">at least 7 hrs in the Sleeper Berth</span> paired with <span className="font-bold">at least 2 hrs in the Sleeper Berth or Off Duty</span>, combined totaling <span className="font-bold">at least 10 hrs</span>. The two periods may occur <span className="font-bold">in any order</span>. Common examples: 7+3, 8+2, 7.5+2.5 — all qualify.
         </p>
       </div>
 
@@ -244,6 +244,13 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone })
       explanation: scenario.explanation.split,
     },
     {
+      key: "hours",
+      type: "twoNum",
+      prompt: "How many counted hours (D + OD that count against the clocks)?",
+      correct: { h14: scenario.counted14Hours, h11: scenario.counted11Hours },
+      explanation: scenario.explanation.hours,
+    },
+    {
       key: "violation",
       type: "choice",
       prompt: "Is the driver in violation of the 11- or 14-hour rule?",
@@ -260,13 +267,6 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone })
         return "none";
       })(),
       explanation: scenario.explanation.violation,
-    },
-    {
-      key: "hours",
-      type: "twoNum",
-      prompt: "How many counted hours (D + OD that count against the clocks)?",
-      correct: { h14: scenario.counted14Hours, h11: scenario.counted11Hours },
-      explanation: scenario.explanation.hours,
     },
   ];
 

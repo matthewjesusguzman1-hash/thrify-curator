@@ -1,0 +1,46 @@
+{
+  "summary": "Frontend-only verification of two targeted Split Sleeper fixes: (1) rule wording now uses generalized 'at least 7 hrs SB + at least 2 hrs SB/OFF, combined ≥10, in any order' framing instead of the restrictive '7+3 OR 8+2' framing, and (2) Practice-tab question order was flipped so the 'counted hours' Q comes BEFORE the 'violation' Q. Both fixes verified at runtime via in-app clicks (badge 042 / PIN 1234).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "runtime_verification": {
+    "login_badge042_pin1234": "PASS (via keyboard.type + Enter — plain page.click on Continue didn't register reliably; use keyboard.press Enter as a robust fallback)",
+    "learn_intro_at_least_7_hrs_sb": "PASS",
+    "learn_intro_at_least_2_hrs_sb_or_off": "PASS",
+    "learn_intro_at_least_10_hrs_combined": "PASS",
+    "learn_intro_in_any_order": "PASS",
+    "learn_intro_examples_7+3_8+2_7.5+2.5": "PASS",
+    "SL2_either_order_in_title": "PASS — title 'Legal pairing · 8h SB + 2h OFF (either order)' + description contains 'Order doesn't matter'",
+    "SL3_at_least_7_consecutive_hours_in_SB": "PASS — SL3 description rewritten to 'The rule requires at least 7 consecutive hours in the Sleeper Berth as one of the two periods'",
+    "cfr_395.1(g)(1)(ii)_present_throughout_learn_content": "PASS",
+    "practice_Q1_answered_next_question_is_q-hours": "PASS — DOM after Q1 = ['q-split','q-hours'] (q-violation NOT yet rendered, so answer is not given away)",
+    "practice_final_DOM_order_split_hours_violation": "PASS — DOM stack = ['q-split','q-hours','q-violation']",
+    "practice_done_reached_after_all_3_Qs": "PASS — [data-testid=practice-done] rendered after answering q-violation"
+  },
+  "code_review_observations": [
+    "hosRules.js validateSplit rewritten correctly — verifies bigger period is SB with ≥7h, smaller period ≥2h SB/OFF, combined ≥10h. Returns type as dynamic ${big.hours}+${sml.hours} so 7.5+2.5 / 8+2 / 7+3 all report accurately. Good.",
+    "SplitSleeperPage.js LearnTab intro copy now reads 'at least 7 hrs in the Sleeper Berth … at least 2 hrs in the Sleeper Berth or Off Duty … combined totaling at least 10 hrs … in any order' with examples 7+3, 8+2, 7.5+2.5 — matches the rule wording the user requested.",
+    "SplitSleeperPage.js PracticeTab questions array reordered: [split, hours, violation] (lines 238–271). This correctly presents the counted-hours question BEFORE the violation question so the answer isn't given away.",
+    "hosScenarios.js SPLIT_LEARN_SCENARIOS titles and descriptions updated consistently — SL1 keeps specific 7+3 (valid example), SL2 highlights 'either order', SL3/SL4 emphasize the ≥7 consecutive SB requirement. §395.1(g)(1)(ii) cited in every scenario.",
+    "SPLIT_PRACTICE_SCENARIOS explanation.qualifying / split / violation / hours strings all rephrased to reference the generalized rule — no stale '7+3 / 8+2' exclusivity language remains.",
+    "Minor nit (not a bug, optional cleanup) — LEARN_CONTENT.duty SB section still says 'anchor a valid 7+3 or 8+2 split' (line ~279) and LEARN_CONTENT.14hr section still says 'valid 7+3 / 8+2 split' (line ~344). These are in the separate Duty Status 101 / 14-Hour Rule learn pages — outside the scope of this Split Sleeper task — but if the team wants consistent wording across ALL HOS training modules, these two strings should also be generalized."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Optional cross-module consistency: update LEARN_CONTENT.duty SB section and LEARN_CONTENT['14hr'] section in hosScenarios.js to use generalized 'valid split-sleeper pairing' language instead of hardcoded '7+3 or 8+2' (two strings total; not in scope of this task but noted for completeness)."
+  ],
+  "critical_code_review_comments": [
+    "Both user-requested fixes are correctly implemented and runtime-verified. No bugs found in the changed files."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per task)", "frontend": "100% — all 11 required runtime checks PASS"},
+  "test_credentials": "Badge 042 / PIN 1234",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Split Sleeper: (a) rule wording in LearnTab intro + SL1–SL4 cards uses generalized ≥7h SB + ≥2h SB/OFF, combined ≥10h, in any order framing with examples 7+3/8+2/7.5+2.5. (b) PracticeTab question DOM order is split→hours→violation (verified). Login gotcha: page.click on the 'Continue' button after filling badge sometimes fails silently in Playwright — use page.focus + keyboard.type + keyboard.press('Enter') to submit both badge and PIN reliably. Navigation to /hours-of-service/split-sleeper works via page.goto after login.",
+  "rca of the issue": "N/A — no open bugs. Both targeted user-reported issues (rule framing and Practice question ordering) are resolved correctly in the delivered code."
+}

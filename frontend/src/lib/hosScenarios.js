@@ -771,7 +771,7 @@ export const EXEMPTIONS_OTHERS = [
 export const SPLIT_LEARN_SCENARIOS = [
   {
     id: "SL1",
-    title: "Legal 7+3 — how the clocks work",
+    title: "Legal pairing · 7h SB + 3h OFF",
     log: [
       { status: "OFF", start: "00:00", end: "04:00" },
       { status: "OD",  start: "04:00", end: "05:00" },
@@ -782,18 +782,18 @@ export const SPLIT_LEARN_SCENARIOS = [
       { status: "OFF", start: "23:00", end: "24:00" },
     ],
     qualifyingBrackets: [
-      { startMin: 9 * 60,  endMin: 16 * 60, label: "Period A · 7h SB ✓", color: "#10B981" },
-      { startMin: 20 * 60, endMin: 23 * 60, label: "Period B · 3h OFF ✓", color: "#10B981" },
+      { startMin: 9 * 60,  endMin: 16 * 60, label: "7h SB ✓", color: "#10B981" },
+      { startMin: 20 * 60, endMin: 23 * 60, label: "3h OFF ✓", color: "#10B981" },
     ],
     countedBrackets: [
       { startMin: 4 * 60,  endMin: 9 * 60,  label: "Counted · 5h", color: "#D4AF37" },
       { startMin: 16 * 60, endMin: 20 * 60, label: "Counted · 4h", color: "#D4AF37" },
     ],
-    description: "Period A (7 hrs in the Sleeper Berth) and Period B (3 hrs off duty) together form a valid 7+3 split under §395.1(g)(1)(ii)(B). Both rest periods pause the 11-hr driving clock (§395.3(a)(3)) AND the 14-hr work-shift clock (§395.3(a)(2)). Only the 4 hrs before Period A, the 5 hrs between A and B, and any work after Period B count toward the 11 & 14. Hours inside a qualifying rest period are NOT counted.",
+    description: "Period A (7 hrs Sleeper Berth) and Period B (3 hrs off duty) together form a legal split under §395.1(g)(1)(ii): ≥7h SB + ≥2h SB/OFF combined ≥10h. Both rest periods pause the 11-hr driving clock (§395.3(a)(3)) AND the 14-hr work-shift clock (§395.3(a)(2)). Only the 4 hrs before Period A, the 5 hrs between A and B, and any work after Period B count toward the 11 & 14. Hours inside a qualifying rest period are NOT counted.",
   },
   {
     id: "SL2",
-    title: "Legal 8+2 — longer period can be first OR second",
+    title: "Legal pairing · 8h SB + 2h OFF (either order)",
     log: [
       { status: "OD",  start: "00:00", end: "01:00" },
       { status: "D",   start: "01:00", end: "06:00" },
@@ -805,35 +805,35 @@ export const SPLIT_LEARN_SCENARIOS = [
     ],
     qualifyingBrackets: [
       { startMin: 6 * 60,  endMin: 8 * 60,  label: "2h OFF ✓",  color: "#10B981" },
-      { startMin: 13 * 60, endMin: 21 * 60, label: "8h SB ✓ (longer)", color: "#10B981" },
+      { startMin: 13 * 60, endMin: 21 * 60, label: "8h SB ✓", color: "#10B981" },
     ],
     countedBrackets: [
       { startMin: 0 * 60,  endMin: 6 * 60,  label: "Counted · 6h", color: "#D4AF37" },
       { startMin: 8 * 60,  endMin: 13 * 60, label: "Counted · 5h", color: "#D4AF37" },
       { startMin: 21 * 60, endMin: 22 * 60, label: "+1h", color: "#D4AF37" },
     ],
-    description: "Shorter period (2h OFF) came first; the longer period (8h SB) came second — order doesn't matter under §395.1(g)(1)(ii)(A) as long as the LONGER period is in the Sleeper Berth. 14-hr clock math: 6h before Period B + 5h in the middle + 1h after Period A = 12h counted. Hours inside Period A and Period B don't count toward the 14.",
+    description: "Order doesn't matter under §395.1(g)(1)(ii) — the 2h OFF here came BEFORE the 8h SB and the pairing is still valid. The rule requires: ≥7h in the Sleeper Berth + ≥2h SB/OFF, combined ≥10h. 14-hr clock math: 6h before Period B + 5h in the middle + 1h after Period A = 12h counted. Hours inside Period A and Period B don't count toward the 14.",
   },
   {
     id: "SL3",
-    title: "Invalid — 6h SB + 4h OFF",
+    title: "Invalid · 6h SB + 4h OFF",
     log: [
       { status: "OFF", start: "00:00", end: "06:00" },
       { status: "SB",  start: "06:00", end: "12:00" }, // 6h — too short
       { status: "D",   start: "12:00", end: "17:00" },
-      { status: "OFF", start: "17:00", end: "21:00" }, // 4h — not paired with ≥7h SB
+      { status: "OFF", start: "17:00", end: "21:00" }, // 4h — no qualifying SB to pair with
       { status: "D",   start: "21:00", end: "24:00" },
     ],
     qualifyingBrackets: [],
     countedBrackets: [
-      { startMin: 6 * 60,  endMin: 12 * 60, label: "6h SB — NOT qualifying", color: "#DC2626" },
-      { startMin: 17 * 60, endMin: 21 * 60, label: "4h OFF — NOT qualifying", color: "#DC2626" },
+      { startMin: 6 * 60,  endMin: 12 * 60, label: "6h SB — too short", color: "#DC2626" },
+      { startMin: 17 * 60, endMin: 21 * 60, label: "4h OFF — no pair", color: "#DC2626" },
     ],
-    description: "Neither period qualifies under §395.1(g)(1)(ii). The shorter period must pair with a sleeper-berth period of at least 7 hrs (for 7+3) or at least 8 hrs (for 8+2). A 6-hr SB doesn't meet either threshold. Because neither period qualifies, BOTH clock windows keep running the whole day — no pause — and the driver's 14-hr window closes based on first on-duty regardless (§395.3(a)(2)).",
+    description: "Neither period qualifies under §395.1(g)(1)(ii). The rule requires at least 7 consecutive hours in the Sleeper Berth as one of the two periods — here the only SB block is 6 hours. Because no qualifying SB period exists, the 4h OFF has no partner. Both clock windows keep running the whole day — no pause — and the 14-hr clock closes based on first on-duty (§395.3(a)(2)).",
   },
   {
     id: "SL4",
-    title: "Invalid — longer period not in Sleeper Berth",
+    title: "Invalid · 8h OFF + 2h SB (wrong order)",
     log: [
       { status: "OD",  start: "00:00", end: "02:00" },
       { status: "D",   start: "02:00", end: "08:00" },
@@ -844,10 +844,10 @@ export const SPLIT_LEARN_SCENARIOS = [
     ],
     qualifyingBrackets: [],
     countedBrackets: [
-      { startMin: 8 * 60,  endMin: 16 * 60, label: "8h OFF — wrong status", color: "#DC2626" },
-      { startMin: 19 * 60, endMin: 21 * 60, label: "2h SB — shorter period", color: "#DC2626" },
+      { startMin: 8 * 60,  endMin: 16 * 60, label: "8h OFF — not sleeper", color: "#DC2626" },
+      { startMin: 19 * 60, endMin: 21 * 60, label: "2h SB — no ≥7h SB pair", color: "#DC2626" },
     ],
-    description: "The LONGER of the two periods must be in the Sleeper Berth per §395.1(g)(1)(ii). Here the 8-hr block is Off Duty instead of Sleeper Berth, so even though the totals look right (8 + 2 = 10), the pairing fails. No pause on the 11/14 clocks — they keep running as if the driver took no split at all.",
+    description: "The rule in §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth as one of the two periods. Here the longer rest is Off Duty (not SB) and the only SB block is 2 hours. Even though the totals look right (8 + 2 = 10), no qualifying SB period exists, so the pairing fails. No pause on the 11/14 clocks — they keep running as if no split was taken.",
   },
 ];
 
@@ -875,10 +875,10 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     counted14Hours: 10,
     counted11Hours: 7, // only D segments within counted on-duty
     explanation: {
-      qualifying: "The 7-hr SB from 09:00-16:00 (idx 3) and the 3-hr OFF from 19:00-22:00 (idx 5) together form a legal 7+3 split. The 4-hr OFF at the start (idx 0) isn't selectable as a split period — it's the pre-shift rest.",
-      split: "Valid 7+3. Longer period (7h) is in Sleeper Berth. Shorter period (3h) is Off Duty. Both periods pause the 11-hr and 14-hr clocks.",
+      qualifying: "The 7-hr SB from 09:00-16:00 (the only qualifying Sleeper Berth period) and the 3-hr OFF from 19:00-22:00 together form a valid split. Under §395.1(g)(1)(ii) the SB period must be ≥7 consecutive hours and the other must be ≥2 consecutive hours (SB or OFF), combined ≥10.",
+      split: "Valid split. The 7h SB period satisfies the minimum sleeper-berth requirement. The 3h OFF period satisfies the minimum 2-hour pair requirement. Combined = 10 hours. Order doesn't matter.",
       violation: "No violation. Counted on-duty (D+OD, excluding the two qualifying rest periods) totals 10 hrs — well within 14. Counted driving totals 7 hrs — within 11.",
-      hours: "14-hr counted = 1h OD (04-05) + 4h D (05-09) + 3h D (16-19) + nothing in Period B or after = 8 hrs counted work toward the 14. (Period A pause: 09-16. Period B pause: 19-22.) Wait — the last OFF (22-24) is post-Period-B so still no extension. Driving counted = 4h + 3h = 7 hrs.",
+      hours: "14-hr counted = 1h OD (04-05) + 4h D (05-09) + 3h D (16-19) = 8 hrs work. (Period A pause: 09-16. Period B pause: 19-22.) Driving counted = 4h + 3h = 7 hrs.",
     },
   },
   {
@@ -900,8 +900,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     counted14Hours: 14, // 1 + 8 + 3 + 2 = 14
     counted11Hours: 13, // 8 + 3 + 2 = 13h driving counted — over 11
     explanation: {
-      qualifying: "2h OFF (idx 2) pairs with 8h SB (idx 4) to form a legal 8+2 split. The longer period is in the Sleeper Berth, as required.",
-      split: "Valid 8+2 — longer period (8h) is in the Sleeper Berth, shorter period (2h) is Off Duty.",
+      qualifying: "The 8-hr SB from 14:00-22:00 is the qualifying Sleeper Berth period. The 2-hr OFF from 09:00-11:00 meets the minimum 2-hour pair requirement. Order doesn't matter under §395.1(g)(1)(ii).",
+      split: "Valid split — 8h SB satisfies the ≥7h Sleeper Berth requirement and the 2h OFF meets the minimum pair. Combined = 10 hrs. Order (short-then-long) is fine.",
       violation: "11-hr DRIVING VIOLATION. The counted driving time (8h + 3h + 2h = 13h) exceeds the 11-hr limit. 14-hr is within limits (14 hrs counted = at the cap but not over).",
       hours: "14-hr counted: 1h OD (00-01) + 8h D (01-09) + 3h D (11-14) + 2h D (22-24) = 14 hrs. 11-hr counted (driving only): 8 + 3 + 2 = 13 hrs — 2 hrs over limit.",
     },
@@ -924,8 +924,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     counted14Hours: 14,
     counted11Hours: 10,
     explanation: {
-      qualifying: "Neither rest period qualifies. A 4h OFF + 4h SB pairing fails both thresholds — the longer period needs to be ≥7h in Sleeper Berth (7+3) or ≥8h SB (8+2). Neither block meets that bar.",
-      split: "No valid split. Because no period qualifies, neither clock ever pauses.",
+      qualifying: "Neither rest period qualifies. §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — the only SB block here is 4 hrs. Without a qualifying SB period, the 4h OFF has nothing to pair with.",
+      split: "No valid split. Because no ≥7h SB period exists, neither clock pauses.",
       violation: "No 11 or 14 violation — but only because total driving is exactly 10 hrs and total on-duty is 14 hrs. Every block counts toward the clocks the whole day.",
       hours: "14-hr counted = full day from first on-duty (06:00) to last entry in shift (24:00) = 18 hrs of wall-clock elapsed … wait, max 14 counted. Actually: counted on-duty = 6h D + 4h D = 10h D + nothing else (OFF and SB don't count toward the 14/11). The 14-hr clock is wall-clock from 06:00 — closes at 20:00. The driver finished driving before 20:00 so no 14-hr violation.",
     },
@@ -949,8 +949,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     counted14Hours: 19, // wall clock 00:00 to 19:00 = 19hrs (no qualifying pause)
     counted11Hours: 8,
     explanation: {
-      qualifying: "The 8h OFF (idx 2) looks appealing but the longer period in a valid split MUST be in the Sleeper Berth — off duty doesn't qualify. The 2h SB (idx 4) is too short to pair with anything else on this log. No qualifying rest periods.",
-      split: "No valid split. 8 OFF + 2 SB fails because the longer period is not in the Sleeper Berth.",
+      qualifying: "The 8h OFF looks appealing but §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — Off Duty doesn't substitute. The 2h SB is too short to be the qualifying Sleeper Berth period on its own. No qualifying rest periods.",
+      split: "No valid split. 8 OFF + 2 SB fails because no period has the required ≥7h in the Sleeper Berth.",
       violation: "14-hr VIOLATION. Without a qualifying split, the 14-hr clock started at 00:00 and closed at 14:00. Driving resumed at 14:00 and continued to 17:00 — that's driving past the 14th hour.",
       hours: "14-hr counted: wall-clock from 00:00, so the window closes at 14:00. Driving from 14:00-17:00 is past the window = violation. Driving counted: 5h + 3h = 8h (under 11).",
     },
