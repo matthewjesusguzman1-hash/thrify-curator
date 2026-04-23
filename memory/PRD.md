@@ -43,8 +43,10 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - EldGrid: label text-anchor clamps to 'start' for markers at <60 min and 'end' for markers at ≥23:00 — prevents long edge labels from clipping past the SVG bounds.
 - Descriptions uniformly call out: (a) prior 10h reset ended at 00:00, (b) pre-split shift duration/hours, (c) CVSA split boundaries, (d) alternative split pairings that would have been valid.
 
-### 2026-02 test_reports/iteration_30.json — 100% frontend pass
-- 11/11 checkpoints: SL1/SL2 4-marker grids · SL3/SL4 enriched narratives · extras expand with correct marker pairs · SL5 multi-day unchanged · prior-reset banner regression preserved · Practice tab untouched.
+### 2026-02 — Fix: overlapping bracket/marker labels on Split Sleeper Learn cards
+- User reported visual overlap on SL3 (labels "Extended rest · 12h (prior 10h re" colliding with "6h SB — too short" / "4h OFF — no pair").
+- Root cause: wide pre-split countedBrackets layered on top of red failed-split brackets shared the same y-row → their mid-anchored labels collided.
+- Fix: removed the wide pre-split/extended-rest countedBrackets from SL3 main, SL4 main, and SL4 extra "3h SB + 7h OFF" (shift markers already convey that context). Shortened all shift-marker labels across SL1-SL5 + extras to concise forms ("Pre-split START · 00:00", "Split END · 17:00", "Shift START · 12:00", "Continues → 02:00 next day", etc.) so 4-marker grids no longer clip or overlap.
 
 ### 2026-02 — Device-only photos + UI consolidation (current session)
 - **Device-only photos**: IndexedDB library (`devicePhotos.js`) + `<DevicePhoto>` component. All upload flows converted to local-save + JSON metadata POST. Server photo endpoints refactored to JSON-only (no multipart). One-time wipe endpoint runs on /api/admin/wipe-photos?badge=121 (executed; 3 inspections cleared).
