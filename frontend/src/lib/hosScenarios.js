@@ -775,6 +775,7 @@ export const SPLIT_LEARN_SCENARIOS = [
   {
     id: "SL1",
     title: "Legal pairing · 7h SB + 3h OFF",
+    priorReset: true,
     log: [
       { status: "OD",  start: "00:00", end: "01:00" },
       { status: "D",   start: "01:00", end: "06:00" },
@@ -798,6 +799,7 @@ export const SPLIT_LEARN_SCENARIOS = [
     extraExamples: [
       {
         name: "7.5h SB + 2.5h OFF",
+        priorReset: true,
         log: [
           { status: "OD",  start: "00:00", end: "01:00" },
           { status: "D",   start: "01:00", end: "06:00" },
@@ -821,6 +823,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       },
       {
         name: "Short period FIRST, then ≥7h SB",
+        priorReset: true,
         log: [
           { status: "OD",  start: "00:00", end: "01:00" },
           { status: "D",   start: "01:00", end: "06:00" },
@@ -847,6 +850,7 @@ export const SPLIT_LEARN_SCENARIOS = [
   {
     id: "SL2",
     title: "Legal pairing · 8h SB + 2h OFF (either order)",
+    priorReset: true,
     log: [
       { status: "OD",  start: "00:00", end: "01:00" },
       { status: "D",   start: "01:00", end: "06:00" },
@@ -870,6 +874,7 @@ export const SPLIT_LEARN_SCENARIOS = [
     extraExamples: [
       {
         name: "9h SB + 2h OFF",
+        priorReset: true,
         log: [
           { status: "OD",  start: "00:00", end: "01:00" },
           { status: "D",   start: "01:00", end: "05:00" },
@@ -894,6 +899,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       },
       {
         name: "8h SB FIRST, then 2h OFF",
+        priorReset: true,
         log: [
           { status: "OD",  start: "00:00", end: "01:00" },
           { status: "SB",  start: "01:00", end: "09:00" },
@@ -921,6 +927,7 @@ export const SPLIT_LEARN_SCENARIOS = [
   {
     id: "SL3",
     title: "Invalid · 6h SB + 4h OFF",
+    priorReset: true,
     log: [
       { status: "OFF", start: "00:00", end: "06:00" },
       { status: "SB",  start: "06:00", end: "12:00" }, // 6h — too short
@@ -941,6 +948,7 @@ export const SPLIT_LEARN_SCENARIOS = [
     extraExamples: [
       {
         name: "6.5h SB + 3.5h OFF — still too short",
+        priorReset: true,
         log: [
           { status: "OFF", start: "00:00", end: "06:00" },
           { status: "D",   start: "06:00", end: "11:00" },
@@ -962,6 +970,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       },
       {
         name: "Two SB blocks but neither is ≥7h",
+        priorReset: true,
         log: [
           { status: "OFF", start: "00:00", end: "06:00" },
           { status: "D",   start: "06:00", end: "12:00" },
@@ -985,6 +994,7 @@ export const SPLIT_LEARN_SCENARIOS = [
   {
     id: "SL4",
     title: "Invalid · 8h OFF + 2h SB (wrong category — no ≥7h in Sleeper Berth)",
+    priorReset: true,
     log: [
       { status: "OD",  start: "00:00", end: "02:00" },
       { status: "D",   start: "02:00", end: "08:00" },
@@ -1006,6 +1016,7 @@ export const SPLIT_LEARN_SCENARIOS = [
     extraExamples: [
       {
         name: "10h straight OFF — no SB anywhere",
+        priorReset: true,
         log: [
           { status: "OD",  start: "00:00", end: "01:00" },
           { status: "D",   start: "01:00", end: "06:00" },
@@ -1025,6 +1036,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       },
       {
         name: "3h SB + 7h OFF — longer is OFF, not SB",
+        priorReset: true,
         log: [
           { status: "OD",  start: "00:00", end: "01:00" },
           { status: "D",   start: "01:00", end: "06:00" },
@@ -1201,6 +1213,7 @@ export const SPLIT_PRACTICE_SCENARIOS = [
   {
     id: "SP1",
     prompt: "Review this driver's day. Tap the rest blocks you believe qualify for a split-sleeper pairing.",
+    priorReset: true,
     log: [
       { status: "OD",  start: "00:00", end: "01:00" },
       { status: "D",   start: "01:00", end: "06:00" },
@@ -1229,6 +1242,7 @@ export const SPLIT_PRACTICE_SCENARIOS = [
   {
     id: "SP2",
     prompt: "Same question — identify the qualifying split-sleeper periods in this log.",
+    priorReset: true,
     log: [
       { status: "SB",  start: "00:00", end: "08:00" }, // idx 0 — 8h SB (Period A · first segment)
       { status: "D",   start: "08:00", end: "12:00" },
@@ -1256,6 +1270,7 @@ export const SPLIT_PRACTICE_SCENARIOS = [
   {
     id: "SP3",
     prompt: "Does this log include any qualifying split-sleeper rest periods?",
+    priorReset: true,
     log: [
       { status: "OFF", start: "00:00", end: "06:00" },
       { status: "D",   start: "06:00", end: "12:00" },
@@ -1283,6 +1298,7 @@ export const SPLIT_PRACTICE_SCENARIOS = [
   {
     id: "SP4",
     prompt: "Identify the qualifying rest periods on this log.",
+    priorReset: true,
     log: [
       { status: "OD",  start: "00:00", end: "01:00" },
       { status: "D",   start: "01:00", end: "06:00" },

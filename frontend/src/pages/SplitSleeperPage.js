@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Layers, CheckCircle2, XCircle, RotateCcw, Target, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Layers, CheckCircle2, XCircle, RotateCcw, Target, AlertTriangle, Moon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { EldGrid } from "../components/hos/EldGrid";
 import { SPLIT_LEARN_SCENARIOS, SPLIT_PRACTICE_SCENARIOS } from "../lib/hosScenarios";
@@ -47,6 +47,23 @@ export default function SplitSleeperPage() {
 }
 
 /* ────────────────────────── Learn Tab ────────────────────────── */
+
+/** Small chip shown above an ELD grid to set the pedagogical context:
+ *  "assume the previous day ended with a full 10-hour OFF reset". */
+function PriorResetBanner() {
+  return (
+    <div
+      className="flex items-center gap-2 rounded-md border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1.5"
+      data-testid="prior-reset-banner"
+    >
+      <Moon className="w-3.5 h-3.5 text-[#1D4ED8] flex-shrink-0" />
+      <p className="text-[11px] text-[#1E3A8A] leading-snug">
+        <span className="font-bold">Assume prior day ended with a full 10-hour OFF reset</span>
+        {" "}— driver's clocks are fresh at 00:00 of this log.
+      </p>
+    </div>
+  );
+}
 
 function LearnTab() {
   return (
@@ -128,6 +145,7 @@ function LearnCard({ s }) {
     </>
   ) : (
     <>
+      {s.priorReset && <PriorResetBanner />}
       <EldGrid
         entries={s.log}
         brackets={[...(s.qualifyingBrackets || []), ...(s.countedBrackets || [])]}
@@ -204,12 +222,15 @@ function LearnExtra({ ex, parentId, idx }) {
             </div>
           ))
         ) : (
-          <EldGrid
-            entries={ex.log}
-            brackets={[...(ex.qualifyingBrackets || []), ...(ex.countedBrackets || [])]}
-            shiftMarkers={ex.shiftMarkers || []}
-            compact
-          />
+          <>
+            {ex.priorReset && <PriorResetBanner />}
+            <EldGrid
+              entries={ex.log}
+              brackets={[...(ex.qualifyingBrackets || []), ...(ex.countedBrackets || [])]}
+              shiftMarkers={ex.shiftMarkers || []}
+              compact
+            />
+          </>
         )}
         <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={ex.description} /></p>
       </div>
@@ -295,6 +316,7 @@ function PracticeTab() {
 
       <section className="bg-white rounded-xl border border-[#E2E8F0] p-3 space-y-3">
         <p className="text-[13px] text-[#334155] leading-relaxed">{scenario.prompt}</p>
+        {scenario.priorReset && <PriorResetBanner />}
         <EldGrid
           entries={scenario.log}
           selectableIndices={selectable}
