@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Layers, CheckCircle2, XCircle, RotateCcw, Target, AlertTriangle, Moon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Layers, CheckCircle2, XCircle, RotateCcw, Target, AlertTriangle, Moon, Hand } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { EldGrid } from "../components/hos/EldGrid";
 import { SPLIT_LEARN_SCENARIOS, SPLIT_PRACTICE_SCENARIOS } from "../lib/hosScenarios";
@@ -246,8 +246,18 @@ function PracticeTab() {
   const [selected, setSelected] = useState([]);
   const [questionIdx, setQuestionIdx] = useState(0);
   const [answers, setAnswers] = useState({}); // { split, violation, h14, h11 }
+  // Shift-question tap-to-set state — lifted here so EldGrid taps populate the
+  // same tStart/tEnd strings the QuestionCard reads.
+  const [tStart, setTStart] = useState("");
+  const [tEnd, setTEnd] = useState("");
+  const [shiftTapNext, setShiftTapNext] = useState("start"); // 'start' | 'end'
 
   const scenario = SPLIT_PRACTICE_SCENARIOS[idx];
+
+  // Current question index → key. Mirrors the order defined in QuestionsStack.
+  const questionKeys = ["split", "shift", "hours", "violation"];
+  const currentQKey = phase === "questions" ? questionKeys[questionIdx] : null;
+  const shiftQActive = currentQKey === "shift" && answers.shift === undefined;
 
   // All rest blocks (SB or OFF) are selectable — except the pre-shift OFF
   // (entry index 0) if its status is OFF and it starts at 00:00. Practically,
@@ -289,12 +299,31 @@ function PracticeTab() {
     setSelected([]);
     setAnswers({});
     setQuestionIdx(0);
+    setTStart("");
+    setTEnd("");
+    setShiftTapNext("start");
   };
   const resetScenario = () => {
     setPhase("select");
     setSelected([]);
     setAnswers({});
     setQuestionIdx(0);
+    setTStart("");
+    setTEnd("");
+    setShiftTapNext("start");
+  };
+
+  // Tap handler for the shift question — cycles START → END → START again.
+  // Snaps to the nearest 15 minutes (EldGrid already does that before firing).
+  const handleGridTapForShift = (minute) => {
+    const hhmm = minToHhmm(minute);
+    if (shiftTapNext === "start") {
+      setTStart(hhmm);
+      setShiftTapNext("end");
+    } else {
+      setTEnd(hhmm);
+      setShiftTapNext("start");
+    }
   };
 
   const selectionCorrect = useMemo(() => {
@@ -317,16 +346,36 @@ function PracticeTab() {
       <section className="bg-white rounded-xl border border-[#E2E8F0] p-3 space-y-3">
         <p className="text-[13px] text-[#334155] leading-relaxed">{scenario.prompt}</p>
         {scenario.priorReset && <PriorResetBanner />}
+        {shiftQActive && (
+          <div
+            className="flex items-center gap-2 rounded-md border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-2"
+            data-testid="grid-tap-banner"
+          >
+            <Hand className="w-3.5 h-3.5 text-[#3730A3] flex-shrink-0" aria-hidden="true" />
+            <p className="text-[11px] text-[#3730A3] leading-snug">
+              <span className="font-bold">Tap the grid</span> to set
+              {" "}<span className={`font-bold ${shiftTapNext === "start" ? "text-[#10B981]" : "text-[#DC2626]"}`}>
+                {shiftTapNext === "start" ? "Shift START" : "Shift END"}
+              </span>
+              {" "}(snaps to 15-min). Or type HH:MM below.
+            </p>
+          </div>
+        )}
         <EldGrid
           entries={scenario.log}
           selectableIndices={selectable}
           selectedIndices={selected}
           onEntryClick={phase === "select" ? toggle : null}
           blockMarks={blockMarks}
-          shiftMarkers={answers.shift ? [
-            { min: scenario.shiftStartMin, kind: "start", label: `Shift START · ${fmtMin(scenario.shiftStartMin)}` },
-            { min: scenario.shiftEndMin, kind: "end", label: `Shift END · ${fmtMin(scenario.shiftEndMin)}` },
-          ] : []}
+          onMinuteClick={shiftQActive ? handleGridTapForShift : null}
+          shiftMarkers={[
+            ...(answers.shift ? [
+              { min: scenario.shiftStartMin, kind: "start", label: `Shift START · ${fmtMin(scenario.shiftStartMin)}` },
+              { min: scenario.shiftEndMin, kind: "end", label: `Shift END · ${fmtMin(scenario.shiftEndMin)}` },
+            ] : []),
+            ...(shiftQActive && tStart ? [{ min: timeStrToMin(tStart), kind: "start", label: `You: START · ${tStart}` }] : []),
+            ...(shiftQActive && tEnd ? [{ min: timeStrToMin(tEnd), kind: "end", label: `You: END · ${tEnd}`, labelRow: 1 }] : []),
+          ]}
         />
 
         {phase === "select" && (
@@ -364,6 +413,10 @@ function PracticeTab() {
           setAnswer={(key, val) => setAnswers((a) => ({ ...a, [key]: val }))}
           onNextQ={() => setQuestionIdx((q) => q + 1)}
           onDone={() => setPhase("done")}
+          shiftTStart={tStart}
+          shiftTEnd={tEnd}
+          setShiftTStart={setTStart}
+          setShiftTEnd={setTEnd}
         />
       )}
 
@@ -389,7 +442,7 @@ function PracticeTab() {
 }
 
 /* ─── HOS questions stack ─── */
-function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone }) {
+function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, shiftTStart, shiftTEnd, setShiftTStart, setShiftTEnd }) {
   const questions = [
     {
       key: "split",
@@ -449,17 +502,26 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone })
             else onNextQ();
           }}
           isLast={i === questions.length - 1}
+          extTStart={q.key === "shift" ? shiftTStart : undefined}
+          extTEnd={q.key === "shift" ? shiftTEnd : undefined}
+          setExtTStart={q.key === "shift" ? setShiftTStart : undefined}
+          setExtTEnd={q.key === "shift" ? setShiftTEnd : undefined}
         />
       ))}
     </section>
   );
 }
 
-function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast }) {
+function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast, extTStart, extTEnd, setExtTStart, setExtTEnd }) {
   const [h14, setH14] = useState("");
   const [h11, setH11] = useState("");
-  const [tStart, setTStart] = useState("");
-  const [tEnd, setTEnd] = useState("");
+  const [localTStart, setLocalTStart] = useState("");
+  const [localTEnd, setLocalTEnd] = useState("");
+  // Prefer externally-controlled values (driven by grid taps) when parent provides them.
+  const tStart = extTStart !== undefined ? extTStart : localTStart;
+  const setTStart = setExtTStart || setLocalTStart;
+  const tEnd = extTEnd !== undefined ? extTEnd : localTEnd;
+  const setTEnd = setExtTEnd || setLocalTEnd;
   const submitTwoNum = () => {
     const v14 = parseFloat(h14);
     const v11 = parseFloat(h11);
@@ -639,4 +701,12 @@ function fmtMin(min) {
   if (min === null || min === undefined) return "—";
   if (min === 24 * 60) return "24:00";
   return minToTimeStr(min);
+}
+/* Convert a minute-of-day into the "HH:MM" value an <input type="time">
+ * expects. Clamps to the 00:00-23:59 range and zero-pads. */
+function minToHhmm(min) {
+  const m = Math.max(0, Math.min(24 * 60 - 1, Math.round(min)));
+  const hh = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }

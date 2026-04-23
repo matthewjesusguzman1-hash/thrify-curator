@@ -43,7 +43,12 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - EldGrid: label text-anchor clamps to 'start' for markers at <60 min and 'end' for markers at ≥23:00 — prevents long edge labels from clipping past the SVG bounds.
 - Descriptions uniformly call out: (a) prior 10h reset ended at 00:00, (b) pre-split shift duration/hours, (c) CVSA split boundaries, (d) alternative split pairings that would have been valid.
 
-### 2026-02 — Fix: Practice tab pre-highlighted rest blocks (spoiler) + added distractors
+### 2026-02 — Tap-to-set shift time on Practice grid
+- User requested touching the grid to choose shift START/END time instead of typing HH:MM.
+- **SplitSleeperPage.js**: lifted `tStart` / `tEnd` state out of QuestionCard into PracticeTab. Added `shiftTapNext` ("start" | "end") cycling indicator. When the shift question becomes active, EldGrid receives `onMinuteClick={handleGridTapForShift}`. Each grid tap snaps to 15-min, populates tStart or tEnd, and toggles the next tap. HH:MM inputs remain as a fallback (keyboard users / manual edits).
+- Added a blue "Tap the grid to set Shift START/END" hint banner (`[data-testid="grid-tap-banner"]`) above the grid, with the active label highlighted in green (START) or red (END) so the user always knows which marker the next tap will drop.
+- Live markers render on the grid as the user taps: "You: START · HH:MM" (green) on labelRow 0 and "You: END · HH:MM" (red) on labelRow 1 so they don't collide with the official CVSA markers that appear post-submission.
+- Verified at desktop viewport: single tap at 13:00 → START marker appears, input fills to "13:00", banner switches to "Shift END"; second tap fires END. Tapping again after both set restarts at START.
 - User flagged that dashed outlines on every selectable OFF/SB block in Practice mode effectively reveal the rest breaks before the user has chosen, and SP1/SP2 had ONLY 2 selectable blocks which were both the qualifying answer → no reasoning required.
 - EldGrid: removed the default dashed outline on unselected selectable blocks. The log now reads as a normal roadside log until the user taps a block. Selected state + post-submission marks (correct/wrong/missed) still render. Cursor pointer + click handler remain for discoverability.
 - SP1: added a 1h OFF distractor at 05-06 so three blocks are candidate rest periods. qualifyingBlockIdx: [2,4] → [3,5].
