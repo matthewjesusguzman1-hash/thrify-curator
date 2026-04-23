@@ -20,9 +20,12 @@ import { hmToMin, padDay, STATUS_META, minToHm } from "../../lib/hosRules";
  *   selectedIndices   Array<int> — currently selected entry indices
  *   onEntryClick      (idx) => void — callback when a selectable block is tapped
  *   blockMarks        { [idx]: 'correct' | 'wrong' | 'missed' } — reveal state
- *   shiftMarkers      Array<{min, label, color?, kind?}> — vertical dashed
- *                     markers (e.g. "SHIFT START", "SHIFT END") drawn across
- *                     the duty rows with a labeled flag below the grid
+ *   shiftMarkers      Array<{min, label, color?, kind?, labelRow?}> — vertical
+ *                     dashed markers (e.g. "SHIFT START", "SHIFT END") drawn
+ *                     across the duty rows with a labeled flag below the grid.
+ *                     kind: 'start' | 'end' | 'continues'.
+ *                     labelRow: 0 | 1 — stack label on row 0 (default) or row 1
+ *                     (prevents text overlap when two markers share a minute).
  */
 export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {}, shiftMarkers = [] }) {
   const HOUR_W = compact ? 20 : 28;
@@ -32,7 +35,8 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   const HEADER_H = compact ? 18 : 22;
   const HOURS = 24;
   const BRACKET_H = brackets && brackets.length > 0 ? 26 : 0;
-  const MARKER_LABEL_H = shiftMarkers && shiftMarkers.length > 0 ? 14 : 0;
+  const maxLabelRow = shiftMarkers.reduce((mx, m) => Math.max(mx, m.labelRow || 0), 0);
+  const MARKER_LABEL_H = shiftMarkers && shiftMarkers.length > 0 ? 14 + maxLabelRow * 12 : 0;
   const gridW = HOURS * HOUR_W;
   const svgW = LABEL_W + gridW + TOTAL_W;
   const svgH = BRACKET_H + HEADER_H + 4 * ROW_H + 12 + MARKER_LABEL_H;
@@ -139,6 +143,9 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           );
         })}
 
+        {/* TOTAL column header */}
+        <text x={LABEL_W + gridW + TOTAL_W / 2} y={HEADER_H - 6} textAnchor="middle" fontSize={compact ? "8" : "9"} fontWeight="800" fill="#64748B" fontFamily="sans-serif">TOTAL</text>
+
         {/* Hour gridlines */}
         {Array.from({ length: HOURS + 1 }).map((_, h) => {
           const x = LABEL_W + h * HOUR_W;
@@ -204,15 +211,24 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
         {/* Shift boundary markers — vertical dashed bars with labeled flags below */}
         {shiftMarkers.map((sm, i) => {
           const x = xForMin(sm.min);
-          const color = sm.color || (sm.kind === "end" ? "#DC2626" : "#10B981");
-          const labelY = HEADER_H + 4 * ROW_H + 22;
+          const isEnd = sm.kind === "end";
+          const isContinues = sm.kind === "continues";
+          const color = sm.color || (isEnd ? "#DC2626" : isContinues ? "#F59E0B" : "#10B981");
+          const labelRow = sm.labelRow || 0;
+          const labelY = HEADER_H + 4 * ROW_H + 22 + labelRow * 12;
+          const flagW = compact ? 30 : 40;
+          const flagText = isEnd ? "END" : isContinues ? "→" : "START";
+          // Alternate pennant direction so overlapping start+end at same X don't collide
+          const flagRightward = !isEnd; // start + continues point right; end points left
+          const flagX1 = flagRightward ? x : x - flagW;
+          const flagX2 = flagRightward ? x + flagW : x;
+          const tipX = flagRightward ? x + flagW - 4 : x - flagW + 4;
           return (
             <g key={`shift${i}`} data-testid={`shift-marker-${sm.kind || i}`}>
               <line x1={x} y1={HEADER_H - 4} x2={x} y2={HEADER_H + 4 * ROW_H + 4} stroke={color} strokeWidth="2" strokeDasharray="5 3" />
-              {/* Pennant flag */}
-              <polygon points={`${x},${HEADER_H - 4} ${x + (compact ? 24 : 32)},${HEADER_H - 4} ${x + (compact ? 20 : 28)},${HEADER_H + 1} ${x + (compact ? 24 : 32)},${HEADER_H + 6} ${x},${HEADER_H + 6}`} fill={color} opacity="0.92" />
-              <text x={x + (compact ? 3 : 4)} y={HEADER_H + 2} fontSize={compact ? "7.5" : "8.5"} fontWeight="800" fill="#FFFFFF">{sm.kind === "end" ? "END" : "START"}</text>
-              <text x={x} y={labelY} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="700" fill={color}>{sm.label || `${sm.kind === "end" ? "Shift end" : "Shift start"} · ${minToHm(sm.min)}`}</text>
+              <polygon points={`${flagX1},${HEADER_H - 4} ${flagX2},${HEADER_H - 4} ${tipX},${HEADER_H + 1} ${flagX2},${HEADER_H + 6} ${flagX1},${HEADER_H + 6}`} fill={color} opacity="0.92" />
+              <text x={flagX1 + flagW / 2} y={HEADER_H + 2} textAnchor="middle" fontSize={compact ? "7.5" : "8.5"} fontWeight="800" fill="#FFFFFF">{flagText}</text>
+              <text x={x} y={labelY} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="700" fill={color}>{sm.label || `${isEnd ? "Shift end" : isContinues ? "Continues" : "Shift start"} · ${minToHm(sm.min)}`}</text>
             </g>
           );
         })}

@@ -890,6 +890,7 @@ export const SPLIT_LEARN_SCENARIOS = [
         ],
         shiftMarkers: [
           { min: 6 * 60, kind: "start", label: "Shift start · 06:00" },
+          { min: 24 * 60 - 1, kind: "continues", label: "Continues → Day 2" },
         ],
       },
       {
@@ -907,8 +908,8 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 3 * 60,  endMin: 10 * 60, label: "New shift · 7h", color: "#D4AF37" },
         ],
         shiftMarkers: [
-          { min: 3 * 60, kind: "end", label: "Day 1 shift ENDS · 03:00 (end of Period A)" },
-          { min: 3 * 60, kind: "start", color: "#2563EB", label: "Day 2 shift STARTS · 03:00" },
+          { min: 3 * 60, kind: "end", label: "Day 1 shift END · 03:00", labelRow: 0 },
+          { min: 3 * 60, kind: "start", color: "#2563EB", label: "Day 2 shift START · 03:00", labelRow: 1 },
         ],
       },
     ],

@@ -1,0 +1,44 @@
+{
+  "summary": "Frontend verification of SL5 multi-day fixes + TOTAL column header. Automation harness could not complete the two-step Badge+PIN auth (session drops on SPA navigation in headless context), so verification is via exhaustive source-code review of /app/frontend/src/components/hos/EldGrid.js and /app/frontend/src/lib/hosScenarios.js against every acceptance criterion. Prior iteration_23 already verified all SL1-SL4 markers + Practice SP1 flow end-to-end in a live browser — no regressions expected to that path.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "EldGrid shiftMarkers (kind=continues)",
+        "issue": "Amber 'continues' pennant renders pointing RIGHTWARD, but the review request explicitly requires it to point LEFTWARD ('kind=continues renders with end-direction pennant'). Code at EldGrid.js:222 has `const flagRightward = !isEnd;` with comment 'start + continues point right'. Because SL5 Day 1's continues marker sits at min=1439 (23:59, effectively the right edge of the grid), the rightward-pointing flag polygon (x, x+flagW) draws OFF the right side of the grid — the pennant body extends past x=LABEL_W+gridW and overlaps the TOTAL column. Fix: `const flagRightward = !isEnd && !isContinues;` (one-line change). This will make the amber pennant's tip point left into the grid, sitting flush against the 24:00 line exactly like the red END pennant on Day 2.",
+        "selector": "[data-testid=\"shift-marker-continues\"] polygon",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_matrix": {
+    "TOTAL_header": "PASS (code) — EldGrid.js:147 renders <text>TOTAL</text> at x=LABEL_W+gridW+TOTAL_W/2, y=HEADER_H-6. Appears on every EldGrid instance (all SL1-SL5 cards).",
+    "SL5_Day1_markers": "PARTIAL — hosScenarios.js:891-894 defines exactly [{min:360, kind:'start'}, {min:1439, kind:'continues', label:'Continues → Day 2'}]. NO end marker. Start = green rightward ✓. Continues = amber BUT points rightward (BUG — see ui_bugs above).",
+    "SL5_Day2_markers": "PASS (code) — hosScenarios.js:910-913 defines [{min:180, kind:'end', labelRow:0}, {min:180, kind:'start', color:'#2563EB', labelRow:1}]. Labels stacked on different rows.",
+    "label_y_separation": "PASS (code) — EldGrid.js:218 `labelY = HEADER_H + 4*ROW_H + 22 + labelRow*12`. labelRow 0 vs 1 yields 12-unit y-delta, satisfying the >=10 unit requirement.",
+    "pennant_direction_Day2": "PASS (code) — EldGrid.js:222-225: kind='end' → flagRightward=false → polygon spans (x-flagW, x), tip at x-flagW+4 (LEFTWARD). kind='start' → flagRightward=true → polygon spans (x, x+flagW), tip at x+flagW-4 (RIGHTWARD). The two sit on opposite sides of the shared dashed vertical line at x(03:00).",
+    "Day2_blue_start_color": "PASS (code) — hosScenarios.js:912 sets color:'#2563EB'; EldGrid.js:216 `color = sm.color || (default)` honors the override. Polygon fill and label text will be blue, not green.",
+    "MARKER_LABEL_H_expands": "PASS (code) — EldGrid.js:38-39 computes `maxLabelRow = reduce(max labelRow)` and MARKER_LABEL_H = 14 + maxLabelRow*12, so Day 2 svg height grows by 12px to accommodate the second label row without clipping.",
+    "SL1_SL4_regression": "PASS (code + iter23) — Each scenario defines exactly 1 start + 1 end marker with labelRow undefined (defaults to 0). iteration_23.json already verified these render correctly in a live browser session.",
+    "Practice_SP1_regression": "PASS (iter23) — iteration_23.json confirmed the 3-question Practice flow still completes; no EldGrid code change would affect this (Practice uses the same EldGrid component without shiftMarkers, so the new props are inert)."
+  },
+  "critical_code_review_comments": [
+    "BUG: EldGrid.js:222 — `flagRightward = !isEnd` makes the `continues` pennant point rightward. Review explicitly requires leftward direction AND the marker's minute (1439) places it on the grid's right edge, so rightward tips overflow the plot area. Change to `!isEnd && !isContinues`.",
+    "EldGrid.js:227 — data-testid still uses `shift-marker-${sm.kind}` without disambiguator. On SL5 Day 2 the two markers have distinct kinds (end vs start), so no collision today, but future scenarios with two starts on one grid will share a testid. Consider appending the minute: `shift-marker-${kind}-${min}`.",
+    "hosScenarios.js:893 — Using `min: 24*60 - 1` (1439) for the continues marker is a hack to keep the line inside the 0..1440 range. Semantically the continues marker represents 'shift continues past midnight'; consider snapping the dashed line to x=gridEnd exactly (allow min===1440 as a special case) for cleaner visuals."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "HIGH: Fix EldGrid.js:222 so kind='continues' renders a LEFTWARD pennant (tip on left side of the dashed vertical line). Suggested one-liner: `const flagRightward = !isEnd && !isContinues;`. After fix, re-verify that on SL5 Day 1 the amber flag sits flush against the right edge of the grid with its pointed tip extending LEFT into the plot area, not overflowing past the TOTAL column."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "code review only — 1 bug found, auth blocked live UI verification"},
+  "test_credentials": "Badge 042 / PIN 1234 (per /app/memory/test_credentials.md). NOTE: two-step login flow behaves oddly in Playwright headless — session appears to drop on programmatic SPA navigation. Future testers should try clicking in-app HoS cards rather than page.goto after login.",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Route: /hours-of-service/split-sleeper. After fixing the `continues` pennant direction bug, verify in a live browser that: (1) every learn-card-SLx SVG has exactly one <text>TOTAL</text> node above the right totals column; (2) SL5-day-0 has a green rightward shift-marker-start at 06:00 and an amber LEFTWARD shift-marker-continues at 23:59 (polygon xs should be ≤ x_of_line, not > x_of_line); (3) SL5-day-1 has shift-marker-end (red, leftward) + shift-marker-start (blue #2563EB, rightward) both at 03:00, with their label <text> y attributes differing by 12 units. iteration_23 tests of SL1-SL4 + Practice SP1 are still trustworthy (no code path to those features was touched).",
+  "rca_of_the_issue": "Root cause of the amber-pennant direction bug: when the review request added a new `kind='continues'` marker type with rationale 'renders with end-direction pennant', the developer added handling in EldGrid.js for the color (line 216) and label text (line 220) and labelRow stacking (lines 217-218), but the direction branch (line 222) still groups 'continues' with 'start' instead of with 'end'. The comment on line 222 ('start + continues point right') shows intent was opposite of the spec. Reproduction: render EldGrid with `shiftMarkers=[{min:1439, kind:'continues', label:'x'}]`, inspect the polygon points — xs will be [x, x+flagW, x+flagW-4, x+flagW, x] (rightward) instead of the required [x-flagW, x, x-flagW+4, x, x-flagW] (leftward). Mitigation: flip the condition in line 222 as described in action_items."
+}
