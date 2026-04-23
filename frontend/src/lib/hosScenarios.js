@@ -789,7 +789,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 4 * 60,  endMin: 9 * 60,  label: "Counted · 5h", color: "#D4AF37" },
       { startMin: 16 * 60, endMin: 20 * 60, label: "Counted · 4h", color: "#D4AF37" },
     ],
-    description: "Period A (7 hrs in the Sleeper Berth) and Period B (3 hrs off duty) together form a valid 7+3 split. Both rest periods pause the 11-hr driving clock AND the 14-hr work-shift clock. Only the 4 hrs before Period A, the 5 hrs between A and B, and any work after Period B count toward the 11 & 14. Hours inside a qualifying rest period are NOT counted.",
+    description: "Period A (7 hrs in the Sleeper Berth) and Period B (3 hrs off duty) together form a valid 7+3 split under §395.1(g)(1)(ii)(B). Both rest periods pause the 11-hr driving clock (§395.3(a)(3)) AND the 14-hr work-shift clock (§395.3(a)(2)). Only the 4 hrs before Period A, the 5 hrs between A and B, and any work after Period B count toward the 11 & 14. Hours inside a qualifying rest period are NOT counted.",
   },
   {
     id: "SL2",
@@ -812,7 +812,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 8 * 60,  endMin: 13 * 60, label: "Counted · 5h", color: "#D4AF37" },
       { startMin: 21 * 60, endMin: 22 * 60, label: "+1h", color: "#D4AF37" },
     ],
-    description: "Shorter period (2h OFF) came first; the longer period (8h SB) came second — order doesn't matter as long as the LONGER period is in the Sleeper Berth. 14-hr clock math: 6h before Period B + 5h in the middle + 1h after Period A = 12h counted. Hours inside Period A and Period B don't count toward the 14.",
+    description: "Shorter period (2h OFF) came first; the longer period (8h SB) came second — order doesn't matter under §395.1(g)(1)(ii)(A) as long as the LONGER period is in the Sleeper Berth. 14-hr clock math: 6h before Period B + 5h in the middle + 1h after Period A = 12h counted. Hours inside Period A and Period B don't count toward the 14.",
   },
   {
     id: "SL3",
@@ -829,7 +829,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 6 * 60,  endMin: 12 * 60, label: "6h SB — NOT qualifying", color: "#DC2626" },
       { startMin: 17 * 60, endMin: 21 * 60, label: "4h OFF — NOT qualifying", color: "#DC2626" },
     ],
-    description: "Neither period qualifies. The shorter period must pair with a sleeper-berth period of at least 7 hrs (for 7+3) or at least 8 hrs (for 8+2). A 6-hr SB doesn't meet either threshold. Because neither period qualifies, BOTH clock windows keep running the whole day — no pause — and the driver's 14-hr window closes based on first on-duty regardless.",
+    description: "Neither period qualifies under §395.1(g)(1)(ii). The shorter period must pair with a sleeper-berth period of at least 7 hrs (for 7+3) or at least 8 hrs (for 8+2). A 6-hr SB doesn't meet either threshold. Because neither period qualifies, BOTH clock windows keep running the whole day — no pause — and the driver's 14-hr window closes based on first on-duty regardless (§395.3(a)(2)).",
   },
   {
     id: "SL4",
@@ -847,7 +847,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 8 * 60,  endMin: 16 * 60, label: "8h OFF — wrong status", color: "#DC2626" },
       { startMin: 19 * 60, endMin: 21 * 60, label: "2h SB — shorter period", color: "#DC2626" },
     ],
-    description: "The LONGER of the two periods must be in the Sleeper Berth. Here the 8-hr block is Off Duty instead of Sleeper Berth, so even though the totals look right (8 + 2 = 10), the pairing fails. No pause on the 11/14 clocks — they keep running as if the driver took no split at all.",
+    description: "The LONGER of the two periods must be in the Sleeper Berth per §395.1(g)(1)(ii). Here the 8-hr block is Off Duty instead of Sleeper Berth, so even though the totals look right (8 + 2 = 10), the pairing fails. No pause on the 11/14 clocks — they keep running as if the driver took no split at all.",
   },
 ];
 

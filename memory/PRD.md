@@ -71,6 +71,16 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - **70-Hour Recap upgrade**: each day in both Learn visual and Quiz now renders as a **miniature ELD log** (synthesized via `synthesizeDayLog`) with gold brackets drawn over the on-duty (D+OD) runs — so inspectors practice reading a log the way they would roadside, instead of staring at a single abstracted number.
 - **Helpers added**: `onDutyBrackets(entries)` auto-derives bracket sets from duty runs; `synthesizeDayLog(onDutyHours)` generates a realistic mixed log for a given total.
 
+### 2026-02 test_reports/iteration_19.json
+- Frontend Playwright: 12/12 PASS (100%). Every §x.y CFR citation in HOS Training + Split Sleeper renders as a clickable `[data-testid=cfr-link]` anchor pointing to `ecfr.gov/current/title-49/section-{major}.{minor}`. Inline refs (e.g. §395.2 in the utility-service-vehicle definition) are auto-linkified via the new `CfrText` component. `49 CFR Part 395` falls back to the part index page.
+
+### 2026-02 — CFR reference links
+- **New utility** `/app/frontend/src/lib/cfrLinks.js`: `linkifyCitation(text)` parses any §X.Y(…) citation and `<CfrText>` renders strings with auto-linked references pointing to the eCFR (`https://www.ecfr.gov/current/title-49/section-{major}.{minor}`). Keeps existing text styling; links are underline-dotted → solid on hover.
+- Applied across: Learn view headers and intro/body/summary prose, Duty Status feedback, Violation-Finder + Recap feedback, Exemptions header/intro/card-CFR/card-summary/card-conditions, Split Sleeper header + Learn descriptions + Practice explanations.
+- Enhanced exemption prose (oilfield, agricultural, utility-service, driver-salesperson, hawaii) to include inline §x.y definition references that now auto-link. Added §395.1(g)(1)(ii), §395.3(a)(2/3) inline citations to Split Sleeper Learn descriptions.
+- `49 CFR Part 395` (no specific section) links to `/current/title-49/part-395`.
+
+
 ### 2026-02 test_reports/iteration_18.json
 - Source review: 100% PASS for (1) ds5 per-question CFR/explanation override, (2) 7th module tile `module-exempt` + ExemptionsView accordion, (3) SplitSleeperPage Learn/Practice rewrite.
 - Playwright runtime couldn't assert across routes due to an auth-session quirk with programmatic pushState navigation (real user clicks work — iteration_17 already validated in-app nav path).
