@@ -1,33 +1,54 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, BookOpen, Target, Calendar, RotateCcw, CheckCircle2, XCircle, ChevronRight, GraduationCap, Zap, Award, Clock } from "lucide-react";
+import {
+  ChevronLeft, BookOpen, Target, Calendar, RotateCcw, CheckCircle2, XCircle,
+  ChevronRight, GraduationCap, Zap, Award, Clock, Layers, Lightbulb, FileText,
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import { EldGrid } from "../components/hos/EldGrid";
 import { STATUS_META, minToHm } from "../lib/hosRules";
-import { DUTY_STATUS_QUIZ, FOURTEEN_HOUR_SCENARIOS, ELEVEN_HOUR_SCENARIOS, BREAK_SCENARIOS, RECAP_SCENARIOS } from "../lib/hosScenarios";
+import {
+  DUTY_STATUS_QUIZ, FOURTEEN_HOUR_SCENARIOS, ELEVEN_HOUR_SCENARIOS,
+  BREAK_SCENARIOS, RECAP_SCENARIOS, LEARN_CONTENT, onDutyBrackets, synthesizeDayLog,
+} from "../lib/hosScenarios";
 
 /**
  * HosTrainingPage — property-carrying CMV HOS training.
- *
- * Quiz-style drills; no points, streaks, or badges. Explanations + 49 CFR
- * citations are always visible after every answer.
+ * Flow: each module opens a Learn screen with an explanation + example ELD grid
+ * (with corner brackets highlighting what the rule counts). The quiz is a
+ * secondary option reached from a "Take the Quiz" button at the bottom.
  */
+
+const MODULES = [
+  { id: "duty",  learnKey: "duty",  title: "Duty Status 101",   subtitle: "Classify real situations",     icon: BookOpen,  color: "#2563EB", minutes: 3, quiz: DUTY_STATUS_QUIZ },
+  { id: "14hr",  learnKey: "14hr",  title: "14-Hour Window",    subtitle: "Spot the on-duty violation",   icon: Clock,     color: "#DC2626", minutes: 5, quiz: FOURTEEN_HOUR_SCENARIOS },
+  { id: "11hr",  learnKey: "11hr",  title: "11-Hour Driving",   subtitle: "Count the driving time",       icon: Target,    color: "#F59E0B", minutes: 4, quiz: ELEVEN_HOUR_SCENARIOS },
+  { id: "break", learnKey: "break", title: "30-Min Break",      subtitle: "Find the missed interruption", icon: Zap,       color: "#10B981", minutes: 3, quiz: BREAK_SCENARIOS },
+  { id: "recap", learnKey: "recap", title: "70-Hour Recap",     subtitle: "Count rolling 8-day hours",    icon: Calendar,  color: "#7C3AED", minutes: 4, quiz: RECAP_SCENARIOS },
+  { id: "split", learnKey: null,    title: "Split Sleeper Trainer", subtitle: "Interactive 7+3 / 8+2",    icon: Layers,    color: "#0EA5E9", minutes: 6, quiz: null, route: "/hours-of-service/split-sleeper" },
+];
+
 export default function HosTrainingPage() {
   const navigate = useNavigate();
-  const [activeModule, setActiveModule] = useState(null);
+  const [active, setActive] = useState(null); // module id
+  const [phase, setPhase] = useState("learn"); // learn | quiz
 
-  const MODULES = [
-    { id: "duty",   title: "Duty Status 101",   subtitle: "Classify real situations",     icon: BookOpen, color: "#2563EB", component: DutyStatusModule, count: DUTY_STATUS_QUIZ.length, minutes: 3 },
-    { id: "14hr",   title: "14-Hour Window",    subtitle: "Spot the on-duty violation",   icon: Clock,    color: "#DC2626", component: FourteenHourModule, count: FOURTEEN_HOUR_SCENARIOS.length, minutes: 5 },
-    { id: "11hr",   title: "11-Hour Driving",   subtitle: "Count the driving time",       icon: Target,   color: "#F59E0B", component: ElevenHourModule, count: ELEVEN_HOUR_SCENARIOS.length, minutes: 4 },
-    { id: "break",  title: "30-Min Break",      subtitle: "Find the missed interruption", icon: Zap,      color: "#10B981", component: BreakModule, count: BREAK_SCENARIOS.length, minutes: 3 },
-    { id: "recap",  title: "70-Hour Recap",     subtitle: "Count rolling 8-day hours",    icon: Calendar, color: "#7C3AED", component: RecapModule, count: RECAP_SCENARIOS.length, minutes: 4 },
-  ];
+  const mod = useMemo(() => MODULES.find((m) => m.id === active) || null, [active]);
 
-  const ModuleComp = MODULES.find((m) => m.id === activeModule)?.component;
+  const openModule = (m) => {
+    if (m.route) { navigate(m.route); return; }
+    setActive(m.id);
+    setPhase("learn");
+  };
+  const goToQuiz = () => setPhase("quiz");
+  const exitModule = () => { setActive(null); setPhase("learn"); };
 
-  if (ModuleComp) {
-    return <ModuleComp onBack={() => setActiveModule(null)} />;
+  if (mod && phase === "learn") {
+    return <LearnView mod={mod} onBack={exitModule} onQuiz={goToQuiz} />;
+  }
+  if (mod && phase === "quiz") {
+    const Quiz = QUIZ_COMPONENTS[mod.id];
+    return <Quiz onBack={() => setPhase("learn")} />;
   }
 
   return (
@@ -48,12 +69,12 @@ export default function HosTrainingPage() {
       </div>
 
       <main className="max-w-[900px] mx-auto px-3 pt-4 space-y-3">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-[#64748B] px-1">Pick a drill</p>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-[#64748B] px-1">Pick a rule to learn</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {MODULES.map((m) => (
             <button
               key={m.id}
-              onClick={() => setActiveModule(m.id)}
+              onClick={() => openModule(m)}
               className="bg-white rounded-xl border border-[#E2E8F0] p-3 text-left hover:border-[#002855] hover:shadow-md transition-all flex gap-3 items-start group"
               data-testid={`module-${m.id}`}
             >
@@ -65,7 +86,8 @@ export default function HosTrainingPage() {
                 <p className="text-[11px] text-[#64748B]">{m.subtitle}</p>
                 <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#94A3B8]">
                   <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> ~{m.minutes} min</span>
-                  {m.count !== null && <span>· {m.count} scenarios</span>}
+                  {m.quiz && <span>· {m.quiz.length} quiz scenarios</span>}
+                  {m.route && <span>· interactive</span>}
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-[#CBD5E1] group-hover:text-[#002855] flex-shrink-0 mt-1" />
@@ -77,7 +99,147 @@ export default function HosTrainingPage() {
   );
 }
 
-/* ─── Shared shell ─── */
+/* ═══════════════ Learn view (shared shell) ═══════════════ */
+
+function LearnView({ mod, onBack, onQuiz }) {
+  const content = LEARN_CONTENT[mod.learnKey];
+  if (!content) return null;
+  const isRecap = mod.id === "recap";
+
+  return (
+    <div className="min-h-screen bg-[#F0F2F5] pb-8" data-testid={`learn-${mod.id}`}>
+      <header className="sticky top-0 z-30 bg-[#002855] text-white border-b border-[#D4AF37]/30">
+        <div className="max-w-[900px] mx-auto px-3 py-2.5 flex items-center gap-2">
+          <button onClick={onBack} className="text-white/70 hover:text-white p-1" data-testid="learn-back-btn">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <mod.icon className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <p className="text-sm font-bold leading-tight truncate" style={{ fontFamily: "Outfit, sans-serif" }}>{content.title}</p>
+            </div>
+            <p className="text-[10px] text-white/50 font-mono">{content.cfr}</p>
+          </div>
+          <button
+            onClick={onQuiz}
+            className="flex items-center gap-1 rounded-md bg-[#D4AF37] text-[#002855] hover:bg-[#E0BE50] px-2.5 py-1.5 text-[11px] font-bold transition-colors"
+            data-testid="skip-to-quiz-btn"
+          >
+            <Target className="w-3.5 h-3.5" /> Quiz
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-[900px] mx-auto px-3 py-4 space-y-3">
+        {/* Intro */}
+        <section className="bg-white rounded-xl border border-[#E2E8F0] p-4">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Lightbulb className="w-4 h-4 text-[#D4AF37]" />
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">The rule</p>
+          </div>
+          <p className="text-[13px] text-[#334155] leading-relaxed">{content.intro}</p>
+        </section>
+
+        {/* Sections — each with body text + example ELD + brackets */}
+        {content.sections.map((s, i) => (
+          <section key={i} className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`learn-section-${i}`}>
+            <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 py-2 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-[#002855] text-[#D4AF37] flex items-center justify-center text-[11px] font-bold">{i + 1}</div>
+              <p className="text-sm font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>{s.heading}</p>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-[12.5px] text-[#334155] leading-relaxed">{s.body}</p>
+              {s.exampleLog && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Example log — brackets show what the rule counts</p>
+                  <EldGrid entries={s.exampleLog} brackets={s.brackets || []} compact />
+                </div>
+              )}
+            </div>
+          </section>
+        ))}
+
+        {/* Recap-specific: 7-day on-duty visualization */}
+        {isRecap && <RecapLearnVisual />}
+
+        {/* Summary + CTA to quiz */}
+        {content.summary && (
+          <section className="rounded-xl border-2 border-[#D4AF37]/40 bg-[#FFFBEB] p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <FileText className="w-4 h-4 text-[#D4AF37]" />
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#D4AF37]">Inspector takeaway</p>
+            </div>
+            <p className="text-[12.5px] text-[#334155] leading-relaxed">{content.summary}</p>
+          </section>
+        )}
+
+        <div className="pt-2">
+          <Button
+            onClick={onQuiz}
+            size="lg"
+            className="w-full bg-[#002855] text-white hover:bg-[#001a3a] h-12 text-sm font-bold"
+            data-testid="take-quiz-btn"
+          >
+            <Target className="w-4 h-4 mr-2" /> Take the {content.title} quiz
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+          <p className="text-[11px] text-center text-[#94A3B8] mt-2">
+            {mod.quiz?.length || 0} scenarios · no timer · no score pressure
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/* 7-day visual for the recap learn page. Renders each prior day as a mini ELD
+ * with brackets around on-duty segments, so inspectors see the reading pattern
+ * before the quiz. Uses the same "available today" math as Scenario A. */
+function RecapLearnVisual() {
+  const SAMPLE = [
+    { label: "Day −7 · Mon", onDuty: 10 },
+    { label: "Day −6 · Tue", onDuty: 8 },
+    { label: "Day −5 · Wed", onDuty: 10 },
+    { label: "Day −4 · Thu", onDuty: 9 },
+    { label: "Day −3 · Fri", onDuty: 11 },
+    { label: "Day −2 · Sat", onDuty: 8 },
+    { label: "Day −1 · Sun", onDuty: 9 },
+  ];
+  const total = SAMPLE.reduce((s, d) => s + d.onDuty, 0);
+  return (
+    <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid="recap-learn-visual">
+      <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 py-2 flex items-center gap-2">
+        <div className="w-6 h-6 rounded-full bg-[#7C3AED] text-white flex items-center justify-center text-[11px] font-bold">R</div>
+        <p className="text-sm font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>Read each day roadside</p>
+      </div>
+      <div className="p-3 space-y-2">
+        <p className="text-[12px] text-[#334155] leading-relaxed">Brackets mark the on-duty segments the inspector counts. Sum the labels, then subtract from 70.</p>
+        {SAMPLE.map((d, i) => {
+          const log = synthesizeDayLog(d.onDuty);
+          const brackets = onDutyBrackets(log, "#D4AF37");
+          return (
+            <div key={i} className="border border-[#E2E8F0] rounded-lg p-2" data-testid={`recap-day-${i}`}>
+              <div className="flex items-center justify-between px-1 mb-1">
+                <p className="text-[11px] font-bold text-[#334155]">{d.label}</p>
+                <p className="text-[11px] font-mono font-bold text-[#D4AF37]">{d.onDuty}h on-duty</p>
+              </div>
+              <EldGrid entries={log} brackets={brackets} compact />
+            </div>
+          );
+        })}
+        <div className="rounded-lg bg-[#F0FDF4] border border-[#10B981]/40 px-3 py-2 mt-2">
+          <p className="text-[11px] text-[#065F46]">
+            <span className="font-bold">Sum of last 7 days:</span> {total}h &nbsp;·&nbsp;
+            <span className="font-bold">Available today:</span> 70 − {total} = <span className="font-mono font-bold">{70 - total}h</span>
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════ Quiz shells (unchanged behavior) ═══════════════ */
+
 function DrillShell({ title, onBack, step, total, children, correct, done, onDone }) {
   return (
     <div className="min-h-screen bg-[#F0F2F5] pb-6">
@@ -118,14 +280,14 @@ function FinalResult({ correct, total, onDone }) {
       </div>
       <div className="flex gap-2">
         <Button onClick={() => window.location.reload()} variant="outline" className="flex-1 border-[#E2E8F0]" data-testid="drill-retry"><RotateCcw className="w-4 h-4 mr-1.5" /> Retry</Button>
-        <Button onClick={onDone} className="flex-1 bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="drill-done">Done</Button>
+        <Button onClick={onDone} className="flex-1 bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="drill-done">Back to Learn</Button>
       </div>
     </div>
   );
 }
 
-/* ─── Module 1: Duty Status Classifier ─── */
-function DutyStatusModule({ onBack }) {
+/* ─── Duty Status quiz ─── */
+function DutyStatusQuiz({ onBack }) {
   const [idx, setIdx] = useState(0);
   const [pick, setPick] = useState(null);
   const [revealed, setRevealed] = useState(false);
@@ -189,14 +351,14 @@ function DutyStatusModule({ onBack }) {
 }
 
 const DUTY_STATUS_EXPLAIN = {
-  OFF:  "Off Duty is time when the driver is relieved of all responsibilities, including to the vehicle. Personal activities (commuting, second non-CMV jobs, vacation) count here.",
-  SB:   "Sleeper Berth is time spent resting inside a qualifying sleeper berth. It counts toward the 10-hour reset and valid 7/3 or 8/2 splits.",
-  D:    "Driving is time at the controls of a CMV in operation on a public road. Deadheading a tractor across town to pick up a trailer still counts as Driving.",
-  OD:   "On-Duty (not driving) is all other work — loading/unloading supervision, inspections, fueling, stopped at a scale, waiting on repairs, and time in the passenger seat ready to resume driving.",
+  OFF: "Off Duty is time when the driver is relieved of all responsibilities, including to the vehicle. Personal activities (commuting, second non-CMV jobs, vacation) count here.",
+  SB:  "Sleeper Berth is time spent resting inside a qualifying sleeper berth. It counts toward the 10-hour reset and valid 7+3 or 8+2 splits.",
+  D:   "Driving is time at the controls of a CMV in operation on a public road. Deadheading a tractor across town to pick up a trailer still counts as Driving.",
+  OD:  "On-Duty (not driving) is all other work — loading/unloading supervision, inspections, fueling, stopped at a scale, waiting on repairs, and time in the passenger seat ready to resume driving.",
 };
 
-/* ─── Modules 2-4: Violation Finder (tap the grid OR pick "No violation") ─── */
-function ViolationFinderModule({ title, scenarios, tolerance = 30, onBack }) {
+/* ─── Violation Finder (shared by 14-hr, 11-hr, break) ─── */
+function ViolationFinderQuiz({ title, scenarios, tolerance = 30, onBack }) {
   const [idx, setIdx] = useState(0);
   const [mark, setMark] = useState(null);
   const [revealed, setRevealed] = useState(false);
@@ -228,8 +390,7 @@ function ViolationFinderModule({ title, scenarios, tolerance = 30, onBack }) {
     <DrillShell title={title} onBack={onBack} step={idx} total={scenarios.length} correct={correct}>
       <div className="bg-white rounded-xl border border-[#E2E8F0] p-3 sm:p-4 space-y-3">
         <p className="text-[13px] text-[#334155] leading-relaxed">
-          Tap the grid at the exact time the violation begins.
-          If this log has <span className="font-bold">no violation</span>, use the button below.
+          Tap the grid at the exact time the violation begins. If this log has <span className="font-bold">no violation</span>, use the button below.
         </p>
         <EldGrid
           entries={s.log}
@@ -270,12 +431,12 @@ function ViolationFinderModule({ title, scenarios, tolerance = 30, onBack }) {
   );
 }
 
-function FourteenHourModule(props) { return <ViolationFinderModule title="14-Hour Window Drill" scenarios={FOURTEEN_HOUR_SCENARIOS} {...props} />; }
-function ElevenHourModule(props)    { return <ViolationFinderModule title="11-Hour Driving Drill" scenarios={ELEVEN_HOUR_SCENARIOS} {...props} />; }
-function BreakModule(props)         { return <ViolationFinderModule title="30-Minute Break Drill"  scenarios={BREAK_SCENARIOS}      {...props} />; }
+function FourteenHourQuiz({ onBack }) { return <ViolationFinderQuiz title="14-Hour Window Drill" scenarios={FOURTEEN_HOUR_SCENARIOS} onBack={onBack} />; }
+function ElevenHourQuiz({ onBack })    { return <ViolationFinderQuiz title="11-Hour Driving Drill" scenarios={ELEVEN_HOUR_SCENARIOS} onBack={onBack} />; }
+function BreakQuiz({ onBack })         { return <ViolationFinderQuiz title="30-Minute Break Drill"  scenarios={BREAK_SCENARIOS}      onBack={onBack} />; }
 
-/* ─── Module 5: 70-Hour Recap ─── */
-function RecapModule({ onBack }) {
+/* ─── 70-Hour Recap quiz ─── */
+function RecapQuiz({ onBack }) {
   const [idx, setIdx] = useState(0);
   const [entry, setEntry] = useState("");
   const [revealed, setRevealed] = useState(false);
@@ -301,16 +462,25 @@ function RecapModule({ onBack }) {
     <DrillShell title="70-Hour Recap Drill" onBack={onBack} step={idx} total={RECAP_SCENARIOS.length} correct={correct}>
       <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 space-y-4">
         <p className="text-sm text-[#002855] font-bold">{s.todayQuestion}</p>
+
+        {/* Each day rendered as a mini ELD with brackets around on-duty segments */}
         <div className="space-y-1.5">
-          {s.days.map((d, i) => (
-            <div key={i} className="flex items-center justify-between bg-[#F8FAFC] rounded-md px-3 py-2 border border-[#E2E8F0]">
-              <p className="text-xs font-bold text-[#334155]">{d.label}</p>
-              <div className="flex items-center gap-2">
-                {d.note && <span className="text-[9px] text-[#7C3AED] font-bold uppercase tracking-wider">{d.note}</span>}
-                <p className="text-sm font-mono font-bold text-[#002855]">{d.onDuty}h</p>
+          {s.days.map((d, i) => {
+            const log = synthesizeDayLog(d.onDuty);
+            const brackets = onDutyBrackets(log, "#D4AF37");
+            return (
+              <div key={i} className="border border-[#E2E8F0] rounded-lg p-2 bg-[#FAFBFC]" data-testid={`recap-quiz-day-${i}`}>
+                <div className="flex items-center justify-between px-1 mb-1">
+                  <p className="text-[11px] font-bold text-[#334155]">{d.label}</p>
+                  <div className="flex items-center gap-1.5">
+                    {d.note && <span className="text-[9px] text-[#7C3AED] font-bold uppercase tracking-wider">{d.note}</span>}
+                    <p className="text-[11px] font-mono font-bold text-[#D4AF37]">{d.onDuty}h</p>
+                  </div>
+                </div>
+                <EldGrid entries={log} brackets={brackets} compact />
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div className="flex items-center justify-between px-3 py-1 pt-2">
             <p className="text-[10px] text-[#64748B] font-bold uppercase">Sum (last 7 days)</p>
             <p className="text-sm font-mono font-bold text-[#64748B]">{total7}h</p>
@@ -347,3 +517,11 @@ function RecapModule({ onBack }) {
     </DrillShell>
   );
 }
+
+const QUIZ_COMPONENTS = {
+  duty: DutyStatusQuiz,
+  "14hr": FourteenHourQuiz,
+  "11hr": ElevenHourQuiz,
+  break: BreakQuiz,
+  recap: RecapQuiz,
+};

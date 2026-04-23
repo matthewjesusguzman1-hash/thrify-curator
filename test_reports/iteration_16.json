@@ -1,0 +1,46 @@
+{
+  "summary": "Frontend-only review of HOS training restructure. 10 of 11 assertions PASS. One CRITICAL MISS: the `hos-training-btn` pill button was NOT added to the HoursOfServicePage sticky header — users have no in-app way to reach /hours-of-service/training from the calculator. All other requested changes work correctly (old CTAs removed, 6 modules present, Learn-first flow with CFR header + numbered sections + EldGrid with bracket SVGs + Inspector takeaway + primary `take-quiz-btn` + top-right `skip-to-quiz-btn`, recap mini-ELDs with brackets in both Learn and Quiz, Split module navigates to /split-sleeper, preset-valid-7-3 still shows green 'Legal 7+3 split detected').",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "HoursOfServicePage header",
+        "issue": "Missing `[data-testid=hos-training-btn]` Training pill. Header currently renders only: Back | 60/70 Hour Calculator | Clear. The task explicitly requires a compact 'Training' pill button top-right, before the Clear button, so the user can launch HOS Training from the calculator header. Entry point is completely missing from the HoS page.",
+        "selector": "header[data-testid=...] > ... before [data-testid=hos-clear-btn]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "old-CTAs-removed": "PASS (hos-training-cta and hos-split-sleeper-cta both absent from page body)",
+    "header-training-pill": "FAIL — `hos-training-btn` not present in HoursOfServicePage header",
+    "direct-nav-/training": "PASS — page loads, `hos-training` root visible",
+    "six-modules": "PASS — module-duty, module-14hr, module-11hr, module-break, module-recap, module-split all present",
+    "module-14hr-learn-first": "PASS — learn-14hr root, numbered sections (learn-section-0), take-quiz-btn, skip-to-quiz-btn, 951 SVG <line> elements (brackets rendered)",
+    "take-quiz-navigates-to-quiz": "PASS — vf-submit appears after clicking take-quiz-btn on 14hr",
+    "module-recap-learn-visual": "PASS — recap-learn-visual present; recap-day-0 and recap-day-6 both render mini ELDs; 2227 SVG <line> elements inside recap-learn-visual (brackets visible)",
+    "recap-quiz-mini-eld-days": "PASS — recap-quiz-day-0 & recap-quiz-day-6 render EldGrid (319 SVG <line> inside day-0); recap-input accepted '5', recap-feedback shown",
+    "module-split-navigation": "PASS — navigates to /hours-of-service/split-sleeper",
+    "preset-valid-7-3": "PASS — green verdict 'Legal 7+3 split detected — Valid 7+3 split — 7h SB + 3h OFF.'"
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Add `[data-testid=hos-training-btn]` pill button to the sticky header in /app/frontend/src/pages/HoursOfServicePage.js between the title block and the Clear button. Expected behavior: navigate('/hours-of-service/training'). Recommended style: compact amber pill matching the Quiz pill style used on Learn headers (bg-[#D4AF37] text-[#002855], GraduationCap icon, label 'Training'). GraduationCap is already imported (line 6) but unused — just wire it up."
+  ],
+  "critical_code_review_comments": [
+    "HoursOfServicePage.js imports GraduationCap (line 6) but never renders it — orphan import, confirms the Training pill rewrite was partially applied (library import landed, JSX did not).",
+    "HosTrainingPage.js MODULES array is well-structured; `split` correctly uses `route` instead of `learnKey` so LearnView is skipped. Good separation.",
+    "RecapLearnVisual and RecapQuiz both call synthesizeDayLog + onDutyBrackets per render for every day. With 7 days × 2 views, this is cheap enough but could be memoized if scenarios grow.",
+    "Learn header 'Quiz' pill uses `bg-[#D4AF37]` on a dark-blue header — good contrast. Same amber pill styling should be reused on the HoS calculator header so the 'Training' entry feels consistent with the return path."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "91% (10/11 assertions)"},
+  "test_credentials": "Badge 042 / PIN 1234",
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Only one bug remains on the HoS restructure: the Training pill is missing from /hours-of-service header. Once main agent adds `[data-testid=hos-training-btn]` in HoursOfServicePage.js header, the full task is complete. Everything downstream of /hours-of-service/training (Learn-first flow, brackets, recap mini-ELDs, split-sleeper module route, preset-valid-7-3 verdict) has been verified working on the preview URL.",
+  "rca of the issue": "Root cause: HoursOfServicePage.js header JSX was not updated when the rest of the feature was shipped. Evidence: `GraduationCap` icon was added to the lucide-react import block (line 6) but never rendered in JSX; `grep -n 'hos-training-btn'` on the file returns no hits; the sticky header (lines 378-391) only contains `hos-back-btn`, the title div, and `hos-clear-btn`. Reproduction: Login → /hours-of-service → inspect header — no Training button visible or selectable. Mitigation: Add a <button data-testid='hos-training-btn' onClick={()=>navigate('/hours-of-service/training')}> between the title div and the Clear button, styled as an amber pill (bg-[#D4AF37] text-[#002855] rounded-md px-2.5 py-1 text-[11px] font-bold) with a GraduationCap icon + label 'Training'. Push the Clear button further right by placing the Training pill in the same right-aligned flex cluster."
+}

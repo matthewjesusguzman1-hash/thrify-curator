@@ -10,17 +10,23 @@ import { hmToMin, padDay, STATUS_META, minToHm } from "../../lib/hosRules";
  *   highlightMinute   number | null — overlay a red vertical marker at this minute
  *   onMinuteClick     (minute) => void — enables tap-to-mark interactive mode
  *   markedMinute      number | null — user-placed flag (different color than highlight)
+ *   brackets          Array<{startMin, endMin, label?, color?}> — pairs of corner
+ *                     brackets drawn ABOVE the grid to call out a counted span
+ *                     (e.g. the 14-hr window, 8-hr driving block, on-duty segment)
+ *   shade             Array<{startMin, endMin, color?}> — soft column shading
+ *                     across all rows to accent a region of the log
  */
-export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null }) {
+export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [] }) {
   const HOUR_W = compact ? 20 : 28;
   const ROW_H = compact ? 26 : 32;
   const LABEL_W = compact ? 62 : 74;
   const TOTAL_W = compact ? 50 : 58;
   const HEADER_H = compact ? 18 : 22;
   const HOURS = 24;
+  const BRACKET_H = brackets && brackets.length > 0 ? 26 : 0;
   const gridW = HOURS * HOUR_W;
   const svgW = LABEL_W + gridW + TOTAL_W;
-  const svgH = HEADER_H + 4 * ROW_H + 12;
+  const svgH = BRACKET_H + HEADER_H + 4 * ROW_H + 12;
 
   const ROWS = ["OFF", "SB", "D", "OD"].map((k) => STATUS_META[k]);
   const rowIdx = (k) => ROWS.findIndex((r) => r.key === k);
@@ -67,6 +73,35 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
         onClick={handleSvgClick}
         style={{ cursor: onMinuteClick ? "crosshair" : "default" }}
       >
+        {/* Brackets above the grid — call out spans the rule cares about */}
+        {brackets.map((b, i) => {
+          const x1 = xForMin(b.startMin);
+          const x2 = xForMin(b.endMin);
+          const color = b.color || "#002855";
+          const barY = BRACKET_H - 10;
+          return (
+            <g key={`br${i}`}>
+              <line x1={x1} y1={barY} x2={x2} y2={barY} stroke={color} strokeWidth="1.8" />
+              <line x1={x1} y1={barY} x2={x1} y2={BRACKET_H - 1} stroke={color} strokeWidth="1.8" />
+              <line x1={x2} y1={barY} x2={x2} y2={BRACKET_H - 1} stroke={color} strokeWidth="1.8" />
+              {b.label && (
+                <text x={(x1 + x2) / 2} y={barY - 4} textAnchor="middle" fontSize={compact ? "8.5" : "9.5"} fontWeight="700" fill={color} fontFamily="sans-serif">
+                  {b.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        <g transform={`translate(0, ${BRACKET_H})`}>
+        {/* Shaded spans — soft column overlay across all duty rows */}
+        {shade.map((s, i) => {
+          const x = xForMin(s.startMin);
+          const w = Math.max(0, xForMin(s.endMin) - x);
+          return (
+            <rect key={`sh${i}`} x={x} y={HEADER_H} width={w} height={4 * ROW_H} fill={s.color || "#D4AF37"} opacity="0.16" />
+          );
+        })}
         {/* Hour labels */}
         {Array.from({ length: HOURS + 1 }).map((_, h) => {
           const x = LABEL_W + h * HOUR_W;
@@ -133,9 +168,10 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
         {markedMinute !== null && markedMinute !== undefined && markedMinute !== highlightMinute && (
           <g>
             <line x1={xForMin(markedMinute)} y1={HEADER_H - 2} x2={xForMin(markedMinute)} y2={HEADER_H + 4 * ROW_H + 2} stroke="#D4AF37" strokeWidth="2.5" />
-            <text x={xForMin(markedMinute)} y={svgH - 1} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="700" fill="#D4AF37">your pick · {minToHm(markedMinute)}</text>
+            <text x={xForMin(markedMinute)} y={4 * ROW_H + HEADER_H + 11} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="700" fill="#D4AF37">your pick · {minToHm(markedMinute)}</text>
           </g>
         )}
+        </g>
       </svg>
     </div>
   );
