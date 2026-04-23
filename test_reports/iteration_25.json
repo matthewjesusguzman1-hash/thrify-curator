@@ -1,0 +1,51 @@
+{
+  "summary": "Frontend-only visual regression on HoS → Training → Split Sleeper Trainer → Learn. Verified (1) the new [data-testid=eld-totals] strip is rendered below every EldGrid with per-status chips (OFF/SB/D/OD) and a grand total, and (2) the shift markers were migrated from <polygon> pennants to uniform rounded-rect SVG badges.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_results": {
+    "eld_totals_strip": {
+      "found_count": 6,
+      "grand_totals": ["24:00","24:00","24:00","24:00","24:00","24:00"],
+      "all_sum_to_24h": true,
+      "per_status_testids_present": ["total-OFF","total-SB","total-D","total-OD","total-day"]
+    },
+    "sl1_totals_actual": { "OFF": "3:00", "SB": "7:00", "D": "9:00", "OD": "5:00", "Total": "24:00" },
+    "sl1_totals_expected_in_request": { "OFF": "4:00", "SB": "7:00", "D": "9:00", "OD": "4:00", "Total": "24:00" },
+    "sl1_arithmetic_note": "The segments listed in the review request (OD 00-01=1h, D 01-06=5h, SB 06-13=7h, D 13-17=4h, OFF 17-20=3h, OD 20-24=4h) actually sum to OFF=3, SB=7, D=9, OD=5. The app renders these correctly. The 'expected' OFF=4/OD=4 in the request appears to be an arithmetic slip in the PRD text, NOT an app bug.",
+    "shift_markers": {
+      "polygons_inside_markers": 0,
+      "rects_inside_markers": 12,
+      "total_markers": 12,
+      "start_count": 6, "end_count": 5, "continues_count": 1,
+      "all_rects_rx": 2,
+      "start_fill": "#10B981 (green)", "end_fill": "#DC2626 (red)", "continues_fill": "#F59E0B (amber)"
+    },
+    "flag_text": {
+      "content": ["START","END","CONTINUES"],
+      "font_size": "8.5 (compact) — meets >=8.5",
+      "font_weight": "800",
+      "letter_spacing": "0.3"
+    }
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(OPTIONAL) Reconcile the SL1 totals text in the PRD/review description (OFF=4/OD=4 is arithmetically impossible given the listed segments; the app is correctly showing OFF=3/OD=5)."
+  ],
+  "critical_code_review_comments": [
+    "EldGrid.js: polygon shift marker removed; replaced with a single <rect rx=2> for START/END/CONTINUES — shape is uniform, only width and fill differ. Confirmed no <polygon> inside any [data-testid^=shift-marker-] element.",
+    "Totals strip uses `flex flex-wrap` + justify-between — survives narrow viewports without requiring horizontal scroll, solving the originally-reported hidden-totals-column issue.",
+    "Clamping of badgeX inside the grid (LABEL_W .. LABEL_W+gridW-flagW) prevents edge overflow for 00:00 and 24:00 badges — verified visually on SL5 CONTINUES badge near 24:00."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (skipped per request)", "frontend": "100%" },
+  "test_credentials": "Badge 042 / PIN 1234 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Split Sleeper Trainer has 6 example grids on the Learn tab. All render the eld-totals strip + rectangular shift badges correctly. Nav path: Login → HoS tile → Training pill → Split Sleeper Trainer card → Learn tab (default).",
+  "rca of the issue": "No defects found."
+}

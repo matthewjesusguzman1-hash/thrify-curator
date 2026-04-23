@@ -76,8 +76,12 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
     onMinuteClick(clamped);
   };
 
+  const totalHm = (mins) => `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
+  const totalAll = totals.OFF + totals.SB + totals.D + totals.OD;
+
   return (
-    <div className="overflow-x-auto -mx-1 rounded-lg border border-[#CBD5E1] bg-white">
+    <div className="rounded-lg border border-[#CBD5E1] bg-white">
+      <div className="overflow-x-auto -mx-1">
       <svg
         width={svgW}
         height={svgH}
@@ -208,7 +212,7 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           );
         })}
 
-        {/* Shift boundary markers — vertical dashed bars with labeled flags below */}
+        {/* Shift boundary markers — unified rectangular badges + dashed bar */}
         {shiftMarkers.map((sm, i) => {
           const x = xForMin(sm.min);
           const isEnd = sm.kind === "end";
@@ -216,18 +220,19 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const color = sm.color || (isEnd ? "#DC2626" : isContinues ? "#F59E0B" : "#10B981");
           const labelRow = sm.labelRow || 0;
           const labelY = HEADER_H + 4 * ROW_H + 22 + labelRow * 12;
-          const flagW = compact ? 30 : 40;
-          const flagText = isEnd ? "END" : isContinues ? "→" : "START";
-          // Pennant direction: start points right, end + continues point left
-          const flagRightward = !isEnd && !isContinues;
-          const flagX1 = flagRightward ? x : x - flagW;
-          const flagX2 = flagRightward ? x + flagW : x;
-          const tipX = flagRightward ? x + flagW - 4 : x - flagW + 4;
+          const flagText = isEnd ? "END" : isContinues ? "CONTINUES" : "START";
+          const flagW = compact ? (flagText === "CONTINUES" ? 60 : 36) : (flagText === "CONTINUES" ? 74 : 44);
+          const flagH = compact ? 11 : 13;
+          // Position: END opens to the LEFT of the line; START/CONTINUES opens to the RIGHT.
+          // Clamp inside the grid so badges at 00:00 or 24:00 don't overflow.
+          let badgeX = isEnd ? x - flagW : x;
+          if (badgeX < LABEL_W) badgeX = LABEL_W;
+          if (badgeX + flagW > LABEL_W + gridW) badgeX = LABEL_W + gridW - flagW;
           return (
             <g key={`shift${i}`} data-testid={`shift-marker-${sm.kind || i}`}>
-              <line x1={x} y1={HEADER_H - 4} x2={x} y2={HEADER_H + 4 * ROW_H + 4} stroke={color} strokeWidth="2" strokeDasharray="5 3" />
-              <polygon points={`${flagX1},${HEADER_H - 4} ${flagX2},${HEADER_H - 4} ${tipX},${HEADER_H + 1} ${flagX2},${HEADER_H + 6} ${flagX1},${HEADER_H + 6}`} fill={color} opacity="0.92" />
-              <text x={flagX1 + flagW / 2} y={HEADER_H + 2} textAnchor="middle" fontSize={compact ? "7.5" : "8.5"} fontWeight="800" fill="#FFFFFF">{flagText}</text>
+              <line x1={x} y1={HEADER_H - 1} x2={x} y2={HEADER_H + 4 * ROW_H + 4} stroke={color} strokeWidth="2" strokeDasharray="5 3" />
+              <rect x={badgeX} y={HEADER_H - flagH - 2} width={flagW} height={flagH} rx={2} fill={color} />
+              <text x={badgeX + flagW / 2} y={HEADER_H - 4} textAnchor="middle" fontSize={compact ? "8.5" : "9.5"} fontWeight="800" fill="#FFFFFF" fontFamily="sans-serif" letterSpacing="0.3">{flagText}</text>
               <text x={x} y={labelY} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="700" fill={color}>{sm.label || `${isEnd ? "Shift end" : isContinues ? "Continues" : "Shift start"} · ${minToHm(sm.min)}`}</text>
             </g>
           );
@@ -250,6 +255,23 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
         )}
         </g>
       </svg>
+      </div>
+      {/* Totals strip — always visible without horizontal scroll */}
+      <div className="border-t border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 justify-between" data-testid="eld-totals">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {ROWS.map((r) => (
+            <div key={r.key} className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: r.color }} />
+              <span className="text-[10.5px] font-bold text-[#64748B] uppercase tracking-wide">{r.short}</span>
+              <span className="text-[11px] font-mono font-bold text-[#002855]" data-testid={`total-${r.key}`}>{totalHm(totals[r.key])}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wide">Total</span>
+          <span className="text-[11px] font-mono font-bold text-[#002855]" data-testid="total-day">{totalHm(totalAll)}</span>
+        </div>
+      </div>
     </div>
   );
 }
