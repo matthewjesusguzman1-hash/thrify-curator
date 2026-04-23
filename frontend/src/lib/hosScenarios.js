@@ -677,6 +677,16 @@ export const EXEMPTIONS_TOP = [
       "Not used in for-hire carriage.",
     ],
   },
+  {
+    id: "livestock",
+    title: "Livestock 30-Min Break Exemption",
+    cfr: "49 CFR §395.1(v)",
+    summary: "Interstate livestock transport is exempt from the 30-min break rule (§395.3(a)(3)(ii)) while livestock are loaded on the CMV.",
+    conditions: [
+      "Interstate transport of livestock by CMV.",
+      "Livestock are loaded on the vehicle for the duration the exemption is claimed.",
+    ],
+  },
 ];
 
 export const EXEMPTIONS_OTHERS = [
@@ -732,13 +742,6 @@ export const EXEMPTIONS_OTHERS = [
     cfr: "49 CFR §395.1(u)",
     summary: "Interstate bee transport is exempt from the 30-min break rule if bees are loaded.",
     conditions: ["Interstate transport of commercial bees by CMV with bees loaded."],
-  },
-  {
-    id: "livestock",
-    title: "Commercial Livestock Transport",
-    cfr: "49 CFR §395.1(v)",
-    summary: "Interstate livestock transport is exempt from the 30-min break rule if livestock are loaded.",
-    conditions: ["Interstate transport of livestock by CMV with livestock loaded."],
   },
   {
     id: "hi-rail",
