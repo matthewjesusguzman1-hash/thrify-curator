@@ -35,7 +35,7 @@ export default function SplashScreen({ onFinish }) {
     >
       {/* Center stack: logo */}
       <div className="relative flex flex-col items-center justify-center select-none mx-auto">
-        <div className="relative w-[min(92vw,540px)] aspect-[5/6] flex items-center justify-center">
+        <div className="relative w-[min(85vw,480px)] aspect-[5/6] flex items-center justify-center">
           {/* Logo — scales up as the splash begins */}
           <img
             src="/splash-logo.jpeg"
