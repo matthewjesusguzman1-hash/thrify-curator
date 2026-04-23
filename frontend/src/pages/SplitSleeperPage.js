@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Layers, CheckCircle2, XCircle, RotateCcw, Ta
 import { Button } from "../components/ui/button";
 import { EldGrid } from "../components/hos/EldGrid";
 import { SPLIT_LEARN_SCENARIOS, SPLIT_PRACTICE_SCENARIOS } from "../lib/hosScenarios";
+import { CfrText } from "../lib/cfrLinks";
 
 /**
  * SplitSleeperPage — two tabs.
@@ -29,7 +30,7 @@ export default function SplitSleeperPage() {
             <Layers className="w-4 h-4 text-[#D4AF37]" />
             <div>
               <h1 className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Split Sleeper Trainer</h1>
-              <p className="text-[10px] text-white/50">Property-carrying · 49 CFR §395.1(g)(1)(ii)</p>
+              <p className="text-[10px] text-white/50">Property-carrying · <a href="https://www.ecfr.gov/current/title-49/section-395.1" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR §395.1(g)(1)(ii)</a></p>
             </div>
           </div>
         </div>
@@ -81,7 +82,7 @@ function LearnCard({ s }) {
       </div>
       <div className="p-3 space-y-3">
         <EldGrid entries={s.log} brackets={brackets} compact />
-        <p className="text-[12.5px] text-[#334155] leading-relaxed">{s.description}</p>
+        <p className="text-[12.5px] text-[#334155] leading-relaxed"><CfrText text={s.description} /></p>
       </div>
     </section>
   );
@@ -190,7 +191,7 @@ function PracticeTab() {
                 {selectionCorrect ? "You picked the right blocks." : "Not quite — grid now shows the truth."}
               </p>
             </div>
-            <p className="text-[12px] text-[#334155] leading-relaxed">{scenario.explanation.qualifying}</p>
+            <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={scenario.explanation.qualifying} /></p>
             <div className="flex items-center gap-3 mt-2 text-[10.5px] text-[#475569]">
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#10B981]" /> correct</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#DC2626]" /> wrong pick</span>
@@ -394,7 +395,7 @@ function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast }
             {correct ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />}
             <p className="text-[12px] font-bold text-[#334155]">{correct ? "Correct" : "Not quite — here's why"}</p>
           </div>
-          <p className="text-[12px] text-[#334155] leading-relaxed">{q.explanation}</p>
+          <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={q.explanation} /></p>
         </div>
       )}
 

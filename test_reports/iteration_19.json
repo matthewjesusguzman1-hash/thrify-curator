@@ -1,0 +1,46 @@
+{
+  "summary": "Frontend-only validation of CFR-link auto-linkification across HOS Training and Split Sleeper pages. Executed via in-app clicks (not pushState). All 12 required scenarios PASS at runtime — every §x.y citation referenced in the task is rendered as a cfr-link anchor pointing to the correct ecfr.gov/current/title-49/section-{major}.{minor} URL.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "runtime_verification": {
+    "login_badge042_pin1234": "PASS",
+    "module-14hr header §395.3(a)(2)": "PASS — renders as cfr-link with href https://www.ecfr.gov/current/title-49/section-395.3",
+    "module-exempt header §395.1 link": "PASS",
+    "module-exempt intro §395.1 + §395.3 auto-linkified": "PASS — CfrText yields both section-395.1 and section-395.3 anchors inside intro copy",
+    "exempt-utility-service": "PASS — 5 cfr-link anchors inside the card: §395.1(n) ×2 in citation line (one per § ref), §395.2 ×3 (citation 'definition §395.2' + summary + condition bullet). All resolve to correct section URLs.",
+    "exempt-short-haul-150": "PASS — citation line has TWO cfr-link anchors (§395.1(e)(1) + §395.1(e)(2)).",
+    "exempt-oilfield": "PASS — 5 cfr-links incl. §395.1(d)(3) in summary, §395.1(d)(2) and §395.1(e) in conditions.",
+    "exempt-pipeline-welding": "PASS — 4 cfr-links: §395.1(x) + §390.38(b) (citation), §390.38(b) in summary and condition. §390.38 resolves to section-390.38 URL.",
+    "duty-quiz ds1 fallback": "PASS — ds-feedback contains exactly one cfr-link (§395.2) via q.cfr default.",
+    "duty-quiz ds5 passenger seat": "PASS — ds-feedback contains BOTH §395.2 AND §395.1(g)(1)(i)(A) anchors (from q.cfr '49 CFR §395.2 · §395.1(g)(1)(i)(A)'). Feedback text also includes the clarifying '3 hours', '7 consecutive hours', 'passenger seat' phrasing from q.explain.",
+    "14hr quiz vf-feedback Part 395": "PASS — vf-feedback contains a direct <a data-testid=cfr-link> to https://www.ecfr.gov/current/title-49/part-395 with label '49 CFR Part 395'.",
+    "split-sleeper header §395.1(g)(1)(ii)": "PASS — subtitle rendered as cfr-link to section-395.1."
+  },
+  "observations": {
+    "split-sleeper learn cards (SL1-SL4)": "Cards render with learn-card-SL{n} testids but have zero cfr-link anchors because none of the visible scenario descriptions include a §x.y literal (only the SVG bracket annotations like 'Counted · 5h' / 'Period A · 7h SB'). Task spec says 'with any §395.x references' → conditional. If main agent wants inline links inside the Learn scenario descriptions as well, add §395.1(g)(1)(ii) / §395.1(g)(1)(iii) citations into SPLIT_LEARN_SCENARIOS descriptions in /app/frontend/src/lib/hosScenarios.js.",
+    "split-sleeper practice flow": "The q-split-* testids are only rendered AFTER the user submits block selection from the ELD grid. The flow is: select qualifying rest blocks → Submit selection → answer q-split → answer q-violation → fill q-hours. Since this task is purely about cfr-link rendering, did not walk the whole flow — the SplitSleeperPage wraps the eventual explanation text in <CfrText> per source review."
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional polish: add inline §395.1(g)(1)(ii)/§395.1(g)(1)(iii) references inside SPLIT_LEARN_SCENARIOS descriptions in /app/frontend/src/lib/hosScenarios.js so the Learn cards gain visible CFR links (currently descriptions have no § literals for CfrText to linkify).",
+    "Nothing else to fix — every required linkification is correctly implemented."
+  ],
+  "critical_code_review_comments": [
+    "cfrLinks.js — clean, reusable utility. Regex /§\\s*(\\d+)\\.(\\d+)((?:\\s*\\([a-z0-9]+\\))*)/gi correctly captures §x.y with arbitrary subsection suffixes. onClick stopPropagation prevents cards from collapsing when users click a citation link — nice touch.",
+    "HosTrainingPage.js — CfrText wrapping applied consistently across content.cfr / content.intro / s.body / content.summary / q.cfr / q.answerExplain / exemption summary + conditions. Header 49 CFR Part 395 is a direct <a> (not through CfrText) because the regex is section-based, not part-based — correct handling.",
+    "SplitSleeperPage.js — header subtitle '49 CFR §395.1(g)(1)(ii)' is a direct <a> with data-testid=cfr-link (fine). CfrText is used for scenario description / explanation / qualifying-explanation per source.",
+    "hosScenarios.js — exemption entries now contain §395.x literals in summary + conditions (utility-service, oilfield, short-haul, agricultural, driver-salesperson, pipeline-welding, hawaii) allowing linkification to fire. Good."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per task)", "frontend": "100% of required cfr-link scenarios verified at runtime"},
+  "test_credentials": "Badge 042 / PIN 1234",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "CFR-link auto-linkification is fully wired and runtime-verified. Regex lives in /app/frontend/src/lib/cfrLinks.js. When adding NEW CFR refs to training content, just include the literal '§XXX.Y' (with or without subsection parens) inside any text passed through <CfrText>, and the anchor + data-testid=cfr-link will render automatically to https://www.ecfr.gov/current/title-49/section-{major}.{minor}. For 'Part 395' style refs (no section number), write a direct <a> tag as done for the training header. Login flow: [data-testid=badge-input] → badge-continue-btn → [data-testid=pin-input] → Sign In. Use real /hours-of-service/... URLs with page.goto + re-login if guard kicks in — that works reliably for fresh Playwright sessions.",
+  "rca of the issue": "N/A — no bugs. The requested feature (clickable eCFR links for every §x.y reference in HOS training UI) is implemented correctly and verified at runtime across all required scenarios (14hr module, exemptions top cards + others, duty status ds1/ds5, 14hr vf-feedback, split sleeper header). Minor optional polish: none of the SplitSleeper Learn scenario descriptions currently contain literal § references, so those cards show 0 cfr-links — easy to extend by editing hosScenarios.js."
+}

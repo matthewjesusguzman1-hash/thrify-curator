@@ -8,6 +8,7 @@ import {
 import { Button } from "../components/ui/button";
 import { EldGrid } from "../components/hos/EldGrid";
 import { STATUS_META, minToHm } from "../lib/hosRules";
+import { CfrText } from "../lib/cfrLinks";
 import {
   DUTY_STATUS_QUIZ, FOURTEEN_HOUR_SCENARIOS, ELEVEN_HOUR_SCENARIOS,
   BREAK_SCENARIOS, RECAP_SCENARIOS, LEARN_CONTENT, onDutyBrackets, synthesizeDayLog,
@@ -69,7 +70,7 @@ export default function HosTrainingPage() {
               <GraduationCap className="w-4 h-4 text-[#D4AF37]" />
               <h1 className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>HOS Log Book Training</h1>
             </div>
-            <p className="text-[10px] text-white/50">Property-carrying CMV · 49 CFR Part 395</p>
+            <p className="text-[10px] text-white/50">Property-carrying CMV · <a href="https://www.ecfr.gov/current/title-49/part-395" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR Part 395</a></p>
           </div>
         </div>
       </div>
@@ -124,7 +125,7 @@ function LearnView({ mod, onBack, onQuiz }) {
               <mod.icon className="w-3.5 h-3.5 text-[#D4AF37]" />
               <p className="text-sm font-bold leading-tight truncate" style={{ fontFamily: "Outfit, sans-serif" }}>{content.title}</p>
             </div>
-            <p className="text-[10px] text-white/50 font-mono">{content.cfr}</p>
+            <p className="text-[10px] text-white/50 font-mono"><CfrText text={content.cfr} linkClassName="text-white/70 hover:text-[#D4AF37]" /></p>
           </div>
           <button
             onClick={onQuiz}
@@ -143,7 +144,7 @@ function LearnView({ mod, onBack, onQuiz }) {
             <Lightbulb className="w-4 h-4 text-[#D4AF37]" />
             <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">The rule</p>
           </div>
-          <p className="text-[13px] text-[#334155] leading-relaxed">{content.intro}</p>
+          <p className="text-[13px] text-[#334155] leading-relaxed"><CfrText text={content.intro} /></p>
         </section>
 
         {/* Sections — each with body text + example ELD + brackets */}
@@ -154,7 +155,7 @@ function LearnView({ mod, onBack, onQuiz }) {
               <p className="text-sm font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>{s.heading}</p>
             </div>
             <div className="p-4 space-y-3">
-              <p className="text-[12.5px] text-[#334155] leading-relaxed">{s.body}</p>
+              <p className="text-[12.5px] text-[#334155] leading-relaxed"><CfrText text={s.body} /></p>
               {s.exampleLog && (
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Example log — brackets show what the rule counts</p>
@@ -175,7 +176,7 @@ function LearnView({ mod, onBack, onQuiz }) {
               <FileText className="w-4 h-4 text-[#D4AF37]" />
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#D4AF37]">Inspector takeaway</p>
             </div>
-            <p className="text-[12.5px] text-[#334155] leading-relaxed">{content.summary}</p>
+            <p className="text-[12.5px] text-[#334155] leading-relaxed"><CfrText text={content.summary} /></p>
           </section>
         )}
 
@@ -345,7 +346,7 @@ function DutyStatusQuiz({ onBack }) {
               <p className="text-sm font-bold text-[#334155]">{isCorrect ? "Correct" : `Correct answer: ${STATUS_META[q.answer].label}`}</p>
             </div>
             <p className="text-[12px] text-[#334155] leading-relaxed">{q.explain || DUTY_STATUS_EXPLAIN[q.answer]}</p>
-            <p className="text-[10px] text-[#64748B] font-mono">{q.cfr || "49 CFR §395.2"}</p>
+            <p className="text-[10px] text-[#64748B] font-mono"><CfrText text={q.cfr || "49 CFR §395.2"} /></p>
           </div>
         )}
         <Button onClick={next} disabled={!revealed} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="ds-next-btn">
@@ -422,8 +423,10 @@ function ViolationFinderQuiz({ title, scenarios, tolerance = 30, onBack }) {
               {wasCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
               <p className="text-sm font-bold text-[#334155]">{wasCorrect ? "Correct" : s.hasViolation ? "Not quite — here's where it starts" : "No violation on this log"}</p>
             </div>
-            <p className="text-[12px] text-[#334155] leading-relaxed">{s.answerExplain}</p>
-            <p className="text-[10px] text-[#64748B] font-mono pt-1">49 CFR Part 395</p>
+            <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={s.answerExplain} /></p>
+            <p className="text-[10px] text-[#64748B] font-mono pt-1">
+              <a href="https://www.ecfr.gov/current/title-49/part-395" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR Part 395</a>
+            </p>
           </div>
         )}
 
@@ -509,8 +512,10 @@ function RecapQuiz({ onBack }) {
               {wasCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
               <p className="text-sm font-bold text-[#334155]">{wasCorrect ? "Correct" : `Correct answer: ${s.answer} hours`}</p>
             </div>
-            <p className="text-[12px] text-[#334155] leading-relaxed">{s.answerExplain}</p>
-            <p className="text-[10px] text-[#64748B] font-mono pt-1">49 CFR Part 395</p>
+            <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={s.answerExplain} /></p>
+            <p className="text-[10px] text-[#64748B] font-mono pt-1">
+              <a href="https://www.ecfr.gov/current/title-49/part-395" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR Part 395</a>
+            </p>
           </div>
         )}
 
@@ -548,7 +553,9 @@ function ExemptionsView({ onBack }) {
               <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
               <p className="text-sm font-bold leading-tight truncate" style={{ fontFamily: "Outfit, sans-serif" }}>HOS Exemptions</p>
             </div>
-            <p className="text-[10px] text-white/50 font-mono">49 CFR §395.1</p>
+            <p className="text-[10px] text-white/50 font-mono">
+              <a href="https://www.ecfr.gov/current/title-49/section-395.1" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR §395.1</a>
+            </p>
           </div>
         </div>
       </header>
@@ -560,7 +567,7 @@ function ExemptionsView({ onBack }) {
             <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">How exemptions work</p>
           </div>
           <p className="text-[12.5px] text-[#334155] leading-relaxed">
-            49 CFR §395.1 lists conditions under which the standard HOS rules are relaxed — either waived entirely, time-extended, or recordkeeping-only. Always verify the driver meets EVERY condition of a claimed exemption. Most exemptions require specific vehicle use, geographic limits, or carrier recordkeeping. Source: NASI-A Part A Module 6.
+            <CfrText text="49 CFR §395.1 lists conditions under which the standard HOS rules in §395.3 are relaxed — either waived entirely, time-extended, or recordkeeping-only. Always verify the driver meets EVERY condition of a claimed exemption. Most exemptions require specific vehicle use, geographic limits, or carrier recordkeeping. Source: NASI-A Part A Module 6." />
           </p>
         </section>
 
@@ -607,13 +614,13 @@ function ExemptionCard({ ex, top }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-bold text-[#002855] leading-tight">{ex.title}</p>
-          <p className="text-[10px] text-[#64748B] font-mono leading-tight">{ex.cfr}</p>
+          <p className="text-[10px] text-[#64748B] font-mono leading-tight"><CfrText text={ex.cfr} /></p>
         </div>
         {open ? <Minus className="w-4 h-4 text-[#64748B]" /> : <Plus className="w-4 h-4 text-[#64748B]" />}
       </button>
       {open && (
         <div className="px-3 pb-3 pt-1 border-t border-[#F1F5F9] space-y-2">
-          <p className="text-[12px] text-[#334155] leading-relaxed">{ex.summary}</p>
+          <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={ex.summary} /></p>
           {ex.conditions && ex.conditions.length > 0 && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] mb-1">Conditions to qualify</p>
@@ -621,7 +628,7 @@ function ExemptionCard({ ex, top }) {
                 {ex.conditions.map((c, i) => (
                   <li key={i} className="text-[12px] text-[#334155] leading-relaxed pl-3 relative">
                     <span className="absolute left-0 top-[6px] w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
-                    {c}
+                    <CfrText text={c} />
                   </li>
                 ))}
               </ul>
