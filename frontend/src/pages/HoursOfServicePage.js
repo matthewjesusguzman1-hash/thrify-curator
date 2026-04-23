@@ -376,17 +376,28 @@ export default function HoursOfServicePage() {
 
       {/* HEADER */}
       <header className="sticky top-0 z-40 bg-[#002855] border-b border-[#001a3a]">
-        <div className="max-w-[1440px] mx-auto px-3 sm:px-6 py-3 flex items-center justify-between">
+        <div className="max-w-[1440px] mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
           <button onClick={() => navigate(-1)} className="text-white hover:text-[#D4AF37] flex items-center gap-1.5 text-sm font-medium" data-testid="hos-back-btn">
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
-          <div className="flex items-center gap-2 text-white">
-            <Hourglass className="w-5 h-5 text-[#D4AF37]" />
-            <span className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>60/70 Hour Calculator</span>
+          <div className="flex items-center gap-2 text-white min-w-0">
+            <Hourglass className="w-5 h-5 text-[#D4AF37] flex-shrink-0" />
+            <span className="text-sm font-bold truncate" style={{ fontFamily: "Outfit, sans-serif" }}>60/70 Hour Calculator</span>
           </div>
-          <button onClick={clearAll} className="text-white/70 hover:text-white flex items-center gap-1.5 text-xs font-medium" data-testid="hos-clear-btn">
-            <RotateCcw className="w-3.5 h-3.5" /> Clear
-          </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => navigate("/hours-of-service/training")}
+              className="flex items-center gap-1 rounded-md bg-[#D4AF37] text-[#002855] hover:bg-[#E0BE50] px-2.5 py-1.5 text-[11px] font-bold transition-colors"
+              data-testid="hos-training-btn"
+              aria-label="Open HOS Training"
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Training</span>
+            </button>
+            <button onClick={clearAll} className="text-white/70 hover:text-white flex items-center gap-1 text-[11px] font-medium px-1.5 py-1.5" data-testid="hos-clear-btn">
+              <RotateCcw className="w-3.5 h-3.5" /> Clear
+            </button>
+          </div>
         </div>
       </header>
 
