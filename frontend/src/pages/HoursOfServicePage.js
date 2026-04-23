@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info,
-  Eye, Save, ClipboardList, HelpCircle, Clock, GraduationCap, Flame,
+  Eye, Save, ClipboardList, HelpCircle, Clock, GraduationCap,
   Lightbulb, X, Share2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -419,11 +419,8 @@ export default function HoursOfServicePage() {
             <GraduationCap className="w-5 h-5" />
           </div>
           <div className="flex-1 text-left min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Log Book Training</p>
-              <Flame className="w-3 h-3 text-[#F59E0B]" />
-            </div>
-            <p className="text-[11px] text-white/70 leading-tight">5 drills · NASI-A pp. 93–196 · Earn badges, build streaks</p>
+            <p className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Log Book Training</p>
+            <p className="text-[11px] text-white/70 leading-tight">6 quiz drills · NASI-A 2024 Part A · pp. 93–196</p>
           </div>
           <ChevronLeft className="w-4 h-4 text-white/60 rotate-180" />
         </button>
