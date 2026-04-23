@@ -1,0 +1,31 @@
+{
+  "summary": "Retested Split Sleeper Practice tab presets after main agent's fixes for midnight-clamp bug and verdict text wording. All 4 presets now produce the expected verdict (color + wording). No NASI-A references on /hours-of-service or /hours-of-service/training.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "preset-valid-8-2": "PASS — GREEN verdict, text 'Legal 8+2 split detected — Valid 8+2 split — 8h SB + 2h OFF.'",
+    "preset-valid-7-3": "PASS — GREEN verdict, text 'Legal 7+3 split detected — Valid 7+3 split — 7h SB + 3h OFF.'",
+    "preset-invalid-6-4": "PASS — RED verdict 'No valid split' with proper feedback.",
+    "preset-invalid-5-5-sb": "PASS — RED verdict 'No valid split' with proper feedback.",
+    "nasi-check /hours-of-service": "PASS — no NASI reference found",
+    "nasi-check /hours-of-service/training": "PASS — no NASI reference found"
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "hosRules.validateSplit sorts by hours descending; with equal hours (e.g. 5/5 SB) the 'big' picked is arbitrary — currently correctly flagged invalid (big=5 fails 7+3/8+2). No fix required.",
+    "PracticeTab restCandidates uses block.hours directly which correctly ignores midnight-clamping; good fix. Edge case: if a user sets hours so block exceeds 24:00 start+hours, the visual EldGrid is clamped but the verdict still uses the nominal hours — acceptable for trainer UI."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% (6/6 assertions)"},
+  "test_credentials": "Badge 042 / PIN 1234",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both iteration_14 fixes verified on preview URL. hosRules.validateSplit returns type '8+2'/'7+3' and PracticeTab derives rest-candidate durations from raw block.hours (not entry end-start), so midnight-clamped SB blocks like 18:00+8h no longer mis-evaluate.",
+  "rca of the issue": "Previously resolved by E1: (1) validateSplit label changed from '7/3'/'8/2' to '7+3'/'8+2'. (2) PracticeTab restCandidates now filters blocks using b.hours ≥ 2 before clamping, so 'Valid 8+2' preset (SB 18:00 for 8h) no longer loses 2h to 24:00 clamp. Both verified visually + via DOM text/class inspection."
+}

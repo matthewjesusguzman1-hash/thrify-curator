@@ -176,23 +176,25 @@ function PracticeTab() {
     .filter((e) => hmToMin(e.end) > hmToMin(e.start))
     .sort((a, b) => hmToMin(a.start) - hmToMin(b.start)), [blocks]);
 
-  // Find sleeper/off periods >= 2 hrs as possible split candidates
-  const restCandidates = useMemo(() => entries.filter((e) => (e.status === "SB" || e.status === "OFF") && (hmToMin(e.end) - hmToMin(e.start)) >= 2 * 60), [entries]);
+  // Find sleeper/off rest blocks >= 2 hrs as possible split candidates.
+  // NOTE: Use block.hours (not entry end-start) so midnight-clamped entries
+  // still validate against true block durations.
+  const restCandidates = useMemo(() => blocks.filter((b) => (b.status === "SB" || b.status === "OFF") && b.hours >= 2), [blocks]);
 
   const splitVerdict = useMemo(() => {
     // Check all pairs of candidates for a valid split
     for (let i = 0; i < restCandidates.length; i++) {
       for (let j = i + 1; j < restCandidates.length; j++) {
-        const a = { hours: (hmToMin(restCandidates[i].end) - hmToMin(restCandidates[i].start)) / 60, type: restCandidates[i].status };
-        const b = { hours: (hmToMin(restCandidates[j].end) - hmToMin(restCandidates[j].start)) / 60, type: restCandidates[j].status };
+        const a = { hours: restCandidates[i].hours, type: restCandidates[i].status };
+        const b = { hours: restCandidates[j].hours, type: restCandidates[j].status };
         const r = validateSplit(a, b);
         if (r.legal) return { ...r, a, b };
       }
     }
     // None legal — return the closest attempt for feedback
     if (restCandidates.length >= 2) {
-      const a = { hours: (hmToMin(restCandidates[0].end) - hmToMin(restCandidates[0].start)) / 60, type: restCandidates[0].status };
-      const b = { hours: (hmToMin(restCandidates[1].end) - hmToMin(restCandidates[1].start)) / 60, type: restCandidates[1].status };
+      const a = { hours: restCandidates[0].hours, type: restCandidates[0].status };
+      const b = { hours: restCandidates[1].hours, type: restCandidates[1].status };
       return { ...validateSplit(a, b), a, b };
     }
     return null;

@@ -122,10 +122,10 @@ export function validateSplit(a, b) {
     return { legal: false, reason: "The longer period must be spent in the Sleeper Berth.", cfr: "49 CFR §395.1(g)(1)(ii)" };
   }
   if (big.hours >= 8 && sml.hours >= 2) {
-    return { legal: true, type: "8/2", reason: `Valid 8/2 split — ${big.hours}h SB + ${sml.hours}h ${sml.type}.`, cfr: "49 CFR §395.1(g)(1)(ii)(A)" };
+    return { legal: true, type: "8+2", reason: `Valid 8+2 split — ${big.hours}h SB + ${sml.hours}h ${sml.type}.`, cfr: "49 CFR §395.1(g)(1)(ii)(A)" };
   }
   if (big.hours >= 7 && sml.hours >= 3) {
-    return { legal: true, type: "7/3", reason: `Valid 7/3 split — ${big.hours}h SB + ${sml.hours}h ${sml.type}.`, cfr: "49 CFR §395.1(g)(1)(ii)(B)" };
+    return { legal: true, type: "7+3", reason: `Valid 7+3 split — ${big.hours}h SB + ${sml.hours}h ${sml.type}.`, cfr: "49 CFR §395.1(g)(1)(ii)(B)" };
   }
   return {
     legal: false,
