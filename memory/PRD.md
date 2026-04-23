@@ -44,9 +44,15 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - Descriptions uniformly call out: (a) prior 10h reset ended at 00:00, (b) pre-split shift duration/hours, (c) CVSA split boundaries, (d) alternative split pairings that would have been valid.
 
 ### 2026-02 — Fix: overlapping bracket/marker labels on Split Sleeper Learn cards
-- User reported visual overlap on SL3 (labels "Extended rest · 12h (prior 10h re" colliding with "6h SB — too short" / "4h OFF — no pair").
-- Root cause: wide pre-split countedBrackets layered on top of red failed-split brackets shared the same y-row → their mid-anchored labels collided.
-- Fix: removed the wide pre-split/extended-rest countedBrackets from SL3 main, SL4 main, and SL4 extra "3h SB + 7h OFF" (shift markers already convey that context). Shortened all shift-marker labels across SL1-SL5 + extras to concise forms ("Pre-split START · 00:00", "Split END · 17:00", "Shift START · 12:00", "Continues → 02:00 next day", etc.) so 4-marker grids no longer clip or overlap.
+- User reported visual overlap on SL3 (labels "Extended rest · 12h (prior 10h re" colliding with "6h SB — too short" / "4h OFF — no pair") and subsequently flagged additional overlap in multi-day extras.
+- Root cause: wide pre-split countedBrackets layered on top of red failed-split brackets + long bracket labels + close-together shift markers with default labelRow 0.
+- Fixes applied:
+  - Removed wide pre-split/extended-rest countedBrackets from SL3 main, SL4 main, and SL4 extra "3h SB + 7h OFF".
+  - Shortened shift-marker labels: "Pre-split START · 00:00", "Pre-split END · 06:00", "Split START · 13:00", "Split END · 17:00", "Shift START · 12:00", "Continues → 02:00 next day", "Next START · 03:00", etc.
+  - Shortened countedBracket labels: "Pre-split · 6h" (was "Pre-split · 6h (1 OD + 5 D)"), "Split · 4h D" (was "CVSA split · 4h D"), "⟵ Period A · 3h", "Next shift · 7h", "← 10h reset ends", "Next shift · 6h", "10h SB reset →", etc.
+  - Shortened qualifyingBracket labels on SL5 multi-day: "2h OFF ✓ (Period B)" (was "Period B · first segment"), "Period A · 5h ⟶", "8h SB ✓", etc.
+  - SL5-b Day 1: removed the "Shift continues → Day 2" marker at 23:59 which collided with "Shift START · 23:30" at 23:30 (the continuation is already conveyed by the multi-day indicator + dashed line).
+- Verified visually on 430px mobile viewport: SL1-SL5 main cards, all extras expanded, and Practice SP1 shift question all render with NO label collisions.
 
 ### 2026-02 — Device-only photos + UI consolidation (current session)
 - **Device-only photos**: IndexedDB library (`devicePhotos.js`) + `<DevicePhoto>` component. All upload flows converted to local-save + JSON metadata POST. Server photo endpoints refactored to JSON-only (no multipart). One-time wipe endpoint runs on /api/admin/wipe-photos?badge=121 (executed; 3 inspections cleared).

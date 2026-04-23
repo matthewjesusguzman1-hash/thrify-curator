@@ -789,8 +789,8 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 17 * 60, endMin: 20 * 60, label: "3h OFF ✓", color: "#10B981" },
     ],
     countedBrackets: [
-      { startMin: 0,       endMin: 6 * 60,  label: "Pre-split · 6h (1 OD + 5 D)", color: "#64748B" },
-      { startMin: 13 * 60, endMin: 17 * 60, label: "CVSA split · 4h D", color: "#D4AF37" },
+      { startMin: 0,       endMin: 6 * 60,  label: "Pre-split · 6h", color: "#64748B" },
+      { startMin: 13 * 60, endMin: 17 * 60, label: "Split · 4h D", color: "#D4AF37" },
     ],
     shiftMarkers: [
       { min: 0,        kind: "start", color: "#64748B", label: "Pre-split START · 00:00", labelRow: 0 },
@@ -816,8 +816,8 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 17 * 60 + 30, endMin: 20 * 60, label: "2.5h OFF ✓", color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 0, endMin: 6 * 60, label: "Pre-split · 6h (1 OD + 5 D)", color: "#64748B" },
-          { startMin: 13 * 60 + 30, endMin: 17 * 60 + 30, label: "CVSA split · 4h D", color: "#D4AF37" },
+          { startMin: 0, endMin: 6 * 60, label: "Pre-split · 6h", color: "#64748B" },
+          { startMin: 13 * 60 + 30, endMin: 17 * 60 + 30, label: "Split · 4h D", color: "#D4AF37" },
         ],
         shiftMarkers: [
           { min: 0,              kind: "start", color: "#64748B", label: "Pre-split START · 00:00", labelRow: 0 },
@@ -843,8 +843,8 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 14 * 60, endMin: 21 * 60, label: "7h SB ✓",  color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 0, endMin: 6 * 60, label: "Pre-split · 6h (1 OD + 5 D)", color: "#64748B" },
-          { startMin: 9 * 60, endMin: 14 * 60, label: "CVSA split · 5h D", color: "#D4AF37" },
+          { startMin: 0, endMin: 6 * 60, label: "Pre-split · 6h", color: "#64748B" },
+          { startMin: 9 * 60, endMin: 14 * 60, label: "Split · 5h D", color: "#D4AF37" },
         ],
         shiftMarkers: [
           { min: 0,        kind: "start", color: "#64748B", label: "Pre-split START · 00:00", labelRow: 0 },
@@ -873,8 +873,8 @@ export const SPLIT_LEARN_SCENARIOS = [
       { startMin: 13 * 60, endMin: 21 * 60, label: "8h SB ✓", color: "#10B981" },
     ],
     countedBrackets: [
-      { startMin: 0, endMin: 6 * 60, label: "Pre-split · 6h (1 OD + 5 D)", color: "#64748B" },
-      { startMin: 8 * 60, endMin: 13 * 60, label: "CVSA split · 5h D", color: "#D4AF37" },
+      { startMin: 0, endMin: 6 * 60, label: "Pre-split · 6h", color: "#64748B" },
+      { startMin: 8 * 60, endMin: 13 * 60, label: "Split · 5h D", color: "#D4AF37" },
     ],
     shiftMarkers: [
       { min: 0,       kind: "start", color: "#64748B", label: "Pre-split START · 00:00", labelRow: 0 },
@@ -901,8 +901,8 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 12 * 60, endMin: 21 * 60, label: "9h SB ✓",  color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 0, endMin: 5 * 60, label: "Pre-split · 5h (1 OD + 4 D)", color: "#64748B" },
-          { startMin: 7 * 60, endMin: 12 * 60, label: "CVSA split · 5h (4 D + 1 OD)", color: "#D4AF37" },
+          { startMin: 0, endMin: 5 * 60, label: "Pre-split · 5h", color: "#64748B" },
+          { startMin: 7 * 60, endMin: 12 * 60, label: "Split · 5h", color: "#D4AF37" },
         ],
         shiftMarkers: [
           { min: 0,        kind: "start", color: "#64748B", label: "Pre-split START · 00:00", labelRow: 0 },
@@ -929,8 +929,8 @@ export const SPLIT_LEARN_SCENARIOS = [
           { startMin: 18 * 60, endMin: 20 * 60, label: "2h OFF ✓", color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 0, endMin: 1 * 60, label: "Pre-split · 1h OD", color: "#64748B" },
-          { startMin: 9 * 60, endMin: 18 * 60, label: "CVSA split · 9h (8 D + 1 OD)", color: "#D4AF37" },
+          { startMin: 0, endMin: 1 * 60, label: "Pre-split · 1h", color: "#64748B" },
+          { startMin: 9 * 60, endMin: 18 * 60, label: "Split · 9h", color: "#D4AF37" },
         ],
         shiftMarkers: [
           { min: 0,        kind: "start", color: "#64748B", label: "Pre-split START · 00:00", labelRow: 0 },
@@ -1099,8 +1099,8 @@ export const SPLIT_LEARN_SCENARIOS = [
           { status: "SB",  start: "19:00", end: "24:00" },  // Period A starts — 5h Day 1 portion
         ],
         qualifyingBrackets: [
-          { startMin: 12 * 60, endMin: 14 * 60, label: "2h OFF ✓ (Period B · first segment)", color: "#10B981" },
-          { startMin: 19 * 60, endMin: 24 * 60, label: "Period A · 5h ⟶ (second segment)", color: "#10B981" },
+          { startMin: 12 * 60, endMin: 14 * 60, label: "2h OFF ✓ (Period B)", color: "#10B981" },
+          { startMin: 19 * 60, endMin: 24 * 60, label: "Period A · 5h ⟶", color: "#10B981" },
         ],
         countedBrackets: [
           { startMin: 14 * 60, endMin: 19 * 60, label: "Counted · 5h (D)", color: "#D4AF37" },
@@ -1119,10 +1119,10 @@ export const SPLIT_LEARN_SCENARIOS = [
           { status: "OFF", start: "10:00", end: "24:00" },  // end-of-trip rest
         ],
         qualifyingBrackets: [
-          { startMin: 0, endMin: 3 * 60, label: "⟵ Period A · 3h (8h total SB)", color: "#10B981" },
+          { startMin: 0, endMin: 3 * 60, label: "⟵ Period A · 3h", color: "#10B981" },
         ],
         countedBrackets: [
-          { startMin: 3 * 60,  endMin: 10 * 60, label: "Next shift · 7h (1h OD + 6h D)", color: "#D4AF37" },
+          { startMin: 3 * 60,  endMin: 10 * 60, label: "Next shift · 7h", color: "#D4AF37" },
         ],
         shiftMarkers: [
           { min: 3 * 60, kind: "start", label: "Next START · 03:00", labelRow: 0 },
@@ -1147,14 +1147,13 @@ export const SPLIT_LEARN_SCENARIOS = [
               { status: "D",   start: "23:30", end: "24:00" },
             ],
             qualifyingBrackets: [
-              { startMin: 21 * 60, endMin: 23 * 60 + 30, label: "2.5h OFF ✓ (first segment)", color: "#10B981" },
+              { startMin: 21 * 60, endMin: 23 * 60 + 30, label: "2.5h OFF ✓", color: "#10B981" },
             ],
             countedBrackets: [
               { startMin: 23 * 60 + 30, endMin: 24 * 60, label: "Counted · 0.5h D", color: "#D4AF37" },
             ],
             shiftMarkers: [
               { min: 23 * 60 + 30, kind: "start", label: "Shift START · 23:30" },
-              { min: 24 * 60 - 1, kind: "continues", label: "Shift continues → Day 2" },
             ],
           },
           {
@@ -1166,10 +1165,10 @@ export const SPLIT_LEARN_SCENARIOS = [
               { status: "OFF", start: "11:00", end: "24:00" },
             ],
             qualifyingBrackets: [
-              { startMin: 2 * 60, endMin: 10 * 60, label: "8h SB ✓ (second segment)", color: "#10B981" },
+              { startMin: 2 * 60, endMin: 10 * 60, label: "8h SB ✓", color: "#10B981" },
             ],
             countedBrackets: [
-              { startMin: 0, endMin: 2 * 60, label: "Counted · 2h D", color: "#D4AF37" },
+              { startMin: 0, endMin: 2 * 60, label: "Counted · 2h", color: "#D4AF37" },
             ],
             shiftMarkers: [
               { min: 2 * 60, kind: "end", label: "Shift END · 02:00", labelRow: 0 },
@@ -1194,7 +1193,7 @@ export const SPLIT_LEARN_SCENARIOS = [
               { status: "SB",  start: "19:00", end: "24:00" },
             ],
             qualifyingBrackets: [
-              { startMin: 19 * 60, endMin: 24 * 60, label: "10h SB reset → (not a split)", color: "#10B981" },
+              { startMin: 19 * 60, endMin: 24 * 60, label: "10h SB reset →", color: "#10B981" },
             ],
             countedBrackets: [
               { startMin: 6 * 60, endMin: 15 * 60, label: "Counted · 9h", color: "#D4AF37" },
@@ -1214,10 +1213,10 @@ export const SPLIT_LEARN_SCENARIOS = [
               { status: "OFF", start: "11:00", end: "24:00" },
             ],
             qualifyingBrackets: [
-              { startMin: 0, endMin: 5 * 60, label: "← 10h SB reset ends (not a split)", color: "#10B981" },
+              { startMin: 0, endMin: 5 * 60, label: "← 10h reset ends", color: "#10B981" },
             ],
             countedBrackets: [
-              { startMin: 5 * 60, endMin: 11 * 60, label: "Next shift · 6h (1h OD + 5h D)", color: "#D4AF37" },
+              { startMin: 5 * 60, endMin: 11 * 60, label: "Next shift · 6h", color: "#D4AF37" },
             ],
             shiftMarkers: [
               { min: 5 * 60, kind: "start", label: "Next START · 05:00", labelRow: 0 },
