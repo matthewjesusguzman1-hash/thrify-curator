@@ -276,7 +276,7 @@ export const LEARN_CONTENT = {
       },
       {
         heading: "Sleeper Berth (SB)",
-        body: "Time resting inside a qualifying sleeper berth. Counts toward the 10-hour reset AND is the only status that can anchor a valid 7+3 or 8+2 split.",
+        body: "Time resting inside a qualifying sleeper berth. Counts toward the 10-hour reset AND is the only status that can anchor a valid split-sleeper pairing (≥7h SB paired with ≥2h SB/OFF, combined ≥10h — see §395.1(g)(1)(ii)).",
         exampleLog: [
           { status: "D",   start: "06:00", end: "14:00" },
           { status: "SB",  start: "14:00", end: "22:00" },
@@ -341,7 +341,7 @@ export const LEARN_CONTENT = {
       },
       {
         heading: "Work shift ends at the 14th hour",
-        body: "Once the 14th hour is reached, the driver must stop. Any driving OR on-duty time past the 14th hour is a violation. The only way to start a new work shift is to take a qualifying rest (10 consecutive hours off-duty/sleeper or a valid 7+3 / 8+2 split).",
+        body: "Once the 14th hour is reached, the driver must stop. Any driving OR on-duty time past the 14th hour is a violation. The only way to start a new work shift is to take a qualifying rest (10 consecutive hours off-duty/sleeper or a valid split-sleeper pairing per §395.1(g)(1)(ii): ≥7h SB + ≥2h SB/OFF, combined ≥10h, in any order).",
         exampleLog: [
           { status: "OFF", start: "00:00", end: "07:00" },
           { status: "D",   start: "07:00", end: "13:00" },
