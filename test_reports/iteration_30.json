@@ -1,0 +1,38 @@
+{
+  "summary": "Frontend-only verification of iteration_30 10-hour-rest-break shift-window enrichment across Split Sleeper Learn tab. All 11 review points PASS. SL1 & SL2 main cards now render FOUR shift markers (two slate pre-split + two green/red CVSA split) with slate pre-split bracket (0-6h) and gold CVSA split bracket (13-17h for SL1, 8-13h for SL2). Descriptions mention prior 10h reset AND other valid split alternatives (7+3, 7.5+2.5, 8+2 / 7+3, 8+2, 9+2). SL3 main card renders single Shift START at 12:00 + CONTINUES→02:00 marker with grey Extended-rest 12h bracket and correct 'NOT a failed split' narrative. SL4 main card renders Shift START 00:00 + Shift END 14:00 with Splits-that-would-have-worked enumeration. SL1-SL4 'Show more examples' extras each render 2 banners + correct pre-split/CVSA marker pairs (SL1: 7.5+2.5 at 00-06/13:30-17:30 and Short-period-FIRST at 00-06/09-14; SL2: 9+2 at 00-05/07-12 and 8 SB first at 00-01/09-18; SL3 both extras 06:00/20:00; SL4 10h straight OFF renders TWO shifts with Shift 1 00-06 slate + Shift 2 16:00 green START + orange CONTINUES near 24:00; SL4 3h+7h OFF at 00-14). Prior-reset banner regression from iteration_29 preserved (SL1-SL4 main = 1 banner each, SL5 = 0, each extra = 1 banner so 2 per extras container). Practice SP1-SP4 unchanged - 1 banner per active scenario. No JS runtime errors, no layout overflow.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Split Sleeper · Learn · SL1 & SL2 main card", "issues": ["Cosmetic: in the dense 4-marker row the left-most labels (e.g. 'Pre-split shift START · 00:00 (end of prior 10h reset)') can slightly clip past the SVG left edge because they anchor at x=0 and extend leftward. Rendering is still legible and labelRow 0/1 staggering prevents overlap between adjacent markers. Suggestion: clamp label text-anchor to 'start' for min=0 markers."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_30.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "hosScenarios.js is now 1358 lines (was 1300 at iter_28, 1357 after priorReset additions) - splitting into scenarios/split-sleeper.js + scenarios/general-hos.js is overdue and would improve maintainability of every future iteration.",
+    "The four-marker SL1/SL2 main grids have slate #64748B hard-coded inline across 10+ marker/bracket objects - consider introducing named color constants (PRE_SPLIT_SLATE, CVSA_GOLD, FAIL_RED, OK_GREEN) in a single export so color drift is impossible.",
+    "labelRow 0/1 alternation works for 2-4 markers but will break if any future scenario adds a 5th marker at a nearby x-coordinate - consider auto-computing labelRow from marker density.",
+    "SL4 extra '10h straight OFF' uses kind='continues' at min=24*60-1 (i.e. 1439) - this is a hack to avoid rendering outside the grid width; cleaner would be to let EldGrid handle an explicit 'shift-continues' flag without requiring the -1 minute offset."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100%"},
+  "test_credentials": "Badge 042 / PIN 1234 (PIN does NOT auto-submit on 4th digit in this build - must press Enter or click Sign In button; memory file /app/memory/test_credentials.md should be updated to reflect this).",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Shift-marker labels are rendered inside SVG <text> elements; use svg.querySelectorAll('text') to assert marker text. Each learn-card selector is [data-testid='learn-card-<SL-ID>']. Each extras container is [data-testid='learn-extras-<SL-ID>'] and contains N single-day-scenario blocks each carrying its own prior-reset-banner. Login: [data-testid='badge-input'] → [data-testid='badge-continue-btn'] → [data-testid='pin-input'] then Enter key or click 'Sign In' button (auto-submit on 4th digit did NOT fire in this run).",
+  "verified_checkpoints": [
+    "SL1 main: 1 banner + 4 markers (Pre-split START/END slate + CVSA START/END green/red) + 6h slate + 4h gold brackets + description mentions 7+3 / 7.5+2.5 / 8+2",
+    "SL2 main: 1 banner + 4 markers (Pre-split 00/06 + CVSA 08/13) + 6h slate + 5h gold brackets",
+    "SL3 main: 1 banner + single START 12:00 + CONTINUES → 02:00 next day + Extended rest 12h slate bracket + narrative 'NOT a failed split'",
+    "SL4 main: 1 banner + START 00:00 + END 14:00 + Pre-split 14h slate bracket + description lists 7+3 / 8+2 / 10+0 alternative splits",
+    "SL1 extras expand: 2 banners, 2 SVGs with Pre-split+CVSA marker pairs (7.5+2.5: 00-06/13:30-17:30; Short-FIRST: 00-06/09-14)",
+    "SL2 extras expand: 2 banners, marker pairs (9+2: 00-05/07-12; 8 SB first: 00-01/09-18)",
+    "SL3 extras expand: 2 banners, both show Shift 06:00 START + 20:00 END",
+    "SL4 extras expand: 2 banners; '10h straight OFF' renders Shift 1 START 00/END 06 (slate) + Shift 2 START 16 (green) + CONTINUES marker near 24:00 (orange); '3h SB + 7h OFF' renders START 00 + END 14",
+    "SL5 multi-day: still 0 banners (intentional regression preserved)",
+    "Practice SP1-SP4: 1 banner visible per active scenario; scenario navigation works; no JS console errors"
+  ]
+}
