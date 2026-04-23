@@ -31,7 +31,7 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   const HOUR_W = compact ? 20 : 28;
   const ROW_H = compact ? 26 : 32;
   const LABEL_W = compact ? 62 : 74;
-  const TOTAL_W = compact ? 50 : 58;
+  const TOTAL_W = compact ? 66 : 76;
   const HEADER_H = compact ? 18 : 22;
   const HOURS = 24;
   const BRACKET_H = brackets && brackets.length > 0 ? 26 : 0;
@@ -139,16 +139,16 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
               <text x={LABEL_W - 6} y={y + ROW_H / 2 + 3.5} textAnchor="end" fontSize={compact ? "9" : "10"} fontWeight="700" fill="#1E293B">
                 {compact ? r.short : r.label}
               </text>
-              <rect x={LABEL_W + gridW + 2} y={y + 4} width={TOTAL_W - 6} height={ROW_H - 8} fill="#FFFFFF" stroke="#CBD5E1" />
-              <text x={LABEL_W + gridW + TOTAL_W / 2} y={y + ROW_H / 2 + 3.5} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="700" fill="#1E293B" fontFamily="monospace">
-                {String(h).padStart(2, "0")}:{String(m).padStart(2, "0")}
+              <rect x={LABEL_W + gridW + 2} y={y + 3} width={TOTAL_W - 6} height={ROW_H - 6} fill="#FFFFFF" stroke="#CBD5E1" rx={2} />
+              <text x={LABEL_W + gridW + TOTAL_W / 2} y={y + ROW_H / 2 + 4} textAnchor="middle" fontSize={compact ? "12" : "13"} fontWeight="700" fill="#002855" fontFamily="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" data-testid={`svg-total-${r.key}`}>
+                {`${h}:${String(m).padStart(2, "0")}`}
               </text>
             </g>
           );
         })}
 
         {/* TOTAL column header */}
-        <text x={LABEL_W + gridW + TOTAL_W / 2} y={HEADER_H - 6} textAnchor="middle" fontSize={compact ? "8" : "9"} fontWeight="800" fill="#64748B" fontFamily="sans-serif">TOTAL</text>
+        <text x={LABEL_W + gridW + TOTAL_W / 2} y={HEADER_H - 6} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="800" fill="#002855" fontFamily="sans-serif">TOTAL</text>
 
         {/* Hour gridlines */}
         {Array.from({ length: HOURS + 1 }).map((_, h) => {
