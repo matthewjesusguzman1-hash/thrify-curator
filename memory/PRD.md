@@ -60,17 +60,25 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - **Bug fix**: `validateSplit` used "7/3"/"8/2" labels — changed to "7+3"/"8+2" to match preset buttons and walkthroughs.
 - **Bug fix**: PracticeTab split validation used clamped-at-midnight entries, making `preset-valid-8-2` render red. Now derives rest-candidate durations from raw `blocks[].hours` so midnight wrapping doesn't affect the verdict.
 
-### 2026-02 test_reports/iteration_15.json
-- Frontend Playwright: 6/6 assertions PASS. Login → /hours-of-service/split-sleeper → Practice tab → all 4 presets produce correct verdict (7+3/8+2 green, 6+4/5+5-SB red). Zero NASI-A references on either HoS route.
+### 2026-02 test_reports/iteration_17.json
+- Frontend Playwright: 5/5 PASS (100%). `hos-training-btn` pill in HoS sticky header → opens training grid. 6 modules present. Learn-first flow intact. EldGrid bracket annotations render above the grid. Recap Learn + Quiz both render per-day mini-ELDs with on-duty brackets. Split Sleeper preset-valid-7-3 still green 'Legal 7+3 split'.
+
+### 2026-02 — Learn-first training + bracket-annotated ELD grids
+- **Training entry moved into HoS header**: compact gold `Training` pill in the top-right of the 60/70-hr Calculator sticky header (next to Clear). The previous full-width body CTAs are gone.
+- **6 modules** on `/hours-of-service/training`: Duty Status, 14-Hour, 11-Hour, 30-Min Break, 70-Hour Recap, **Split Sleeper Trainer** (6th tile, navigates to the standalone `/hours-of-service/split-sleeper` interactive page).
+- **Learn-first flow**: every non-split module opens a Learn view FIRST — rule intro + numbered sections each pairing plain-English explanation with an example ELD log. Quiz is a secondary option (primary `take-quiz-btn` CTA at the bottom + compact `skip-to-quiz-btn` pill in the Learn header).
+- **Bracket annotations on EldGrid**: new `brackets` + `shade` props draw roadside-style corner brackets (with labels) above the duty grid to call out the exact span each rule counts — 14-hr window, 11-hr driving cumulative, 8-hr drive + break, violation spans, on-duty segments, etc.
+- **70-Hour Recap upgrade**: each day in both Learn visual and Quiz now renders as a **miniature ELD log** (synthesized via `synthesizeDayLog`) with gold brackets drawn over the on-duty (D+OD) runs — so inspectors practice reading a log the way they would roadside, instead of staring at a single abstracted number.
+- **Helpers added**: `onDutyBrackets(entries)` auto-derives bracket sets from duty runs; `synthesizeDayLog(onDutyHours)` generates a realistic mixed log for a given total.
 
 ## Backlog (P0 → P2)
-- **P0 ON HOLD**: **Photo Annotator + Quick Photos** — UI entirely hidden (header buttons, per-violation attach, routes redirect to /inspections) pending the user's agency decision on whether to store photos at all. Code kept intact for later reactivation. When resumed: (1) audit coord math in `renderEntryBlob`; (2) reproduce on iOS Safari; (3) decide single-vs-dual entry-point flow; (4) add "re-attach photo" fallback for IndexedDB eviction.
-- **P1 ✅ SHIPPED** — HOS Log Book Training + Split Sleeper Trainer (decoupled). Property-carrying only. Extension ideas: passenger-carrying rules, short-haul exemption, adverse driving, RODS falsification drill (source material in `/app/memory/references/hos-section.pdf`).
+- **P0 ON HOLD**: **Photo Annotator + Quick Photos** — UI entirely hidden (header buttons, per-violation attach, routes redirect to /inspections) pending the user's agency decision on whether to store photos at all. Code kept intact for later reactivation.
+- **P1 ✅ SHIPPED** — HOS Log Book Training: Learn-first flow + 6 modules + bracket-annotated ELD grids + standalone Split Sleeper Trainer. Property-carrying only. Extension ideas: passenger-carrying rules, short-haul exemption, adverse driving, RODS falsification drill (source material in `/app/memory/references/hos-section.pdf`).
 - **P1**: Offline/cached mode for field use (cache violation tree + last N inspections for offline access)
 - **P2**: Refactor `server.py` into modular routes (`/app/backend/routes/*`)
 - **P2**: Refactor `BridgeChartPage.js` / `HoursOfServicePage.js` / `HazMatHelpers.js` into smaller components
 - **P2**: Additional Inspector Tools — Spec Marking Decoder, Retest Date Calculator, OOS Quick Reference
-- **P2**: Device-storage indicator in the Customize Header / admin menu (show IndexedDB usage)
+- **P2**: Device-storage indicator in the Customize Header / admin menu
 
 ## Test Credentials
 - Standard User — Badge `042`, PIN `1234`
