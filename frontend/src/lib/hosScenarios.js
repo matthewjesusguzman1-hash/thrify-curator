@@ -849,6 +849,48 @@ export const SPLIT_LEARN_SCENARIOS = [
     ],
     description: "The rule in §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth as one of the two periods. Here the longer rest is Off Duty (not SB) and the only SB block is 2 hours. Even though the totals look right (8 + 2 = 10), no qualifying SB period exists, so the pairing fails. No pause on the 11/14 clocks — they keep running as if no split was taken.",
   },
+  {
+    id: "SL5",
+    title: "Overnight trip · Sleeper Berth crosses midnight",
+    multiDay: true,
+    days: [
+      {
+        label: "Day 1 · Mon",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "07:00" },
+          { status: "D",   start: "07:00", end: "12:00" },
+          { status: "OFF", start: "12:00", end: "14:00" },  // Period B — 2h OFF qualifying
+          { status: "D",   start: "14:00", end: "19:00" },
+          { status: "SB",  start: "19:00", end: "24:00" },  // Period A starts — 5h Day 1 portion
+        ],
+        qualifyingBrackets: [
+          { startMin: 12 * 60, endMin: 14 * 60, label: "2h OFF ✓ (Period B)", color: "#10B981" },
+          { startMin: 19 * 60, endMin: 24 * 60, label: "Period A · 5h ⟶", color: "#10B981" },
+        ],
+        countedBrackets: [
+          { startMin: 6 * 60,  endMin: 12 * 60, label: "Counted · 6h", color: "#D4AF37" },
+          { startMin: 14 * 60, endMin: 19 * 60, label: "Counted · 5h", color: "#D4AF37" },
+        ],
+      },
+      {
+        label: "Day 2 · Tue",
+        log: [
+          { status: "SB",  start: "00:00", end: "03:00" },  // Period A continues — 3h Day 2 portion (total 8h)
+          { status: "OD",  start: "03:00", end: "04:00" },
+          { status: "D",   start: "04:00", end: "10:00" },
+          { status: "OFF", start: "10:00", end: "24:00" },  // end-of-trip rest
+        ],
+        qualifyingBrackets: [
+          { startMin: 0, endMin: 3 * 60, label: "⟵ Period A · 3h (8h total SB)", color: "#10B981" },
+        ],
+        countedBrackets: [
+          { startMin: 3 * 60,  endMin: 10 * 60, label: "New shift · 7h", color: "#D4AF37" },
+        ],
+      },
+    ],
+    description: "An overnight run where the Sleeper Berth period straddles midnight. Day 1 has the 2h OFF at 12:00-14:00 (Period B). The driver then drives 14:00-19:00 and enters the Sleeper Berth at 19:00, continuing across midnight until 03:00 Day 2 — an 8-hour SB block that counts as a single qualifying Period A under §395.1(g)(1)(ii). Both periods pause the 11/14 clocks. Counted toward the shift's 11 & 14 before Period A ends = 6h (Day 1 pre-Period-B) + 5h (between B and A) = 11h total; driving counted = 5h + 5h = 10h. After Period A ends at 03:00 Day 2, a new 14-hr window begins — the 1h OD + 6h D shown on Day 2 (04:00-10:00) start a new shift.",
+  },
 ];
 
 /* ─── Practice scenarios ─── user (1) selects qualifying rest blocks then

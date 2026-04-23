@@ -74,6 +74,30 @@ function LearnTab() {
 }
 
 function LearnCard({ s }) {
+  if (s.multiDay) {
+    return (
+      <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`learn-card-${s.id}`}>
+        <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 py-2 flex items-center gap-2">
+          <span className="text-[9px] font-bold uppercase tracking-wider bg-[#002855] text-[#D4AF37] rounded px-1.5 py-0.5">Multi-day</span>
+          <p className="text-sm font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>{s.title}</p>
+        </div>
+        <div className="p-3 space-y-3">
+          {s.days.map((d, i) => (
+            <div key={i} className="space-y-1" data-testid={`learn-card-${s.id}-day-${i}`}>
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#64748B]">{d.label}</p>
+                {i < s.days.length - 1 && (
+                  <p className="text-[9.5px] text-[#94A3B8] italic">continues overnight ↓</p>
+                )}
+              </div>
+              <EldGrid entries={d.log} brackets={[...(d.qualifyingBrackets || []), ...(d.countedBrackets || [])]} compact />
+            </div>
+          ))}
+          <p className="text-[12.5px] text-[#334155] leading-relaxed pt-1"><CfrText text={s.description} /></p>
+        </div>
+      </section>
+    );
+  }
   const brackets = [...(s.qualifyingBrackets || []), ...(s.countedBrackets || [])];
   return (
     <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`learn-card-${s.id}`}>
