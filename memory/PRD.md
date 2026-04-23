@@ -25,6 +25,17 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 
 ## Changelog
 
+### 2026-02 — CVSA Split-Sleeper shift-boundary rule (current session)
+- Per-CVSA fix across `SplitSleeperPage.js` + `hosScenarios.js`: under the sleeper-berth provision, the 14-hr work shift STARTS at the END of the FIRST qualifying rest segment and ENDS at the BEGINNING of the SECOND qualifying rest segment (§395.1(g)(1)(ii)). The 10-hour Continuous Break rule is unchanged.
+- Updated `shiftMarkers`, `countedBrackets` and descriptions on SL1 (7+3), SL1 extras (7.5+2.5, 3+7-reversed), SL2 (8+2), SL2 extras (9+2, 8-SB-first), SL5 Day 1 + Day 2 overnight, SL5-b (shift crossing midnight), SL5-c (10h straight SB = full reset).
+- Rewrote SP2 log to a realistic 11-hr driving violation under the CVSA window: `SB 00-08 · D 08-12 · OD 12-13 · D 13-21 · OFF 21-24` → shift 08:00-21:00 · 12h drive / 13h on-duty / 11-hr violation.
+- Fixed SP1 (shift 13:00-17:00, counted 4/4), SP3 (counted 10/10 — was 14/10), SP4 (counted 6/8 — was 19/8). SL3, SL4, SP3, SP4 invalid-split scenarios retain 14-hr wall-clock boundaries.
+- Updated QuestionsStack hint in SplitSleeperPage.js to cite CVSA rule verbatim.
+- EldGrid received `data-testid="eld-entry-{idx}"` on selectable duty blocks (testing agent helper — no behavior change).
+
+### 2026-02 test_reports/iteration_28.json — 100% frontend pass
+- 13/13 checkpoints: CVSA bullets visible · SL1-SL5 + extras · SP1-SP4 full 4-question flow · shift-time validation tolerates ±10 min · hours ±0.5. No runtime errors.
+
 ### 2026-02 — Device-only photos + UI consolidation (current session)
 - **Device-only photos**: IndexedDB library (`devicePhotos.js`) + `<DevicePhoto>` component. All upload flows converted to local-save + JSON metadata POST. Server photo endpoints refactored to JSON-only (no multipart). One-time wipe endpoint runs on /api/admin/wipe-photos?badge=121 (executed; 3 inspections cleared).
 - **Shipping-paper OCR removed entirely** — camera UI, state, handler, and backend endpoint all deleted. Endpoint returns 410 Gone.
