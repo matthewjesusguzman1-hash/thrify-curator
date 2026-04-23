@@ -57,30 +57,26 @@ export default function SplashScreen({ onFinish }) {
 
       {/* Scoped styles */}
       <style>{`
-        /* Slightly more visible peaks (~0.8 alpha) but still brief, so the
-           flash reads as "patrol lights" without turning the whole screen
-           into a disco. Timing kept at ~0.85s and the two sides are offset
-           so they don't peak simultaneously. */
         @keyframes splash-blue-pulse {
           0%, 100% { opacity: 0.0; }
-          28%      { opacity: 0.8;  }
-          48%      { opacity: 0.0; }
-          70%      { opacity: 0.55; }
+          30%      { opacity: 0.55; }
+          50%      { opacity: 0.0; }
+          70%      { opacity: 0.4; }
         }
         @keyframes splash-red-pulse {
-          0%, 100% { opacity: 0.55; }
-          18%      { opacity: 0.0; }
-          42%      { opacity: 0.8; }
-          72%      { opacity: 0.0; }
+          0%, 100% { opacity: 0.4; }
+          20%      { opacity: 0.0; }
+          45%      { opacity: 0.55; }
+          75%      { opacity: 0.0; }
         }
         .splash-flash-blue {
-          background: radial-gradient(ellipse at 0% 50%, rgba(59,130,246,0.95) 0%, rgba(59,130,246,0.45) 40%, rgba(59,130,246,0) 75%);
-          animation: splash-blue-pulse 0.85s ease-in-out infinite;
+          background: radial-gradient(ellipse at 0% 50%, rgba(59,130,246,0.85) 0%, rgba(59,130,246,0.35) 35%, rgba(59,130,246,0) 70%);
+          animation: splash-blue-pulse 0.75s ease-in-out infinite;
           mix-blend-mode: screen;
         }
         .splash-flash-red {
-          background: radial-gradient(ellipse at 100% 50%, rgba(220,38,38,0.95) 0%, rgba(220,38,38,0.45) 40%, rgba(220,38,38,0) 75%);
-          animation: splash-red-pulse 0.85s ease-in-out infinite;
+          background: radial-gradient(ellipse at 100% 50%, rgba(220,38,38,0.85) 0%, rgba(220,38,38,0.35) 35%, rgba(220,38,38,0) 70%);
+          animation: splash-red-pulse 0.75s ease-in-out infinite;
           mix-blend-mode: screen;
         }
 
