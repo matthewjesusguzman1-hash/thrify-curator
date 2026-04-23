@@ -185,6 +185,9 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const y = HEADER_H + rowIdx(e.status) * ROW_H;
           const selected = selectedIndices.includes(idx);
           const mark = blockMarks[idx];
+          // Before user interaction, NO outline is drawn — the grid reads as a
+          // normal roadside log. On tap, the block gets a solid selected fill.
+          // After submission, blockMarks drive correct/wrong/missed reveal.
           const fill = mark === "correct" ? "#10B981" :
                        mark === "wrong"   ? "#DC2626" :
                        mark === "missed"  ? "#F59E0B" :
@@ -193,16 +196,16 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const strokeColor = mark === "correct" ? "#059669" :
                               mark === "wrong"   ? "#B91C1C" :
                               mark === "missed"  ? "#D97706" :
-                              selected           ? "#1D4ED8" : "#002855";
-          const strokeW = mark || selected ? 2.2 : 1.2;
-          const strokeOpacity = mark || selected ? 1 : 0.55;
+                              selected           ? "#1D4ED8" : "transparent";
+          const strokeW = mark || selected ? 2.2 : 0;
+          const strokeOpacity = mark || selected ? 1 : 0;
           return (
             <g key={`sel${idx}`} data-testid={`eld-entry-${idx}`} style={{ cursor: onEntryClick && !mark ? "pointer" : "default" }}
                onClick={(ev) => { if (onEntryClick && !mark) { ev.stopPropagation(); onEntryClick(idx); } }}>
               <rect x={x + 1} y={y + 2} width={Math.max(0, w - 2)} height={ROW_H - 4}
                 fill={fill} fillOpacity={fillOpacity}
                 stroke={strokeColor} strokeWidth={strokeW} strokeOpacity={strokeOpacity}
-                strokeDasharray={!mark && !selected ? "3 2" : ""} rx={3} />
+                rx={3} />
               {mark && (
                 <text x={x + w / 2} y={y + ROW_H / 2 + 3.5} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="800" fill="#FFFFFF">
                   {mark === "correct" ? "✓" : mark === "wrong" ? "✕" : "!"}

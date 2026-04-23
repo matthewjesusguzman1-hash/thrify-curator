@@ -43,7 +43,11 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - EldGrid: label text-anchor clamps to 'start' for markers at <60 min and 'end' for markers at ≥23:00 — prevents long edge labels from clipping past the SVG bounds.
 - Descriptions uniformly call out: (a) prior 10h reset ended at 00:00, (b) pre-split shift duration/hours, (c) CVSA split boundaries, (d) alternative split pairings that would have been valid.
 
-### 2026-02 — Fix: overlapping bracket/marker labels on Split Sleeper Learn cards
+### 2026-02 — Fix: Practice tab pre-highlighted rest blocks (spoiler) + added distractors
+- User flagged that dashed outlines on every selectable OFF/SB block in Practice mode effectively reveal the rest breaks before the user has chosen, and SP1/SP2 had ONLY 2 selectable blocks which were both the qualifying answer → no reasoning required.
+- EldGrid: removed the default dashed outline on unselected selectable blocks. The log now reads as a normal roadside log until the user taps a block. Selected state + post-submission marks (correct/wrong/missed) still render. Cursor pointer + click handler remain for discoverability.
+- SP1: added a 1h OFF distractor at 05-06 so three blocks are candidate rest periods. qualifyingBlockIdx: [2,4] → [3,5].
+- SP2: rewrote log to include a 30-min §395.3(a)(3)(ii) break at 17-17:30 as a distractor. Three candidate blocks. qualifyingBlockIdx: [0,4] → [0,6]. counted14Hours: 13 → 12.5, counted11Hours: 12 → 11.5 (still an 11-hr violation).
 - User reported visual overlap on SL3 (labels "Extended rest · 12h (prior 10h re" colliding with "6h SB — too short" / "4h OFF — no pair") and subsequently flagged additional overlap in multi-day extras.
 - Root cause: wide pre-split countedBrackets layered on top of red failed-split brackets + long bracket labels + close-together shift markers with default labelRow 0.
 - Fixes applied:

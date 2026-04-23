@@ -1240,13 +1240,14 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     priorReset: true,
     log: [
       { status: "OD",  start: "00:00", end: "01:00" },
-      { status: "D",   start: "01:00", end: "06:00" },
-      { status: "SB",  start: "06:00", end: "13:00" }, // idx 2 — qualifying 7h SB
+      { status: "D",   start: "01:00", end: "05:00" },
+      { status: "OFF", start: "05:00", end: "06:00" }, // idx 2 — 1h break (distractor · too short for a pair)
+      { status: "SB",  start: "06:00", end: "13:00" }, // idx 3 — qualifying 7h SB
       { status: "D",   start: "13:00", end: "17:00" },
-      { status: "OFF", start: "17:00", end: "20:00" }, // idx 4 — qualifying 3h OFF
+      { status: "OFF", start: "17:00", end: "20:00" }, // idx 5 — qualifying 3h OFF
       { status: "OD",  start: "20:00", end: "24:00" },
     ],
-    qualifyingBlockIdx: [2, 4],
+    qualifyingBlockIdx: [3, 5],
     validSplit: true,
     splitType: "7+3",
     violation11: false,
@@ -1256,8 +1257,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     shiftStartMin: 13 * 60,  // 13:00 — end of Period A (7h SB · first qualifying segment)
     shiftEndMin: 17 * 60,    // 17:00 — beginning of Period B (3h OFF · second qualifying segment)
     explanation: {
-      qualifying: "This log has exactly one Sleeper Berth block of at least 7 hrs (06-13) and exactly one Off-Duty block of at least 2 hrs (17-20), so the pairing is unambiguous. Under §395.1(g)(1)(ii) the SB period must be ≥7h and the other must be ≥2h SB/OFF, combined ≥10h.",
-      shift: "CVSA Split-Sleeper rule: shift STARTS at 13:00 (end of the FIRST qualifying segment — the 7h SB) and ENDS at 17:00 (beginning of the SECOND qualifying segment — the 3h OFF). The 1h OD + 5h D before 06:00 belong to the PRIOR shift; the 4h OD after 20:00 begins ANOTHER new shift.",
+      qualifying: "The 7h SB (06-13) and the 3h OFF (17-20) are the only two blocks that satisfy §395.1(g)(1)(ii). The 1h OFF at 05-06 is too short to be either segment (Period A requires ≥7h SB, Period B requires ≥2h SB/OFF) — it's just an on-duty break, not part of the split.",
+      shift: "CVSA Split-Sleeper rule: shift STARTS at 13:00 (end of the FIRST qualifying segment — the 7h SB) and ENDS at 17:00 (beginning of the SECOND qualifying segment — the 3h OFF). The 1h OD + 4h D before 05:00, plus the 1h OFF break and the work before Period A, belong to the PRIOR shift; the 4h OD after 20:00 begins ANOTHER new shift.",
       split: "Valid split. The 7h SB meets the minimum sleeper-berth requirement. The 3h OFF meets the minimum 2-hour pair. Combined = 10 hours. Order doesn't matter.",
       violation: "No violation. Between CVSA shift START (13:00) and END (17:00), driving = 4h (under 11) and on-duty = 4h (under 14).",
       hours: "Counted between CVSA shift START (13:00) and END (17:00): 4h D (13-17). Toward 14 = 4h. Toward 11 = 4h.",
@@ -1268,27 +1269,29 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     prompt: "Same question — identify the qualifying split-sleeper periods in this log.",
     priorReset: true,
     log: [
-      { status: "SB",  start: "00:00", end: "08:00" }, // idx 0 — 8h SB (Period A · first segment)
+      { status: "SB",  start: "00:00", end: "08:00" },       // idx 0 — qualifying 8h SB (Period A · first segment)
       { status: "D",   start: "08:00", end: "12:00" },
       { status: "OD",  start: "12:00", end: "13:00" },
-      { status: "D",   start: "13:00", end: "21:00" },
-      { status: "OFF", start: "21:00", end: "24:00" }, // idx 4 — 3h OFF (Period B · second segment, ≥2h)
+      { status: "D",   start: "13:00", end: "17:00" },
+      { status: "OFF", start: "17:00", end: "17:30" },       // idx 4 — 30-min break (§395.3(a)(3)(ii) · NOT a split segment)
+      { status: "D",   start: "17:30", end: "21:00" },
+      { status: "OFF", start: "21:00", end: "24:00" },       // idx 6 — qualifying 3h OFF (Period B · second segment, ≥2h)
     ],
-    qualifyingBlockIdx: [0, 4],
+    qualifyingBlockIdx: [0, 6],
     validSplit: true,
     splitType: "8+2",
     violation11: true,
     violation14: false,
-    counted14Hours: 13,
-    counted11Hours: 12,
+    counted14Hours: 12.5,
+    counted11Hours: 11.5,
     shiftStartMin: 8 * 60,   // 08:00 — end of Period A (8h SB · first qualifying segment)
     shiftEndMin: 21 * 60,    // 21:00 — beginning of Period B (3h OFF · second qualifying segment)
     explanation: {
-      qualifying: "The 8h SB from 00:00-08:00 is the ≥7h Sleeper Berth period (first segment). The 3h OFF from 21:00-24:00 satisfies the ≥2h pair (second segment). Combined = 11h, meeting the ≥10h total under §395.1(g)(1)(ii).",
+      qualifying: "The 8h SB (00-08) is the ≥7h Sleeper Berth period (first segment). The 3h OFF (21-24) satisfies the ≥2h pair (second segment). Combined = 11h, meeting the ≥10h total under §395.1(g)(1)(ii). The 30-min OFF at 17:00 is the mandatory §395.3(a)(3)(ii) break — it's too short (<2h) to be a qualifying split segment and would never pair with the 8h SB.",
       shift: "CVSA Split-Sleeper rule: shift STARTS at 08:00 (end of the 8h SB · first qualifying segment) and ENDS at 21:00 (beginning of the 3h OFF · second qualifying segment).",
       split: "Valid split — 8h SB satisfies the ≥7h Sleeper Berth requirement and the 3h OFF satisfies the ≥2h pair. Combined = 11 hrs.",
-      violation: "11-hr DRIVING VIOLATION. Between CVSA shift START (08:00) and END (21:00), driving = 4h (08-12) + 8h (13-21) = 12h. That exceeds the 11-hr limit. Total on-duty counted = 13h (under 14, so no 14-hr violation).",
-      hours: "Counted between CVSA shift START (08:00) and END (21:00): 4h D (08-12) + 1h OD (12-13) + 8h D (13-21) = 13h on-duty. Toward 14 = 13h. Toward 11 (driving only) = 4 + 8 = 12h — 1h over the limit.",
+      violation: "11-hr DRIVING VIOLATION. Between CVSA shift START (08:00) and END (21:00), driving = 4h (08-12) + 4h (13-17) + 3.5h (17:30-21) = 11.5h. That exceeds the 11-hr limit. Total on-duty counted = 12.5h (under 14, so no 14-hr violation).",
+      hours: "Counted between CVSA shift START (08:00) and END (21:00), excluding the 30-min break: 4h D (08-12) + 1h OD (12-13) + 4h D (13-17) + 3.5h D (17:30-21) = 12.5h on-duty. Toward 14 = 12.5h. Toward 11 (driving only) = 4 + 4 + 3.5 = 11.5h — 0.5h over the limit.",
     },
   },
   {
