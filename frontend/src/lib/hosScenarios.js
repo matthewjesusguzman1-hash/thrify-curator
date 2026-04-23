@@ -845,7 +845,7 @@ export const SPLIT_LEARN_SCENARIOS = [
   },
   {
     id: "SL4",
-    title: "Invalid · 8h OFF + 2h SB (wrong order)",
+    title: "Invalid · 8h OFF + 2h SB (wrong category — no ≥7h in Sleeper Berth)",
     log: [
       { status: "OD",  start: "00:00", end: "02:00" },
       { status: "D",   start: "02:00", end: "08:00" },
