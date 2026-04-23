@@ -53,16 +53,15 @@ function LearnTab() {
     <div className="space-y-3">
       <div className="bg-white rounded-xl border border-[#E2E8F0] p-4">
         <p className="text-[12.5px] text-[#334155] leading-relaxed">
-          A split-sleeper pairing breaks the 10-hr reset into two qualifying rest periods.
-          Hours spent inside a <span className="font-bold text-[#10B981]">qualifying rest period</span> pause
-          BOTH the 11-hr driving clock AND the 14-hr work-shift clock.
-          Hours spent in <span className="font-bold text-[#D4AF37]">on-duty or driving segments</span> count toward both limits.
-          Valid pairing (<a href="https://www.ecfr.gov/current/title-49/section-395.1" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR §395.1(g)(1)(ii)</a>): <span className="font-bold">at least 7 hrs in the Sleeper Berth</span> paired with <span className="font-bold">at least 2 hrs in the Sleeper Berth or Off Duty</span>, combined totaling <span className="font-bold">at least 10 hrs</span>. The two periods may occur <span className="font-bold">in any order</span>. Common examples: 7+3, 8+2, 7.5+2.5 — all qualify.
+          A split-sleeper pairing is the <span className="font-bold">equivalent of a 10-hour reset</span> taken as two rest periods instead of one. Per <a href="https://www.ecfr.gov/current/title-49/section-395.1" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR §395.1(g)(1)(ii)</a>: <span className="font-bold">≥7 consecutive hours in the Sleeper Berth</span> paired with <span className="font-bold">≥2 consecutive hours in the Sleeper Berth or Off Duty</span>, combined totaling <span className="font-bold">≥10 hrs</span>, in <span className="font-bold">any order</span>. Examples: 7+3, 8+2, 7.5+2.5 — all qualify.
+        </p>
+        <p className="text-[12.5px] text-[#334155] leading-relaxed mt-2">
+          The wall-clock does <span className="font-bold">NOT</span> pause. Per §395.1(g)(1)(ii)(E), the time spent inside qualifying rest periods is <span className="font-bold text-[#10B981]">excluded from the 11-hr and 14-hr calculations</span> — in other words, those rest hours simply don't count toward either limit. Hours in <span className="font-bold text-[#D4AF37]">driving or on-duty segments</span> still count toward both.
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 px-1">
-        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#10B981]" /><p className="text-[10.5px] text-[#475569] font-bold">Qualifying rest</p></div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#10B981]" /><p className="text-[10.5px] text-[#475569] font-bold">Excluded from 11 &amp; 14</p></div>
         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#D4AF37]" /><p className="text-[10.5px] text-[#475569] font-bold">Counts toward 11 &amp; 14</p></div>
       </div>
 
