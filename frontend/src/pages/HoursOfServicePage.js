@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info,
-  Eye, Save, ClipboardList, HelpCircle, Clock,
+  Eye, Save, ClipboardList, HelpCircle, Clock, GraduationCap, Flame,
   Lightbulb, X, Share2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -408,6 +408,25 @@ export default function HoursOfServicePage() {
       )}
 
       <main className="max-w-3xl mx-auto px-3 sm:px-6 py-3 pb-16 space-y-3">
+
+        {/* TRAINING CTA — prominent, gold/navy, single tap to the training zone */}
+        <button
+          onClick={() => navigate("/hours-of-service/training")}
+          className="w-full rounded-xl border border-[#D4AF37]/40 bg-gradient-to-r from-[#002855] to-[#003366] hover:from-[#001a3a] hover:to-[#002855] text-white px-3 py-2.5 flex items-center gap-3 transition-all shadow-sm active:scale-[0.99]"
+          data-testid="hos-training-cta"
+        >
+          <div className="w-9 h-9 rounded-lg bg-[#D4AF37] text-[#002855] flex items-center justify-center flex-shrink-0">
+            <GraduationCap className="w-5 h-5" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Log Book Training</p>
+              <Flame className="w-3 h-3 text-[#F59E0B]" />
+            </div>
+            <p className="text-[11px] text-white/70 leading-tight">5 drills · NASI-A pp. 93–196 · Earn badges, build streaks</p>
+          </div>
+          <ChevronLeft className="w-4 h-4 text-white/60 rotate-180" />
+        </button>
 
         {/* VERDICT BANNER — big, clear answer up top */}
         {verdict && (

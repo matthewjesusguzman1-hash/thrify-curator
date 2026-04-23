@@ -57,11 +57,8 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
   - Audit coordinate math in `renderEntryBlob` (PhotoAnnotator.js) — non-active queue entries skip annotation bake; need to persist each entry's `imgDimensions` at annotation time so multi-photo batches stay aligned.
   - Decide whether to keep the dual entry points (Quick Photos preview → Annotate vs. /photo-annotator entry screen) or collapse to one canonical flow.
   - Consider an "Unassign / back to Quick Photos" action on inspection photos so annotated shots can be re-edited.
-- **P1**: **HOS Log Book Training area** — add a guided practice zone inside the 60/70 Hour Calculator so inspectors can train on:
-  - Pairing rest breaks correctly (10-hr off-duty reset, 30-min break, split berth 8/2 and 7/3)
-  - Counting recap hours (60/7 passenger and 70/8 property rolling windows)
-  - OOS triggers and recovery timers (34-hr restart)
-  - Scoring quiz mode with canned scenarios + "explain the math" after each answer. Should live as a new tab or secondary route under `/hours-of-service/training` so it doesn't clutter the main calculator.
+- **P1**: **HOS Log Book Training** — ✅ **SHIPPED 2026-02-23**. Built from NASI-A 2024 Part A Participant Manual (pp. 93–196, stored in `/app/memory/references/hos-section.pdf`). Six modules: Duty Status Classifier, 14-Hour Window, 11-Hour Driving, 30-Minute Break, 70-Hour Recap, Split Sleeper Trainer. Tap-to-mark interactive ELD grids, XP/streak/badge system, per-badge progress persistence. Entry point: gold CTA on `/hours-of-service`. Files: `/app/frontend/src/pages/HosTrainingPage.js`, `/app/frontend/src/lib/hosRules.js`, `/app/frontend/src/lib/hosScenarios.js`, `/app/frontend/src/components/hos/EldGrid.js`.
+  - **Future expansions**: passenger-carrying rules, short-haul exemptions, adverse driving, RODS falsification drill. Source material is in the PDF (pp. 132–196 covers more than we mined).
 - **P1**: Offline/cached mode for field use (cache violation tree + last N inspections for offline access)
 - **P2**: Refactor `server.py` into modular routes (`/app/backend/routes/*`)
 - **P2**: Refactor `BridgeChartPage.js` / `HoursOfServicePage.js` / `HazMatHelpers.js` into smaller components
