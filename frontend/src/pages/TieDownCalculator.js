@@ -628,7 +628,8 @@ export default function TieDownCalculator() {
                     )}
                   </div>
 
-                  {/* PHOTOS */}
+                  {/* PHOTOS — hidden pre-launch */}
+                  {false && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Photos ({art.photos.length})</p>
@@ -648,6 +649,7 @@ export default function TieDownCalculator() {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               )}
             </div>

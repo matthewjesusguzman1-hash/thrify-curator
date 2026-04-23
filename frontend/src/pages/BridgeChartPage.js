@@ -996,7 +996,7 @@ export default function BridgeChartPage() {
           <div className="flex items-center gap-1">
             {tab === "record" && (
               <>
-                <Button variant="ghost" size="sm" onClick={() => photoRef.current?.click()} className="text-white hover:bg-white/10 h-8 px-2" title="Add photos" data-testid="header-photo-btn"><Camera className="w-4 h-4" /></Button>
+                {/* Bridge Chart "Add photos" hidden pre-launch */}
                 <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhoto} />
               </>
             )}

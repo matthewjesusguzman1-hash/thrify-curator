@@ -132,7 +132,9 @@ const NAV_BUTTONS = [
   { id: "bridge", label: "Bridge", icon: Scale, path: "/bridge-chart", style: "primary", testid: "bridge-chart-nav-btn" },
   { id: "hos", label: "HOS", icon: Hourglass, path: "/hours-of-service", style: "primary", testid: "hos-nav-btn", liteAllowed: true },
   { id: "hazmat", label: "HazMat", short: "HM", icon: null, path: "/hazmat-worksheet", style: "primary", testid: "hazmat-nav-btn" },
-  { id: "photo", label: "Photos", icon: Camera, path: "/quick-photos", style: "outline", testid: "photo-annotator-nav-btn", liteAllowed: true },
+  // Photos nav hidden pre-launch per agency review. Code preserved at
+  // /app/frontend/src/pages/QuickPhotos.js — re-enable this entry when ready.
+  // { id: "photo", label: "Photos", icon: Camera, path: "/quick-photos", style: "outline", testid: "photo-annotator-nav-btn", liteAllowed: true },
   { id: "inspections", label: "Inspections", icon: ClipboardList, path: "/inspections", style: "outline", testid: "inspections-nav-btn", liteAllowed: true },
   { id: "resources", label: "Resources", icon: null, kind: "resources", style: "gold-outline", testid: "cvsa-btn", liteAllowed: true },
 ];
@@ -301,14 +303,7 @@ function ChangePinPopover({ badge, navigate, logout, enabledButtons, setEnabledB
         <Settings2 className="w-3.5 h-3.5 text-[#64748B]" />
         Customize Header
       </button>
-      <button
-        onClick={openStorageInfo}
-        className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"
-        data-testid="about-storage-link"
-      >
-        <HardDrive className="w-3.5 h-3.5 text-[#64748B]" />
-        About Photo Storage
-      </button>
+      {/* "About Photo Storage" hidden pre-launch — returns when photo flow is re-enabled. */}
       <button
         onClick={() => setMode("change")}
         className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-[#F1F5F9] text-xs text-[#334155] transition-colors"

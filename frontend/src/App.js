@@ -12,7 +12,7 @@ import TieDownCalculator from "./pages/TieDownCalculator";
 import HazMatWorksheet from "./pages/HazMatWorksheet";
 // Photo Annotator hidden for pre-launch — pending full QA. Re-enable when ready.
 // import PhotoAnnotator from "./pages/PhotoAnnotator";
-import QuickPhotos from "./pages/QuickPhotos";
+// import QuickPhotos from "./pages/QuickPhotos";  // hidden pre-launch
 import Level3InspectionTool from "./pages/Level3InspectionTool";
 import AdminPage from "./pages/AdminPage";
 import BridgeChartPage from "./pages/BridgeChartPage";
@@ -34,10 +34,9 @@ function AppRoutes() {
       <Route path="/inspections/:id" element={<InspectionDetail />} />
       <Route path="/calculator" element={<TieDownCalculator />} />
       <Route path="/hazmat-worksheet" element={<HazMatWorksheet />} />
-      {/* Photo Annotator hidden pre-launch — direct URL falls through to
-          Quick Photos so linked photos still land somewhere useful. */}
-      <Route path="/photo-annotator" element={<Navigate to="/quick-photos" replace />} />
-      <Route path="/quick-photos" element={<QuickPhotos />} />
+      {/* Photo pages hidden pre-launch — any deep link falls back to Inspections. */}
+      <Route path="/photo-annotator" element={<Navigate to="/inspections" replace />} />
+      <Route path="/quick-photos" element={<Navigate to="/inspections" replace />} />
       <Route path="/level3" element={<Level3InspectionTool />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/bridge-chart" element={<BridgeChartPage />} />

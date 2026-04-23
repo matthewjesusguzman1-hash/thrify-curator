@@ -601,8 +601,8 @@ export function InspectionReportContent({ inspection }) {
         </div>
       )}
 
-      {/* Additional Photos (inspector-taken camera photos) */}
-      {(inspection.general_photos || []).length > 0 && (
+      {/* Additional Photos hidden pre-launch — agency review pending. */}
+      {false && (inspection.general_photos || []).length > 0 && (
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 13, fontWeight: "bold", color: "#002855", marginBottom: 6, borderBottom: "2px solid #D4AF37", paddingBottom: 4 }}>
             Additional Photos ({inspection.general_photos.length})

@@ -349,48 +349,30 @@ export default function InspectionDetail() {
                     </button>
                   )}
 
-                  {/* Photos */}
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {item.photos?.map((photo) => (
-                      <div key={photo.photo_id} className="relative group">
-                        <DevicePhoto
-                          photoId={photo.photo_id}
-                          alt={photo.original_filename}
-                          className="w-16 h-16 object-cover rounded-md border cursor-pointer"
-                          onClick={() => setPreviewPhoto(photo.photo_id)}
-                        />
-                        {photo.annotations?.length > 0 && (
-                          <div className="absolute top-0 left-0 w-3 h-3 bg-[#D4AF37] rounded-full border border-white" title="Has annotations" />
-                        )}
-                        <div className="absolute -top-1 -right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 sm:opacity-100">
-                          {/* Annotator hidden until it passes full QA. Re-enable when ready. */}
-                          {false && (
+                  {/* Photos hidden pre-launch — existing photos still render,
+                      new-photo UI is suppressed. */}
+                  {(item.photos?.length > 0) && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {item.photos.map((photo) => (
+                        <div key={photo.photo_id} className="relative group">
+                          <DevicePhoto
+                            photoId={photo.photo_id}
+                            alt={photo.original_filename}
+                            className="w-16 h-16 object-cover rounded-md border cursor-pointer"
+                            onClick={() => setPreviewPhoto(photo.photo_id)}
+                          />
+                          <div className="absolute -top-1 -right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 sm:opacity-100">
                             <button
-                              onClick={() => navigate(`/photo-annotator?inspection=${inspection.id}&photo=${photo.photo_id}`)}
-                              className="w-4 h-4 bg-[#002855] text-white rounded-full flex items-center justify-center text-[8px]"
-                              title="Edit annotations"
-                              data-testid={`edit-photo-${photo.photo_id}`}
+                              onClick={() => removePhoto(item.item_id, photo.photo_id)}
+                              className="w-4 h-4 bg-[#DC2626] text-white rounded-full flex items-center justify-center text-[8px]"
                             >
-                              <Pencil className="w-2.5 h-2.5" />
+                              <X className="w-2.5 h-2.5" />
                             </button>
-                          )}
-                          <button
-                            onClick={() => removePhoto(item.item_id, photo.photo_id)}
-                            className="w-4 h-4 bg-[#DC2626] text-white rounded-full flex items-center justify-center text-[8px]"
-                          >
-                            <X className="w-2.5 h-2.5" />
-                          </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Add photo button */}
-                  <label className="inline-flex items-center gap-1 text-xs text-[#94A3B8] hover:text-[#002855] cursor-pointer transition-colors">
-                    <Camera className="w-3 h-3" />
-                    <span>Add photo</span>
-                    <input type="file" accept="image/*" capture="environment" onChange={(e) => handlePhotoUpload(item.item_id, e)} className="hidden" />
-                  </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -495,11 +477,7 @@ export default function InspectionDetail() {
                         </div>
                       ))}
                     </div>
-                    <label className="inline-flex items-center gap-1 text-xs text-[#94A3B8] hover:text-[#002855] cursor-pointer transition-colors mt-1">
-                      <Camera className="w-3 h-3" />
-                      <span>Add photo</span>
-                      <input type="file" accept="image/*" capture="environment" onChange={(e) => handleAssessmentPhotoUpload(a.assessment_id, e)} className="hidden" />
-                    </label>
+                    {/* Tie-Down assessment "Add photo" hidden pre-launch */}
                     <button
                       onClick={() => navigate("/calculator", { state: { recreateTiedown: a } })}
                       className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-[#002855] text-white text-[11px] font-bold hover:bg-[#001a3a] transition-colors"
@@ -859,8 +837,8 @@ export default function InspectionDetail() {
           </div>
         )}
 
-        {/* Additional Photos — inspector-taken camera photos */}
-        {(inspection.general_photos || []).length > 0 && (
+        {/* Additional Photos hidden pre-launch — agency review pending. */}
+        {false && (inspection.general_photos || []).length > 0 && (
           <div data-testid="weight-photos-section">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
