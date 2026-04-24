@@ -187,12 +187,13 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
             <rect key={`sh${i}`} x={x} y={HEADER_H} width={w} height={4 * ROW_H} fill={s.color || "#D4AF37"} opacity="0.16" />
           );
         })}
-        {/* Hour labels */}
+        {/* Hour labels — military time (00-23). Hide 24 to prevent crowding the
+         * right edge; the 23 label suffices to convey end-of-day. */}
         {Array.from({ length: HOURS + 1 }).map((_, h) => {
           const x = LABEL_W + h * HOUR_W;
-          const label = h === 0 ? "Mid" : h === 12 ? "Noon" : h === 24 ? "" : (h > 12 ? h - 12 : h);
+          const label = h === 24 ? "" : String(h).padStart(2, "0");
           return (
-            <text key={`h${h}`} x={x} y={12} textAnchor="middle" fontSize={compact ? "8" : "9"} fill="#475569" fontFamily="sans-serif">{label}</text>
+            <text key={`h${h}`} x={x} y={12} textAnchor="middle" fontSize={compact ? "8" : "9"} fill="#475569" fontFamily="sans-serif" fontFeatureSettings="'tnum'">{label}</text>
           );
         })}
 
