@@ -77,6 +77,26 @@ function LearnTab() {
         </p>
       </div>
 
+      {/* CVSA enforcement principle — taught up front so inspectors see it
+       * before any specific example, and also so they know every example
+       * selected the pairing that most benefits the driver. */}
+      <div
+        className="rounded-md bg-[#002855] text-white px-3 py-2.5 shadow-sm border-l-[3px] border-[#D4AF37]"
+        data-testid="roadside-principle"
+      >
+        <div className="flex items-start gap-2">
+          <span className="inline-flex items-center gap-1 bg-[#D4AF37] text-[#002855] text-[9.5px] font-black uppercase tracking-widest rounded-sm px-1.5 py-[2px] flex-shrink-0 mt-[2px]">
+            <Target className="w-2.5 h-2.5" strokeWidth={3} /> Roadside
+          </span>
+          <div className="text-[13px] leading-snug space-y-1">
+            <p className="font-bold">Pick the pairing that benefits the driver the most.</p>
+            <p className="text-white/90">
+              A driver can pair <span className="font-bold">any two qualifying rest periods</span> on the log. If a violation exists under the straight 14-hr or 11-hr rule, look for <span className="font-bold">every</span> legitimate split combination (any ≥7h SB + any ≥2h SB/OFF, combined ≥10h) — if applying one of them makes the violation go away or reduces the counted hours, the driver gets it. When two pairings both qualify, use the one with the lower counted D/OD between its segments. See <span className="font-bold text-[#D4AF37]">Example 1</span> for a worked case.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-2 px-1">
         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#10B981]" /><p className="text-[10.5px] text-[#475569] font-bold">Excluded from 11 &amp; 14</p></div>
         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#D4AF37]" /><p className="text-[10.5px] text-[#475569] font-bold">Counts toward 11 &amp; 14</p></div>

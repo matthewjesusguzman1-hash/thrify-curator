@@ -808,6 +808,37 @@ export const EXEMPTIONS_OTHERS = [
  * spans that count toward the 11 & 14 clocks; `description` explains the math. */
 export const SPLIT_LEARN_SCENARIOS = [
   {
+    id: "SL0",
+    title: "Inspector principle · pick the pairing that benefits the driver most",
+    priorReset: true,
+    log: [
+      { status: "OD",  start: "00:00", end: "01:00" },
+      { status: "D",   start: "01:00", end: "06:00" }, // 5h D pre-split
+      { status: "SB",  start: "06:00", end: "13:00" }, // 7h SB — Period A (only qualifying SB in log)
+      { status: "D",   start: "13:00", end: "17:00" }, // 4h D current
+      { status: "OFF", start: "17:00", end: "19:00" }, // 2h OFF — Period B candidate #1 ← USE THIS
+      { status: "D",   start: "19:00", end: "22:00" }, // 3h D (part of NEW shift after pair A completes)
+      { status: "OFF", start: "22:00", end: "24:00" }, // 2h OFF — Period B candidate #2 (also qualifies, but worse pick)
+    ],
+    qualifyingBrackets: [
+      { startMin: 6 * 60,  endMin: 13 * 60, label: "7h SB ✓ Period A", color: "#10B981" },
+      { startMin: 17 * 60, endMin: 19 * 60, label: "2h OFF ✓ use this", color: "#10B981" },
+      { startMin: 22 * 60, endMin: 24 * 60, label: "2h OFF (qualifies but worse)", color: "#94A3B8" },
+    ],
+    countedBrackets: [
+      { startMin: 0,       endMin: 6 * 60,  label: "Pre-split · 6h", color: "#64748B" },
+      { startMin: 13 * 60, endMin: 17 * 60, label: "Current · 4h D ✓", color: "#D4AF37" },
+    ],
+    shiftMarkers: [
+      { min: 0,        kind: "start", color: "#64748B", label: "Pre-split START · 00:00", labelRow: 0 },
+      { min: 6 * 60,   kind: "end",   color: "#64748B", label: "Pre-split END · 06:00", labelRow: 1 },
+      { min: 13 * 60,  kind: "start",                    label: "Split START · 13:00", labelRow: 0 },
+      { min: 17 * 60,  kind: "end",                      label: "Split END · 17:00", labelRow: 1 },
+    ],
+    description:
+      "A driver can pair any two qualifying rest periods — the inspector must pick the one that benefits the driver the most. This log has TWO Period B candidates (the 2h OFF at 17-19 AND the 2h OFF at 22-24) that could both pair with the 7h SB at 06-13. Under straight 14/11-hr rules, this log has BOTH a 14-hr violation (driving past 14:00) and an 11-hr violation (total driving since the prior reset = 5 + 4 + 3 = 12h, over 11). \n\nPairing A — 7h SB + 2h OFF at 17-19 — clears BOTH violations: current shift is 13:00 → 17:00 counting just 4h D, the pair completes at 19:00 and a fresh shift begins, and the 3h D at 19-22 sits inside its own new 11-hr limit. \n\nPairing B — 7h SB + 2h OFF at 22-24 — only clears the 14-hr violation. Total driving accumulated BEFORE the pair completes is 5 + 4 + 3 = 12h, still an 11-hr driving violation. \n\nBecause A clears both and B clears only one, the driver gets pairing A. Never enforce a sub-optimal pairing when a better one is legitimately available on the log.",
+  },
+  {
     id: "SL1",
     title: "Legal pairing · 7h SB + 3h OFF",
     priorReset: true,
