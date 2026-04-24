@@ -379,60 +379,24 @@ export const ELD_TOPICS = [
 
   {
     id: "save-to-dataqs",
-    title: "Save the ELD File to DataQs / RDR",
-    short: "Required post-inspection best practice",
-    cfr: "FMCSA eRODS · DataQs (DPSMS)",
+    title: "Save the ELD Data File",
+    short: "Critical post-inspection step",
+    cfr: "FMCSA eRODS best practice",
     color: "#15803D",
     summary:
-      "Every time you transfer an ELD data file at roadside, the file lives temporarily in eRODS. It is CRITICAL to save your own copy of that file locally — either through eRODS export or your state's inspection platform. If the driver or carrier later files a Request for Data Review (RDR) through DataQs, your saved file is the ONLY authoritative evidence of what the ELD showed at the moment of inspection.",
+      "Saving the ELD data file after every transfer is extremely important. The file in eRODS is a working copy; your saved local copy is the authoritative record of what the ELD showed at the moment of inspection. If the file is ever needed later, you will need your saved copy.",
     sections: [
       {
-        heading: "Why saving matters",
-        body: "eRODS retains transfer files for a limited window. Once that window expires, the file may be purged from the cloud tier or become difficult to retrieve. When a DataQs RDR is opened months later, if the original ELD file is gone, the violation becomes much harder to defend — and easy to overturn.",
+        heading: "How to save in eRODS",
+        body: "In eRODS, the option to save the ELD data file requires the user to click **File → Save Data File**. Do this on every contact — not just inspections with violations.",
       },
       {
-        heading: "Save on EVERY contact",
-        body: "Every ELD data transfer. Every driver. Every time. Not just inspections with violations. RDRs can be filed against ANY inspection, including clean ones, and a saved file is your best defense. If the driver later claims they 'never had that log' or 'the device was malfunctioning', your saved copy settles it.",
+        heading: "Why this matters",
+        body: "Saved copies can be extremely important later. If the data is ever needed — for any reason — your saved file is the authoritative record. Without it, reconstructing what the ELD showed at roadside becomes significantly harder, and sometimes impossible.",
       },
       {
-        heading: "How to save (standard workflow)",
-        body: "Exact steps vary by state and the inspection platform you use (Aspen/ISS, SafetyNet, state-specific), but the common pattern is:",
-        bullets: [
-          "After eRODS confirms the transfer, click the EXPORT or DOWNLOAD option to pull the raw .csv or .xml file to your device.",
-          "Rename the file with the inspection number + driver last name + date (e.g., `2026-01-15_SMITH_INSP-12345.csv`).",
-          "Save to your official case-file folder — NOT your downloads folder. Transfer to department storage / evidence share per your agency's digital evidence policy.",
-          "If your inspection platform integrates with eRODS (most do), verify the ELD file is linked to the inspection record before you close the case.",
-        ],
-      },
-      {
-        heading: "When a Request for Data Review (RDR) comes in",
-        body: "Carriers and drivers file RDRs through DataQs when they believe an inspection finding is incorrect. DataQs forwards the RDR to your state, often months after the inspection. When the RDR hits your queue:",
-        bullets: [
-          "Retrieve your saved ELD file (that's why you saved it).",
-          "Compare the file to the citation — does the data support what you wrote?",
-          "Upload/attach the saved ELD file to the DataQs response as primary evidence.",
-          "Respond with specific event IDs, timestamps, and the annotation pattern that supported the violation.",
-        ],
-      },
-      {
-        heading: "If you didn't save the file",
-        body: "If a DataQs RDR comes in and you never saved the file, attempt these in order:",
-        bullets: [
-          "Log into eRODS and search by the inspection number and date — the file may still be retained server-side.",
-          "Contact the carrier and request the ELD data for that driver-date range (they're required to retain 6 months).",
-          "Contact the ELD manufacturer support desk with the registration ID — some manufacturers retain transfer logs.",
-          "As a last resort, rely on your inspection-report screenshots and field notes. This is significantly weaker and often results in the violation being vacated.",
-        ],
-      },
-      {
-        heading: "Quick habits that make this automatic",
-        body: "Practical tips that turn saving into muscle memory:",
-        bullets: [
-          "Make 'export ELD file' the FIRST step after every transfer, before you move on to the next inspection phase.",
-          "Use a consistent filename template — mistakes and missing files drop once the format is automatic.",
-          "Back up your case-file folder to department storage DAILY, not weekly.",
-          "If your agency uses a mobile inspection tablet, check that it auto-syncs ELD files to the case record; don't assume — verify.",
-        ],
+        heading: "Make it a habit",
+        body: "Save on EVERY contact. Every driver. Every time. Build the habit so you never have to wish you'd saved a file you didn't.",
       },
     ],
   },
