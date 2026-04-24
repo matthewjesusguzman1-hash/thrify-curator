@@ -835,9 +835,9 @@ export const SPLIT_LEARN_SCENARIOS = [
       { min: 13 * 60,  kind: "start",                    label: "Split START · 13:00", labelRow: 0 },
       { min: 17 * 60,  kind: "end",                      label: "Split END · 17:00", labelRow: 1 },
     ],
-    pairingNote: "TWO qualifying Period B candidates (2h OFF at 17-19 AND 2h OFF at 22-24). The 17-19 pair is the one we drew because it clears both the 14-hr AND the 11-hr violation. The 22-24 pair only clears the 14-hr but leaves 12h total driving since the prior reset — that's still an 11-hr violation, so the driver doesn't get that pairing.",
+    pairingNote: "TWO qualifying Period B candidates (2h OFF at 17-19 AND 2h OFF at 22-24). The 17-19 pair is the one we drew because it clears both the 14-hr AND the 11-hr violation. The 22-24 pair only clears the 14-hr but leaves 12h total driving before the pair completes — that's still an 11-hr violation, so the driver doesn't get that pairing.",
     description:
-      "A driver can pair any two qualifying rest periods — the inspector must pick the one that benefits the driver the most. This log has TWO Period B candidates (the 2h OFF at 17-19 AND the 2h OFF at 22-24) that could both pair with the 7h SB at 06-13. Under straight 14/11-hr rules, this log has BOTH a 14-hr violation (driving past 14:00) and an 11-hr violation (total driving since the prior reset = 5 + 4 + 3 = 12h, over 11). \n\nPairing A — 7h SB + 2h OFF at 17-19 — clears BOTH violations: current shift is 13:00 → 17:00 counting just 4h D, the pair completes at 19:00 and a fresh shift begins, and the 3h D at 19-22 sits inside its own new 11-hr limit. \n\nPairing B — 7h SB + 2h OFF at 22-24 — only clears the 14-hr violation. Total driving accumulated BEFORE the pair completes is 5 + 4 + 3 = 12h, still an 11-hr driving violation. \n\nBecause A clears both and B clears only one, the driver gets pairing A. Never enforce a sub-optimal pairing when a better one is legitimately available on the log.",
+      "A driver can pair any two qualifying rest periods — the inspector must pick the one that benefits the driver the most. This log has TWO Period B candidates (the 2h OFF at 17-19 AND the 2h OFF at 22-24) that could both pair with the 7h SB at 06-13. Under straight 14/11-hr rules, this log has BOTH a 14-hr violation (driving past 14:00) and an 11-hr violation (total driving before the pair completes = 5 + 4 + 3 = 12h, over 11). \n\nPairing A — 7h SB + 2h OFF at 17-19 — clears BOTH violations: current shift is 13:00 → 17:00 counting just 4h D, the pair completes at 19:00 and a fresh shift begins, and the 3h D at 19-22 sits inside its own new 11-hr limit. \n\nPairing B — 7h SB + 2h OFF at 22-24 — only clears the 14-hr violation. Total driving accumulated BEFORE the pair completes is 5 + 4 + 3 = 12h, still an 11-hr driving violation. \n\nBecause A clears both and B clears only one, the driver gets pairing A. Never enforce a sub-optimal pairing when a better one is legitimately available on the log.",
   },
   {
     id: "SL1",
@@ -866,7 +866,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       { min: 17 * 60,  kind: "end",                      label: "Split END · 17:00", labelRow: 1 },
     ],
     pairingNote: "Only one qualifying pair exists on this log (the 7h SB at 06-13 + the 3h OFF at 17-20). Under the Example 1 principle that's automatically the most beneficial pairing — there's nothing better to compare it against.",
-    description: "Prior day ended with a full 10-hr OFF reset at 00:00, so the driver starts this day with a fresh 14-hr window (closes 14:00 if no split is taken). Shift 1 runs under the 10-hour continuous rule from 00:00 until Period A begins at 06:00 — 6h worked (1h OD + 5h D), well within 11/14. Once Period B (3h OFF, 17-20) completes, a valid 7+3 split exists under §395.1(g)(1)(ii) and CVSA procedure kicks in: the CURRENT shift is 13:00 (end of Period A · 7h SB) → 17:00 (beginning of Period B · 3h OFF) with only 4h D counted. After Period B ends at 20:00, Period A + Period B together satisfy a full 10-hr equivalent reset, so a fresh 14-hr window reopens at 20:00. Other valid splits on this log shape: 7+3, 7.5+2.5, 8+2 — any combination ≥7h SB + ≥2h SB/OFF totaling ≥10h, with the first segment fitting before the original 14h expired at 14:00.",
+    description: "This log has a valid 7+3 split under §395.1(g)(1)(ii): the 7h SB (06-13, Period A) paired with the 3h OFF (17-20, Period B) totals 10h equivalent reset. CVSA procedure kicks in: the CURRENT shift is 13:00 (end of Period A · 7h SB) → 17:00 (beginning of Period B · 3h OFF) with only 4h D counted. After Period B ends at 20:00, Period A + Period B together satisfy the full 10-hr equivalent reset, so a fresh 14-hr window reopens at 20:00. Other valid splits on this log shape: 7+3, 7.5+2.5, 8+2 — any combination ≥7h SB + ≥2h SB/OFF totaling ≥10h.",
     extraExamples: [
       {
         name: "7.5h SB + 2.5h OFF",
@@ -894,7 +894,7 @@ export const SPLIT_LEARN_SCENARIOS = [
           { min: 17 * 60 + 30,   kind: "end",                      label: "Split END · 17:30", labelRow: 1 },
         ],
         pairingNote: "Only one qualifying pair on this log (7.5h SB + 2.5h OFF). Non-whole-hour segments still qualify.",
-        description: "Prior 10h reset ends at 00:00 → fresh 14h window to 14:00. Pre-split shift 00-06 = 6h (1 OD + 5 D). Non-standard but legal 7.5+2.5 pairing (§395.1(g)(1)(ii)). CVSA split shift 13:30 → 17:30 counts 4h D. Whole-hour segments aren't required — any combination ≥7h SB + ≥2h SB/OFF totaling ≥10h qualifies.",
+        description: "Non-standard but legal 7.5+2.5 pairing under §395.1(g)(1)(ii). CVSA split shift 13:30 → 17:30 counts 4h D. Whole-hour segments aren't required — any combination ≥7h SB + ≥2h SB/OFF totaling ≥10h qualifies.",
       },
       {
         name: "Short period FIRST, then ≥7h SB",
@@ -922,7 +922,7 @@ export const SPLIT_LEARN_SCENARIOS = [
           { min: 14 * 60,  kind: "end",                      label: "Split END · 14:00", labelRow: 1 },
         ],
         pairingNote: "Only one qualifying pair (3h OFF + 7h SB). The short period just happens to sit FIRST chronologically — §395.1(g)(1)(ii) allows any order.",
-        description: "Prior 10h reset ends at 00:00 → fresh 14h window. Pre-split shift: 00-06, 6h (1 OD + 5 D). Order of segments doesn't matter under §395.1(g)(1)(ii) — here the SHORT period (3h OFF) came FIRST and the 7h SB came SECOND. CVSA split shift: 09:00 (end of first segment · 3h OFF) → 14:00 (start of second segment · 7h SB), 5h D counted.",
+        description: "Order of segments doesn't matter under §395.1(g)(1)(ii) — here the SHORT period (3h OFF, 06-09) came FIRST and the 7h SB (14-21) came SECOND. CVSA split shift: 09:00 (end of first segment · 3h OFF) → 14:00 (start of second segment · 7h SB), 5h D counted.",
       },
     ],
   },
@@ -953,7 +953,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       { min: 13 * 60, kind: "end",                      label: "Split END · 13:00", labelRow: 1 },
     ],
     pairingNote: "Only one qualifying pair on this log (the 8h SB at 13-21 + the 2h OFF at 06-08). The order happens to be reversed — short period first, long SB second — but §395.1(g)(1)(ii) doesn't care about order, so the pair stands and it's the only option anyway.",
-    description: "Prior 10h reset ends at 00:00 → fresh 14h window (closes 14:00 if no split). Pre-split shift 00-06 = 6h worked (1 OD + 5 D). The 2h OFF (06-08) came FIRST chronologically and the 8h SB (13-21) came SECOND — order doesn't matter under §395.1(g)(1)(ii). Once the 8h SB completes at 21:00, a valid 8+2 split exists and CVSA retroactively treats 08:00 (end of first segment) as the shift START and 13:00 (beginning of second segment) as the shift END for the CURRENT shift. 5h D counted. After 21:00, Period A + B combined = 10h equivalent reset — fresh 14h window reopens. Other valid splits on this shape: 7+3, 8+2, 9+2, etc.",
+    description: "The 2h OFF (06-08) came FIRST chronologically and the 8h SB (13-21) came SECOND — order doesn't matter under §395.1(g)(1)(ii). Once the 8h SB completes at 21:00, a valid 8+2 split exists and CVSA retroactively treats 08:00 (end of first segment) as the shift START and 13:00 (beginning of second segment) as the shift END for the CURRENT shift. 5h D counted. After 21:00, Period A + B combined = 10h equivalent reset — fresh 14h window reopens. Other valid splits on this shape: 7+3, 8+2, 9+2, etc.",
     extraExamples: [
       {
         name: "9h SB + 2h OFF",
@@ -982,7 +982,7 @@ export const SPLIT_LEARN_SCENARIOS = [
           { min: 12 * 60,  kind: "end",                      label: "Split END · 12:00", labelRow: 1 },
         ],
         pairingNote: "Only one qualifying pair on this log (9h SB + 2h OFF).",
-        description: "Prior 10h reset ends at 00:00 → fresh 14h window. Pre-split: 00-05, 5h (1 OD + 4 D). The SB period doesn't have to be exactly 8h — 9+2 pairing qualifies. CVSA split shift 07:00 → 12:00 counts 5h (4h D + 1h OD).",
+        description: "The SB period doesn't have to be exactly 8h — a 9+2 pairing qualifies just as well. CVSA split shift 07:00 → 12:00 counts 5h (4h D + 1h OD).",
       },
       {
         name: "8h SB FIRST, then 2h OFF",
@@ -1011,7 +1011,7 @@ export const SPLIT_LEARN_SCENARIOS = [
           { min: 18 * 60,  kind: "end",                      label: "Split END · 18:00", labelRow: 1 },
         ],
         pairingNote: "Only one qualifying pair (8h SB + 2h OFF). No other rest periods of qualifying length exist on the log.",
-        description: "Prior 10h reset ends at 00:00 → fresh 14h window. The 8h SB comes first (01-09) and the 2h OFF comes second (18-20). Pre-split shift 00-01 is only 1h OD. CVSA split shift 09:00 → 18:00 counts 9h (5h D + 1h OD + 3h D) — driving total 8h, within 11.",
+        description: "The 8h SB comes first (01-09) and the 2h OFF comes second (18-20). CVSA split shift 09:00 → 18:00 counts 9h (5h D + 1h OD + 3h D) — driving total 8h, within 11.",
       },
     ],
   },
@@ -1036,7 +1036,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       { min: 24 * 60 - 1,   kind: "continues", label: "Continues → 02:00 next day", labelRow: 1 },
     ],
     pairingNote: "No qualifying pair exists anywhere on this log — the 6h SB is below the §395.1(g)(1)(ii) ≥7h Sleeper Berth threshold, so the 4h OFF has no legitimate partner. The pairing principle doesn't help here because nothing in the log qualifies as a first segment.",
-    description: "Prior day ended with a full 10-hr OFF reset at 00:00, and the driver stayed off-duty another 12 hours (6h OFF + 6h SB) — that's simply extending the rest, NOT an attempted split, because the 6h SB alone cannot be a qualifying first segment (§395.1(g)(1)(ii) requires ≥7h SB). The shift only STARTS when the driver first goes on-duty at 12:00, and runs 14 wall-clock hours to 02:00 next day. The later 4h OFF (17-21) has no ≥7h SB to pair with, so no split ever materializes. Counted toward 11 & 14 in the visible window: 5h D (12-17) + 3h D (21-24) = 8h driving — well within limits. Takeaway: extended pre-shift rest is NOT a failed split; a failed split requires an attempted first segment AFTER the driver has started working.",
+    description: "The 6h SB alone cannot be a qualifying first segment — §395.1(g)(1)(ii) requires ≥7h SB. The shift STARTS when the driver first goes on-duty at 12:00, and runs 14 wall-clock hours to 02:00 next day. The later 4h OFF (17-21) has no ≥7h SB to pair with, so no split ever materializes. Counted toward 11 & 14 in the visible window: 5h D (12-17) + 3h D (21-24) = 8h driving — well within limits. Takeaway: a failed split needs an attempted qualifying first segment AFTER the driver has started working.",
     extraExamples: [
       {
         name: "6.5h SB + 3.5h OFF — still too short",
@@ -1051,7 +1051,7 @@ export const SPLIT_LEARN_SCENARIOS = [
         ],
         qualifyingBrackets: [],
         countedBrackets: [
-          { startMin: 0,       endMin: 6 * 60,  label: "Extra rest (prior 10h reset)", color: "#64748B" },
+          { startMin: 0,       endMin: 6 * 60,  label: "Pre-shift OFF · 6h", color: "#64748B" },
           { startMin: 11 * 60, endMin: 17 * 60 + 30, label: "6.5h SB — too short", color: "#DC2626" },
           { startMin: 20 * 60, endMin: 23 * 60 + 30, label: "3.5h OFF — no pair", color: "#DC2626" },
         ],
@@ -1060,7 +1060,7 @@ export const SPLIT_LEARN_SCENARIOS = [
           { min: 20 * 60, kind: "end",   label: "Shift END · 20:00 (14h wall-clock)", labelRow: 1 },
         ],
         pairingNote: "No qualifying pair exists. The 6.5h SB falls under the ≥7h Sleeper Berth threshold, and the 3.5h OFF has no qualifying first segment to partner. The pairing principle cannot rescue this log — the driver is over the 14.",
-        description: "Prior 10h reset ends at 00:00. Driver takes 6h extra OFF, then goes on-duty at 06:00 → shift start. This time the SB attempt (11:00-17:30) IS a split try AFTER work began, but 6.5h < 7h threshold so the pairing fails (§395.1(g)(1)(ii)). Without a valid split, the 14-hr wall-clock closes at 20:00. Driving at 23:30 = 3.5h past 14h shift end → 14-hr violation.",
+        description: "Shift starts at 06:00 (first D entry). The SB attempt (11:00-17:30) IS a split try AFTER work began, but 6.5h < 7h threshold so the pairing fails (§395.1(g)(1)(ii)). Without a valid split, the 14-hr wall-clock closes at 20:00. Driving at 23:30 = 3.5h past 14h shift end → 14-hr violation.",
       },
       {
         name: "Two SB blocks but neither is ≥7h",
@@ -1074,7 +1074,7 @@ export const SPLIT_LEARN_SCENARIOS = [
         ],
         qualifyingBrackets: [],
         countedBrackets: [
-          { startMin: 0,       endMin: 6 * 60,  label: "Extra rest (prior 10h reset)", color: "#64748B" },
+          { startMin: 0,       endMin: 6 * 60,  label: "Pre-shift OFF · 6h", color: "#64748B" },
           { startMin: 12 * 60, endMin: 17 * 60, label: "5h SB — too short", color: "#DC2626" },
           { startMin: 19 * 60, endMin: 24 * 60, label: "5h SB — too short", color: "#DC2626" },
         ],
@@ -1083,7 +1083,7 @@ export const SPLIT_LEARN_SCENARIOS = [
           { min: 20 * 60, kind: "end",   label: "Shift END · 20:00 (14h)", labelRow: 1 },
         ],
         pairingNote: "Two SB blocks but neither is ≥7h, so no qualifying first segment exists — nothing to pair. Summing two short SB blocks is NOT a valid split; §395.1(g)(1)(ii) requires one continuous ≥7h SB period.",
-        description: "Prior 10h reset ends at 00:00. Shift starts at 06:00 (first D). Two SB attempts in-shift (5h + 5h), but neither reaches the ≥7h Sleeper-Berth threshold — the rule isn't 'two periods totaling 10h', it requires ONE of the two periods to be at least 7h in the Sleeper Berth (§395.1(g)(1)(ii)). No valid split → 14h wall-clock applies, closing at 20:00.",
+        description: "Shift starts at 06:00 (first D). Two SB attempts in-shift (5h + 5h), but neither reaches the ≥7h Sleeper-Berth threshold — the rule isn't 'two periods totaling 10h', it requires ONE of the two periods to be at least 7h in the Sleeper Berth (§395.1(g)(1)(ii)). No valid split → 14h wall-clock applies, closing at 20:00.",
       },
     ],
   },
@@ -1109,7 +1109,7 @@ export const SPLIT_LEARN_SCENARIOS = [
       { min: 14 * 60, kind: "end",   label: "Shift END · 14:00 (14h)", labelRow: 1 },
     ],
     pairingNote: "No qualifying pair exists. The 8h rest is OFF not SB (§395.1(g)(1)(ii) needs ≥7h inside the Sleeper Berth specifically), and the 2h SB is too short to be that qualifying SB period on its own. The pairing principle can't help — there's no first segment to partner.",
-    description: "Prior 10h reset ends at 00:00 → driver has a fresh 14h window, closing at 14:00. Driver attempts 8h OFF (08-16) + 2h SB (19-21) pairing, but §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — Off Duty doesn't substitute, and the 2h SB is too short to be the qualifying SB period on its own. No valid split → no exclusion, 14h wall-clock closes at 14:00. Driving 16:00-19:00 is PAST the 14h shift end → 14-hr violation. Splits that WOULD have worked on this shape: 7+3 (SB 08-15 + OFF 19-22), 8+2 (SB 08-16 + OFF 19-21 — just swap statuses of the 8h block), 10+0 (straight 10h SB).",
+    description: "Driver's 14h window runs from 00:00 (first OD entry) to 14:00. Attempts 8h OFF (08-16) + 2h SB (19-21) pairing, but §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — Off Duty doesn't substitute, and the 2h SB is too short to be the qualifying SB period on its own. No valid split → no exclusion, 14h wall-clock closes at 14:00. Driving 16:00-19:00 is PAST the 14h shift end → 14-hr violation. Splits that WOULD have worked on this shape: 7+3 (SB 08-15 + OFF 19-22), 8+2 (SB 08-16 + OFF 19-21 — just swap statuses of the 8h block), 10+0 (straight 10h SB).",
     extraExamples: [
       {
         name: "10h straight OFF — no SB anywhere",
@@ -1135,7 +1135,7 @@ export const SPLIT_LEARN_SCENARIOS = [
           { min: 24 * 60 - 1, kind: "continues",              label: "Shift 2 → 06:00 next day", labelRow: 1 },
         ],
         pairingNote: "Not a split at all — this is a straight 10-hour continuous OFF reset. The pairing principle only applies when the driver is TRYING to satisfy the reset with two periods; here one full 10h block already resets both clocks.",
-        description: "10 consecutive hours Off Duty IS a valid 10-hr continuous reset (§395.3(a)(1)) — NOT a split-sleeper pairing (there's no SB time). Under CVSA 10-Hour Continuous Break rule: Shift 1 STARTS at 00:00 (end of prior 10h reset) and ENDS at 06:00 (beginning of the new 10h OFF reset). After the 10h OFF completes at 16:00, a NEW shift begins with a fresh 11/14. The 3h D + 5h OFF after 16:00 are part of Shift 2, ending at 06:00 next day.",
+        description: "10 consecutive hours Off Duty IS a valid 10-hr continuous reset (§395.3(a)(1)) — NOT a split-sleeper pairing (there's no SB time). Under CVSA 10-Hour Continuous Break rule: Shift 1 ENDS at 06:00 (beginning of the 10h OFF reset). After the 10h OFF completes at 16:00, a NEW shift begins with a fresh 11/14. The 3h D + 5h OFF after 16:00 are part of Shift 2, ending at 06:00 next day.",
       },
       {
         name: "3h SB + 7h OFF — longer is OFF, not SB",
@@ -1158,7 +1158,7 @@ export const SPLIT_LEARN_SCENARIOS = [
           { min: 14 * 60, kind: "end",   label: "Shift END · 14:00 (14h)", labelRow: 1 },
         ],
         pairingNote: "No qualifying pair. The 3h SB is too short and the 7h block is OFF (not SB). The pairing principle can't help — the regulation requires one of the two periods to be ≥7h specifically in the Sleeper Berth.",
-        description: "Prior 10h reset ends at 00:00. Driver attempts a 3+7 pairing but it fails two ways: (1) the SB is too short (<7h), and (2) the 7h rest is Off Duty, not Sleeper Berth. No valid split → 14h wall-clock closes at 14:00. Driving at 21:00 is 7h past shift end → 14-hr violation.",
+        description: "Driver attempts a 3+7 pairing but it fails two ways: (1) the SB is too short (<7h), and (2) the 7h rest is Off Duty, not Sleeper Berth. No valid split → 14h wall-clock closes at 14:00. Driving at 21:00 is 7h past shift end → 14-hr violation.",
       },
     ],
   },
@@ -1306,7 +1306,7 @@ export const SPLIT_LEARN_SCENARIOS = [
           },
         ],
         pairingNote: "Not a split — this is a straight 10-hour continuous Sleeper-Berth reset that happens to cross midnight. The pairing principle only matters when the driver is trying to stitch two rest periods together; a single ≥10h block already resets everything on its own.",
-        description: "A 10-hour SB straight through midnight (19:00 Day 1 → 05:00 Day 2) is a complete 10-hr reset on its own — NOT a split. CVSA 10-Hour Continuous Break rule applies: shift STARTS at the end of the prior 10-hr reset (06:00 Day 1) and ENDS at the BEGINNING of the 10-hr reset (19:00 Day 1). After the 10h SB completes at 05:00 Day 2, a new shift begins with a fresh 11/14 — the 1h OD + 5h D on Day 2 are the next shift, ending at 11:00 when the 13h OFF reset begins.",
+        description: "A 10-hour SB straight through midnight (19:00 Day 1 → 05:00 Day 2) is a complete 10-hr reset on its own — NOT a split. CVSA 10-Hour Continuous Break rule applies: shift ENDS at the BEGINNING of the 10-hr reset (19:00 Day 1). After the 10h SB completes at 05:00 Day 2, a new shift begins with a fresh 11/14 — the 1h OD + 5h D on Day 2 are the next shift, ending at 11:00 when the 13h OFF reset begins.",
       },
     ],
   },
