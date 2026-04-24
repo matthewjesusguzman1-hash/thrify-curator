@@ -83,28 +83,49 @@ export default function HosTrainingPage() {
       <main className="max-w-[900px] mx-auto px-3 pt-4 space-y-3">
         <p className="text-[11px] font-bold uppercase tracking-wider text-[#64748B] px-1">Pick a rule to learn</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {MODULES.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => openModule(m)}
-              className="bg-white rounded-xl border border-[#E2E8F0] p-3 text-left hover:border-[#002855] hover:shadow-md transition-all flex gap-3 items-start group"
-              data-testid={`module-${m.id}`}
-            >
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${m.color}18`, color: m.color }}>
-                <m.icon className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#002855]">{m.title}</p>
-                <p className="text-[11px] text-[#64748B]">{m.subtitle}</p>
-                <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#94A3B8]">
-                  <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> ~{m.minutes} min</span>
-                  {m.quiz && <span>· {m.quiz.length} quiz scenarios</span>}
-                  {m.route && <span>· interactive</span>}
+          {MODULES.map((m) => {
+            // Pull the first roadside action (if the module has one) so we can
+            // give inspectors a scannable preview on the hub itself — turns the
+            // tile grid into a mini quick-reference before they even open a module.
+            const learn = m.learnKey ? LEARN_CONTENT[m.learnKey] : null;
+            const firstRoadside = learn && Array.isArray(learn.roadside) && learn.roadside.length > 0
+              ? (typeof learn.roadside[0] === "string" ? learn.roadside[0] : learn.roadside[0].text)
+              : null;
+            return (
+              <button
+                key={m.id}
+                onClick={() => openModule(m)}
+                className="bg-white rounded-xl border border-[#E2E8F0] p-3 text-left hover:border-[#002855] hover:shadow-md transition-all flex gap-3 items-start group"
+                data-testid={`module-${m.id}`}
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${m.color}18`, color: m.color }}>
+                  <m.icon className="w-5 h-5" />
                 </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-[#CBD5E1] group-hover:text-[#002855] flex-shrink-0 mt-1" />
-            </button>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[#002855]">{m.title}</p>
+                  <p className="text-[11px] text-[#64748B]">{m.subtitle}</p>
+                  {firstRoadside && (
+                    <div
+                      className="mt-1.5 flex items-start gap-1.5 rounded-md bg-[#002855]/95 px-2 py-1.5 border-l-[2px] border-[#D4AF37]"
+                      data-testid={`module-${m.id}-roadside-preview`}
+                    >
+                      <span className="inline-flex items-center gap-0.5 bg-[#D4AF37] text-[#002855] text-[8px] font-black uppercase tracking-widest rounded-sm px-1 py-[1px] flex-shrink-0 mt-[1px]">
+                        <Target className="w-2 h-2" strokeWidth={3} />
+                        Roadside
+                      </span>
+                      <span className="text-[10.5px] text-white leading-snug line-clamp-2">{firstRoadside}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#94A3B8]">
+                    <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> ~{m.minutes} min</span>
+                    {m.quiz && <span>· {m.quiz.length} quiz scenarios</span>}
+                    {m.route && <span>· interactive</span>}
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#CBD5E1] group-hover:text-[#002855] flex-shrink-0 mt-1" />
+              </button>
+            );
+          })}
         </div>
       </main>
     </div>

@@ -26,6 +26,14 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — HOS Training hub: Roadside preview chips on every module tile
+- User approved the proposed enhancement: preview each module's first Roadside action on the hub tile.
+- HosTrainingPage hub now looks up `LEARN_CONTENT[m.learnKey].roadside[0]` for each module and renders it below the subtitle as a compact navy-tinted chip (#002855/95 filled, gold 2px left accent) with a mini "ROADSIDE" badge (gold background, Target icon, 8px font). Text is clamped to 2 lines with `line-clamp-2`.
+- Applied to 5 tiles with learn content: Duty Status 101, 14-Hour Window, 11-Hour Driving, 30-Min Break, 70-Hour Recap. The 3 non-learn tiles (Split Sleeper Trainer, HOS Exemptions, ELD Reference) retain their original compact layout.
+- The hub now doubles as a quick-reference card grid — an inspector can glance at 5 Roadside actions without opening any module.
+- Data-test hook: `module-{id}-roadside-preview` on each chip.
+
+
 ### 2026-02 — HOS Training Learn: merge Inspector Takeaway into Roadside, keep only Roadside
 - User: Inspector takeaway and Roadside sections had overlapping information. Combine and display only Roadside — more noticeable and more relevant.
 - Removed the amber "Inspector takeaway" summary section in LearnView (HosTrainingPage.js). The roadside action block is now the sole call-to-action before the "Take the quiz" button.
