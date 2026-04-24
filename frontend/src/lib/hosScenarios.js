@@ -485,13 +485,29 @@ export const LEARN_CONTENT = {
           { startMin: MIN(8), endMin: MIN(12), label: "VIOLATION", color: "#DC2626" },
         ],
       },
+      {
+        heading: "The 30-min break counts toward the 14",
+        body: "The 30-min break satisfies the 8-hour driving counter, but the 14-hour work shift keeps running during it. Off-duty/Sleeper time inside a shift does NOT pause the 14-hr wall-clock — only a qualifying split-sleeper pair (§395.1(g)(1)(ii)) excludes rest from the 14. So a 30-min break at 12:30 still eats into the 14-hour window exactly like any other on-duty time, and the shift still ends 14 wall-clock hours after the first on-duty entry.",
+        exampleLog: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "D",   start: "06:00", end: "14:00" },
+          { status: "OFF", start: "14:00", end: "14:30" },
+          { status: "D",   start: "14:30", end: "20:00" },
+          { status: "OFF", start: "20:00", end: "24:00" },
+        ],
+        brackets: [
+          { startMin: MIN(6), endMin: MIN(20), label: "14-hr shift still ends at 20:00", color: "#D4AF37" },
+          { startMin: MIN(14), endMin: MIN(14, 30), label: "30-min break counts toward 14", color: "#F59E0B" },
+        ],
+      },
     ],
-    summary: "Roadside workflow: scan the log for driving runs. Any uninterrupted run > 8 hours without a 30-min non-driving block is a violation.",
+    summary: "Roadside workflow: scan the log for driving runs. Any uninterrupted run > 8 hours without a 30-min non-driving block is a violation. The 30-min break itself still counts toward the 14-hour work shift.",
     roadsideQuick: ">8h driving without a 30-min break = violation.",
     roadside: [
       "Scan the log for driving runs. Walk through the D segments chronologically and track cumulative driving since the last non-driving block ≥ 30 minutes.",
       "The instant cumulative driving passes 8 hours without a qualifying 30-minute non-driving interruption, any further driving is a violation — cite §395.3(a)(3)(ii).",
       "The 30-minute block can be OFF, SB, or OD (not driving). Don't require it to be off-duty.",
+      "The 30-min break still counts toward the 14-hour work shift — it only resets the 8-hour driving counter, it does NOT pause the 14-hr wall-clock.",
     ],
   },
 
@@ -1364,7 +1380,7 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     splitType: "8+2",
     violation11: true,
     violation14: false,
-    counted14Hours: 12.5,
+    counted14Hours: 13,
     counted11Hours: 11.5,
     shiftStartMin: 8 * 60,   // 08:00 — end of Period A (8h SB · first qualifying segment)
     shiftEndMin: 21 * 60,    // 21:00 — beginning of Period B (3h OFF · second qualifying segment)
@@ -1372,8 +1388,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
       qualifying: "The 8h SB (00-08) is the ≥7h Sleeper Berth period (first segment). The 3h OFF (21-24) satisfies the ≥2h pair (second segment). Combined = 11h, meeting the ≥10h total under §395.1(g)(1)(ii). The 30-min OFF at 17:00 is the mandatory §395.3(a)(3)(ii) break — it's too short (<2h) to be a qualifying split segment and would never pair with the 8h SB.",
       shift: "CVSA Split-Sleeper rule: shift STARTS at 08:00 (end of the 8h SB · first qualifying segment) and ENDS at 21:00 (beginning of the 3h OFF · second qualifying segment).",
       split: "Valid split — 8h SB satisfies the ≥7h Sleeper Berth requirement and the 3h OFF satisfies the ≥2h pair. Combined = 11 hrs.",
-      violation: "11-hr DRIVING VIOLATION. Between CVSA shift START (08:00) and END (21:00), driving = 4h (08-12) + 4h (13-17) + 3.5h (17:30-21) = 11.5h. That exceeds the 11-hr limit. Total on-duty counted = 12.5h (under 14, so no 14-hr violation).",
-      hours: "Counted between CVSA shift START (08:00) and END (21:00), excluding the 30-min break: 4h D (08-12) + 1h OD (12-13) + 4h D (13-17) + 3.5h D (17:30-21) = 12.5h on-duty. Toward 14 = 12.5h. Toward 11 (driving only) = 4 + 4 + 3.5 = 11.5h — 0.5h over the limit.",
+      violation: "11-hr DRIVING VIOLATION. Between CVSA shift START (08:00) and END (21:00), driving = 4h (08-12) + 4h (13-17) + 3.5h (17:30-21) = 11.5h. That exceeds the 11-hr limit. The 14-hr count = the full 13h wall-clock (08:00→21:00), under 14, so no 14-hr violation.",
+      hours: "Toward 14 = the full 13h wall-clock from CVSA shift START (08:00) to END (21:00). The 30-min OFF at 17-17:30 DOES count toward the 14 because it isn't part of a qualifying split-sleeper pair — only qualifying pair rest is excluded under §395.1(g)(1)(ii)(E). Toward 11 (driving only): 4 + 4 + 3.5 = 11.5h — 0.5h over the limit.",
     },
   },
   {
