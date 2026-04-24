@@ -43,7 +43,15 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - EldGrid: label text-anchor clamps to 'start' for markers at <60 min and 'end' for markers at ≥23:00 — prevents long edge labels from clipping past the SVG bounds.
 - Descriptions uniformly call out: (a) prior 10h reset ended at 00:00, (b) pre-split shift duration/hours, (c) CVSA split boundaries, (d) alternative split pairings that would have been valid.
 
-### 2026-02 — ELD Reference module added to HOS Training hub
+### 2026-02 — ELD Reference module expanded to 12 topics
+- User requested additions after the initial 9-topic build:
+  - **Nebraska state exception** on local transfer methods (Nebraska enforcement uses Telematics only — no USB / Bluetooth) — added as a bullet to `data-transfer` topic with a recommendation to move directly to display/printout when Telematics fails.
+  - **Fail-to-Transfer violation caveat** — separate section in `data-transfer` distinguishing driver-caused transfer failures (violation) from network/service/routing-code issues (not a violation); documents required for defensible citation.
+  - **Required In-Cab ELD Supplies** — NEW topic covering §395.22(h)(1)-(4): ELD user manual, data transfer instructions, malfunction instructions, blank-logs supply. Includes common roadside findings.
+  - **False Logs, Manipulation & Ghost Drivers** — NEW topic contrasting §395.8(e) false log violation with the 2024 CVSA OOS criteria on manipulated ELD logs. Extensive list of common manipulation patterns (driving logged as OD/SB/OFF, unidentified driving matching driver's VIN, personal conveyance misuse, yard-move on public roads, vague annotations, fabricated malfunctions). Ghost-driver sub-section with detection tips at roadside and documentation requirements for a defensible OOS.
+  - **Save the ELD File to DataQs / RDR** — NEW topic on the critical post-inspection best practice: save the transfer file locally on EVERY contact, how to save (standard workflow), how to use the file during a Request for Data Review, recovery options if file wasn't saved, muscle-memory habits.
+- CfrText enhanced to render `**bold**` markdown as `<strong class="font-bold text-[#002855]">` so content authors can emphasize critical phrases without raw HTML. Bold segments and CFR citations coexist cleanly.
+- Intro paragraph updated to reflect 12 topics.
 - New tile on /hours-of-service/training (Smartphone icon, "ELD Reference · Devices, data, malfunctions, ~10 min") opens a dedicated expandable-cards view.
 - Content: `/app/frontend/src/lib/eldContent.js` with 9 topics covering 49 CFR §395.8 / §395.11 / §395.15 / §395.22 / §395.24 / §395.30 / §395.32 / §395.34.
   - ELD vs Paper Log + Exemptions (short-haul, 8-day, pre-2000 engine, driveaway-towaway, rented ≤8 days)

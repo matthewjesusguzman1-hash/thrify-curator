@@ -106,15 +106,62 @@ export const ELD_TOPICS = [
         bullets: [
           "USB 2.0: inspector provides a FMCSA-certified USB stick (or one supplied by the carrier). ELD copies the encrypted file onto it.",
           "Bluetooth: ELD pairs with an inspector's device (phone/tablet with approved software). Short-range, must be within the cab.",
+          "**State exception — Nebraska**: Nebraska enforcement does NOT accept local transfer (USB or Bluetooth) from roadside inspectors. Nebraska inspectors use Telematics transfer only (web services / email). If you're inspecting in Nebraska and Telematics fails, move directly to display/printout review — do not attempt USB or Bluetooth.",
+        ],
+      },
+      {
+        heading: "Fail-to-Transfer violation (and the caveat)",
+        body: "§395.24(a)(2) / §395.22(h) require the driver, on request, to produce the ELD data via transfer OR display OR printout. A clean 'fail-to-transfer' citation is only appropriate when the failure is attributable to the DRIVER — not the network or FMCSA services.",
+        bullets: [
+          "**Before citing:** determine WHY the transfer failed. Work through at least one alternate transfer method and then display/printout before deciding it's a driver issue.",
+          "**Not a violation:** the ELD attempted the transfer, but the carrier's cellular/wifi dropped, eRODS was down, the FMCSA email gateway timed out, or the inspector's routing code was invalid. Network/service issues on the FMCSA or carrier side are NOT the driver's fault.",
+          "**Violation:** the driver cannot operate the ELD's transfer function, does not know the process, refuses to initiate the transfer, or deliberately enters the routing code incorrectly. That's a §395.22(h) / §395.24(a)(2) failure by the driver.",
+          "Document WHICH method was attempted, WHERE it failed in the workflow, and whether display/printout was then used. A well-documented attempt chain is what distinguishes a valid citation from one that gets dismissed later.",
         ],
       },
       {
         heading: "When transfer fails",
-        body: "If both transfer methods fail, §395.24(a)(2) allows the inspector to review the ELD's DISPLAY or PRINTOUT instead — same data, different delivery. Note the transfer failure on your inspection report; a failed transfer alone is not automatically a violation, but the ELD must make the display or printout available.",
+        body: "If both transfer methods fail, §395.24(a)(2) allows the inspector to review the ELD's DISPLAY or PRINTOUT instead — same data, different delivery. Note the transfer failure on your inspection report; a failed transfer alone is not automatically a violation (see the caveat above). The ELD must make the display or printout available.",
       },
       {
         heading: "Routing codes",
         body: "Routing codes come from eRODS at the roadside and are specific to YOUR login session. Never reuse a code across drivers. If the driver types it wrong, have them retry; the ELD must accept up to 3 attempts before timing out.",
+      },
+    ],
+  },
+
+  {
+    id: "in-cab-supplies",
+    title: "Required In-Cab ELD Supplies",
+    short: "Manual, transfer & malfunction instructions, blank logs",
+    cfr: "49 CFR §395.22(h) · §395.22(i)",
+    color: "#EA580C",
+    summary:
+      "§395.22(h) and §395.22(i) require the driver to have four specific paper or electronic items in the cab at all times. Missing any one is a discrete violation — independent of the RODS content itself.",
+    sections: [
+      {
+        heading: "The four required items",
+        body: "Each item must be onboard and accessible to the driver. Electronic copies on the ELD, the driver's phone, or a tablet satisfy the requirement — as long as the inspector can view them at roadside.",
+        bullets: [
+          "**ELD User's Manual** — the manufacturer's operating manual describing how to use the ELD (§395.22(h)(1)). Covers logging in/out, duty status changes, annotations, co-driver use, and general operation.",
+          "**ELD Data Transfer Instructions** — step-by-step instructions describing how to produce and transfer the ELD data file to an authorized safety official (§395.22(h)(2)). Must cover every transfer method the device supports.",
+          "**ELD Malfunction Instructions** — a document describing the ELD malfunction reporting requirements and the recordkeeping procedures the driver must follow during an ELD malfunction (§395.22(h)(3)). This is the §395.34 driver-duty checklist in written form.",
+          "**Supply of blank driver's RODS (paper logs)** — sufficient blank logs for the driver to reconstruct the current day AND the prior 7 days manually, in case the ELD malfunctions (§395.22(h)(4)). A minimum of 8 blank logs. Pre-printed graph-grid sheets.",
+        ],
+      },
+      {
+        heading: "What to check at roadside",
+        body: "Ask to see all four items. Electronic copies are fine but must be AVAILABLE — not 'I can download it when I get home'. If the driver can't produce any one of the four, cite the corresponding §395.22(h) paragraph.",
+      },
+      {
+        heading: "Common roadside findings",
+        body: "Most frequent gaps:",
+        bullets: [
+          "No blank logs at all — the driver assumed the ELD would never malfunction. Cite §395.22(h)(4).",
+          "Only the manufacturer's quick-start card — the full user manual is not available. Cite §395.22(h)(1).",
+          "Transfer instructions are on the ELD itself, but the driver can't navigate to them. The instructions must be produceable on request.",
+          "Malfunction instructions confused with the ELD user manual. These are two separate required documents, even if the carrier prints them together.",
+        ],
       },
     ],
   },
@@ -259,6 +306,137 @@ export const ELD_TOPICS = [
       {
         heading: "Inspector roadside use",
         body: "Supporting documents aren't typically carried roadside — they're a carrier-records review item during compliance reviews, audits, and new-entrant safety audits. But toll receipts, fuel receipts, and text messages in the cab CAN be used to spot-check the RODS.",
+      },
+    ],
+  },
+
+  {
+    id: "false-logs",
+    title: "False Logs, Manipulation & Ghost Drivers",
+    short: "False vs manipulated · new OOS criteria",
+    cfr: "49 CFR §395.8(e) · CVSA OOS Criteria",
+    color: "#BE123C",
+    summary:
+      "A 'false log' violation has been on the books for decades — §395.8(e) prohibits a driver from making a false report. The 2024 CVSA North American Standard Out-of-Service Criteria added a NEW category for MANIPULATED ELD logs, which carries an automatic OOS condition. Recognize the difference and document the specific manipulation pattern you're citing.",
+    sections: [
+      {
+        heading: "False log — the existing rule",
+        body: "§395.8(e) makes it a violation for the driver to make a false report in connection with a duty activity — including on an ELD. Historically this covered driver errors, sloppy edits, missing events, or clearly incorrect status entries. False-log citations are a §395.8(e) violation but do NOT automatically place the driver out of service; they're a records violation with fines and CSA severity weight.",
+      },
+      {
+        heading: "Manipulated log — new OOS criteria (CVSA 2024)",
+        body: "The CVSA OOS Criteria now treats MANIPULATION of an ELD log as a standalone out-of-service condition. Manipulation means the driver deliberately altered the ELD record to hide actual driving or on-duty time — not just made a mistake. Placing the driver out of service is now mandatory when you can articulate a specific manipulation pattern. The distinction:",
+        bullets: [
+          "**False log (§395.8(e))**: inaccurate, incomplete, or incorrect RODS. Could be carelessness, a misunderstood status, or an uncorrected edit. Fine/CSA weight. NOT automatic OOS.",
+          "**Manipulated log (CVSA OOS)**: intentional alteration to CONCEAL actual driving/on-duty time. Driving logged as OFF/SB, unidentified driving that matches the current driver's VIN, logged-out driving periods, repeated annotations that don't match the event timeline. AUTOMATIC OOS condition under the new CVSA criteria.",
+          "You cite §395.8(e) in BOTH cases — the OOS decision is driven by the CVSA criteria, not a separate CFR citation.",
+        ],
+      },
+      {
+        heading: "Common false log & manipulation examples",
+        body: "Patterns to look for in the ELD transfer file and in comparison to supporting evidence (fuel receipts, toll records, mobile-comm logs):",
+        bullets: [
+          "Driving logged as On-Duty (not driving) to hide 11-hr/14-hr exposure — ECM shows wheels moving but RODS shows OD.",
+          "Driving logged as Sleeper Berth or Off-Duty — classic manipulation; manipulation OOS when paired with ECM/GPS evidence.",
+          "Unidentified driving that matches the driver's VIN within minutes of their login/logout — driver unclaimed their own driving to avoid the hours.",
+          "End-of-day certification of a day that is clearly inaccurate (e.g., 0 miles logged on a day with fuel receipts from 300 miles apart).",
+          "Edited events with annotations like 'fix', 'ok', 'corrected' — vague annotations don't explain WHY and violate §395.32(f).",
+          "Personal Conveyance use exceeding the limits (advancing the load toward the delivery, starting/ending at work site) — converts PC time to Driving; logging it as PC is a false log.",
+          "Yard Move status used on public roads — YM is only valid on property not open to public travel; public-road use while logged YM is a false status.",
+          "Paper log submitted with the ELD data claiming a malfunction, but the ELD shows no malfunction code — fabricated malfunction to run paper.",
+        ],
+      },
+      {
+        heading: "Ghost driver scenario",
+        body: "A 'ghost driver' scenario is when the ELD record shows Driver A operating the CMV, but Driver B (or someone else entirely) was actually driving. Typical patterns:",
+        bullets: [
+          "Driver A logs in, drives briefly, logs out. Driver B takes over but the truck stays on Driver A's login — B's driving is recorded to A's RODS.",
+          "Co-driver scenario where the co-driver is logged in as the primary — one driver's hours exhausted, so the team 'switches' the login without actually switching seats.",
+          "Trainer / trainee where the trainer is always logged in to keep the trainee off the hook for hours.",
+          "Straight identity fraud — Driver A's credentials used by an unauthorized person (not a licensed CDL holder, suspended/revoked driver, etc.).",
+        ],
+      },
+      {
+        heading: "Detecting a ghost driver at roadside",
+        body: "Cross-check the driver in front of you against the ELD record:",
+        bullets: [
+          "Driver's CDL photo vs the name/license number in the ELD header — they must match.",
+          "Compare the driver's typical work schedule (co-driver, solo, sleeper team) against the 7-day data transfer.",
+          "Ask about specific recent stops; a ghost driver won't have the lived-experience details (a fuel stop, a weigh station, a rest area).",
+          "Unidentified driving spikes immediately before/after this driver's login are a strong indicator.",
+          "Team sleeper operations with an 'always logged-in' primary driver and a co-driver whose RODS is mostly SB — investigate.",
+        ],
+      },
+      {
+        heading: "Documenting manipulation for a clean OOS",
+        body: "A manipulation OOS has to be defensible on DataQs review. Capture:",
+        bullets: [
+          "The specific pattern (cite the event ID range from the ELD file).",
+          "The corroborating evidence (ECM motion, fuel receipts, toll records, mobile comms, unidentified driving records).",
+          "The time delta (hours hidden vs reported).",
+          "Driver's explanation, verbatim.",
+          "Photos/screenshots of the ELD display showing the anomaly.",
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "save-to-dataqs",
+    title: "Save the ELD File to DataQs / RDR",
+    short: "Required post-inspection best practice",
+    cfr: "FMCSA eRODS · DataQs (DPSMS)",
+    color: "#15803D",
+    summary:
+      "Every time you transfer an ELD data file at roadside, the file lives temporarily in eRODS. It is CRITICAL to save your own copy of that file locally — either through eRODS export or your state's inspection platform. If the driver or carrier later files a Request for Data Review (RDR) through DataQs, your saved file is the ONLY authoritative evidence of what the ELD showed at the moment of inspection.",
+    sections: [
+      {
+        heading: "Why saving matters",
+        body: "eRODS retains transfer files for a limited window. Once that window expires, the file may be purged from the cloud tier or become difficult to retrieve. When a DataQs RDR is opened months later, if the original ELD file is gone, the violation becomes much harder to defend — and easy to overturn.",
+      },
+      {
+        heading: "Save on EVERY contact",
+        body: "Every ELD data transfer. Every driver. Every time. Not just inspections with violations. RDRs can be filed against ANY inspection, including clean ones, and a saved file is your best defense. If the driver later claims they 'never had that log' or 'the device was malfunctioning', your saved copy settles it.",
+      },
+      {
+        heading: "How to save (standard workflow)",
+        body: "Exact steps vary by state and the inspection platform you use (Aspen/ISS, SafetyNet, state-specific), but the common pattern is:",
+        bullets: [
+          "After eRODS confirms the transfer, click the EXPORT or DOWNLOAD option to pull the raw .csv or .xml file to your device.",
+          "Rename the file with the inspection number + driver last name + date (e.g., `2026-01-15_SMITH_INSP-12345.csv`).",
+          "Save to your official case-file folder — NOT your downloads folder. Transfer to department storage / evidence share per your agency's digital evidence policy.",
+          "If your inspection platform integrates with eRODS (most do), verify the ELD file is linked to the inspection record before you close the case.",
+        ],
+      },
+      {
+        heading: "When a Request for Data Review (RDR) comes in",
+        body: "Carriers and drivers file RDRs through DataQs when they believe an inspection finding is incorrect. DataQs forwards the RDR to your state, often months after the inspection. When the RDR hits your queue:",
+        bullets: [
+          "Retrieve your saved ELD file (that's why you saved it).",
+          "Compare the file to the citation — does the data support what you wrote?",
+          "Upload/attach the saved ELD file to the DataQs response as primary evidence.",
+          "Respond with specific event IDs, timestamps, and the annotation pattern that supported the violation.",
+        ],
+      },
+      {
+        heading: "If you didn't save the file",
+        body: "If a DataQs RDR comes in and you never saved the file, attempt these in order:",
+        bullets: [
+          "Log into eRODS and search by the inspection number and date — the file may still be retained server-side.",
+          "Contact the carrier and request the ELD data for that driver-date range (they're required to retain 6 months).",
+          "Contact the ELD manufacturer support desk with the registration ID — some manufacturers retain transfer logs.",
+          "As a last resort, rely on your inspection-report screenshots and field notes. This is significantly weaker and often results in the violation being vacated.",
+        ],
+      },
+      {
+        heading: "Quick habits that make this automatic",
+        body: "Practical tips that turn saving into muscle memory:",
+        bullets: [
+          "Make 'export ELD file' the FIRST step after every transfer, before you move on to the next inspection phase.",
+          "Use a consistent filename template — mistakes and missing files drop once the format is automatic.",
+          "Back up your case-file folder to department storage DAILY, not weekly.",
+          "If your agency uses a mobile inspection tablet, check that it auto-syncs ELD files to the case record; don't assume — verify.",
+        ],
       },
     ],
   },
