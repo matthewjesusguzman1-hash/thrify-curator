@@ -268,10 +268,17 @@ function LearnExtra({ ex, parentId, idx }) {
 
 function PracticeTab() {
   const [idx, setIdx] = useState(0);
-  const [phase, setPhase] = useState("select"); // select → questions → next
+  // Phase progression:
+  //   qualify → (if yes) select → questions → done
+  //                 (if no)            ↗
+  // "qualify" replaces the old post-selection "is this a valid pairing?"
+  // question. Asking it up front means the app never asks the user to
+  // identify blocks when no qualifying rest periods exist, and never
+  // re-asks validity after a correct selection has already confirmed it.
+  const [phase, setPhase] = useState("qualify"); // qualify → select → questions → done
   const [selected, setSelected] = useState([]);
   const [questionIdx, setQuestionIdx] = useState(0);
-  const [answers, setAnswers] = useState({}); // { split, violation, h14, h11 }
+  const [answers, setAnswers] = useState({}); // { qualify, shift, h14, h11, violation }
   // Shift-question tap-to-set state — lifted here so EldGrid taps populate the
   // same tStart/tEnd strings the QuestionCard reads.
   const [tStart, setTStart] = useState("");
@@ -281,7 +288,8 @@ function PracticeTab() {
   const scenario = SPLIT_PRACTICE_SCENARIOS[idx];
 
   // Current question index → key. Mirrors the order defined in QuestionsStack.
-  const questionKeys = ["split", "shift", "hours", "violation"];
+  // "split" was removed because the qualify question up-front already answers it.
+  const questionKeys = ["shift", "hours", "violation"];
   const currentQKey = phase === "questions" ? questionKeys[questionIdx] : null;
   const shiftQActive = currentQKey === "shift" && answers.shift === undefined;
 
@@ -297,7 +305,10 @@ function PracticeTab() {
   }, [scenario]);
 
   const blockMarks = useMemo(() => {
-    if (phase === "select") return {};
+    if (phase === "qualify" || phase === "select") return {};
+    // If the inspector said "no" and there were indeed no qualifying periods,
+    // skip marking — there's nothing to mark. Otherwise same logic as before.
+    if (answers.qualify === "no" && scenario.qualifyingBlockIdx.length === 0) return {};
     const marks = {};
     const correctSet = new Set(scenario.qualifyingBlockIdx);
     const pickedSet = new Set(selected);
@@ -307,7 +318,7 @@ function PracticeTab() {
       else if (correctSet.has(i) && !pickedSet.has(i)) marks[i] = "missed";
     }
     return marks;
-  }, [phase, scenario, selected, selectable]);
+  }, [phase, scenario, selected, selectable, answers.qualify]);
 
   const toggle = (i) => {
     setSelected((prev) => prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]);
@@ -316,12 +327,11 @@ function PracticeTab() {
   const submitSelection = () => {
     setPhase("questions");
     setQuestionIdx(0);
-    setAnswers({});
   };
 
   const nextScenario = () => {
     setIdx((i) => (i + 1) % SPLIT_PRACTICE_SCENARIOS.length);
-    setPhase("select");
+    setPhase("qualify");
     setSelected([]);
     setAnswers({});
     setQuestionIdx(0);
@@ -330,7 +340,7 @@ function PracticeTab() {
     setShiftTapNext("start");
   };
   const resetScenario = () => {
-    setPhase("select");
+    setPhase("qualify");
     setSelected([]);
     setAnswers({});
     setQuestionIdx(0);
@@ -370,7 +380,9 @@ function PracticeTab() {
       </div>
 
       <section className="bg-white rounded-xl border border-[#E2E8F0] p-3 space-y-3">
-        <p className="text-[13px] text-[#334155] leading-relaxed">{scenario.prompt}</p>
+        {phase === "select" && (
+          <p className="text-[13px] text-[#334155] leading-relaxed">{scenario.prompt}</p>
+        )}
         {shiftQActive && (
           <div
             className="flex items-center gap-2 rounded-md border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-2"
@@ -403,6 +415,17 @@ function PracticeTab() {
           ]}
         />
 
+        {phase === "qualify" && (
+          <QualifyCard
+            scenario={scenario}
+            onContinue={(correctAnswer) => {
+              setAnswers((a) => ({ ...a, qualify: correctAnswer }));
+              if (correctAnswer === "yes") setPhase("select");
+              else { setPhase("questions"); setQuestionIdx(0); }
+            }}
+          />
+        )}
+
         {phase === "select" && (
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setSelected([])} className="border-[#E2E8F0]" data-testid="practice-clear">Clear</Button>
@@ -412,7 +435,7 @@ function PracticeTab() {
           </div>
         )}
 
-        {phase !== "select" && (
+        {(phase === "questions" || phase === "done") && answers.qualify === "yes" && (
           <div className={`rounded-lg p-3 border ${selectionCorrect ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`} data-testid="selection-feedback">
             <div className="flex items-center gap-2 mb-1">
               {selectionCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
@@ -467,15 +490,71 @@ function PracticeTab() {
 }
 
 /* ─── HOS questions stack ─── */
+
+/** First Practice question — asked BEFORE block selection so an inspector
+ *  who correctly identifies "no qualifying periods" never has to fake-pick
+ *  blocks, and a correct "yes" answer is immediately followed by block
+ *  selection (which itself confirms validity — no separate yes/no needed).
+ */
+function QualifyCard({ scenario, onContinue }) {
+  const correct = scenario.validSplit ? "yes" : "no";
+  const [answered, setAnswered] = useState(undefined);
+  const isCorrect = answered === correct;
+  return (
+    <div className="rounded-lg border border-[#E2E8F0] bg-white p-3 space-y-2" data-testid="q-qualify">
+      <p className="text-[12.5px] font-bold text-[#002855]">
+        Are there qualifying rest periods to pair for the sleeper-berth provision?
+      </p>
+      <p className="text-[10.5px] text-[#64748B] leading-snug">
+        §395.1(g)(1)(ii) requires <span className="font-bold">≥7 consecutive hours in the Sleeper Berth</span> AND a separate <span className="font-bold">≥2 consecutive hours in the Sleeper Berth or Off Duty</span>. If either is missing, no pair can form.
+      </p>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          disabled={answered !== undefined}
+          onClick={() => setAnswered("yes")}
+          className={`flex-1 border-[#E2E8F0] ${answered === "yes" ? (isCorrect ? "bg-[#F0FDF4] border-[#10B981] text-[#065F46]" : "bg-[#FEF2F2] border-[#DC2626] text-[#991B1B]") : ""}`}
+          data-testid="q-qualify-yes"
+        >
+          Yes
+        </Button>
+        <Button
+          variant="outline"
+          disabled={answered !== undefined}
+          onClick={() => setAnswered("no")}
+          className={`flex-1 border-[#E2E8F0] ${answered === "no" ? (isCorrect ? "bg-[#F0FDF4] border-[#10B981] text-[#065F46]" : "bg-[#FEF2F2] border-[#DC2626] text-[#991B1B]") : ""}`}
+          data-testid="q-qualify-no"
+        >
+          No
+        </Button>
+      </div>
+      {answered !== undefined && (
+        <>
+          <div className={`rounded-md p-2 text-[11.5px] leading-relaxed ${isCorrect ? "bg-[#F0FDF4] text-[#065F46]" : "bg-[#FFFBEB] text-[#713F12] border border-[#F59E0B]/40"}`}>
+            <p className="font-bold mb-0.5">{isCorrect ? "Correct." : `Not quite — the right answer is "${correct}".`}</p>
+            <p><CfrText text={scenario.explanation.qualifying} /></p>
+          </div>
+          <Button
+            onClick={() => onContinue(correct)}
+            className="w-full bg-[#002855] text-white hover:bg-[#001a3a]"
+            data-testid="q-qualify-continue"
+          >
+            {correct === "yes"
+              ? "Continue — identify which blocks qualify"
+              : "Continue — move to shift analysis"}
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
+
 function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, shiftTStart, shiftTEnd, setShiftTStart, setShiftTEnd }) {
+  // The "is this a valid pairing?" question was removed — the up-front
+  // qualify question (asked before block selection) already answers it.
   const questions = [
-    {
-      key: "split",
-      type: "yesno",
-      prompt: "Is this a valid split-sleeper pairing?",
-      correct: scenario.validSplit ? "yes" : "no",
-      explanation: scenario.explanation.split,
-    },
     {
       key: "shift",
       type: "twoTime",
