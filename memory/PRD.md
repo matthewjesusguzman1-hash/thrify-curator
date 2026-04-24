@@ -26,6 +26,14 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — HOS sections: background → highlighted Roadside action block
+- User: each HOS section should give the approximate information THEN highlight what to do or check roadside. The inspector needs to know what to DO at roadside.
+- Added amber-highlighted "Roadside — ..." action bullets at the end of every HOS-related Level 3 section: Log Book Exempt, eRODS, HOS-Interstate, HOS-Intrastate, Split Sleeper Berth, Personal Conveyance, Log Book Requirements, Electronic Logs (non-eRODS). OOS Duration is already pure roadside action and didn't need additions.
+- Each section now reads: brief rule/background → "Roadside — ..." step(s) spelling out the specific action (identify, count, ask, verify, cite, place OOS if X).
+- Example — Split Sleeper gets 3 roadside steps: identify qualifying segments, apply CVSA shift boundaries, fall back to 14h wall-clock if invalid split. HOS-Interstate gets 4 roadside steps covering the last-10-hour-break count, active-driving-only OOS rule, 30-min break verification, and 60/70 prior-days review.
+- All CFR citations, statute references, and highlighted facts are preserved; the roadside actions are additions, not replacements.
+
+
 ### 2026-02 — ELD Malfunctions topic refocused on driver duties
 - User: less emphasis on identifying the specific code, more emphasis on the driver's duty to notify the carrier, revert to paper, and the time allowed.
 - Retitled topic "Malfunctions & Data Diagnostic Events" → **"ELD Malfunctions — Driver Duties"**; subtitle "Notify the carrier · run paper · 8-day clock".
