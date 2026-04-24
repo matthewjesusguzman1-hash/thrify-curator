@@ -431,9 +431,16 @@ function PracticeTab() {
               { min: scenario.dayStartMin, kind: "start", label: `Day START · ${fmtMin(scenario.dayStartMin)}` },
               { min: scenario.dayEndMin, kind: "end", label: `Day SHOULD end · ${fmtMin(scenario.dayEndMin)}`, labelRow: 1 },
             ] : []),
-            // Actual split-sleeper shift end (gold) — shown after Q2 answered, only if it differs from day end.
-            ...(answers.shiftEnd && scenario.shiftEndMin !== scenario.dayEndMin ? [
-              { min: scenario.shiftEndMin, kind: "end", color: "#D4AF37", label: `Actual shift END · ${fmtMin(scenario.shiftEndMin)}`, labelRow: 2 },
+            // Actual split-sleeper shift bounds (gold) — shown after Q2 answered.
+            // Both the start AND end shift under split (start = Period A end,
+            // end = Period B start), so render both as gold markers.
+            ...(answers.shiftEnd ? [
+              ...(scenario.shiftStartMin !== scenario.dayStartMin
+                ? [{ min: scenario.shiftStartMin, kind: "start", color: "#D4AF37", label: `Actual shift START · ${fmtMin(scenario.shiftStartMin)}`, labelRow: 2 }]
+                : []),
+              ...(scenario.shiftEndMin !== scenario.dayEndMin
+                ? [{ min: scenario.shiftEndMin, kind: "end", color: "#D4AF37", label: `Actual shift END · ${fmtMin(scenario.shiftEndMin)}`, labelRow: 2 }]
+                : []),
             ] : []),
             // Pre-placed DRAGGABLE markers during the dayBounds question. They
             // start at a sensible default (08:00 / 22:00) so the inspector has
@@ -605,16 +612,21 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, s
       prompt: "When does the day START and when SHOULD it end?",
       hint: "Straight 10-hr continuous rule: START = first on-duty entry after the last 10-hr reset (or the first work of the log). SHOULD END = 14 wall-clock hours later. Don't factor in any split yet — that comes next. Tip: you can drag the green START and red END handles on the grid above to set the times.",
       correct: { start: scenario.dayStartMin, end: scenario.dayEndMin },
-      explanation: scenario.explanation.dayBounds || `Straight 10-hr rule: day STARTS at ${fmtMin(scenario.dayStartMin)} (first on-duty entry) and SHOULD END at ${fmtMin(scenario.dayEndMin)} (14 wall-clock hours later, §395.3(a)(2)).`,
+      explanation:
+        (scenario.explanation.dayBounds ||
+          `Straight 10-hr rule: day STARTS at ${fmtMin(scenario.dayStartMin)} (first on-duty entry) and SHOULD END at ${fmtMin(scenario.dayEndMin)} (14 wall-clock hours later, §395.3(a)(2)).`) +
+        (hasDrivePastDayEnd
+          ? ` ⚠️ But driver has work/drive time past ${fmtMin(scenario.dayEndMin)} — the next question checks whether a valid split-sleeper pair extends the shift.`
+          : ` No driving past the 14-hr mark, so the straight rule stands — no split-sleeper extension needed.`),
     },
     // Only asked when the log has drive/on-duty work past the straight-rule
     // day-end — otherwise there's nothing for a split-sleeper pair to resolve.
     ...(hasDrivePastDayEnd ? [{
       key: "shiftEnd",
-      type: "oneTime",
-      prompt: "The driver has work/drive time past the 14-hr wall-clock mark. Identify the ACTUAL end of the work shift.",
-      hint: "Valid split pair: shift ENDS at the BEGINNING of the SECOND qualifying rest segment (Period B). No valid pair: shift still ends at the 14-hr mark from Q1 — any driving past it is the violation itself.",
-      correct: { end: scenario.shiftEndMin },
+      type: "twoTime",
+      prompt: "The driver has work/drive time past the 14-hr wall-clock mark. A split-sleeper pair redefines BOTH the shift start AND end. Identify the actual work shift.",
+      hint: "Valid split pair (CVSA procedure): shift STARTS at the END of the FIRST qualifying rest segment (Period A · ≥7h SB), and shift ENDS at the BEGINNING of the SECOND qualifying rest segment (Period B · ≥2h SB/OFF). No valid pair: shift stays at the straight-rule bounds from Q1 — and any driving past the 14-hr mark is the violation itself.",
+      correct: { start: scenario.shiftStartMin, end: scenario.shiftEndMin },
       explanation: scenario.explanation.shift,
     }] : []),
     {

@@ -123,26 +123,18 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   const hasDraggable = shiftMarkers.some((m) => m.draggable) && !!onMarkerDrag;
   return (
     <div className="rounded-lg border border-[#CBD5E1] bg-white">
-      <div
-        // When draggable markers are active, disable the horizontal-scroll
-        // wrapper's own touch-pan so dragging a marker horizontally never
-        // ends up as a scroll gesture on the grid container.
-        className="-mx-1"
-        style={{
-          overflowX: hasDraggable ? "visible" : "auto",
-          touchAction: hasDraggable ? "none" : "auto",
-        }}
-      >
+      {/* Grid always fits the container width. viewBox keeps the internal
+          coordinate system intact while the SVG itself scales down on narrow
+          phones — no horizontal scroll needed. */}
+      <div className="px-1">
       <svg
-        width={svgW}
+        width="100%"
         height={svgH}
         viewBox={`0 0 ${svgW} ${svgH}`}
-        className="block"
-        onClick={handleSvgClick}
-        style={{
-          cursor: onMinuteClick ? "crosshair" : "default",
-          touchAction: hasDraggable ? "none" : "auto",
-        }}
+        preserveAspectRatio="xMidYMid meet"
+        className="block max-w-full h-auto"
+        onClick={hasDraggable ? undefined : handleSvgClick}
+        style={{ cursor: onMinuteClick && !hasDraggable ? "crosshair" : "default" }}
       >
         {/* Brackets above the grid — call out spans the rule cares about.
          * `bracketRows[i]` tells us which vertical row to place the label on
