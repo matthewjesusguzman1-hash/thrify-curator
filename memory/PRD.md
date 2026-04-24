@@ -26,6 +26,14 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — ELD Malfunctions topic refocused on driver duties
+- User: less emphasis on identifying the specific code, more emphasis on the driver's duty to notify the carrier, revert to paper, and the time allowed.
+- Retitled topic "Malfunctions & Data Diagnostic Events" → **"ELD Malfunctions — Driver Duties"**; subtitle "Notify the carrier · run paper · 8-day clock".
+- Summary rewritten: ELD malfunctions are almost always readily apparent — the inspector's focus is NOT diagnosing the code but verifying the driver notified the carrier in writing within 24 hours and reverted to paper.
+- Reordered sections so driver duties come first (explicitly labeled "this is the focus"), then "How long paper logs are allowed" (carrier 8-day repair clock, paper until fixed — not indefinitely), then "What to check at roadside". The 6-code table demoted to a final single-paragraph "Malfunction codes — background only" section with explicit note that the code doesn't change the driver's duty.
+- Removed the separate Data Diagnostic Events section and the standalone Carrier Duties section — both now absorbed into the driver-duty-focused narrative.
+
+
 ### 2026-02 — Level 3 Inspection Guide clarity pass (no content change)
 - User asked for the Level 3 help section to be easier to read without changing the underlying information.
 - Rewrote every section's items as complete sentences with consistent tone — replacing telegraphic fragments ("Count from last 10 hour break") with clear statements ("Count from the end of the last 10-hour break."). All CFR citations, statute references, Truck Guide Book page pointers, OOS rules, and highlighted callouts preserved.

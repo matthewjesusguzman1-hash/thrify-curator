@@ -167,47 +167,40 @@ export const ELD_TOPICS = [
 
   {
     id: "malfunctions",
-    title: "Malfunctions & Data Diagnostic Events",
-    short: "The 6 malfunction codes + driver duties",
+    title: "ELD Malfunctions — Driver Duties",
+    short: "Notify the carrier · run paper · 8-day clock",
     cfr: "49 CFR §395.22(h) · §395.34",
     color: "#DC2626",
     summary:
-      "ELDs must self-monitor for 6 specific malfunctions (§395.22(g)) and 6 data diagnostic events. When a malfunction is detected, the ELD must display a visual/audible notification and the driver must take specific actions under §395.34 — including notifying the carrier within 24 hours and reverting to paper RODS.",
+      "When an ELD malfunctions, it is almost always readily apparent — the device itself alerts the driver. The inspector's focus is NOT diagnosing the code; it's verifying the driver did what §395.34 requires: NOTIFY THE CARRIER IN WRITING within 24 hours and REVERT TO PAPER LOGS until the device is back in compliance. The 8-day carrier repair clock starts when the malfunction is reported.",
     sections: [
       {
-        heading: "The 6 ELD malfunctions",
-        body: "Each malfunction has a required code the ELD displays. Memorize these — the code alone tells you the failure mode:",
+        heading: "Driver's duties when the ELD malfunctions (§395.34) — this is the focus",
+        body: "From the moment the malfunction is detected, the driver must:",
         bullets: [
-          "P — Power compliance: ELD isn't powered for at least 30 minutes over the last 24 hours despite the engine being on.",
-          "E — Engine synchronization: ELD lost connection to the vehicle's ECM, so engine-hours / VIN / odometer data isn't syncing.",
-          "T — Timing compliance: ELD's clock drifts more than 10 minutes from UTC.",
-          "L — Positioning compliance: GPS unable to fix the vehicle's location for 60+ minutes during driving events.",
-          "R — Data recording compliance: ELD can no longer log or retrieve events (storage failure).",
-          "S — Data transfer compliance: ELD cannot complete a data transfer to eRODS, even after several attempts.",
-          "O — Other (rare, manufacturer-specific critical errors).",
+          "**Provide the carrier with written notice of the malfunction within 24 hours.** This starts the 8-day carrier repair clock under §395.34(a)(2).",
+          "**Revert to paper RODS immediately.** Reconstruct the current day (if needed) and the preceding 7 days on paper, unless those days are already captured on the ELD.",
+          "**Continue to prepare paper RODS** for every day until the ELD is repaired and back in compliance.",
+          "**Produce the paper logs on inspector request** — they're part of the driver's RODS and subject to the same review as an ELD transfer.",
         ],
       },
       {
-        heading: "Data diagnostic events",
-        body: "Less severe than malfunctions — the ELD logs the event but continues operating. The driver is notified on screen. If a diagnostic persists more than a short threshold, it escalates to the matching malfunction. Six codes: 1 power, 2 engine sync, 3 missing required data, 4 data transfer, 5 unidentified driving, 6 other.",
-      },
-      {
-        heading: "Driver duties when a malfunction is detected (§395.34)",
-        body: "The moment the ELD shows a malfunction (not a diagnostic), the driver MUST:",
-        bullets: [
-          "Note the malfunction and provide the carrier with written notice of the malfunction within 24 hours.",
-          "Reconstruct the current day's RODS (if needed) and the preceding 7 days manually on paper (unless already on the ELD).",
-          "Continue to prepare paper RODS until the ELD is serviced and back in compliance.",
-          "Provide the paper logs to the inspector on request — they're still considered part of the RODS.",
-        ],
-      },
-      {
-        heading: "Carrier duties (§395.34(a)(2))",
-        body: "The motor carrier must correct the malfunction within 8 days of discovery (or within 8 days of the driver's notification, whichever is earlier). For a malfunction that persists beyond 8 days, the carrier must request an FMCSA extension — otherwise the vehicle must be taken out of service for that ELD until repaired.",
+        heading: "How long paper logs are allowed",
+        body: "Paper is the backup from the time of the malfunction until the ELD is repaired. The carrier has 8 days from the driver's notification to correct the malfunction (§395.34(a)(2)). If the malfunction cannot be fixed within 8 days, the carrier must request an FMCSA extension; otherwise, that ELD cannot be used further until it's compliant. Bottom line for the driver: paper until the device is fixed — not indefinitely.",
       },
       {
         heading: "What to check at roadside",
-        body: "Look for any malfunction icon/code on the ELD display. If you see one, ask for the driver's paper logs for that day + prior 7 days. Ask when the malfunction occurred — if it's been more than 24 hours since the driver noticed it AND the carrier has not been notified in writing, that's a §395.34 violation independent of the malfunction itself.",
+        body: "A malfunctioning ELD is usually obvious — there's an error icon on the screen, a missing transfer, or the device is clearly not recording. When you see it:",
+        bullets: [
+          "Ask when the malfunction was first noticed.",
+          "Ask to see the driver's written notification to the carrier — a text, email, dispatch macro, or malfunction report form. If more than 24 hours have passed without notification, that's a §395.34 violation independent of the malfunction itself.",
+          "Ask for paper logs for the day of the malfunction and the prior 7 days. No paper logs = another §395.22(h)(4) / §395.34 violation.",
+          "Review the paper logs the same way you'd review a transferred ELD file.",
+        ],
+      },
+      {
+        heading: "Malfunction codes — background only",
+        body: "ELDs self-monitor for 6 specific malfunctions (§395.22(g)) and display a code when one is detected. You generally don't need to analyze the code — the driver's duty to notify and revert to paper is the same regardless of which code fired. Included here for reference only: P (power), E (engine sync), T (timing), L (positioning), R (data recording), S (data transfer), O (other). Data diagnostic events are less severe on-device notices that escalate to a matching malfunction if they persist.",
       },
     ],
   },
