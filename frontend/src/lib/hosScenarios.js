@@ -1318,14 +1318,13 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     priorReset: true,
     log: [
       { status: "OD",  start: "00:00", end: "01:00" },
-      { status: "D",   start: "01:00", end: "05:00" },
-      { status: "OFF", start: "05:00", end: "06:00" }, // idx 2 — 1h break (distractor · too short for a pair)
-      { status: "SB",  start: "06:00", end: "13:00" }, // idx 3 — qualifying 7h SB
+      { status: "D",   start: "01:00", end: "06:00" },
+      { status: "SB",  start: "06:00", end: "13:00" }, // idx 2 — qualifying 7h SB
       { status: "D",   start: "13:00", end: "17:00" },
-      { status: "OFF", start: "17:00", end: "20:00" }, // idx 5 — qualifying 3h OFF
+      { status: "OFF", start: "17:00", end: "20:00" }, // idx 4 — qualifying 3h OFF
       { status: "OD",  start: "20:00", end: "24:00" },
     ],
-    qualifyingBlockIdx: [3, 5],
+    qualifyingBlockIdx: [2, 4],
     validSplit: true,
     splitType: "7+3",
     violation11: false,
@@ -1337,8 +1336,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     shiftStartMin: 13 * 60,  // 13:00 — end of Period A (7h SB · first qualifying segment)
     shiftEndMin: 17 * 60,    // 17:00 — beginning of Period B (3h OFF · second qualifying segment)
     explanation: {
-      qualifying: "The 7h SB (06-13) and the 3h OFF (17-20) are the only two blocks that satisfy §395.1(g)(1)(ii). The 1h OFF at 05-06 is too short to be either segment (Period A requires ≥7h SB, Period B requires ≥2h SB/OFF) — it's just an on-duty break, not part of the split.",
-      shift: "CVSA Split-Sleeper rule: shift STARTS at 13:00 (end of the FIRST qualifying segment — the 7h SB) and ENDS at 17:00 (beginning of the SECOND qualifying segment — the 3h OFF). The 1h OD + 4h D before 05:00, plus the 1h OFF break and the work before Period A, belong to the PRIOR shift; the 4h OD after 20:00 begins ANOTHER new shift.",
+      qualifying: "The 7h SB (06-13) and the 3h OFF (17-20) are the only two blocks that satisfy §395.1(g)(1)(ii). Period A requires ≥7h SB and Period B requires ≥2h SB or OFF — together they form a valid 7+3 split.",
+      shift: "CVSA Split-Sleeper rule: shift STARTS at 13:00 (end of the FIRST qualifying segment — the 7h SB) and ENDS at 17:00 (beginning of the SECOND qualifying segment — the 3h OFF). The 1h OD + 5h D before 06:00 belong to the PRIOR shift; the 4h OD after 20:00 begins ANOTHER new shift.",
       split: "Valid split. The 7h SB meets the minimum sleeper-berth requirement. The 3h OFF meets the minimum 2-hour pair. Combined = 10 hours. Order doesn't matter.",
       violation: "No violation. Between CVSA shift START (13:00) and END (17:00), driving = 4h (under 11) and on-duty = 4h (under 14).",
       hours: "Counted between CVSA shift START (13:00) and END (17:00): 4h D (13-17). Toward 14 = 4h. Toward 11 = 4h.",
