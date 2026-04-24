@@ -589,8 +589,8 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, s
     {
       key: "shift",
       type: "twoTime",
-      prompt: "Identify the work shift — when does it START and when does it END?",
-      hint: "Valid split pair (CVSA procedure): shift STARTS at the END of the FIRST qualifying rest segment (Period A · ≥7h SB), and shift ENDS at the BEGINNING of the SECOND qualifying rest segment (Period B · ≥2h SB/OFF). No valid pair: shift STARTS at the first on-duty entry after the prior 10-hr reset and ENDS 14 wall-clock hours later (§395.3(a)(2)). Tip: drag the green START and red END handles on the grid above.",
+      prompt: "When did the work shift START and when SHOULD it have ENDED under HOS rules?",
+      hint: "Valid split-sleeper pair (CVSA): shift STARTS at the END of the FIRST qualifying rest segment (Period A · ≥7h SB) and ENDS at the BEGINNING of the SECOND qualifying rest segment (Period B · ≥2h SB/OFF). No valid pair: shift STARTS at the first on-duty entry and ENDS at the 14-hr wall-clock mark (§395.3(a)(2)). Any driving past that mark is the 14-hr violation — the next question covers that. Tip: drag the green START and red END handles on the grid above.",
       correct: { start: scenario.shiftStartMin, end: scenario.shiftEndMin },
       explanation: scenario.explanation.shift,
     },
