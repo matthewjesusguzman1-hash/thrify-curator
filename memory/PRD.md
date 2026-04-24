@@ -26,6 +26,17 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — HOS Practice consolidation: 4-category unified runner + neutral picker IDs + larger grid
+- User: "I don't want the user to know the type of scenario it is. That defeats the purpose ... remove the clean 13 hour name." Then: "Make the grid larger. It should be at least the size of the one in the split sleeper trainer. It would also be good to incorporate the split sleeper trainer with the other scenarios."
+- Stripped every `title` and `subtitle` field from the 11 advanced scenarios (`hosAdvancedScenarios.js`). The runner's picker reads `s.title || s.id`, so it now shows neutral codes only — `C1..C5`, `M1..M3`, `E1..E3`, `SP1..SP4`. Inspectors see no hint about the scenario's "trap" or violation type before solving it.
+- Added a 4th tab to `/hours-of-service/practice`: **Split Sleeper** (mode='split', renders SPLIT_PRACTICE_SCENARIOS through the same shared PracticeRunner). The category-tab grid switched from 3-col to `grid-cols-2 sm:grid-cols-4`. Per-category `mode` is now part of the CATEGORIES config so the runner picks the right phase order.
+- Removed the Practice tab from `/hours-of-service/split-sleeper` — page is Learn-only now, with a `goto-practice-btn` shortcut in the header that navigates to `/practice`. Single home for all practice drills.
+- Bumped non-compact EldGrid dimensions for a larger, more readable grid everywhere it appears (Learn cards + practice runner): `HOUR_W 28→34`, `ROW_H 32→38`, `LABEL_W 74→78`, `TOTAL_W 76→80`, `HEADER_H 22→26`. Compact mode bumped equivalently. Multi-day prior-day context grids now also render non-compact so they match the focal-day grid size.
+- HOS Training hub tile copy updated: Split Sleeper Trainer subtitle is now "Learn the qualifying-pair rule"; HOS Practice Scenarios subtitle is "Combined · multi-day · 8-day · split sleeper".
+- Bug caught in testing: when removing the top-level tab state from SplitSleeperPage I dropped `useState` from imports, but `LearnCard` (declared in the same file) still uses it locally for the "show extras" toggle. Tester re-added the import; verified live. Lesson: when removing top-level state, scan the whole file for child-component usages before pruning imports.
+- Tested via testing_agent_v3_fork iteration 32 — 12 / 12 frontend assertions passed.
+
+
 ### 2026-02 — HOS Practice Scenarios (NEW section · 11 scenarios) + military time + Restart/Pick controls
 - User asked for: more practice (just-14/11 combined, multi-day, full 8-day inspection period), a Restart Scenario button + Pick scenario picker, military time across the ELD trainer, and an embedded mini 70-hr calculator that does NOT affect the real /hours-of-service tool.
 - Extracted the practice runner from `SplitSleeperPage` into shared `/app/frontend/src/components/hos/PracticeRunner.js` (~440 lines). Two modes: `mode="split"` (full qualify→select→questions flow) and `mode="shift"` (skips qualify+select for non-split scenarios). Same drag-to-place handles, same scroll-lock on iOS.
