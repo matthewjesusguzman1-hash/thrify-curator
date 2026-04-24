@@ -289,7 +289,11 @@ function PracticeTab() {
 
   // Current question index → key. Mirrors the order defined in QuestionsStack.
   // "split" was removed because the qualify question up-front already answers it.
-  const questionKeys = ["shift", "hours", "violation"];
+  // "shouldEnd" is conditional on the scenario having a 14-hr violation.
+  const hasShouldEnd = scenario.violation14 && scenario.regulatoryEndMin !== undefined;
+  const questionKeys = hasShouldEnd
+    ? ["shift", "shouldEnd", "hours", "violation"]
+    : ["shift", "hours", "violation"];
   const currentQKey = phase === "questions" ? questionKeys[questionIdx] : null;
   const shiftQActive = currentQKey === "shift" && answers.shift === undefined;
 
@@ -412,11 +416,16 @@ function PracticeTab() {
           } : null}
           shiftMarkers={[
             // Permanent markers shown after Q1 ("shift") is answered — the actual
-            // split-adjusted shift bounds (or straight-rule bounds when no valid
-            // split applies). Green/red colours match the answer feedback.
+            // observed shift bounds (or split-adjusted bounds when valid). Green/red.
             ...(answers.shift ? [
               { min: scenario.shiftStartMin, kind: "start", label: `Shift START · ${fmtMin(scenario.shiftStartMin)}` },
               { min: scenario.shiftEndMin, kind: "end", label: `Shift END · ${fmtMin(scenario.shiftEndMin)}`, labelRow: 1 },
+            ] : []),
+            // Regulatory end marker (gold) — shown after Q2 "shouldEnd" is
+            // answered for scenarios with a 14-hr violation. Makes the gap
+            // between observed end and §395.3(a)(2) limit visible on the grid.
+            ...(answers.shouldEnd && scenario.regulatoryEndMin !== undefined && scenario.regulatoryEndMin !== scenario.shiftEndMin ? [
+              { min: scenario.regulatoryEndMin, kind: "end", color: "#D4AF37", label: `SHOULD have ended · ${fmtMin(scenario.regulatoryEndMin)}`, labelRow: 2 },
             ] : []),
             // Pre-placed DRAGGABLE markers during the shift question. They start
             // at sensible defaults so the inspector has something to grab and
@@ -589,11 +598,22 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, s
     {
       key: "shift",
       type: "twoTime",
-      prompt: "When did the work shift START and when SHOULD it have ENDED under HOS rules?",
-      hint: "Valid split-sleeper pair (CVSA): shift STARTS at the END of the FIRST qualifying rest segment (Period A · ≥7h SB) and ENDS at the BEGINNING of the SECOND qualifying rest segment (Period B · ≥2h SB/OFF). No valid pair: shift STARTS at the first on-duty entry and ENDS at the 14-hr wall-clock mark (§395.3(a)(2)). Any driving past that mark is the 14-hr violation — the next question covers that. Tip: drag the green START and red END handles on the grid above.",
+      prompt: "When did the work shift START and END?",
+      hint: "Shift START = first on-duty entry (or end of Period A if a valid split-sleeper pair exists). Shift END = where the driver's last on-duty/driving entry stops (or the start of Period B for a valid split pair). Tip: drag the green START and red END handles on the grid above.",
       correct: { start: scenario.shiftStartMin, end: scenario.shiftEndMin },
       explanation: scenario.explanation.shift,
     },
+    // Conditional: when there's a 14-hr violation, ask for the regulatory
+    // end separately so the inspector internalizes the gap between observed
+    // end and the §395.3(a)(2) 14-hr wall-clock limit.
+    ...(scenario.violation14 && scenario.regulatoryEndMin !== undefined ? [{
+      key: "shouldEnd",
+      type: "oneTime",
+      prompt: "When SHOULD the work shift have ENDED under HOS rules?",
+      hint: "§395.3(a)(2): with no valid split-sleeper pair, the shift must end 14 wall-clock hours after it started. Off-duty time inside the shift does NOT pause that clock.",
+      correct: { end: scenario.regulatoryEndMin },
+      explanation: scenario.explanation.shouldEnd,
+    }] : []),
     {
       key: "hours",
       type: "twoNum",

@@ -1,4 +1,5 @@
 import { hmToMin, padDay, STATUS_META, minToHm } from "../../lib/hosRules";
+import { useEffect, useRef } from "react";
 
 /**
  * EldGrid — roadside-accurate ELD log grid (4 rows × 24 hrs with qtr-hour ticks,
@@ -121,6 +122,22 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   const totalAll = totals.OFF + totals.SB + totals.D + totals.OD;
 
   const hasDraggable = shiftMarkers.some((m) => m.draggable) && !!onMarkerDrag;
+
+  // While a marker is being dragged we attach a non-passive document-level
+  // touchmove listener that calls preventDefault — this is what actually
+  // stops mobile browsers (especially iOS Safari) from translating a
+  // horizontal drag inside the SVG into a vertical page scroll. React's
+  // onTouchMove is forced passive and can't preventDefault on its own.
+  const draggingRef = useRef(false);
+  useEffect(() => {
+    if (!hasDraggable) return undefined;
+    const block = (ev) => {
+      if (draggingRef.current) ev.preventDefault();
+    };
+    document.addEventListener("touchmove", block, { passive: false });
+    return () => document.removeEventListener("touchmove", block);
+  }, [hasDraggable]);
+
   return (
     <div className="rounded-lg border border-[#CBD5E1] bg-white">
       {/* Grid always fits the container width. viewBox keeps the internal
@@ -318,6 +335,7 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
                     onPointerDown={(ev) => {
                       ev.preventDefault();
                       ev.stopPropagation();
+                      draggingRef.current = true;
                       ev.currentTarget.setPointerCapture(ev.pointerId);
                       handleMarkerPointerMove(ev, sm);
                     }}
@@ -328,8 +346,10 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
                       handleMarkerPointerMove(ev, sm);
                     }}
                     onPointerUp={(ev) => {
+                      draggingRef.current = false;
                       ev.currentTarget.releasePointerCapture?.(ev.pointerId);
                     }}
+                    onPointerCancel={() => { draggingRef.current = false; }}
                     onTouchStart={(ev) => ev.preventDefault()}
                     onTouchMove={(ev) => ev.preventDefault()}
                     data-testid={`shift-marker-drag-${sm.kind || i}`}

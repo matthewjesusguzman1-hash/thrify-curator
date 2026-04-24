@@ -1426,11 +1426,13 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     counted11Hours: 8,  // total driving since prior reset: 5h + 3h
     dayStartMin: 0,          // 00:00 — first on-duty (OD)
     dayEndMin: 14 * 60,      // 14:00 — 14h wall-clock after day start
-    shiftStartMin: 0,       // 00:00 — first OD entry
-    shiftEndMin: 14 * 60,   // 14:00 — 14h wall-clock limit (no qualifying split applies)
+    shiftStartMin: 0,           // 00:00 — first OD entry
+    shiftEndMin: 17 * 60,       // 17:00 — when work actually stopped (last D end)
+    regulatoryEndMin: 14 * 60,  // 14:00 — what HOS rule says it SHOULD have ended (14h limit)
     explanation: {
       qualifying: "The 8h OFF looks appealing but §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — Off Duty doesn't substitute. The 2h SB is too short to be the qualifying Sleeper Berth period on its own. No qualifying rest periods.",
-      shift: "No valid split, so CVSA 14-hr wall-clock rule applies. Shift START = 00:00 (first on-duty). Shift SHOULD END = 14:00 (14 wall-clock hours later, §395.3(a)(2)). The driver actually drove 14:00-17:00, which is past the regulatory end — that's the violation, addressed in the next question.",
+      shift: "Shift START = 00:00 (first on-duty entry). Shift END = 17:00 (the driver's last on-duty / driving entry — when work physically stopped). The SB and OFF after 17:00 are rest, not part of this work shift.",
+      shouldEnd: "Under the 14-hr wall-clock rule (§395.3(a)(2)), the shift SHOULD have ENDED at 14:00 — 14 wall-clock hours after the 00:00 shift start. Because no valid split-sleeper pair exists, the 14-hr clock does NOT pause for the 8h OFF in the middle. The driver's actual shift ran past that mark to 17:00 — 3 hours into a 14-hr violation.",
       split: "No valid split. 8 OFF + 2 SB fails because no period has the required ≥7h in the Sleeper Berth.",
       violation: "14-hr VIOLATION. Without a qualifying split, §395.1(g)(1)(ii)(E) does not apply. The 14-hr wall-clock started at 00:00 and closed at 14:00. Driving from 14:00-17:00 is past the 14-hr work-shift limit — violation.",
       hours: "Toward 14 = the full 14h wall-clock from 00:00 (first OD) to 14:00. The 8h OFF (06-14) inside the shift still counts toward the 14 because it isn't part of a qualifying split-sleeper pair — only qualifying pair rest is excluded under §395.1(g)(1)(ii)(E). The 3h D from 14-17 is PAST the 14, not 'counted toward' it — it's the violation itself. Toward 11 (total driving since last 10h reset) = 5h + 3h = 8h.",
