@@ -26,6 +26,15 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — Roadside action cards moved from Level 3 → HOS Training Learn module
+- User: roadside actions belonged in HOS Training, not the Level 3 tool. Remove from Level 3 and apply the prominent navy/gold treatment in the appropriate HOS training areas instead.
+- Level 3: removed all 22 "Roadside — " items (now empty), removed the `roadside: true` rendering branch in SectionItem, removed the Target import, and reverted the `light` variant on CfrLink. Level 3 renderer is back to its original 3-variant state (sub/highlight/indent).
+- HOS Training (HosTrainingPage.js LearnView): added a dedicated "Roadside — what to do" section that renders between the learn sections and the Inspector Takeaway summary. Each item renders as a navy card (#002855 filled, white text, gold #D4AF37 left accent + top-left "ROADSIDE" badge with target icon).
+- hosScenarios.js LEARN_CONTENT now carries a `roadside: [...]` string array on each module: duty (3 actions), 14hr (4 actions), 11hr (4 actions), break (3 actions), recap (4 actions). CfrText auto-links any §395.x inside the text.
+- Data-test hook: `data-testid="learn-roadside"` on the section + `roadside-action-{i}` per card.
+- Verified live: 14hr/11hr/recap learn pages all render 4 navy action cards below the lesson sections; cards are visually dominant and read as the primary call-to-action rather than advisory.
+
+
 ### 2026-02 — Roadside action blocks promoted to prominent navy/gold cards
 - User: roadside actions should be MORE prominent and NOT read as advisory side-notes.
 - Added a new `roadside: true` item flag to the Level 3 SectionItem renderer. Items with this flag render as filled navy cards (#002855 background, white text, gold #D4AF37 left accent), with a gold "ROADSIDE" badge + target icon pinned top-left.

@@ -317,6 +317,11 @@ export const LEARN_CONTENT = {
       },
     ],
     summary: "Rule of thumb — Driving means wheels turning on a public road. On Duty is work but not driving. Sleeper Berth is resting in the bunk. Off Duty is freed from work AND the vehicle.",
+    roadside: [
+      "Scan the log top-to-bottom. Classify every block as OFF / SB / D / OD before you compute any other rule.",
+      "Challenge any OFF block where the driver was clearly still responsible for the CMV or cargo — that's misclassified and should be OD.",
+      "Any yard movement on private property is OD, not D. Any movement on a public road is D regardless of distance.",
+    ],
   },
 
   "14hr": {
@@ -370,6 +375,12 @@ export const LEARN_CONTENT = {
       },
     ],
     summary: "When reading a log roadside: find the first on-duty entry after a qualifying rest, add 14 hours — that's the end of the work shift. Any driving or on-duty work after that clock time is a violation. The off-duty blocks in between do NOT pause the clock.",
+    roadside: [
+      "Find the first on-duty entry (D or OD) after a qualifying 10-hour rest. Add 14 hours. That's the end of the work shift.",
+      "Any driving or on-duty work past that clock time is a 14-hour violation — cite §395.3(a)(2).",
+      "OOS only applies if the driver is ACTIVELY DRIVING at the time of the 14-hour violation. Violations on a prior day's log: cite, do NOT place OOS.",
+      "A valid split-sleeper pair (§395.1(g)(1)(ii)) changes the shift boundaries — see the Split Sleeper Trainer for how to identify them.",
+    ],
   },
 
   "11hr": {
@@ -414,6 +425,12 @@ export const LEARN_CONTENT = {
       },
     ],
     summary: "Count only the driving segments. On-duty not-driving time does NOT extend the 11-hour limit, but it does still eat into the 14-hour window.",
+    roadside: [
+      "Sum ONLY the D segments within the current shift. Ignore OD for this rule.",
+      "The moment the cumulative D total exceeds 11 hours, any further driving is a violation — cite §395.3(a)(3)(i).",
+      "OOS only applies if the driver is ACTIVELY DRIVING at the time of the 11-hour violation. Violations on a prior day's log: cite, do NOT place OOS.",
+      "Remember — OD counts against the 14-hour window but NOT against the 11-hour limit. Don't double-flag.",
+    ],
   },
 
   "break": {
@@ -465,6 +482,11 @@ export const LEARN_CONTENT = {
       },
     ],
     summary: "Roadside workflow: scan the log for driving runs. Any uninterrupted run > 8 hours without a 30-min non-driving block is a violation.",
+    roadside: [
+      "Walk through the D segments chronologically. Track cumulative driving since the last non-driving block ≥ 30 minutes.",
+      "The instant cumulative driving passes 8 hours without a qualifying 30-minute non-driving interruption, any further driving is a violation — cite §395.3(a)(3)(ii).",
+      "The 30-minute block can be OFF, SB, or OD (not driving). Don't require it to be off-duty.",
+    ],
   },
 
   recap: {
@@ -499,6 +521,12 @@ export const LEARN_CONTENT = {
       },
     ],
     summary: "When reading a driver's recap roadside: for each day in the last 7, sum the brackets drawn around D+OD segments. Add today's on-duty so far. If the sum > 70, it's a violation.",
+    roadside: [
+      "For each of the prior 7 days, sum the D+OD minutes. Ignore OFF and SB entirely.",
+      "Add today's on-duty so far. If the total exceeds 70 hours, cite the 70-hr violation.",
+      "Check for a 34-hr consecutive OFF/SB block since the oldest day — if present, the recap resets to zero and you only count hours after the restart.",
+      "Use the 60/7 limit instead of 70/8 when the carrier does NOT operate every day of the week.",
+    ],
   },
 };
 

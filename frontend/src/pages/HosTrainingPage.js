@@ -174,6 +174,33 @@ function LearnView({ mod, onBack, onQuiz }) {
         {/* Recap-specific: 7-day on-duty visualization */}
         {isRecap && <RecapLearnVisual />}
 
+        {/* Roadside action cards — "what to DO after reading the rule" */}
+        {Array.isArray(content.roadside) && content.roadside.length > 0 && (
+          <section data-testid="learn-roadside" className="space-y-2">
+            <div className="flex items-center gap-2 px-1 pt-1">
+              <div className="w-1 h-5 bg-[#D4AF37] rounded" />
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#002855]">Roadside — what to do</p>
+            </div>
+            {content.roadside.map((r, i) => (
+              <div
+                key={i}
+                data-testid={`roadside-action-${i}`}
+                className="rounded-md bg-[#002855] text-white px-3 py-2.5 shadow-sm border-l-[3px] border-[#D4AF37]"
+              >
+                <div className="flex items-start gap-2">
+                  <span className="inline-flex items-center gap-1 bg-[#D4AF37] text-[#002855] text-[9.5px] font-black uppercase tracking-widest rounded-sm px-1.5 py-[2px] flex-shrink-0 mt-[2px]">
+                    <Target className="w-2.5 h-2.5" strokeWidth={3} />
+                    Roadside
+                  </span>
+                  <span className="text-[13px] leading-snug font-medium">
+                    <CfrText text={typeof r === "string" ? r : r.text} linkClassName="text-[#D4AF37] hover:text-white" />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
         {/* Summary + CTA to quiz */}
         {content.summary && (
           <section className="rounded-xl border-2 border-[#D4AF37]/40 bg-[#FFFBEB] p-4">
