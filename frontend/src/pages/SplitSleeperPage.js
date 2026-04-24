@@ -48,21 +48,27 @@ export default function SplitSleeperPage() {
 
 /* ────────────────────────── Learn Tab ────────────────────────── */
 
-/** Why this pair? Small gold-bordered chip shown on each example so an
- *  inspector reading the log knows whether the pairing we drew was the only
- *  qualifying one, the most beneficial of several, or a worked failure. It
- *  reinforces the CVSA principle from the intro callout without forcing the
- *  inspector to re-read it on every example. */
-function PairingNote({ note }) {
+/** Combined rationale + detail text shown beneath each scenario's ELD grid.
+ *  Merges the short "why this pair" intro with the long mechanics walkthrough
+ *  into one unified block — a bold gold-inked lead line followed by the
+ *  breakdown, so inspectors get the headline then the math without
+ *  re-reading overlapping information. */
+function ScenarioExplanation({ note, description, small }) {
+  // If there's no "why this pair" note, just render the description as plain prose.
+  if (!note) {
+    return (
+      <p className={`${small ? "text-[12px]" : "text-[12.5px]"} text-[#334155] leading-relaxed`}>
+        <CfrText text={description} />
+      </p>
+    );
+  }
   return (
-    <div
-      className="flex items-start gap-2 rounded-md bg-[#FFFBEB] border-l-[3px] border-[#D4AF37] px-2.5 py-1.5"
-      data-testid="pairing-note"
-    >
-      <span className="inline-flex items-center gap-0.5 bg-[#D4AF37] text-[#002855] text-[9px] font-black uppercase tracking-widest rounded-sm px-1.5 py-[1px] flex-shrink-0 mt-[1px]">
-        Why this pair
-      </span>
-      <p className="text-[11px] text-[#713F12] leading-snug"><CfrText text={note} /></p>
+    <div className={`${small ? "text-[12px]" : "text-[12.5px]"} text-[#334155] leading-relaxed space-y-2`}>
+      <p className="text-[#713F12] bg-[#FFFBEB] border-l-[3px] border-[#D4AF37] rounded-r-md px-2.5 py-1.5">
+        <span className="font-black uppercase tracking-widest text-[9.5px] text-[#D4AF37] mr-1.5">Why this pair</span>
+        <CfrText text={note} />
+      </p>
+      <p><CfrText text={description} /></p>
     </div>
   );
 }
@@ -163,8 +169,7 @@ function LearnCard({ s }) {
           />
         </div>
       ))}
-      {s.pairingNote && <PairingNote note={s.pairingNote} />}
-      <p className="text-[12.5px] text-[#334155] leading-relaxed pt-1"><CfrText text={s.description} /></p>
+      <ScenarioExplanation note={s.pairingNote} description={s.description} />
     </>
   ) : (
     <>
@@ -174,8 +179,7 @@ function LearnCard({ s }) {
         shiftMarkers={s.shiftMarkers || []}
         compact
       />
-      {s.pairingNote && <PairingNote note={s.pairingNote} />}
-      <p className="text-[12.5px] text-[#334155] leading-relaxed"><CfrText text={s.description} /></p>
+      <ScenarioExplanation note={s.pairingNote} description={s.description} />
     </>
   );
 
@@ -254,8 +258,7 @@ function LearnExtra({ ex, parentId, idx }) {
             />
           </>
         )}
-        {ex.pairingNote && <PairingNote note={ex.pairingNote} />}
-        <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={ex.description} /></p>
+        <ScenarioExplanation note={ex.pairingNote} description={ex.description} small />
       </div>
     </div>
   );
