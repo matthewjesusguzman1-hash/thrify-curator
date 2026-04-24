@@ -201,16 +201,8 @@ function LearnView({ mod, onBack, onQuiz }) {
           </section>
         )}
 
-        {/* Summary + CTA to quiz */}
-        {content.summary && (
-          <section className="rounded-xl border-2 border-[#D4AF37]/40 bg-[#FFFBEB] p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <FileText className="w-4 h-4 text-[#D4AF37]" />
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#D4AF37]">Inspector takeaway</p>
-            </div>
-            <p className="text-[12.5px] text-[#334155] leading-relaxed"><CfrText text={content.summary} /></p>
-          </section>
-        )}
+        {/* Summary section removed — the Roadside action cards above already
+         * carry the inspector takeaway in the more prominent format. */}
 
         <div className="pt-2">
           <Button

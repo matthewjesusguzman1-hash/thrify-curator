@@ -26,6 +26,13 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — HOS Training Learn: merge Inspector Takeaway into Roadside, keep only Roadside
+- User: Inspector takeaway and Roadside sections had overlapping information. Combine and display only Roadside — more noticeable and more relevant.
+- Removed the amber "Inspector takeaway" summary section in LearnView (HosTrainingPage.js). The roadside action block is now the sole call-to-action before the "Take the quiz" button.
+- Merged any unique information from each summary into the corresponding `roadside` array on duty / 14hr / 11hr / break / recap. Examples: 14hr now has a dedicated card stating the clock runs wall-clock time and off-duty blocks don't pause it; 11hr now explicitly reminds that OD counts toward the 14-hr window but NOT the 11-hr limit; duty adds the literal "Driving = wheels turning…" rule-of-thumb; break adds the scan-the-log phrasing; recap adds the D+OD bracket reading + §395.3(b)(2) citation.
+- Verified live: "Inspector takeaway" text no longer renders anywhere; 5 roadside cards on 14hr, 5 on duty/11hr/recap (varies by module), all navy/gold prominent.
+
+
 ### 2026-02 — Roadside action cards moved from Level 3 → HOS Training Learn module
 - User: roadside actions belonged in HOS Training, not the Level 3 tool. Remove from Level 3 and apply the prominent navy/gold treatment in the appropriate HOS training areas instead.
 - Level 3: removed all 22 "Roadside — " items (now empty), removed the `roadside: true` rendering branch in SectionItem, removed the Target import, and reverted the `light` variant on CfrLink. Level 3 renderer is back to its original 3-variant state (sub/highlight/indent).
