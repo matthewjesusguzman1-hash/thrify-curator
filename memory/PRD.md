@@ -26,6 +26,14 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — HOS section: sibling tab bar for 60/70 Calculator ⇄ HOS Training
+- User: "I want the hours of service training button to be an HOS general tab. I want it next to the 60/70 hour calc in a tab."
+- Created `/app/frontend/src/components/hos/HosTabs.js` — route-driven shared tab bar (no local state). Two tabs: `60/70 Calculator` → `/hours-of-service`, `HOS Training` → `/hours-of-service/training`. Active tab is inferred from the current pathname, gold text + gold underline accent on the active one, white/60 on the inactive.
+- Removed the standalone "Training" button from the HoursOfServicePage header (also dropped the now-unused `GraduationCap` import there).
+- Injected `<HosTabs />` below the sticky header on both HoursOfServicePage and HosTrainingPage hub. Bumped the HoursOfServicePage floating action-bar sticky offset from `top-[52px]` → `top-[88px]` so it still clears the taller sticky header.
+- Data-test hooks: `hos-tabs` on the container, `hos-tab-calc` / `hos-tab-training` on the two tabs.
+- Verified live: both tabs toggle correctly, `aria-current="page"` set on the active tab, routing works in both directions.
+
 ### 2026-02 — HOS Training Hub: Compact Mode toggle REMOVED
 - User feedback: "It's cool but it makes no difference to the user. Remove the quick button and function."
 - Removed the Detailed ⇄ Quick toggle button, the `compact`/`setCompact`/`toggleCompact` state, and all `compact ? ... : ...` conditional styling from HosTrainingPage hub tiles.

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Hourglass, ChevronLeft, AlertTriangle, CheckCircle2, RotateCcw, Info,
-  Eye, Save, ClipboardList, HelpCircle, Clock, GraduationCap,
+  Eye, Save, ClipboardList, HelpCircle, Clock,
   Lightbulb, X, Share2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -14,6 +14,7 @@ import { useAuth } from "../components/app/AuthContext";
 import { PDFPreview } from "../components/app/PDFPreview";
 import { HosReportContent } from "../components/app/ReportContent";
 import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
+import { HosTabs } from "../components/hos/HosTabs";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -385,25 +386,17 @@ export default function HoursOfServicePage() {
             <span className="text-sm font-bold truncate" style={{ fontFamily: "Outfit, sans-serif" }}>60/70 Hour Calculator</span>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              onClick={() => navigate("/hours-of-service/training")}
-              className="flex items-center gap-1 rounded-md bg-[#D4AF37] text-[#002855] hover:bg-[#E0BE50] px-2.5 py-1.5 text-[11px] font-bold transition-colors"
-              data-testid="hos-training-btn"
-              aria-label="Open HOS Training"
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              <span>Training</span>
-            </button>
             <button onClick={clearAll} className="text-white/70 hover:text-white flex items-center gap-1 text-[11px] font-medium px-1.5 py-1.5" data-testid="hos-clear-btn">
               <RotateCcw className="w-3.5 h-3.5" /> Clear
             </button>
           </div>
         </div>
+        <HosTabs />
       </header>
 
       {/* FLOATING ACTION BAR */}
       {hasData && (
-        <div className="sticky top-[52px] z-30 bg-white/95 backdrop-blur border-b border-[#E2E8F0] shadow-sm">
+        <div className="sticky top-[88px] z-30 bg-white/95 backdrop-blur border-b border-[#E2E8F0] shadow-sm">
           <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2 flex items-center gap-2">
             <Button size="sm" onClick={() => setShowPreview(true)} className="bg-[#002855] text-white hover:bg-[#001a3a] h-9 text-xs font-bold flex-1" data-testid="export-standalone-btn">
               <Eye className="w-3.5 h-3.5 mr-1.5" /> Preview

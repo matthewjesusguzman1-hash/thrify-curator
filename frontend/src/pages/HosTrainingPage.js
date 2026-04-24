@@ -15,6 +15,7 @@ import {
   EXEMPTIONS_TOP, EXEMPTIONS_OTHERS,
 } from "../lib/hosScenarios";
 import { ELD_TOPICS } from "../lib/eldContent";
+import { HosTabs } from "../components/hos/HosTabs";
 
 /**
  * HosTrainingPage — property-carrying CMV HOS training.
@@ -78,6 +79,7 @@ export default function HosTrainingPage() {
             <p className="text-[10px] text-white/50">Property-carrying CMV · <a href="https://www.ecfr.gov/current/title-49/part-395" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR Part 395</a></p>
           </div>
         </div>
+        <HosTabs />
       </div>
 
       <main className="max-w-[900px] mx-auto px-3 pt-4 space-y-3">
