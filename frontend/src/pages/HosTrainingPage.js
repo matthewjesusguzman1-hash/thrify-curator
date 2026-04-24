@@ -38,6 +38,17 @@ export default function HosTrainingPage() {
   const navigate = useNavigate();
   const [active, setActive] = useState(null); // module id
   const [phase, setPhase] = useState("learn"); // learn | quiz
+  const compactKey = "hos-hub-compact-mode";
+  const [compact, setCompact] = useState(() => {
+    try { return localStorage.getItem(compactKey) === "1"; } catch { return false; }
+  });
+  const toggleCompact = () => {
+    setCompact((v) => {
+      const next = !v;
+      try { localStorage.setItem(compactKey, next ? "1" : "0"); } catch {}
+      return next;
+    });
+  };
 
   const mod = useMemo(() => MODULES.find((m) => m.id === active) || null, [active]);
 
@@ -77,6 +88,21 @@ export default function HosTrainingPage() {
             </div>
             <p className="text-[10px] text-white/50">Property-carrying CMV · <a href="https://www.ecfr.gov/current/title-49/part-395" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR Part 395</a></p>
           </div>
+          {/* Compact / Detailed toggle — persists via localStorage so an inspector
+           * who prefers the cheat-sheet density keeps it across sessions. */}
+          <button
+            onClick={toggleCompact}
+            className={`text-[10px] font-bold uppercase tracking-wider rounded-md px-2 py-1.5 transition-colors ${
+              compact
+                ? "bg-[#D4AF37] text-[#002855] hover:bg-[#E8C869]"
+                : "bg-white/10 text-white hover:bg-white/20"
+            }`}
+            data-testid="hub-compact-toggle"
+            aria-pressed={compact}
+            title={compact ? "Switch to detailed view" : "Switch to quick-reference view"}
+          >
+            {compact ? "Quick" : "Detailed"}
+          </button>
         </div>
       </div>
 
@@ -99,18 +125,23 @@ export default function HosTrainingPage() {
               <button
                 key={m.id}
                 onClick={() => openModule(m)}
-                className="bg-white rounded-xl border border-[#E2E8F0] p-3 text-left hover:border-[#002855] hover:shadow-md transition-all flex gap-3 items-start group"
+                className={`bg-white rounded-xl border border-[#E2E8F0] text-left hover:border-[#002855] hover:shadow-md transition-all flex gap-3 items-start group ${
+                  compact ? "p-2.5" : "p-3"
+                }`}
                 data-testid={`module-${m.id}`}
               >
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${m.color}18`, color: m.color }}>
-                  <m.icon className="w-5 h-5" />
+                <div
+                  className={`rounded-lg flex items-center justify-center flex-shrink-0 ${compact ? "w-8 h-8" : "w-10 h-10"}`}
+                  style={{ backgroundColor: `${m.color}18`, color: m.color }}
+                >
+                  <m.icon className={compact ? "w-4 h-4" : "w-5 h-5"} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-[#002855]">{m.title}</p>
-                  <p className="text-[11px] text-[#64748B]">{m.subtitle}</p>
+                  <p className={`font-bold text-[#002855] ${compact ? "text-[13px] leading-tight" : "text-sm"}`}>{m.title}</p>
+                  {!compact && <p className="text-[11px] text-[#64748B]">{m.subtitle}</p>}
                   {firstRoadside && (
                     <div
-                      className="mt-1.5 flex items-start gap-1.5 rounded-md bg-[#002855]/95 px-2 py-1.5 border-l-[2px] border-[#D4AF37]"
+                      className={`flex items-start gap-1.5 rounded-md bg-[#002855]/95 px-2 py-1.5 border-l-[2px] border-[#D4AF37] ${compact ? "mt-1" : "mt-1.5"}`}
                       data-testid={`module-${m.id}-roadside-preview`}
                     >
                       <span className="inline-flex items-center gap-0.5 bg-[#D4AF37] text-[#002855] text-[8px] font-black uppercase tracking-widest rounded-sm px-1 py-[1px] flex-shrink-0 mt-[1px]">
@@ -120,13 +151,15 @@ export default function HosTrainingPage() {
                       <span className="text-[10.5px] text-white leading-snug truncate">{firstRoadside}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#94A3B8]">
-                    <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> ~{m.minutes} min</span>
-                    {m.quiz && <span>· {m.quiz.length} quiz scenarios</span>}
-                    {m.route && <span>· interactive</span>}
-                  </div>
+                  {!compact && (
+                    <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#94A3B8]">
+                      <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> ~{m.minutes} min</span>
+                      {m.quiz && <span>· {m.quiz.length} quiz scenarios</span>}
+                      {m.route && <span>· interactive</span>}
+                    </div>
+                  )}
                 </div>
-                <ChevronRight className="w-4 h-4 text-[#CBD5E1] group-hover:text-[#002855] flex-shrink-0 mt-1" />
+                {!compact && <ChevronRight className="w-4 h-4 text-[#CBD5E1] group-hover:text-[#002855] flex-shrink-0 mt-1" />}
               </button>
             );
           })}
