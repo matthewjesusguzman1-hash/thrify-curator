@@ -29,11 +29,11 @@ import { useEffect, useRef } from "react";
  *                     (prevents text overlap when two markers share a minute).
  */
 export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {}, shiftMarkers = [], onMarkerDrag = null }) {
-  const HOUR_W = compact ? 20 : 28;
-  const ROW_H = compact ? 26 : 32;
-  const LABEL_W = compact ? 62 : 74;
-  const TOTAL_W = compact ? 66 : 76;
-  const HEADER_H = compact ? 18 : 22;
+  const HOUR_W = compact ? 22 : 34;
+  const ROW_H = compact ? 28 : 38;
+  const LABEL_W = compact ? 64 : 78;
+  const TOTAL_W = compact ? 68 : 80;
+  const HEADER_H = compact ? 20 : 26;
   const HOURS = 24;
 
   // Assign each bracket to a label row, pushing colliding labels down to a

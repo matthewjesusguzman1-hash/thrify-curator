@@ -25,8 +25,6 @@
 export const COMBINED_SCENARIOS = [
   {
     id: "C1",
-    title: "Clean 13-hr shift",
-    subtitle: "No violations — driver stayed inside both clocks",
     prompt: "Identify the work shift, then say whether the driver violated the 11- or 14-hour rule.",
     log: [
       { status: "OFF", start: "00:00", end: "06:00" },
@@ -55,8 +53,6 @@ export const COMBINED_SCENARIOS = [
   },
   {
     id: "C2",
-    title: "14-hr + 11-hr · both clocks blown",
-    subtitle: "Driver kept driving past both limits",
     prompt: "Identify the work shift, then say which rules the driver violated.",
     log: [
       { status: "OFF", start: "00:00", end: "06:00" },
@@ -87,8 +83,6 @@ export const COMBINED_SCENARIOS = [
   },
   {
     id: "C3",
-    title: "11-hr drive only · still inside the 14",
-    subtitle: "Long shift but only the driving clock blew",
     prompt: "Identify the work shift, then say which rules the driver violated.",
     log: [
       { status: "OFF", start: "00:00", end: "05:00" },
@@ -115,8 +109,6 @@ export const COMBINED_SCENARIOS = [
   },
   {
     id: "C4",
-    title: "Pre-trip eats into 14 · borderline",
-    subtitle: "Long pre-trip OD pushes shift past 14h",
     prompt: "Identify the work shift, then say which rules the driver violated.",
     log: [
       { status: "OFF", start: "00:00", end: "04:00" },
@@ -147,8 +139,6 @@ export const COMBINED_SCENARIOS = [
   },
   {
     id: "C5",
-    title: "Right at 14 · legal to the minute",
-    subtitle: "Trap — looks like a violation, isn't",
     prompt: "Identify the work shift, then decide.",
     log: [
       { status: "OFF", start: "00:00", end: "06:00" },
@@ -191,8 +181,6 @@ export const COMBINED_SCENARIOS = [
 export const MULTIDAY_SCENARIOS = [
   {
     id: "M1",
-    title: "Day 2 · clean 10-hr reset",
-    subtitle: "Yesterday ended at 18:00, today started after a full reset",
     prompt: "Day 2 is the focal day. Identify today's shift and check for violations.",
     priorDays: [
       {
@@ -237,8 +225,6 @@ export const MULTIDAY_SCENARIOS = [
   },
   {
     id: "M2",
-    title: "Day 2 · short rest · 14-hr trap",
-    subtitle: "Driver only got 9h off — does today's shift even legally start?",
     prompt: "Day 2 is the focal day. Identify the shift and check for violations.",
     priorDays: [
       {
@@ -281,8 +267,6 @@ export const MULTIDAY_SCENARIOS = [
   },
   {
     id: "M3",
-    title: "Day 2 · valid split crosses midnight",
-    subtitle: "Yesterday's 8h SB pairs with today's 2h OFF",
     prompt: "Day 2 is the focal day. The driver claims a split-sleeper pair across the two days. Identify today's shift bounds and check for violations.",
     priorDays: [
       {
@@ -338,8 +322,6 @@ export const MULTIDAY_SCENARIOS = [
 export const EIGHTDAY_SCENARIOS = [
   {
     id: "E1",
-    title: "Day 8 · 70-hr cycle compliance",
-    subtitle: "Prior 7 days = 60h. Today's shift = 9h. Inside the cycle?",
     prompt: "Today is Day 8. Use the mini 70-hr calculator + identify today's shift and check for 11/14 violations.",
     cycleLimit: 70,
     priorRecap: [
@@ -380,8 +362,6 @@ export const EIGHTDAY_SCENARIOS = [
   },
   {
     id: "E2",
-    title: "Day 8 · driver hits 70 mid-shift",
-    subtitle: "Prior 7 days = 64h. Today's shift will push them over.",
     prompt: "Use the mini 70-hr calculator. Identify when the driver should have stopped, and whether they violated the 11/14 today.",
     cycleLimit: 70,
     priorRecap: [
@@ -422,8 +402,6 @@ export const EIGHTDAY_SCENARIOS = [
   },
   {
     id: "E3",
-    title: "Day 8 · 34-hr restart resets cycle",
-    subtitle: "Prior 7 days = 68h, but a 34-hr restart cleared the recap",
     prompt: "Use the mini 70-hr calculator and account for the restart. Did the driver violate the cycle today?",
     cycleLimit: 70,
     priorRecap: [

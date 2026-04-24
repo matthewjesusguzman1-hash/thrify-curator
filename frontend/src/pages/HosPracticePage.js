@@ -1,23 +1,25 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, GraduationCap, Clock, CalendarDays, Hourglass, Calculator } from "lucide-react";
+import { ChevronLeft, GraduationCap, Clock, CalendarDays, Hourglass, Calculator, Layers } from "lucide-react";
 import { EldGrid } from "../components/hos/EldGrid";
 import { PracticeRunner } from "../components/hos/PracticeRunner";
 import {
   COMBINED_SCENARIOS, MULTIDAY_SCENARIOS, EIGHTDAY_SCENARIOS,
 } from "../lib/hosAdvancedScenarios";
+import { SPLIT_PRACTICE_SCENARIOS } from "../lib/hosScenarios";
 import { HosTabs } from "../components/hos/HosTabs";
 
 /**
- * HosPracticePage — advanced HOS practice scenarios. Three categories rendered
- * via the same PracticeRunner so the user gets the same drag-to-place flow:
- *   • 11/14 Combined · single-day, no split-sleeper
- *   • Multi-Day · prior day(s) shown as context, focal day in the runner
- *   • 8-Day Inspection · prior 7-day recap table + mini 70-hr calc + focal day
+ * HosPracticePage — single home for all HOS practice scenarios. Four
+ * categories rendered via the same PracticeRunner:
+ *   • 11/14 Combined  · single-day, no split-sleeper
+ *   • Multi-Day       · 2-day with prior-day context
+ *   • 8-Day Inspection · prior 7-day recap + mini 70-hr calc + focal day
+ *   • Split Sleeper   · qualifying-rest pairings (drag the green/red handles)
  *
- * The mini 70-hr calculator on 8-day scenarios is fully local — it never
- * touches the real /hours-of-service tool. State resets on category/scenario
- * change.
+ * Scenario titles/subtitles are intentionally omitted from the picker so the
+ * inspector can't see "what kind of trap" the scenario is before running it —
+ * the picker shows just the neutral scenario ID (C1, M1, E1, SP1, ...).
  */
 const CATEGORIES = [
   {
@@ -25,13 +27,15 @@ const CATEGORIES = [
     label: "11 / 14 Combined",
     icon: Clock,
     scenarios: COMBINED_SCENARIOS,
-    desc: "Single-day shifts. Drag the green/red handles to mark when the shift started and ended, then catch any 11-hr or 14-hr violation.",
+    mode: "shift",
+    desc: "Single-day shifts. Drag the green/red handles to mark when the shift started and ended, then evaluate any 11- or 14-hour rule violation.",
   },
   {
     id: "multiday",
     label: "Multi-Day",
     icon: CalendarDays,
     scenarios: MULTIDAY_SCENARIOS,
+    mode: "shift",
     desc: "Two-day scenarios. Yesterday's log is shown for context — focus your shift bounds and violation analysis on TODAY (Day 2).",
   },
   {
@@ -39,7 +43,16 @@ const CATEGORIES = [
     label: "8-Day Inspection",
     icon: Hourglass,
     scenarios: EIGHTDAY_SCENARIOS,
+    mode: "shift",
     desc: "Full 8-day inspection period. Use the mini 70-hr calculator below to check cycle compliance, then run the standard 11/14 analysis on today's ELD.",
+  },
+  {
+    id: "split",
+    label: "Split Sleeper",
+    icon: Layers,
+    scenarios: SPLIT_PRACTICE_SCENARIOS,
+    mode: "split",
+    desc: "Identify qualifying split-sleeper rest periods (≥7h SB + ≥2h SB/OFF, combined ≥10h), then evaluate today's shift with the pair applied.",
   },
 ];
 
@@ -76,7 +89,7 @@ export default function HosPracticePage() {
 
       <main className="max-w-[900px] mx-auto px-3 py-4 space-y-3">
         {/* Category tabs */}
-        <div className="grid grid-cols-3 gap-1 bg-white rounded-lg p-1 border border-[#E2E8F0]" data-testid="practice-category-tabs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-white rounded-lg p-1 border border-[#E2E8F0]" data-testid="practice-category-tabs">
           {CATEGORIES.map((c) => {
             const Icon = c.icon;
             const isActive = c.id === catId;
@@ -108,7 +121,7 @@ export default function HosPracticePage() {
         <PracticeRunner
           key={catId}
           scenarios={cat.scenarios}
-          mode="shift"
+          mode={cat.mode}
           category={catId}
           renderContext={renderContext}
         />
@@ -130,7 +143,7 @@ function PriorDaysContext({ priorDays }) {
             <p className="text-[12px] font-bold text-[#002855]">{d.label}</p>
           </div>
           <div className="p-2">
-            <EldGrid entries={d.log} compact />
+            <EldGrid entries={d.log} />
             {d.summary && (
               <p className="text-[11.5px] text-[#475569] leading-relaxed mt-1.5 px-1">{d.summary}</p>
             )}

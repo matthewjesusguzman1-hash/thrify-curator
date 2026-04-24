@@ -2,22 +2,20 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Layers, Target } from "lucide-react";
 import { EldGrid } from "../components/hos/EldGrid";
-import { PracticeRunner } from "../components/hos/PracticeRunner";
-import { SPLIT_LEARN_SCENARIOS, SPLIT_PRACTICE_SCENARIOS } from "../lib/hosScenarios";
+import { SPLIT_LEARN_SCENARIOS } from "../lib/hosScenarios";
 import { CfrText } from "../lib/cfrLinks";
 
 /**
- * SplitSleeperPage — two tabs.
- *   Learn     · walks through valid vs invalid pairings, with green brackets
- *               marking qualifying rest periods and gold brackets showing the
- *               hours that still count against the 11 and 14.
- *   Practice  · user taps the rest blocks they believe qualify, then answers
- *               three follow-up questions (valid split? 11/14 violation?
- *               counted hours) with graded explanations.
+ * SplitSleeperPage — Learn-only walkthrough of valid vs invalid pairings.
+ * Green brackets mark qualifying rest periods, gold brackets show the hours
+ * that still count against the 11 and 14. The interactive Practice flow that
+ * used to live on a second tab here was consolidated into the unified
+ * /hours-of-service/practice page (Split Sleeper category) so all practice
+ * scenarios share one home and one runner — the inspector doesn't need to
+ * remember where each kind of drill lives.
  */
 export default function SplitSleeperPage() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("learn");
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] pb-10" data-testid="split-sleeper-page">
@@ -33,14 +31,17 @@ export default function SplitSleeperPage() {
               <p className="text-[10px] text-white/50">Property-carrying · <a href="https://www.ecfr.gov/current/title-49/section-395.1" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR §395.1(g)(1)(ii)</a></p>
             </div>
           </div>
-        </div>
-        <div className="max-w-[900px] mx-auto px-2 grid grid-cols-2 gap-1 pb-2">
-          <button onClick={() => setTab("learn")} className={`py-1.5 rounded-md text-[11px] font-bold transition-colors ${tab === "learn" ? "bg-[#D4AF37] text-[#002855]" : "bg-white/5 text-white/70 hover:bg-white/10"}`} data-testid="tab-learn">Learn</button>
-          <button onClick={() => setTab("practice")} className={`py-1.5 rounded-md text-[11px] font-bold transition-colors ${tab === "practice" ? "bg-[#D4AF37] text-[#002855]" : "bg-white/5 text-white/70 hover:bg-white/10"}`} data-testid="tab-practice">Practice</button>
+          <button
+            onClick={() => navigate("/hours-of-service/practice")}
+            className="ml-auto flex items-center gap-1 rounded-md bg-[#D4AF37] text-[#002855] hover:bg-[#E0BE50] px-2.5 py-1.5 text-[11px] font-bold transition-colors"
+            data-testid="goto-practice-btn"
+          >
+            <Target className="w-3.5 h-3.5" /> Practice
+          </button>
         </div>
       </header>
       <main className="max-w-[900px] mx-auto px-3 py-4 space-y-3">
-        {tab === "learn" ? <LearnTab /> : <PracticeTab />}
+        <LearnTab />
       </main>
     </div>
   );
@@ -264,9 +265,8 @@ function LearnExtra({ ex, parentId, idx }) {
   );
 }
 
-/* ────────────────────────── Practice Tab ────────────────────────── */
-/* Thin wrapper — the actual practice flow lives in shared PracticeRunner so
- * the same UX is reused by the advanced practice page. */
-function PracticeTab() {
-  return <PracticeRunner scenarios={SPLIT_PRACTICE_SCENARIOS} mode="split" category="split" />;
-}
+/* ────────────────────────── Learn-only ──────────────────────────
+ * The interactive practice flow that lived on a "Practice" tab here was
+ * moved to /hours-of-service/practice (Split Sleeper category) so all
+ * practice scenarios share one home and one runner. The header has a
+ * "Practice" shortcut button that jumps directly there. */

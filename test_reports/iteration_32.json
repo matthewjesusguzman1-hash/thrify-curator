@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend regression+enhancement validation for the consolidated HOS Practice page (Iteration 32). All 12 requested checks passed. Login (042/1234) works. /hours-of-service/training shows both tiles with the updated subtitles ('Learn the qualifying-pair rule' on module-split, 'Combined \u00b7 multi-day \u00b7 8-day \u00b7 split sleeper' on module-practice). /hours-of-service/practice now exposes 4 category tabs: combined (5), multiday (3), eightday (3), split (4) \u2014 counts match spec. All four pickers show NEUTRAL IDs only \u2014 combined: C1\u2013C5, multiday: M1\u2013M3, eightday: E1\u2013E3, split: SP1\u2013SP4 \u2014 no scenario titles/subtitles leak. On the Split category tab the qualify card (q-qualify) renders and split-restart-btn / split-pick-scenario-btn are present, confirming the unified split-sleeper practice runner. /hours-of-service/split-sleeper no longer has tab-practice; only Learn content + a goto-practice-btn shortcut that navigates to /hours-of-service/practice. ELD grid visually larger (HOUR_W 28\u219234, ROW_H 32\u219238 verified on rendered scenario screenshot \u2014 grid is substantially taller and wider than the previous compact rendering). Multi-day prior-days-context renders with the same non-compact size as the focal grid. /hours-of-service (60/70 calculator) still loads cleanly.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SplitSleeperPage.js", "issue": "useState was used in LearnCard but not imported \u2014 page would throw ReferenceError on load. Fixed by adding `import { useState } from 'react'`.", "selector": "/app/frontend/src/pages/SplitSleeperPage.js", "priority": "HIGH (FIXED by tester)"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_32.json"],
+  "action_items": [
+    "Non-blocking console warning observed across multiple pages: 'React does not recognize the `%s` prop on a DOM element ... fontFeatureSettings'. Pre-existing (not introduced this iteration) but worth tracking \u2014 some component is spreading a style/props object onto a DOM element where it shouldn't. Suspect a lucide-icon or styled wrapper passing a JSX style key as a literal HTML attribute."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/src/pages/SplitSleeperPage.js was missing the useState import even though LearnCard used it \u2014 would have crashed the entire Split Sleeper Trainer page on first render. Tester applied the one-line fix to unblock testing; main agent should keep this in mind for future refactors (linting in CI would catch this).",
+    "HosPracticePage.js cleanly delegates to PracticeRunner via per-category mode flag \u2014 good separation. Picker correctly falls back to s.id when title is missing, achieving the 'no give-away' goal."
+  ],
+  "updated_files": ["/app/frontend/src/pages/SplitSleeperPage.js"],
+  "success_rate": {"backend": "n/a (not in scope)", "frontend": "100% (12/12 checks passed)"},
+  "test_credentials": "Badge 042 / PIN 1234 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All HOS Practice consolidation requirements verified. The unified /hours-of-service/practice page is the single home for combined / multiday / 8-day / split-sleeper drills. /hours-of-service/split-sleeper is now Learn-only with a Practice shortcut button (goto-practice-btn) in the header. ELD grid is at the larger non-compact dimensions (HOUR_W 34, ROW_H 38). Pickers intentionally show neutral IDs (C1\u2026, M1\u2026, E1\u2026, SP1\u2026) so scenario type isn't given away. Tester had to add a missing `useState` import in SplitSleeperPage.js (one-liner) before /split-sleeper would load \u2014 main agent should be aware.",
+  "rca of the issue": "RCA for the missing import: when SplitSleeperPage was refactored from a tabbed Learn+Practice page to Learn-only, the top-level useState that previously managed the tab state was removed from the imports. However LearnCard still uses useState locally for the 'show extras' toggle. Reproduction: navigate to /hours-of-service/split-sleeper \u2192 ReferenceError: useState is not defined when LearnCard mounts. Mitigation applied: re-added `import { useState } from 'react'` at top of file."
+}
