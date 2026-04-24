@@ -9,8 +9,8 @@ import { Hourglass, GraduationCap } from "lucide-react";
  * loaded. Clicking a tab navigates to that route.
  */
 const TABS = [
-  { id: "calc",     label: "HOS General",  icon: Hourglass,     path: "/hours-of-service" },
-  { id: "training", label: "HOS Training", icon: GraduationCap, path: "/hours-of-service/training" },
+  { id: "calc",     label: "60/70 Calculator", icon: Hourglass,     path: "/hours-of-service" },
+  { id: "training", label: "HOS General",      icon: GraduationCap, path: "/hours-of-service/training" },
 ];
 
 export function HosTabs() {
