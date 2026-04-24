@@ -106,71 +106,71 @@ const SIZE_OVERVIEW = {
     { label: "Height", value: "14' 6\"", detail: "including load, all highways" },
     { label: "Length · single vehicle", value: "45'", detail: "including load" },
     { label: "Length · semitrailer", value: "53'", detail: "including load, excluding truck-tractor" },
-    { label: "Length · semitrailer + trailer", value: "65'", detail: "including load & connecting devices, excluding truck-tractor" },
+    { label: "Length · semitrailer and trailer", value: "65'", detail: "including load and connecting devices, excluding truck-tractor" },
     { label: "Length · any other combination", value: "65'", detail: "including load" },
   ],
 };
 
 const SIZE_WIDTH_EXCEPTIONS = [
-  "Farm equipment in temporary movement during daylight hours, or hours of darkness when the clearance light requirements are complied with in the normal course of farm operations (for farm equipment being transported on a trailer, refer to #4 below).",
+  "Farm equipment in temporary movement during daylight hours, or hours of darkness when the clearance light requirements are complied with in the normal course of farm operations (For farm equipment being transported on a trailer, refer to #4 below).",
   "Combines 18' or less in width, while in the normal course of farm operations and while being driven during daylight hours or during hours of darkness when the clearance light requirements are fully complied with.",
-  "Combines in excess of 18' in width, while in the normal course of farm operations and while being driven during daylight hours for a distance of 25 miles or less on highways and while preceded by a well-lighted pilot vehicle or flag person, and during hours of darkness when clearance light requirements are met.",
-  "Combines and vehicles transporting combines or other implements of husbandry engaged in harvesting or other agricultural work, while being transported into or through the state during daylight hours, when the total width including the implement does not exceed 15'. When necessary to the harvesting operation, vehicles may travel unloaded for distances not to exceed 25 miles.",
-  "Livestock forage vehicles loaded or unloaded that comply with §60-6,305 (not exceeding 65' length, 18' width, 18' height, operated only during daylight hours).",
-  "Vehicles en route to pickup, delivering, or returning unloaded from delivery of baled livestock forage — may be up to 12' in width, daylight hours only.",
-  "Farm equipment dealers or representatives driving, delivering, or picking up farm equipment or other implements of husbandry during daylight hours.",
+  "Combines in excess of 18' in width, while in the normal course of farm operations and while being driven during daylight hours for distance of 25 miles or less on highways and while preceded by a well-lighted pilot vehicle or flag person, and during hours of darkness when clearance light requirements are met.",
+  "Combines and vehicles used in transporting combines or other implements of husbandry, and only when transporting combines or other implements of husbandry, to be engaged in harvesting or other agricultural work, while being transported into or through the state during daylight hours, when the total width including the width of the combine or other implement of husbandry being transported does not exceed 15', except that vehicles used in transporting combines or other implements of husbandry can, when necessary to the harvesting operation or other agricultural work, travel unloaded for distances not to exceed 25 miles, while the combine or other implement of husbandry to be transported is engaged in a harvesting operation or other agricultural work.",
+  "Livestock forage vehicles loaded or unloaded that comply with livestock forage vehicle provisions of state statute §60-6,305 (not exceeding 65' length, 18' width, 18' height, and being operated only during hours of daylight).",
+  "During daylight hours only, vehicles en-route to pickup, delivering, or returning unloaded from delivery of baled livestock forage which, including the load if any, may be 12' in width.",
+  "Farm equipment dealers or their representatives driving, delivering, or picking up farm equipment, or other implements of husbandry during daylight hours.",
 ];
 
 const SIZE_HEIGHT_EXCEPTIONS = [
-  "Combines or vehicles transporting combines engaged in harvesting within or outside the state, moving into or through the state during daylight hours, when overall height does not exceed 15' 6\".",
-  "Farm equipment dealers or representatives hauling farm equipment — overall height shall not exceed 15' 6\".",
-  "Livestock forage vehicles with or without load complying with subsection 2 of §60-6,305 (refer to width exception #5 for dimensions).",
+  "Combines or vehicles used in transporting combines, to be engaged in harvesting within, or outside of the state, moving into or through the state during daylight hours when the overall height does not exceed 15' 6\".",
+  "Farm equipment dealers or their representatives hauling farm equipment shall not exceed overall height of 15' 6\".",
+  "Livestock forage vehicles with or without load that comply with subsection 2 of state statute §60-6,305 (refer to width exception #5 above for dimensions).",
   "Vehicles hauling baled livestock forage shall not exceed overall height of 15' 6\".",
 ];
 
 const SIZE_LENGTH_SINGLE_EXC = [
   "A truck-tractor.",
   "A semitrailer operated in a truck-tractor single semitrailer combination.",
-  "Bus / Motor Home — shall not exceed 45'.",
+  "Bus / Motor Home shall not exceed 45' in length.",
 ];
 
 const SIZE_LENGTH_COMBO_EXC = [
-  "One truck and one trailer loaded or unloaded, used transporting implements of husbandry to be engaged in harvesting, transported into or through the state during daylight hours — total length ≤ 75' including load.",
+  "One truck and one trailer loaded or unloaded, used in transporting implements of husbandry to be engaged in harvesting, while being transported into or through the state during daylight hours if the total length does not exceed 75' including the load.",
   "A truck-tractor single semitrailer combination.",
-  "A truck-tractor semitrailer-trailer combination — but the semitrailer-trailer portion shall not exceed 65' including connecting devices.",
-  "Driveaway saddlemount vehicle transporter combinations (and with fullmount) — total overall length shall not exceed 97'.",
-  "Movement of public utility or other construction and maintenance material — at any time.",
-  "A semitrailer in a truck-tractor single semitrailer combination transporting baled livestock forage — shall not exceed 59' 6\" including load.",
+  "A truck-tractor semitrailer-trailer combination, but the semitrailer-trailer portion shall not exceed 65' including connecting devices.",
+  "A driveaway saddlemount vehicle transporter combination and driveaway saddlemount with fullmount vehicle transporter combination, but the total overall length shall not exceed 97'.",
+  "The movement of public utility or other construction and maintenance material at any time.",
+  "A semitrailer operating in a truck-tractor single semitrailer combination, while transporting baled livestock forage, shall not exceed a length of 59' 6\" including load.",
 ];
 
 const SIZE_OVERLENGTH_NO_INTERSTATE = [
   "Movement of unbaled livestock forage vehicles, loaded or unloaded.",
-  "Overhang of a combine being transported by a truck-tractor semitrailer combination during daylight hours — semitrailer + overhang ≤ 63', semitrailer itself ≤ 53'.",
-  "Farm equipment dealers or representatives driving, delivering, or picking up farm equipment within their county of business or adjoining counties and return.",
+  "The overhang of a combine to be engaged in harvesting, while being transported into or through the state driven during daylight hours by a truck-tractor semitrailer combination, but the length of the semitrailer including overhang shall not exceed 63' and the maximum semitrailer length shall not exceed 53'.",
+  "Farm equipment dealers or their representatives, driving, delivering, or picking up farm equipment within the county in which the dealer maintains his place of business, or adjoining counties and return.",
   "Temporary movement of farm machinery during daylight hours in normal farm operation.",
 ];
 
 const SIZE_CUSTOM_HARVEST = {
   width: [
-    "Combines and vehicles transporting combines or implements of husbandry engaged in harvesting, moving into or through the state during daylight hours — total width including the implement ≤ 15'. Vehicles may travel unloaded up to 25 miles when necessary to the harvest.",
+    "Combines and vehicles used in transporting combines or other implements of husbandry, and only when transporting combines or other implements of husbandry, to be engaged in harvesting or other agricultural work, while being transported into or through the state during daylight hours, when the total width including the width of the combine or other implement of husbandry being transported does not exceed 15', except that vehicles used in transporting combines or other implements of husbandry may, when necessary to the harvesting operation or other agricultural work, travel unloaded for distances not to exceed 25 miles, while the combine or other implement of husbandry to be transported is engaged in a harvesting operation or other agricultural work.",
   ],
   length65: [
-    "One truck and one trailer loaded or unloaded transporting implements of husbandry to be engaged in harvesting — total length ≤ 75' including load, daylight hours only.",
+    "One truck and one trailer, loaded or unloaded, used in transporting implements of husbandry to be engaged in harvesting, while being transported into or through the state during daylight hours if the total length does not exceed 75' including load.",
   ],
   truckTractor: [
-    "Semitrailer — 53' including load.",
-    "Truck-tractor semitrailer + trailer — 65' measuring the trailers only, including the load.",
-    "All other combinations — 65' including load.",
-    "Truck-tractor with two trailers (or semitrailer + trailer) used to transport custom harvesting equipment for wheat, soybeans, or milo April through November — trailers up to 81' 6\" including any coupling device, NOT including the power unit.",
+    "Semitrailer is 53' including load.",
+    "Truck-tractor semitrailer, trailer combination is 65' measuring the trailers only including the load.",
+    "All other combinations 65' including load.",
+    "A truck-tractor with two trailers or a truck-tractor with a semitrailer and trailer combination used to transport custom harvesting equipment for agricultural producers to harvest wheat, soybeans, or milo from April through November, the maximum length of the trailers is 81' 6\" including any coupling device or devices, but not including the power unit.",
   ],
   height: [
-    "Combines or vehicles transporting combines engaged in harvesting, moving into or through the state during daylight hours — overall height ≤ 15' 6\".",
-    "Vehicles issued an over-dimensional permit.",
+    "Combines or vehicles used in transporting combines, to be engaged in harvesting within or outside the state, moving into or through the state during daylight hours when the overall height does not exceed 15' 6\".",
+    "Vehicles which have been issued an over-dimensional permit.",
   ],
 };
 
 const SIZE_DRIVER_RISK_NOTE =
-  "Owners, lessees, and operators of a vehicle exceeding 12' 6\" in height shall assume the risk of loss to the vehicle or its load and shall be liable for any damages that result from overhead obstructions.";
+  "Owners, lessees and operators of a vehicle exceeding 12' 6\" in height shall assume the risk of loss to the vehicle or its load and shall be liable for any damages that result to overhead obstructions.";
 
 const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"];
 
