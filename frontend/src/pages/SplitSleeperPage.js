@@ -91,9 +91,9 @@ function LearnTab() {
             <Target className="w-2.5 h-2.5" strokeWidth={3} /> Roadside
           </span>
           <div className="text-[13px] leading-snug space-y-1">
-            <p className="font-bold">Pick the pairing that benefits the driver the most.</p>
+            <p className="font-bold">Any valid pair defends the driver.</p>
             <p className="text-white/90">
-              A driver can pair <span className="font-bold">any two qualifying rest periods</span> on the log. If a violation exists under the straight 14-hr or 11-hr rule, look for <span className="font-bold">every</span> legitimate split combination (any ≥7h SB + any ≥2h SB/OFF, combined ≥10h) — if applying one of them makes the violation go away or reduces the counted hours, the driver gets it. When two pairings both qualify, use the one with the lower counted D/OD between its segments. See <span className="font-bold text-[#D4AF37]">Example 1</span> for a worked case.
+              A driver can pair <span className="font-bold">any two qualifying rest periods</span> on the log. If a violation exists under the straight 14-hr or 11-hr rule, look for <span className="font-bold">any</span> legitimate split combination (≥7h SB + ≥2h SB/OFF, combined ≥10h) that would cover it. If at least one valid pair makes the violation go away, the driver is compliant — you don't have to pick the single "best" pair to cite, just verify one exists. See <span className="font-bold text-[#D4AF37]">Example 1</span> for a worked case.
             </p>
           </div>
         </div>
