@@ -26,6 +26,14 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — Level 3 Inspection Guide clarity pass (no content change)
+- User asked for the Level 3 help section to be easier to read without changing the underlying information.
+- Rewrote every section's items as complete sentences with consistent tone — replacing telegraphic fragments ("Count from last 10 hour break") with clear statements ("Count from the end of the last 10-hour break."). All CFR citations, statute references, Truck Guide Book page pointers, OOS rules, and highlighted callouts preserved.
+- Sub-headers (`sub: true`) now render as small-caps, gold-left-border mini-heads — clearly separating the outline chunks within each accordion instead of blending into the list.
+- Indented items (`indent: true`) use circle bullets (`list-[circle]`) so they visually nest under their "UNLESS…" or "if:" parent line.
+- Examples of clarifying rephrases: 11-hour/14-hour "must be driving at time of violation to be OOS" → "OOS only applies if the driver is actively driving at the time of the X-hour violation"; "Count from end of last 10 hour break" → "Count from the end of the last 10-hour break"; "Violations on previous days logs — note as violation on inspection but NOT OOS" → "If the violation appears on a prior day's log, cite the violation but do NOT place OOS".
+
+
 ### 2026-02 — ELD Registry links + "check every inspection" emphasis
 - Linked the FMCSA registered list (https://eld.fmcsa.dot.gov/List) and the revoked list (https://eld.fmcsa.dot.gov/List/Revoked) directly in the ELD Registration topic.
 - Added explicit 4-step verification workflow: pull registration ID from transferred file → confirm on registered list → check revoked list → cite §395.22(a) if missing or revoked. Emphasized doing this on EVERY ELD inspection, not just when something looks off.
