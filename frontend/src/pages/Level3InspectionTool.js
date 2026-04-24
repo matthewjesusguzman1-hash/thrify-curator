@@ -4,7 +4,7 @@ import {
   ChevronLeft, Search, Shield, Truck, CreditCard, Tractor,
   FlaskConical, HeartPulse, Hash, PenLine, CalendarCheck,
   BookOpen, MonitorSmartphone, Clock, Moon, CarFront, FileText,
-  AlertOctagon, Ban, ChevronDown, X, ExternalLink,
+  AlertOctagon, Ban, ChevronDown, X, ExternalLink, Target,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -30,23 +30,28 @@ function ecfrUrl(ref) {
   return null;
 }
 
-function CfrLink({ r }) {
+function CfrLink({ r, light = false }) {
   if (!r) return null;
   const url = ecfrUrl(r);
+  // `light` variant — readable on the navy Roadside card background.
+  const cls = light
+    ? "inline-flex items-center gap-0.5 text-[10px] font-mono text-[#D4AF37] hover:text-white hover:underline transition-colors"
+    : "inline-flex items-center gap-0.5 text-[10px] font-mono text-[#D4AF37] hover:text-[#002855] hover:underline transition-colors";
+  const fallbackCls = light ? "text-[10px] font-mono text-[#D4AF37]" : "text-[10px] font-mono text-[#D4AF37]/80";
   if (url) {
     return (
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-0.5 text-[10px] font-mono text-[#D4AF37] hover:text-[#002855] hover:underline transition-colors"
+        className={cls}
       >
         {r}
         <ExternalLink className="w-2.5 h-2.5 ml-0.5 opacity-60" />
       </a>
     );
   }
-  return <span className="text-[10px] font-mono text-[#D4AF37]/80">{r}</span>;
+  return <span className={fallbackCls}>{r}</span>;
 }
 
 /* ================================================================
@@ -215,9 +220,9 @@ const SECTIONS = [
       { text: "ELD HOS Ag exemption — livestock within 150 miles of the source AND within 150 miles of the destination are exempt from logs.", highlight: true },
       { text: "Driver/salesperson whose total driving time does not exceed 40 hours in any 7 consecutive days (395.1(c)).", cfr: "395.1" },
       { text: "Pipeline welding trucks (395.1(x)).", cfr: "395.1" },
-      { text: "Roadside — if the driver claims an exemption, note the specific exemption on the last page of the inspection.", highlight: true },
-      { text: "Roadside — verify the claim: ask the operating radius from the reporting location, the commodity, the vehicle plate type, and whether the carrier keeps the driver's time cards.", highlight: true },
-      { text: "Roadside — if the claim doesn't hold up, treat the driver as required to keep a log and apply the appropriate log violation.", highlight: true },
+      { text: "Roadside — if the driver claims an exemption, note the specific exemption on the last page of the inspection.", roadside: true },
+      { text: "Roadside — verify the claim: ask the operating radius from the reporting location, the commodity, the vehicle plate type, and whether the carrier keeps the driver's time cards.", roadside: true },
+      { text: "Roadside — if the claim doesn't hold up, treat the driver as required to keep a log and apply the appropriate log violation.", roadside: true },
     ],
   },
   {
@@ -238,10 +243,10 @@ const SECTIONS = [
       "Engine model year older than 2000.",
       "Driveaway-towaway operations — transporting an empty vehicle for sale, lease, or repair when the vehicle is part of the shipment. See 390.5 for the definition.",
       "Driver who uses paper logs no more than 8 days in any 30-day window.",
-      { text: "Roadside — request the data transfer first. The transfer is the required review method under §395.24.", cfr: "395.24", highlight: true },
-      { text: "Roadside — confirm the in-cab supplies (user manual, transfer instructions, malfunction instructions, 8 days of blank paper logs) are present.", cfr: "395.22", highlight: true },
-      { text: "Roadside — confirm the ELD is mounted in a fixed position and visible to the driver when seated.", cfr: "395.22", highlight: true },
-      { text: "Roadside — if the transfer fails due to network/service issues outside the driver's control, fall back to display/printout ONLY as a last resort. Display/printout does NOT exempt the driver from a fail-to-transfer violation when the failure is driver-caused.", highlight: true },
+      { text: "Roadside — request the data transfer first. The transfer is the required review method under §395.24.", cfr: "395.24", roadside: true },
+      { text: "Roadside — confirm the in-cab supplies (user manual, transfer instructions, malfunction instructions, 8 days of blank paper logs) are present.", cfr: "395.22", roadside: true },
+      { text: "Roadside — confirm the ELD is mounted in a fixed position and visible to the driver when seated.", cfr: "395.22", roadside: true },
+      { text: "Roadside — if the transfer fails due to network/service issues outside the driver's control, fall back to display/printout ONLY as a last resort. Display/printout does NOT exempt the driver from a fail-to-transfer violation when the failure is driver-caused.", roadside: true },
     ],
   },
   {
@@ -281,10 +286,10 @@ const SECTIONS = [
       { text: "Off-Duty Time: the driver is relieved of all duty and responsibility for the CMV and cargo.", cfr: "395.2" },
       { text: "30-Minute Rest Break — must be taken before 8 hours of driving. May be on-duty not-driving, off-duty, sleeper berth, or a combination.", cfr: "395.3" },
       { text: "A driver hauling livestock interstate with the livestock loaded on the vehicle is exempt from the HOS limits during that trip.", cfr: "395.1", highlight: true },
-      { text: "Roadside — count driving and on-duty hours from the end of the driver's last 10-hour break.", highlight: true },
-      { text: "Roadside — OOS only applies when the driver is ACTIVELY DRIVING at the time of an 11-hour or 14-hour violation. Violations that appear on a prior day's log: cite the violation, do NOT place OOS.", highlight: true },
-      { text: "Roadside — for the 30-minute break requirement, verify the break was taken before 8 hours of driving since the last qualifying rest.", cfr: "395.3", highlight: true },
-      { text: "Roadside — for the 60/70-hour rule, review the driver's prior 7 or 8 days to determine current on-duty total and whether a 34-hour restart has been taken.", highlight: true },
+      { text: "Roadside — count driving and on-duty hours from the end of the driver's last 10-hour break.", roadside: true },
+      { text: "Roadside — OOS only applies when the driver is ACTIVELY DRIVING at the time of an 11-hour or 14-hour violation. Violations that appear on a prior day's log: cite the violation, do NOT place OOS.", roadside: true },
+      { text: "Roadside — for the 30-minute break requirement, verify the break was taken before 8 hours of driving since the last qualifying rest.", cfr: "395.3", roadside: true },
+      { text: "Roadside — for the 60/70-hour rule, review the driver's prior 7 or 8 days to determine current on-duty total and whether a 34-hour restart has been taken.", roadside: true },
     ],
   },
   {
@@ -298,8 +303,8 @@ const SECTIONS = [
       "Maximum 16 hours on duty after 10 consecutive hours off duty.",
       "70/80 hours total on-duty/driving in a 7/8-day period.",
       "Use the 80-hour figure if the company operates 8 days a week.",
-      { text: "Roadside — apply the intrastate limits when the operation is entirely within the state (12/16/70-80 under 75-363).", highlight: true },
-      { text: "Roadside — confirm intrastate status from the load origin, destination, and any interlining before applying intrastate limits.", highlight: true },
+      { text: "Roadside — apply the intrastate limits when the operation is entirely within the state (12/16/70-80 under 75-363).", roadside: true },
+      { text: "Roadside — confirm intrastate status from the load origin, destination, and any interlining before applying intrastate limits.", roadside: true },
     ],
   },
   {
@@ -327,9 +332,9 @@ const SECTIONS = [
       { text: "For the 11-hour rule, count ONLY driving time.", highlight: true },
       { text: "For the 14-hour rule, count ALL time except qualifying rest periods under 395.1(g)(1)(ii).", highlight: true },
       { text: "Crew-cab pickups (hotshots) cannot claim Sleeper Berth — only Off Duty. The back seat must meet the requirements of 393.76.", cfr: "393.76", highlight: true },
-      { text: "Roadside — identify the two qualifying rest segments on the log: ≥7h in the sleeper PLUS a second segment ≥2h (SB or OFF). Combined must be ≥10h.", highlight: true },
-      { text: "Roadside — the current shift STARTS at the end of the first qualifying rest segment and ENDS at the beginning of the second qualifying rest segment. Only the work between those two segments counts toward THIS shift's 11 and 14.", highlight: true },
-      { text: "Roadside — if the attempted split doesn't meet the requirements (short SB, OFF instead of SB, etc.), the 14-hour wall-clock rule applies. No exclusion for the rest periods.", highlight: true },
+      { text: "Roadside — identify the two qualifying rest segments on the log: ≥7h in the sleeper PLUS a second segment ≥2h (SB or OFF). Combined must be ≥10h.", roadside: true },
+      { text: "Roadside — the current shift STARTS at the end of the first qualifying rest segment and ENDS at the beginning of the second qualifying rest segment. Only the work between those two segments counts toward THIS shift's 11 and 14.", roadside: true },
+      { text: "Roadside — if the attempted split doesn't meet the requirements (short SB, OFF instead of SB, etc.), the 14-hour wall-clock rule applies. No exclusion for the rest periods.", roadside: true },
     ],
   },
   {
@@ -341,8 +346,8 @@ const SECTIONS = [
       { text: "PC cannot be used to further the load or to reposition the vehicle to be re-dispatched.", highlight: true },
       "See 395.8 Interpretation #26 or the \"Proper Uses of Personal Conveyance\" guidance.",
       { text: "Misused PC is a false log violation — OOS 10 hours.", highlight: true },
-      { text: "Roadside — if the driver claims PC, ask WHERE they were going, the direction of travel, whether the load was being advanced, and whether the trip was toward a delivery point or a work site.", highlight: true },
-      { text: "Roadside — if PC was used to further the load or to reposition for dispatch, cite false log under §395.8(e) and place OOS 10 hours.", cfr: "395.8", highlight: true },
+      { text: "Roadside — if the driver claims PC, ask WHERE they were going, the direction of travel, whether the load was being advanced, and whether the trip was toward a delivery point or a work site.", roadside: true },
+      { text: "Roadside — if PC was used to further the load or to reposition for dispatch, cite false log under §395.8(e) and place OOS 10 hours.", cfr: "395.8", roadside: true },
     ],
   },
   {
@@ -363,8 +368,8 @@ const SECTIONS = [
       "Co-driver's name (printed).",
       "Total hours at the end of the day.",
       "Bill of lading number, or commodity and shipper name.",
-      { text: "Roadside — check each field on each log. Every missing field is a separate violation.", highlight: true },
-      { text: "Roadside — make sure the log is current through the last change of duty status. Not-current logs are a common citation.", highlight: true },
+      { text: "Roadside — check each field on each log. Every missing field is a separate violation.", roadside: true },
+      { text: "Roadside — make sure the log is current through the last change of duty status. Not-current logs are a common citation.", roadside: true },
     ],
   },
   {
@@ -392,8 +397,8 @@ const SECTIONS = [
       "Each starting location must match the prior stopping location.",
       "See 395.8 Interpretation #28 for additional requirements.",
       { text: "If can't thumb through each change of status → violation for failure to produce the log under 395.8(a).", cfr: "395.8", highlight: true },
-      { text: "Roadside — ask the driver to thumb through each change of duty status on the device. If they can't, cite §395.8(a) failure to produce.", cfr: "395.8", highlight: true },
-      { text: "Roadside — confirm the electronic log contains every field required on a paper log, and that each starting location matches the prior stopping location.", highlight: true },
+      { text: "Roadside — ask the driver to thumb through each change of duty status on the device. If they can't, cite §395.8(a) failure to produce.", cfr: "395.8", roadside: true },
+      { text: "Roadside — confirm the electronic log contains every field required on a paper log, and that each starting location matches the prior stopping location.", roadside: true },
     ],
   },
   {
@@ -448,6 +453,35 @@ function SectionItem({ item }) {
   const isSubHeader = item.sub;
   const isHighlight = item.highlight;
   const isIndented = item.indent;
+  const isRoadside = item.roadside;
+
+  if (isRoadside) {
+    // Strip the "Roadside — " prefix so we can render it as a prominent badge
+    // instead of inline text. Keeps the narrative intact, just separates the
+    // action cue from the instruction.
+    const cleanText = String(item.text || "").replace(/^Roadside\s+[—-]\s+/i, "");
+    return (
+      <li
+        className="list-none -mx-1 my-1.5 rounded-md bg-[#002855] text-white px-3 py-2.5 shadow-sm border-l-[3px] border-[#D4AF37]"
+        data-testid="roadside-action"
+      >
+        <div className="flex items-start gap-2">
+          <span className="inline-flex items-center gap-1 bg-[#D4AF37] text-[#002855] text-[9.5px] font-black uppercase tracking-widest rounded-sm px-1.5 py-[2px] flex-shrink-0 mt-[2px]">
+            <Target className="w-2.5 h-2.5" strokeWidth={3} />
+            Roadside
+          </span>
+          <span className="text-[13px] leading-snug font-medium">
+            {cleanText}
+            {item.cfr && (
+              <span className="ml-1.5">
+                <CfrLink r={item.cfr} light />
+              </span>
+            )}
+          </span>
+        </div>
+      </li>
+    );
+  }
 
   return (
     <li

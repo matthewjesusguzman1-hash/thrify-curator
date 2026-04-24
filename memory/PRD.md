@@ -26,6 +26,15 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — Roadside action blocks promoted to prominent navy/gold cards
+- User: roadside actions should be MORE prominent and NOT read as advisory side-notes.
+- Added a new `roadside: true` item flag to the Level 3 SectionItem renderer. Items with this flag render as filled navy cards (#002855 background, white text, gold #D4AF37 left accent), with a gold "ROADSIDE" badge + target icon pinned top-left.
+- The literal "Roadside — " prefix is stripped from the text when rendering (it becomes the badge label), so the narrative reads naturally after the badge.
+- CfrLink gained a `light` variant so CFR citations on the navy roadside cards remain readable (gold hover → white).
+- All 22 existing "Roadside —" items across the 8 HOS-related sections were flipped from `highlight: true` to `roadside: true` in one pass.
+- Visually verified on 430px viewport — roadside cards now dominate each section's closer without reading as warnings.
+
+
 ### 2026-02 — HOS sections: background → highlighted Roadside action block
 - User: each HOS section should give the approximate information THEN highlight what to do or check roadside. The inspector needs to know what to DO at roadside.
 - Added amber-highlighted "Roadside — ..." action bullets at the end of every HOS-related Level 3 section: Log Book Exempt, eRODS, HOS-Interstate, HOS-Intrastate, Split Sleeper Berth, Personal Conveyance, Log Book Requirements, Electronic Logs (non-eRODS). OOS Duration is already pure roadside action and didn't need additions.
