@@ -419,19 +419,29 @@ export const ELD_TOPICS = [
     cfr: "49 CFR §395.22 · §395.28 · §395.30",
     color: "#9333EA",
     summary:
-      "Every ELD in service must be self-certified by its manufacturer and REGISTERED on the FMCSA ELD registry. FMCSA can REVOKE a registration if the device fails to meet §395 standards. A revoked ELD is treated the same as having no ELD at all.",
+      "Every ELD in service must be self-certified by its manufacturer and REGISTERED on the FMCSA ELD registry. FMCSA can REVOKE a registration if the device fails to meet §395 standards. At roadside, inspectors should verify the device is on the registry AND check it against the Revoked list on EVERY inspection — a revoked ELD is treated the same as having no ELD at all.",
     sections: [
       {
         heading: "How registration works",
-        body: "Manufacturers self-certify that their ELD meets the technical specifications in §395 Subpart B. FMCSA maintains a public registry of registered ELDs at www.fmcsa.dot.gov/hours-service/elds. Each entry shows the ELD model, manufacturer, registration ID, and certification status.",
+        body: "Manufacturers self-certify that their ELD meets the technical specifications in §395 Subpart B. FMCSA maintains a public registry with two primary lists:",
+        bullets: [
+          "**Registered ELDs** — https://eld.fmcsa.dot.gov/List",
+          "**Revoked ELDs** — https://eld.fmcsa.dot.gov/List/Revoked",
+        ],
       },
       {
         heading: "What a revoked ELD means roadside",
         body: "If FMCSA revokes an ELD's registration, carriers have 60 days to replace the device with a compliant one (§395.22(a)). After that grace period, using the revoked ELD is equivalent to operating without an ELD — the driver must either switch to a different registered ELD or revert to paper RODS.",
       },
       {
-        heading: "How to verify at roadside",
-        body: "The ELD registration ID is captured in the transferred data file. If you're reviewing via transfer (the required method), the ID is right there. Cross-reference it against the FMCSA ELD registry (accessible via your inspector tablet or phone). If the ID is not in the registry, or shows as 'REVOKED', cite §395.22(a) and treat the driver as operating without a required ELD.",
+        heading: "How to verify at roadside — every inspection",
+        body: "Check the ELD against BOTH lists on every ELD inspection — not just when something looks off:",
+        bullets: [
+          "Pull the ELD registration ID from the transferred data file (the required review method).",
+          "Confirm the ELD is present on the registered list: https://eld.fmcsa.dot.gov/List",
+          "Check the revoked list: https://eld.fmcsa.dot.gov/List/Revoked",
+          "If the ID does not appear on the registered list OR appears on the revoked list, cite §395.22(a) and treat the driver as operating without a required ELD.",
+        ],
       },
       {
         heading: "Removal vs revocation",

@@ -12,6 +12,7 @@
 
 const SECTION_REGEX = /§\s*(\d+)\.(\d+)((?:\s*\([a-z0-9]+\))*)/gi;
 const BOLD_REGEX = /\*\*([^*]+)\*\*/g;
+const URL_REGEX = /https?:\/\/[^\s)<>"']+[^\s.,;:!?)<>"']/g;
 const ECFR_BASE = "https://www.ecfr.gov/current/title-49/section-";
 
 function cfrUrl(section) {
@@ -35,19 +36,40 @@ export function linkifyCitation(text) {
   if (last < text.length) boldParts.push({ kind: "plain", text: text.slice(last) });
   if (boldParts.length === 0) boldParts.push({ kind: "plain", text });
 
-  // Second pass — within each PLAIN segment, link §XXX.Y citations.
+  // Second pass — within each PLAIN segment, link §XXX.Y citations AND raw URLs.
   const out = [];
   boldParts.forEach((seg) => {
     if (seg.kind === "bold") { out.push({ bold: seg.text }); return; }
-    let segLast = 0;
+
+    // Find all match spans (CFR + URL), sort by start index, then emit.
+    const matches = [];
     let m;
     SECTION_REGEX.lastIndex = 0;
     while ((m = SECTION_REGEX.exec(seg.text)) !== null) {
-      if (m.index > segLast) out.push(seg.text.slice(segLast, m.index));
-      const section = `${m[1]}.${m[2]}`;
-      out.push({ href: cfrUrl(section), label: m[0].replace(/\s+/g, "") });
-      segLast = m.index + m[0].length;
+      matches.push({
+        start: m.index,
+        end: m.index + m[0].length,
+        node: { href: cfrUrl(`${m[1]}.${m[2]}`), label: m[0].replace(/\s+/g, "") },
+      });
     }
+    URL_REGEX.lastIndex = 0;
+    while ((m = URL_REGEX.exec(seg.text)) !== null) {
+      matches.push({
+        start: m.index,
+        end: m.index + m[0].length,
+        node: { href: m[0], label: m[0], raw: true },
+      });
+    }
+    matches.sort((a, b) => a.start - b.start);
+
+    let segLast = 0;
+    matches.forEach((mt) => {
+      if (mt.start >= segLast) {
+        if (mt.start > segLast) out.push(seg.text.slice(segLast, mt.start));
+        out.push(mt.node);
+        segLast = mt.end;
+      }
+    });
     if (segLast < seg.text.length) out.push(seg.text.slice(segLast));
   });
   return out;

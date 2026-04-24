@@ -26,6 +26,12 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — ELD Registry links + "check every inspection" emphasis
+- Linked the FMCSA registered list (https://eld.fmcsa.dot.gov/List) and the revoked list (https://eld.fmcsa.dot.gov/List/Revoked) directly in the ELD Registration topic.
+- Added explicit 4-step verification workflow: pull registration ID from transferred file → confirm on registered list → check revoked list → cite §395.22(a) if missing or revoked. Emphasized doing this on EVERY ELD inspection, not just when something looks off.
+- Extended `cfrLinks.js` `CfrText` helper to auto-link raw `https://…` URLs alongside CFR citations and `**bold**` — so any future content with URLs renders them as live links without author effort.
+
+
 ### 2026-02 — False RODS vs Tampered ELD rewrite per CVSA Bulletin 2026-02
 - Prior content treated the split as "false log (§395.8(e))" vs "manipulated log (CVSA OOS)" which was wrong per the bulletin.
 - Correct split: **§395.8(e)(1) False RODS** (ELD works, log is wrong — driver error or misreporting) vs **§395.8(e)(2) Reengineered/Reprogrammed/Tampered ELD** (DEVICE-level alteration — fraudulent accounts, altered data). OOS rules corrected to match bulletin.
