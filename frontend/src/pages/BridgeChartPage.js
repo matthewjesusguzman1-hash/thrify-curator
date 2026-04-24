@@ -491,7 +491,7 @@ export default function BridgeChartPage() {
     setGroups(p => {
       const n = [...p]; n[i] = { ...n[i], [field]: val };
       if (field === "preset") {
-        const map = { "Single": 1, "Tandem (2)": 2, "Triple (3)": 3, "Quad (4)": 4 };
+        const map = { "Single": 1, "Tandem (2)": 2, "Tandem-38K": 2, "Triple (3)": 3, "Quad (4)": 4 };
         const ax = map[val] || 0;
         if (ax > 0) { n[i].axles = String(ax); n[i].useGroup = ax > 1; n[i].weights = Array(ax).fill(""); n[i].groupWeight = ""; n[i].dummyAxle = false; }
         if (val === "Custom") { n[i].useGroup = false; n[i].dummyAxle = false; }
@@ -593,10 +593,18 @@ export default function BridgeChartPage() {
       const dummySuffix = di.hasDummy ? (di.disregarded ? "" : "+dummy") : "";
       const configLabel = di.hasDummy ? `${baseDesc}${dummySuffix ? `+dummy` : ""}` : baseDesc;
 
+      // "Tandem (38K)" preset — state-specific 38,000-lb tandem allowance. When
+      // the user picks this preset we cap at 38k for a straight 2-axle group
+      // (no bridge distance overriding it). Bridge-formula values still win if
+      // they come back lower for an explicit distance.
+      const is38kTandem = g.preset === "Tandem-38K";
+      const TANDEM_MAX = is38kTandem ? 38000 : 34000;
+      const TANDEM_SRC = is38kTandem ? "Tandem (38K)" : "Tandem";
+
       let max = null, source = "";
       if (isCustom && g.maxOverride) { max = parseInt(g.maxOverride); source = "Custom"; }
       else if (n === 1) { max = 20000; source = "Single axle"; }
-      else if (n === 2 && !gDist) { max = 34000; source = "Tandem"; }
+      else if (n === 2 && !gDist) { max = TANDEM_MAX; source = TANDEM_SRC; }
       else if (n >= 2 && gDist) {
         const lk = bridgeLookup(gDist, n);
         if (lk) {
@@ -608,9 +616,9 @@ export default function BridgeChartPage() {
           } else {
             source = `${configLabel} · Bridge ${gDist}ft, ${n} axles`;
           }
-        } else if (n === 2) { max = 34000; source = "Tandem"; }
+        } else if (n === 2) { max = TANDEM_MAX; source = TANDEM_SRC; }
       }
-      else if (n === 2) { max = 34000; source = "Tandem"; }
+      else if (n === 2) { max = TANDEM_MAX; source = TANDEM_SRC; }
 
       // Secondary tandem 34k check — only when dummy is COUNTED AND we know the base-tandem
       // sum without the dummy (individual-weights mode). In group-weights mode the app
@@ -1208,7 +1216,7 @@ export default function BridgeChartPage() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0" data-html2canvas-ignore="true">
                       <select value={g.preset} onClick={e => e.stopPropagation()} onChange={e => updateGroup(gi, "preset", e.target.value)} className="text-[10px] bg-white/10 text-white border border-white/20 rounded px-1.5 py-0.5 outline-none">
-                        {[{ l: "Single", v: "Single" }, { l: "Tandem", v: "Tandem (2)" }, { l: "Triple", v: "Triple (3)" }, { l: "Quad", v: "Quad (4)" }, { l: "Custom", v: "Custom" }].map(p => <option key={p.v} value={p.v} className="text-[#002855]">{p.l}</option>)}
+                        {[{ l: "Single", v: "Single" }, { l: "Tandem", v: "Tandem (2)" }, { l: "Tandem (38K) see weight rules *", v: "Tandem-38K" }, { l: "Triple", v: "Triple (3)" }, { l: "Quad", v: "Quad (4)" }, { l: "Custom", v: "Custom" }].map(p => <option key={p.v} value={p.v} className="text-[#002855]">{p.l}</option>)}
                       </select>
                       {groups.length > 1 && <button onClick={e => { e.stopPropagation(); removeGroup(gi); }} className="text-white/50 hover:text-white p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>}
                       {g._collapsed ? <ChevronDown className="w-4 h-4 text-white/80" /> : <ChevronUp className="w-4 h-4 text-white/80" />}
