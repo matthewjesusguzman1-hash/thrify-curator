@@ -65,6 +65,25 @@ function PriorResetBanner() {
   );
 }
 
+/** Why this pair? Small gold-bordered chip shown on each example so an
+ *  inspector reading the log knows whether the pairing we drew was the only
+ *  qualifying one, the most beneficial of several, or a worked failure. It
+ *  reinforces the CVSA principle from the intro callout without forcing the
+ *  inspector to re-read it on every example. */
+function PairingNote({ note }) {
+  return (
+    <div
+      className="flex items-start gap-2 rounded-md bg-[#FFFBEB] border-l-[3px] border-[#D4AF37] px-2.5 py-1.5"
+      data-testid="pairing-note"
+    >
+      <span className="inline-flex items-center gap-0.5 bg-[#D4AF37] text-[#002855] text-[9px] font-black uppercase tracking-widest rounded-sm px-1.5 py-[1px] flex-shrink-0 mt-[1px]">
+        Why this pair
+      </span>
+      <p className="text-[11px] text-[#713F12] leading-snug"><CfrText text={note} /></p>
+    </div>
+  );
+}
+
 function LearnTab() {
   return (
     <div className="space-y-3">
@@ -161,6 +180,7 @@ function LearnCard({ s }) {
           />
         </div>
       ))}
+      {s.pairingNote && <PairingNote note={s.pairingNote} />}
       <p className="text-[12.5px] text-[#334155] leading-relaxed pt-1"><CfrText text={s.description} /></p>
     </>
   ) : (
@@ -172,6 +192,7 @@ function LearnCard({ s }) {
         shiftMarkers={s.shiftMarkers || []}
         compact
       />
+      {s.pairingNote && <PairingNote note={s.pairingNote} />}
       <p className="text-[12.5px] text-[#334155] leading-relaxed"><CfrText text={s.description} /></p>
     </>
   );
@@ -252,6 +273,7 @@ function LearnExtra({ ex, parentId, idx }) {
             />
           </>
         )}
+        {ex.pairingNote && <PairingNote note={ex.pairingNote} />}
         <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={ex.description} /></p>
       </div>
     </div>
