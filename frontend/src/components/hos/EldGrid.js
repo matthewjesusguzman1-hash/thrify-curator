@@ -34,7 +34,34 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   const TOTAL_W = compact ? 66 : 76;
   const HEADER_H = compact ? 18 : 22;
   const HOURS = 24;
-  const BRACKET_H = brackets && brackets.length > 0 ? 26 : 0;
+
+  // Assign each bracket to a label row, pushing colliding labels down to a
+  // second (or third) row so two narrow adjacent brackets — e.g. "2.5h OFF ✓"
+  // next to "Counted · 0.5h D" — never overlap into unreadable mush.
+  const BRACKET_FONT = compact ? 8.5 : 9.5;
+  const BRACKET_ROW_H = compact ? 11 : 12;
+  const bracketRows = (() => {
+    if (!brackets || brackets.length === 0) return [];
+    // Approx label width: average glyph ≈ 0.55 × font-size, plus 8px padding.
+    const labelSpan = (b) => {
+      const w = (b.label || "").length * BRACKET_FONT * 0.55 + 8;
+      const cx = LABEL_W + ((b.startMin + b.endMin) / 2 / 60) * HOUR_W;
+      return { cx, left: cx - w / 2, right: cx + w / 2 };
+    };
+    const rowEnds = []; // rightmost label-right per row
+    return brackets.map((b) => {
+      const { left, right } = labelSpan(b);
+      let row = 0;
+      while (row < rowEnds.length && rowEnds[row] > left) row++;
+      rowEnds[row] = right;
+      return row;
+    });
+  })();
+  const bracketRowCount = bracketRows.length ? Math.max(...bracketRows) + 1 : 0;
+  // Bracket band height: base bar (14) + one row of label (BRACKET_ROW_H) per
+  // extra stacked row beyond the first. First row labels still sit above the
+  // bar like before; additional rows stack above that.
+  const BRACKET_H = bracketRowCount > 0 ? 14 + bracketRowCount * BRACKET_ROW_H : 0;
   const maxLabelRow = shiftMarkers.reduce((mx, m) => Math.max(mx, m.labelRow || 0), 0);
   const MARKER_LABEL_H = shiftMarkers && shiftMarkers.length > 0 ? 14 + maxLabelRow * 12 : 0;
   const gridW = HOURS * HOUR_W;
@@ -90,19 +117,24 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
         onClick={handleSvgClick}
         style={{ cursor: onMinuteClick ? "crosshair" : "default" }}
       >
-        {/* Brackets above the grid — call out spans the rule cares about */}
+        {/* Brackets above the grid — call out spans the rule cares about.
+         * `bracketRows[i]` tells us which vertical row to place the label on
+         * so adjacent narrow brackets don't collide. Row 0 sits just above
+         * the bar; row 1/2 stack above that. */}
         {brackets.map((b, i) => {
           const x1 = xForMin(b.startMin);
           const x2 = xForMin(b.endMin);
           const color = b.color || "#002855";
-          const barY = BRACKET_H - 10;
+          const barY = BRACKET_H - 4; // bar hugs the bottom of the band
+          const row = bracketRows[i] || 0;
+          const labelY = barY - 6 - row * BRACKET_ROW_H;
           return (
             <g key={`br${i}`}>
               <line x1={x1} y1={barY} x2={x2} y2={barY} stroke={color} strokeWidth="1.8" />
               <line x1={x1} y1={barY} x2={x1} y2={BRACKET_H - 1} stroke={color} strokeWidth="1.8" />
               <line x1={x2} y1={barY} x2={x2} y2={BRACKET_H - 1} stroke={color} strokeWidth="1.8" />
               {b.label && (
-                <text x={(x1 + x2) / 2} y={barY - 4} textAnchor="middle" fontSize={compact ? "8.5" : "9.5"} fontWeight="700" fill={color} fontFamily="sans-serif">
+                <text x={(x1 + x2) / 2} y={labelY} textAnchor="middle" fontSize={BRACKET_FONT} fontWeight="700" fill={color} fontFamily="sans-serif">
                   {b.label}
                 </text>
               )}
