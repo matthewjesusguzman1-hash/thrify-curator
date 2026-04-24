@@ -43,7 +43,21 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - EldGrid: label text-anchor clamps to 'start' for markers at <60 min and 'end' for markers at ≥23:00 — prevents long edge labels from clipping past the SVG bounds.
 - Descriptions uniformly call out: (a) prior 10h reset ended at 00:00, (b) pre-split shift duration/hours, (c) CVSA split boundaries, (d) alternative split pairings that would have been valid.
 
-### 2026-02 — Tap-to-set shift time on Practice grid
+### 2026-02 — ELD Reference module added to HOS Training hub
+- New tile on /hours-of-service/training (Smartphone icon, "ELD Reference · Devices, data, malfunctions, ~10 min") opens a dedicated expandable-cards view.
+- Content: `/app/frontend/src/lib/eldContent.js` with 9 topics covering 49 CFR §395.8 / §395.11 / §395.15 / §395.22 / §395.24 / §395.30 / §395.32 / §395.34.
+  - ELD vs Paper Log + Exemptions (short-haul, 8-day, pre-2000 engine, driveaway-towaway, rented ≤8 days)
+  - Required Data Elements + Roadside Display (header fields, duty status records, screen vs printout, graph-grid requirements)
+  - Data Transfer Methods (Telematics = web+email; Local = USB+Bluetooth; failure fallback; routing codes)
+  - Malfunctions & Data Diagnostic Events (6 malfunction codes P/E/T/L/R/S/O, driver duties §395.34, carrier 8-day repair, roadside checks)
+  - Unidentified Driving Records (driver claim flow, carrier annotation duty, red flags)
+  - Edits/Annotations/Certification (immutable originals, who can edit what, driving time rule, end-of-day certification, annotation requirements)
+  - Supporting Documents (§395.11 — 5 categories, 6-mo retention, 10-per-day cap)
+  - ELD Registration & Revocation (FMCSA registry, 60-day replacement grace, roadside verification)
+  - AOBRD vs ELD Historical (Dec 2019 transition, 4 key ELD-over-AOBRD improvements)
+- Component: `EldView` + `EldTopicCard` in `HosTrainingPage.js`. Each card shows topic color, icon, title, 1-line subtitle, and CFR citation. Expand reveals a yellow TL;DR summary chip + numbered sections with body text + colored bullets.
+- CFR auto-linking via `CfrText` wraps every §395.x string as a live eCFR hyperlink — including the complex anchor paths like §395.8(a)(1)(iii)(A)(1).
+- Info-only for now; flashcard / practice mode deferred pending user decision on preferred format.
 - User requested touching the grid to choose shift START/END time instead of typing HH:MM.
 - **SplitSleeperPage.js**: lifted `tStart` / `tEnd` state out of QuestionCard into PracticeTab. Added `shiftTapNext` ("start" | "end") cycling indicator. When the shift question becomes active, EldGrid receives `onMinuteClick={handleGridTapForShift}`. Each grid tap snaps to 15-min, populates tStart or tEnd, and toggles the next tap. HH:MM inputs remain as a fallback (keyboard users / manual edits).
 - Added a blue "Tap the grid to set Shift START/END" hint banner (`[data-testid="grid-tap-banner"]`) above the grid, with the active label highlighted in green (START) or red (END) so the user always knows which marker the next tap will drop.
@@ -141,7 +155,7 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - **P2**: Refactor `server.py` into modular routes (`/app/backend/routes/*`)
 - **P2**: Refactor `BridgeChartPage.js` / `HoursOfServicePage.js` / `HazMatHelpers.js` into smaller components
 - **P2**: Additional Inspector Tools — Spec Marking Decoder, Retest Date Calculator, OOS Quick Reference
-- **Tabled (re-raise later)**: ELD Training module (49 CFR §395.8 + §395.20-§395.38) — candidate topics: ELD vs Paper Log + exemptions, Required Data/Display, Data Transfer methods, Malfunctions & Data Diagnostic Events, Unidentified Driving Records, Edits/Annotations/Certification, Supporting Docs, ELD Registration & Revocation, AOBRD historical context. User opted to table in favor of other priorities.
+- **Tabled (re-raise later)**: ELD Training module (49 CFR §395.8 + §395.20-§395.38) — INFO MODULE SHIPPED Feb 2026 (see Changelog). User to decide if a practice/flashcard layer should follow.
 - **P2**: Device-storage indicator in the Customize Header / admin menu
 
 ## Test Credentials

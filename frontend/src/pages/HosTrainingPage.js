@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft, BookOpen, Target, Calendar, RotateCcw, CheckCircle2, XCircle,
   ChevronRight, GraduationCap, Zap, Award, Clock, Layers, Lightbulb, FileText,
-  ShieldCheck, Plus, Minus,
+  ShieldCheck, Plus, Minus, Smartphone,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { EldGrid } from "../components/hos/EldGrid";
@@ -14,6 +14,7 @@ import {
   BREAK_SCENARIOS, RECAP_SCENARIOS, LEARN_CONTENT, onDutyBrackets, synthesizeDayLog,
   EXEMPTIONS_TOP, EXEMPTIONS_OTHERS,
 } from "../lib/hosScenarios";
+import { ELD_TOPICS } from "../lib/eldContent";
 
 /**
  * HosTrainingPage — property-carrying CMV HOS training.
@@ -30,6 +31,7 @@ const MODULES = [
   { id: "recap", learnKey: "recap", title: "70-Hour Recap",     subtitle: "Count rolling 8-day hours",    icon: Calendar,  color: "#7C3AED", minutes: 4, quiz: RECAP_SCENARIOS },
   { id: "split", learnKey: null,    title: "Split Sleeper Trainer", subtitle: "Qualifying rest pairings",     icon: Layers,    color: "#0EA5E9", minutes: 6, quiz: null, route: "/hours-of-service/split-sleeper" },
   { id: "exempt", learnKey: "exempt", title: "HOS Exemptions",  subtitle: "Top roadside + others",        icon: ShieldCheck, color: "#475569", minutes: 6, quiz: null, custom: "exemptions" },
+  { id: "eld",    learnKey: "eld",    title: "ELD Reference",    subtitle: "Devices, data, malfunctions",  icon: Smartphone,  color: "#2563EB", minutes: 10, quiz: null, custom: "eld" },
 ];
 
 export default function HosTrainingPage() {
@@ -49,6 +51,9 @@ export default function HosTrainingPage() {
 
   if (mod && mod.custom === "exemptions") {
     return <ExemptionsView onBack={exitModule} />;
+  }
+  if (mod && mod.custom === "eld") {
+    return <EldView onBack={exitModule} />;
   }
   if (mod && phase === "learn") {
     return <LearnView mod={mod} onBack={exitModule} onQuiz={goToQuiz} />;
@@ -604,8 +609,7 @@ function ExemptionsView({ onBack }) {
   );
 }
 
-function ExemptionCard({ ex, top }) {
-  const [open, setOpen] = useState(false);
+function ExemptionCard({ ex, top }) {  const [open, setOpen] = useState(false);
   return (
     <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`exempt-${ex.id}`}>
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-[#F8FAFC]">
@@ -639,4 +643,123 @@ function ExemptionCard({ ex, top }) {
     </div>
   );
 }
+
+/* ═══════════════ ELD Reference view ═══════════════ */
+
+function EldView({ onBack }) {
+  const [openId, setOpenId] = useState(ELD_TOPICS[0].id);
+  return (
+    <div className="min-h-screen bg-[#F0F2F5] pb-8" data-testid="eld-view">
+      <header className="sticky top-0 z-30 bg-[#002855] text-white border-b border-[#D4AF37]/30">
+        <div className="max-w-[900px] mx-auto px-3 py-2.5 flex items-center gap-2">
+          <button onClick={onBack} className="text-white/70 hover:text-white p-1" data-testid="eld-back-btn">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <Smartphone className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <p className="text-sm font-bold leading-tight truncate" style={{ fontFamily: "Outfit, sans-serif" }}>ELD Reference</p>
+            </div>
+            <p className="text-[10px] text-white/50 font-mono">
+              <a href="https://www.ecfr.gov/current/title-49/subtitle-B/chapter-III/subchapter-B/part-395" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR Part 395 Subparts A &amp; B</a>
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-[900px] mx-auto px-3 py-4 space-y-3">
+        <section className="bg-white rounded-xl border border-[#E2E8F0] p-4" data-testid="eld-intro">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Lightbulb className="w-4 h-4 text-[#D4AF37]" />
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Roadside ELD reference</p>
+          </div>
+          <p className="text-[12.5px] text-[#334155] leading-relaxed">
+            Nine quick-reference topics covering what a driver must show you, how to transfer the ELD data, the 6 malfunction codes, edits &amp; certification rules, and the historical AOBRD transition. Tap any card to expand. Every <span className="font-mono font-bold">§395.x</span> citation links straight to eCFR.
+          </p>
+        </section>
+
+        <div className="flex items-center gap-2 px-1 pt-1">
+          <div className="w-1 h-5 bg-[#D4AF37] rounded" />
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#002855]">Topics</p>
+          <p className="text-[10px] text-[#94A3B8]">· {ELD_TOPICS.length} sections</p>
+        </div>
+
+        <div className="space-y-2">
+          {ELD_TOPICS.map((t) => (
+            <EldTopicCard
+              key={t.id}
+              topic={t}
+              open={openId === t.id}
+              onToggle={() => setOpenId((cur) => (cur === t.id ? null : t.id))}
+            />
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function EldTopicCard({ topic, open, onToggle }) {
+  return (
+    <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`eld-topic-${topic.id}`}>
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-[#F8FAFC]"
+        data-testid={`eld-topic-toggle-${topic.id}`}
+      >
+        <div
+          className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: `${topic.color}18`, color: topic.color }}
+        >
+          <Smartphone className="w-4 h-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13.5px] font-bold text-[#002855] leading-tight">{topic.title}</p>
+          <p className="text-[10.5px] text-[#64748B] leading-tight">{topic.short}</p>
+          <p className="text-[10px] text-[#94A3B8] font-mono leading-tight mt-0.5">
+            <CfrText text={topic.cfr} />
+          </p>
+        </div>
+        {open ? <Minus className="w-4 h-4 text-[#64748B] flex-shrink-0" /> : <Plus className="w-4 h-4 text-[#64748B] flex-shrink-0" />}
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 pt-1 border-t border-[#F1F5F9] space-y-3" data-testid={`eld-topic-body-${topic.id}`}>
+          {/* Summary — framed so it reads like the "TL;DR" at the top */}
+          <div className="rounded-lg bg-[#FFFBEB] border border-[#D4AF37]/30 p-2.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#B45309] mb-1">Summary</p>
+            <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={topic.summary} /></p>
+          </div>
+
+          {/* Sections */}
+          {topic.sections.map((s, i) => (
+            <div key={i} className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                  style={{ backgroundColor: topic.color }}
+                >
+                  {i + 1}
+                </div>
+                <p className="text-[12.5px] font-bold text-[#002855]" style={{ fontFamily: "Outfit, sans-serif" }}>{s.heading}</p>
+              </div>
+              <p className="text-[12px] text-[#334155] leading-relaxed pl-7"><CfrText text={s.body} /></p>
+              {s.bullets && s.bullets.length > 0 && (
+                <ul className="space-y-1 pl-7">
+                  {s.bullets.map((b, bi) => (
+                    <li key={bi} className="text-[12px] text-[#334155] leading-relaxed pl-3 relative">
+                      <span className="absolute left-0 top-[6px] w-1.5 h-1.5 rounded-full" style={{ backgroundColor: topic.color }} />
+                      <CfrText text={b} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
