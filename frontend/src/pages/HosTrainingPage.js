@@ -88,9 +88,13 @@ export default function HosTrainingPage() {
             // give inspectors a scannable preview on the hub itself — turns the
             // tile grid into a mini quick-reference before they even open a module.
             const learn = m.learnKey ? LEARN_CONTENT[m.learnKey] : null;
-            const firstRoadside = learn && Array.isArray(learn.roadside) && learn.roadside.length > 0
-              ? (typeof learn.roadside[0] === "string" ? learn.roadside[0] : learn.roadside[0].text)
-              : null;
+            // Prefer the module's short "roadsideQuick" rule-of-thumb (scannable
+            // in a glance) over the first full Roadside card.
+            const firstRoadside = learn && learn.roadsideQuick
+              ? learn.roadsideQuick
+              : (learn && Array.isArray(learn.roadside) && learn.roadside.length > 0
+                  ? (typeof learn.roadside[0] === "string" ? learn.roadside[0] : learn.roadside[0].text)
+                  : null);
             return (
               <button
                 key={m.id}
@@ -113,7 +117,7 @@ export default function HosTrainingPage() {
                         <Target className="w-2 h-2" strokeWidth={3} />
                         Roadside
                       </span>
-                      <span className="text-[10.5px] text-white leading-snug line-clamp-2">{firstRoadside}</span>
+                      <span className="text-[10.5px] text-white leading-snug truncate">{firstRoadside}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#94A3B8]">

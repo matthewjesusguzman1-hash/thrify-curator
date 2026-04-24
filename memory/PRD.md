@@ -26,6 +26,18 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — HOS hub tile previews shortened to single-line rule-of-thumb
+- User: the full first Roadside action was too much information for a hub-glance preview.
+- Added a short `roadsideQuick` string to each LEARN_CONTENT module — one-line rule-of-thumb, typically 6-10 words:
+  - duty → "Classify every block OFF/SB/D/OD first."
+  - 14hr → "First on-duty after 10h rest + 14h = end of shift."
+  - 11hr → "Sum D segments only. >11h driving = violation."
+  - break → ">8h driving without a 30-min break = violation."
+  - recap → "Sum D+OD over prior 7 days. >70h = violation."
+- Hub tile now prefers `roadsideQuick` over the first full Roadside action. Chip text switched from `line-clamp-2` to `truncate` (single line) so the tile height stays tight.
+- Full Roadside action cards still render inside each Learn module — this is a hub-only shortening.
+
+
 ### 2026-02 — HOS Training hub: Roadside preview chips on every module tile
 - User approved the proposed enhancement: preview each module's first Roadside action on the hub tile.
 - HosTrainingPage hub now looks up `LEARN_CONTENT[m.learnKey].roadside[0]` for each module and renders it below the subtitle as a compact navy-tinted chip (#002855/95 filled, gold 2px left accent) with a mini "ROADSIDE" badge (gold background, Target icon, 8px font). Text is clamped to 2 lines with `line-clamp-2`.
