@@ -26,6 +26,19 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — HOS Practice Scenarios (NEW section · 11 scenarios) + military time + Restart/Pick controls
+- User asked for: more practice (just-14/11 combined, multi-day, full 8-day inspection period), a Restart Scenario button + Pick scenario picker, military time across the ELD trainer, and an embedded mini 70-hr calculator that does NOT affect the real /hours-of-service tool.
+- Extracted the practice runner from `SplitSleeperPage` into shared `/app/frontend/src/components/hos/PracticeRunner.js` (~440 lines). Two modes: `mode="split"` (full qualify→select→questions flow) and `mode="shift"` (skips qualify+select for non-split scenarios). Same drag-to-place handles, same scroll-lock on iOS.
+- New top bar inside the runner: Pick scenario (opens an inline list of all scenarios with title + subtitle, jump to any) and Restart (resets the active scenario back to step 1). Both data-testids: `${category}-pick-scenario-btn`, `${category}-restart-btn`, `${category}-scenario-pick-{i}`.
+- New scenarios file `/app/frontend/src/lib/hosAdvancedScenarios.js`: COMBINED_SCENARIOS (5 single-day 11/14), MULTIDAY_SCENARIOS (3 two-day with prior-day ELD context), EIGHTDAY_SCENARIOS (3 full 8-day with prior 7-day recap + cycle compliance). 11 total, all military time.
+- New page `/app/frontend/src/pages/HosPracticePage.js` (~315 lines) at route `/hours-of-service/practice`. Three category tabs (combined / multiday / eightday). Per-category context renderer: multi-day shows prior-day ELD cards above the runner; 8-day shows the recap table + an embedded **MiniCycleCalc**.
+- MiniCycleCalc is a self-contained 70/60-hr calculator with editable prior-day overrides (so the inspector can simulate a 34-hr restart by zeroing days), a Today on-duty input, live verdict (under / at limit / over), and a "Reveal correct numbers" button. State is local React state only — remounted on category switch via `key={catId}` and never reads/writes the real /hours-of-service calculator state.
+- EldGrid hour labels switched from 12-hour Mid/Noon/1-11 to 24-hour 00..23 (24 hidden to prevent right-edge crowding) — `String(h).padStart(2, "0")` with `font-feature-settings: 'tnum'` for tabular alignment. All scenario shift markers and explanations were already 24-hr, so no scenario data needed conversion.
+- New module tile "HOS Practice Scenarios" added to the HOS Training hub (color: #D4AF37, icon: Target) routing to the new page. Existing Split Sleeper tile unchanged.
+- Files touched: PracticeRunner.js (new), hosAdvancedScenarios.js (new), HosPracticePage.js (new), SplitSleeperPage.js (refactored to thin wrapper around PracticeRunner mode="split"), EldGrid.js (military labels), HosTrainingPage.js (added module tile), App.js (added route).
+- Tested: testing_agent_v3_fork iteration 31 — 18 / 18 assertions passed, no regressions on Split Sleeper or 60/70 calculator.
+
+
 ### 2026-02 — HOS section: sibling tab bar for 60/70 Calculator ⇄ HOS Training
 - User: "I want the hours of service training button to be an HOS general tab. I want it next to the 60/70 hour calc in a tab."
 - Created `/app/frontend/src/components/hos/HosTabs.js` — route-driven shared tab bar (no local state). Two tabs: `60/70 Calculator` → `/hours-of-service`, `HOS Training` → `/hours-of-service/training`. Active tab is inferred from the current pathname, gold text + gold underline accent on the active one, white/60 on the inactive.
