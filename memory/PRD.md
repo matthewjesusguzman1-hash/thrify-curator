@@ -26,7 +26,13 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
-### 2026-02 — HOS Training Hub: Compact Mode toggle (VERIFIED)
+### 2026-02 — HOS Training Hub: Compact Mode toggle REMOVED
+- User feedback: "It's cool but it makes no difference to the user. Remove the quick button and function."
+- Removed the Detailed ⇄ Quick toggle button, the `compact`/`setCompact`/`toggleCompact` state, and all `compact ? ... : ...` conditional styling from HosTrainingPage hub tiles.
+- Hub tiles now render in a single (detailed) layout only — title + subtitle + Roadside chip + minute/quiz meta row + chevron.
+- localStorage key `hos-hub-compact-mode` is now unused (harmless residue, no cleanup needed).
+
+### 2026-02 — HOS Training Hub: Compact Mode toggle (VERIFIED, later removed)
 - User approved: "Yeah, try it" on compact-mode toggle proposal. Inspectors working an active roadside stop needed to see all six HOS rules on one screen without scrolling.
 - Added a Detailed ⇄ Quick toggle button in the HosTrainingPage hub header (gold when active, white/10 when inactive).
 - State persists via `localStorage["hos-hub-compact-mode"]`, so an inspector who prefers the cheat-sheet density keeps it across sessions.
