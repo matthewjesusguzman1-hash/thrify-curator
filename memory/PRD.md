@@ -43,7 +43,13 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - EldGrid: label text-anchor clamps to 'start' for markers at <60 min and 'end' for markers at ≥23:00 — prevents long edge labels from clipping past the SVG bounds.
 - Descriptions uniformly call out: (a) prior 10h reset ended at 00:00, (b) pre-split shift duration/hours, (c) CVSA split boundaries, (d) alternative split pairings that would have been valid.
 
-### 2026-02 — ELD Save Data File simplified (user correction)
+### 2026-02 — False RODS vs Tampered ELD rewrite per CVSA Bulletin 2026-02
+- User provided CVSA Inspection Bulletin 2026-02. Prior content treated the split as "false log (§395.8(e))" vs "manipulated log (CVSA OOS)" which was wrong.
+- Correct split per bulletin: **§395.8(e)(1) False RODS** (ELD works, log is wrong — driver error or misreporting) vs **§395.8(e)(2) Reengineered/Reprogrammed/Tampered ELD** (DEVICE-level alteration — fraudulent accounts, altered data, etc.).
+- OOS rules corrected to match bulletin: (a) §395.8(e)(1) + falsification determined + driver NOT over hours → cite and proceed; (b) §395.8(e)(1) + driver IS over HOS → cite + OOS until HOS eligibility re-established; (c) §395.8(e)(2) + cannot determine actual driving → cite + OOS 10 consecutive hours.
+- Bulletin examples incorporated verbatim: PC misuse 3.75h, driving without logging in (unidentified driving with SB mismatch on same VIN), fraudulent ELD accounts with one-digit CDL difference, Tolleson AZ off-duty claim contradicted by Strafford MO fuel receipt.
+- Ghost driver subsection rewritten to map each scenario to the correct §395.8(e) paragraph.
+- Topic title updated to "False RODS vs Tampered ELD"; subtitle now cites the bulletin.
 - Stripped DataQs-specific content per user request. Topic retitled "Save the ELD Data File" (was "Save the ELD File to DataQs / RDR") with subtitle "Critical post-inspection step".
 - Content reduced to 3 concise sections: (1) How to save in eRODS — "click **File → Save Data File**"; (2) Why this matters — saved local copy is the authoritative record if data is ever needed; (3) Make it a habit — save on every contact.
 - Rewrote the Fail-to-Transfer section in the Data Transfer topic: clarified that §395.24(a) requires the driver to TRANSFER via a prescribed method (Telematics/USB/BT), and that viewing via display/printout is acceptable for HOS review but does NOT satisfy §395.24(a) or exempt the driver from a fail-to-transfer violation. Distinguished "not the driver's fault" (network/eRODS/routing-code issues) from "driver violation" (cannot/will not/refuses). Citation only after the driver has been given the opportunity to transfer AND the inspector has assisted as needed.
