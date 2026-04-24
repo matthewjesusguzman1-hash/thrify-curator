@@ -485,29 +485,13 @@ export const LEARN_CONTENT = {
           { startMin: MIN(8), endMin: MIN(12), label: "VIOLATION", color: "#DC2626" },
         ],
       },
-      {
-        heading: "The 30-min break counts toward the 14",
-        body: "The 30-min break satisfies the 8-hour driving counter, but the 14-hour work shift keeps running during it. Off-duty/Sleeper time inside a shift does NOT pause the 14-hr wall-clock — only a qualifying split-sleeper pair (§395.1(g)(1)(ii)) excludes rest from the 14. So a 30-min break at 12:30 still eats into the 14-hour window exactly like any other on-duty time, and the shift still ends 14 wall-clock hours after the first on-duty entry.",
-        exampleLog: [
-          { status: "OFF", start: "00:00", end: "06:00" },
-          { status: "D",   start: "06:00", end: "14:00" },
-          { status: "OFF", start: "14:00", end: "14:30" },
-          { status: "D",   start: "14:30", end: "20:00" },
-          { status: "OFF", start: "20:00", end: "24:00" },
-        ],
-        brackets: [
-          { startMin: MIN(6), endMin: MIN(20), label: "14-hr shift still ends at 20:00", color: "#D4AF37" },
-          { startMin: MIN(14), endMin: MIN(14, 30), label: "30-min break counts toward 14", color: "#F59E0B" },
-        ],
-      },
     ],
-    summary: "Roadside workflow: scan the log for driving runs. Any uninterrupted run > 8 hours without a 30-min non-driving block is a violation. The 30-min break itself still counts toward the 14-hour work shift.",
+    summary: "Roadside workflow: scan the log for driving runs. Any uninterrupted run > 8 hours without a 30-min non-driving block is a violation.",
     roadsideQuick: ">8h driving without a 30-min break = violation.",
     roadside: [
       "Scan the log for driving runs. Walk through the D segments chronologically and track cumulative driving since the last non-driving block ≥ 30 minutes.",
       "The instant cumulative driving passes 8 hours without a qualifying 30-minute non-driving interruption, any further driving is a violation — cite §395.3(a)(3)(ii).",
       "The 30-minute block can be OFF, SB, or OD (not driving). Don't require it to be off-duty.",
-      "The 30-min break still counts toward the 14-hour work shift — it only resets the 8-hour driving counter, it does NOT pause the 14-hr wall-clock.",
     ],
   },
 
@@ -1408,16 +1392,16 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     splitType: null,
     violation11: false,
     violation14: false,
-    counted14Hours: 10,
+    counted14Hours: 14,
     counted11Hours: 10,
     shiftStartMin: 6 * 60,  // 06:00 — first on-duty (D) after the prior reset
     shiftEndMin: 20 * 60,   // 20:00 — 14h wall-clock limit (no qualifying split applies)
     explanation: {
       qualifying: "Neither rest period qualifies. §395.1(g)(1)(ii) requires ≥7 consecutive hours in the Sleeper Berth — the only SB block here is 4 hrs. Without a qualifying SB period, the 4h OFF has nothing to pair with.",
-      shift: "No valid split, so CVSA 14-hr wall-clock rule applies. Shift START = 06:00 (first on-duty after the prior reset). Shift END = 20:00 (14h wall-clock later, §395.3(a)(2)). The 4h OFF and 4h SB in the middle do NOT extend the window.",
+      shift: "No valid split, so CVSA 14-hr wall-clock rule applies. Shift START = 06:00 (first on-duty after the prior reset). Shift END = 20:00 (14h wall-clock later, §395.3(a)(2)). The 4h OFF and 4h SB in the middle do NOT extend the window and still count toward the 14.",
       split: "No valid split. Without a qualifying ≥7h SB period, the §395.1(g)(1)(ii)(E) exclusion does not apply.",
       violation: "No 11 or 14 violation. Driving total is exactly 10h (within 11) and the last driving ends at 20:00 — exactly at the 14-hr wall-clock limit, not over.",
-      hours: "Toward 14 (D+OD within the 06-20 wall-clock window) = 6h D (06-12) + 4h D (16-20) = 10h. Toward 11 (total driving since prior reset) = 10h.",
+      hours: "Toward 14 = the full 14h wall-clock from 06:00 to 20:00. The 4h OFF (12-16) inside the shift DOES count toward the 14 because it isn't part of a qualifying split-sleeper pair — only qualifying pair rest is excluded under §395.1(g)(1)(ii)(E). Toward 11 (driving only) = 6h (06-12) + 4h (16-20) = 10h.",
     },
   },
   {
@@ -1437,8 +1421,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     splitType: null,
     violation11: false,
     violation14: true,
-    counted14Hours: 6, // D+OD within 14h wall-clock window (00:00-14:00): 1h OD + 5h D
-    counted11Hours: 8, // total driving since prior reset: 5h + 3h
+    counted14Hours: 14, // wall-clock elapsed from 00:00 (first OD) to 14:00 — non-pair OFF still counts
+    counted11Hours: 8,  // total driving since prior reset: 5h + 3h
     shiftStartMin: 0,       // 00:00 — first OD entry
     shiftEndMin: 14 * 60,   // 14:00 — 14h wall-clock limit (no qualifying split applies)
     explanation: {
@@ -1446,7 +1430,7 @@ export const SPLIT_PRACTICE_SCENARIOS = [
       shift: "No valid split, so CVSA 14-hr wall-clock rule applies. Shift START = 00:00 (first on-duty). Shift END = 14:00 (14 wall-clock hours later, §395.3(a)(2)). Any driving or on-duty work after 14:00 is a 14-hr violation.",
       split: "No valid split. 8 OFF + 2 SB fails because no period has the required ≥7h in the Sleeper Berth.",
       violation: "14-hr VIOLATION. Without a qualifying split, §395.1(g)(1)(ii)(E) does not apply. The 14-hr wall-clock started at 00:00 and closed at 14:00. Driving from 14:00-17:00 is past the 14-hr work-shift limit — violation.",
-      hours: "Toward 14 (D+OD within the 00:00-14:00 wall-clock window) = 1h OD (00-01) + 5h D (01-06) = 6h. The 3h D from 14-17 is PAST the 14, not 'counted toward' it — it's the violation itself. Toward 11 (total driving since last 10h reset) = 5h + 3h = 8h.",
+      hours: "Toward 14 = the full 14h wall-clock from 00:00 (first OD) to 14:00. The 8h OFF (06-14) inside the shift still counts toward the 14 because it isn't part of a qualifying split-sleeper pair — only qualifying pair rest is excluded under §395.1(g)(1)(ii)(E). The 3h D from 14-17 is PAST the 14, not 'counted toward' it — it's the violation itself. Toward 11 (total driving since last 10h reset) = 5h + 3h = 8h.",
     },
   },
 ];

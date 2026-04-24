@@ -484,7 +484,7 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, s
     {
       key: "hours",
       type: "twoNum",
-      prompt: "How many counted hours (D + OD that count against the clocks)?",
+      prompt: "How many hours count toward the 14-hr and 11-hr clocks?",
       correct: { h14: scenario.counted14Hours, h11: scenario.counted11Hours },
       explanation: scenario.explanation.hours,
     },
