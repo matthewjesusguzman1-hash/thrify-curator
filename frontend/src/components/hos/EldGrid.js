@@ -27,7 +27,7 @@ import { hmToMin, padDay, STATUS_META, minToHm } from "../../lib/hosRules";
  *                     labelRow: 0 | 1 — stack label on row 0 (default) or row 1
  *                     (prevents text overlap when two markers share a minute).
  */
-export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {}, shiftMarkers = [] }) {
+export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {}, shiftMarkers = [], onMarkerDrag = null }) {
   const HOUR_W = compact ? 20 : 28;
   const ROW_H = compact ? 26 : 32;
   const LABEL_W = compact ? 62 : 74;
@@ -101,6 +101,20 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
     const min = Math.round((x / HOUR_W) * 4) * 15;
     const clamped = Math.max(0, Math.min(24 * 60, min));
     onMinuteClick(clamped);
+  };
+
+  // Drag support for shift markers flagged with draggable:true. We snap to
+  // 15-min intervals (same as onMinuteClick) and emit through onMarkerDrag.
+  // Pointer capture keeps drag alive even if the pointer leaves the marker.
+  const handleMarkerPointerMove = (ev, sm) => {
+    if (!onMarkerDrag) return;
+    const svg = ev.currentTarget.ownerSVGElement || ev.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const scale = svgW / rect.width;
+    const x = (ev.clientX - rect.left) * scale - LABEL_W;
+    const min = Math.round((x / HOUR_W) * 4) * 15;
+    const clamped = Math.max(0, Math.min(24 * 60, min));
+    onMarkerDrag(sm.kind, sm.markerId, clamped);
   };
 
   const totalHm = (mins) => `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
@@ -273,6 +287,37 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
               <rect x={badgeX} y={HEADER_H - flagH - 2} width={flagW} height={flagH} rx={2} fill={color} />
               <text x={badgeX + flagW / 2} y={HEADER_H - 4} textAnchor="middle" fontSize={compact ? "8.5" : "9.5"} fontWeight="800" fill="#FFFFFF" fontFamily="sans-serif" letterSpacing="0.3">{flagText}</text>
               <text x={x} y={labelY} textAnchor={labelAnchor} fontSize={compact ? "9" : "10"} fontWeight="700" fill={color}>{sm.label || `${isEnd ? "Shift end" : isContinues ? "Continues" : "Shift start"} · ${minToHm(sm.min)}`}</text>
+              {/* Drag handle — wide invisible hit rect around the line. Shown
+                  only when sm.draggable and onMarkerDrag are set, giving the
+                  inspector a generous ~20px-wide zone to grab on mobile. */}
+              {sm.draggable && onMarkerDrag && (
+                <>
+                  {/* visible grip circle on the header so the draggable state is obvious */}
+                  <circle cx={x} cy={HEADER_H + 4 * ROW_H + 4} r={compact ? 4.5 : 5.5} fill={color} stroke="#FFFFFF" strokeWidth="2" />
+                  <rect
+                    x={x - 12}
+                    y={HEADER_H - flagH - 4}
+                    width={24}
+                    height={(4 * ROW_H) + flagH + 12}
+                    fill="transparent"
+                    style={{ cursor: "ew-resize", touchAction: "none" }}
+                    onPointerDown={(ev) => {
+                      ev.stopPropagation();
+                      ev.currentTarget.setPointerCapture(ev.pointerId);
+                      handleMarkerPointerMove(ev, sm);
+                    }}
+                    onPointerMove={(ev) => {
+                      if (!ev.currentTarget.hasPointerCapture?.(ev.pointerId)) return;
+                      ev.stopPropagation();
+                      handleMarkerPointerMove(ev, sm);
+                    }}
+                    onPointerUp={(ev) => {
+                      ev.currentTarget.releasePointerCapture?.(ev.pointerId);
+                    }}
+                    data-testid={`shift-marker-drag-${sm.kind || i}`}
+                  />
+                </>
+              )}
             </g>
           );
         })}

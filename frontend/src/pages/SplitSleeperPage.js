@@ -287,11 +287,26 @@ function PracticeTab() {
 
   const scenario = SPLIT_PRACTICE_SCENARIOS[idx];
 
+  // Does the driver have any drive/on-duty time past the straight 10-hr rule's
+  // day-end? If so, the practice flow asks a follow-up "identify actual shift
+  // end" step; otherwise it skips straight from day-bounds → hours.
+  const hasDrivePastDayEnd = useMemo(() => {
+    const end = scenario.dayEndMin ?? scenario.shiftEndMin;
+    return scenario.log.some((e) => {
+      if (e.status !== "D" && e.status !== "OD") return false;
+      return timeStrToMin(e.end) > end;
+    });
+  }, [scenario]);
+
   // Current question index → key. Mirrors the order defined in QuestionsStack.
   // "split" was removed because the qualify question up-front already answers it.
-  const questionKeys = ["shift", "hours", "violation"];
+  // "shiftEnd" is only included when `hasDrivePastDayEnd` is true.
+  const questionKeys = useMemo(
+    () => ["dayBounds", ...(hasDrivePastDayEnd ? ["shiftEnd"] : []), "hours", "violation"],
+    [hasDrivePastDayEnd]
+  );
   const currentQKey = phase === "questions" ? questionKeys[questionIdx] : null;
-  const shiftQActive = currentQKey === "shift" && answers.shift === undefined;
+  const shiftQActive = currentQKey === "dayBounds" && answers.dayBounds === undefined;
 
   // All rest blocks (SB or OFF) are selectable — except the pre-shift OFF
   // (entry index 0) if its status is OFF and it starts at 00:00. Practically,
@@ -405,13 +420,41 @@ function PracticeTab() {
           onEntryClick={phase === "select" ? toggle : null}
           blockMarks={blockMarks}
           onMinuteClick={shiftQActive ? handleGridTapForShift : null}
+          onMarkerDrag={shiftQActive ? (kind, markerId, newMin) => {
+            const hhmm = `${String(Math.floor(newMin / 60)).padStart(2, "0")}:${String(newMin % 60).padStart(2, "0")}`;
+            if (markerId === "dayStart") setTStart(hhmm);
+            else if (markerId === "dayEnd") setTEnd(hhmm);
+          } : null}
           shiftMarkers={[
-            ...(answers.shift ? [
-              { min: scenario.shiftStartMin, kind: "start", label: `Shift START · ${fmtMin(scenario.shiftStartMin)}` },
-              { min: scenario.shiftEndMin, kind: "end", label: `Shift END · ${fmtMin(scenario.shiftEndMin)}` },
+            // Day bounds (straight 10-hr rule) — shown after Q1 answered and beyond.
+            ...(answers.dayBounds ? [
+              { min: scenario.dayStartMin, kind: "start", label: `Day START · ${fmtMin(scenario.dayStartMin)}` },
+              { min: scenario.dayEndMin, kind: "end", label: `Day SHOULD end · ${fmtMin(scenario.dayEndMin)}`, labelRow: 1 },
             ] : []),
-            ...(shiftQActive && tStart ? [{ min: timeStrToMin(tStart), kind: "start", label: `You: START · ${tStart}` }] : []),
-            ...(shiftQActive && tEnd ? [{ min: timeStrToMin(tEnd), kind: "end", label: `You: END · ${tEnd}`, labelRow: 1 }] : []),
+            // Actual split-sleeper shift end (gold) — shown after Q2 answered, only if it differs from day end.
+            ...(answers.shiftEnd && scenario.shiftEndMin !== scenario.dayEndMin ? [
+              { min: scenario.shiftEndMin, kind: "end", color: "#D4AF37", label: `Actual shift END · ${fmtMin(scenario.shiftEndMin)}`, labelRow: 2 },
+            ] : []),
+            // Pre-placed DRAGGABLE markers during the dayBounds question. They
+            // start at a sensible default (08:00 / 22:00) so the inspector has
+            // something to grab and drag rather than tapping an exact line.
+            ...(shiftQActive ? [
+              {
+                min: timeStrToMin(tStart || "08:00") ?? 8 * 60,
+                kind: "start",
+                markerId: "dayStart",
+                draggable: true,
+                label: `Drag → START · ${tStart || "08:00"}`,
+              },
+              {
+                min: timeStrToMin(tEnd || "22:00") ?? 22 * 60,
+                kind: "end",
+                markerId: "dayEnd",
+                draggable: true,
+                label: `Drag → END · ${tEnd || "22:00"}`,
+                labelRow: 1,
+              },
+            ] : []),
           ]}
         />
 
@@ -465,6 +508,7 @@ function PracticeTab() {
           shiftTEnd={tEnd}
           setShiftTStart={setTStart}
           setShiftTEnd={setTEnd}
+          hasDrivePastDayEnd={hasDrivePastDayEnd}
         />
       )}
 
@@ -551,18 +595,28 @@ function QualifyCard({ scenario, onContinue }) {
 }
 
 
-function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, shiftTStart, shiftTEnd, setShiftTStart, setShiftTEnd }) {
+function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, shiftTStart, shiftTEnd, setShiftTStart, setShiftTEnd, hasDrivePastDayEnd }) {
   // The "is this a valid pairing?" question was removed — the up-front
   // qualify question (asked before block selection) already answers it.
   const questions = [
     {
-      key: "shift",
+      key: "dayBounds",
       type: "twoTime",
-      prompt: "Identify the work shift — when does it START and END?",
-      hint: "Split-sleeper: START = END of the FIRST qualifying rest segment · END = BEGINNING of the SECOND qualifying rest segment. No valid split: START = end of prior 10-hr reset (or first on-duty after it), END = 14 wall-clock hours later (or beginning of the next 10-hr reset, whichever is first).",
-      correct: { start: scenario.shiftStartMin, end: scenario.shiftEndMin },
-      explanation: scenario.explanation.shift,
+      prompt: "When does the day START and when SHOULD it end?",
+      hint: "Straight 10-hr continuous rule: START = first on-duty entry after the last 10-hr reset (or the first work of the log). SHOULD END = 14 wall-clock hours later. Don't factor in any split yet — that comes next. Tip: you can drag the green START and red END handles on the grid above to set the times.",
+      correct: { start: scenario.dayStartMin, end: scenario.dayEndMin },
+      explanation: scenario.explanation.dayBounds || `Straight 10-hr rule: day STARTS at ${fmtMin(scenario.dayStartMin)} (first on-duty entry) and SHOULD END at ${fmtMin(scenario.dayEndMin)} (14 wall-clock hours later, §395.3(a)(2)).`,
     },
+    // Only asked when the log has drive/on-duty work past the straight-rule
+    // day-end — otherwise there's nothing for a split-sleeper pair to resolve.
+    ...(hasDrivePastDayEnd ? [{
+      key: "shiftEnd",
+      type: "oneTime",
+      prompt: "The driver has work/drive time past the 14-hr wall-clock mark. Identify the ACTUAL end of the work shift.",
+      hint: "Valid split pair: shift ENDS at the BEGINNING of the SECOND qualifying rest segment (Period B). No valid pair: shift still ends at the 14-hr mark from Q1 — any driving past it is the violation itself.",
+      correct: { end: scenario.shiftEndMin },
+      explanation: scenario.explanation.shift,
+    }] : []),
     {
       key: "hours",
       type: "twoNum",
@@ -606,10 +660,10 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, s
             else onNextQ();
           }}
           isLast={i === questions.length - 1}
-          extTStart={q.key === "shift" ? shiftTStart : undefined}
-          extTEnd={q.key === "shift" ? shiftTEnd : undefined}
-          setExtTStart={q.key === "shift" ? setShiftTStart : undefined}
-          setExtTEnd={q.key === "shift" ? setShiftTEnd : undefined}
+          extTStart={q.key === "dayBounds" ? shiftTStart : undefined}
+          extTEnd={q.key === "dayBounds" ? shiftTEnd : undefined}
+          setExtTStart={q.key === "dayBounds" ? setShiftTStart : undefined}
+          setExtTEnd={q.key === "dayBounds" ? setShiftTEnd : undefined}
         />
       ))}
     </section>
@@ -649,6 +703,9 @@ function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast, 
       // equivalent to 24*60 when the correct answer is a full-day shift.
       const normAnsEnd = answer.end === 0 && q.correct.end === 24 * 60 ? 24 * 60 : answer.end;
       correct = Math.abs(answer.start - q.correct.start) <= 10 && Math.abs(normAnsEnd - q.correct.end) <= 10;
+    } else if (q.type === "oneTime") {
+      const normAnsEnd = answer.end === 0 && q.correct.end === 24 * 60 ? 24 * 60 : answer.end;
+      correct = Math.abs(normAnsEnd - q.correct.end) <= 10;
     } else {
       correct = answer === q.correct;
     }
@@ -730,8 +787,36 @@ function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast, 
 
       {q.type === "twoTime" && answered && (
         <div className="space-y-1 text-[12px] font-mono">
-          <div className="flex justify-between"><span>Shift START:</span><span className="font-bold">Your: {minToTimeStr(answer.start)} &nbsp;·&nbsp; Correct: {minToTimeStr(q.correct.start)}</span></div>
-          <div className="flex justify-between"><span>Shift END:</span><span className="font-bold">Your: {minToTimeStr(answer.end)} &nbsp;·&nbsp; Correct: {minToTimeStr(q.correct.end)}</span></div>
+          <div className="flex justify-between"><span>{q.key === "dayBounds" ? "Day START:" : "Shift START:"}</span><span className="font-bold">Your: {minToTimeStr(answer.start)} &nbsp;·&nbsp; Correct: {minToTimeStr(q.correct.start)}</span></div>
+          <div className="flex justify-between"><span>{q.key === "dayBounds" ? "Day SHOULD end:" : "Shift END:"}</span><span className="font-bold">Your: {minToTimeStr(answer.end)} &nbsp;·&nbsp; Correct: {minToTimeStr(q.correct.end)}</span></div>
+        </div>
+      )}
+
+      {q.type === "oneTime" && !answered && (
+        <div className="space-y-2">
+          {q.hint && (
+            <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">{q.hint}</p>
+          )}
+          <div className="flex gap-2 items-center">
+            <label className="text-[11px] font-bold text-[#475569] w-28">Shift END:</label>
+            <input type="time" value={tEnd} onChange={(e) => setTEnd(e.target.value)}
+              className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#D4AF37] focus:border-[#002855] focus:outline-none"
+              data-testid={`${testid}-end`} />
+          </div>
+          <Button
+            onClick={() => { const m = timeStrToMin(tEnd); if (m !== null) setAnswer({ end: m }); }}
+            disabled={!tEnd}
+            className="w-full bg-[#002855] text-white hover:bg-[#001a3a]"
+            data-testid={`${testid}-submit`}
+          >
+            Submit
+          </Button>
+        </div>
+      )}
+
+      {q.type === "oneTime" && answered && (
+        <div className="space-y-1 text-[12px] font-mono">
+          <div className="flex justify-between"><span>Actual shift END:</span><span className="font-bold">Your: {minToTimeStr(answer.end)} &nbsp;·&nbsp; Correct: {minToTimeStr(q.correct.end)}</span></div>
         </div>
       )}
 

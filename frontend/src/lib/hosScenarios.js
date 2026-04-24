@@ -1332,6 +1332,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     violation14: false,
     counted14Hours: 4,
     counted11Hours: 4,
+    dayStartMin: 0,          // 00:00 — first on-duty of the log (straight 10-hr rule)
+    dayEndMin: 14 * 60,      // 14:00 — 14h wall-clock after day start (straight 14-hr rule)
     shiftStartMin: 13 * 60,  // 13:00 — end of Period A (7h SB · first qualifying segment)
     shiftEndMin: 17 * 60,    // 17:00 — beginning of Period B (3h OFF · second qualifying segment)
     explanation: {
@@ -1362,6 +1364,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     violation14: false,
     counted14Hours: 13,
     counted11Hours: 11.5,
+    dayStartMin: 8 * 60,     // 08:00 — first on-duty of the log (after the 8h SB rest)
+    dayEndMin: 22 * 60,      // 22:00 — 14h wall-clock after day start (straight 14-hr rule)
     shiftStartMin: 8 * 60,   // 08:00 — end of Period A (8h SB · first qualifying segment)
     shiftEndMin: 21 * 60,    // 21:00 — beginning of Period B (3h OFF · second qualifying segment)
     explanation: {
@@ -1390,6 +1394,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     violation14: false,
     counted14Hours: 14,
     counted11Hours: 10,
+    dayStartMin: 6 * 60,     // 06:00 — first on-duty of the log
+    dayEndMin: 20 * 60,      // 20:00 — 14h wall-clock after day start
     shiftStartMin: 6 * 60,  // 06:00 — first on-duty (D) after the prior reset
     shiftEndMin: 20 * 60,   // 20:00 — 14h wall-clock limit (no qualifying split applies)
     explanation: {
@@ -1419,6 +1425,8 @@ export const SPLIT_PRACTICE_SCENARIOS = [
     violation14: true,
     counted14Hours: 14, // wall-clock elapsed from 00:00 (first OD) to 14:00 — non-pair OFF still counts
     counted11Hours: 8,  // total driving since prior reset: 5h + 3h
+    dayStartMin: 0,          // 00:00 — first on-duty (OD)
+    dayEndMin: 14 * 60,      // 14:00 — 14h wall-clock after day start
     shiftStartMin: 0,       // 00:00 — first OD entry
     shiftEndMin: 14 * 60,   // 14:00 — 14h wall-clock limit (no qualifying split applies)
     explanation: {
