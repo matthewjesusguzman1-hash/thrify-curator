@@ -39,11 +39,11 @@ const RULES = [
   {
     id: "two-axle-38k",
     title: "Two-Axle Group (8' to 8'6\") — 38,000 lbs",
-    note: "pairs with the \"Tandem (38K) *\" preset in Record Weights",
+    note: "pairs with the \"Tandem 38K *\" preset in Record Weights",
     hl: true,
     items: [
       "The maximum gross load on any group of two axles, the distance between the extremes of which is more than 8' but less than 8'6\", shall be 38,000 lbs.",
-      "In Record Weights, pick the \"Tandem (38K) see weight rules *\" preset to apply this 38,000-lb cap in place of the standard 34,000-lb tandem rule.",
+      "In Record Weights, pick the \"Tandem 38K *\" preset to apply this 38,000-lb cap in place of the standard 34,000-lb tandem rule.",
     ],
   },
   {
@@ -1306,9 +1306,9 @@ export default function BridgeChartPage() {
                     tabIndex={0}
                     onClick={() => updateGroup(gi, "_collapsed", !g._collapsed)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); updateGroup(gi, "_collapsed", !g._collapsed); } }}
-                    className={`w-full px-3 py-4 min-h-[60px] flex items-center justify-between text-left cursor-pointer border-b leading-[1.6] ${isOver ? (withinTol ? "bg-[#F97316] border-[#F97316]" : "bg-[#DC2626] border-[#DC2626]") : "bg-[#002855] border-[#002855]"}`}
+                    className={`w-full px-3 py-3 min-h-[60px] flex flex-wrap items-center justify-between gap-y-1.5 text-left cursor-pointer border-b leading-[1.6] ${isOver ? (withinTol ? "bg-[#F97316] border-[#F97316]" : "bg-[#DC2626] border-[#DC2626]") : "bg-[#002855] border-[#002855]"}`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white/20" style={{ background: COLORS[gi % COLORS.length] }} />
                       <span className="text-sm font-bold text-white truncate">{g.label || axLabel}</span>
                       <span className="text-[10px] text-white/60 font-mono flex-shrink-0">{axLabel}</span>
@@ -1326,9 +1326,9 @@ export default function BridgeChartPage() {
                       )}
                       {hasViol && !isOver && gWeight > 0 && <CheckCircle2 className="w-3.5 h-3.5 text-[#22C55E] flex-shrink-0" />}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0" data-html2canvas-ignore="true">
-                      <select value={g.preset} onClick={e => e.stopPropagation()} onChange={e => updateGroup(gi, "preset", e.target.value)} className="text-[10px] bg-white/10 text-white border border-white/20 rounded px-1.5 py-0.5 outline-none">
-                        {[{ l: "Single", v: "Single" }, { l: "Tandem", v: "Tandem (2)" }, { l: "Tandem (38K) see weight rules *", v: "Tandem-38K" }, { l: "Triple", v: "Triple (3)" }, { l: "Quad", v: "Quad (4)" }, { l: "Custom", v: "Custom" }].map(p => <option key={p.v} value={p.v} className="text-[#002855]">{p.l}</option>)}
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-auto" data-html2canvas-ignore="true">
+                      <select value={g.preset} onClick={e => e.stopPropagation()} onChange={e => updateGroup(gi, "preset", e.target.value)} className="text-[10px] bg-white/10 text-white border border-white/20 rounded px-1.5 py-0.5 outline-none max-w-[130px]">
+                        {[{ l: "Single", v: "Single" }, { l: "Tandem", v: "Tandem (2)" }, { l: "Tandem 38K *", v: "Tandem-38K" }, { l: "Triple", v: "Triple (3)" }, { l: "Quad", v: "Quad (4)" }, { l: "Custom", v: "Custom" }].map(p => <option key={p.v} value={p.v} className="text-[#002855]">{p.l}</option>)}
                       </select>
                       {g.preset === "Tandem-38K" && (
                         <button
