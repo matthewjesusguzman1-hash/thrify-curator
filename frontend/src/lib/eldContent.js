@@ -46,16 +46,24 @@ export const ELD_TOPICS = [
 
   {
     id: "display-data",
-    title: "Required Data Elements + Roadside Display",
-    short: "What the driver must show you",
+    title: "Required Data Elements & Review Method",
+    short: "What the ELD must record and how to review it",
     cfr: "49 CFR §395.22 · §395.24 · §395.32",
     color: "#059669",
     summary:
-      "At roadside, the driver must be able to (a) display the current 24-hour RODS + previous 7 consecutive days on the ELD screen OR a printout, AND (b) transfer the ELD data file to you on request. §395.32 lists every data element the ELD must record and display.",
+      "The DATA TRANSFER is the required, primary method to review a driver's ELD record at roadside. The ELD's on-screen graph-grid display or printout is a LAST RESORT — available only when a transfer cannot be completed for reasons outside the driver's control. §395.32 lists every data element the ELD must record; those elements should be reviewed in the transferred file, not by reading them off the device.",
     sections: [
       {
+        heading: "How to review the ELD record",
+        body: "Order of preference — start at the top, only move down if a prior step is legitimately unavailable:",
+        bullets: [
+          "**1. Data transfer** — required method under §395.24(a). Telematics (web/email) or Local (USB/Bluetooth) depending on the ELD's supported set. This is how you review the record.",
+          "**2. Display or printout — LAST RESORT ONLY.** Use only when a transfer cannot be completed due to issues outside the driver's control (carrier cell/wifi outage, eRODS down, etc.). Display/printout is not a shortcut for an inspector who wants to skip the transfer — and it never substitutes for the driver's obligation to transfer.",
+        ],
+      },
+      {
         heading: "Header information (every day)",
-        body: "Every RODS day the ELD prepares must include these header fields — any missing field is a §395.22/§395.32 violation:",
+        body: "Every RODS day the ELD prepares must include these data elements — any missing field is a §395.22/§395.32 violation (review in the transferred file):",
         bullets: [
           "Driver name, driver's license number, and driver's license issuing State.",
           "Carrier name, USDOT number, and main office address.",
@@ -63,22 +71,18 @@ export const ELD_TOPICS = [
           "24-hour period start time (and time zone).",
           "Driver's total miles driven today and total vehicle miles.",
           "Truck tractor and trailer number(s), VIN (auto-populated from engine data).",
-          "ELD manufacturer name, model/version, and ELD registration ID (shown on the display or printout header).",
+          "ELD manufacturer name, model/version, and ELD registration ID.",
           "Co-driver name(s), if any.",
           "Driver certification of 24-hour period (yes/no/not yet).",
         ],
       },
       {
         heading: "Duty status records",
-        body: "Every duty status change must be captured with: time (local clock), location description (auto-generated within 1 mile in urban areas / 10 miles in rural areas), odometer at status change, engine hours, and event sequence ID (§395.32(b)).",
+        body: "Every duty status change must be captured with: time (local clock), location description (auto-generated within 1 mile in urban areas / 10 miles in rural areas), odometer at status change, engine hours, and event sequence ID (§395.32(b)). Verify these in the transferred file.",
       },
       {
-        heading: "Screen vs printout",
-        body: "The ELD must offer EITHER a display graph-grid view OR a printout. Both are acceptable at roadside. Older 4-line graph-grids and modern card-style views both satisfy §395.22(h) if all the header + event data is readable. If the driver's ELD cannot produce a display or printout that is readable, cite §395.22(h).",
-      },
-      {
-        heading: "Graph-grid display requirements",
-        body: "When the ELD shows a graph-grid, it must display the four duty lines (OFF/SB/D/OD), a 24-hour horizontal axis, remarks, shipping document references, and the total hours in each status (§395.8(f)). Verify the grid visually matches the event list.",
+        heading: "If you do fall back to display/printout",
+        body: "When display/printout is your ONLY option (after a legitimate transfer-failure path), confirm the device satisfies §395.22(h): the graph-grid must show the four duty lines (OFF/SB/D/OD), a 24-hour axis, remarks, shipping-doc references, and total hours per status. If the device cannot produce a readable display or printout, cite §395.22(h). But remember — using display/printout does NOT exempt the driver from a fail-to-transfer citation when the underlying failure was the driver's fault.",
       },
     ],
   },
@@ -106,17 +110,16 @@ export const ELD_TOPICS = [
         bullets: [
           "USB 2.0: inspector provides a FMCSA-certified USB stick (or one supplied by the carrier). ELD copies the encrypted file onto it.",
           "Bluetooth: ELD pairs with an inspector's device (phone/tablet with approved software). Short-range, must be within the cab.",
-          "**State exception — Nebraska**: Nebraska enforcement does NOT accept local transfer (USB or Bluetooth) from roadside inspectors. Nebraska inspectors use Telematics transfer only (web services / email). If you're inspecting in Nebraska and Telematics fails, move directly to display/printout review — do not attempt USB or Bluetooth.",
+          "**State exception — Nebraska**: Nebraska enforcement does NOT accept local transfer (USB or Bluetooth) from roadside inspectors. Nebraska inspectors use Telematics transfer only (web services / email). If you're inspecting in Nebraska and Telematics fails, treat it as a transfer-failure situation — display/printout is the absolute last resort, not a workaround.",
         ],
       },
       {
         heading: "Fail-to-Transfer violation",
-        body: "§395.24(a) requires the driver to TRANSFER the ELD record to the inspector using one of the prescribed transfer methods the ELD supports (Telematics web/email, USB, or Bluetooth — whichever the device offers). The transfer itself is the compliance act; viewing the data a different way does NOT satisfy §395.24(a).",
+        body: "§395.24(a) requires the driver to TRANSFER the ELD record to the inspector using one of the prescribed transfer methods the ELD supports (Telematics web/email, USB, or Bluetooth — whichever the device offers). The transfer itself is the compliance act and the proper way to review the record. Display/printout is a last-resort fallback only, and it does NOT satisfy §395.24(a) or exempt the driver from a fail-to-transfer violation.",
         bullets: [
-          "Display / printout is acceptable for the inspector to REVIEW the HOS data at roadside, but it is not recommended as a substitute for the transfer and DOES NOT exempt the driver from a fail-to-transfer violation. The driver still owes you a successful transfer.",
           "**Not the driver's fault**: the transfer attempt itself failed for technical reasons outside the driver's control — carrier cell/wifi dropped mid-transfer, eRODS was down, the FMCSA email gateway timed out, or a routing-code issue the inspector introduced. Network/service-side failures are not a driver violation.",
           "**Driver violation**: the driver cannot or will not operate the ELD's transfer function, doesn't know the process, refuses to initiate the transfer, or the transfer fails due to the driver / the ELD (not the network / FMCSA). After the driver has been given the opportunity to transfer the log and the inspector has assisted as described below, cite the fail-to-transfer violation under §395.24(a) / §395.22(h).",
-          "Document WHICH method(s) were attempted, WHERE each attempt failed in the workflow, any inspector assistance provided, and what was used to review the data if the transfer ultimately did not succeed. A well-documented attempt chain distinguishes a defensible citation from one vacated on DataQs review.",
+          "Document WHICH method(s) were attempted, WHERE each attempt failed, any inspector assistance provided, and only as a last resort how the data was otherwise reviewed. A well-documented attempt chain distinguishes a defensible citation from one vacated on DataQs review.",
         ],
       },
       {
@@ -428,7 +431,7 @@ export const ELD_TOPICS = [
       },
       {
         heading: "How to verify at roadside",
-        body: "The ELD's display/printout shows the ELD registration ID. Cross-reference it against the FMCSA ELD registry (accessible via your inspector tablet or phone). If the ID is not in the registry, or shows as 'REVOKED', cite §395.22(a) and treat the driver as operating without a required ELD.",
+        body: "The ELD registration ID is captured in the transferred data file. If you're reviewing via transfer (the required method), the ID is right there. Cross-reference it against the FMCSA ELD registry (accessible via your inspector tablet or phone). If the ID is not in the registry, or shows as 'REVOKED', cite §395.22(a) and treat the driver as operating without a required ELD.",
       },
       {
         heading: "Removal vs revocation",

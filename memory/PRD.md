@@ -25,6 +25,12 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 
 ## Changelog
 
+
+### 2026-02 — False RODS vs Tampered ELD rewrite per CVSA Bulletin 2026-02
+- Prior content treated the split as "false log (§395.8(e))" vs "manipulated log (CVSA OOS)" which was wrong per the bulletin.
+- Correct split: **§395.8(e)(1) False RODS** (ELD works, log is wrong — driver error or misreporting) vs **§395.8(e)(2) Reengineered/Reprogrammed/Tampered ELD** (DEVICE-level alteration — fraudulent accounts, altered data). OOS rules corrected to match bulletin.
+- Bulletin examples incorporated verbatim. Ghost driver subsection rewritten to map each scenario to correct §395.8(e) paragraph.
+
 ### 2026-02 — CVSA Split-Sleeper shift-boundary rule (current session)
 - Per-CVSA fix across `SplitSleeperPage.js` + `hosScenarios.js`: under the sleeper-berth provision, the 14-hr work shift STARTS at the END of the FIRST qualifying rest segment and ENDS at the BEGINNING of the SECOND qualifying rest segment (§395.1(g)(1)(ii)). The 10-hour Continuous Break rule is unchanged.
 - Updated `shiftMarkers`, `countedBrackets` and descriptions on SL1 (7+3), SL1 extras (7.5+2.5, 3+7-reversed), SL2 (8+2), SL2 extras (9+2, 8-SB-first), SL5 Day 1 + Day 2 overnight, SL5-b (shift crossing midnight), SL5-c (10h straight SB = full reset).
@@ -43,7 +49,16 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 - EldGrid: label text-anchor clamps to 'start' for markers at <60 min and 'end' for markers at ≥23:00 — prevents long edge labels from clipping past the SVG bounds.
 - Descriptions uniformly call out: (a) prior 10h reset ended at 00:00, (b) pre-split shift duration/hours, (c) CVSA split boundaries, (d) alternative split pairings that would have been valid.
 
-### 2026-02 — False RODS vs Tampered ELD rewrite per CVSA Bulletin 2026-02
+### 2026-02 — De-emphasize display/printout as review method
+- User: the ELD module was treating on-screen display and printout as co-equal with transfer, which gave the wrong impression about what the primary review method is.
+- Renamed topic "Required Data Elements + Roadside Display" → **"Required Data Elements & Review Method"**.
+- Rewrote summary to lead with: "The DATA TRANSFER is the required, primary method to review a driver's ELD record at roadside. The ELD's on-screen graph-grid display or printout is a LAST RESORT".
+- Added an explicit numbered "Order of preference" section (1. Data transfer → required; 2. Display or printout → LAST RESORT ONLY, available only when transfer cannot be completed for reasons outside the driver's control).
+- Relabeled the display section to "If you do fall back to display/printout" with the reminder that it never exempts the driver from a fail-to-transfer citation.
+- Updated Nebraska bullet: "treat it as a transfer-failure situation — display/printout is the absolute last resort, not a workaround."
+- Removed the "Display/printout is acceptable for the inspector to review" bullet from the Fail-to-Transfer section; the caveat is now framed in terms of attempt documentation only.
+- Updated ELD Registration topic so the registration-ID check points to the transferred data file rather than the display/printout.
+- Refreshed hub intro paragraph to describe transfer as "the required review method".
 - User provided CVSA Inspection Bulletin 2026-02. Prior content treated the split as "false log (§395.8(e))" vs "manipulated log (CVSA OOS)" which was wrong.
 - Correct split per bulletin: **§395.8(e)(1) False RODS** (ELD works, log is wrong — driver error or misreporting) vs **§395.8(e)(2) Reengineered/Reprogrammed/Tampered ELD** (DEVICE-level alteration — fraudulent accounts, altered data, etc.).
 - OOS rules corrected to match bulletin: (a) §395.8(e)(1) + falsification determined + driver NOT over hours → cite and proceed; (b) §395.8(e)(1) + driver IS over HOS → cite + OOS until HOS eligibility re-established; (c) §395.8(e)(2) + cannot determine actual driving → cite + OOS 10 consecutive hours.

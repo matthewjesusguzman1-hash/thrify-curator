@@ -674,7 +674,7 @@ function EldView({ onBack }) {
             <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Roadside ELD reference</p>
           </div>
           <p className="text-[12.5px] text-[#334155] leading-relaxed">
-            Twelve quick-reference topics covering what a driver must show you, how to transfer the ELD data, the 6 malfunction codes, edits &amp; certification rules, false / manipulated logs &amp; ghost drivers, the DataQs save-file workflow, required in-cab supplies, and the historical AOBRD transition. Tap any card to expand. Every <span className="font-mono font-bold">§395.x</span> citation links straight to eCFR.
+            Twelve quick-reference topics covering how to transfer the ELD data (the required review method), what the ELD must record, the 6 malfunction codes, edits &amp; certification rules, False RODS vs Tampered ELD per CVSA Bulletin 2026-02, saving the data file, required in-cab supplies, and the historical AOBRD transition. Tap any card to expand. Every <span className="font-mono font-bold">§395.x</span> citation links straight to eCFR.
           </p>
         </section>
 
