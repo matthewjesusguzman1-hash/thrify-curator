@@ -37,6 +37,7 @@ const RULES = [
     ],
   },
   {
+    id: "two-axle-38k",
     title: "Two-Axle Group (8' to 8'6\") — 38,000 lbs",
     note: "pairs with the \"Tandem (38K) *\" preset in Record Weights",
     hl: true,
@@ -416,7 +417,23 @@ export default function BridgeChartPage() {
   const photoRef = useRef(null);
   const [tab, setTab] = useState("chart");
   const [showRules, setShowRules] = useState(false);
-  const [rulesTab, setRulesTab] = useState("rules"); // "rules" | "measure"
+  const [rulesTab, setRulesTab] = useState("rules"); // "rules" | "size" | "measure"
+
+  // Jump from the "Tandem (38K) *" preset directly to the underlying rule.
+  // Opens the Rules panel on the Weight Rules tab, waits a frame for the DOM,
+  // then scrolls/flashes the 38K rule card so the inspector can read it.
+  const jumpTo38kRule = useCallback(() => {
+    setShowRules(true);
+    setRulesTab("rules");
+    // defer until after the panel mounts
+    setTimeout(() => {
+      const el = document.querySelector('[data-rule-id="two-axle-38k"]');
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-[#D4AF37]", "ring-offset-2");
+      setTimeout(() => el.classList.remove("ring-2", "ring-[#D4AF37]", "ring-offset-2"), 1800);
+    }, 120);
+  }, []);
 
   // Chart tab
   const [cFt, setCFt] = useState(""); const [cIn, setCIn] = useState(""); const [cAxles, setCAxles] = useState(""); const [cActual, setCActual] = useState("");
@@ -1138,7 +1155,11 @@ export default function BridgeChartPage() {
             {rulesTab === "rules" ? (
               <div className="divide-y divide-[#F1F5F9]">
                 {RULES.map((r, i) => (
-                  <div key={i} className={`px-4 py-2.5 ${r.hl ? "bg-[#D4AF37]/5" : ""}`}>
+                  <div
+                    key={i}
+                    data-rule-id={r.id || undefined}
+                    className={`px-4 py-2.5 transition-[box-shadow] duration-500 ${r.hl ? "bg-[#D4AF37]/5" : ""}`}
+                  >
                     <h3 className="text-xs font-bold text-[#002855] mb-1">
                       {r.title}
                       {r.cfr && <span className="ml-1 text-[10px] font-mono text-[#D4AF37]">{r.cfr}</span>}
@@ -1309,6 +1330,16 @@ export default function BridgeChartPage() {
                       <select value={g.preset} onClick={e => e.stopPropagation()} onChange={e => updateGroup(gi, "preset", e.target.value)} className="text-[10px] bg-white/10 text-white border border-white/20 rounded px-1.5 py-0.5 outline-none">
                         {[{ l: "Single", v: "Single" }, { l: "Tandem", v: "Tandem (2)" }, { l: "Tandem (38K) see weight rules *", v: "Tandem-38K" }, { l: "Triple", v: "Triple (3)" }, { l: "Quad", v: "Quad (4)" }, { l: "Custom", v: "Custom" }].map(p => <option key={p.v} value={p.v} className="text-[#002855]">{p.l}</option>)}
                       </select>
+                      {g.preset === "Tandem-38K" && (
+                        <button
+                          onClick={e => { e.stopPropagation(); jumpTo38kRule(); }}
+                          className="inline-flex items-center gap-1 rounded-full bg-[#D4AF37] text-[#002855] hover:bg-[#E0BE50] px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wider"
+                          data-testid={`jump-38k-rule-${gi}`}
+                          title="Read the 38,000-lb two-axle-group rule"
+                        >
+                          <Info className="w-2.5 h-2.5" /> Rule *
+                        </button>
+                      )}
                       {groups.length > 1 && <button onClick={e => { e.stopPropagation(); removeGroup(gi); }} className="text-white/50 hover:text-white p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>}
                       {g._collapsed ? <ChevronDown className="w-4 h-4 text-white/80" /> : <ChevronUp className="w-4 h-4 text-white/80" />}
                     </div>
@@ -1947,6 +1978,20 @@ function SizeRulesPanel() {
   );
   return (
     <div className="divide-y divide-[#F1F5F9] max-h-[70vh] overflow-y-auto" data-testid="size-rules-panel">
+      {/* Illustrated cheat-sheet — Nebraska dimension diagrams from the source
+       * document. Rendered at the top so an inspector can point to the picture
+       * while explaining a limit to a driver at the shoulder. */}
+      <div className="p-3 bg-white">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] mb-1.5">Dimensions at a glance</p>
+        <img
+          src="https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/rsge4g1o_IMG_1395.jpeg"
+          alt={`Nebraska dimension limits — width 8'6", height 14'6", single-vehicle 45', semitrailer 53', trailer-trailer 65', other combos 65'`}
+          className="w-full rounded-lg border border-[#E2E8F0] bg-white"
+          loading="lazy"
+          data-testid="size-diagram"
+        />
+      </div>
+
       {/* Overview — quick-glance table of headline limits */}
       <div className="px-4 py-3 bg-[#0F172A]">
         <h3 className="text-xs font-bold text-white mb-0.5">
