@@ -405,11 +405,7 @@ function PracticeTab() {
           >
             <Hand className="w-3.5 h-3.5 text-[#3730A3] flex-shrink-0" aria-hidden="true" />
             <p className="text-[11px] text-[#3730A3] leading-snug">
-              <span className="font-bold">Tap the grid</span> to set
-              {" "}<span className={`font-bold ${shiftTapNext === "start" ? "text-[#10B981]" : "text-[#DC2626]"}`}>
-                {shiftTapNext === "start" ? "Shift START" : "Shift END"}
-              </span>
-              {" "}(snaps to 15-min). Or type HH:MM below.
+              <span className="font-bold">Drag</span> the <span className="font-bold text-[#10B981]">green START</span> and <span className="font-bold text-[#DC2626]">red END</span> handles on the grid (snaps to 15-min). Or type HH:MM below.
             </p>
           </div>
         )}
@@ -419,7 +415,11 @@ function PracticeTab() {
           selectedIndices={selected}
           onEntryClick={phase === "select" ? toggle : null}
           blockMarks={blockMarks}
-          onMinuteClick={shiftQActive ? handleGridTapForShift : null}
+          // Tap-to-set is disabled when draggable markers are active — dragging
+          // the pre-placed handles (or typing into the HH:MM inputs) is the
+          // intended interaction. Leaving onMinuteClick live would cause the
+          // synthesized click after pointerup to double-write start/end.
+          onMinuteClick={null}
           onMarkerDrag={shiftQActive ? (kind, markerId, newMin) => {
             const hhmm = `${String(Math.floor(newMin / 60)).padStart(2, "0")}:${String(newMin % 60).padStart(2, "0")}`;
             if (markerId === "dayStart") setTStart(hhmm);

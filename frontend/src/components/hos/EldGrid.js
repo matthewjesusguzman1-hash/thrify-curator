@@ -120,16 +120,29 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   const totalHm = (mins) => `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
   const totalAll = totals.OFF + totals.SB + totals.D + totals.OD;
 
+  const hasDraggable = shiftMarkers.some((m) => m.draggable) && !!onMarkerDrag;
   return (
     <div className="rounded-lg border border-[#CBD5E1] bg-white">
-      <div className="overflow-x-auto -mx-1">
+      <div
+        // When draggable markers are active, disable the horizontal-scroll
+        // wrapper's own touch-pan so dragging a marker horizontally never
+        // ends up as a scroll gesture on the grid container.
+        className="-mx-1"
+        style={{
+          overflowX: hasDraggable ? "visible" : "auto",
+          touchAction: hasDraggable ? "none" : "auto",
+        }}
+      >
       <svg
         width={svgW}
         height={svgH}
         viewBox={`0 0 ${svgW} ${svgH}`}
         className="block"
         onClick={handleSvgClick}
-        style={{ cursor: onMinuteClick ? "crosshair" : "default" }}
+        style={{
+          cursor: onMinuteClick ? "crosshair" : "default",
+          touchAction: hasDraggable ? "none" : "auto",
+        }}
       >
         {/* Brackets above the grid — call out spans the rule cares about.
          * `bracketRows[i]` tells us which vertical row to place the label on
@@ -293,27 +306,40 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
               {sm.draggable && onMarkerDrag && (
                 <>
                   {/* visible grip circle on the header so the draggable state is obvious */}
-                  <circle cx={x} cy={HEADER_H + 4 * ROW_H + 4} r={compact ? 4.5 : 5.5} fill={color} stroke="#FFFFFF" strokeWidth="2" />
+                  <circle cx={x} cy={HEADER_H + 4 * ROW_H + 4} r={compact ? 5.5 : 7} fill={color} stroke="#FFFFFF" strokeWidth="2" />
+                  {/* Generous hit zone (±22px) with a subtle tint so the inspector
+                      can SEE the target and still tap anywhere on the column.
+                      touch-action:none + pointer-events:all + explicit preventDefault
+                      on touchstart/touchmove keeps the browser from stealing the
+                      gesture as a page scroll. */}
                   <rect
-                    x={x - 12}
-                    y={HEADER_H - flagH - 4}
-                    width={24}
-                    height={(4 * ROW_H) + flagH + 12}
-                    fill="transparent"
-                    style={{ cursor: "ew-resize", touchAction: "none" }}
+                    x={x - 22}
+                    y={0}
+                    width={44}
+                    height={HEADER_H + 4 * ROW_H + 14}
+                    fill={color}
+                    fillOpacity="0.06"
+                    stroke={color}
+                    strokeOpacity="0.25"
+                    strokeDasharray="2 3"
+                    style={{ cursor: "ew-resize", touchAction: "none", pointerEvents: "all" }}
                     onPointerDown={(ev) => {
+                      ev.preventDefault();
                       ev.stopPropagation();
                       ev.currentTarget.setPointerCapture(ev.pointerId);
                       handleMarkerPointerMove(ev, sm);
                     }}
                     onPointerMove={(ev) => {
                       if (!ev.currentTarget.hasPointerCapture?.(ev.pointerId)) return;
+                      ev.preventDefault();
                       ev.stopPropagation();
                       handleMarkerPointerMove(ev, sm);
                     }}
                     onPointerUp={(ev) => {
                       ev.currentTarget.releasePointerCapture?.(ev.pointerId);
                     }}
+                    onTouchStart={(ev) => ev.preventDefault()}
+                    onTouchMove={(ev) => ev.preventDefault()}
                     data-testid={`shift-marker-drag-${sm.kind || i}`}
                   />
                 </>
