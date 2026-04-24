@@ -37,10 +37,12 @@ const RULES = [
     ],
   },
   {
-    title: "Two-Axle Group (8' to 8'6\")",
+    title: "Two-Axle Group (8' to 8'6\") — 38,000 lbs",
+    note: "pairs with the \"Tandem (38K) *\" preset in Record Weights",
     hl: true,
     items: [
       "The maximum gross load on any group of two axles, the distance between the extremes of which is more than 8' but less than 8'6\", shall be 38,000 lbs.",
+      "In Record Weights, pick the \"Tandem (38K) see weight rules *\" preset to apply this 38,000-lb cap in place of the standard 34,000-lb tandem rule.",
     ],
   },
   {
@@ -90,7 +92,87 @@ const RULES = [
   },
 ];
 
+/* ---- Size rules (Nebraska §60-6,288 to §60-6,290) ----
+   Rendered in the Size tab of the Rules panel. Structured so each block —
+   overview / width / height / length / overlength / custom harvest — can be
+   expressed as titled sections with optional exception bullets. */
+const SIZE_OVERVIEW = {
+  title: "Dimensions Overview",
+  cfr: "§60-6,288 to §60-6,290",
+  note: "All dimension measurements include the load to the front and/or the rear",
+  items: [
+    { label: "Width", value: "8' 6\"", detail: "including load, all highways" },
+    { label: "Height", value: "14' 6\"", detail: "including load, all highways" },
+    { label: "Length · single vehicle", value: "45'", detail: "including load" },
+    { label: "Length · semitrailer", value: "53'", detail: "including load, excluding truck-tractor" },
+    { label: "Length · semitrailer + trailer", value: "65'", detail: "including load & connecting devices, excluding truck-tractor" },
+    { label: "Length · any other combination", value: "65'", detail: "including load" },
+  ],
+};
+
+const SIZE_WIDTH_EXCEPTIONS = [
+  "Farm equipment in temporary movement during daylight hours, or hours of darkness when the clearance light requirements are complied with in the normal course of farm operations (for farm equipment being transported on a trailer, refer to #4 below).",
+  "Combines 18' or less in width, while in the normal course of farm operations and while being driven during daylight hours or during hours of darkness when the clearance light requirements are fully complied with.",
+  "Combines in excess of 18' in width, while in the normal course of farm operations and while being driven during daylight hours for a distance of 25 miles or less on highways and while preceded by a well-lighted pilot vehicle or flag person, and during hours of darkness when clearance light requirements are met.",
+  "Combines and vehicles transporting combines or other implements of husbandry engaged in harvesting or other agricultural work, while being transported into or through the state during daylight hours, when the total width including the implement does not exceed 15'. When necessary to the harvesting operation, vehicles may travel unloaded for distances not to exceed 25 miles.",
+  "Livestock forage vehicles loaded or unloaded that comply with §60-6,305 (not exceeding 65' length, 18' width, 18' height, operated only during daylight hours).",
+  "Vehicles en route to pickup, delivering, or returning unloaded from delivery of baled livestock forage — may be up to 12' in width, daylight hours only.",
+  "Farm equipment dealers or representatives driving, delivering, or picking up farm equipment or other implements of husbandry during daylight hours.",
+];
+
+const SIZE_HEIGHT_EXCEPTIONS = [
+  "Combines or vehicles transporting combines engaged in harvesting within or outside the state, moving into or through the state during daylight hours, when overall height does not exceed 15' 6\".",
+  "Farm equipment dealers or representatives hauling farm equipment — overall height shall not exceed 15' 6\".",
+  "Livestock forage vehicles with or without load complying with subsection 2 of §60-6,305 (refer to width exception #5 for dimensions).",
+  "Vehicles hauling baled livestock forage shall not exceed overall height of 15' 6\".",
+];
+
+const SIZE_LENGTH_SINGLE_EXC = [
+  "A truck-tractor.",
+  "A semitrailer operated in a truck-tractor single semitrailer combination.",
+  "Bus / Motor Home — shall not exceed 45'.",
+];
+
+const SIZE_LENGTH_COMBO_EXC = [
+  "One truck and one trailer loaded or unloaded, used transporting implements of husbandry to be engaged in harvesting, transported into or through the state during daylight hours — total length ≤ 75' including load.",
+  "A truck-tractor single semitrailer combination.",
+  "A truck-tractor semitrailer-trailer combination — but the semitrailer-trailer portion shall not exceed 65' including connecting devices.",
+  "Driveaway saddlemount vehicle transporter combinations (and with fullmount) — total overall length shall not exceed 97'.",
+  "Movement of public utility or other construction and maintenance material — at any time.",
+  "A semitrailer in a truck-tractor single semitrailer combination transporting baled livestock forage — shall not exceed 59' 6\" including load.",
+];
+
+const SIZE_OVERLENGTH_NO_INTERSTATE = [
+  "Movement of unbaled livestock forage vehicles, loaded or unloaded.",
+  "Overhang of a combine being transported by a truck-tractor semitrailer combination during daylight hours — semitrailer + overhang ≤ 63', semitrailer itself ≤ 53'.",
+  "Farm equipment dealers or representatives driving, delivering, or picking up farm equipment within their county of business or adjoining counties and return.",
+  "Temporary movement of farm machinery during daylight hours in normal farm operation.",
+];
+
+const SIZE_CUSTOM_HARVEST = {
+  width: [
+    "Combines and vehicles transporting combines or implements of husbandry engaged in harvesting, moving into or through the state during daylight hours — total width including the implement ≤ 15'. Vehicles may travel unloaded up to 25 miles when necessary to the harvest.",
+  ],
+  length65: [
+    "One truck and one trailer loaded or unloaded transporting implements of husbandry to be engaged in harvesting — total length ≤ 75' including load, daylight hours only.",
+  ],
+  truckTractor: [
+    "Semitrailer — 53' including load.",
+    "Truck-tractor semitrailer + trailer — 65' measuring the trailers only, including the load.",
+    "All other combinations — 65' including load.",
+    "Truck-tractor with two trailers (or semitrailer + trailer) used to transport custom harvesting equipment for wheat, soybeans, or milo April through November — trailers up to 81' 6\" including any coupling device, NOT including the power unit.",
+  ],
+  height: [
+    "Combines or vehicles transporting combines engaged in harvesting, moving into or through the state during daylight hours — overall height ≤ 15' 6\".",
+    "Vehicles issued an over-dimensional permit.",
+  ],
+};
+
+const SIZE_DRIVER_RISK_NOTE =
+  "Owners, lessees, and operators of a vehicle exceeding 12' 6\" in height shall assume the risk of loss to the vehicle or its load and shall be liable for any damages that result from overhead obstructions.";
+
 const COLORS = ["#D4AF37", "#3B82F6", "#16A34A", "#F59E0B", "#8B5CF6", "#EC4899"];
+
 
 /* ================================================================
    TRUCK DIAGRAM — improved with tight grouped axles
@@ -1030,17 +1112,24 @@ export default function BridgeChartPage() {
               <button onClick={() => setShowRules(false)} className="text-white/40 hover:text-white" data-testid="close-rules-btn"><X className="w-4 h-4" /></button>
             </div>
             {/* Tabs — pill style matching page-level tabs above */}
-            <div className="flex items-center gap-2 border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5">
+            <div className="flex items-center gap-2 border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 overflow-x-auto">
               <button
                 onClick={() => setRulesTab("rules")}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all ${rulesTab === "rules" ? "bg-[#D4AF37] text-[#002855] shadow-sm" : "bg-white text-[#64748B] border border-[#E2E8F0] hover:text-[#002855]"}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${rulesTab === "rules" ? "bg-[#D4AF37] text-[#002855] shadow-sm" : "bg-white text-[#64748B] border border-[#E2E8F0] hover:text-[#002855]"}`}
                 data-testid="rules-tab-rules"
               >
-                <Info className="w-3.5 h-3.5" /> Rules
+                <Info className="w-3.5 h-3.5" /> Weight Rules
+              </button>
+              <button
+                onClick={() => setRulesTab("size")}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${rulesTab === "size" ? "bg-[#D4AF37] text-[#002855] shadow-sm" : "bg-white text-[#64748B] border border-[#E2E8F0] hover:text-[#002855]"}`}
+                data-testid="rules-tab-size"
+              >
+                <Ruler className="w-3.5 h-3.5" /> Size
               </button>
               <button
                 onClick={() => setRulesTab("measure")}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all ${rulesTab === "measure" ? "bg-[#D4AF37] text-[#002855] shadow-sm" : "bg-white text-[#64748B] border border-[#E2E8F0] hover:text-[#002855]"}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${rulesTab === "measure" ? "bg-[#D4AF37] text-[#002855] shadow-sm" : "bg-white text-[#64748B] border border-[#E2E8F0] hover:text-[#002855]"}`}
                 data-testid="rules-tab-measure"
               >
                 <Ruler className="w-3.5 h-3.5" /> How to Measure Bridge
@@ -1059,6 +1148,8 @@ export default function BridgeChartPage() {
                   </div>
                 ))}
               </div>
+            ) : rulesTab === "size" ? (
+              <SizeRulesPanel />
             ) : (
               <div className="p-3 sm:p-4 space-y-3 max-h-[70vh] overflow-y-auto">
                 <img src="https://customer-assets.emergentagent.com/job_violation-navigator/artifacts/mr43ejti_IMG_1317.png" alt="Correct method for measuring groups of axles — page 1" className="w-full rounded-lg border border-[#E2E8F0] bg-white" loading="lazy" />
@@ -1830,3 +1921,115 @@ export default function BridgeChartPage() {
     </div>
   );
 }
+
+/* ================================================================
+   SIZE RULES PANEL — width / height / length limits & exceptions
+   Content sourced from Nebraska §60-6,288 to §60-6,290 summaries
+   supplied by the user. Rendered inside the Rules help dialog.
+   ================================================================ */
+function SizeRulesPanel() {
+  const bullet = (text, i) => (
+    <p
+      key={i}
+      className="text-[11px] text-[#475569] leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-[6px] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#CBD5E1]"
+    >
+      {text}
+    </p>
+  );
+  const Section = ({ title, subtitle, children, hl }) => (
+    <div className={`px-4 py-2.5 ${hl ? "bg-[#D4AF37]/5" : ""}`}>
+      <h3 className="text-xs font-bold text-[#002855] mb-1 flex flex-wrap items-baseline gap-1.5">
+        <span>{title}</span>
+        {subtitle && <span className="text-[10px] italic font-normal text-[#64748B]">{subtitle}</span>}
+      </h3>
+      <div className="space-y-[2px]">{children}</div>
+    </div>
+  );
+  return (
+    <div className="divide-y divide-[#F1F5F9] max-h-[70vh] overflow-y-auto" data-testid="size-rules-panel">
+      {/* Overview — quick-glance table of headline limits */}
+      <div className="px-4 py-3 bg-[#0F172A]">
+        <h3 className="text-xs font-bold text-white mb-0.5">
+          {SIZE_OVERVIEW.title}
+          <span className="ml-1 text-[10px] font-mono text-[#D4AF37]">{SIZE_OVERVIEW.cfr}</span>
+        </h3>
+        <p className="text-[10px] italic text-white/60 mb-2">{SIZE_OVERVIEW.note}</p>
+        <div className="space-y-1">
+          {SIZE_OVERVIEW.items.map((it, i) => (
+            <div key={i} className="flex items-baseline justify-between gap-2 rounded-md bg-white/5 px-2.5 py-1.5">
+              <span className="text-[11px] text-white/80 font-medium truncate">{it.label}</span>
+              <span className="flex-shrink-0 flex items-baseline gap-1.5">
+                <span className="text-[13px] font-black text-[#D4AF37] font-mono tabular-nums">{it.value}</span>
+                <span className="text-[9.5px] text-white/50 italic max-w-[180px] sm:max-w-none">{it.detail}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Width */}
+      <Section
+        title={`Width — Max 8' 6" on All Highways`}
+        subtitle="Exceptions do not apply to the Interstate Highway System"
+        hl
+      >
+        {SIZE_WIDTH_EXCEPTIONS.map(bullet)}
+      </Section>
+
+      {/* Height */}
+      <Section
+        title={`Height — Max 14' 6" on All Highways`}
+        subtitle="Exceptions for height only"
+      >
+        {SIZE_HEIGHT_EXCEPTIONS.map(bullet)}
+        <p className="mt-1.5 rounded-md bg-[#FFFBEB] border border-[#F59E0B]/40 px-2.5 py-1.5 text-[11px] text-[#92400E] leading-relaxed">
+          <span className="font-bold">Driver risk note — </span>{SIZE_DRIVER_RISK_NOTE}
+        </p>
+      </Section>
+
+      {/* Length — single vehicles */}
+      <Section title="Length — Single Vehicles ≤ 45'" subtitle="Exceptions">
+        {SIZE_LENGTH_SINGLE_EXC.map(bullet)}
+      </Section>
+
+      {/* Length — combinations */}
+      <Section title="Length — Truck + Trailer ≤ 65' overall" subtitle="including front and rear bumpers and load" hl>
+        {SIZE_LENGTH_COMBO_EXC.map(bullet)}
+      </Section>
+
+      {/* Overlength not allowed on interstate */}
+      <Section title="Overlength — NOT Authorized on Interstate" subtitle="State highways only, under the exceptions">
+        {SIZE_OVERLENGTH_NO_INTERSTATE.map(bullet)}
+      </Section>
+
+      {/* Custom Harvest */}
+      <div className="px-4 py-3 bg-[#F8FAFC]">
+        <h3 className="text-xs font-bold text-[#002855] mb-0.5">Custom Harvest Information</h3>
+        <p className="text-[10px] italic text-[#64748B] mb-2">Exceptions do not apply to the Interstate Highway System</p>
+
+        <div className="space-y-2.5">
+          <div>
+            <p className="text-[11px] font-bold text-[#002855] mb-1">{`Max Legal Width — 8' 6"`}</p>
+            {SIZE_CUSTOM_HARVEST.width.map(bullet)}
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-[#002855] mb-1">Max Legal Length of a Straight Truck-Trailer Combination — 65'</p>
+            {SIZE_CUSTOM_HARVEST.length65.map(bullet)}
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-[#002855] mb-1">Max Legal Length of Truck-Tractor Combinations</p>
+            {SIZE_CUSTOM_HARVEST.truckTractor.map(bullet)}
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-[#002855] mb-1">{`Max Legal Height Empty or Loaded — 14' 6"`}</p>
+            {SIZE_CUSTOM_HARVEST.height.map(bullet)}
+            <p className="mt-1.5 rounded-md bg-[#FFFBEB] border border-[#F59E0B]/40 px-2.5 py-1.5 text-[11px] text-[#92400E] leading-relaxed">
+              <span className="font-bold">Driver risk note — </span>{SIZE_DRIVER_RISK_NOTE}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
