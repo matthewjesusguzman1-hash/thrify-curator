@@ -26,6 +26,16 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — HOS Training Hub: Compact Mode toggle (VERIFIED)
+- User approved: "Yeah, try it" on compact-mode toggle proposal. Inspectors working an active roadside stop needed to see all six HOS rules on one screen without scrolling.
+- Added a Detailed ⇄ Quick toggle button in the HosTrainingPage hub header (gold when active, white/10 when inactive).
+- State persists via `localStorage["hos-hub-compact-mode"]`, so an inspector who prefers the cheat-sheet density keeps it across sessions.
+- In Quick mode: smaller icon tile (w-8 h-8 vs w-10 h-10), smaller padding (p-2.5 vs p-3), title drops to 13px leading-tight, subtitle + meta row + chevron all hidden. Roadside preview chip remains visible (compressed top margin).
+- Fix applied in previous session: moved the `useState(compactKey)` hook above the conditional early returns so the hooks order stays stable when switching modules. Verified live — no React rules-of-hooks error, toggle cycles label DETAILED ⇄ QUICK correctly, tiles collapse and re-expand.
+- Data-test hooks: `hub-compact-toggle` on the button, `module-{id}-roadside-preview` on the preview chip.
+
+
+
 ### 2026-02 — HOS hub tile previews shortened to single-line rule-of-thumb
 - User: the full first Roadside action was too much information for a hub-glance preview.
 - Added a short `roadsideQuick` string to each LEARN_CONTENT module — one-line rule-of-thumb, typically 6-10 words:
