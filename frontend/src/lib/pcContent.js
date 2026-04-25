@@ -82,7 +82,7 @@ export const PC_TOPICS = [
         body: "Look for these patterns when reviewing a driver's PC entries:",
         bullets: [
           "PC entry immediately after delivery, ending at another shipper, receiver, or terminal — strong indicator the move advanced the load.",
-          "PC distance/time exceeds what's reasonable for 'nearest safe rest' — e.g., 80 miles to find rest when truck stops were available within 10 miles.",
+          "PC distance/time exceeds what's reasonable for the post-load/unload 'nearest safe rest' allowance — that exception applies ONLY to a driver moving from a shipper or receiver to the nearest reasonable safe location to obtain required rest after loading/unloading. There is no general 'PC to the nearest safe location' allowance for any other off-duty situation.",
           "PC entries during the night when the driver should be in their 10-hr reset, especially at the start or end of a shift.",
           "Multiple short PC segments back-to-back that effectively cover a route — splitting load-advancing driving into 'personal' chunks.",
           "PC used to fit driving inside the 14-hr clock — i.e., the driver is at the 14-hr cap and 'becomes off-duty' to keep moving.",
