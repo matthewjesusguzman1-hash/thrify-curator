@@ -26,6 +26,15 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — Split Sleeper rename, /practice header simplification, ELD grid genuinely larger
+- User: "Rename the split sleeper trainer to just split sleeper. When entering the practice scenarios the tabs for 70 hour calc and general tab are visible at the top, remove that. I just want a back button like all the others. The grid doesn't look any larger. I asked for it to be at least as large as the one that was in the split sleeper trainer practice area."
+- **Rename:** `Split Sleeper Trainer` → `Split Sleeper` everywhere it appears: SplitSleeperPage h1, HosTrainingPage hub tile (`module-split` title).
+- **Header cleanup on /practice:** removed the `<HosTabs />` sibling tab bar (60/70 Calculator + HOS General) from /hours-of-service/practice. Header now matches every other top-level page: just a back chevron + title. The HosTabs strip is preserved on /hours-of-service and /hours-of-service/training where it still belongs.
+- **Genuinely larger grid:** previous bump (HOUR_W 28→34, ROW_H 32→38) didn't change the on-screen size because the SVG uses `h-auto` with `viewBox` — display height is dictated by aspect ratio, and proportional bumps to both axes keep the aspect identical. New tuning swings the aspect from "wide-and-short" toward "less-wide-and-tall": HOUR_W=28, ROW_H=52 (was 32 originally). svgH grew from ~162 to ~244 internal units against the same svgW=822, so on a 900px-wide container the displayed grid is now ~50% taller than the original. Rows are visibly thicker; duty trace is easier to read at a glance.
+- Bonus: cleaned up the `fontFeatureSettings` JSX prop on the SVG hour labels — replaced with `style={{ fontVariantNumeric: "tabular-nums" }}` to silence the React DOM warning that's been showing in console (introduced when military-time labels were added).
+- Tested via testing_agent_v3_fork iteration 33 — all three checks passed; HosTabs preserved on the right pages and removed on /practice; ELD grid taller in screenshot.
+
+
 ### 2026-02 — HOS Practice consolidation: 4-category unified runner + neutral picker IDs + larger grid
 - User: "I don't want the user to know the type of scenario it is. That defeats the purpose ... remove the clean 13 hour name." Then: "Make the grid larger. It should be at least the size of the one in the split sleeper trainer. It would also be good to incorporate the split sleeper trainer with the other scenarios."
 - Stripped every `title` and `subtitle` field from the 11 advanced scenarios (`hosAdvancedScenarios.js`). The runner's picker reads `s.title || s.id`, so it now shows neutral codes only — `C1..C5`, `M1..M3`, `E1..E3`, `SP1..SP4`. Inspectors see no hint about the scenario's "trap" or violation type before solving it.

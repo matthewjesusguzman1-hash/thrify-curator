@@ -197,7 +197,7 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const x = LABEL_W + h * HOUR_W;
           const label = h === 24 ? "" : String(h).padStart(2, "0");
           return (
-            <text key={`h${h}`} x={x} y={12} textAnchor="middle" fontSize={compact ? "8" : "9"} fill="#475569" fontFamily="sans-serif" fontFeatureSettings="'tnum'">{label}</text>
+            <text key={`h${h}`} x={x} y={12} textAnchor="middle" fontSize={compact ? "8" : "9"} fill="#475569" fontFamily="sans-serif" style={{ fontVariantNumeric: "tabular-nums" }}>{label}</text>
           );
         })}
 
