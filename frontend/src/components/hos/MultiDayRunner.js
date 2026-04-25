@@ -135,6 +135,18 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
         </div>
       )}
 
+      {/* Day BEFORE — readonly context so the inspector can see how overnight
+       * rest patterns started before Day 1 (relevant for 10-hr reset and
+       * split-sleeper provision analysis). */}
+      {scenario.priorDayLog && (
+        <ContextDayStrip
+          label="Day before"
+          log={scenario.priorDayLog}
+          note={scenario.priorDayNote}
+          testid="prior-day-strip"
+        />
+      )}
+
       {/* Day 1 grid */}
       <DaySection
         label={day1.label}
@@ -214,6 +226,16 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
         />
       )}
 
+      {/* Day AFTER — readonly context strip, visible once Day 2 grid is shown. */}
+      {questionIdx >= 2 && scenario.nextDayLog && (
+        <ContextDayStrip
+          label="Day after"
+          log={scenario.nextDayLog}
+          note={scenario.nextDayNote}
+          testid="next-day-strip"
+        />
+      )}
+
       {done && (
         <section className="rounded-xl border-2 border-[#D4AF37]/40 bg-[#FFFBEB] p-4 space-y-2" data-testid="multi-done">
           <div className="flex items-center gap-2">
@@ -236,6 +258,26 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
 }
 
 /* ─── Sub-components ─── */
+
+/** Readonly context strip — renders the prior-day or next-day log so the
+ *  inspector can see overnight rest patterns adjacent to the focal days. No
+ *  drag handles, no questions; just the grid + an optional caption. */
+function ContextDayStrip({ label, log, note, testid }) {
+  return (
+    <section className="bg-[#F8FAFC] rounded-xl border border-dashed border-[#CBD5E1] overflow-hidden opacity-90" data-testid={testid}>
+      <div className="bg-[#E2E8F0]/60 px-3 py-1.5 flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-[#64748B]">Context · readonly</span>
+        <p className="text-[12px] font-bold text-[#475569]">{label}</p>
+      </div>
+      <div className="p-2">
+        <EldGrid entries={log} />
+        {note && (
+          <p className="text-[11px] text-[#64748B] leading-relaxed mt-1.5 px-1 italic">{note}</p>
+        )}
+      </div>
+    </section>
+  );
+}
 
 function DaySection({ label, log, markers, active, onMarkerDrag }) {
   return (

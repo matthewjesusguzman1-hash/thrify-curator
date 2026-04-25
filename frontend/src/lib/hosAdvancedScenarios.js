@@ -192,6 +192,14 @@ export const MULTIDAY_SCENARIOS = [
   {
     id: "M1",
     primer: "Two consecutive duty days. Both shifts are contained within their own 24-hr window. Identify each day's shift bounds, then evaluate 11/14 compliance per day.",
+    priorDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    priorDayNote: "Day before Day 1 — driver was fully off-duty, so the 14-hr clock starts fresh on Day 1.",
+    nextDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    nextDayNote: "Day after Day 2 — driver took a full off-duty day for recovery.",
     days: [
       {
         label: "Day 1",
@@ -240,6 +248,15 @@ export const MULTIDAY_SCENARIOS = [
   {
     id: "M2",
     primer: "Two consecutive duty days. One day's shift exceeds an HOS limit. Identify each day's shift bounds, then catch the violation.",
+    priorDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    priorDayNote: "Day before Day 1 — driver was fully off-duty (10+ hrs reset satisfied before Day 1's 04:00 start).",
+    nextDayLog: [
+      { status: "OFF", start: "00:00", end: "06:00" },
+      { status: "OFF", start: "06:00", end: "24:00" },
+    ],
+    nextDayNote: "Day after Day 2 — driver remained off-duty.",
     days: [
       {
         label: "Day 1",
@@ -287,6 +304,14 @@ export const MULTIDAY_SCENARIOS = [
   {
     id: "M3",
     primer: "OVERNIGHT shift — the work begins on Day 1 and continues past midnight into Day 2. Identify each day's portion of the shift and evaluate combined 11/14 compliance for the overnight run.",
+    priorDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    priorDayNote: "Day before Day 1 — full off-duty day. The driver was well-rested before the evening overnight shift began at 18:00 Day 1.",
+    nextDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    nextDayNote: "Day after Day 2 — full off-duty day, recovery sleep after the overnight haul.",
     days: [
       {
         label: "Day 1",
@@ -330,6 +355,15 @@ export const MULTIDAY_SCENARIOS = [
   {
     id: "M4",
     primer: "Two consecutive duty days with separate shifts. Each shift fits within its own 24-hr day, but one day stresses the 11-hr drive cap. Identify both shifts and any violations.",
+    priorDayLog: [
+      { status: "OFF", start: "00:00", end: "20:00" },
+      { status: "SB",  start: "20:00", end: "24:00" },
+    ],
+    priorDayNote: "Day before Day 1 — driver was off-duty most of the day, then moved into the sleeper berth at 20:00. The SB block continued into Day 1 (00:00–05:00) and pairs with Day 1's 11:00–11:30 OFF break to form a potential 9.5h reset — short of the 10-hr requirement, but the inspector should track the overnight rest pattern.",
+    nextDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    nextDayNote: "Day after Day 2 — full off-duty day.",
     days: [
       {
         label: "Day 1",
@@ -404,6 +438,14 @@ export const EIGHTDAY_SCENARIOS = [
     id: "E1",
     primer: "Eight consecutive duty days. The driver is mostly compliant — work the inspector workflow end-to-end: identify each day's shift, catch any 11/14/8-hr violation, run the cycle calc, then make the OOS call.",
     cycleLimit: 70,
+    priorDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    priorDayNote: "Day before Day −7 — full off-duty day. The driver was rested heading into the inspection window.",
+    nextDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    nextDayNote: "Day after Day 0 — driver took a full off-duty recovery day.",
     days: [
       {
         label: "Day −7", dayName: "Mon",
@@ -562,6 +604,14 @@ export const EIGHTDAY_SCENARIOS = [
     id: "E2",
     primer: "Eight consecutive duty days with mixed violations. Practice the full inspector workflow: shift identification, daily 11/14/8-hr violations, the 70-hr cycle math, and the OOS call. Pay attention to Day −3's split-sleeper usage too.",
     cycleLimit: 70,
+    priorDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    priorDayNote: "Day before Day −7 — driver was off-duty all day. The 70-hr cycle window includes only the 8 days shown below.",
+    nextDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    nextDayNote: "Day after Day 0 — driver placed OOS by inspector at the end of Day 0; remained off-duty.",
     days: [
       {
         label: "Day −7", dayName: "Mon",

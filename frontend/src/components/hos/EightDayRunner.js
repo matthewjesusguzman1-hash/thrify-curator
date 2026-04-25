@@ -116,6 +116,17 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
         </div>
       )}
 
+      {/* Day BEFORE — readonly context shown above the first day. Helps the
+       * inspector see overnight rest patterns leading into Day −7. */}
+      {scenario.priorDayLog && (
+        <ContextDayStrip
+          label="Day before Day −7"
+          log={scenario.priorDayLog}
+          note={scenario.priorDayNote}
+          testid="prior-day-strip"
+        />
+      )}
+
       {/* Day stepper — visual progress across all 8 days */}
       <DayStepper days={days} answers={dayAnswers} activeIdx={phase === "days" ? dayIdx : -1} done={phase !== "days"} />
 
@@ -146,10 +157,22 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
       )}
 
       {phase === "cycle" && (
-        <CycleStep scenario={scenario} dayAnswers={dayAnswers} answer={cycleAnswer}
-          onAnswer={(v) => setCycleAnswer(v)}
-          onNext={() => setPhase("oos")}
-        />
+        <>
+          {/* Day AFTER — readonly context, now relevant since all 8 days are
+           * complete and the inspector is checking cycle compliance. */}
+          {scenario.nextDayLog && (
+            <ContextDayStrip
+              label="Day after Day 0"
+              log={scenario.nextDayLog}
+              note={scenario.nextDayNote}
+              testid="next-day-strip"
+            />
+          )}
+          <CycleStep scenario={scenario} dayAnswers={dayAnswers} answer={cycleAnswer}
+            onAnswer={(v) => setCycleAnswer(v)}
+            onNext={() => setPhase("oos")}
+          />
+        </>
       )}
 
       {phase === "oos" && (
@@ -181,6 +204,27 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
 }
 
 /* ─── Day stepper ─── */
+
+/** Readonly context strip — renders the prior- or next-day log so the
+ *  inspector can see overnight rest patterns adjacent to the inspection
+ *  window. No interaction. */
+function ContextDayStrip({ label, log, note, testid }) {
+  return (
+    <section className="bg-[#F8FAFC] rounded-xl border border-dashed border-[#CBD5E1] overflow-hidden opacity-90" data-testid={testid}>
+      <div className="bg-[#E2E8F0]/60 px-3 py-1.5 flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-[#64748B]">Context · readonly</span>
+        <p className="text-[12px] font-bold text-[#475569]">{label}</p>
+      </div>
+      <div className="p-2">
+        <EldGrid entries={log} />
+        {note && (
+          <p className="text-[11px] text-[#64748B] leading-relaxed mt-1.5 px-1 italic">{note}</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function DayStepper({ days, answers, activeIdx, done }) {
   return (
     <div className="grid grid-cols-8 gap-1" data-testid="day-stepper">
