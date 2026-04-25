@@ -26,6 +26,15 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — Multi-Day + 8-Day: prior-day / next-day context strips (overnight rest visibility)
+- User: "For any multi day scenario the user needs to be able to see the day before and the day after if available. To properly check the split sleeper provision it can be necessary to see how the rest breaks were taken overnight."
+- Added `priorDayLog`, `priorDayNote`, `nextDayLog`, `nextDayNote` fields to all 4 MULTIDAY_SCENARIOS (M1-M4) and both EIGHTDAY_SCENARIOS (E1, E2). Most prior/next days are full off-duty rest, but M4's prior day shows an SB block starting at 20:00 the night before — useful for evaluating whether the overnight rest qualified as a 10-hr reset or a split-sleeper Period A.
+- New shared visual pattern: **ContextDayStrip** — readonly EldGrid wrapped in a dashed-border / light-grey card with a "Context · readonly" badge + caption. Visually distinct from the active dark-headered day cards so the inspector instantly recognizes context-only days.
+- MultiDayRunner: prior strip rendered ABOVE Day 1 grid; next strip rendered after Day 2's ViolationCard (gated on `questionIdx >= 2` so it appears alongside the Day 2 grid).
+- EightDayRunner: prior strip rendered above the day stepper; next strip rendered above the CycleStep when phase advances to `cycle` (so the inspector sees the day-after pattern at the moment they're evaluating cycle compliance).
+- Tested via testing_agent_v3_fork iteration 36 — 8/8 verification points pass; positions, styling, gating, and Combined/Split regression all good.
+- Tester also flagged 2 future-refactor candidates (non-blocking): ContextDayStrip is duplicated in both runners — extract to a shared component when convenient; both runners are approaching 700 lines — split sub-components into separate files in a future refactor pass.
+
 ### 2026-02 — 8-Day Inspection drill rebuilt as full inspector workflow
 - User: "The eight day inspection scenario was supposed to have 8 days to review and have easy violations to identify for 11 and 14 violations mixed in but also 70 hour violation and required the user to use the 70 hour calculator. It should also include some split sleeper. It should allow the user to throw a little of everything together. The first step is properly identifying rest breaks and work times. Then identifying potential 11, 14 and 8 hour violations. Then the 70 hour rule with the use of the calculator. If necessary place the driver OOS."
 - **Scenarios rewritten** (`hosAdvancedScenarios.js` EIGHTDAY_SCENARIOS): 2 full 8-day scenarios. E1 = clean baseline (60h cycle, no violations, includes a split-sleeper Friday and an off-duty Thursday). E2 = kitchen sink — Day −6 14-hr violation, Day −4 11-hr violation, Day −2 8-hr break violation, split-sleeper usage Day −3+−2, cumulative 77.5h on the 70-hr clock = cycle violation + OOS required. Each day has full ELD log + shiftStartMin/End + onDutyHours + per-day violation flags + explanation prose.
