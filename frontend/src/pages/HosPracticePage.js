@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, GraduationCap, Clock, CalendarDays, Hourglass, Calculator, Layers } from "lucide-react";
-import { EldGrid } from "../components/hos/EldGrid";
 import { PracticeRunner } from "../components/hos/PracticeRunner";
+import { MultiDayRunner } from "../components/hos/MultiDayRunner";
 import {
   COMBINED_SCENARIOS, MULTIDAY_SCENARIOS, EIGHTDAY_SCENARIOS,
 } from "../lib/hosAdvancedScenarios";
@@ -28,14 +28,16 @@ const CATEGORIES = [
     scenarios: COMBINED_SCENARIOS,
     mode: "shift",
     desc: "Single-day shifts. Drag the green/red handles to mark when the shift started and ended, then evaluate any 11- or 14-hour rule violation.",
+    rules: ["§395.3(a)(2) — 14-hr work-shift cap (wall-clock, off-duty time still counts)", "§395.3(a)(3)(i) — 11-hr driving cap (driving minutes only)", "§395.3(a)(3)(ii) — 30-min break required before 8 cumulative hours of driving"],
   },
   {
     id: "multiday",
     label: "Multi-Day",
     icon: CalendarDays,
     scenarios: MULTIDAY_SCENARIOS,
-    mode: "shift",
-    desc: "Two-day scenarios. Yesterday's log is shown for context — focus your shift bounds and violation analysis on TODAY (Day 2).",
+    mode: "multiday",
+    desc: "Two consecutive duty days. Identify each day's shift bounds (watch for shifts that span midnight), then evaluate 11/14 compliance on each day.",
+    rules: ["§395.3(a)(2) — 14-hr work-shift cap", "§395.3(a)(3)(i) — 11-hr driving cap", "§395.3(a)(1) — 10-hr off-duty reset between shifts"],
   },
   {
     id: "eightday",
@@ -44,6 +46,7 @@ const CATEGORIES = [
     scenarios: EIGHTDAY_SCENARIOS,
     mode: "shift",
     desc: "Full 8-day inspection period. Use the mini 70-hr calculator below to check cycle compliance, then run the standard 11/14 analysis on today's ELD.",
+    rules: ["§395.3(b)(2) — 70-hr / 8-day cycle cap (60-hr / 7-day for carriers not operating every day)", "§395.3(c) — 34-hr restart clears the rolling cycle", "§395.3(a)(2)/(a)(3)(i) — daily 11/14 still apply on top of cycle"],
   },
   {
     id: "split",
@@ -52,6 +55,7 @@ const CATEGORIES = [
     scenarios: SPLIT_PRACTICE_SCENARIOS,
     mode: "split",
     desc: "Identify qualifying split-sleeper rest periods (≥7h SB + ≥2h SB/OFF, combined ≥10h), then evaluate today's shift with the pair applied.",
+    rules: ["§395.1(g)(1)(ii) — ≥7h in Sleeper Berth paired with ≥2h in SB or Off-Duty (combined ≥10h)", "CVSA policy — work shift begins at END of first qualifying rest and ends at START of second", "Off-duty time inside a pair-shift still counts toward the 11-hr driving clock"],
   },
 ];
 
@@ -60,10 +64,10 @@ export default function HosPracticePage() {
   const [catId, setCatId] = useState("combined");
   const cat = CATEGORIES.find((c) => c.id === catId);
 
-  // Build a renderContext function per category. Multi-day shows prior day
-  // ELDs; 8-day shows the recap table + mini calculator.
+  // Build a renderContext function per category. 8-day shows the recap table
+  // + mini cycle calculator. Multi-day no longer needs a context renderer
+  // because MultiDayRunner renders both day grids itself.
   const renderContext = useMemo(() => {
-    if (catId === "multiday") return (s) => <PriorDaysContext priorDays={s.priorDays || []} />;
     if (catId === "eightday") return (s) => <EightDayContext scenario={s} />;
     return null;
   }, [catId]);
@@ -110,47 +114,49 @@ export default function HosPracticePage() {
           })}
         </div>
 
-        <div className="rounded-md bg-[#FFFBEB] border-l-[3px] border-[#D4AF37] px-3 py-2">
-          <p className="text-[12px] text-[#713F12] leading-relaxed">{cat.desc}</p>
+        <div className="rounded-xl border border-[#D4AF37]/30 bg-[#FFFBEB] overflow-hidden" data-testid="category-primer">
+          <div className="px-3 py-2 border-b border-[#D4AF37]/20">
+            <p className="text-[12px] text-[#713F12] leading-relaxed">{cat.desc}</p>
+          </div>
+          {cat.rules && cat.rules.length > 0 && (
+            <div className="px-3 py-2 bg-white">
+              <p className="text-[9.5px] font-bold uppercase tracking-wider text-[#64748B] mb-1.5">Rules being tested</p>
+              <ul className="space-y-1">
+                {cat.rules.map((r, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[11.5px] text-[#334155] leading-snug">
+                    <span className="text-[#D4AF37] font-bold flex-shrink-0 mt-0.5">●</span>
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Per-category runner. Key forces remount when switching categories so
-         * the runner resets cleanly. */}
-        <PracticeRunner
-          key={catId}
-          scenarios={cat.scenarios}
-          mode={cat.mode}
-          category={catId}
-          renderContext={renderContext}
-        />
+         * the runner resets cleanly. Multi-day uses a dedicated 2-grid runner;
+         * all other categories share the single-day PracticeRunner. */}
+        {cat.mode === "multiday" ? (
+          <MultiDayRunner
+            key={catId}
+            scenarios={cat.scenarios}
+            category={catId}
+          />
+        ) : (
+          <PracticeRunner
+            key={catId}
+            scenarios={cat.scenarios}
+            mode={cat.mode}
+            category={catId}
+            renderContext={renderContext}
+          />
+        )}
       </main>
     </div>
   );
 }
 
 /* ─────────────── Context renderers ─────────────── */
-
-function PriorDaysContext({ priorDays }) {
-  if (!priorDays || priorDays.length === 0) return null;
-  return (
-    <div className="space-y-2" data-testid="prior-days-context">
-      {priorDays.map((d, i) => (
-        <section key={i} className="bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] overflow-hidden">
-          <div className="bg-[#E2E8F0]/60 px-3 py-1.5 flex items-center gap-2">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-[#64748B]">Context</span>
-            <p className="text-[12px] font-bold text-[#002855]">{d.label}</p>
-          </div>
-          <div className="p-2">
-            <EldGrid entries={d.log} />
-            {d.summary && (
-              <p className="text-[11.5px] text-[#475569] leading-relaxed mt-1.5 px-1">{d.summary}</p>
-            )}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
 
 function EightDayContext({ scenario }) {
   return (

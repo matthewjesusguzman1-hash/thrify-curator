@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only verification of HOS Practice multi-day rewrite + per-category 'Rules being tested' primer + scenario-primer card. All 11 review items pass on the live preview URL.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "MultiDayRunner / ShiftCard hint text (M3 Day 1)", "issues": ["Hint instructs the user to 'drag END to 24:00 (right edge)' but the keyboard fallback uses <input type=\"time\"> which natively rejects 24:00 (HTML spec only allows 00:00-23:59). The code does normalize end=0 to 1440 when day.shiftEndMin===1440 so submitting 00:00 works, but the hint never tells the user that — only the drag instruction is shown. Suggest adding '...or type 00:00 in the time field — it will be treated as the end of Day 1 (24:00).' Non-blocking; the flow is fully completable."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: clarify the M3 Day 1 shift-end hint to mention that typing 00:00 into the HH:MM field is accepted as 24:00 (since HTML <input type=\"time\"> rejects literal 24:00).",
+    "Pre-existing (out of scope): React console warning 'unknown prop fontFeatureSettings on a DOM element' was noted in iteration_33; still present, unrelated to this change."
+  ],
+  "critical_code_review_comments": [
+    "MULTIDAY_SCENARIOS shape, M3 overnight flags (continuesToNext/continuesFromPrev), regulatoryEndMin on Day 2, and explanation strings all match the spec in the review request.",
+    "MultiDayRunner correctly gates Day 2 grid + questions on questionIdx >= 2 / >= 3 and resets cleanly via the multiday-restart-btn.",
+    "ShiftCard normalization `answer.end === 0 && day.shiftEndMin === 24*60 ? 1440 : answer.end` is the right workaround for the HTML time-input limit; verified by a successful 'Correct' feedback after submitting 18:00 → 00:00 on M3 Day 1.",
+    "HosPracticePage rules array is rendered under data-testid=category-primer for all 4 categories; description sits in the top band, rules list in the white sub-band as designed.",
+    "Picker shows neutral IDs (no titles): the code path `s.title || s.id || ...` correctly falls back to the id (M1..M4) because MULTIDAY_SCENARIOS no longer carry `title` fields."
+  ],
+  "updated_files": [],
+  "success_rate": {"frontend": "100%"},
+  "test_credentials": "Badge 042 / PIN 1234 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Verified items end-to-end on live preview (https://violation-navigator.preview.emergentagent.com/hours-of-service/practice): (a) login works, (b) category-primer 'Rules being tested' list renders for all 4 categories (combined/multiday/eightday/split) with bullets visible, (c) Multi-Day picker (multiday-pick-scenario-btn → multiday-scenario-picker → multiday-scenario-pick-0..3) shows 4 entries with neutral IDs M1..M4, (d) M1 scenario-primer text is visible above Day 1 grid, Day 2 hidden initially (data-testid=day-section-day-2 count=0), (e) M3 ran end-to-end: D1 shift 18:00→00:00 (normalized to 24:00) → 'Correct'; D1 violation 'none' → Correct; Day 2 grid then appears; D2 shift 00:00→08:30 → Correct; D2 violation 'both' → Correct; multi-done card shown; multiday-restart-btn resets to primer + Day 1 (Day 2 hidden again), (f) M3 Day 1 shift hint contains 'continued past midnight', M3 Day 2 hint contains 'previous day', (g) 8-Day mini-cycle-calc + recap-table still render, mini-today-input=9 yields mini-grand=69 h on E1, (h) Combined and Split Sleeper categories still load with the rules primer. ONE COSMETIC NOTE: HTML <input type=\"time\"> rejects literal 24:00; the user must type 00:00 for Day 1 of M3. The code already normalizes this for grading, but the visible hint text does not mention it.",
+  "rca of the issue": "N/A — verification-only test, no bugs to RCA. The 24:00 vs 00:00 keyboard quirk is a UX clarity nit, not a bug; the runner accepts and grades 00:00 correctly when day.shiftEndMin===1440."
+}
