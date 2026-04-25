@@ -25,6 +25,12 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 
 ## Changelog
 
+### 2026-02 — HOS practice runners de-dup refactor
+- Extracted shared `ContextDayStrip`, `NextDayPreview`, `PairDayTimePicker` into `/app/frontend/src/components/hos/_shared/`.
+- Moved `timeStrToMin`, `minToTimeStr`, `computeOnDutyHoursFromLog`, `lastEntryEndMin`, `violationCorrectForOvernight`, `deriveShifts` into `/app/frontend/src/lib/hosRules.js`.
+- `EightDayRunner.js` 1689 → 1575 lines · `MultiDayRunner.js` 781 → 693 · `PracticeRunner.js` 651 → 637.
+- Behavior-preserving — frontend testing iteration 39 reported 100% success across all three runners.
+
 
 ### 2026-02 — 8-day overnight shift pair UX
 - When a day is flagged `continuesToNext` and the following day is `continuesFromPrev`, the EightDayRunner now renders BOTH grids together and asks the inspector for a SINGLE shift bracketed across them (Start day+time + End day+time, mirroring MultiDayRunner's pattern). This fixes the prior bug where Day 2 (Day −6) and Day 3 (Day −5) of E1 displayed wrong start/end expectations because the user could only bracket one day at a time.
