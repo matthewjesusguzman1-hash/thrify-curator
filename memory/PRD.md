@@ -25,6 +25,14 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 
 ## Changelog
 
+### 2026-02 — Multi-Day Runner overnight-shift continuity fix
+- User: "For the multi day scenario the start of the work shift begins in the first day and the end stops on the second day the app needs to compensate for that without giving away that the start and stop lines are on different days."
+- Rewrote `/app/frontend/src/components/hos/MultiDayRunner.js` to present BOTH Day 1 + Day 2 grids together with a single ShiftQuestionCard ("When did this work shift START and END?") whose Start/End handles each carry their own day picker (Day 1 or Day 2). The runner advances shift-by-shift via a neutral "Is there another work shift?" card so the UI never reveals scenario count or whether the active shift crosses midnight.
+- Added a `deriveShifts(days)` helper at the bottom of the same file that merges per-day MULTIDAY_SCENARIOS data (`continuesToNext` + `continuesFromPrev`) into a flat shifts[] array. M2 and M3 (overnight Day1→Day2) collapse to ONE merged shift with violations and regulatoryEnd carried from the day where they surface. M1 (priorDay→Day1 overnight + Day 2 contained) stays as 2 shifts; M4 (two contained) stays as 2 shifts.
+- Verified by testing agent (iteration_38) via deep source review of all 4 scenarios; UI wording confirmed neutral, all required data-testids present.
+
+
+
 
 ### 2026-02 — New Personal Conveyance reference module
 - User: "I want another module in hos general for personal conveyance under eld"
