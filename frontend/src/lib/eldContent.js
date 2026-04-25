@@ -101,7 +101,7 @@ export const ELD_TOPICS = [
         body: "ELD sends the data file to FMCSA's eRODS web service over the internet AND offers email as a backup. The inspector provides a routing code (via eRODS); the driver enters it on the ELD screen; the ELD transmits the file. Works anywhere the ELD has cell/wifi data.",
         bullets: [
           "Web services: real-time push to eRODS — preferred method.",
-          "Email: ELD emails the file to a @fmcsa.dot.gov address; slower but works when web services fail.",
+          "Email: ELD emails the file to whatever address the inspector provides — there is no fixed FMCSA email. Inspectors should use their own state-issued enforcement email when this option is chosen, then load the file into eRODS for review.",
         ],
       },
       {
