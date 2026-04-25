@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend-only verification of the new 8-Day Inspection drill (EightDayRunner + rewritten EIGHTDAY_SCENARIOS). Ran E1 end-to-end (8 days including off-day skip on Day 3 + cycle + OOS) and E2 end-to-end with violation-day checks (Day -6=14, Day -4=11, Day -2=8), split-sleeper badge verification, cycle math, and OOS. Regression smoke-tested Combined / Multi-Day / Split tabs. All 14 review items pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "EightDayRunner · CycleStep (cycle-question)", "issues": ["After the user picks cycle-pick-yes/no, the button border turns green/red (correct/wrong) but there is NO textual 'Correct' / 'Correct: …' feedback card rendered, unlike every other question in the runner (shift, violation, OOS, and even the cycleNote reveal). This is inconsistent UX — users get a Tip-reveal button BEFORE answering (cycle-reveal) but no post-answer feedback line. Not blocking (the Continue/cycle-next button still appears and the scenario advances), but worth a tiny ‘Correct / Incorrect — see cycleNote above’ banner for symmetry with DayViolationQ / OosStep."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: add a one-line 'Correct / Incorrect' feedback strip under the cycle-pick buttons (mirror the pattern used in DayViolationQ and OosStep) so users get the same affirmation they get on every other question.",
+    "Pre-existing (out of scope): unknown-DOM-prop React warning noted in iterations 33/34 is unrelated to this change."
+  ],
+  "critical_code_review_comments": [
+    "EIGHTDAY_SCENARIOS data matches spec: E1 onDutyHours sum = 9+9.5+10+0+7+9.5+8+7 = 60 h (verified live: cycle-total shows '60 h', cycle-verdict shows '10 avail'); E2 sum = 10+14+8.5+12.5+7+9.5+9+7 = 77.5 h (verified live: cycle-total '77.5 h', cycle-verdict '+7.5 OVER'). Math is correct and matches cycleViolation flags.",
+    "EightDayRunner correctly gates scrolling: only the active day card is visible/interactive; completing shift→violation advances dayIdx, off-day collapses both questions into day-N-skip. Verified day-card-0..7 renders sequentially with previous cards unmounted.",
+    "DayStepper correctly derives correctViolation from the day.violation11/14/8 flags including the 'multi' case when 2+ are true. Verified stepper chips transition from bordered-default → active (gold) → completed (green for right, amber for wrong).",
+    "Scenario picker respects neutral IDs — pick0 reads 'E1', pick1 reads 'E2' (no marketing titles leaked, since EIGHTDAY_SCENARIOS no longer carry title fields and the fallback chain `s.title || s.id || ...` picks up the id).",
+    "Split-sleeper badge renders on day-card header when day.hasSplitSleeper===true (verified on E2 Day -3 / idx 4 header — 'Split sleeper' text confirmed in inner_text).",
+    "eightday-restart-btn correctly resets idx, dayIdx=0, dayAnswers={}, phase='days', cycleAnswer/oosAnswer undefined, tStart/tEnd cleared. Verified by entering a start time then restarting and re-reading day-0-shift-start input (empty).",
+    "HosPracticePage integration: the 4 category tabs (practice-cat-combined/multiday/eightday/split) all load without console errors; 8-Day tab swaps in EightDayRunner while the other three keep their existing runners (MultiDayRunner has data-testid=multiday-* as expected)."
+  ],
+  "updated_files": [],
+  "success_rate": {"frontend": "100%"},
+  "test_credentials": "Badge 042 / PIN 1234 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Verified items end-to-end on live preview (https://violation-navigator.preview.emergentagent.com/hours-of-service/practice): (1) login with 042/1234 + Enter works and persists through navigation. (2) practice-cat-eightday tab loads EightDayRunner. (3) scenario-primer card visible with the 4-step workflow. (4) eightday-pick-scenario-btn opens eightday-scenario-picker with 2 rows; pick buttons show 'E1' and 'E2' — no marketing titles leaked. (5) day-stepper renders exactly 8 stepper-day-* chips. (6) E1 full run: D0..D2 shift+violation-none (all Correct), D3 offDay resolved via day-3-skip single confirm, D4..D7 all Correct; cycle-step shows cycle-total=60 h, cycle-verdict=10 avail; cycle-reveal toggles cycleNote; cycle-pick-no → cycle-next → oos-step → oos-pick-no (feedback 'Correct' text present) → oos-next → eightday-done. (7) E2 full run: D1(Day-6) violation-14 Correct, D3(Day-4) violation-11 Correct, D4(Day-3) split-sleeper badge visible in header, D5(Day-2) violation-8 Correct; cycle-total=77.5 h, cycle-verdict '+7.5 OVER'; cycle-pick-yes accepted (correct=true); oos-pick-yes accepted (oos correct feedback 'Correct' text visible). (8) eightday-restart-btn clears day-0-shift-start input back to empty and returns to phase=days dayIdx=0. (9) Regression: Combined, Multi-Day, Split tabs still load; MultiDay runner still exposes multiday-* testids. ONE MINOR UX INCONSISTENCY: the cycle-question has no post-answer 'Correct' text strip (only button border color changes) whereas violation/OOS questions show an explicit Correct/Wrong banner — see action_items.",
+  "rca of the issue": "N/A — verification-only run, no bugs found. The cycle-question textual-feedback gap is a UX inconsistency nit (see design_issues), not a functional defect; the flow is fully completable and the underlying correctViolation state is respected by the button styling."
+}

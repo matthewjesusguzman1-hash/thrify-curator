@@ -376,137 +376,350 @@ export const MULTIDAY_SCENARIOS = [
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════
-   EIGHTDAY_SCENARIOS — full 8-day inspection-period scenarios. The page
-   renders a 7-day prior-recap table (Day -7 .. Day -1, on-duty hours) above
-   the focal day's ELD log, plus a mini 70-hr cycle calculator that the user
-   can plug numbers into without affecting the real /hours-of-service tool.
+   EIGHTDAY_SCENARIOS — full 8-day inspection-period drills. The user steps
+   through every one of the 8 days: drag handles to identify each day's shift,
+   pick the daily violation type (none / 11 / 14 / 8-hr-break / multiple), then
+   after all 8 days run a 70-hr cycle check using a mini calculator (which
+   does NOT touch the real /hours-of-service tool), then make the OOS call.
 
-   Shape additions:
-     priorRecap: [{ label, onDutyHours, note? }, ...]   // 7 entries (Day -7 .. Day -1)
-     cycleLimit: 70 | 60                                // for the mini calc
-     today refers to the scenario's `log` (focal day).
+   Scenario shape:
+     id, primer, cycleLimit (70 | 60),
+     days: [
+       {
+         label, dayName,
+         log,                              // ELD entries for this day
+         shiftStartMin, shiftEndMin,
+         continuesFromPrev?, continuesToNext?,
+         onDutyHours,                      // pre-computed daily on-duty total
+         hasSplitSleeper?, splitNote?,     // educational flag
+         violation11, violation14, violation8,
+         explanation: { shift, violation }
+       }, ... (8 entries)
+     ],
+     cycleViolation, cycleNote,
+     oosRequired, oosReason,
    ══════════════════════════════════════════════════════════════════════════ */
 export const EIGHTDAY_SCENARIOS = [
   {
     id: "E1",
-    prompt: "Today is Day 8. Use the mini 70-hr calculator + identify today's shift and check for 11/14 violations.",
+    primer: "Eight consecutive duty days. The driver is mostly compliant — work the inspector workflow end-to-end: identify each day's shift, catch any 11/14/8-hr violation, run the cycle calc, then make the OOS call.",
     cycleLimit: 70,
-    priorRecap: [
-      { label: "Day −7", onDutyHours: 9 },
-      { label: "Day −6", onDutyHours: 8 },
-      { label: "Day −5", onDutyHours: 10 },
-      { label: "Day −4", onDutyHours: 9 },
-      { label: "Day −3", onDutyHours: 8 },
-      { label: "Day −2", onDutyHours: 9 },
-      { label: "Day −1", onDutyHours: 7 },
+    days: [
+      {
+        label: "Day −7", dayName: "Mon",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "07:00" },
+          { status: "D",   start: "07:00", end: "11:00" },
+          { status: "OFF", start: "11:00", end: "11:30" },
+          { status: "D",   start: "11:30", end: "15:00" },
+          { status: "OD",  start: "15:00", end: "15:30" },
+          { status: "OFF", start: "15:30", end: "24:00" },
+        ],
+        shiftStartMin: 6 * 60, shiftEndMin: 15 * 60 + 30,
+        onDutyHours: 9,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 06:00 → 15:30 (9.5h wall-clock). Drive 4h+3.5h = 7.5h.",
+          violation: "Clean day. 30-min break at 11:00 satisfies §395.3(a)(3)(ii). 9.5h shift, 7.5h drive — well within 11/14.",
+        },
+      },
+      {
+        label: "Day −6", dayName: "Tue",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "07:00" },
+          { status: "D",   start: "07:00", end: "12:00" },
+          { status: "OFF", start: "12:00", end: "12:30" },
+          { status: "D",   start: "12:30", end: "16:00" },
+          { status: "OFF", start: "16:00", end: "24:00" },
+        ],
+        shiftStartMin: 6 * 60, shiftEndMin: 16 * 60,
+        onDutyHours: 9.5,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 06:00 → 16:00 (10h wall-clock). Drive 5h+3.5h = 8.5h.",
+          violation: "Clean. 30-min break at 12:00 was taken before the 8-cumulative-driving threshold.",
+        },
+      },
+      {
+        label: "Day −5", dayName: "Wed",
+        log: [
+          { status: "OFF", start: "00:00", end: "07:00" },
+          { status: "OD",  start: "07:00", end: "08:00" },
+          { status: "D",   start: "08:00", end: "12:30" },
+          { status: "OFF", start: "12:30", end: "13:00" },
+          { status: "D",   start: "13:00", end: "16:30" },
+          { status: "OD",  start: "16:30", end: "17:00" },
+          { status: "OFF", start: "17:00", end: "24:00" },
+        ],
+        shiftStartMin: 7 * 60, shiftEndMin: 17 * 60,
+        onDutyHours: 10,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 07:00 → 17:00 (10h). Drive 4.5h+3.5h = 8h. 30-min break at 12:30.",
+          violation: "Clean — break taken right before 8-cumulative-driving threshold.",
+        },
+      },
+      {
+        label: "Day −4", dayName: "Thu",
+        log: [
+          { status: "OFF", start: "00:00", end: "24:00" },
+        ],
+        shiftStartMin: null, shiftEndMin: null,
+        onDutyHours: 0,
+        offDay: true,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Off-duty all day — no shift to identify.",
+          violation: "No work, no violations.",
+        },
+      },
+      {
+        label: "Day −3", dayName: "Fri",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "07:00" },
+          { status: "D",   start: "07:00", end: "11:00" },
+          { status: "SB",  start: "11:00", end: "19:00" },
+          { status: "D",   start: "19:00", end: "21:00" },
+          { status: "OFF", start: "21:00", end: "24:00" },
+        ],
+        shiftStartMin: 6 * 60, shiftEndMin: 21 * 60,
+        onDutyHours: 7,
+        hasSplitSleeper: true,
+        splitNote: "Driver took an 8-hr SB block (11:00–19:00) — qualifying Period A of a split-sleeper pair; pairs with off-duty rest tomorrow morning.",
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "With the 8h SB block as Period A of a split-sleeper pair, the work shift bounds are 06:00 → 11:00 (1st segment) and 19:00 → 21:00 (2nd segment). For inspector identification, mark START 06:00 and END 21:00 covering both work segments.",
+          violation: "Clean — split-sleeper provision being used. Drive 4h+2h = 6h within shift, well under 11. The 8h SB qualifies as Period A under §395.1(g)(1)(ii).",
+        },
+      },
+      {
+        label: "Day −2", dayName: "Sat",
+        log: [
+          { status: "SB",  start: "00:00", end: "02:00" },
+          { status: "OFF", start: "02:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "07:00" },
+          { status: "D",   start: "07:00", end: "11:30" },
+          { status: "OFF", start: "11:30", end: "12:00" },
+          { status: "D",   start: "12:00", end: "16:00" },
+          { status: "OFF", start: "16:00", end: "24:00" },
+        ],
+        shiftStartMin: 6 * 60, shiftEndMin: 16 * 60,
+        onDutyHours: 9.5,
+        hasSplitSleeper: true,
+        splitNote: "00:00–02:00 SB completes the split-sleeper pair started Friday. Today is treated as a fresh start for the 11/14 clocks.",
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 06:00 → 16:00 (10h). Drive 4.5h+4h = 8.5h.",
+          violation: "Clean. 30-min break at 11:30 right before the 8-cumulative threshold.",
+        },
+      },
+      {
+        label: "Day −1", dayName: "Sun",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "06:30" },
+          { status: "D",   start: "06:30", end: "10:30" },
+          { status: "OFF", start: "10:30", end: "11:00" },
+          { status: "D",   start: "11:00", end: "14:30" },
+          { status: "OFF", start: "14:30", end: "24:00" },
+        ],
+        shiftStartMin: 6 * 60, shiftEndMin: 14 * 60 + 30,
+        onDutyHours: 8,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 06:00 → 14:30 (8.5h). Drive 4h+3.5h = 7.5h.",
+          violation: "Clean.",
+        },
+      },
+      {
+        label: "Day 0", dayName: "Mon (today)",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "07:00" },
+          { status: "D",   start: "07:00", end: "11:00" },
+          { status: "OFF", start: "11:00", end: "11:30" },
+          { status: "D",   start: "11:30", end: "14:00" },
+          { status: "OFF", start: "14:00", end: "24:00" },
+        ],
+        shiftStartMin: 6 * 60, shiftEndMin: 14 * 60,
+        onDutyHours: 7,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 06:00 → 14:00 (8h). Drive 4h+2.5h = 6.5h.",
+          violation: "Clean. Cumulative cycle 9+9.5+10+0+7+9.5+8+7 = 60h on the 70-hr/8-day clock — under the cap.",
+        },
+      },
     ],
-    cycleNote: "Prior 7 days total 60h on-duty. Driver may use up to 10h on the focal day (70 − 60).",
-    log: [
-      { status: "OFF", start: "00:00", end: "05:00" },
-      { status: "OD",  start: "05:00", end: "06:00" },
-      { status: "D",   start: "06:00", end: "10:00" },     // 4h drive
-      { status: "OFF", start: "10:00", end: "10:30" },
-      { status: "D",   start: "10:30", end: "14:30" },     // 4h drive (8h total)
-      { status: "OD",  start: "14:30", end: "15:00" },     // shift end paperwork
-      { status: "OFF", start: "15:00", end: "24:00" },
-    ],
-    todayOnDutyHours: 9,
-    cyclePass: true,        // 60 + 9 = 69 ≤ 70
-    validSplit: false,
-    qualifyingBlockIdx: [],
-    violation11: false,
-    violation14: false,
-    counted14Hours: 10,
-    counted11Hours: 8,
-    shiftStartMin: 5 * 60,
-    shiftEndMin: 15 * 60,
-    explanation: {
-      qualifying: "No split-sleeper.",
-      shift: "Shift STARTS 05:00 (first OD). ENDS 15:00 (last OD). 10h wall-clock.",
-      hours: "Toward 14 = 10h. Toward 11 = 4 + 4 = 8h.",
-      violation: "No 11/14 violation. Today's on-duty total = 9h (1h OD + 4h D + 4h D + 30 min OD = ~9h). 70-hr check: 60 (prior) + 9 (today) = 69h, within 70. Driver is fully compliant.",
-    },
+    cycleViolation: false,
+    cycleNote: "Cumulative on-duty across the 8 days = 60h. Under the 70-hr cap. No cycle violation.",
+    oosRequired: false,
+    oosReason: "Driver fully compliant — daily 11/14, 8-hr break rule, and 70-hr cycle all satisfied. No OOS warranted.",
   },
   {
     id: "E2",
-    prompt: "Use the mini 70-hr calculator. Identify when the driver should have stopped, and whether they violated the 11/14 today.",
+    primer: "Eight consecutive duty days with mixed violations. Practice the full inspector workflow: shift identification, daily 11/14/8-hr violations, the 70-hr cycle math, and the OOS call. Pay attention to Day −3's split-sleeper usage too.",
     cycleLimit: 70,
-    priorRecap: [
-      { label: "Day −7", onDutyHours: 11 },
-      { label: "Day −6", onDutyHours: 10 },
-      { label: "Day −5", onDutyHours: 9 },
-      { label: "Day −4", onDutyHours: 8 },
-      { label: "Day −3", onDutyHours: 9 },
-      { label: "Day −2", onDutyHours: 9 },
-      { label: "Day −1", onDutyHours: 8 },
+    days: [
+      {
+        label: "Day −7", dayName: "Mon",
+        log: [
+          { status: "OFF", start: "00:00", end: "05:00" },
+          { status: "OD",  start: "05:00", end: "06:00" },
+          { status: "D",   start: "06:00", end: "11:00" },
+          { status: "OFF", start: "11:00", end: "11:30" },
+          { status: "D",   start: "11:30", end: "15:00" },
+          { status: "OD",  start: "15:00", end: "15:30" },
+          { status: "OFF", start: "15:30", end: "24:00" },
+        ],
+        shiftStartMin: 5 * 60, shiftEndMin: 15 * 60 + 30,
+        onDutyHours: 10,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 05:00 → 15:30 (10.5h). Drive 5h+3.5h = 8.5h.",
+          violation: "Clean. Break at 11:00 ahead of the 8-cumulative-driving threshold.",
+        },
+      },
+      {
+        label: "Day −6", dayName: "Tue",
+        log: [
+          { status: "OFF", start: "00:00", end: "04:00" },
+          { status: "OD",  start: "04:00", end: "05:00" },
+          { status: "D",   start: "05:00", end: "09:00" },
+          { status: "OD",  start: "09:00", end: "10:30" },
+          { status: "OFF", start: "10:30", end: "11:00" },
+          { status: "D",   start: "11:00", end: "14:00" },
+          { status: "OD",  start: "14:00", end: "15:00" },
+          { status: "D",   start: "15:00", end: "18:30" },
+          { status: "OFF", start: "18:30", end: "24:00" },
+        ],
+        shiftStartMin: 4 * 60, shiftEndMin: 18 * 60 + 30,
+        regulatoryEndMin: 18 * 60,
+        onDutyHours: 14,
+        violation11: false, violation14: true, violation8: false,
+        explanation: {
+          shift: "Shift 04:00 → 18:30 (14.5h wall-clock). The 14-hr cap from 04:00 closes at 18:00 — driving 18:00–18:30 is the violation.",
+          violation: "14-hr VIOLATION. Drive total 4h+3h+3.5h = 10.5h (under 11). Pre-trip OD time + load OD time pushes wall-clock to 14.5h, half an hour past §395.3(a)(2).",
+        },
+      },
+      {
+        label: "Day −5", dayName: "Wed",
+        log: [
+          { status: "OFF", start: "00:00", end: "07:00" },
+          { status: "OD",  start: "07:00", end: "08:00" },
+          { status: "D",   start: "08:00", end: "12:00" },
+          { status: "OFF", start: "12:00", end: "12:30" },
+          { status: "D",   start: "12:30", end: "15:30" },
+          { status: "OFF", start: "15:30", end: "24:00" },
+        ],
+        shiftStartMin: 7 * 60, shiftEndMin: 15 * 60 + 30,
+        onDutyHours: 8.5,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 07:00 → 15:30 (8.5h). Drive 4h+3h = 7h.",
+          violation: "Clean.",
+        },
+      },
+      {
+        label: "Day −4", dayName: "Thu",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "06:30" },
+          { status: "D",   start: "06:30", end: "11:30" },
+          { status: "OFF", start: "11:30", end: "12:00" },
+          { status: "D",   start: "12:00", end: "16:30" },
+          { status: "OD",  start: "16:30", end: "17:00" },
+          { status: "D",   start: "17:00", end: "19:00" },
+          { status: "OFF", start: "19:00", end: "24:00" },
+        ],
+        shiftStartMin: 6 * 60, shiftEndMin: 19 * 60,
+        onDutyHours: 12.5,
+        violation11: true, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 06:00 → 19:00 (13h wall-clock — under 14).",
+          violation: "11-hr DRIVING VIOLATION. Drive 5h+4.5h+2h = 11.5h. Cap reached at 18:30 — driving 18:30–19:00 is the violation. §395.3(a)(3)(i).",
+        },
+      },
+      {
+        label: "Day −3", dayName: "Fri",
+        log: [
+          { status: "OFF", start: "00:00", end: "05:00" },
+          { status: "OD",  start: "05:00", end: "06:00" },
+          { status: "D",   start: "06:00", end: "10:00" },
+          { status: "SB",  start: "10:00", end: "18:00" },
+          { status: "D",   start: "18:00", end: "20:00" },
+          { status: "OFF", start: "20:00", end: "24:00" },
+        ],
+        shiftStartMin: 5 * 60, shiftEndMin: 20 * 60,
+        onDutyHours: 7,
+        hasSplitSleeper: true,
+        splitNote: "8-hr SB block 10:00–18:00 = Period A of a split-sleeper pair. Driver pairs it with morning off-duty rest tomorrow.",
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Split-sleeper day: Period A is the 8h SB (10:00–18:00). Mark shift START at 05:00 (first OD) and END at 20:00 (last D). Two work segments inside: 05:00–10:00 and 18:00–20:00.",
+          violation: "Clean. The 8h SB satisfies §395.1(g)(1)(ii) Period A. Drive within shift = 4h+2h = 6h, under 11.",
+        },
+      },
+      {
+        label: "Day −2", dayName: "Sat",
+        log: [
+          { status: "SB",  start: "00:00", end: "02:00" },
+          { status: "OFF", start: "02:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "07:00" },
+          { status: "D",   start: "07:00", end: "12:00" },
+          { status: "D",   start: "12:00", end: "15:30" },
+          { status: "OFF", start: "15:30", end: "24:00" },
+        ],
+        shiftStartMin: 6 * 60, shiftEndMin: 15 * 60 + 30,
+        onDutyHours: 9.5,
+        violation11: false, violation14: false, violation8: true,
+        explanation: {
+          shift: "Shift 06:00 → 15:30 (9.5h). Drive 5h+3.5h = 8.5h continuous, NO 30-min break.",
+          violation: "8-hr break VIOLATION. Driver hit 8 cumulative hours of driving without taking a 30-min off-duty/SB break — §395.3(a)(3)(ii). The break should have been taken before 15:00 (8h after first drive).",
+        },
+      },
+      {
+        label: "Day −1", dayName: "Sun",
+        log: [
+          { status: "OFF", start: "00:00", end: "05:00" },
+          { status: "OD",  start: "05:00", end: "06:00" },
+          { status: "D",   start: "06:00", end: "11:00" },
+          { status: "OFF", start: "11:00", end: "11:30" },
+          { status: "D",   start: "11:30", end: "14:30" },
+          { status: "OFF", start: "14:30", end: "24:00" },
+        ],
+        shiftStartMin: 5 * 60, shiftEndMin: 14 * 60 + 30,
+        onDutyHours: 9,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 05:00 → 14:30 (9.5h). Drive 5h+3h = 8h.",
+          violation: "Clean — 30-min break at 11:00 satisfies §395.3(a)(3)(ii).",
+        },
+      },
+      {
+        label: "Day 0", dayName: "Mon (today)",
+        log: [
+          { status: "OFF", start: "00:00", end: "05:00" },
+          { status: "OD",  start: "05:00", end: "06:00" },
+          { status: "D",   start: "06:00", end: "10:00" },
+          { status: "OFF", start: "10:00", end: "10:30" },
+          { status: "D",   start: "10:30", end: "13:00" },
+          { status: "OFF", start: "13:00", end: "24:00" },
+        ],
+        shiftStartMin: 5 * 60, shiftEndMin: 13 * 60,
+        onDutyHours: 7,
+        violation11: false, violation14: false, violation8: false,
+        explanation: {
+          shift: "Shift 05:00 → 13:00 (8h). Drive 4h+2.5h = 6.5h.",
+          violation: "Looks clean for daily 11/14 — but cumulative 8-day on-duty is the killer here. Run the cycle calc.",
+        },
+      },
     ],
-    cycleNote: "Prior 7 days total 64h. Driver only had 6h of on-duty available before hitting 70h (70 − 64 = 6).",
-    log: [
-      { status: "OFF", start: "00:00", end: "05:00" },
-      { status: "OD",  start: "05:00", end: "06:00" },     // 1h OD (1h total today)
-      { status: "D",   start: "06:00", end: "11:00" },     // 5h drive (6h total — driver hits 70 here)
-      { status: "OFF", start: "11:00", end: "11:30" },
-      { status: "D",   start: "11:30", end: "15:30" },     // 4h MORE drive (10h total today, past the 70)
-      { status: "OD",  start: "15:30", end: "16:00" },
-      { status: "OFF", start: "16:00", end: "24:00" },
-    ],
-    todayOnDutyHours: 10.5,
-    cyclePass: false,       // 64 + 10.5 = 74.5 > 70
-    validSplit: false,
-    qualifyingBlockIdx: [],
-    violation11: false,    // 9h drive is under 11
-    violation14: false,    // 11h shift is under 14
-    counted14Hours: 11,
-    counted11Hours: 9,
-    shiftStartMin: 5 * 60,
-    shiftEndMin: 16 * 60,
-    explanation: {
-      qualifying: "No split-sleeper.",
-      shift: "Shift STARTS 05:00, ENDS 16:00 — 11h wall-clock, under 14.",
-      hours: "Toward 14 = 11h. Toward 11 = 9h driving — both inside today's daily limits.",
-      violation: "No 11/14 today, but a 70-hr CYCLE violation. Driver had 6h available; they used 10.5h. Cite §395.3(b)(2). The driver should have stopped working at 11:00 (when cumulative on-duty hit 70 hrs across the 8 days). Roadside takeaway: the 11/14 alone don't tell you if the cycle is busted — always run the 8-day recap.",
-    },
-  },
-  {
-    id: "E3",
-    prompt: "Use the mini 70-hr calculator and account for the restart. Did the driver violate the cycle today?",
-    cycleLimit: 70,
-    priorRecap: [
-      { label: "Day −7", onDutyHours: 12 },
-      { label: "Day −6", onDutyHours: 11 },
-      { label: "Day −5", onDutyHours: 10 },
-      { label: "Day −4", onDutyHours: 0, note: "34-hr restart taken — 18:00 Day −5 → 04:00 Day −3" },
-      { label: "Day −3", onDutyHours: 0 },
-      { label: "Day −2", onDutyHours: 11 },
-      { label: "Day −1", onDutyHours: 10 },
-    ],
-    cycleNote: "Driver completed a 34-hr restart that ENDED at 04:00 Day −3 (§395.3(c)). For cycle accounting, only count hours AFTER the restart: Day −2 (11) + Day −1 (10) = 21h. Driver may use up to 49h today (70 − 21).",
-    log: [
-      { status: "OFF", start: "00:00", end: "05:00" },
-      { status: "OD",  start: "05:00", end: "06:00" },
-      { status: "D",   start: "06:00", end: "11:00" },     // 5h drive
-      { status: "OFF", start: "11:00", end: "11:30" },
-      { status: "D",   start: "11:30", end: "15:30" },     // 4h drive (9h total drive)
-      { status: "OD",  start: "15:30", end: "16:30" },
-      { status: "D",   start: "16:30", end: "18:30" },     // 2h drive (11h total drive — at cap)
-      { status: "OD",  start: "18:30", end: "19:00" },
-      { status: "OFF", start: "19:00", end: "24:00" },
-    ],
-    todayOnDutyHours: 13.5,
-    cyclePass: true,       // 21 + 13.5 = 34.5h after restart — well under 70
-    validSplit: false,
-    qualifyingBlockIdx: [],
-    violation11: false,
-    violation14: false,
-    counted14Hours: 14,
-    counted11Hours: 11,
-    shiftStartMin: 5 * 60,
-    shiftEndMin: 19 * 60,
-    explanation: {
-      qualifying: "No split-sleeper.",
-      shift: "Shift STARTS 05:00 (first OD after the prior reset), ENDS 19:00 — exactly 14h, at the limit.",
-      hours: "Toward 14 = 14h (at limit). Toward 11 = 5 + 4 + 2 = 11h driving (at limit).",
-      violation: "No violation. The 34-hr restart at 04:00 Day −3 fully reset the 8-day recap (§395.3(c)). After the restart, only Day −2 (11) + Day −1 (10) = 21h count toward the rolling 70h. Today's 13.5h on-duty brings the post-restart total to 34.5h — well under 70.",
-    },
+    cycleViolation: true,
+    cycleNote: "Cumulative on-duty: 10+14+8.5+12.5+7+9.5+9+7 = 77.5h. The 70-hr cap was hit during Day −1 (cumulative 70h reached after ~9.5h Sunday). All work after that point is over the cycle. Cite §395.3(b)(2).",
+    oosRequired: true,
+    oosReason: "Driver has multiple violations (Day −6 14-hr, Day −4 11-hr, Day −2 30-min-break) AND is past the 70-hr cycle limit. §395.13 — driver must be placed OOS until they secure the rest required to bring cumulative hours back under 70 (typically 34-hr restart, or enough off-duty time to roll an old day off the 8-day window).",
   },
 ];
