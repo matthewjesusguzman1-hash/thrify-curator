@@ -3,6 +3,16 @@ import { ChevronRight, CheckCircle2, XCircle, Target, AlertTriangle, Hand, Repea
 import { Button } from "../ui/button";
 import { EldGrid } from "./EldGrid";
 import { CfrText } from "../../lib/cfrLinks";
+import {
+  timeStrToMin,
+  minToTimeStr,
+  computeOnDutyHoursFromLog,
+  lastEntryEndMin,
+  violationCorrectForOvernight,
+} from "../../lib/hosRules";
+import { ContextDayStrip } from "./_shared/ContextDayStrip";
+import { NextDayPreview } from "./_shared/NextDayPreview";
+import { PairDayTimePicker } from "./_shared/PairDayTimePicker";
 
 /**
  * EightDayRunner — 8-day inspection-period drill.
@@ -457,43 +467,6 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
 }
 
 /* ─── Day stepper ─── */
-
-/** Readonly context strip — renders the prior- or next-day log so the
- *  inspector can see overnight rest patterns adjacent to the inspection
- *  window. No interaction. */
-function ContextDayStrip({ label, log, note, testid }) {
-  return (
-    <section className="bg-[#F8FAFC] rounded-xl border border-dashed border-[#CBD5E1] overflow-hidden opacity-90" data-testid={testid}>
-      <div className="bg-[#E2E8F0]/60 px-3 py-1.5 flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-[#64748B]">Context · readonly</span>
-        <p className="text-[12px] font-bold text-[#475569]">{label}</p>
-      </div>
-      <div className="p-2">
-        <EldGrid entries={log} />
-        {note && (
-          <p className="text-[11px] text-[#64748B] leading-relaxed mt-1.5 px-1 italic">{note}</p>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/** Readonly preview of the upcoming day — shown beneath the active day card
- *  so the inspector sees two days at all times (current + next). The user
- *  cannot interact with this grid; it's purely for cross-day context. */
-function NextDayPreview({ day, dayIdx, totalDays }) {
-  return (
-    <section className="bg-[#F8FAFC] rounded-xl border border-dashed border-[#94A3B8] overflow-hidden" data-testid={`next-day-preview-${dayIdx}`}>
-      <div className="bg-[#475569]/15 px-3 py-1.5 flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-[#64748B]">Upcoming · readonly</span>
-        <p className="text-[12px] font-bold text-[#475569]">Day {dayIdx + 1} of {totalDays} · {day.label} · {day.dayName}</p>
-      </div>
-      <div className="p-2">
-        <EldGrid entries={day.log} truncateAtMin={day.truncated ? lastEntryEndMin(day.log) : null} />
-      </div>
-    </section>
-  );
-}
 
 function DayStepper({ days, answers, activeIdx, done }) {
   return (
@@ -1177,34 +1150,6 @@ function PairRegEndQ({ day1, day2, tRegEndDay, setTRegEndDay, answered, answer, 
   );
 }
 
-function PairDayTimePicker({ label, color, value, onChange, day1Label, day2Label, testid }) {
-  return (
-    <div className="space-y-1">
-      <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>{label}</label>
-      <select
-        value={value.day}
-        onChange={(e) => onChange({ ...value, day: Number(e.target.value) })}
-        className="w-full px-2 py-1.5 text-[12px] font-bold border border-[#CBD5E1] rounded-md outline-none focus:border-[#002855]"
-        data-testid={`${testid}-day`}
-      >
-        <option value={1}>{day1Label}</option>
-        <option value={2}>{day2Label}</option>
-      </select>
-      <input
-        type="time"
-        value={minToTimeStr(value.min)}
-        onChange={(e) => {
-          const m = timeStrToMin(e.target.value);
-          if (m !== null) onChange({ ...value, min: m });
-        }}
-        className="w-full px-2 py-1.5 text-sm font-mono font-bold border border-[#CBD5E1] rounded-md outline-none focus:border-[#002855]"
-        style={{ color }}
-        data-testid={testid}
-      />
-    </div>
-  );
-}
-
 /* ─── Multi-shift question (split-sleeper / multi-segment work days) ─── */
 /** The user iteratively places work shifts using the green/red draggable
  *  handles on the day's grid. After each "Add work shift" submission the
@@ -1627,63 +1572,4 @@ function OosStep({ scenario, answer, onAnswer, onNext }) {
       )}
     </section>
   );
-}
-
-/* ─── Time helpers ─── */
-function timeStrToMin(str) {
-  if (!str) return null;
-  const [hh, mm] = str.split(":").map(Number);
-  if (isNaN(hh) || isNaN(mm)) return null;
-  return hh * 60 + mm;
-}
-function minToTimeStr(min) {
-  if (min === null || min === undefined) return "—";
-  if (min === 24 * 60) return "24:00";
-  const m = min % (24 * 60);
-  const hh = Math.floor(m / 60);
-  const mm = m % 60;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
-
-// Compute the on-duty hours total for a day's log by summing all D
-// (driving) and OD (on-duty not driving) durations. Source of truth for
-// the cycle calculator — replaces the hardcoded data.onDutyHours field
-// so the calculator always reflects the actual log content.
-// Compute the on-duty hours total for a day's log by summing all D
-// (driving) and OD (on-duty not driving) durations. Source of truth for
-// the cycle calculator — replaces any hardcoded data.onDutyHours field
-// so the calculator always reflects the actual log content.
-function computeOnDutyHoursFromLog(log) {
-  if (!log || !Array.isArray(log)) return 0;
-  let totalMin = 0;
-  log.forEach((e) => {
-    if (e.status === "D" || e.status === "OD") {
-      const s = timeStrToMin(e.start);
-      const eEnd = e.end === "24:00" ? 24 * 60 : timeStrToMin(e.end);
-      if (s !== null && eEnd !== null) totalMin += eEnd - s;
-    }
-  });
-  return Math.round((totalMin / 60) * 100) / 100;
-}
-
-// Find the latest end-time minute across all entries — used to position the
-// "INSPECTION · HH:MM" overlay line on truncated (in-progress) days.
-function lastEntryEndMin(log) {
-  if (!log || !Array.isArray(log) || log.length === 0) return null;
-  let max = 0;
-  log.forEach((e) => {
-    const m = e.end === "24:00" ? 24 * 60 : timeStrToMin(e.end);
-    if (m !== null && m > max) max = m;
-  });
-  return max;
-}
-function violationCorrectForOvernight(d1, d2) {
-  const v11 = !!(d1?.violation11 || d2?.violation11);
-  const v14 = !!(d1?.violation14 || d2?.violation14);
-  const v8 = !!(d1?.violation8 || d2?.violation8);
-  if ((v11 && v14) || (v11 && v8) || (v14 && v8)) return "multi";
-  if (v11) return "11";
-  if (v14) return "14";
-  if (v8) return "8";
-  return "none";
 }

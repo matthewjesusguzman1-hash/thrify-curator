@@ -3,6 +3,8 @@ import { ChevronRight, CheckCircle2, XCircle, Target, AlertTriangle, Hand, Repea
 import { Button } from "../ui/button";
 import { EldGrid } from "./EldGrid";
 import { CfrText } from "../../lib/cfrLinks";
+import { timeStrToMin, minToTimeStr, deriveShifts } from "../../lib/hosRules";
+import { ContextDayStrip } from "./_shared/ContextDayStrip";
 
 /**
  * MultiDayRunner — 2-day practice flow that presents BOTH day grids together
@@ -431,21 +433,6 @@ function HintPanel({ hints, revealed, onReveal }) {
   );
 }
 
-function ContextDayStrip({ label, log, note, testid }) {
-  return (
-    <section className="bg-[#F8FAFC] rounded-xl border border-dashed border-[#CBD5E1] overflow-hidden opacity-90" data-testid={testid}>
-      <div className="bg-[#E2E8F0]/60 px-3 py-1.5 flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-[#64748B]">Context · readonly</span>
-        <p className="text-[12px] font-bold text-[#475569]">{label}</p>
-      </div>
-      <div className="p-2">
-        <EldGrid entries={log} />
-        {note && <p className="text-[11px] text-[#64748B] leading-relaxed mt-1.5 px-1 italic">{note}</p>}
-      </div>
-    </section>
-  );
-}
-
 function DaySection({ label, log, markers, active, onMarkerDrag }) {
   return (
     <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`day-section-${label.toLowerCase().replace(/\s+/g, "-")}`}>
@@ -703,79 +690,4 @@ function ResultsSummary({ scenario, shiftAnswers }) {
       </div>
     </section>
   );
-}
-
-/* ─── Time helpers ─── */
-function timeStrToMin(str) {
-  if (!str) return null;
-  const [hh, mm] = str.split(":").map(Number);
-  if (isNaN(hh) || isNaN(mm)) return null;
-  return hh * 60 + mm;
-}
-function minToTimeStr(min) {
-  if (min === null || min === undefined) return "—";
-  if (min === 24 * 60) return "24:00";
-  const m = min % (24 * 60);
-  const hh = Math.floor(m / 60);
-  const mm = m % 60;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
-
-/* ─── Derive a flat shifts[] from per-day data ───
- * MULTIDAY_SCENARIOS stores per-day shift bounds with continuesToNext /
- * continuesFromPrev flags. To make cross-midnight overnight shifts a SINGLE
- * draggable shift (start on Day 1, end on Day 2), we merge a day flagged
- * `continuesToNext` with the next day flagged `continuesFromPrev` into one
- * shift entry. Days without a shift (off-duty all day) are skipped.
- */
-function deriveShifts(days) {
-  if (!days || !Array.isArray(days)) return [];
-  const out = [];
-  let open = null;
-  days.forEach((d, i) => {
-    const dayN = i + 1;
-    if (d.shiftStartMin == null || d.shiftEndMin == null) return;
-    if (d.continuesFromPrev && open) {
-      // Close the open overnight shift on this day
-      open.endDay = dayN;
-      open.endMin = d.shiftEndMin;
-      open.violation11 = open.violation11 || !!d.violation11;
-      open.violation14 = open.violation14 || !!d.violation14;
-      if (d.regulatoryEndMin != null) {
-        open.regulatoryEndDay = dayN;
-        open.regulatoryEndMin = d.regulatoryEndMin;
-      }
-      if (d.explanation) {
-        // Prefer the day where the violation surfaces (later day for overnight)
-        open.explanation = {
-          shift: d.explanation.shift || open.explanation.shift,
-          violation: d.explanation.violation || open.explanation.violation,
-        };
-      }
-      out.push(open);
-      open = null;
-      return;
-    }
-    const s = {
-      startDay: dayN,
-      startMin: d.shiftStartMin,
-      endDay: dayN,
-      endMin: d.shiftEndMin,
-      violation11: !!d.violation11,
-      violation14: !!d.violation14,
-      explanation: d.explanation ? { ...d.explanation } : { shift: "", violation: "" },
-    };
-    if (d.regulatoryEndMin != null) {
-      s.regulatoryEndDay = dayN;
-      s.regulatoryEndMin = d.regulatoryEndMin;
-    }
-    if (d.continuesToNext) {
-      open = s; // wait for the next day to merge
-    } else {
-      out.push(s);
-    }
-  });
-  // Trailing open shift (no following day to merge into) — close as-is
-  if (open) out.push(open);
-  return out;
 }

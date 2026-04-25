@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend regression smoke after the HOS practice runners refactor (extracted shared components + time helpers). All three runners (combined / multi-day / eight-day) plus the bonus split-sleeper tab load cleanly through the actual route /hours-of-service/practice. Zero console errors, zero refactor-related ReferenceError/TypeError. Shared modules (ContextDayStrip, NextDayPreview, PairDayTimePicker) and time helpers (timeStrToMin, minToTimeStr, computeOnDutyHoursFromLog, lastEntryEndMin, violationCorrectForOvernight, deriveShifts) all imported and rendering correctly. NOTE: the review_request used URLs of the form /hos-practice?cat=combined which do not exist in this app (no such route, no useSearchParams in HosPracticePage). The actual app uses one route /hours-of-service/practice with an in-page tab switcher (data-testid='practice-category-tabs'). I tested via the real route + tab clicks.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: update review_request playbook entries — the runners are reached via /hours-of-service/practice + tab clicks, NOT via /hos-practice?cat=... URLs (those produce a blank page with 'No routes matched location' warning).",
+    "Optional: add data-testid attributes to category tabs themselves (e.g. data-testid='cat-tab-multiday') so future testing agents can click them by id rather than positional index."
+  ],
+  "critical_code_review_comments": [
+    "Imports of the new shared modules and lib helpers are wired correctly across EightDayRunner.js, MultiDayRunner.js, PracticeRunner.js — verified via grep + runtime console (zero ReferenceErrors).",
+    "EightDayRunner.js is still 1575 lines after the refactor — consider splitting further (e.g. cycle-calc panel, multi-shift day editor) into more shared modules for maintainability.",
+    "Pre-existing exhaustive-deps warning on MultiDayRunner.js (mentioned in handoff) was not introduced by this refactor and remains non-blocking."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "Badge 042 / PIN 1234 (standard inspector). Login flow per /app/memory/test_credentials.md.",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "App login: navigate to /, wait ~5.5s for splash, fill data-testid='badge-input' with 042, click data-testid='badge-continue-btn', fill data-testid='pin-input' with 1234, press Enter. The HOS practice page lives at /hours-of-service/practice and has 4 tabs under data-testid='practice-category-tabs' (button[0]=Combined, [1]=Multi-Day, [2]=8-Day Inspection, [3]=Split Sleeper). The review_request URL pattern /hos-practice?cat=... is NOT a real route. Refactor pass: zero console errors observed during this iteration; the shared modules render correctly in all three runner contexts.",
+  "rca of the issue": "n/a — no defect found. The refactor is behavior-preserving; all extracted symbols (timeStrToMin, minToTimeStr, computeOnDutyHoursFromLog, lastEntryEndMin, violationCorrectForOvernight, deriveShifts, ContextDayStrip, NextDayPreview, PairDayTimePicker) resolve at runtime in their consumer files and the rendered output matches expectations (Day 1+Day 2 grids in Multi-Day; DAY−7…DAY 0 strip + Day −7 active grid + Day −6 NextDayPreview readonly grid in 8-Day; single-day q-shift in Combined)."
+}

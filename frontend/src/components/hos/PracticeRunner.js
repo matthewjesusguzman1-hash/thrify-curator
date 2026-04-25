@@ -3,6 +3,11 @@ import { ChevronRight, CheckCircle2, XCircle, Target, AlertTriangle, Hand, Repea
 import { Button } from "../ui/button";
 import { EldGrid } from "./EldGrid";
 import { CfrText } from "../../lib/cfrLinks";
+import { timeStrToMin, minToTimeStr } from "../../lib/hosRules";
+
+/** Local fmtMin alias kept so existing callsites in this file read the same.
+ *  minToTimeStr already handles 24:00 and null. */
+const fmtMin = minToTimeStr;
 
 /**
  * PracticeRunner — generalized HOS practice scenario runner.
@@ -630,22 +635,3 @@ function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast, 
   );
 }
 
-/* ─── Time helpers ─── */
-function timeStrToMin(str) {
-  if (!str) return null;
-  const [hh, mm] = str.split(":").map(Number);
-  if (isNaN(hh) || isNaN(mm)) return null;
-  return hh * 60 + mm;
-}
-function minToTimeStr(min) {
-  if (min === null || min === undefined) return "—";
-  const m = min % (24 * 60);
-  const hh = Math.floor(m / 60);
-  const mm = m % 60;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
-function fmtMin(min) {
-  if (min === null || min === undefined) return "—";
-  if (min === 24 * 60) return "24:00";
-  return minToTimeStr(min);
-}
