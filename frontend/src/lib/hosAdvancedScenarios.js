@@ -193,7 +193,12 @@ export const COMBINED_SCENARIOS = [
 export const MULTIDAY_SCENARIOS = [
   {
     id: "M1",
-    primer: "Two-day scenario. The Day 1 work block began before the start of the day (continuing from a prior shift outside this window). Identify Day 1's work-shift bounds within this window and Day 2's shift, then check 11/14 compliance.",
+    primer: "Two-day inspection drill. Identify each work shift's bounds, then call any 11- or 14-hour violation.",
+    hints: [
+      "Look closely at how Day 1 begins — work that opens immediately at 00:00 with no preceding break often means a shift was already in progress.",
+      "When a work block opens right at the day boundary, treat 00:00 as the visible START on that day's grid.",
+      "Day 2's shift looks self-contained between the morning OD and the evening off-duty.",
+    ],
     priorDayLog: [
       { status: "OFF", start: "00:00", end: "18:00" },
       { status: "OD",  start: "18:00", end: "19:00" },
@@ -246,7 +251,12 @@ export const MULTIDAY_SCENARIOS = [
   },
   {
     id: "M2",
-    primer: "OVERNIGHT shift starting on Day 1 and ending on Day 2 — completely contained, no violations. Identify each day's portion of the shift and confirm 11/14 compliance.",
+    primer: "Two-day inspection drill. Identify each work shift's bounds, then call any 11- or 14-hour violation.",
+    hints: [
+      "If a work block at the end of Day 1 has no §395.3(a)(1) reset before midnight, ask whether it actually ended that day.",
+      "Look across the day boundary — does the work pick up at the very start of Day 2 with no qualifying rest gap in between?",
+      "A shift that spans midnight is ONE shift — pick the start day for one handle and the end day for the other.",
+    ],
     priorDayLog: [
       { status: "OFF", start: "00:00", end: "06:00" },
       { status: "OD",  start: "06:00", end: "07:00" },
@@ -300,7 +310,12 @@ export const MULTIDAY_SCENARIOS = [
   },
   {
     id: "M3",
-    primer: "OVERNIGHT shift starting on Day 1 with violations manifesting on Day 2. Identify each day's portion of the shift and catch the 11/14 violations.",
+    primer: "Two-day inspection drill. Identify each work shift's bounds, then call any 11- or 14-hour violation.",
+    hints: [
+      "Same overnight question as before — does work continue across midnight without a §395.3(a)(1) reset between Day 1 and Day 2?",
+      "Once you've bracketed the full shift across both days, total the wall-clock and the driving minutes.",
+      "Compare the totals against §395.3(a)(2) (14-hr cap) and §395.3(a)(3)(i) (11-hr drive cap).",
+    ],
     priorDayLog: [
       { status: "OFF", start: "00:00", end: "24:00" },
     ],
@@ -351,7 +366,12 @@ export const MULTIDAY_SCENARIOS = [
   },
   {
     id: "M4",
-    primer: "Two contained day shifts — neither is overnight, BUT the rest period between them is short. Identify each day's shift, then evaluate whether the driver had a proper §395.3(a)(1) 10-hr reset between the end of Day 1 and the start of Day 2.",
+    primer: "Two-day inspection drill. Identify each work shift's bounds, then call any 11- or 14-hour violation.",
+    hints: [
+      "Each day appears to have its own self-contained shift — bracket the work on each day before drawing any conclusions.",
+      "After bracketing both shifts, measure the off-duty stretch between the end of Day 1's shift and the start of Day 2's shift.",
+      "§395.3(a)(1) requires 10 consecutive hours off-duty before a new driving period — anything less is a separate violation worth flagging.",
+    ],
     priorDayLog: [
       { status: "OFF", start: "00:00", end: "06:00" },
       { status: "OD",  start: "06:00", end: "07:00" },

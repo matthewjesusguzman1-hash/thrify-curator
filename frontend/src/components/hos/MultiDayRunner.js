@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, CheckCircle2, XCircle, Target, AlertTriangle, Hand, Repeat, List } from "lucide-react";
+import { ChevronRight, CheckCircle2, XCircle, Target, AlertTriangle, Hand, Repeat, List, Lightbulb } from "lucide-react";
 import { Button } from "../ui/button";
 import { EldGrid } from "./EldGrid";
 import { CfrText } from "../../lib/cfrLinks";
@@ -36,6 +36,8 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
 
   // per-shift cursor: which shift the user is currently identifying
   const [shiftIdx, setShiftIdx] = useState(0);
+  // hints revealed so far for the current scenario (resets on scenario change)
+  const [hintsRevealed, setHintsRevealed] = useState(0);
   // current draggable handle state
   const [tStart, setTStart] = useState({ day: 1, min: 8 * 60 });
   const [tEnd, setTEnd] = useState({ day: 1, min: 18 * 60 });
@@ -64,6 +66,7 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
     setPhase("shift");
     setTStart({ day: 1, min: 8 * 60 });
     setTEnd({ day: 1, min: 18 * 60 });
+    setHintsRevealed(0);
   };
   const nextScenario = () => resetAll((idx + 1) % scenarios.length);
   const restartScenario = () => resetAll(idx);
@@ -178,6 +181,16 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
         </div>
       )}
 
+      {/* Progressive Hints — neutral primer never gives away the answer; user
+          can choose to reveal hints one at a time. */}
+      {Array.isArray(scenario.hints) && scenario.hints.length > 0 && (
+        <HintPanel
+          hints={scenario.hints}
+          revealed={hintsRevealed}
+          onReveal={() => setHintsRevealed((n) => Math.min(n + 1, scenario.hints.length))}
+        />
+      )}
+
       {/* Day 1 + Day 2 grids — always both visible (no day-by-day reveal) */}
       <DaySection
         label={scenario.days[0].label}
@@ -268,6 +281,57 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
 }
 
 /* ─── Sub-components ─── */
+
+function HintPanel({ hints, revealed, onReveal }) {
+  const [open, setOpen] = useState(false);
+  const total = hints.length;
+  const allRevealed = revealed >= total;
+  return (
+    <div className="rounded-xl border border-[#FCD34D] bg-[#FFFBEB] overflow-hidden" data-testid="hint-panel">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#FEF3C7] transition-colors"
+        data-testid="hint-panel-toggle"
+      >
+        <Lightbulb className="w-4 h-4 text-[#B45309]" />
+        <p className="text-[11px] font-bold uppercase tracking-wider text-[#92400E] flex-1">Hints (optional)</p>
+        <span className="text-[10.5px] font-bold text-[#92400E]">
+          {revealed}/{total}
+        </span>
+        <ChevronRight className={`w-3.5 h-3.5 text-[#92400E] transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-3 py-2 space-y-2 border-t border-[#FCD34D]" data-testid="hint-panel-body">
+          {revealed === 0 ? (
+            <p className="text-[11.5px] text-[#92400E] italic leading-relaxed">
+              Try to bracket the shift on your own first. Reveal a hint only if you get stuck.
+            </p>
+          ) : (
+            <ol className="list-decimal ml-4 space-y-1.5">
+              {hints.slice(0, revealed).map((h, i) => (
+                <li key={i} className="text-[11.5px] text-[#1F2937] leading-relaxed" data-testid={`hint-${i + 1}`}>
+                  {h}
+                </li>
+              ))}
+            </ol>
+          )}
+          {!allRevealed && (
+            <button
+              onClick={onReveal}
+              className="w-full mt-1 px-3 py-1.5 rounded-md border border-[#D4AF37] bg-white text-[11.5px] font-bold text-[#92400E] hover:bg-[#FEF3C7]"
+              data-testid="hint-reveal-next-btn"
+            >
+              Reveal hint {revealed + 1} of {total}
+            </button>
+          )}
+          {allRevealed && (
+            <p className="text-[10.5px] italic text-[#92400E] text-center">All hints revealed.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ContextDayStrip({ label, log, note, testid }) {
   return (
