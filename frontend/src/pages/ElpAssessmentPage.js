@@ -159,6 +159,7 @@ export default function ElpAssessmentPage() {
       await axios.post(`${API}/inspections/${inspId}/elp`, buildPayload());
       toast.success("Saved to inspection");
       setShowSaveModal(false);
+      navigate(`/inspections/${inspId}`);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
@@ -172,6 +173,7 @@ export default function ElpAssessmentPage() {
       toast.success("Saved to new inspection");
       setShowSaveModal(false);
       setNewInspTitle("");
+      navigate(`/inspections/${res.data.id}`);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };

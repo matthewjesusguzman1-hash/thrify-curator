@@ -25,6 +25,18 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 
 ## Changelog
 
+### 2026-02 — ELP (English Language Proficiency) Roadside Assessment module
+- New help-button workflow at `/elp` walks inspectors through the agency's two-test ELP protocol:
+  1. **Test 1 — Interview** (Attachment A): 12 standard questions + 2 HM-only questions (auto-shown when "hauling HM" is checked); each marked Pass / Inconclusive / Fail with optional notes.
+  2. **Test 2 — Highway Sign Recognition** (Attachment B): 24 SVG signs rendered client-side (regulatory rectangle, warning/construction diamond, guide black, WRONG WAY red). Inspector holds device to cab, asks driver to identify each sign in English, marks Pass / Fail and records the verbatim response. Phase only unlocks after the interview is complete.
+  3. **Disposition**: Inspector picks PROFICIENT / NOT PROFICIENT. NOT PROFICIENT auto-attaches §391.11(b)(2) citation card. Free-form inspector notes.
+- PDF Preview / Share / Save-to-Inspection flow mirrors the Tie-Down calculator UX (`elp-preview-btn`, `elp-share-btn`, `elp-save-btn`). Save modal supports both "attach to existing inspection" and "create new inspection + attach". After saving, the page navigates to the inspection detail.
+- New backend endpoints (server.py): `POST /api/inspections/{id}/elp`, `DELETE /api/inspections/{id}/elp/{assessment_id}`. Models: `ElpInterviewAnswer`, `ElpSignAnswer`, `SaveElpAssessmentRequest`. Stored in `inspections.elp_assessments[]`.
+- InspectionDetail page now renders an **ELP Assessments** card per saved record: disposition badge (PROFICIENT / NOT PROFICIENT / PENDING), Test 1 + Test 2 breakdown counts, citation card on NOT PROFICIENT, inspector notes, and trash button to remove.
+- Header nav: gold "ELP" pill (`elp-nav-btn`) — visible in default + Lite mode.
+- Files: `/app/frontend/src/pages/ElpAssessmentPage.js`, `/app/frontend/src/lib/elpContent.js`, `/app/frontend/src/components/elp/SignDisplay.js`, `/app/backend/server.py` (lines 185-208 models, 1567-1595 routes), `/app/frontend/src/App.js` (route), `/app/frontend/src/components/app/Header.js` (nav button), `/app/frontend/src/pages/InspectionDetail.js` (display + delete).
+- Tested: backend pytest 5/5 + frontend playwright 22/22 assertions in iteration_40.
+
 ### 2026-02 — HOS practice runners de-dup refactor
 - Extracted shared `ContextDayStrip`, `NextDayPreview`, `PairDayTimePicker` into `/app/frontend/src/components/hos/_shared/`.
 - Moved `timeStrToMin`, `minToTimeStr`, `computeOnDutyHoursFromLog`, `lastEntryEndMin`, `violationCorrectForOvernight`, `deriveShifts` into `/app/frontend/src/lib/hosRules.js`.
