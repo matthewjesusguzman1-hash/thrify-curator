@@ -288,9 +288,9 @@ function ShiftCard({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
         <>
           <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">
             {day.continuesFromPrev
-              ? "This shift started on the previous day. Drag START to 00:00 (left edge) to indicate it continued from yesterday, and drag END to where the driver finally stopped today."
+              ? "This shift started on the previous day. Drag START to 00:00 (left edge) to indicate it continued from yesterday, and drag END to where the driver finally stopped today. (Or type 00:00 in the START field.)"
               : day.continuesToNext
-              ? "This shift continued past midnight. Drag START to where the driver began, and drag END to 24:00 (right edge) to indicate the shift continued into tomorrow."
+              ? "This shift continued past midnight. Drag START to where the driver began, and drag END to 24:00 (right edge) to indicate the shift continued into tomorrow. (Or type 00:00 in the END field — it will be accepted as 24:00 / end-of-day.)"
               : "Drag the green START and red END handles on the grid above (snaps to 15-min). Or type HH:MM (24-hr) below."}
           </p>
           <div className="space-y-2">

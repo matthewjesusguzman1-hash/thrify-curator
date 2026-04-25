@@ -26,6 +26,13 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — Multi-Day scenarios rewritten · 11/14 focus · both-day analysis · overnight shift · pre-scenario primer
+- User: "For the multi day scenario it should be for 11/14 violations. It should have the user find start and end times for both days. At least one of the scenarios should include overnight driving/work time. It also should explain the violations before the scenario has been participated in."
+- **Scenarios rewritten** (`hosAdvancedScenarios.js` MULTIDAY_SCENARIOS): 4 new 11/14-focused 2-day scenarios. M1 clean baseline, M2 Day 1 14-hr violation, M3 OVERNIGHT shift (18:00 Day 1 → 08:30 Day 2 with 11 AND 14 violations on the Day 2 portion), M4 Day 1 11-hr violation. Scenario shape moved from single-focal-day to `days: [{ label, log, shiftStartMin, shiftEndMin, violation11, violation14, continuesFromPrev?, continuesToNext?, regulatoryEndMin?, explanation }, ...]` with a top-level `primer` string.
+- **New MultiDayRunner** (`/components/hos/MultiDayRunner.js`, ~430 lines): dedicated 2-grid runner for multiday. Flow: pre-scenario primer card → Day 1 grid + Day 1 shift question (drag handles) → Day 1 violation (multi-choice) → Day 2 grid appears + Day 2 shift question → Day 2 violation → done. Overnight support: `continuesToNext` flag lets Day 1 END handle sit at 24:00 (right edge); `continuesFromPrev` lets Day 2 START sit at 00:00 (left edge). HTML time input rejects literal "24:00", so the grader normalizes user-typed 00:00 to 1440 min when `day.shiftEndMin===1440` — hint text now explicitly tells the user that.
+- **Per-category rules primer** (`HosPracticePage.js`): every category tab now shows a "Rules being tested" bulleted list (under `data-testid=category-primer`) alongside the description. Rules are drawn from a new `rules` field on each CATEGORIES entry. This satisfies "explain the violations BEFORE the scenario has been participated in" across all practice flows, not just multi-day.
+- Testing: `testing_agent_v3_fork` iteration 34 — all 11 assertions pass; tester ran M3 end-to-end (18:00→00:00 normalized to 24:00, violation "none" on Day 1, violation "both" on Day 2) with correct feedback at each step. No regressions on Combined, 8-Day, or Split Sleeper.
+
 ### 2026-02 — ELD grid: same size as trainer on wide, scales down to fit on narrow
 - User: "Now it is running off the page"
 - Previous revert went too far — fixed natural-pixel sizing with overflow-x-auto meant the grid was wider than the viewport on smaller laptops/phones.
