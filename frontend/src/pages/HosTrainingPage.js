@@ -705,7 +705,7 @@ function ExemptionCard({ ex, top }) {  const [open, setOpen] = useState(false);
 /* ═══════════════ ELD Reference view ═══════════════ */
 
 function EldView({ onBack }) {
-  const [openId, setOpenId] = useState(ELD_TOPICS[0].id);
+  const [openId, setOpenId] = useState(null);
   return (
     <div className="min-h-screen bg-[#F0F2F5] pb-8" data-testid="eld-view">
       <header className="sticky top-0 z-30 bg-[#002855] text-white border-b border-[#D4AF37]/30">
