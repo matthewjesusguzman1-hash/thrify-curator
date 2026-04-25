@@ -182,6 +182,32 @@ class SaveTieDownRequest(BaseModel):
     photos: List[dict] = []
 
 
+# ── ELP (English Language Proficiency) roadside assessment ──
+class ElpInterviewAnswer(BaseModel):
+    key: str = ""
+    question: str = ""
+    result: str = ""  # "pass" | "inconclusive" | "fail" | ""
+    notes: str = ""
+
+class ElpSignAnswer(BaseModel):
+    sign_id: int = 0
+    text: str = ""
+    meaning: str = ""
+    result: str = ""  # "pass" | "fail" | ""
+    driver_response: str = ""
+
+class SaveElpAssessmentRequest(BaseModel):
+    driver_name: str = ""
+    cdl_number: str = ""
+    interview_administered: bool = False
+    interview_answers: List[ElpInterviewAnswer] = []
+    signs_administered: bool = False
+    sign_answers: List[ElpSignAnswer] = []
+    overall_disposition: str = ""  # "proficient" | "not_proficient"
+    citation_ref: str = ""
+    inspector_notes: str = ""
+
+
 class HosDayData(BaseModel):
     date: str = ""
     day_label: str = ""
@@ -1536,6 +1562,37 @@ async def save_tiedown_to_inspection(inspection_id: str, req: SaveTieDownRequest
         },
     )
     return assessment
+
+
+@api_router.post("/inspections/{inspection_id}/elp")
+async def save_elp_to_inspection(inspection_id: str, req: SaveElpAssessmentRequest):
+    """Attach a completed ELP roadside assessment to an inspection."""
+    doc = await db.inspections.find_one({"id": inspection_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    assessment = req.dict()
+    assessment["assessment_id"] = str(uuid.uuid4())
+    assessment["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.inspections.update_one(
+        {"id": inspection_id},
+        {
+            "$push": {"elp_assessments": assessment},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    return assessment
+
+
+@api_router.delete("/inspections/{inspection_id}/elp/{assessment_id}")
+async def delete_elp_from_inspection(inspection_id: str, assessment_id: str):
+    await db.inspections.update_one(
+        {"id": inspection_id},
+        {
+            "$pull": {"elp_assessments": {"assessment_id": assessment_id}},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    return {"ok": True}
 
 
 @api_router.delete("/inspections/{inspection_id}/tiedown/{assessment_id}")
