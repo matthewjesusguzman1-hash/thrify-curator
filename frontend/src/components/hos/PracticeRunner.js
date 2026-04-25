@@ -285,7 +285,7 @@ export function PracticeRunner({ scenarios, mode = "split", category = "split", 
         )}
       </section>
 
-      {phase === "questions" && (
+      {(phase === "questions" || phase === "done") && (
         <QuestionsStack
           scenario={scenario}
           qIdx={questionIdx}
@@ -298,6 +298,27 @@ export function PracticeRunner({ scenarios, mode = "split", category = "split", 
           setShiftTStart={setTStart}
           setShiftTEnd={setTEnd}
         />
+      )}
+
+      {/* Completion panel — appears once every question is answered. Mirrors
+          the Multi-Day / 8-Day "Restart · Next scenario" footer so the runner
+          end-state is consistent across all practice modes. */}
+      {phase === "done" && (
+        <div className="bg-white rounded-xl border border-[#10B981]/40 p-3 space-y-2.5" data-testid={`${category}-done-panel`}>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+            <p className="text-[12.5px] font-bold text-[#002855]">Scenario complete.</p>
+            <span className="ml-auto text-[10px] font-bold text-[#64748B]">Scenario {idx + 1} of {scenarios.length}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={restartScenario} className="text-[12px] font-bold text-[#002855] hover:text-[#D4AF37] py-2 rounded-md border border-[#E2E8F0] hover:border-[#D4AF37] flex items-center justify-center gap-1.5" data-testid={`${category}-done-restart`}>
+              <Repeat className="w-3.5 h-3.5" /> Retry this scenario
+            </button>
+            <button onClick={nextScenario} className="text-[12px] font-bold text-white bg-[#002855] hover:bg-[#001a3a] py-2 rounded-md flex items-center justify-center gap-1.5" data-testid={`${category}-done-next`}>
+              Next scenario <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
