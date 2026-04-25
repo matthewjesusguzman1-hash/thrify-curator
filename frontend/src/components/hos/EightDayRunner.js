@@ -334,7 +334,7 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
 
   const markers = [];
   if (!isOffDay) {
-    const TOL = 10;
+    const TOL = 0;
     if (answer?.shift?.overnight) {
       // Overnight pair: compare user picks vs canonical anchored on the
       // appropriate day. day.continuesToNext day owns START canonical;
@@ -359,13 +359,13 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
       }
       if (ov.endDay === myDayN) {
         if (myDayN === 2 && day.continuesFromPrev && endWrong) {
-          markers.push({ min: ov.endMin, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(ov.endMin)}`, labelRow: 1 });
-          markers.push({ min: day.shiftEndMin, kind: "end", label: `Actual END · ${minToTimeStr(day.shiftEndMin)}`, labelRow: 2 });
+          markers.push({ min: ov.endMin, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(ov.endMin)}` });
+          markers.push({ min: day.shiftEndMin, kind: "end", label: `Actual END · ${minToTimeStr(day.shiftEndMin)}` });
         } else {
-          markers.push({ min: ov.endMin, kind: "end", label: `Shift END · ${minToTimeStr(ov.endMin)}`, labelRow: 1 });
+          markers.push({ min: ov.endMin, kind: "end", label: `Shift END · ${minToTimeStr(ov.endMin)}` });
         }
       } else if (myDayN === 2 && day.continuesFromPrev && typeof day.shiftEndMin === "number") {
-        markers.push({ min: day.shiftEndMin, kind: "end", label: `Actual END · ${minToTimeStr(day.shiftEndMin)}`, labelRow: 1 });
+        markers.push({ min: day.shiftEndMin, kind: "end", label: `Actual END · ${minToTimeStr(day.shiftEndMin)}` });
       }
     } else if (answer?.shift?.multi && Array.isArray(answer.shift.shifts || answer.shift.pairings)) {
       // Multi-shift / legacy multi-pairing day: same wrong/missed treatment
@@ -378,16 +378,16 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
         if (idx >= 0) {
           matchedRequired[idx] = true;
           markers.push({ min: s.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(s.start)}` });
-          markers.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}`, labelRow: 1 });
+          markers.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}` });
         } else {
           markers.push({ min: s.start, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${minToTimeStr(s.start)}` });
-          markers.push({ min: s.end, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(s.end)}`, labelRow: 1 });
+          markers.push({ min: s.end, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(s.end)}` });
         }
       });
       required.forEach((r, ri) => {
         if (!matchedRequired[ri]) {
-          markers.push({ min: r.start, kind: "start", label: `Actual Shift ${ri + 1} START · ${minToTimeStr(r.start)}`, labelRow: 2 });
-          markers.push({ min: r.end, kind: "end", label: `Actual Shift ${ri + 1} END · ${minToTimeStr(r.end)}`, labelRow: 3 });
+          markers.push({ min: r.start, kind: "start", label: `Actual Shift ${ri + 1} START · ${minToTimeStr(r.start)}` });
+          markers.push({ min: r.end, kind: "end", label: `Actual Shift ${ri + 1} END · ${minToTimeStr(r.end)}` });
         }
       });
     } else {
@@ -410,13 +410,13 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
       }
       if (typeof userEnd === "number") {
         if (endWrong) {
-          markers.push({ min: userEnd, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(userEnd)}`, labelRow: 1 });
-          markers.push({ min: canonEnd, kind: "end", label: `Actual END · ${minToTimeStr(canonEnd)}`, labelRow: 2 });
+          markers.push({ min: userEnd, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(userEnd)}` });
+          markers.push({ min: canonEnd, kind: "end", label: `Actual END · ${minToTimeStr(canonEnd)}` });
         } else {
-          markers.push({ min: userEnd, kind: "end", label: `END · ${minToTimeStr(userEnd)}`, labelRow: 1 });
+          markers.push({ min: userEnd, kind: "end", label: `END · ${minToTimeStr(userEnd)}` });
         }
       } else if (typeof canonEnd === "number") {
-        markers.push({ min: canonEnd, kind: "end", label: `END · ${minToTimeStr(canonEnd)}`, labelRow: 1 });
+        markers.push({ min: canonEnd, kind: "end", label: `END · ${minToTimeStr(canonEnd)}` });
       }
     }
   }
@@ -561,7 +561,7 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
     if (isMultiShift && day1ShiftActive && localShifts.length > 0) {
       localShifts.forEach((s, i) => {
         m.push({ min: s.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(s.start)}` });
-        m.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}`, labelRow: 1 });
+        m.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}` });
       });
     }
     if (answer?.shift && !answer.shift.off) {
@@ -571,30 +571,30 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
         // grey "WRONG SHIFT N". Any canonical not matched → green/red flag
         // labelled "Actual Shift N" so the inspector sees what they missed.
         const required = day.acceptableShifts || [];
-        const TOL = 10;
+        const TOL = 0;
         const matchedRequired = new Array(required.length).fill(false);
         answer.shift.shifts.forEach((s, i) => {
           const idx = required.findIndex((r, ri) => !matchedRequired[ri] && Math.abs(s.start - r.start) <= TOL && Math.abs(s.end - r.end) <= TOL);
           if (idx >= 0) {
             matchedRequired[idx] = true;
             m.push({ min: s.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(s.start)}` });
-            m.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}`, labelRow: 1 });
+            m.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}` });
           } else {
             m.push({ min: s.start, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${minToTimeStr(s.start)}` });
-            m.push({ min: s.end, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(s.end)}`, labelRow: 1 });
+            m.push({ min: s.end, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(s.end)}` });
           }
         });
         required.forEach((r, ri) => {
           if (!matchedRequired[ri]) {
-            m.push({ min: r.start, kind: "start", label: `Actual Shift ${ri + 1} START · ${minToTimeStr(r.start)}`, labelRow: 2 });
-            m.push({ min: r.end, kind: "end", label: `Actual Shift ${ri + 1} END · ${minToTimeStr(r.end)}`, labelRow: 3 });
+            m.push({ min: r.start, kind: "start", label: `Actual Shift ${ri + 1} START · ${minToTimeStr(r.start)}` });
+            m.push({ min: r.end, kind: "end", label: `Actual Shift ${ri + 1} END · ${minToTimeStr(r.end)}` });
           }
         });
       } else if (answer.shift.multi && Array.isArray(answer.shift.pairings)) {
         // Backward-compat: legacy answers stored shifts under the `pairings` key.
         answer.shift.pairings.forEach((p, i) => {
           m.push({ min: p.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(p.start)}` });
-          m.push({ min: p.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(p.end)}`, labelRow: 1 });
+          m.push({ min: p.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(p.end)}` });
         });
       } else {
         // Single-shift answer. Compare against canonical and surface mistakes:
@@ -605,7 +605,7 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
         const userEnd = answer.shift.end;
         const canonStart = day.shiftStartMin;
         const canonEnd = day.shiftEndMin;
-        const TOL = 10;
+        const TOL = 0;
         const startWrong = (typeof canonStart === "number") && Math.abs(userStart - canonStart) > TOL;
         const endWrong = (typeof canonEnd === "number") && Math.abs(userEnd - canonEnd) > TOL;
         if (startWrong) {
@@ -615,25 +615,25 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
           m.push({ min: userStart, kind: "start", label: `Shift START · ${minToTimeStr(userStart)}` });
         }
         if (endWrong) {
-          m.push({ min: userEnd, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(userEnd)}`, labelRow: 1 });
-          m.push({ min: canonEnd, kind: "end", label: `Actual END · ${minToTimeStr(canonEnd)}`, labelRow: 2 });
+          m.push({ min: userEnd, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(userEnd)}` });
+          m.push({ min: canonEnd, kind: "end", label: `Actual END · ${minToTimeStr(canonEnd)}` });
         } else {
-          m.push({ min: userEnd, kind: "end", label: `Shift END · ${minToTimeStr(userEnd)}`, labelRow: 1 });
+          m.push({ min: userEnd, kind: "end", label: `Shift END · ${minToTimeStr(userEnd)}` });
         }
         // Canonical "Actually closed at" cap — gated behind the user's own
         // regend submission so they aren't spoiled before answering.
         if (answer.regEndAnswered && day.regulatoryEndMin !== undefined && day.regulatoryEndMin !== answer.shift.end) {
-          m.push({ min: day.regulatoryEndMin, kind: "end", color: "#D4AF37", label: `Actually closed · ${minToTimeStr(day.regulatoryEndMin)}`, labelRow: 2 });
+          m.push({ min: day.regulatoryEndMin, kind: "end", color: "#D4AF37", label: `Actually closed · ${minToTimeStr(day.regulatoryEndMin)}` });
         }
         // User's own committed regend pick.
         if (answer.regEndAnswered && typeof answer.regEndAnswer?.min === "number" && answer.regEndAnswer.min !== day.regulatoryEndMin) {
-          m.push({ min: answer.regEndAnswer.min, kind: "end", color: "#B45309", label: `Your call · ${minToTimeStr(answer.regEndAnswer.min)}`, labelRow: 3 });
+          m.push({ min: answer.regEndAnswer.min, kind: "end", color: "#B45309", label: `Your call · ${minToTimeStr(answer.regEndAnswer.min)}` });
         }
       }
     }
     if (day1ShiftActive && !isOffDay) {
       m.push({ min: timeStrToMin(tStart || "08:00") ?? 480, kind: "start", markerId: "shiftStart", draggable: true, label: `Drag → START · ${tStart || "08:00"}` });
-      m.push({ min: timeStrToMin(tEnd || "18:00") ?? 1080, kind: "end", markerId: "shiftEnd", draggable: true, label: `Drag → END · ${tEnd || "18:00"}`, labelRow: 1 });
+      m.push({ min: timeStrToMin(tEnd || "18:00") ?? 1080, kind: "end", markerId: "shiftEnd", draggable: true, label: `Drag → END · ${tEnd || "18:00"}` });
     }
     // Active draggable handle for the regend pick.
     if (phase === "regend" && !isOffDay && !answer?.regEndAnswered) {
@@ -645,7 +645,6 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
         markerId: "regEnd",
         draggable: true,
         label: `Drag → SHOULD HAVE ENDED · ${seedHhmm}`,
-        labelRow: 2,
       });
     }
     return m;
@@ -763,7 +762,7 @@ function DayRegEndQ({ day, tRegEnd, setTRegEnd, answered, answer, onSubmit, onNe
     onSubmit({ min: m });
   };
   const correctMin = day.regulatoryEndMin;
-  const isCorrect = answered && typeof answer?.min === "number" && Math.abs(answer.min - correctMin) <= 10;
+  const isCorrect = answered && typeof answer?.min === "number" && Math.abs(answer.min - correctMin) === 0;
   return (
     <div className="p-4 border-t border-[#D4AF37]/40 bg-[#FFFBEB]/40 space-y-3" data-testid={`day-${dayIdx}-regend`}>
       <div className="flex items-start gap-2">
@@ -826,7 +825,7 @@ function DayShiftQ({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
   let matched = null;
   if (answered) {
     matched = acceptable.find((a) =>
-      Math.abs(answer.start - a.start) <= 10 && Math.abs(answer.end - a.end) <= 10
+      Math.abs(answer.start - a.start) === 0 && Math.abs(answer.end - a.end) === 0
     );
     correct = !!matched;
   }
@@ -915,8 +914,8 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
   const correctStartMin = day1.shiftStartMin;
   const correctEndDay = 2;
   const correctEndMin = day2.shiftEndMin;
-  const startMatch = shiftAnswered && shiftAnswer.startDay === correctStartDay && Math.abs(shiftAnswer.startMin - correctStartMin) <= 10;
-  const endMatch = shiftAnswered && shiftAnswer.endDay === correctEndDay && Math.abs(shiftAnswer.endMin - correctEndMin) <= 10;
+  const startMatch = shiftAnswered && shiftAnswer.startDay === correctStartDay && Math.abs(shiftAnswer.startMin - correctStartMin) === 0;
+  const endMatch = shiftAnswered && shiftAnswer.endDay === correctEndDay && Math.abs(shiftAnswer.endMin - correctEndMin) === 0;
   const shiftCorrect = startMatch && endMatch;
 
   const violation11 = !!(day1.violation11 || day2.violation11);
@@ -938,7 +937,7 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
       // on day 1; day2.shiftEndMin on day 2). Wrong picks render in grey
       // with a "WRONG" flag; the canonical correct time renders in green/red
       // so the inspector can see what they should have picked.
-      const TOL = 10;
+      const TOL = 0;
       // START — canonical lives on day1
       const userStartOnThisDay = shiftAnswer.startDay === dayN;
       const canonStartOnThisDay = correctStartDay === dayN;
@@ -952,10 +951,10 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
       const userEndOnThisDay = shiftAnswer.endDay === dayN;
       const canonEndOnThisDay = correctEndDay === dayN;
       if (userEndOnThisDay && endMatch) {
-        m.push({ min: shiftAnswer.endMin, kind: "end", label: `Shift END · ${minToTimeStr(shiftAnswer.endMin)}`, labelRow: 1 });
+        m.push({ min: shiftAnswer.endMin, kind: "end", label: `Shift END · ${minToTimeStr(shiftAnswer.endMin)}` });
       } else {
-        if (userEndOnThisDay) m.push({ min: shiftAnswer.endMin, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(shiftAnswer.endMin)}`, labelRow: 1 });
-        if (canonEndOnThisDay && !endMatch) m.push({ min: correctEndMin, kind: "end", label: `Actual END · ${minToTimeStr(correctEndMin)}`, labelRow: 2 });
+        if (userEndOnThisDay) m.push({ min: shiftAnswer.endMin, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(shiftAnswer.endMin)}` });
+        if (canonEndOnThisDay && !endMatch) m.push({ min: correctEndMin, kind: "end", label: `Actual END · ${minToTimeStr(correctEndMin)}` });
       }
       // Suppress unused-var warning when TOL isn't directly used (Math.abs
       // happens upstream in startMatch/endMatch derivation).
@@ -981,7 +980,6 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
           markerId: "shiftEnd",
           draggable: true,
           label: `Drag → END · ${minToTimeStr(tEnd.min)}`,
-          labelRow: 1,
         });
       }
     }
@@ -994,18 +992,17 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
         markerId: "regEnd",
         draggable: true,
         label: `Drag → SHOULD HAVE ENDED · ${minToTimeStr(tRegEndDay.min)}`,
-        labelRow: 2,
       });
     }
     // Reveal canonical + user's regend pick after submission.
     if (answer?.regEndAnswered) {
       const regDay = (day1.regulatoryEndMin !== undefined) ? 1 : 2;
       if (regDay === dayN && regCanonicalMin !== undefined) {
-        m.push({ min: regCanonicalMin, kind: "end", color: "#D4AF37", label: `Actually closed · ${minToTimeStr(regCanonicalMin)}`, labelRow: 2 });
+        m.push({ min: regCanonicalMin, kind: "end", color: "#D4AF37", label: `Actually closed · ${minToTimeStr(regCanonicalMin)}` });
       }
       if (answer.regEndAnswer?.day === dayN && typeof answer.regEndAnswer.min === "number" &&
           !(regDay === dayN && answer.regEndAnswer.min === regCanonicalMin)) {
-        m.push({ min: answer.regEndAnswer.min, kind: "end", color: "#B45309", label: `Your call · ${minToTimeStr(answer.regEndAnswer.min)}`, labelRow: 3 });
+        m.push({ min: answer.regEndAnswer.min, kind: "end", color: "#B45309", label: `Your call · ${minToTimeStr(answer.regEndAnswer.min)}` });
       }
     }
     return m;
@@ -1136,7 +1133,7 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
 function PairRegEndQ({ day1, day2, tRegEndDay, setTRegEndDay, answered, answer, onSubmit, onNext, dayIdx }) {
   const correctDay = (day1.regulatoryEndMin !== undefined) ? 1 : 2;
   const correctMin = day1.regulatoryEndMin ?? day2.regulatoryEndMin;
-  const isCorrect = answered && answer?.day === correctDay && Math.abs(answer.min - correctMin) <= 10;
+  const isCorrect = answered && answer?.day === correctDay && Math.abs(answer.min - correctMin) === 0;
   const correctDayLabel = correctDay === 1 ? day1.label : day2.label;
   return (
     <div className="p-4 border-t border-[#D4AF37]/40 bg-[#FFFBEB]/40 space-y-3" data-testid={`overnight-${dayIdx}-regend`}>
@@ -1240,7 +1237,7 @@ function MultiShiftQ({ day, tStart, setTStart, tEnd, setTEnd, localShifts, setLo
   const userMatchIdx = [];
   if (answered) {
     submittedShifts.forEach((s) => {
-      const idx = required.findIndex((r, i) => !matchedRequired[i] && Math.abs(s.start - r.start) <= 10 && Math.abs(s.end - r.end) <= 10);
+      const idx = required.findIndex((r, i) => !matchedRequired[i] && Math.abs(s.start - r.start) === 0 && Math.abs(s.end - r.end) === 0);
       if (idx >= 0) {
         matchedRequired[idx] = true;
         userMatchIdx.push(idx);

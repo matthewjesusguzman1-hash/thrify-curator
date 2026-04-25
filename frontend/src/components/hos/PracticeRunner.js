@@ -188,13 +188,46 @@ export function PracticeRunner({ scenarios, mode = "split", category = "split", 
             else if (markerId === "shiftEnd") setTEnd(hhmm);
           } : null}
           shiftMarkers={[
-            ...(answers.shift ? [
-              { min: scenario.shiftStartMin, kind: "start", label: `Shift START · ${fmtMin(scenario.shiftStartMin)}` },
-              { min: scenario.shiftEndMin, kind: "end", label: `Shift END · ${fmtMin(scenario.shiftEndMin)}`, labelRow: 1 },
-            ] : []),
-            ...(answers.shouldEnd && scenario.regulatoryEndMin !== undefined && scenario.regulatoryEndMin !== scenario.shiftEndMin ? [
-              { min: scenario.regulatoryEndMin, kind: "end", color: "#D4AF37", label: `SHOULD have ended · ${fmtMin(scenario.regulatoryEndMin)}`, labelRow: 2 },
-            ] : []),
+            ...(answers.shift ? (() => {
+              // After submitting, compare user's pick against canonical.
+              // Wrong picks render as grey "WRONG" flags at the user's chosen
+              // time; canonical correct time renders as the standard
+              // green/red flag so the inspector can base later decisions on
+              // the right answer. Strict equality — no tolerance.
+              const us = answers.shift.start;
+              const ue = answers.shift.end;
+              const cs = scenario.shiftStartMin;
+              const ce = scenario.shiftEndMin;
+              const startWrong = us !== cs;
+              const endWrong = ue !== ce;
+              const out = [];
+              if (startWrong) {
+                out.push({ min: us, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${fmtMin(us)}` });
+                out.push({ min: cs, kind: "start", label: `Actual START · ${fmtMin(cs)}` });
+              } else {
+                out.push({ min: us, kind: "start", label: `Shift START · ${fmtMin(us)}` });
+              }
+              if (endWrong) {
+                out.push({ min: ue, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${fmtMin(ue)}` });
+                out.push({ min: ce, kind: "end", label: `Actual END · ${fmtMin(ce)}` });
+              } else {
+                out.push({ min: ue, kind: "end", label: `Shift END · ${fmtMin(ue)}` });
+              }
+              return out;
+            })() : []),
+            ...(answers.shouldEnd ? (() => {
+              const ue = answers.shouldEnd.end;
+              const ce = scenario.regulatoryEndMin;
+              if (ce === undefined) return [];
+              const out = [];
+              if (ue !== ce) {
+                out.push({ min: ue, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong cap · ${fmtMin(ue)}` });
+                out.push({ min: ce, kind: "end", color: "#D4AF37", label: `Actual cap · ${fmtMin(ce)}` });
+              } else {
+                out.push({ min: ue, kind: "end", color: "#D4AF37", label: `Cap · ${fmtMin(ue)}` });
+              }
+              return out;
+            })() : []),
             ...(shiftQActive ? [
               {
                 min: timeStrToMin(tStart || "08:00") ?? 8 * 60,
@@ -209,7 +242,6 @@ export function PracticeRunner({ scenarios, mode = "split", category = "split", 
                 markerId: "shiftEnd",
                 draggable: true,
                 label: `Drag → END · ${tEnd || "18:00"}`,
-                labelRow: 1,
               },
             ] : []),
           ]}
@@ -424,11 +456,13 @@ function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast, 
     if (q.type === "twoNum") {
       correct = Math.abs(answer.h14 - q.correct.h14) < 0.5 && Math.abs(answer.h11 - q.correct.h11) < 0.5;
     } else if (q.type === "twoTime") {
+      // Strict equality — no tolerance.
       const normAnsEnd = answer.end === 0 && q.correct.end === 24 * 60 ? 24 * 60 : answer.end;
-      correct = Math.abs(answer.start - q.correct.start) <= 10 && Math.abs(normAnsEnd - q.correct.end) <= 10;
+      correct = answer.start === q.correct.start && normAnsEnd === q.correct.end;
     } else if (q.type === "oneTime") {
+      // Strict equality — no tolerance.
       const normAnsEnd = answer.end === 0 && q.correct.end === 24 * 60 ? 24 * 60 : answer.end;
-      correct = Math.abs(normAnsEnd - q.correct.end) <= 10;
+      correct = normAnsEnd === q.correct.end;
     } else {
       correct = answer === q.correct;
     }

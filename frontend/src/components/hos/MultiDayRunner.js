@@ -84,7 +84,7 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
       if (!sa) return;
       const ans = sa.shiftAnswer;
       const correctShift = scenario.shifts[sIdx];
-      const TOL = 10;
+      const TOL = 0;
       const startWrong = correctShift && (ans.startDay !== correctShift.startDay || Math.abs(ans.startMin - correctShift.startMin) > TOL);
       const endWrong = correctShift && (ans.endDay !== correctShift.endDay || Math.abs(ans.endMin - correctShift.endMin) > TOL);
       // User's submitted START on this grid
@@ -97,19 +97,19 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
       }
       // Canonical correct START on this grid (only if user got it wrong)
       if (startWrong && correctShift?.startDay === dayN) {
-        markers.push({ min: correctShift.startMin, kind: "start", label: `Actual Shift ${sIdx + 1} START · ${minToTimeStr(correctShift.startMin)}`, labelRow: 2 });
+        markers.push({ min: correctShift.startMin, kind: "start", label: `Actual Shift ${sIdx + 1} START · ${minToTimeStr(correctShift.startMin)}` });
       }
       // User's submitted END on this grid
       if (ans.endDay === dayN) {
         if (endWrong) {
-          markers.push({ min: ans.endMin, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(ans.endMin)}`, labelRow: 1 });
+          markers.push({ min: ans.endMin, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(ans.endMin)}` });
         } else {
-          markers.push({ min: ans.endMin, kind: "end", label: `Shift ${sIdx + 1} END · ${minToTimeStr(ans.endMin)}`, labelRow: 1 });
+          markers.push({ min: ans.endMin, kind: "end", label: `Shift ${sIdx + 1} END · ${minToTimeStr(ans.endMin)}` });
         }
       }
       // Canonical correct END on this grid (only if user got it wrong)
       if (endWrong && correctShift?.endDay === dayN) {
-        markers.push({ min: correctShift.endMin, kind: "end", label: `Actual Shift ${sIdx + 1} END · ${minToTimeStr(correctShift.endMin)}`, labelRow: 2 });
+        markers.push({ min: correctShift.endMin, kind: "end", label: `Actual Shift ${sIdx + 1} END · ${minToTimeStr(correctShift.endMin)}` });
       }
       // Show §395.3 cap end ONLY after the user has submitted their own
       // regulatory-end answer — otherwise the marker would spoil the question.
@@ -124,7 +124,6 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
           kind: "end",
           color: "#D4AF37",
           label: `Actually closed · ${minToTimeStr(correctShift.regulatoryEndMin)}`,
-          labelRow: 2,
         });
       }
       // User's own committed regulatory-end pick (gold, dashed feel via label)
@@ -138,7 +137,6 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
           kind: "end",
           color: "#B45309",
           label: `Your call · ${minToTimeStr(sa.regEndAnswer.min)}`,
-          labelRow: 3,
         });
       }
     });
@@ -160,7 +158,6 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
           markerId: "shiftEnd",
           draggable: true,
           label: `Drag → END · ${minToTimeStr(tEnd.min)}`,
-          labelRow: 1,
         });
       }
     }
@@ -173,7 +170,6 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
         markerId: "regEnd",
         draggable: true,
         label: `Drag → SHOULD HAVE ENDED · ${minToTimeStr(tRegEnd.min)}`,
-        labelRow: 2,
       });
     }
     return markers;
@@ -570,7 +566,7 @@ function RegEndQuestionCard({ shift, tRegEnd, setTRegEnd, answered, answer, onSu
   // Tolerance ±10 min, exact day match — same as ResultsSummary uses for shift bounds.
   const correctDay = shift.regulatoryEndDay;
   const correctMin = shift.regulatoryEndMin;
-  const isCorrect = answered && answer && answer.day === correctDay && Math.abs(answer.min - correctMin) <= 10;
+  const isCorrect = answered && answer && answer.day === correctDay && Math.abs(answer.min - correctMin) === 0;
   return (
     <div className="bg-white rounded-xl border border-[#D4AF37]/60 p-4 space-y-3" data-testid={testid}>
       <div className="flex items-start gap-2">
@@ -667,8 +663,8 @@ function ResultsSummary({ scenario, shiftAnswers }) {
         )}
         {scenario.shifts.map((s, i) => {
           const ua = shiftAnswers[i]?.shiftAnswer;
-          const startMatch = ua && ua.startDay === s.startDay && Math.abs(ua.startMin - s.startMin) <= 10;
-          const endMatch = ua && ua.endDay === s.endDay && Math.abs(ua.endMin - s.endMin) <= 10;
+          const startMatch = ua && ua.startDay === s.startDay && Math.abs(ua.startMin - s.startMin) === 0;
+          const endMatch = ua && ua.endDay === s.endDay && Math.abs(ua.endMin - s.endMin) === 0;
           const fullMatch = startMatch && endMatch;
           return (
             <div key={i} className={`rounded-md border p-2.5 ${ua ? (fullMatch ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]") : "border-[#DC2626] bg-[#FEE2E2]"}`}>
