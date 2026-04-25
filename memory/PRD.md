@@ -26,6 +26,12 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — ELD grid reverted to original Split Sleeper Trainer dimensions
+- User: "Can you make it the same size the split sleeper trainer grid was?"
+- Found via git log: when EldGrid was first built, the Split Sleeper Trainer practice grid used `HOUR_W=28, ROW_H=32, LABEL_W=74, TOTAL_W=76, HEADER_H=22` and rendered at NATURAL pixel size (`width={svgW}` / `height={svgH}`) wrapped in `overflow-x-auto`. A later refactor switched to `width="100%"` + `viewBox` + `h-auto` for responsive scaling, which is what made the grid *appear* a different size depending on the container — and what made my prior "make it bigger" tweaks visually fall flat.
+- Reverted EldGrid to the original sizing strategy: SVG at natural pixel size 822×162, wrapper uses `overflow-x-auto` (with the existing `touchAction: none` exception when draggable shift markers are active so dragging doesn't get hijacked as a scroll on mobile). All font sizes and marker badge dimensions restored to their original values.
+- Lint clean; frontend compiled successfully. Behavior unchanged — only visual sizing strategy reverted.
+
 ### 2026-02 — ELD grid size pushed further (~+110% vs original)
 - User: "Can you make it any bigger and still have everything visible on the page?"
 - Pushed non-compact dims further: HOUR_W 28→26, ROW_H 52→70, LABEL_W 74→80, TOTAL_W 76→84, HEADER_H 24→28. Aspect ratio drops from 3.37 to 2.46 — at a 840-wide container, displayed height grows from ~249px to ~341px (+37% vs previous tweak, +110% vs the original).

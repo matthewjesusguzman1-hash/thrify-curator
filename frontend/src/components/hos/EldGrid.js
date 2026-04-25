@@ -29,15 +29,15 @@ import { useEffect, useRef } from "react";
  *                     (prevents text overlap when two markers share a minute).
  */
 export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {}, shiftMarkers = [], onMarkerDrag = null }) {
-  // Dimensions tuned for a TALL aspect — at fixed container width, on-screen
-  // size is dictated by aspect ratio. ROW_H much larger than HOUR_W so each
-  // duty row is thick enough to read roadside; svgW stays close to a typical
-  // 900px container so we don't lose width.
-  const HOUR_W = compact ? 24 : 26;
-  const ROW_H = compact ? 48 : 70;
-  const LABEL_W = compact ? 64 : 80;
-  const TOTAL_W = compact ? 68 : 84;
-  const HEADER_H = compact ? 22 : 28;
+  // Dimensions match the original Split Sleeper Trainer grid the user is
+  // accustomed to. The SVG renders at NATURAL pixel size (width={svgW},
+  // height={svgH}); the wrapper has overflow-x-auto so narrow phones get a
+  // horizontal scroll instead of a shrunken grid.
+  const HOUR_W = compact ? 20 : 28;
+  const ROW_H = compact ? 26 : 32;
+  const LABEL_W = compact ? 62 : 74;
+  const TOTAL_W = compact ? 66 : 76;
+  const HEADER_H = compact ? 18 : 22;
   const HOURS = 24;
 
   // Assign each bracket to a label row, pushing colliding labels down to a
@@ -68,7 +68,7 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   // bar like before; additional rows stack above that.
   const BRACKET_H = bracketRowCount > 0 ? 14 + bracketRowCount * BRACKET_ROW_H : 0;
   const maxLabelRow = shiftMarkers.reduce((mx, m) => Math.max(mx, m.labelRow || 0), 0);
-  const MARKER_LABEL_H = shiftMarkers && shiftMarkers.length > 0 ? 16 + maxLabelRow * 14 : 0;
+  const MARKER_LABEL_H = shiftMarkers && shiftMarkers.length > 0 ? 14 + maxLabelRow * 12 : 0;
   const gridW = HOURS * HOUR_W;
   const svgW = LABEL_W + gridW + TOTAL_W;
   const svgH = BRACKET_H + HEADER_H + 4 * ROW_H + 12 + MARKER_LABEL_H;
@@ -144,18 +144,28 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
 
   return (
     <div className="rounded-lg border border-[#CBD5E1] bg-white">
-      {/* Grid always fits the container width. viewBox keeps the internal
-          coordinate system intact while the SVG itself scales down on narrow
-          phones — no horizontal scroll needed. */}
-      <div className="px-1">
+      {/* Natural-pixel grid (matches the original Split Sleeper Trainer size)
+          inside an overflow-x-auto wrapper so narrow phones can scroll
+          horizontally rather than render a shrunk-to-fit grid. When draggable
+          markers are active, disable the wrapper's touch-pan so dragging a
+          marker horizontally never gets stolen as a scroll gesture. */}
+      <div
+        className="-mx-px"
+        style={{
+          overflowX: hasDraggable ? "visible" : "auto",
+          touchAction: hasDraggable ? "none" : "auto",
+        }}
+      >
       <svg
-        width="100%"
+        width={svgW}
         height={svgH}
         viewBox={`0 0 ${svgW} ${svgH}`}
-        preserveAspectRatio="xMidYMid meet"
-        className="block max-w-full h-auto"
+        className="block"
         onClick={hasDraggable ? undefined : handleSvgClick}
-        style={{ cursor: onMinuteClick && !hasDraggable ? "crosshair" : "default" }}
+        style={{
+          cursor: onMinuteClick && !hasDraggable ? "crosshair" : "default",
+          touchAction: hasDraggable ? "none" : "auto",
+        }}
       >
         {/* Brackets above the grid — call out spans the rule cares about.
          * `bracketRows[i]` tells us which vertical row to place the label on
@@ -197,7 +207,7 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const x = LABEL_W + h * HOUR_W;
           const label = h === 24 ? "" : String(h).padStart(2, "0");
           return (
-            <text key={`h${h}`} x={x} y={14} textAnchor="middle" fontSize={compact ? "9" : "11"} fill="#475569" fontFamily="sans-serif" style={{ fontVariantNumeric: "tabular-nums" }}>{label}</text>
+            <text key={`h${h}`} x={x} y={12} textAnchor="middle" fontSize={compact ? "8" : "9"} fill="#475569" fontFamily="sans-serif" style={{ fontVariantNumeric: "tabular-nums" }}>{label}</text>
           );
         })}
 
@@ -209,11 +219,11 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           return (
             <g key={r.key}>
               <rect x={LABEL_W} y={y} width={gridW} height={ROW_H} fill={r.color} />
-              <text x={LABEL_W - 6} y={y + ROW_H / 2 + 4.5} textAnchor="end" fontSize={compact ? "10" : "13"} fontWeight="700" fill="#1E293B">
+              <text x={LABEL_W - 6} y={y + ROW_H / 2 + 3.5} textAnchor="end" fontSize={compact ? "9" : "10"} fontWeight="700" fill="#1E293B">
                 {compact ? r.short : r.label}
               </text>
               <rect x={LABEL_W + gridW + 2} y={y + 3} width={TOTAL_W - 6} height={ROW_H - 6} fill="#FFFFFF" stroke="#CBD5E1" rx={2} />
-              <text x={LABEL_W + gridW + TOTAL_W / 2} y={y + ROW_H / 2 + 5} textAnchor="middle" fontSize={compact ? "13" : "16"} fontWeight="700" fill="#002855" fontFamily="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" data-testid={`svg-total-${r.key}`}>
+              <text x={LABEL_W + gridW + TOTAL_W / 2} y={y + ROW_H / 2 + 4} textAnchor="middle" fontSize={compact ? "12" : "13"} fontWeight="700" fill="#002855" fontFamily="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" data-testid={`svg-total-${r.key}`}>
                 {`${h}:${String(m).padStart(2, "0")}`}
               </text>
             </g>
@@ -221,7 +231,7 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
         })}
 
         {/* TOTAL column header */}
-        <text x={LABEL_W + gridW + TOTAL_W / 2} y={HEADER_H - 8} textAnchor="middle" fontSize={compact ? "10" : "11"} fontWeight="800" fill="#002855" fontFamily="sans-serif">TOTAL</text>
+        <text x={LABEL_W + gridW + TOTAL_W / 2} y={HEADER_H - 6} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="800" fill="#002855" fontFamily="sans-serif">TOTAL</text>
 
         {/* Hour gridlines */}
         {Array.from({ length: HOURS + 1 }).map((_, h) => {
@@ -295,10 +305,10 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const isContinues = sm.kind === "continues";
           const color = sm.color || (isEnd ? "#DC2626" : isContinues ? "#F59E0B" : "#10B981");
           const labelRow = sm.labelRow || 0;
-          const labelY = HEADER_H + 4 * ROW_H + 24 + labelRow * 14;
+          const labelY = HEADER_H + 4 * ROW_H + 22 + labelRow * 12;
           const flagText = isEnd ? "END" : isContinues ? "CONTINUES" : "START";
-          const flagW = compact ? (flagText === "CONTINUES" ? 68 : 42) : (flagText === "CONTINUES" ? 90 : 54);
-          const flagH = compact ? 13 : 16;
+          const flagW = compact ? (flagText === "CONTINUES" ? 60 : 36) : (flagText === "CONTINUES" ? 74 : 44);
+          const flagH = compact ? 11 : 13;
           // Position: END opens to the LEFT of the line; START/CONTINUES opens to the RIGHT.
           // Clamp inside the grid so badges at 00:00 or 24:00 don't overflow.
           let badgeX = isEnd ? x - flagW : x;
@@ -312,8 +322,8 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
             <g key={`shift${i}`} data-testid={`shift-marker-${sm.kind || i}`}>
               <line x1={x} y1={HEADER_H - 1} x2={x} y2={HEADER_H + 4 * ROW_H + 4} stroke={color} strokeWidth="2" strokeDasharray="5 3" />
               <rect x={badgeX} y={HEADER_H - flagH - 2} width={flagW} height={flagH} rx={2} fill={color} />
-              <text x={badgeX + flagW / 2} y={HEADER_H - 5} textAnchor="middle" fontSize={compact ? "9" : "11"} fontWeight="800" fill="#FFFFFF" fontFamily="sans-serif" letterSpacing="0.3">{flagText}</text>
-              <text x={x} y={labelY} textAnchor={labelAnchor} fontSize={compact ? "10" : "12"} fontWeight="700" fill={color}>{sm.label || `${isEnd ? "Shift end" : isContinues ? "Continues" : "Shift start"} · ${minToHm(sm.min)}`}</text>
+              <text x={badgeX + flagW / 2} y={HEADER_H - 4} textAnchor="middle" fontSize={compact ? "8.5" : "9.5"} fontWeight="800" fill="#FFFFFF" fontFamily="sans-serif" letterSpacing="0.3">{flagText}</text>
+              <text x={x} y={labelY} textAnchor={labelAnchor} fontSize={compact ? "9" : "10"} fontWeight="700" fill={color}>{sm.label || `${isEnd ? "Shift end" : isContinues ? "Continues" : "Shift start"} · ${minToHm(sm.min)}`}</text>
               {/* Drag handle — wide invisible hit rect around the line. Shown
                   only when sm.draggable and onMarkerDrag are set, giving the
                   inspector a generous ~20px-wide zone to grab on mobile. */}
