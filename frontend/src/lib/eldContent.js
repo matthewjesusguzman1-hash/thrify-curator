@@ -39,7 +39,7 @@ export const ELD_TOPICS = [
       },
       {
         heading: "What to check at roadside",
-        body: "Verify the driver qualifies for any claimed exemption. For short-haul, ask for the carrier's time records or ask the driver for start-time, CMV-release time, and return location. For pre-2000 engines, look at the engine's data plate. If a driver claims the 8-day rule, INTERVIEW the driver about their recent duty pattern (How many days have you driven in the past 30? Where have you been working?) and review any logs they have readily available. Drivers using paper logs are NOT required to carry RODS for days outside the inspection period (current day + prior 7 days), so don't demand a full 30 days at roadside. BUT — if the driver's account, the readily-available logs, the BOLs in the cab, or any other roadside evidence shows the driver actually exceeded 8 RODS days in a rolling 30-day window, take enforcement action: the driver no longer qualifies for the §395.8(a)(1)(iii)(A)(1) exception, so cite §395.8 (no required RODS). Apply the appropriate OOS criteria. Don't sit on roadside evidence and punt it to carrier records.",
+        body: "Verify the driver qualifies for any claimed exemption. For short-haul, ask for the carrier's time records or ask the driver for start-time, CMV-release time, and return location. For pre-2000 engines, look at the engine's data plate. If a driver claims the 8-day rule, INTERVIEW the driver about their recent duty pattern (How many days have you driven in the past 30? Where have you been working?) and review any logs they have readily available. Drivers using paper logs are NOT required to carry RODS for days outside the inspection period (current day + prior 7 days), so don't demand a full 30 days at roadside. BUT — if the driver's account, the readily-available logs, the BOLs in the cab, or any other roadside evidence shows the driver actually exceeded 8 RODS days in a rolling 30-day window, take enforcement action: the driver no longer qualifies for the §395.8(a)(1)(iii) exception, so cite §395.8(a)(1) — failing to use the prescribed method (a registered ELD) for the record of duty status. Apply the appropriate OOS criteria. Don't sit on roadside evidence and punt it to carrier records.",
       },
     ],
   },
@@ -82,7 +82,7 @@ export const ELD_TOPICS = [
       },
       {
         heading: "If you do fall back to display/printout",
-        body: "When display/printout is your ONLY option (after a legitimate transfer-failure path), confirm the device satisfies §395.22(h): the graph-grid must show the four duty lines (OFF/SB/D/OD), a 24-hour axis, remarks, shipping-doc references, and total hours per status. If the device cannot produce a readable display or printout, cite §395.22(h). But remember — using display/printout does NOT exempt the driver from a fail-to-transfer citation when the underlying failure was the driver's fault.",
+        body: "When display/printout is your ONLY option (after a legitimate transfer-failure path), the graph-grid must show the four duty lines (OFF/SB/D/OD), a 24-hour axis, remarks, shipping-doc references, and total hours per status. If the device's display screen is not viewable from outside the cab, cite §395.20(b). If a portable ELD is not mounted in a fixed position visible to the driver, cite §395.22(g). But remember — using display/printout does NOT exempt the driver from a fail-to-transfer citation when the underlying failure was the driver's fault.",
       },
     ],
   },
@@ -266,7 +266,7 @@ export const ELD_TOPICS = [
       },
       {
         heading: "Annotations",
-        body: "Every edit requires an annotation at least 4 characters long (§395.32(f)(3)). Meaningless annotations ('ok', 'fix') are considered missing — cite §395.32 if the annotation doesn't explain the edit.",
+        body: "Every edit requires an annotation at least 4 characters long. Meaningless annotations ('ok', 'fix') are considered missing — flag the edit on the inspection report. If the inadequate annotation is on a recertification after edits, cite §395.30(b)(4) (failing to recertify the record after edits).",
       },
     ],
   },
@@ -433,7 +433,7 @@ export const ELD_TOPICS = [
           "Pull the ELD registration ID from the transferred data file (the required review method).",
           "Confirm the ELD is present on the registered list: https://eld.fmcsa.dot.gov/List",
           "Check the revoked list: https://eld.fmcsa.dot.gov/List/Revoked",
-          "If the ID does not appear on the registered list OR appears on the revoked list, cite §395.22(a) and treat the driver as operating without a required ELD.",
+          "If the ID does not appear on the registered list OR appears on the revoked list, treat the driver as operating without a required ELD and cite §395.8(a)(1) — failing to use the prescribed method (a registered ELD) for the record of duty status.",
         ],
       },
       {
@@ -468,7 +468,7 @@ export const ELD_TOPICS = [
       },
       {
         heading: "If a driver claims their device is an AOBRD",
-        body: "Confirm the device is ACTUALLY a registered ELD — some ELDs were previously sold as AOBRDs and later upgraded. Check the registry for the current certification. If the driver is operating under a different exemption (pre-2000 engine, driveaway, etc.), an AOBRD is irrelevant because paper RODS are acceptable. If none of those apply and the device is truly an AOBRD, cite §395.22(a) — the driver is required to use a registered ELD.",
+        body: "Confirm the device is ACTUALLY a registered ELD — some ELDs were previously sold as AOBRDs and later upgraded. Check the registry for the current certification. If the driver is operating under a different exemption (pre-2000 engine, driveaway, etc.), an AOBRD is irrelevant because paper RODS are acceptable. If none of those apply and the device is truly an AOBRD, the driver is failing to use the prescribed method (a registered ELD) — cite §395.8(a)(1).",
       },
     ],
   },

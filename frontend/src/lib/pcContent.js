@@ -144,7 +144,7 @@ export const PC_TOPICS = [
       },
       {
         heading: "How to cite",
-        body: "When the evidence shows the PC was actually on-duty driving, cite §395.8(e) (false report of duty status). The reclassified driving time is then added to the 11-hr and 14-hr clocks — which often surfaces an additional §395.3(a)(2) or (a)(3) violation. If multiple instances are documented, the carrier may also face a §390.11 / §385 pattern-of-violation finding.",
+        body: "When the evidence shows the PC was actually on-duty driving, cite §395.8(e)(1) (false report of duty status). The reclassified driving time is then added to the 11-hr and 14-hr clocks — which often surfaces an additional §395.3(a)(2) (14-hr cap) or §395.3(a)(3)(i) (11-hr drive cap) violation. If multiple instances are documented, refer the carrier for a pattern-of-violation review.",
       },
       {
         heading: "OOS criteria",
