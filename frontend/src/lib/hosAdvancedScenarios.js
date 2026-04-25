@@ -171,12 +171,14 @@ export const COMBINED_SCENARIOS = [
 /* ══════════════════════════════════════════════════════════════════════════
    MULTIDAY_SCENARIOS — 11/14-violation drills across two days. The user
    identifies the work-shift bounds on BOTH days, then identifies any 11- or
-   14-hour violations on each day. At least one scenario has an OVERNIGHT
-   shift that begins on Day 1 and finishes on Day 2 — the inspector has to
-   recognize that the shift continues across midnight when scoring violations.
+   14-hour violations on each day. Three of four scenarios involve OVERNIGHT
+   shifts that span midnight — a single shift either started on the prior day
+   and ends on Day 1, or starts on Day 1 and ends on Day 2. Showing the prior
+   day matters: for overnight shifts the inspector must look BACK to see
+   where the shift actually started.
 
    Shape:
-     id, primer (string shown BEFORE the runner starts),
+     id, primer, priorDayLog, priorDayNote, nextDayLog, nextDayNote,
      days: [
        {
          label, log,
@@ -184,22 +186,185 @@ export const COMBINED_SCENARIOS = [
          continuesFromPrev?, continuesToNext?, // overnight flags
          violation11, violation14,
          regulatoryEndMin?,                  // when the 14-hr cap closed (for explanations)
-         explanation: { shift, violation }   // text shown after each Q
+         explanation: { shift, violation }
        }, ...
      ],
    ══════════════════════════════════════════════════════════════════════════ */
 export const MULTIDAY_SCENARIOS = [
   {
     id: "M1",
-    primer: "Two consecutive duty days. Both shifts are contained within their own 24-hr window. Identify each day's shift bounds, then evaluate 11/14 compliance per day.",
+    primer: "OVERNIGHT shift carrying from the PRIOR DAY into Day 1 — the inspector must look at the prior day to see where the shift actually started, then confirm Day 2 has its own clean shift after a proper reset. Identify each day's shift bounds and check 11/14 compliance.",
     priorDayLog: [
-      { status: "OFF", start: "00:00", end: "24:00" },
+      { status: "OFF", start: "00:00", end: "18:00" },
+      { status: "OD",  start: "18:00", end: "19:00" },
+      { status: "D",   start: "19:00", end: "23:30" },
+      { status: "OFF", start: "23:30", end: "24:00" },
     ],
-    priorDayNote: "Day before Day 1 — driver was fully off-duty, so the 14-hr clock starts fresh on Day 1.",
+    priorDayNote: "Prior day — driver started an evening run at 18:00. The shift continued into Day 1 (overnight). The shift's actual START is on the prior day.",
     nextDayLog: [
       { status: "OFF", start: "00:00", end: "24:00" },
     ],
-    nextDayNote: "Day after Day 2 — driver took a full off-duty day for recovery.",
+    nextDayNote: "Day after Day 2 — full off-duty.",
+    days: [
+      {
+        label: "Day 1",
+        log: [
+          { status: "D",   start: "00:00", end: "04:00" },
+          { status: "OD",  start: "04:00", end: "04:30" },
+          { status: "OFF", start: "04:30", end: "24:00" },
+        ],
+        shiftStartMin: 0,
+        shiftEndMin: 4 * 60 + 30,
+        continuesFromPrev: true,
+        violation11: false,
+        violation14: false,
+        explanation: {
+          shift: "Day 1 portion of the overnight shift: STARTS at 00:00 (continued from prior day's 18:00 start) and ENDS at 04:30 (last OD entry). Full overnight shift wall-clock = 18:00 prior → 04:30 Day 1 = 10.5h.",
+          violation: "No violation. Drive total across the overnight shift = 4.5h prior + 4h Day 1 = 8.5h (under 11). Wall-clock 10.5h (under 14). After 04:30 the driver took a 19.5h reset before any work on Day 2.",
+        },
+      },
+      {
+        label: "Day 2",
+        log: [
+          { status: "OFF", start: "00:00", end: "06:00" },
+          { status: "OD",  start: "06:00", end: "07:00" },
+          { status: "D",   start: "07:00", end: "11:30" },
+          { status: "OFF", start: "11:30", end: "12:00" },
+          { status: "D",   start: "12:00", end: "16:00" },
+          { status: "OFF", start: "16:00", end: "24:00" },
+        ],
+        shiftStartMin: 6 * 60,
+        shiftEndMin: 16 * 60,
+        violation11: false,
+        violation14: false,
+        explanation: {
+          shift: "Day 2 has a separate, contained day shift: STARTS at 06:00 (first OD), ENDS at 16:00 (last D). 10h wall-clock, well under 14.",
+          violation: "Clean Day 2. Drive 4.5h+4h = 8.5h (under 11). 30-min break at 11:30 satisfies §395.3(a)(3)(ii).",
+        },
+      },
+    ],
+  },
+  {
+    id: "M2",
+    primer: "OVERNIGHT shift starting on Day 1 and ending on Day 2 — completely contained, no violations. Identify each day's portion of the shift and confirm 11/14 compliance.",
+    priorDayLog: [
+      { status: "OFF", start: "00:00", end: "06:00" },
+      { status: "OD",  start: "06:00", end: "07:00" },
+      { status: "D",   start: "07:00", end: "12:00" },
+      { status: "OFF", start: "12:00", end: "12:30" },
+      { status: "D",   start: "12:30", end: "15:30" },
+      { status: "OFF", start: "15:30", end: "24:00" },
+    ],
+    priorDayNote: "Prior day — driver ran a normal day shift 06:00-15:30 (8h drive). Off-duty from 15:30, giving a 26.5-hr rest before Day 1's evening start.",
+    nextDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    nextDayNote: "Day after Day 2 — full off-duty.",
+    days: [
+      {
+        label: "Day 1",
+        log: [
+          { status: "OFF", start: "00:00", end: "18:00" },
+          { status: "OD",  start: "18:00", end: "19:00" },
+          { status: "D",   start: "19:00", end: "23:30" },
+          { status: "OFF", start: "23:30", end: "24:00" },
+        ],
+        shiftStartMin: 18 * 60,
+        shiftEndMin: 24 * 60,
+        continuesToNext: true,
+        violation11: false,
+        violation14: false,
+        explanation: {
+          shift: "Day 1 portion of the overnight shift: STARTS at 18:00 (first OD), continues past midnight. END handle goes to 24:00 (right edge) to indicate the shift continues into Day 2.",
+          violation: "No violation in Day 1's portion alone — but full overnight shift compliance must be evaluated across BOTH days. Day 1 work segment: 4.5h drive, 5.5h shift wall-clock so far.",
+        },
+      },
+      {
+        label: "Day 2",
+        log: [
+          { status: "D",   start: "00:00", end: "05:00" },
+          { status: "OD",  start: "05:00", end: "05:30" },
+          { status: "OFF", start: "05:30", end: "24:00" },
+        ],
+        shiftStartMin: 0,
+        shiftEndMin: 5 * 60 + 30,
+        continuesFromPrev: true,
+        violation11: false,
+        violation14: false,
+        explanation: {
+          shift: "Day 2 portion of the overnight shift: STARTS at 00:00 (continued from Day 1) and ENDS at 05:30 (last OD). Full overnight shift wall-clock = 18:00 Day 1 → 05:30 Day 2 = 11.5h.",
+          violation: "No violation. Drive total across the overnight shift = 4.5h Day 1 + 5h Day 2 = 9.5h (under 11). Wall-clock 11.5h (under 14). The 30-min break at 23:30 covers the 8-cumulative-driving threshold for the next leg.",
+        },
+      },
+    ],
+  },
+  {
+    id: "M3",
+    primer: "OVERNIGHT shift starting on Day 1 with violations manifesting on Day 2. Identify each day's portion of the shift and catch the 11/14 violations.",
+    priorDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    priorDayNote: "Prior day — full off-duty rest day. Driver was well-rested heading into Day 1.",
+    nextDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    nextDayNote: "Day after Day 2 — driver took a recovery day after the overnight haul.",
+    days: [
+      {
+        label: "Day 1",
+        log: [
+          { status: "OFF", start: "00:00", end: "15:00" },
+          { status: "OD",  start: "15:00", end: "16:00" },
+          { status: "D",   start: "16:00", end: "21:00" },
+          { status: "OFF", start: "21:00", end: "21:30" },
+          { status: "D",   start: "21:30", end: "24:00" },
+        ],
+        shiftStartMin: 15 * 60,
+        shiftEndMin: 24 * 60,
+        continuesToNext: true,
+        violation11: false,
+        violation14: false,
+        explanation: {
+          shift: "Day 1 portion: STARTS at 15:00 (first OD), continues past midnight. END at 24:00 to indicate continuation into Day 2.",
+          violation: "Day 1 alone shows no violation yet (9h into the shift, 7.5h drive). But the shift continues into Day 2 — full compliance must be checked there.",
+        },
+      },
+      {
+        label: "Day 2",
+        log: [
+          { status: "D",   start: "00:00", end: "05:30" },
+          { status: "OD",  start: "05:30", end: "06:00" },
+          { status: "OFF", start: "06:00", end: "24:00" },
+        ],
+        shiftStartMin: 0,
+        shiftEndMin: 6 * 60,
+        continuesFromPrev: true,
+        regulatoryEndMin: 5 * 60,
+        violation11: true,
+        violation14: true,
+        explanation: {
+          shift: "Day 2 portion: STARTS at 00:00 (continued from Day 1's 15:00 start) and ENDS at 06:00. Full overnight shift wall-clock = 15:00 Day 1 → 06:00 Day 2 = 15h.",
+          violation: "BOTH violations on the overnight shift, surfacing on Day 2. 14-hr: shift ran 15h, 1h past §395.3(a)(2) cap (which would have closed at 05:00 Day 2 = 14h after 15:00 start). 11-hr: drive total = 5h + 2.5h + 5.5h = 13h, 2h over §395.3(a)(3)(i). Cap reached at 04:00 Day 2; everything driven after is the violation.",
+        },
+      },
+    ],
+  },
+  {
+    id: "M4",
+    primer: "Two contained day shifts — neither is overnight, BUT the rest period between them is short. Identify each day's shift, then evaluate whether the driver had a proper §395.3(a)(1) 10-hr reset before starting Day 2 (the prior day's logs matter for that check too).",
+    priorDayLog: [
+      { status: "OFF", start: "00:00", end: "06:00" },
+      { status: "OD",  start: "06:00", end: "07:00" },
+      { status: "D",   start: "07:00", end: "12:00" },
+      { status: "OFF", start: "12:00", end: "12:30" },
+      { status: "D",   start: "12:30", end: "16:30" },
+      { status: "OFF", start: "16:30", end: "24:00" },
+    ],
+    priorDayNote: "Prior day — clean 9.5h day shift 06:00→16:30. Driver was properly rested before Day 1 — long off-duty stretch between 16:30 prior day and 05:00 Day 1 (12.5h reset).",
+    nextDayLog: [
+      { status: "OFF", start: "00:00", end: "24:00" },
+    ],
+    nextDayNote: "Day after Day 2 — full off-duty.",
     days: [
       {
         label: "Day 1",
@@ -209,172 +374,8 @@ export const MULTIDAY_SCENARIOS = [
           { status: "D",   start: "06:00", end: "11:00" },
           { status: "OFF", start: "11:00", end: "11:30" },
           { status: "D",   start: "11:30", end: "15:30" },
-          { status: "OD",  start: "15:30", end: "16:30" },
-          { status: "D",   start: "16:30", end: "18:00" },
-          { status: "OFF", start: "18:00", end: "24:00" },
-        ],
-        shiftStartMin: 5 * 60,
-        shiftEndMin: 18 * 60,
-        violation11: false,
-        violation14: false,
-        explanation: {
-          shift: "Day 1 shift STARTS at 05:00 (first OD entry — pre-trip) and ENDS at 18:00 (last D entry). Wall-clock 13h, well within 14.",
-          violation: "No violation on Day 1. Drive total 5h+4h+1.5h = 10.5h (under 11). Wall-clock 13h (under 14). The 30-min OFF at 11:00 satisfies §395.3(a)(3)(ii).",
-        },
-      },
-      {
-        label: "Day 2",
-        log: [
-          { status: "OFF", start: "00:00", end: "04:00" },
-          { status: "OD",  start: "04:00", end: "05:00" },
-          { status: "D",   start: "05:00", end: "10:00" },
-          { status: "OFF", start: "10:00", end: "10:30" },
-          { status: "D",   start: "10:30", end: "14:30" },
-          { status: "OD",  start: "14:30", end: "15:30" },
-          { status: "D",   start: "15:30", end: "17:30" },
-          { status: "OFF", start: "17:30", end: "24:00" },
-        ],
-        shiftStartMin: 4 * 60,
-        shiftEndMin: 17 * 60 + 30,
-        violation11: false,
-        violation14: false,
-        explanation: {
-          shift: "Day 2 shift STARTS at 04:00 (first OD after the 10h reset that ran from 18:00 Day 1 → 04:00 Day 2) and ENDS at 17:30 (last D). Wall-clock 13.5h, under 14.",
-          violation: "No violation on Day 2. Drive total 5h+4h+2h = 11h — exactly at the 11-hr cap, not over. Wall-clock 13.5h (under 14).",
-        },
-      },
-    ],
-  },
-  {
-    id: "M2",
-    primer: "Two consecutive duty days. One day's shift exceeds an HOS limit. Identify each day's shift bounds, then catch the violation.",
-    priorDayLog: [
-      { status: "OFF", start: "00:00", end: "24:00" },
-    ],
-    priorDayNote: "Day before Day 1 — driver was fully off-duty (10+ hrs reset satisfied before Day 1's 04:00 start).",
-    nextDayLog: [
-      { status: "OFF", start: "00:00", end: "06:00" },
-      { status: "OFF", start: "06:00", end: "24:00" },
-    ],
-    nextDayNote: "Day after Day 2 — driver remained off-duty.",
-    days: [
-      {
-        label: "Day 1",
-        log: [
-          { status: "OFF", start: "00:00", end: "04:00" },
-          { status: "OD",  start: "04:00", end: "06:00" },     // 2h pre-trip
-          { status: "D",   start: "06:00", end: "10:00" },     // 4h drive
-          { status: "OD",  start: "10:00", end: "12:00" },     // 2h load
-          { status: "D",   start: "12:00", end: "16:00" },     // 4h drive
-          { status: "OFF", start: "16:00", end: "16:30" },     // 30-min break
-          { status: "D",   start: "16:30", end: "19:00" },     // 2.5h drive
-          { status: "OFF", start: "19:00", end: "24:00" },
-        ],
-        shiftStartMin: 4 * 60,
-        shiftEndMin: 19 * 60,
-        regulatoryEndMin: 18 * 60,
-        violation11: false,
-        violation14: true,
-        explanation: {
-          shift: "Day 1 shift STARTS at 04:00 (first OD). Driver kept driving until 19:00. The 14-hr wall-clock from 04:00 closes at 18:00 — driving 18:00-19:00 is the violation. Pre-trip OD time counts the same as driving toward the 14.",
-          violation: "14-hr VIOLATION on Day 1. Drive total 4h+4h+2.5h = 10.5h (under 11). But shift wall-clock = 15h, 1h past the §395.3(a)(2) 14-hr limit.",
-        },
-      },
-      {
-        label: "Day 2",
-        log: [
-          { status: "OFF", start: "00:00", end: "06:00" },
-          { status: "OD",  start: "06:00", end: "06:30" },
-          { status: "D",   start: "06:30", end: "11:00" },     // 4.5h
-          { status: "OFF", start: "11:00", end: "11:30" },     // break
-          { status: "D",   start: "11:30", end: "16:00" },     // 4.5h (9h drive)
-          { status: "OFF", start: "16:00", end: "24:00" },
-        ],
-        shiftStartMin: 6 * 60,
-        shiftEndMin: 16 * 60,
-        violation11: false,
-        violation14: false,
-        explanation: {
-          shift: "Day 2 shift STARTS at 06:00 (first OD), ENDS at 16:00 (last D). Wall-clock 10h, well under 14.",
-          violation: "No violation on Day 2. Drive total 4.5h+4.5h = 9h (under 11). Wall-clock 10h (under 14).",
-        },
-      },
-    ],
-  },
-  {
-    id: "M3",
-    primer: "OVERNIGHT shift — the work begins on Day 1 and continues past midnight into Day 2. Identify each day's portion of the shift and evaluate combined 11/14 compliance for the overnight run.",
-    priorDayLog: [
-      { status: "OFF", start: "00:00", end: "24:00" },
-    ],
-    priorDayNote: "Day before Day 1 — full off-duty day. The driver was well-rested before the evening overnight shift began at 18:00 Day 1.",
-    nextDayLog: [
-      { status: "OFF", start: "00:00", end: "24:00" },
-    ],
-    nextDayNote: "Day after Day 2 — full off-duty day, recovery sleep after the overnight haul.",
-    days: [
-      {
-        label: "Day 1",
-        log: [
-          { status: "OFF", start: "00:00", end: "18:00" },     // long rest before evening start
-          { status: "OD",  start: "18:00", end: "19:00" },     // pre-trip
-          { status: "D",   start: "19:00", end: "23:30" },     // 4.5h drive
-          { status: "OFF", start: "23:30", end: "24:00" },     // 30-min break
-        ],
-        shiftStartMin: 18 * 60,
-        shiftEndMin: 24 * 60,             // continues into Day 2
-        continuesToNext: true,
-        violation11: false,
-        violation14: false,
-        explanation: {
-          shift: "Day 1 portion of the overnight shift: STARTS at 18:00 (first OD), continues past midnight into Day 2. END handle goes to 24:00 (right edge) to indicate the shift continues.",
-          violation: "No violation on Day 1's portion alone — but the overall shift bounds straddle midnight, so 11/14 compliance must be evaluated across the FULL overnight shift, not just Day 1.",
-        },
-      },
-      {
-        label: "Day 2",
-        log: [
-          { status: "D",   start: "00:00", end: "04:30" },     // continued 4.5h drive (9h total)
-          { status: "OD",  start: "04:30", end: "05:00" },     // brief OD
-          { status: "D",   start: "05:00", end: "08:30" },     // 3.5h drive (12.5h total!)
-          { status: "OFF", start: "08:30", end: "24:00" },
-        ],
-        shiftStartMin: 0,                 // continues from Day 1
-        shiftEndMin: 8 * 60 + 30,
-        continuesFromPrev: true,
-        regulatoryEndMin: 8 * 60,         // 14-hr cap from 18:00 Day 1 closes at 08:00 Day 2
-        violation11: true,
-        violation14: true,
-        explanation: {
-          shift: "Day 2 portion of the overnight shift: STARTS at 00:00 (continued from Day 1) and ENDS at 08:30 (last D entry). The full shift wall-clock = 18:00 Day 1 → 08:30 Day 2 = 14.5h.",
-          violation: "BOTH violations on the overnight shift, both manifest on Day 2. 14-hr: shift ran 14.5h, 30 min past §395.3(a)(2). 11-hr: total drive = 4.5h + 4.5h + 3.5h = 12.5h, 1.5h past §395.3(a)(3)(i). Cumulative drive hits 11h at 07:00 Day 2; everything driven after is the violation.",
-        },
-      },
-    ],
-  },
-  {
-    id: "M4",
-    primer: "Two consecutive duty days with separate shifts. Each shift fits within its own 24-hr day, but one day stresses the 11-hr drive cap. Identify both shifts and any violations.",
-    priorDayLog: [
-      { status: "OFF", start: "00:00", end: "20:00" },
-      { status: "SB",  start: "20:00", end: "24:00" },
-    ],
-    priorDayNote: "Day before Day 1 — driver was off-duty most of the day, then moved into the sleeper berth at 20:00. The SB block continued into Day 1 (00:00–05:00) and pairs with Day 1's 11:00–11:30 OFF break to form a potential 9.5h reset — short of the 10-hr requirement, but the inspector should track the overnight rest pattern.",
-    nextDayLog: [
-      { status: "OFF", start: "00:00", end: "24:00" },
-    ],
-    nextDayNote: "Day after Day 2 — full off-duty day.",
-    days: [
-      {
-        label: "Day 1",
-        log: [
-          { status: "OFF", start: "00:00", end: "05:00" },
-          { status: "OD",  start: "05:00", end: "06:00" },
-          { status: "D",   start: "06:00", end: "11:00" },     // 5h drive
-          { status: "OFF", start: "11:00", end: "11:30" },     // break
-          { status: "D",   start: "11:30", end: "15:30" },     // 4h drive (9h)
           { status: "OD",  start: "15:30", end: "16:00" },
-          { status: "D",   start: "16:00", end: "18:30" },     // 2.5h drive (11.5h total — over 11!)
+          { status: "D",   start: "16:00", end: "18:30" },
           { status: "OFF", start: "18:30", end: "24:00" },
         ],
         shiftStartMin: 5 * 60,
@@ -382,27 +383,27 @@ export const MULTIDAY_SCENARIOS = [
         violation11: true,
         violation14: false,
         explanation: {
-          shift: "Day 1 shift STARTS at 05:00 (first OD), ENDS at 18:30 (last D). Wall-clock = 13.5h, under 14. But drive total = 11.5h, over the 11-hr cap.",
-          violation: "11-hr DRIVING violation on Day 1. Cumulative drive: 5h + 4h + 2.5h = 11.5h. 11-hr cap reached at 18:00 — driving 18:00-18:30 is the violation. Wall-clock 13.5h (under 14, no 14-hr violation).",
+          shift: "Day 1 shift STARTS at 05:00 (first OD), ENDS at 18:30 (last D). Wall-clock 13.5h, under 14.",
+          violation: "11-hr DRIVING violation. Drive total 5h+4h+2.5h = 11.5h. Cap reached at 18:00 — driving 18:00-18:30 is the violation. Wall-clock 13.5h (no 14-hr violation).",
         },
       },
       {
         label: "Day 2",
         log: [
-          { status: "OFF", start: "00:00", end: "05:00" },
-          { status: "OD",  start: "05:00", end: "06:00" },
-          { status: "D",   start: "06:00", end: "10:30" },     // 4.5h drive
-          { status: "OFF", start: "10:30", end: "11:00" },     // break
-          { status: "D",   start: "11:00", end: "15:00" },     // 4h drive (8.5h)
-          { status: "OFF", start: "15:00", end: "24:00" },
+          { status: "OFF", start: "00:00", end: "03:00" },
+          { status: "OD",  start: "03:00", end: "04:00" },
+          { status: "D",   start: "04:00", end: "08:30" },
+          { status: "OFF", start: "08:30", end: "09:00" },
+          { status: "D",   start: "09:00", end: "13:00" },
+          { status: "OFF", start: "13:00", end: "24:00" },
         ],
-        shiftStartMin: 5 * 60,
-        shiftEndMin: 15 * 60,
+        shiftStartMin: 3 * 60,
+        shiftEndMin: 13 * 60,
         violation11: false,
         violation14: false,
         explanation: {
-          shift: "Day 2 shift STARTS at 05:00 (first OD), ENDS at 15:00 (last D). Wall-clock = 10h, under 14.",
-          violation: "No violation on Day 2. Drive total 4.5h+4h = 8.5h (under 11). Wall-clock 10h (under 14).",
+          shift: "Day 2 shift STARTS at 03:00 (first OD), ENDS at 13:00 (last D). Wall-clock 10h, under 14.",
+          violation: "No 11/14 violation on Day 2 itself (drive 4.5h+4h = 8.5h, wall-clock 10h). HOWEVER — the off-duty between Day 1 (18:30) and Day 2 (03:00) is only 8.5h, short of the §395.3(a)(1) 10-hr reset. That's a SEPARATE reset violation the inspector should also flag (in addition to Day 1's 11-hr violation). The lesson: today's clocks are 'fresh' on paper, but the driver wasn't entitled to start them.",
         },
       },
     ],
