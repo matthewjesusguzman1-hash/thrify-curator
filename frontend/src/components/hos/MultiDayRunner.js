@@ -44,7 +44,14 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
   // phase within current shift: "shift" | "violation" | "another?"
   const [phase, setPhase] = useState("shift");
 
-  const scenario = scenarios[idx];
+  const rawScenario = scenarios[idx];
+  // Derive a flat `shifts` array from the per-day data shape so cross-midnight
+  // overnight shifts are treated as ONE continuous shift (start on Day 1, end
+  // on Day 2). Two contained day shifts collapse to two entries.
+  const scenario = useMemo(() => ({
+    ...rawScenario,
+    shifts: rawScenario.shifts ? rawScenario.shifts : deriveShifts(rawScenario.days),
+  }), [rawScenario]);
   const totalShifts = scenario.shifts.length;
   const allShiftsDone = shiftIdx >= totalShifts;
   const currentShift = !allShiftsDone ? scenario.shifts[shiftIdx] : null;
@@ -511,4 +518,63 @@ function minToTimeStr(min) {
   const hh = Math.floor(m / 60);
   const mm = m % 60;
   return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+/* ─── Derive a flat shifts[] from per-day data ───
+ * MULTIDAY_SCENARIOS stores per-day shift bounds with continuesToNext /
+ * continuesFromPrev flags. To make cross-midnight overnight shifts a SINGLE
+ * draggable shift (start on Day 1, end on Day 2), we merge a day flagged
+ * `continuesToNext` with the next day flagged `continuesFromPrev` into one
+ * shift entry. Days without a shift (off-duty all day) are skipped.
+ */
+function deriveShifts(days) {
+  if (!days || !Array.isArray(days)) return [];
+  const out = [];
+  let open = null;
+  days.forEach((d, i) => {
+    const dayN = i + 1;
+    if (d.shiftStartMin == null || d.shiftEndMin == null) return;
+    if (d.continuesFromPrev && open) {
+      // Close the open overnight shift on this day
+      open.endDay = dayN;
+      open.endMin = d.shiftEndMin;
+      open.violation11 = open.violation11 || !!d.violation11;
+      open.violation14 = open.violation14 || !!d.violation14;
+      if (d.regulatoryEndMin != null) {
+        open.regulatoryEndDay = dayN;
+        open.regulatoryEndMin = d.regulatoryEndMin;
+      }
+      if (d.explanation) {
+        // Prefer the day where the violation surfaces (later day for overnight)
+        open.explanation = {
+          shift: d.explanation.shift || open.explanation.shift,
+          violation: d.explanation.violation || open.explanation.violation,
+        };
+      }
+      out.push(open);
+      open = null;
+      return;
+    }
+    const s = {
+      startDay: dayN,
+      startMin: d.shiftStartMin,
+      endDay: dayN,
+      endMin: d.shiftEndMin,
+      violation11: !!d.violation11,
+      violation14: !!d.violation14,
+      explanation: d.explanation ? { ...d.explanation } : { shift: "", violation: "" },
+    };
+    if (d.regulatoryEndMin != null) {
+      s.regulatoryEndDay = dayN;
+      s.regulatoryEndMin = d.regulatoryEndMin;
+    }
+    if (d.continuesToNext) {
+      open = s; // wait for the next day to merge
+    } else {
+      out.push(s);
+    }
+  });
+  // Trailing open shift (no following day to merge into) — close as-is
+  if (open) out.push(open);
+  return out;
 }
