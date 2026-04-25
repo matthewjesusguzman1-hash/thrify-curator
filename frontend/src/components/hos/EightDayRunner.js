@@ -334,26 +334,90 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
 
   const markers = [];
   if (!isOffDay) {
+    const TOL = 10;
     if (answer?.shift?.overnight) {
-      // Overnight shift submitted on a paired day — render only the markers
-      // that fall on THIS day. The other half lives on the adjacent card.
+      // Overnight pair: compare user picks vs canonical anchored on the
+      // appropriate day. day.continuesToNext day owns START canonical;
+      // continuesFromPrev day owns END canonical.
       const ov = answer.shift;
-      const myDayN = ov.continuesFromPrev ? 2 : 1; // this card's relative day#
-      if (ov.startDay === myDayN) markers.push({ min: ov.startMin, kind: "start", label: `Shift START · ${minToTimeStr(ov.startMin)}` });
-      if (ov.endDay === myDayN) markers.push({ min: ov.endMin, kind: "end", label: `Shift END · ${minToTimeStr(ov.endMin)}`, labelRow: 1 });
-    } else if (answer?.shift?.multi && Array.isArray(answer.shift.pairings)) {
-      // Multi-pairing day: render every submitted pairing.
-      answer.shift.pairings.forEach((p, i) => {
-        markers.push({ min: p.start, kind: "start", label: `P${i + 1} START · ${minToTimeStr(p.start)}` });
-        markers.push({ min: p.end, kind: "end", label: `P${i + 1} END · ${minToTimeStr(p.end)}`, labelRow: 1 });
+      const myDayN = ov.continuesFromPrev ? 2 : 1;
+      const startWrong = (typeof day.shiftStartMin === "number") && day.continuesToNext &&
+        (ov.startDay !== 1 || Math.abs(ov.startMin - day.shiftStartMin) > TOL);
+      const endWrong = (typeof day.shiftEndMin === "number") && day.continuesFromPrev &&
+        (ov.endDay !== 2 || Math.abs(ov.endMin - day.shiftEndMin) > TOL);
+      if (ov.startDay === myDayN) {
+        if (myDayN === 1 && day.continuesToNext && startWrong) {
+          markers.push({ min: ov.startMin, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${minToTimeStr(ov.startMin)}` });
+          markers.push({ min: day.shiftStartMin, kind: "start", label: `Actual START · ${minToTimeStr(day.shiftStartMin)}` });
+        } else {
+          markers.push({ min: ov.startMin, kind: "start", label: `Shift START · ${minToTimeStr(ov.startMin)}` });
+        }
+      } else if (myDayN === 1 && day.continuesToNext && typeof day.shiftStartMin === "number") {
+        // User picked start on the OTHER day — show canonical here for
+        // reference even though they didn't pick a wrong time on this card.
+        markers.push({ min: day.shiftStartMin, kind: "start", label: `Actual START · ${minToTimeStr(day.shiftStartMin)}` });
+      }
+      if (ov.endDay === myDayN) {
+        if (myDayN === 2 && day.continuesFromPrev && endWrong) {
+          markers.push({ min: ov.endMin, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(ov.endMin)}`, labelRow: 1 });
+          markers.push({ min: day.shiftEndMin, kind: "end", label: `Actual END · ${minToTimeStr(day.shiftEndMin)}`, labelRow: 2 });
+        } else {
+          markers.push({ min: ov.endMin, kind: "end", label: `Shift END · ${minToTimeStr(ov.endMin)}`, labelRow: 1 });
+        }
+      } else if (myDayN === 2 && day.continuesFromPrev && typeof day.shiftEndMin === "number") {
+        markers.push({ min: day.shiftEndMin, kind: "end", label: `Actual END · ${minToTimeStr(day.shiftEndMin)}`, labelRow: 1 });
+      }
+    } else if (answer?.shift?.multi && Array.isArray(answer.shift.shifts || answer.shift.pairings)) {
+      // Multi-shift / legacy multi-pairing day: same wrong/missed treatment
+      // as the active card so the review reads consistently.
+      const submitted = answer.shift.shifts || answer.shift.pairings || [];
+      const required = day.acceptableShifts || [];
+      const matchedRequired = new Array(required.length).fill(false);
+      submitted.forEach((s, i) => {
+        const idx = required.findIndex((r, ri) => !matchedRequired[ri] && Math.abs(s.start - r.start) <= TOL && Math.abs(s.end - r.end) <= TOL);
+        if (idx >= 0) {
+          matchedRequired[idx] = true;
+          markers.push({ min: s.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(s.start)}` });
+          markers.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}`, labelRow: 1 });
+        } else {
+          markers.push({ min: s.start, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${minToTimeStr(s.start)}` });
+          markers.push({ min: s.end, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(s.end)}`, labelRow: 1 });
+        }
+      });
+      required.forEach((r, ri) => {
+        if (!matchedRequired[ri]) {
+          markers.push({ min: r.start, kind: "start", label: `Actual Shift ${ri + 1} START · ${minToTimeStr(r.start)}`, labelRow: 2 });
+          markers.push({ min: r.end, kind: "end", label: `Actual Shift ${ri + 1} END · ${minToTimeStr(r.end)}`, labelRow: 3 });
+        }
       });
     } else {
-      // Show the USER's answered shift bounds — same reasoning as the active
-      // DayCard (split-sleeper days have multiple valid bracketings).
-      const startMin = answer?.shift?.start ?? day.shiftStartMin;
-      const endMin = answer?.shift?.end ?? day.shiftEndMin;
-      markers.push({ min: startMin, kind: "start", label: `START · ${minToTimeStr(startMin)}` });
-      markers.push({ min: endMin, kind: "end", label: `END · ${minToTimeStr(endMin)}`, labelRow: 1 });
+      // Single-shift completed day. Same wrong/canonical treatment as above.
+      const userStart = answer?.shift?.start;
+      const userEnd = answer?.shift?.end;
+      const canonStart = day.shiftStartMin;
+      const canonEnd = day.shiftEndMin;
+      const startWrong = (typeof userStart === "number") && (typeof canonStart === "number") && Math.abs(userStart - canonStart) > TOL;
+      const endWrong = (typeof userEnd === "number") && (typeof canonEnd === "number") && Math.abs(userEnd - canonEnd) > TOL;
+      if (typeof userStart === "number") {
+        if (startWrong) {
+          markers.push({ min: userStart, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${minToTimeStr(userStart)}` });
+          markers.push({ min: canonStart, kind: "start", label: `Actual START · ${minToTimeStr(canonStart)}` });
+        } else {
+          markers.push({ min: userStart, kind: "start", label: `START · ${minToTimeStr(userStart)}` });
+        }
+      } else if (typeof canonStart === "number") {
+        markers.push({ min: canonStart, kind: "start", label: `START · ${minToTimeStr(canonStart)}` });
+      }
+      if (typeof userEnd === "number") {
+        if (endWrong) {
+          markers.push({ min: userEnd, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(userEnd)}`, labelRow: 1 });
+          markers.push({ min: canonEnd, kind: "end", label: `Actual END · ${minToTimeStr(canonEnd)}`, labelRow: 2 });
+        } else {
+          markers.push({ min: userEnd, kind: "end", label: `END · ${minToTimeStr(userEnd)}`, labelRow: 1 });
+        }
+      } else if (typeof canonEnd === "number") {
+        markers.push({ min: canonEnd, kind: "end", label: `END · ${minToTimeStr(canonEnd)}`, labelRow: 1 });
+      }
     }
   }
 
@@ -502,10 +566,29 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
     }
     if (answer?.shift && !answer.shift.off) {
       if (answer.shift.multi && Array.isArray(answer.shift.shifts)) {
-        // Render every submitted work shift as Shift 1, Shift 2, ...
+        // Each submitted shift is matched against the canonical
+        // acceptableShifts list (±10 min). Matched → green/red. Unmatched →
+        // grey "WRONG SHIFT N". Any canonical not matched → green/red flag
+        // labelled "Actual Shift N" so the inspector sees what they missed.
+        const required = day.acceptableShifts || [];
+        const TOL = 10;
+        const matchedRequired = new Array(required.length).fill(false);
         answer.shift.shifts.forEach((s, i) => {
-          m.push({ min: s.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(s.start)}` });
-          m.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}`, labelRow: 1 });
+          const idx = required.findIndex((r, ri) => !matchedRequired[ri] && Math.abs(s.start - r.start) <= TOL && Math.abs(s.end - r.end) <= TOL);
+          if (idx >= 0) {
+            matchedRequired[idx] = true;
+            m.push({ min: s.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(s.start)}` });
+            m.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}`, labelRow: 1 });
+          } else {
+            m.push({ min: s.start, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${minToTimeStr(s.start)}` });
+            m.push({ min: s.end, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(s.end)}`, labelRow: 1 });
+          }
+        });
+        required.forEach((r, ri) => {
+          if (!matchedRequired[ri]) {
+            m.push({ min: r.start, kind: "start", label: `Actual Shift ${ri + 1} START · ${minToTimeStr(r.start)}`, labelRow: 2 });
+            m.push({ min: r.end, kind: "end", label: `Actual Shift ${ri + 1} END · ${minToTimeStr(r.end)}`, labelRow: 3 });
+          }
         });
       } else if (answer.shift.multi && Array.isArray(answer.shift.pairings)) {
         // Backward-compat: legacy answers stored shifts under the `pairings` key.
@@ -514,11 +597,29 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
           m.push({ min: p.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(p.end)}`, labelRow: 1 });
         });
       } else {
-        // After answering, show the USER's shift bounds (not always the canonical
-        // single answer) — important on split-sleeper days where multiple valid
-        // bracketings exist.
-        m.push({ min: answer.shift.start, kind: "start", label: `Shift START · ${minToTimeStr(answer.shift.start)}` });
-        m.push({ min: answer.shift.end, kind: "end", label: `Shift END · ${minToTimeStr(answer.shift.end)}`, labelRow: 1 });
+        // Single-shift answer. Compare against canonical and surface mistakes:
+        // user's WRONG pick gets a grey "WRONG START/END" flag; the canonical
+        // correct time gets the standard green/red flag so the inspector can
+        // base later decisions (regend, cycle math) on the right answer.
+        const userStart = answer.shift.start;
+        const userEnd = answer.shift.end;
+        const canonStart = day.shiftStartMin;
+        const canonEnd = day.shiftEndMin;
+        const TOL = 10;
+        const startWrong = (typeof canonStart === "number") && Math.abs(userStart - canonStart) > TOL;
+        const endWrong = (typeof canonEnd === "number") && Math.abs(userEnd - canonEnd) > TOL;
+        if (startWrong) {
+          m.push({ min: userStart, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${minToTimeStr(userStart)}` });
+          m.push({ min: canonStart, kind: "start", label: `Actual START · ${minToTimeStr(canonStart)}` });
+        } else {
+          m.push({ min: userStart, kind: "start", label: `Shift START · ${minToTimeStr(userStart)}` });
+        }
+        if (endWrong) {
+          m.push({ min: userEnd, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(userEnd)}`, labelRow: 1 });
+          m.push({ min: canonEnd, kind: "end", label: `Actual END · ${minToTimeStr(canonEnd)}`, labelRow: 2 });
+        } else {
+          m.push({ min: userEnd, kind: "end", label: `Shift END · ${minToTimeStr(userEnd)}`, labelRow: 1 });
+        }
         // Canonical "Actually closed at" cap — gated behind the user's own
         // regend submission so they aren't spoiled before answering.
         if (answer.regEndAnswered && day.regulatoryEndMin !== undefined && day.regulatoryEndMin !== answer.shift.end) {
@@ -833,8 +934,32 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
   const buildMarkersForDay = (dayN) => {
     const m = [];
     if (shiftAnswered) {
-      if (shiftAnswer.startDay === dayN) m.push({ min: shiftAnswer.startMin, kind: "start", label: `Shift START · ${minToTimeStr(shiftAnswer.startMin)}` });
-      if (shiftAnswer.endDay === dayN) m.push({ min: shiftAnswer.endMin, kind: "end", label: `Shift END · ${minToTimeStr(shiftAnswer.endMin)}`, labelRow: 1 });
+      // Compare the user's submitted day+time vs canonical (day1.shiftStartMin
+      // on day 1; day2.shiftEndMin on day 2). Wrong picks render in grey
+      // with a "WRONG" flag; the canonical correct time renders in green/red
+      // so the inspector can see what they should have picked.
+      const TOL = 10;
+      // START — canonical lives on day1
+      const userStartOnThisDay = shiftAnswer.startDay === dayN;
+      const canonStartOnThisDay = correctStartDay === dayN;
+      if (userStartOnThisDay && startMatch) {
+        m.push({ min: shiftAnswer.startMin, kind: "start", label: `Shift START · ${minToTimeStr(shiftAnswer.startMin)}` });
+      } else {
+        if (userStartOnThisDay) m.push({ min: shiftAnswer.startMin, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${minToTimeStr(shiftAnswer.startMin)}` });
+        if (canonStartOnThisDay && !startMatch) m.push({ min: correctStartMin, kind: "start", label: `Actual START · ${minToTimeStr(correctStartMin)}` });
+      }
+      // END — canonical lives on day2
+      const userEndOnThisDay = shiftAnswer.endDay === dayN;
+      const canonEndOnThisDay = correctEndDay === dayN;
+      if (userEndOnThisDay && endMatch) {
+        m.push({ min: shiftAnswer.endMin, kind: "end", label: `Shift END · ${minToTimeStr(shiftAnswer.endMin)}`, labelRow: 1 });
+      } else {
+        if (userEndOnThisDay) m.push({ min: shiftAnswer.endMin, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(shiftAnswer.endMin)}`, labelRow: 1 });
+        if (canonEndOnThisDay && !endMatch) m.push({ min: correctEndMin, kind: "end", label: `Actual END · ${minToTimeStr(correctEndMin)}`, labelRow: 2 });
+      }
+      // Suppress unused-var warning when TOL isn't directly used (Math.abs
+      // happens upstream in startMatch/endMatch derivation).
+      void TOL;
     }
     // Active draggable handles before the user submits — handles can sit on
     // EITHER day's grid; the grid's drag callback updates state with the

@@ -84,20 +84,32 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
       if (!sa) return;
       const ans = sa.shiftAnswer;
       const correctShift = scenario.shifts[sIdx];
+      const TOL = 10;
+      const startWrong = correctShift && (ans.startDay !== correctShift.startDay || Math.abs(ans.startMin - correctShift.startMin) > TOL);
+      const endWrong = correctShift && (ans.endDay !== correctShift.endDay || Math.abs(ans.endMin - correctShift.endMin) > TOL);
+      // User's submitted START on this grid
       if (ans.startDay === dayN) {
-        markers.push({
-          min: ans.startMin,
-          kind: "start",
-          label: `Shift ${sIdx + 1} START · ${minToTimeStr(ans.startMin)}`,
-        });
+        if (startWrong) {
+          markers.push({ min: ans.startMin, kind: "start", color: "#94A3B8", flagText: "WRONG", label: `Wrong start · ${minToTimeStr(ans.startMin)}` });
+        } else {
+          markers.push({ min: ans.startMin, kind: "start", label: `Shift ${sIdx + 1} START · ${minToTimeStr(ans.startMin)}` });
+        }
       }
+      // Canonical correct START on this grid (only if user got it wrong)
+      if (startWrong && correctShift?.startDay === dayN) {
+        markers.push({ min: correctShift.startMin, kind: "start", label: `Actual Shift ${sIdx + 1} START · ${minToTimeStr(correctShift.startMin)}`, labelRow: 2 });
+      }
+      // User's submitted END on this grid
       if (ans.endDay === dayN) {
-        markers.push({
-          min: ans.endMin,
-          kind: "end",
-          label: `Shift ${sIdx + 1} END · ${minToTimeStr(ans.endMin)}`,
-          labelRow: 1,
-        });
+        if (endWrong) {
+          markers.push({ min: ans.endMin, kind: "end", color: "#94A3B8", flagText: "WRONG", label: `Wrong end · ${minToTimeStr(ans.endMin)}`, labelRow: 1 });
+        } else {
+          markers.push({ min: ans.endMin, kind: "end", label: `Shift ${sIdx + 1} END · ${minToTimeStr(ans.endMin)}`, labelRow: 1 });
+        }
+      }
+      // Canonical correct END on this grid (only if user got it wrong)
+      if (endWrong && correctShift?.endDay === dayN) {
+        markers.push({ min: correctShift.endMin, kind: "end", label: `Actual Shift ${sIdx + 1} END · ${minToTimeStr(correctShift.endMin)}`, labelRow: 2 });
       }
       // Show §395.3 cap end ONLY after the user has submitted their own
       // regulatory-end answer — otherwise the marker would spoil the question.

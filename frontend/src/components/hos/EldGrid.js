@@ -375,8 +375,12 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const color = sm.color || (isEnd ? "#DC2626" : isContinues ? "#F59E0B" : "#10B981");
           const labelRow = shiftLabelRows[i] || 0;
           const labelY = HEADER_H + 4 * ROW_H + 22 + labelRow * 12;
-          const flagText = isEnd ? "END" : isContinues ? "CONTINUES" : "START";
-          const flagW = compact ? (flagText === "CONTINUES" ? 60 : 36) : (flagText === "CONTINUES" ? 74 : 44);
+          const flagText = sm.flagText || (isEnd ? "END" : isContinues ? "CONTINUES" : "START");
+          // Auto-compute flag width from the text length so longer labels
+          // (like "WRONG START") don't get clipped while short ones stay
+          // compact.
+          const charPx = compact ? 5.5 : 6.5;
+          const flagW = Math.max(compact ? 24 : 32, Math.round(flagText.length * charPx) + (compact ? 8 : 10));
           const flagH = compact ? 11 : 13;
           // Flag chip sits ABOVE the hour-numbers header so it never covers
           // the time labels. y is negative inside the translated group, mapped
