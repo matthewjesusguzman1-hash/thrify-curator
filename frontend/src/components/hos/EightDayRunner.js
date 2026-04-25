@@ -183,7 +183,17 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
             tEnd={tEnd} setTEnd={setTEnd}
             tRegEnd={tRegEnd} setTRegEnd={setTRegEnd}
             onSubmitShift={(v) => {
-              setDayAnswers((a) => ({ ...a, [dayIdx]: { ...(a[dayIdx] || {}), shift: v } }));
+              setDayAnswers((a) => {
+                const cur = a[dayIdx] || {};
+                if (v === undefined) {
+                  // Unsubmit — used to "Keep editing" on multi-shift days.
+                  // Strip the committed shift but preserve violation answer
+                  // if any (the user can re-grade after re-submitting).
+                  const { shift, ...rest } = cur; // eslint-disable-line no-unused-vars
+                  return { ...a, [dayIdx]: rest };
+                }
+                return { ...a, [dayIdx]: { ...cur, shift: v } };
+              });
             }}
             onShiftNext={() => setDayPhase("violation")}
             onSubmitViolation={(v) => {
@@ -605,6 +615,7 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
           answered={answer?.shift !== undefined}
           answer={answer?.shift}
           onSubmit={onSubmitShift}
+          onUnsubmit={() => onSubmitShift(undefined)}
           onNext={onShiftNext}
           dayIdx={dayIdx}
         />
@@ -621,6 +632,7 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
           onNext={onViolationNext}
           dayIdx={dayIdx}
           isLast={dayIdx === totalDays - 1}
+          willAskRegEnd={day.regulatoryEndMin !== undefined}
         />
       )}
 
@@ -972,6 +984,7 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
           onNext={onViolationNext}
           dayIdx={dayIdx}
           isLast={dayIdx + 2 >= totalDays}
+          willAskRegEnd={(day1.regulatoryEndMin !== undefined) || (day2.regulatoryEndMin !== undefined)}
         />
       )}
 
@@ -1077,7 +1090,7 @@ function PairDayTimePicker({ label, color, value, onChange, day1Label, day2Label
  *  "Shift N") and a fresh pair of draggable handles re-appears so the user
  *  can place the next shift. When done they click "Done — submit shifts"
  *  to commit the array of work shifts as the day's answer. */
-function MultiShiftQ({ day, tStart, setTStart, tEnd, setTEnd, localShifts, setLocalShifts, answered, answer, onSubmit, onNext, dayIdx }) {
+function MultiShiftQ({ day, tStart, setTStart, tEnd, setTEnd, localShifts, setLocalShifts, answered, answer, onSubmit, onUnsubmit, onNext, dayIdx }) {
   const required = day.acceptableShifts || [];
 
   const addShift = () => {
@@ -1192,13 +1205,27 @@ function MultiShiftQ({ day, tStart, setTStart, tEnd, setTEnd, localShifts, setLo
           <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`day-${dayIdx}-shift-next`}>
             Next: violation check <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
+          {/* If the user missed one or more canonical work shifts, give them
+              a way to keep editing without restarting the whole day. */}
+          {!allCovered && onUnsubmit && (
+            <button
+              onClick={() => {
+                setLocalShifts(submittedShifts);
+                onUnsubmit();
+              }}
+              className="w-full text-[11.5px] font-bold text-[#92400E] hover:text-[#7C2D12] py-1.5 rounded border border-dashed border-[#FCD34D] hover:bg-[#FFFBEB]"
+              data-testid={`day-${dayIdx}-shifts-keep-editing`}
+            >
+              Keep editing — add the missed work shift
+            </button>
+          )}
         </>
       )}
     </div>
   );
 }
 
-function DayViolationQ({ day, correctValue, answered, answer, onPick, onNext, dayIdx, isLast }) {
+function DayViolationQ({ day, correctValue, answered, answer, onPick, onNext, dayIdx, isLast, willAskRegEnd = false }) {
   const choices = [
     { value: "none", label: "No violation" },
     { value: "11",   label: "11-hr drive" },
@@ -1250,7 +1277,16 @@ function DayViolationQ({ day, correctValue, answered, answer, onPick, onNext, da
             </div>
           )}
           <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`day-${dayIdx}-violation-next`}>
-            {isLast ? "Continue: 70-hr cycle check" : `Next day → Day ${dayIdx + 2}`} <ChevronRight className="w-4 h-4 ml-1" />
+            {(() => {
+              // If the user just called a 14-hr violation on a day with a
+              // canonical regulatoryEndMin, the next click triggers the
+              // "when SHOULD it have ended?" question — make the button label
+              // reflect that, NOT a misleading "Next day".
+              const userCalledFourteen = answer === "14" || answer === "multi" || answer === "both";
+              if (willAskRegEnd && userCalledFourteen) return "Next: when should the shift have ended?";
+              if (isLast) return "Continue: 70-hr cycle check";
+              return `Next day → Day ${dayIdx + 2}`;
+            })()} <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </>
       )}
