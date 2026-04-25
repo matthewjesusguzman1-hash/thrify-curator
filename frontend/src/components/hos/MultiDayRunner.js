@@ -5,75 +5,129 @@ import { EldGrid } from "./EldGrid";
 import { CfrText } from "../../lib/cfrLinks";
 
 /**
- * MultiDayRunner — drives the 2-day practice flow for 11/14 violations.
+ * MultiDayRunner — 2-day practice flow that presents BOTH day grids together
+ * and asks the inspector to identify shifts iteratively. Per shift: (1) drag
+ * START and END handles to mark its bounds — handles can sit on EITHER day's
+ * grid (the runner auto-detects which day from the drag position), so an
+ * overnight shift looks identical in the UI to a contained one. (2) pick the
+ * violation type. After each shift is graded, the runner asks "is there
+ * another shift?" — letting the user advance without the UI ever revealing
+ * how many shifts the scenario has or whether it's overnight.
  *
- * Scenario shape: { id, primer, days: [{ label, log, shiftStartMin,
- * shiftEndMin, continuesFromPrev?, continuesToNext?, regulatoryEndMin?,
- * violation11, violation14, explanation: { shift, violation } }, ...] }
- *
- * Flow (per scenario):
- *   1. Day 1 shift — drag green/red handles on Day 1 grid to mark shift
- *      START and END. For an overnight shift, drag END to 24:00 (right edge).
- *   2. Day 1 violation — multi-choice (none | 11 | 14 | both).
- *   3. Day 2 shift — drag handles on Day 2 grid. For overnight continuation,
- *      drag START to 00:00 (left edge).
- *   4. Day 2 violation — multi-choice.
- *   5. Done — full per-day explanations.
- *
- * A "Restart" button resets the active scenario; "Pick scenario" opens an
- * inline list for jumping to any scenario.
+ * Scenario shape:
+ *   id, primer,
+ *   priorDayLog?, priorDayNote?, nextDayLog?, nextDayNote?,
+ *   shifts: [
+ *     {
+ *       startDay: 1 | 2,
+ *       startMin,                        // 0..1440 within that day
+ *       endDay: 1 | 2,
+ *       endMin,                          // 0..1440 within that day
+ *       regulatoryEndDay?, regulatoryEndMin?,
+ *       violation11, violation14,
+ *       explanation: { shift, violation }
+ *     }, ...
+ *   ],
+ *   days: [{ label, log }, { label, log }]
  */
 export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 0 }) {
   const [idx, setIdx] = useState(initialIdx);
-  const [questionIdx, setQuestionIdx] = useState(0);
-  const [answers, setAnswers] = useState({});
-  const [t1Start, setT1Start] = useState("");
-  const [t1End, setT1End] = useState("");
-  const [t2Start, setT2Start] = useState("");
-  const [t2End, setT2End] = useState("");
   const [showPicker, setShowPicker] = useState(false);
 
+  // per-shift cursor: which shift the user is currently identifying
+  const [shiftIdx, setShiftIdx] = useState(0);
+  // current draggable handle state
+  const [tStart, setTStart] = useState({ day: 1, min: 8 * 60 });
+  const [tEnd, setTEnd] = useState({ day: 1, min: 18 * 60 });
+  // per-shift answers: array of { shiftAnswer:{startDay,startMin,endDay,endMin}, violation }
+  const [shiftAnswers, setShiftAnswers] = useState([]);
+  // phase within current shift: "shift" | "violation" | "another?"
+  const [phase, setPhase] = useState("shift");
+
   const scenario = scenarios[idx];
-  const questionKeys = ["day1Shift", "day1Violation", "day2Shift", "day2Violation"];
-  const currentQKey = questionIdx < questionKeys.length ? questionKeys[questionIdx] : null;
-  const done = questionIdx >= questionKeys.length;
+  const totalShifts = scenario.shifts.length;
+  const allShiftsDone = shiftIdx >= totalShifts;
+  const currentShift = !allShiftsDone ? scenario.shifts[shiftIdx] : null;
+  const currentAnswer = shiftAnswers[shiftIdx];
 
   const resetAll = (toIdx = idx) => {
     setIdx(toIdx);
-    setQuestionIdx(0);
-    setAnswers({});
-    setT1Start(""); setT1End(""); setT2Start(""); setT2End("");
+    setShiftIdx(0);
+    setShiftAnswers([]);
+    setPhase("shift");
+    setTStart({ day: 1, min: 8 * 60 });
+    setTEnd({ day: 1, min: 18 * 60 });
   };
   const nextScenario = () => resetAll((idx + 1) % scenarios.length);
   const restartScenario = () => resetAll(idx);
   const pickScenario = (newIdx) => { resetAll(newIdx); setShowPicker(false); };
 
-  const day1 = scenario.days[0];
-  const day2 = scenario.days[1];
+  // Markers for each grid: committed answers (all prior + current if in
+  // violation/another phase) + active draggable handles.
+  const buildMarkersForDay = (dayN) => {
+    const markers = [];
+    // committed answers — show their bounds on the grids they belong to
+    shiftAnswers.forEach((sa, sIdx) => {
+      if (!sa) return;
+      const ans = sa.shiftAnswer;
+      const correctShift = scenario.shifts[sIdx];
+      if (ans.startDay === dayN) {
+        markers.push({
+          min: ans.startMin,
+          kind: "start",
+          label: `Shift ${sIdx + 1} START · ${minToTimeStr(ans.startMin)}`,
+        });
+      }
+      if (ans.endDay === dayN) {
+        markers.push({
+          min: ans.endMin,
+          kind: "end",
+          label: `Shift ${sIdx + 1} END · ${minToTimeStr(ans.endMin)}`,
+          labelRow: 1,
+        });
+      }
+      // Show §395.3 cap end if this committed shift had a regulatory boundary
+      if (
+        correctShift?.regulatoryEndDay === dayN &&
+        correctShift?.regulatoryEndMin !== undefined &&
+        !(correctShift.regulatoryEndDay === ans.endDay && correctShift.regulatoryEndMin === ans.endMin)
+      ) {
+        markers.push({
+          min: correctShift.regulatoryEndMin,
+          kind: "end",
+          color: "#D4AF37",
+          label: `SHOULD have ended · ${minToTimeStr(correctShift.regulatoryEndMin)}`,
+          labelRow: 2,
+        });
+      }
+    });
+    // active draggable handles for the in-progress shift
+    if (phase === "shift" && !allShiftsDone) {
+      if (tStart.day === dayN) {
+        markers.push({
+          min: tStart.min,
+          kind: "start",
+          markerId: "shiftStart",
+          draggable: true,
+          label: `Drag → START · ${minToTimeStr(tStart.min)}`,
+        });
+      }
+      if (tEnd.day === dayN) {
+        markers.push({
+          min: tEnd.min,
+          kind: "end",
+          markerId: "shiftEnd",
+          draggable: true,
+          label: `Drag → END · ${minToTimeStr(tEnd.min)}`,
+          labelRow: 1,
+        });
+      }
+    }
+    return markers;
+  };
 
-  // Drag targets for each day's shift question
-  const day1ShiftActive = currentQKey === "day1Shift" && answers.day1Shift === undefined;
-  const day2ShiftActive = currentQKey === "day2Shift" && answers.day2Shift === undefined;
-
-  const day1Markers = useMemo(() => buildMarkers({
-    day: day1,
-    committedAnswer: answers.day1Shift,
-    active: day1ShiftActive,
-    tStart: t1Start,
-    tEnd: t1End,
-    startId: "day1Start",
-    endId: "day1End",
-  }), [day1, answers.day1Shift, day1ShiftActive, t1Start, t1End]);
-
-  const day2Markers = useMemo(() => buildMarkers({
-    day: day2,
-    committedAnswer: answers.day2Shift,
-    active: day2ShiftActive,
-    tStart: t2Start,
-    tEnd: t2End,
-    startId: "day2Start",
-    endId: "day2End",
-  }), [day2, answers.day2Shift, day2ShiftActive, t2Start, t2End]);
+  const day1Markers = useMemo(() => buildMarkersForDay(1), [shiftAnswers, phase, tStart, tEnd, allShiftsDone, scenario]);
+  const day2Markers = useMemo(() => buildMarkersForDay(2), [shiftAnswers, phase, tStart, tEnd, allShiftsDone, scenario]);
 
   return (
     <div className="space-y-3">
@@ -81,27 +135,14 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
       <div className="flex items-center gap-2 px-1 flex-wrap">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] flex-1 min-w-[120px]">
           Scenario {idx + 1} of {scenarios.length}
-          {scenario.title && <span className="ml-1.5 text-[#002855] normal-case tracking-normal">· {scenario.title}</span>}
         </p>
-        <button
-          onClick={() => setShowPicker((v) => !v)}
-          className="text-[10.5px] font-bold text-[#002855] hover:text-[#D4AF37] flex items-center gap-1 px-2 py-1 rounded border border-[#E2E8F0] hover:border-[#D4AF37]"
-          data-testid={`${category}-pick-scenario-btn`}
-        >
+        <button onClick={() => setShowPicker((v) => !v)} className="text-[10.5px] font-bold text-[#002855] hover:text-[#D4AF37] flex items-center gap-1 px-2 py-1 rounded border border-[#E2E8F0] hover:border-[#D4AF37]" data-testid={`${category}-pick-scenario-btn`}>
           <List className="w-3 h-3" /> Pick scenario
         </button>
-        <button
-          onClick={restartScenario}
-          className="text-[10.5px] font-bold text-[#002855] hover:text-[#D4AF37] flex items-center gap-1 px-2 py-1 rounded border border-[#E2E8F0] hover:border-[#D4AF37]"
-          data-testid={`${category}-restart-btn`}
-        >
+        <button onClick={restartScenario} className="text-[10.5px] font-bold text-[#002855] hover:text-[#D4AF37] flex items-center gap-1 px-2 py-1 rounded border border-[#E2E8F0] hover:border-[#D4AF37]" data-testid={`${category}-restart-btn`}>
           <Repeat className="w-3 h-3" /> Restart
         </button>
-        <button
-          onClick={nextScenario}
-          className="text-[11px] font-bold text-[#002855] hover:text-[#D4AF37] flex items-center gap-0.5"
-          data-testid={`${category}-next-scenario-btn`}
-        >
+        <button onClick={nextScenario} className="text-[11px] font-bold text-[#002855] hover:text-[#D4AF37] flex items-center gap-0.5" data-testid={`${category}-next-scenario-btn`}>
           Next <ChevronRight className="w-3 h-3" />
         </button>
       </div>
@@ -109,14 +150,9 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
       {showPicker && (
         <div className="bg-white rounded-xl border border-[#D4AF37]/40 p-2 max-h-[40vh] overflow-y-auto space-y-1" data-testid={`${category}-scenario-picker`}>
           {scenarios.map((s, i) => (
-            <button
-              key={s.id || i}
-              onClick={() => pickScenario(i)}
-              className={`w-full text-left rounded-md px-2.5 py-1.5 text-[12px] transition-colors flex items-start gap-2 ${
-                i === idx ? "bg-[#FFFBEB] border border-[#D4AF37]" : "hover:bg-[#F8FAFC] border border-transparent"
-              }`}
-              data-testid={`${category}-scenario-pick-${i}`}
-            >
+            <button key={s.id || i} onClick={() => pickScenario(i)}
+              className={`w-full text-left rounded-md px-2.5 py-1.5 text-[12px] flex items-start gap-2 ${i === idx ? "bg-[#FFFBEB] border border-[#D4AF37]" : "hover:bg-[#F8FAFC] border border-transparent"}`}
+              data-testid={`${category}-scenario-pick-${i}`}>
               <span className="font-mono text-[#64748B] flex-shrink-0">{String(i + 1).padStart(2, "0")}</span>
               <span className="font-bold text-[#002855]">{s.title || s.id || `Scenario ${i + 1}`}</span>
             </button>
@@ -124,7 +160,7 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
         </div>
       )}
 
-      {/* Pre-scenario primer — explains WHAT is being tested before the user dives in. */}
+      {/* Pre-scenario primer */}
       {scenario.primer && (
         <div className="rounded-xl border-l-[3px] border-[#3B82F6] bg-[#EEF6FF] p-3" data-testid="scenario-primer">
           <div className="flex items-center gap-1.5 mb-1">
@@ -135,104 +171,100 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
         </div>
       )}
 
-      {/* Day BEFORE — readonly context so the inspector can see how overnight
-       * rest patterns started before Day 1 (relevant for 10-hr reset and
-       * split-sleeper provision analysis). */}
+      {/* Day before — context */}
       {scenario.priorDayLog && (
-        <ContextDayStrip
-          label="Day before"
-          log={scenario.priorDayLog}
-          note={scenario.priorDayNote}
-          testid="prior-day-strip"
-        />
+        <ContextDayStrip label="Day before" log={scenario.priorDayLog} note={scenario.priorDayNote} testid="prior-day-strip" />
       )}
 
-      {/* Day 1 grid */}
+      {/* Day 1 + Day 2 grids — always both visible (no day-by-day reveal) */}
       <DaySection
-        label={day1.label}
-        log={day1.log}
+        label={scenario.days[0].label}
+        log={scenario.days[0].log}
         markers={day1Markers}
-        active={day1ShiftActive}
-        onMarkerDrag={day1ShiftActive ? (kind, markerId, newMin) => {
-          const hhmm = minToTimeStr(newMin);
-          if (markerId === "day1Start") setT1Start(hhmm);
-          else if (markerId === "day1End") setT1End(hhmm);
+        active={phase === "shift" && !allShiftsDone}
+        onMarkerDrag={phase === "shift" && !allShiftsDone ? (kind, markerId, newMin) => {
+          if (markerId === "shiftStart") setTStart({ day: 1, min: newMin });
+          else if (markerId === "shiftEnd") setTEnd({ day: 1, min: newMin });
+        } : null}
+      />
+      <DaySection
+        label={scenario.days[1].label}
+        log={scenario.days[1].log}
+        markers={day2Markers}
+        active={phase === "shift" && !allShiftsDone}
+        onMarkerDrag={phase === "shift" && !allShiftsDone ? (kind, markerId, newMin) => {
+          if (markerId === "shiftStart") setTStart({ day: 2, min: newMin });
+          else if (markerId === "shiftEnd") setTEnd({ day: 2, min: newMin });
         } : null}
       />
 
-      {/* Day 1 shift question card */}
-      {currentQKey === "day1Shift" && (
-        <ShiftCard
-          day={day1}
-          tStart={t1Start} setTStart={setT1Start}
-          tEnd={t1End} setTEnd={setT1End}
-          answered={answers.day1Shift !== undefined}
-          answer={answers.day1Shift}
-          onSubmit={(v) => setAnswers((a) => ({ ...a, day1Shift: v }))}
-          onNext={() => setQuestionIdx((q) => q + 1)}
-          testid="q-day1-shift"
+      {/* Active shift question */}
+      {!allShiftsDone && phase === "shift" && (
+        <ShiftQuestionCard
+          tStart={tStart} setTStart={setTStart}
+          tEnd={tEnd} setTEnd={setTEnd}
+          onSubmit={() => {
+            const ans = { startDay: tStart.day, startMin: tStart.min, endDay: tEnd.day, endMin: tEnd.min };
+            const updated = [...shiftAnswers];
+            updated[shiftIdx] = { shiftAnswer: ans };
+            setShiftAnswers(updated);
+            setPhase("violation");
+          }}
+          shift={currentShift}
+          answer={currentAnswer?.shiftAnswer}
+          phase={phase}
+          onAdvance={() => setPhase("violation")}
+          testid={`shift-${shiftIdx}`}
         />
       )}
 
-      {/* Day 1 violation question card */}
-      {questionIdx >= 1 && (
-        <ViolationCard
-          day={day1}
-          answered={answers.day1Violation !== undefined}
-          answer={answers.day1Violation}
-          onPick={(v) => setAnswers((a) => ({ ...a, day1Violation: v }))}
-          onNext={() => setQuestionIdx((q) => q + 1)}
-          testid="q-day1-violation"
+      {/* Violation question for the just-identified shift */}
+      {!allShiftsDone && phase === "violation" && currentAnswer?.shiftAnswer && (
+        <ViolationQuestionCard
+          shift={currentShift}
+          answered={currentAnswer.violation !== undefined}
+          answer={currentAnswer.violation}
+          onPick={(v) => {
+            const updated = [...shiftAnswers];
+            updated[shiftIdx] = { ...updated[shiftIdx], violation: v };
+            setShiftAnswers(updated);
+          }}
+          onNext={() => setPhase("another?")}
+          testid={`violation-${shiftIdx}`}
         />
       )}
 
-      {/* Day 2 grid (only after Day 1 violation answered) */}
-      {questionIdx >= 2 && (
-        <DaySection
-          label={day2.label}
-          log={day2.log}
-          markers={day2Markers}
-          active={day2ShiftActive}
-          onMarkerDrag={day2ShiftActive ? (kind, markerId, newMin) => {
-            const hhmm = minToTimeStr(newMin);
-            if (markerId === "day2Start") setT2Start(hhmm);
-            else if (markerId === "day2End") setT2End(hhmm);
-          } : null}
+      {/* "Another shift?" — neutral wording, doesn't reveal scenario count */}
+      {!allShiftsDone && phase === "another?" && (
+        <AnotherShiftCard
+          onYes={() => {
+            setShiftIdx((i) => i + 1);
+            setPhase("shift");
+            setTStart({ day: 1, min: 8 * 60 });
+            setTEnd({ day: 1, min: 18 * 60 });
+          }}
+          onNo={() => {
+            // User declares "no more shifts". If they're correct (matches
+            // total), advance to all-done. If not, mark wrong-answer and
+            // advance anyway so they can review.
+            setShiftIdx(totalShifts);
+            setPhase("done");
+          }}
+          testid={`another-${shiftIdx}`}
         />
       )}
 
-      {/* Day 2 shift question card */}
-      {currentQKey === "day2Shift" && (
-        <ShiftCard
-          day={day2}
-          tStart={t2Start} setTStart={setT2Start}
-          tEnd={t2End} setTEnd={setT2End}
-          answered={answers.day2Shift !== undefined}
-          answer={answers.day2Shift}
-          onSubmit={(v) => setAnswers((a) => ({ ...a, day2Shift: v }))}
-          onNext={() => setQuestionIdx((q) => q + 1)}
-          testid="q-day2-shift"
-        />
+      {/* Day after — only visible after all answers, since revealing it
+          earlier could give away whether shifts continued. */}
+      {allShiftsDone && scenario.nextDayLog && (
+        <ContextDayStrip label="Day after" log={scenario.nextDayLog} note={scenario.nextDayNote} testid="next-day-strip" />
       )}
 
-      {questionIdx >= 3 && (
-        <ViolationCard
-          day={day2}
-          answered={answers.day2Violation !== undefined}
-          answer={answers.day2Violation}
-          onPick={(v) => setAnswers((a) => ({ ...a, day2Violation: v }))}
-          onNext={() => setQuestionIdx((q) => q + 1)}
-          testid="q-day2-violation"
-        />
-      )}
-
-      {/* Day AFTER — readonly context strip, visible once Day 2 grid is shown. */}
-      {questionIdx >= 2 && scenario.nextDayLog && (
-        <ContextDayStrip
-          label="Day after"
-          log={scenario.nextDayLog}
-          note={scenario.nextDayNote}
-          testid="next-day-strip"
+      {/* Summary card after user declares no more shifts */}
+      {allShiftsDone && (
+        <ResultsSummary
+          scenario={scenario}
+          shiftAnswers={shiftAnswers}
         />
       )}
     </div>
@@ -241,9 +273,6 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
 
 /* ─── Sub-components ─── */
 
-/** Readonly context strip — renders the prior-day or next-day log so the
- *  inspector can see overnight rest patterns adjacent to the focal days. No
- *  drag handles, no questions; just the grid + an optional caption. */
 function ContextDayStrip({ label, log, note, testid }) {
   return (
     <section className="bg-[#F8FAFC] rounded-xl border border-dashed border-[#CBD5E1] overflow-hidden opacity-90" data-testid={testid}>
@@ -253,9 +282,7 @@ function ContextDayStrip({ label, log, note, testid }) {
       </div>
       <div className="p-2">
         <EldGrid entries={log} />
-        {note && (
-          <p className="text-[11px] text-[#64748B] leading-relaxed mt-1.5 px-1 italic">{note}</p>
-        )}
+        {note && <p className="text-[11px] text-[#64748B] leading-relaxed mt-1.5 px-1 italic">{note}</p>}
       </div>
     </section>
   );
@@ -269,114 +296,95 @@ function DaySection({ label, log, markers, active, onMarkerDrag }) {
         <p className="text-[12.5px] font-bold">{label}</p>
         {active && (
           <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-[#D4AF37]">
-            <Hand className="w-3 h-3" /> drag the handles
+            <Hand className="w-3 h-3" /> drag to either day's grid
           </span>
         )}
       </div>
       <div className="p-2">
-        <EldGrid
-          entries={log}
-          shiftMarkers={markers}
-          onMarkerDrag={onMarkerDrag}
-        />
+        <EldGrid entries={log} shiftMarkers={markers} onMarkerDrag={onMarkerDrag} />
       </div>
     </section>
   );
 }
 
-function ShiftCard({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, onSubmit, onNext, testid }) {
-  const submit = () => {
-    const sMin = timeStrToMin(tStart);
-    const eMin = timeStrToMin(tEnd);
-    if (sMin === null || eMin === null) return;
-    onSubmit({ start: sMin, end: eMin });
-  };
-
-  let correct = false;
-  if (answered) {
-    const normEnd = answer.end === 0 && day.shiftEndMin === 24 * 60 ? 24 * 60 : answer.end;
-    correct =
-      Math.abs(answer.start - day.shiftStartMin) <= 10 &&
-      Math.abs(normEnd - day.shiftEndMin) <= 10;
-  }
-
+function ShiftQuestionCard({ tStart, setTStart, tEnd, setTEnd, onSubmit, testid }) {
   return (
     <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 space-y-3" data-testid={testid}>
       <div className="flex items-start gap-2">
         <Target className="w-4 h-4 text-[#002855] mt-0.5 flex-shrink-0" />
-        <p className="text-[13px] font-bold text-[#002855] leading-snug">
-          When did {day.label}'s work shift START and END?
-        </p>
+        <p className="text-[13px] font-bold text-[#002855] leading-snug">When did this work shift START and END?</p>
       </div>
-      {!answered && (
-        <>
-          <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">
-            {day.continuesFromPrev
-              ? "This shift started on the previous day. Drag START to 00:00 (left edge) to indicate it continued from yesterday, and drag END to where the driver finally stopped today. (Or type 00:00 in the START field.)"
-              : day.continuesToNext
-              ? "This shift continued past midnight. Drag START to where the driver began, and drag END to 24:00 (right edge) to indicate the shift continued into tomorrow. (Or type 00:00 in the END field — it will be accepted as 24:00 / end-of-day.)"
-              : "Drag the green START and red END handles on the grid above (snaps to 15-min). Or type HH:MM (24-hr) below."}
-          </p>
-          <div className="space-y-2">
-            <div className="flex gap-2 items-center">
-              <label className="text-[11px] font-bold text-[#475569] w-28">Shift START:</label>
-              <input type="time" value={tStart} onChange={(e) => setTStart(e.target.value)}
-                className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#10B981] focus:border-[#002855] focus:outline-none"
-                data-testid={`${testid}-start`} />
-            </div>
-            <div className="flex gap-2 items-center">
-              <label className="text-[11px] font-bold text-[#475569] w-28">Shift END:</label>
-              <input type="time" value={tEnd} onChange={(e) => setTEnd(e.target.value)}
-                className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#DC2626] focus:border-[#002855] focus:outline-none"
-                data-testid={`${testid}-end`} />
-            </div>
-            <Button onClick={submit} disabled={!tStart || !tEnd} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-submit`}>
-              Submit
-            </Button>
-          </div>
-        </>
-      )}
-      {answered && (
-        <>
-          <div className="space-y-1 text-[12px] font-mono">
-            <div className="flex justify-between"><span>Shift START:</span><span className="font-bold">Your: {minToTimeStr(answer.start)} &nbsp;·&nbsp; Correct: {minToTimeStr(day.shiftStartMin)}</span></div>
-            <div className="flex justify-between"><span>Shift END:</span><span className="font-bold">Your: {minToTimeStr(answer.end)} &nbsp;·&nbsp; Correct: {minToTimeStr(day.shiftEndMin)}</span></div>
-          </div>
-          <div className={`rounded-lg p-3 border ${correct ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`} data-testid={`${testid}-feedback`}>
-            <div className="flex items-center gap-2 mb-1">
-              {correct ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />}
-              <p className="text-[12px] font-bold text-[#334155]">{correct ? "Correct" : "Not quite — here's why"}</p>
-            </div>
-            <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={day.explanation.shift} /></p>
-          </div>
-          <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-next`}>
-            Next question <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        </>
-      )}
+      <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">
+        Drag the green / red handles onto whichever day's grid the bounds fall on. You can also pick the day + time manually below.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <DayTimePicker
+          label="Shift START"
+          color="#10B981"
+          value={tStart}
+          onChange={setTStart}
+          testid={`${testid}-start`}
+        />
+        <DayTimePicker
+          label="Shift END"
+          color="#DC2626"
+          value={tEnd}
+          onChange={setTEnd}
+          testid={`${testid}-end`}
+        />
+      </div>
+      <Button onClick={onSubmit} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-submit`}>
+        Submit shift
+      </Button>
     </div>
   );
 }
 
-function ViolationCard({ day, answered, answer, onPick, onNext, testid }) {
+function DayTimePicker({ label, color, value, onChange, testid }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] font-bold uppercase tracking-wider text-[#475569]" style={{ color }}>{label}</label>
+      <select
+        value={value.day}
+        onChange={(e) => onChange({ ...value, day: Number(e.target.value) })}
+        className="w-full px-2 py-1.5 text-[12px] font-bold border border-[#CBD5E1] rounded-md outline-none focus:border-[#002855]"
+        data-testid={`${testid}-day`}
+      >
+        <option value={1}>Day 1</option>
+        <option value={2}>Day 2</option>
+      </select>
+      <input
+        type="time"
+        value={minToTimeStr(value.min)}
+        onChange={(e) => {
+          const m = timeStrToMin(e.target.value);
+          if (m !== null) onChange({ ...value, min: m });
+        }}
+        className="w-full px-2 py-1.5 text-sm font-mono font-bold border border-[#CBD5E1] rounded-md outline-none focus:border-[#002855]"
+        style={{ color }}
+        data-testid={testid}
+      />
+    </div>
+  );
+}
+
+function ViolationQuestionCard({ shift, answered, answer, onPick, onNext, testid }) {
   const choices = [
     { value: "none", label: "No violation" },
-    { value: "11",   label: "11-hr driving" },
-    { value: "14",   label: "14-hr work shift" },
-    { value: "both", label: "Both" },
+    { value: "11",   label: "11-hr drive" },
+    { value: "14",   label: "14-hr shift" },
+    { value: "both", label: "Both 11 and 14" },
   ];
-  const correctValue =
-    day.violation11 && day.violation14 ? "both" :
-    day.violation11 ? "11" :
-    day.violation14 ? "14" : "none";
-
+  const correctValue = (
+    shift.violation11 && shift.violation14 ? "both" :
+    shift.violation11 ? "11" :
+    shift.violation14 ? "14" : "none"
+  );
   return (
     <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 space-y-3" data-testid={testid}>
       <div className="flex items-start gap-2">
         <Target className="w-4 h-4 text-[#002855] mt-0.5 flex-shrink-0" />
-        <p className="text-[13px] font-bold text-[#002855] leading-snug">
-          Does {day.label}'s shift have an 11- or 14-hour violation?
-        </p>
+        <p className="text-[13px] font-bold text-[#002855] leading-snug">Was there an 11- or 14-hour violation on the shift you just identified?</p>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {choices.map((c) => {
@@ -384,18 +392,14 @@ function ViolationCard({ day, answered, answer, onPick, onNext, testid }) {
           const right = answered && c.value === correctValue;
           const wrong = picked && !right;
           return (
-            <button
-              key={c.value}
-              onClick={() => !answered && onPick(c.value)}
-              disabled={answered}
+            <button key={c.value} onClick={() => !answered && onPick(c.value)} disabled={answered}
               className={`rounded-lg border-2 py-2 text-[12px] font-bold transition-colors ${
                 right ? "border-[#10B981] bg-[#DCFCE7] text-[#065F46]" :
                 wrong ? "border-[#DC2626] bg-[#FEE2E2] text-[#7F1D1D]" :
                 picked ? "border-[#002855] bg-[#002855]/5 text-[#002855]" :
                 answered ? "border-[#E2E8F0] opacity-40" : "border-[#CBD5E1] hover:border-[#002855]"
               }`}
-              data-testid={`${testid}-${c.value}`}
-            >
+              data-testid={`${testid}-${c.value}`}>
               {c.label}
             </button>
           );
@@ -403,70 +407,94 @@ function ViolationCard({ day, answered, answer, onPick, onNext, testid }) {
       </div>
       {answered && (
         <>
-          <div className={`rounded-lg p-3 border ${answer === correctValue ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`} data-testid={`${testid}-feedback`}>
+          <div className={`rounded-md p-2.5 border ${answer === correctValue ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`}>
             <div className="flex items-center gap-2 mb-1">
               {answer === correctValue ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
-              <p className="text-[12px] font-bold text-[#334155]">{answer === correctValue ? "Correct" : `Not quite — correct answer is "${choices.find((c) => c.value === correctValue).label}"`}</p>
+              <p className="text-[12px] font-bold text-[#334155]">{answer === correctValue ? "Correct" : `Correct: ${choices.find((c) => c.value === correctValue).label}`}</p>
             </div>
-            <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={day.explanation.violation} /></p>
+            <p className="text-[11.5px] text-[#334155] leading-relaxed"><CfrText text={shift.explanation.violation} /></p>
           </div>
-          {!testid.includes("day2") && (
-            <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-next`}>
-              Next question <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          )}
+          <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-next`}>
+            Continue <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
         </>
       )}
     </div>
   );
 }
 
-/* ─── Marker builder ─── */
+function AnotherShiftCard({ onYes, onNo, testid }) {
+  return (
+    <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 space-y-3" data-testid={testid}>
+      <div className="flex items-start gap-2">
+        <Target className="w-4 h-4 text-[#002855] mt-0.5 flex-shrink-0" />
+        <p className="text-[13px] font-bold text-[#002855] leading-snug">Is there another work shift in these two days that you haven't identified yet?</p>
+      </div>
+      <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">
+        Look at the grids above — if every work segment is bounded by the shift markers you've already placed, choose "No more shifts". Otherwise pick "Yes — identify next" and bracket the next shift.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <Button onClick={onYes} variant="outline" className="border-[#E2E8F0]" data-testid={`${testid}-yes`}>
+          Yes — identify next shift
+        </Button>
+        <Button onClick={onNo} className="bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-no`}>
+          No more shifts
+        </Button>
+      </div>
+    </div>
+  );
+}
 
-function buildMarkers({ day, committedAnswer, active, tStart, tEnd, startId, endId }) {
-  const markers = [];
-  // Committed answer → permanent markers showing the correct bounds
-  if (committedAnswer !== undefined) {
-    markers.push({
-      min: day.shiftStartMin,
-      kind: "start",
-      label: `Shift START · ${minToTimeStr(day.shiftStartMin)}`,
-    });
-    markers.push({
-      min: day.shiftEndMin,
-      kind: "end",
-      label: day.continuesToNext ? `Continues into next day · 24:00` : `Shift END · ${minToTimeStr(day.shiftEndMin)}`,
-      labelRow: 1,
-    });
-    if (day.regulatoryEndMin !== undefined && day.regulatoryEndMin !== day.shiftEndMin) {
-      markers.push({
-        min: day.regulatoryEndMin,
-        kind: "end",
-        color: "#D4AF37",
-        label: `SHOULD have ended · ${minToTimeStr(day.regulatoryEndMin)}`,
-        labelRow: 2,
-      });
-    }
-  }
-  // Active question → draggable handles
-  if (active) {
-    markers.push({
-      min: timeStrToMin(tStart || "08:00") ?? 8 * 60,
-      kind: "start",
-      markerId: startId,
-      draggable: true,
-      label: `Drag → START · ${tStart || "08:00"}`,
-    });
-    markers.push({
-      min: timeStrToMin(tEnd || "18:00") ?? 18 * 60,
-      kind: "end",
-      markerId: endId,
-      draggable: true,
-      label: `Drag → END · ${tEnd || "18:00"}`,
-      labelRow: 1,
-    });
-  }
-  return markers;
+function ResultsSummary({ scenario, shiftAnswers }) {
+  const totalShifts = scenario.shifts.length;
+  const userIdentified = shiftAnswers.filter((a) => a?.shiftAnswer).length;
+  const countMatch = userIdentified === totalShifts;
+
+  return (
+    <section className="bg-white rounded-xl border-2 border-[#D4AF37]/40 overflow-hidden" data-testid="multi-results">
+      <div className="bg-[#FFFBEB] px-3 py-2 flex items-center gap-2 border-b border-[#D4AF37]/30">
+        <Target className="w-4 h-4 text-[#D4AF37]" />
+        <p className="text-[12px] font-bold text-[#002855]">Inspection summary</p>
+        <span className={`ml-auto text-[10.5px] font-bold px-2 py-0.5 rounded ${countMatch ? "bg-[#10B981]/15 text-[#065F46]" : "bg-[#F59E0B]/20 text-[#92400E]"}`}>
+          {userIdentified} / {totalShifts} shifts identified
+        </span>
+      </div>
+      <div className="p-3 space-y-3">
+        {!countMatch && (
+          <div className="rounded-md p-2.5 border border-[#F59E0B] bg-[#FFFBEB]">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
+              <p className="text-[12px] font-bold text-[#334155]">
+                {userIdentified < totalShifts
+                  ? `Missed ${totalShifts - userIdentified} shift${totalShifts - userIdentified === 1 ? "" : "s"}`
+                  : `Identified ${userIdentified - totalShifts} extra shift${userIdentified - totalShifts === 1 ? "" : "s"} that don't exist`}
+              </p>
+            </div>
+          </div>
+        )}
+        {scenario.shifts.map((s, i) => {
+          const ua = shiftAnswers[i]?.shiftAnswer;
+          const startMatch = ua && ua.startDay === s.startDay && Math.abs(ua.startMin - s.startMin) <= 10;
+          const endMatch = ua && ua.endDay === s.endDay && Math.abs(ua.endMin - s.endMin) <= 10;
+          const fullMatch = startMatch && endMatch;
+          return (
+            <div key={i} className={`rounded-md border p-2.5 ${ua ? (fullMatch ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]") : "border-[#DC2626] bg-[#FEE2E2]"}`}>
+              <p className="text-[11.5px] font-bold text-[#002855] mb-1">Canonical shift {i + 1}</p>
+              <div className="text-[11.5px] font-mono text-[#334155]">
+                <p>Correct: Day {s.startDay} {minToTimeStr(s.startMin)} → Day {s.endDay} {minToTimeStr(s.endMin)}</p>
+                {ua ? (
+                  <p>You marked: Day {ua.startDay} {minToTimeStr(ua.startMin)} → Day {ua.endDay} {minToTimeStr(ua.endMin)} {fullMatch ? "✓" : ""}</p>
+                ) : (
+                  <p className="text-[#991B1B]">Not identified.</p>
+                )}
+              </div>
+              <p className="text-[11.5px] text-[#334155] leading-relaxed mt-1.5"><CfrText text={s.explanation.shift} /></p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 /* ─── Time helpers ─── */
