@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, CheckCircle2, XCircle, Target, AlertTriangle, Hand, Repeat, List, Calculator, Shield, ShieldOff } from "lucide-react";
 import { Button } from "../ui/button";
 import { EldGrid } from "./EldGrid";
@@ -474,16 +474,34 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
   );
 
   const day1ShiftActive = phase === "shift" && answer?.shift === undefined;
-  const isMultiPair = !isOffDay && day.requireAllPairings === true;
+  const isMultiShift = !isOffDay && day.requireAllPairings === true;
+  // For multi-shift days the user iteratively places work shifts using the
+  // green/red draggable handles. Submitted shifts so far are stored locally
+  // until the user clicks "Done" to commit them as the day's answer.
+  const [localShifts, setLocalShifts] = useState([]);
+  useEffect(() => { if (!answer?.shift) setLocalShifts([]); }, [answer?.shift]);
   const markers = useMemo(() => {
     const m = [];
+    // Submitted (not-yet-committed) work shifts on a multi-shift day — show
+    // each as a green/red marker pair labelled "Shift N".
+    if (isMultiShift && day1ShiftActive && localShifts.length > 0) {
+      localShifts.forEach((s, i) => {
+        m.push({ min: s.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(s.start)}` });
+        m.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}`, labelRow: 1 });
+      });
+    }
     if (answer?.shift && !answer.shift.off) {
-      if (answer.shift.multi && Array.isArray(answer.shift.pairings)) {
-        // Render every pairing the user submitted, stacking labels so they
-        // don't collide.
+      if (answer.shift.multi && Array.isArray(answer.shift.shifts)) {
+        // Render every submitted work shift as Shift 1, Shift 2, ...
+        answer.shift.shifts.forEach((s, i) => {
+          m.push({ min: s.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(s.start)}` });
+          m.push({ min: s.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(s.end)}`, labelRow: 1 });
+        });
+      } else if (answer.shift.multi && Array.isArray(answer.shift.pairings)) {
+        // Backward-compat: legacy answers stored shifts under the `pairings` key.
         answer.shift.pairings.forEach((p, i) => {
-          m.push({ min: p.start, kind: "start", label: `P${i + 1} START · ${minToTimeStr(p.start)}` });
-          m.push({ min: p.end, kind: "end", label: `P${i + 1} END · ${minToTimeStr(p.end)}`, labelRow: 1 });
+          m.push({ min: p.start, kind: "start", label: `Shift ${i + 1} START · ${minToTimeStr(p.start)}` });
+          m.push({ min: p.end, kind: "end", label: `Shift ${i + 1} END · ${minToTimeStr(p.end)}`, labelRow: 1 });
         });
       } else {
         // After answering, show the USER's shift bounds (not always the canonical
@@ -520,7 +538,7 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
       });
     }
     return m;
-  }, [day, answer, day1ShiftActive, tStart, tEnd, tRegEnd, isOffDay, phase]);
+  }, [day, answer, day1ShiftActive, tStart, tEnd, tRegEnd, isOffDay, phase, isMultiShift, localShifts]);
 
   return (
     <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden space-y-0" data-testid={`day-card-${dayIdx}`}>
@@ -561,7 +579,7 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
       )}
 
       {/* Shift question */}
-      {!isOffDay && phase === "shift" && !isMultiPair && (
+      {!isOffDay && phase === "shift" && !isMultiShift && (
         <DayShiftQ
           day={day} tStart={tStart} setTStart={setTStart} tEnd={tEnd} setTEnd={setTEnd}
           answered={answer?.shift !== undefined}
@@ -572,10 +590,17 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
         />
       )}
 
-      {/* Multi-pairing shift question (split-sleeper days with > 1 work segments) */}
-      {!isOffDay && phase === "shift" && isMultiPair && (
-        <MultiPairingShiftQ
+      {/* Multi-shift day (split-sleeper or other multi-segment days) — user
+          places multiple Shift START/END pairs using the same green/red
+          draggable handles, then clicks Done to commit them all as the day's
+          answer. */}
+      {!isOffDay && phase === "shift" && isMultiShift && (
+        <MultiShiftQ
           day={day}
+          tStart={tStart} setTStart={setTStart}
+          tEnd={tEnd} setTEnd={setTEnd}
+          localShifts={localShifts}
+          setLocalShifts={setLocalShifts}
           answered={answer?.shift !== undefined}
           answer={answer?.shift}
           onSubmit={onSubmitShift}
@@ -1044,32 +1069,39 @@ function PairDayTimePicker({ label, color, value, onChange, day1Label, day2Label
   );
 }
 
-/* ─── Multi-pairing shift question (split-sleeper days with multiple work segments) ─── */
-function MultiPairingShiftQ({ day, answered, answer, onSubmit, onNext, dayIdx }) {
-  const [pairings, setPairings] = useState([]);
-  const [tStart, setTStart] = useState("");
-  const [tEnd, setTEnd] = useState("");
+/* ─── Multi-shift question (split-sleeper / multi-segment work days) ─── */
+/** The user iteratively places work shifts using the green/red draggable
+ *  handles on the day's grid. After each "Add work shift" submission the
+ *  shift is committed (rendered as a static green/red marker pair labeled
+ *  "Shift N") and a fresh pair of draggable handles re-appears so the user
+ *  can place the next shift. When done they click "Done — submit shifts"
+ *  to commit the array of work shifts as the day's answer. */
+function MultiShiftQ({ day, tStart, setTStart, tEnd, setTEnd, localShifts, setLocalShifts, answered, answer, onSubmit, onNext, dayIdx }) {
   const required = day.acceptableShifts || [];
 
-  const submitOne = () => {
+  const addShift = () => {
     const sMin = timeStrToMin(tStart);
     const eMin = timeStrToMin(tEnd);
     if (sMin === null || eMin === null) return;
-    setPairings((p) => [...p, { start: sMin, end: eMin }]);
+    setLocalShifts((p) => [...p, { start: sMin, end: eMin }]);
     setTStart(""); setTEnd("");
   };
   const finish = () => {
-    onSubmit({ multi: true, pairings });
+    onSubmit({ multi: true, shifts: localShifts });
   };
 
-  // Match each user pairing to a canonical pairing within ±10 min tolerance.
-  // Each canonical pairing can only be matched once.
+  // Pull submitted shifts off the answer (supports both `shifts` and the
+  // legacy `pairings` key for older saved answers).
+  const submittedShifts = answered ? (answer.shifts || answer.pairings || []) : [];
+
+  // Match each user shift to a canonical shift within ±10 min tolerance.
+  // Each canonical shift can only be matched once.
   let correctCount = 0;
-  let matchedRequired = new Array(required.length).fill(false);
-  let userMatchIdx = [];
-  if (answered && answer?.multi) {
-    answer.pairings.forEach((p) => {
-      const idx = required.findIndex((r, i) => !matchedRequired[i] && Math.abs(p.start - r.start) <= 10 && Math.abs(p.end - r.end) <= 10);
+  const matchedRequired = new Array(required.length).fill(false);
+  const userMatchIdx = [];
+  if (answered) {
+    submittedShifts.forEach((s) => {
+      const idx = required.findIndex((r, i) => !matchedRequired[i] && Math.abs(s.start - r.start) <= 10 && Math.abs(s.end - r.end) <= 10);
       if (idx >= 0) {
         matchedRequired[idx] = true;
         userMatchIdx.push(idx);
@@ -1079,47 +1111,47 @@ function MultiPairingShiftQ({ day, answered, answer, onSubmit, onNext, dayIdx })
       }
     });
   }
-  const allCovered = answered && correctCount === required.length && answer.pairings.length === required.length;
+  const allCovered = answered && correctCount === required.length && submittedShifts.length === required.length;
 
   return (
     <div className="p-4 border-t border-[#E2E8F0] space-y-3" data-testid={`day-${dayIdx}-shift`}>
       <div className="flex items-start gap-2">
         <Target className="w-4 h-4 text-[#002855] mt-0.5 flex-shrink-0" />
-        <p className="text-[13px] font-bold text-[#002855] leading-snug">Identify EVERY work segment on this day. Some days have more than one — keep adding pairings until every work block on the grid is bracketed.</p>
+        <p className="text-[13px] font-bold text-[#002855] leading-snug">When did this day's work shift START and END? Some days have more than one — bracket each work shift, then click <span className="text-[#10B981]">Add work shift</span> to start the next one.</p>
       </div>
       {!answered && (
         <>
-          {pairings.length > 0 && (
-            <div className="rounded-md border border-[#10B981]/40 bg-[#F0FDF4] p-2 space-y-1" data-testid={`day-${dayIdx}-pairings-list`}>
-              <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#065F46]">Submitted pairings</p>
-              {pairings.map((p, i) => (
+          {localShifts.length > 0 && (
+            <div className="rounded-md border border-[#10B981]/40 bg-[#F0FDF4] p-2 space-y-1" data-testid={`day-${dayIdx}-shifts-list`}>
+              <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#065F46]">Work shifts so far</p>
+              {localShifts.map((s, i) => (
                 <div key={i} className="flex items-center gap-2 text-[12px] font-mono">
-                  <span className="text-[#065F46] font-bold">P{i + 1}</span>
-                  <span>{minToTimeStr(p.start)} → {minToTimeStr(p.end)}</span>
-                  <button onClick={() => setPairings((arr) => arr.filter((_, j) => j !== i))} className="ml-auto text-[10px] text-[#991B1B] hover:underline" data-testid={`day-${dayIdx}-pairing-${i}-remove`}>remove</button>
+                  <span className="text-[#065F46] font-bold">Shift {i + 1}</span>
+                  <span>{minToTimeStr(s.start)} → {minToTimeStr(s.end)}</span>
+                  <button onClick={() => setLocalShifts((arr) => arr.filter((_, j) => j !== i))} className="ml-auto text-[10px] text-[#991B1B] hover:underline" data-testid={`day-${dayIdx}-shift-${i}-remove`}>remove</button>
                 </div>
               ))}
             </div>
           )}
-          <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">Type the START and END for the next work segment, then click <span className="font-bold">Add pairing</span>. When you've bracketed every work block, click <span className="font-bold">Done — submit pairings</span>.</p>
+          <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">Drag the green / red handles on the grid above (or type HH:MM below). Click <span className="font-bold">Add work shift</span> to commit it and place the next one. Click <span className="font-bold">Done — submit</span> when every work block is bracketed.</p>
           <div className="space-y-2">
             <div className="flex gap-2 items-center">
-              <label className="text-[11px] font-bold text-[#475569] w-28">Pairing START:</label>
+              <label className="text-[11px] font-bold text-[#475569] w-28">Shift START:</label>
               <input type="time" value={tStart} onChange={(e) => setTStart(e.target.value)}
                 className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#10B981] focus:border-[#002855] focus:outline-none"
-                data-testid={`day-${dayIdx}-pairing-start`} />
+                data-testid={`day-${dayIdx}-shift-start`} />
             </div>
             <div className="flex gap-2 items-center">
-              <label className="text-[11px] font-bold text-[#475569] w-28">Pairing END:</label>
+              <label className="text-[11px] font-bold text-[#475569] w-28">Shift END:</label>
               <input type="time" value={tEnd} onChange={(e) => setTEnd(e.target.value)}
                 className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#DC2626] focus:border-[#002855] focus:outline-none"
-                data-testid={`day-${dayIdx}-pairing-end`} />
+                data-testid={`day-${dayIdx}-shift-end`} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Button onClick={submitOne} disabled={!tStart || !tEnd} variant="outline" className="border-[#10B981] text-[#065F46] hover:bg-[#F0FDF4]" data-testid={`day-${dayIdx}-pairing-add`}>
-                Add pairing
+              <Button onClick={addShift} disabled={!tStart || !tEnd} variant="outline" className="border-[#10B981] text-[#065F46] hover:bg-[#F0FDF4]" data-testid={`day-${dayIdx}-shift-add`}>
+                Add work shift
               </Button>
-              <Button onClick={finish} disabled={pairings.length === 0} className="bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`day-${dayIdx}-pairings-submit`}>
+              <Button onClick={finish} disabled={localShifts.length === 0} className="bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`day-${dayIdx}-shifts-submit`}>
                 Done — submit
               </Button>
             </div>
@@ -1129,21 +1161,21 @@ function MultiPairingShiftQ({ day, answered, answer, onSubmit, onNext, dayIdx })
       {answered && (
         <>
           <div className="space-y-1 text-[12px] font-mono">
-            <p className="text-[11px] text-[#475569] font-sans not-italic">Your pairings vs canonical pairings:</p>
-            {answer.pairings.map((p, i) => {
+            <p className="text-[11px] text-[#475569] font-sans not-italic">Your work shifts vs canonical work shifts:</p>
+            {submittedShifts.map((s, i) => {
               const m = userMatchIdx[i];
               return (
                 <div key={`u${i}`} className={`flex justify-between pl-2 ${m >= 0 ? "text-[#10B981]" : "text-[#DC2626]"}`}>
-                  <span>P{i + 1}:</span>
-                  <span className="font-bold">{minToTimeStr(p.start)} → {minToTimeStr(p.end)} {m >= 0 ? "✓" : "✗ no match"}</span>
+                  <span>Shift {i + 1}:</span>
+                  <span className="font-bold">{minToTimeStr(s.start)} → {minToTimeStr(s.end)} {m >= 0 ? "✓" : "✗ no match"}</span>
                 </div>
               );
             })}
             <div className="border-t border-[#E2E8F0] pt-1 mt-1 space-y-0.5">
-              <p className="text-[11px] text-[#475569] font-sans not-italic">Canonical pairings (all must be identified):</p>
+              <p className="text-[11px] text-[#475569] font-sans not-italic">Canonical work shifts (all must be identified):</p>
               {required.map((r, i) => (
                 <div key={`r${i}`} className={`flex justify-between pl-2 ${matchedRequired[i] ? "text-[#10B981]" : "text-[#F59E0B]"}`}>
-                  <span>{r.label}:</span>
+                  <span>{r.label?.replace(/^Pairing /i, "Shift ").replace(/Compound — /, "")}</span>
                   <span className="font-bold">{minToTimeStr(r.start)} → {minToTimeStr(r.end)} {matchedRequired[i] ? "✓ found" : "✗ MISSED"}</span>
                 </div>
               ))}
@@ -1152,7 +1184,7 @@ function MultiPairingShiftQ({ day, answered, answer, onSubmit, onNext, dayIdx })
           <div className={`rounded-md p-2.5 border ${allCovered ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`}>
             <div className="flex items-center gap-2 mb-1">
               {allCovered ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />}
-              <p className="text-[12px] font-bold text-[#334155]">{allCovered ? `Correct — ${correctCount}/${required.length} pairings` : `Identified ${correctCount}/${required.length} pairings`}</p>
+              <p className="text-[12px] font-bold text-[#334155]">{allCovered ? `Correct — ${correctCount}/${required.length} work shifts` : `Identified ${correctCount}/${required.length} work shifts`}</p>
             </div>
             <p className="text-[11.5px] text-[#334155] leading-relaxed"><CfrText text={day.explanation.shift} /></p>
           </div>

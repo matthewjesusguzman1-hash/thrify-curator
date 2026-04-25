@@ -546,8 +546,8 @@ export const EIGHTDAY_SCENARIOS = [
         ],
         shiftStartMin: 6 * 60, shiftEndMin: 21 * 60,
         acceptableShifts: [
-          { start: 6 * 60,  end: 11 * 60, label: "Pairing A — morning shift (06:00 → 11:00)" },
-          { start: 19 * 60, end: 21 * 60, label: "Pairing B — evening shift (19:00 → 21:00)" },
+          { start: 6 * 60,  end: 11 * 60, label: "Shift 1 — morning (06:00 → 11:00)" },
+          { start: 19 * 60, end: 21 * 60, label: "Shift 2 — evening (19:00 → 21:00)" },
         ],
         requireAllPairings: true,
         onDutyHours: 7,
@@ -726,8 +726,8 @@ export const EIGHTDAY_SCENARIOS = [
         ],
         shiftStartMin: 5 * 60, shiftEndMin: 20 * 60,
         acceptableShifts: [
-          { start: 5 * 60,  end: 10 * 60, label: "Pairing A — morning shift (05:00 → 10:00)" },
-          { start: 18 * 60, end: 20 * 60, label: "Pairing B — evening shift (18:00 → 20:00)" },
+          { start: 5 * 60,  end: 10 * 60, label: "Shift 1 — morning (05:00 → 10:00)" },
+          { start: 18 * 60, end: 20 * 60, label: "Shift 2 — evening (18:00 → 20:00)" },
         ],
         requireAllPairings: true,
         onDutyHours: 7,
