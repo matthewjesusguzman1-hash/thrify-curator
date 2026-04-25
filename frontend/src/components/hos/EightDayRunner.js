@@ -26,10 +26,11 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
   const [dayIdx, setDayIdx] = useState(0);
   // Per-day: { [d]: { shift?: {start, end}, violation?: string } }
   const [dayAnswers, setDayAnswers] = useState({});
-  const [dayPhase, setDayPhase] = useState("shift");   // 'shift' | 'violation'
+  const [dayPhase, setDayPhase] = useState("shift");   // 'shift' | 'violation' | 'regend'
   // For drag handles
   const [tStart, setTStart] = useState("");
   const [tEnd, setTEnd] = useState("");
+  const [tRegEnd, setTRegEnd] = useState("");
   // Final phases
   const [phase, setPhase] = useState("days");          // 'days' | 'cycle' | 'oos' | 'done'
   const [cycleAnswer, setCycleAnswer] = useState(undefined);    // boolean
@@ -45,7 +46,7 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
     setDayIdx(0);
     setDayAnswers({});
     setDayPhase("shift");
-    setTStart(""); setTEnd("");
+    setTStart(""); setTEnd(""); setTRegEnd("");
     setPhase("days");
     setCycleAnswer(undefined);
     setOosAnswer(undefined);
@@ -66,9 +67,27 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
     if (nextIdx < totalDays) {
       setDayIdx(nextIdx);
       setDayPhase("shift");
-      setTStart(""); setTEnd("");
+      setTStart(""); setTEnd(""); setTRegEnd("");
     } else {
       setPhase("cycle");
+    }
+  };
+
+  // After a violation pick, decide whether to ask the regulatory-end question
+  // or just advance to the next day. Triggered when the user said the day had
+  // a 14-hr (or multi/both) violation AND the day has a canonical
+  // regulatoryEndMin to grade against.
+  const handleViolationNext = (dayHasRegEnd, skipForOvernight = 1) => {
+    const v = dayAnswers[dayIdx]?.violation;
+    const userCalledFourteen = v === "14" || v === "multi" || v === "both";
+    if (dayHasRegEnd && userCalledFourteen) {
+      // Seed the regend handle near the user's submitted shift end so they
+      // have a sensible starting drag position.
+      const submittedEnd = dayAnswers[dayIdx]?.shift?.endMin ?? dayAnswers[dayIdx]?.shift?.end;
+      if (typeof submittedEnd === "number") setTRegEnd(minToTimeStr(submittedEnd));
+      setDayPhase("regend");
+    } else {
+      advanceDay(skipForOvernight);
     }
   };
 
@@ -137,11 +156,11 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
       {/* Day stepper — visual progress across all 8 days */}
       <DayStepper days={days} answers={dayAnswers} activeIdx={phase === "days" ? dayIdx : -1} done={phase !== "days"} />
 
-      {/* Completed days — visible only at cycle/OOS/done phases so the
-       * inspector can review every day at once when running the 70-hr math.
-       * During day-answering we keep the screen focused on the active day +
-       * a preview of the upcoming day (always two grids visible). */}
-      {phase !== "days" && Array.from({ length: days.length }).map((_, i) => (
+      {/* Completed days — always visible so the inspector keeps full
+       * cross-day context (split-sleeper continuations from prior days,
+       * §395.3(a)(1) reset stretches, etc.) AND can review every day at
+       * once when running the 70-hr cycle math. */}
+      {Array.from({ length: phase === "days" ? dayIdx : days.length }).map((_, i) => (
         <CompletedDayCard
           key={`completed-${i}`}
           day={days[i]}
@@ -162,6 +181,7 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
             answer={dayAnswers[dayIdx]}
             tStart={tStart} setTStart={setTStart}
             tEnd={tEnd} setTEnd={setTEnd}
+            tRegEnd={tRegEnd} setTRegEnd={setTRegEnd}
             onSubmitShift={(v) => {
               setDayAnswers((a) => ({ ...a, [dayIdx]: { ...(a[dayIdx] || {}), shift: v } }));
             }}
@@ -169,7 +189,11 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
             onSubmitViolation={(v) => {
               setDayAnswers((a) => ({ ...a, [dayIdx]: { ...(a[dayIdx] || {}), violation: v } }));
             }}
-            onViolationNext={() => advanceDay(1)}
+            onViolationNext={() => handleViolationNext(day.regulatoryEndMin !== undefined, 1)}
+            onSubmitRegEnd={(v) => {
+              setDayAnswers((a) => ({ ...a, [dayIdx]: { ...(a[dayIdx] || {}), regEndAnswer: v, regEndAnswered: true } }));
+            }}
+            onRegEndNext={() => advanceDay(1)}
             onOffDayConfirm={() => {
               // Off-duty day: record empty shift + 'none' violation, advance
               setDayAnswers((a) => ({ ...a, [dayIdx]: { shift: { start: 0, end: 0, off: true }, violation: "none" } }));
@@ -195,6 +219,7 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
             totalDays={totalDays}
             phase={dayPhase}
             answer={dayAnswers[dayIdx]}
+            tRegEnd={tRegEnd} setTRegEnd={setTRegEnd}
             onSubmitShift={(v) => {
               // Store the single overnightShift on BOTH days so the stepper +
               // CompletedDayCard rendering pick it up for either day.
@@ -212,7 +237,18 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
                 [dayIdx + 1]: { ...(a[dayIdx + 1] || {}), violation: v, overnightCorrect: violationCorrectForOvernight(day, days[dayIdx + 1]) },
               }));
             }}
-            onViolationNext={() => advanceDay(2)}
+            onViolationNext={() => {
+              const hasReg = (day.regulatoryEndMin !== undefined) || (days[dayIdx + 1]?.regulatoryEndMin !== undefined);
+              handleViolationNext(hasReg, 2);
+            }}
+            onSubmitRegEnd={(v) => {
+              setDayAnswers((a) => ({
+                ...a,
+                [dayIdx]: { ...(a[dayIdx] || {}), regEndAnswer: v, regEndAnswered: true },
+                [dayIdx + 1]: { ...(a[dayIdx + 1] || {}), regEndAnswer: v, regEndAnswered: true },
+              }));
+            }}
+            onRegEndNext={() => advanceDay(2)}
           />
           {/* Preview of the day AFTER the overnight pair (so the user keeps
               two-or-more-day context as they navigate). */}
@@ -426,7 +462,7 @@ function DayStepper({ days, answers, activeIdx, done }) {
 }
 
 /* ─── Day card ─── */
-function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEnd, setTEnd, onSubmitShift, onShiftNext, onSubmitViolation, onViolationNext, onOffDayConfirm }) {
+function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEnd, setTEnd, tRegEnd, setTRegEnd, onSubmitShift, onShiftNext, onSubmitViolation, onViolationNext, onSubmitRegEnd, onRegEndNext, onOffDayConfirm }) {
   const isOffDay = day.offDay === true;
   const violationCorrect = (
     day.violation11 && day.violation14 ? "multi" :
@@ -455,8 +491,14 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
         // bracketings exist.
         m.push({ min: answer.shift.start, kind: "start", label: `Shift START · ${minToTimeStr(answer.shift.start)}` });
         m.push({ min: answer.shift.end, kind: "end", label: `Shift END · ${minToTimeStr(answer.shift.end)}`, labelRow: 1 });
-        if (day.regulatoryEndMin !== undefined && day.regulatoryEndMin !== answer.shift.end) {
-          m.push({ min: day.regulatoryEndMin, kind: "end", color: "#D4AF37", label: `SHOULD have ended · ${minToTimeStr(day.regulatoryEndMin)}`, labelRow: 2 });
+        // Canonical "Actually closed at" cap — gated behind the user's own
+        // regend submission so they aren't spoiled before answering.
+        if (answer.regEndAnswered && day.regulatoryEndMin !== undefined && day.regulatoryEndMin !== answer.shift.end) {
+          m.push({ min: day.regulatoryEndMin, kind: "end", color: "#D4AF37", label: `Actually closed · ${minToTimeStr(day.regulatoryEndMin)}`, labelRow: 2 });
+        }
+        // User's own committed regend pick.
+        if (answer.regEndAnswered && typeof answer.regEndAnswer?.min === "number" && answer.regEndAnswer.min !== day.regulatoryEndMin) {
+          m.push({ min: answer.regEndAnswer.min, kind: "end", color: "#B45309", label: `Your call · ${minToTimeStr(answer.regEndAnswer.min)}`, labelRow: 3 });
         }
       }
     }
@@ -464,8 +506,21 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
       m.push({ min: timeStrToMin(tStart || "08:00") ?? 480, kind: "start", markerId: "shiftStart", draggable: true, label: `Drag → START · ${tStart || "08:00"}` });
       m.push({ min: timeStrToMin(tEnd || "18:00") ?? 1080, kind: "end", markerId: "shiftEnd", draggable: true, label: `Drag → END · ${tEnd || "18:00"}`, labelRow: 1 });
     }
+    // Active draggable handle for the regend pick.
+    if (phase === "regend" && !isOffDay && !answer?.regEndAnswered) {
+      const seedHhmm = tRegEnd || (typeof answer?.shift?.end === "number" ? minToTimeStr(answer.shift.end) : "18:00");
+      m.push({
+        min: timeStrToMin(seedHhmm) ?? 1080,
+        kind: "end",
+        color: "#D4AF37",
+        markerId: "regEnd",
+        draggable: true,
+        label: `Drag → SHOULD HAVE ENDED · ${seedHhmm}`,
+        labelRow: 2,
+      });
+    }
     return m;
-  }, [day, answer, day1ShiftActive, tStart, tEnd, isOffDay]);
+  }, [day, answer, day1ShiftActive, tStart, tEnd, tRegEnd, isOffDay, phase]);
 
   return (
     <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden space-y-0" data-testid={`day-card-${dayIdx}`}>
@@ -482,10 +537,11 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
         <EldGrid
           entries={day.log}
           shiftMarkers={markers}
-          onMarkerDrag={day1ShiftActive && !isOffDay ? (kind, markerId, newMin) => {
+          onMarkerDrag={(day1ShiftActive || phase === "regend") && !isOffDay ? (kind, markerId, newMin) => {
             const hhmm = minToTimeStr(newMin);
             if (markerId === "shiftStart") setTStart(hhmm);
             else if (markerId === "shiftEnd") setTEnd(hhmm);
+            else if (markerId === "regEnd" && setTRegEnd) setTRegEnd(hhmm);
           } : null}
         />
         {/* splitNote intentionally hidden on the ACTIVE day card — revealing
@@ -541,7 +597,75 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
           isLast={dayIdx === totalDays - 1}
         />
       )}
+
+      {/* Regulatory-end question — appears only when the user called a 14-hr
+          violation on a day that has a canonical regulatoryEndMin. Asks them
+          to drag the gold handle (or pick time below) to mark when the shift
+          should have closed under §395.3(a)(2). */}
+      {!isOffDay && phase === "regend" && (
+        <DayRegEndQ
+          day={day}
+          tRegEnd={tRegEnd} setTRegEnd={setTRegEnd}
+          answered={!!answer?.regEndAnswered}
+          answer={answer?.regEndAnswer}
+          onSubmit={onSubmitRegEnd}
+          onNext={onRegEndNext}
+          dayIdx={dayIdx}
+        />
+      )}
     </section>
+  );
+}
+
+function DayRegEndQ({ day, tRegEnd, setTRegEnd, answered, answer, onSubmit, onNext, dayIdx }) {
+  const submit = () => {
+    const m = timeStrToMin(tRegEnd);
+    if (m === null) return;
+    onSubmit({ min: m });
+  };
+  const correctMin = day.regulatoryEndMin;
+  const isCorrect = answered && typeof answer?.min === "number" && Math.abs(answer.min - correctMin) <= 10;
+  return (
+    <div className="p-4 border-t border-[#D4AF37]/40 bg-[#FFFBEB]/40 space-y-3" data-testid={`day-${dayIdx}-regend`}>
+      <div className="flex items-start gap-2">
+        <Target className="w-4 h-4 text-[#92400E] mt-0.5 flex-shrink-0" />
+        <p className="text-[13px] font-bold text-[#002855] leading-snug">When SHOULD this 14-hour shift have ended under §395.3(a)(2)?</p>
+      </div>
+      {!answered && (
+        <>
+          <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">
+            14 wall-clock hours after the shift START. Drag the gold handle on the grid above, or type HH:MM below.
+          </p>
+          <div className="flex gap-2 items-center">
+            <label className="text-[11px] font-bold text-[#92400E] w-28">Cap closes at:</label>
+            <input type="time" value={tRegEnd} onChange={(e) => setTRegEnd(e.target.value)}
+              className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#B45309] focus:border-[#92400E] focus:outline-none"
+              data-testid={`day-${dayIdx}-regend-time`} />
+          </div>
+          <Button onClick={submit} disabled={!tRegEnd} className="w-full bg-[#92400E] text-white hover:bg-[#7C2D12]" data-testid={`day-${dayIdx}-regend-submit`}>
+            Submit cap time
+          </Button>
+        </>
+      )}
+      {answered && (
+        <>
+          <div className={`rounded-md p-2.5 border ${isCorrect ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              {isCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
+              <p className="text-[12px] font-bold text-[#334155]">
+                {isCorrect ? "Correct" : `Correct: ${minToTimeStr(correctMin)}`}
+              </p>
+            </div>
+            <p className="text-[11.5px] text-[#334155] leading-relaxed">
+              §395.3(a)(2) closes the shift exactly 14 wall-clock hours after the first on-duty entry. Any driving past that minute is the 14-hour violation — flag the moment the cap was crossed and document the over-cap driving time on the inspection report.
+            </p>
+          </div>
+          <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`day-${dayIdx}-regend-next`}>
+            Continue <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -634,9 +758,14 @@ function DayShiftQ({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
  *  the full overnight requires looking at both days. After the user submits
  *  the shift + violation, both days are marked complete and the runner skips
  *  ahead by 2. */
-function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, onSubmitShift, onShiftNext, onSubmitViolation, onViolationNext }) {
+function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegEnd, setTRegEnd, onSubmitShift, onShiftNext, onSubmitViolation, onViolationNext, onSubmitRegEnd, onRegEndNext }) {
   const [tStart, setTStart] = useState({ day: 1, min: 18 * 60 });
   const [tEnd, setTEnd] = useState({ day: 2, min: 5 * 60 });
+  // For the regend pick, default the day to whichever day owns the canonical
+  // regulatoryEndMin so the user starts on the right grid.
+  const regOwner = (day1.regulatoryEndMin !== undefined) ? 1 : (day2.regulatoryEndMin !== undefined ? 2 : 1);
+  const regCanonicalMin = day1.regulatoryEndMin ?? day2.regulatoryEndMin;
+  const [tRegEndDay, setTRegEndDay] = useState({ day: regOwner, min: regCanonicalMin ?? 18 * 60 });
 
   const shiftAnswer = answer?.shift;
   const shiftAnswered = shiftAnswer !== undefined;
@@ -693,13 +822,46 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, onSub
         });
       }
     }
+    // Active draggable handle for the regend pick.
+    if (phase === "regend" && !answer?.regEndAnswered && tRegEndDay.day === dayN) {
+      m.push({
+        min: tRegEndDay.min,
+        kind: "end",
+        color: "#D4AF37",
+        markerId: "regEnd",
+        draggable: true,
+        label: `Drag → SHOULD HAVE ENDED · ${minToTimeStr(tRegEndDay.min)}`,
+        labelRow: 2,
+      });
+    }
+    // Reveal canonical + user's regend pick after submission.
+    if (answer?.regEndAnswered) {
+      const regDay = (day1.regulatoryEndMin !== undefined) ? 1 : 2;
+      if (regDay === dayN && regCanonicalMin !== undefined) {
+        m.push({ min: regCanonicalMin, kind: "end", color: "#D4AF37", label: `Actually closed · ${minToTimeStr(regCanonicalMin)}`, labelRow: 2 });
+      }
+      if (answer.regEndAnswer?.day === dayN && typeof answer.regEndAnswer.min === "number" &&
+          !(regDay === dayN && answer.regEndAnswer.min === regCanonicalMin)) {
+        m.push({ min: answer.regEndAnswer.min, kind: "end", color: "#B45309", label: `Your call · ${minToTimeStr(answer.regEndAnswer.min)}`, labelRow: 3 });
+      }
+    }
     return m;
   };
 
-  const onDragForDay = (dayN) => (phase === "shift" && !shiftAnswered) ? (kind, markerId, newMin) => {
-    if (markerId === "shiftStart") setTStart({ day: dayN, min: newMin });
-    else if (markerId === "shiftEnd") setTEnd({ day: dayN, min: newMin });
-  } : null;
+  const onDragForDay = (dayN) => {
+    if (phase === "shift" && !shiftAnswered) {
+      return (kind, markerId, newMin) => {
+        if (markerId === "shiftStart") setTStart({ day: dayN, min: newMin });
+        else if (markerId === "shiftEnd") setTEnd({ day: dayN, min: newMin });
+      };
+    }
+    if (phase === "regend" && !answer?.regEndAnswered) {
+      return (kind, markerId, newMin) => {
+        if (markerId === "regEnd") setTRegEndDay({ day: dayN, min: newMin });
+      };
+    }
+    return null;
+  };
 
   return (
     <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden space-y-0" data-testid={`overnight-pair-${dayIdx}`}>
@@ -786,7 +948,71 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, onSub
           isLast={dayIdx + 2 >= totalDays}
         />
       )}
+
+      {/* Regulatory-end question — fires when the user called a 14-hr
+          violation on an overnight pair that has a regulatoryEndMin on either
+          day. The handle is draggable on whichever grid owns the cap. */}
+      {phase === "regend" && (
+        <PairRegEndQ
+          day1={day1}
+          day2={day2}
+          tRegEndDay={tRegEndDay}
+          setTRegEndDay={setTRegEndDay}
+          answered={!!answer?.regEndAnswered}
+          answer={answer?.regEndAnswer}
+          onSubmit={onSubmitRegEnd}
+          onNext={onRegEndNext}
+          dayIdx={dayIdx}
+        />
+      )}
     </section>
+  );
+}
+
+function PairRegEndQ({ day1, day2, tRegEndDay, setTRegEndDay, answered, answer, onSubmit, onNext, dayIdx }) {
+  const correctDay = (day1.regulatoryEndMin !== undefined) ? 1 : 2;
+  const correctMin = day1.regulatoryEndMin ?? day2.regulatoryEndMin;
+  const isCorrect = answered && answer?.day === correctDay && Math.abs(answer.min - correctMin) <= 10;
+  const correctDayLabel = correctDay === 1 ? day1.label : day2.label;
+  return (
+    <div className="p-4 border-t border-[#D4AF37]/40 bg-[#FFFBEB]/40 space-y-3" data-testid={`overnight-${dayIdx}-regend`}>
+      <div className="flex items-start gap-2">
+        <Target className="w-4 h-4 text-[#92400E] mt-0.5 flex-shrink-0" />
+        <p className="text-[13px] font-bold text-[#002855] leading-snug">When SHOULD this 14-hour shift have ended under §395.3(a)(2)?</p>
+      </div>
+      {!answered && (
+        <>
+          <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">
+            14 wall-clock hours after the shift START. Drag the gold handle on whichever day's grid the cap falls on, or pick day + time below.
+          </p>
+          <div className="max-w-[220px]">
+            <PairDayTimePicker label="Cap closes at" color="#B45309" value={tRegEndDay} onChange={setTRegEndDay}
+              day1Label={day1.label} day2Label={day2.label} testid={`overnight-${dayIdx}-regend`} />
+          </div>
+          <Button onClick={() => onSubmit({ day: tRegEndDay.day, min: tRegEndDay.min })} className="w-full bg-[#92400E] text-white hover:bg-[#7C2D12]" data-testid={`overnight-${dayIdx}-regend-submit`}>
+            Submit cap time
+          </Button>
+        </>
+      )}
+      {answered && (
+        <>
+          <div className={`rounded-md p-2.5 border ${isCorrect ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              {isCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
+              <p className="text-[12px] font-bold text-[#334155]">
+                {isCorrect ? "Correct" : `Correct: ${correctDayLabel} ${minToTimeStr(correctMin)}`}
+              </p>
+            </div>
+            <p className="text-[11.5px] text-[#334155] leading-relaxed">
+              §395.3(a)(2) closes the shift exactly 14 wall-clock hours after the first on-duty entry. On overnight shifts the cap commonly falls on the SECOND day — check the start time on Day 1 and add 14h.
+            </p>
+          </div>
+          <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`overnight-${dayIdx}-regend-next`}>
+            Continue <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </>
+      )}
+    </div>
   );
 }
 
