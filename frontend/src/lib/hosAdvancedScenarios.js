@@ -528,6 +528,12 @@ export const EIGHTDAY_SCENARIOS = [
           { status: "OFF", start: "21:00", end: "24:00" },
         ],
         shiftStartMin: 6 * 60, shiftEndMin: 21 * 60,
+        // Three valid answers under the rolling-pair interpretation:
+        acceptableShifts: [
+          { start: 6 * 60,  end: 11 * 60, label: "Pairing A — morning shift (06:00 → 11:00)" },
+          { start: 19 * 60, end: 21 * 60, label: "Pairing B — evening shift (19:00 → 21:00)" },
+          { start: 6 * 60,  end: 21 * 60, label: "Compound — both segments (06:00 → 21:00)" },
+        ],
         onDutyHours: 7,
         hasSplitSleeper: true,
         splitNote: "Two valid split-sleeper pairings on this day under §395.1(g)(1)(ii) (rolling-pair interpretation): \n• PAIRING A — OFF 00:00–06:00 (6h ≥2h OFF) + SB 11:00–19:00 (8h ≥7h SB). Bounds the morning work shift 06:00–11:00. \n• PAIRING B — SB 11:00–19:00 (8h Period A — same block, used in second pair) + Fri 21:00 → Sat 06:00 (9h consecutive SB+OFF Period B). Bounds the evening work shift 19:00–21:00.",
@@ -703,6 +709,12 @@ export const EIGHTDAY_SCENARIOS = [
           { status: "OFF", start: "20:00", end: "24:00" },
         ],
         shiftStartMin: 5 * 60, shiftEndMin: 20 * 60,
+        // Three valid answers under the rolling-pair interpretation:
+        acceptableShifts: [
+          { start: 5 * 60,  end: 10 * 60, label: "Pairing A — morning shift (05:00 → 10:00)" },
+          { start: 18 * 60, end: 20 * 60, label: "Pairing B — evening shift (18:00 → 20:00)" },
+          { start: 5 * 60,  end: 20 * 60, label: "Compound — both segments (05:00 → 20:00)" },
+        ],
         onDutyHours: 7,
         hasSplitSleeper: true,
         splitNote: "Two valid split-sleeper pairings on this day (rolling-pair interpretation under §395.1(g)(1)(ii) and FMCSA 2020 guidance): \n• PAIRING A — OFF 00:00–05:00 (5h ≥2h OFF) + SB 10:00–18:00 (8h ≥7h SB). Bounds the morning work shift 05:00–10:00. \n• PAIRING B — SB 10:00–18:00 (8h Period A reused) + Fri 20:00 → Sat 06:00 (10h consecutive OFF+SB+OFF Period B). Bounds the evening work shift 18:00–20:00.",

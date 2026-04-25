@@ -26,6 +26,17 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — Split-sleeper days now accept all valid pairing answers
+- User: "Again, it explains the two pairs but doesn't show them correctly." Screenshot showed answering 06:00→11:00 (Pairing A's morning shift) marked WRONG because grader only accepted the compound 06:00→21:00 form.
+- Added `acceptableShifts` array on each split-sleeper day (E1 Day −3 + E2 Day −3). Three valid forms per day under the rolling-pair interpretation:
+  - Pairing A — morning shift (between morning OFF and SB)
+  - Pairing B — evening shift (between SB and overnight rest)
+  - Compound — both work segments bracketed together (first OD → last D)
+- DayShiftQ refactored to grade against the array — first match within ±10 min wins. Falls back to single `shiftStartMin/EndMin` for non-split days.
+- Post-answer feedback now lists all three acceptable answers with a ✓ next to whichever the user matched, so inspectors learn which valid pairing they identified.
+- DayCard + CompletedDayCard markers redrawn from the user's answered bounds (not canonical), so the SVG visually reflects what the inspector identified.
+- Frontend compiled cleanly.
+
 ### 2026-02 — 8-Day flow polish: 15-min snap restored, split-sleeper tip-offs hidden until after answering
 - User: "I won't like the snap to 5 mins. The 15 minutes is easier to use. The examples should be in 15 minute increments. The explanation in the scenarios should be given before the user has tried. On day 5 of 8 the split sleeper it shouldnt be labeled split sleeper for one because the user should be checking for split pairings without help but also the pairings are explained and then told they are incorrect."
 - **Snap reverted to 15-min** in EldGrid.handleMarkerPointerMove. Shift-bounds correctness tolerance back to ±10 min (covers a 15-min snap with grace) in both MultiDayRunner and EightDayRunner. All scenario examples already on 15-min boundaries.

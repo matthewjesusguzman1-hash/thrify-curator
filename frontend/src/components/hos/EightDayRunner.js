@@ -236,8 +236,12 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
 
   const markers = [];
   if (!isOffDay) {
-    markers.push({ min: day.shiftStartMin, kind: "start", label: `START · ${minToTimeStr(day.shiftStartMin)}` });
-    markers.push({ min: day.shiftEndMin, kind: "end", label: `END · ${minToTimeStr(day.shiftEndMin)}`, labelRow: 1 });
+    // Show the USER's answered shift bounds — same reasoning as the active
+    // DayCard (split-sleeper days have multiple valid bracketings).
+    const startMin = answer?.shift?.start ?? day.shiftStartMin;
+    const endMin = answer?.shift?.end ?? day.shiftEndMin;
+    markers.push({ min: startMin, kind: "start", label: `START · ${minToTimeStr(startMin)}` });
+    markers.push({ min: endMin, kind: "end", label: `END · ${minToTimeStr(endMin)}`, labelRow: 1 });
   }
 
   const violationLabel = (
@@ -353,9 +357,12 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
   const markers = useMemo(() => {
     const m = [];
     if (answer?.shift && !answer.shift.off) {
-      m.push({ min: day.shiftStartMin, kind: "start", label: `Shift START · ${minToTimeStr(day.shiftStartMin)}` });
-      m.push({ min: day.shiftEndMin, kind: "end", label: `Shift END · ${minToTimeStr(day.shiftEndMin)}`, labelRow: 1 });
-      if (day.regulatoryEndMin !== undefined && day.regulatoryEndMin !== day.shiftEndMin) {
+      // After answering, show the USER's shift bounds (not always the canonical
+      // single answer) — important on split-sleeper days where multiple valid
+      // bracketings exist.
+      m.push({ min: answer.shift.start, kind: "start", label: `Shift START · ${minToTimeStr(answer.shift.start)}` });
+      m.push({ min: answer.shift.end, kind: "end", label: `Shift END · ${minToTimeStr(answer.shift.end)}`, labelRow: 1 });
+      if (day.regulatoryEndMin !== undefined && day.regulatoryEndMin !== answer.shift.end) {
         m.push({ min: day.regulatoryEndMin, kind: "end", color: "#D4AF37", label: `SHOULD have ended · ${minToTimeStr(day.regulatoryEndMin)}`, labelRow: 2 });
       }
     }
@@ -439,9 +446,20 @@ function DayShiftQ({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
     if (sMin === null || eMin === null) return;
     onSubmit({ start: sMin, end: eMin });
   };
+  // Build the list of acceptable answers. For most days there is only one,
+  // but split-sleeper days can have multiple valid forms (each pair's bracketed
+  // work segment, plus the compound "all-segments" answer). All entries get
+  // graded — first match within tolerance wins.
+  const acceptable = (day.acceptableShifts && day.acceptableShifts.length > 0)
+    ? day.acceptableShifts
+    : [{ start: day.shiftStartMin, end: day.shiftEndMin, label: null }];
   let correct = false;
+  let matched = null;
   if (answered) {
-    correct = Math.abs(answer.start - day.shiftStartMin) <= 10 && Math.abs(answer.end - day.shiftEndMin) <= 10;
+    matched = acceptable.find((a) =>
+      Math.abs(answer.start - a.start) <= 10 && Math.abs(answer.end - a.end) <= 10
+    );
+    correct = !!matched;
   }
   return (
     <div className="p-4 border-t border-[#E2E8F0] space-y-3" data-testid={`day-${dayIdx}-shift`}>
@@ -472,8 +490,20 @@ function DayShiftQ({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
       {answered && (
         <>
           <div className="space-y-1 text-[12px] font-mono">
-            <div className="flex justify-between"><span>START:</span><span className="font-bold">Your: {minToTimeStr(answer.start)} · Correct: {minToTimeStr(day.shiftStartMin)}</span></div>
-            <div className="flex justify-between"><span>END:</span><span className="font-bold">Your: {minToTimeStr(answer.end)} · Correct: {minToTimeStr(day.shiftEndMin)}</span></div>
+            <div className="flex justify-between"><span>You answered:</span><span className="font-bold">{minToTimeStr(answer.start)} → {minToTimeStr(answer.end)}</span></div>
+            {acceptable.length === 1 ? (
+              <div className="flex justify-between"><span>Correct answer:</span><span className="font-bold">{minToTimeStr(acceptable[0].start)} → {minToTimeStr(acceptable[0].end)}</span></div>
+            ) : (
+              <div className="space-y-0.5">
+                <p className="text-[11px] text-[#475569] font-sans not-italic mt-1">Acceptable answers (any one is correct):</p>
+                {acceptable.map((a, i) => (
+                  <div key={i} className={`flex justify-between pl-2 ${matched === a ? "text-[#10B981]" : ""}`}>
+                    <span>{a.label || `Pairing ${String.fromCharCode(65 + i)}`}:</span>
+                    <span className="font-bold">{minToTimeStr(a.start)} → {minToTimeStr(a.end)} {matched === a && "✓"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className={`rounded-md p-2.5 border ${correct ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`}>
             <div className="flex items-center gap-2 mb-1">
