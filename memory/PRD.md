@@ -26,6 +26,13 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — 8-day overnight shift pair UX
+- When a day is flagged `continuesToNext` and the following day is `continuesFromPrev`, the EightDayRunner now renders BOTH grids together and asks the inspector for a SINGLE shift bracketed across them (Start day+time + End day+time, mirroring MultiDayRunner's pattern). This fixes the prior bug where Day 2 (Day −6) and Day 3 (Day −5) of E1 displayed wrong start/end expectations because the user could only bracket one day at a time.
+- New `OvernightPairCard` + `PairDayTimePicker` components.
+- After answering the overnight pair (shift + violation), the runner advances by 2 days. Both day answers are populated so the stepper and CompletedDayCard show both as complete.
+- `violationCorrectForOvernight` helper ORs the two days' violation flags so a violation surfacing on the second half is graded correctly. Stored as `overnightCorrect` on each answer.
+- CompletedDayCard now renders only the overnight markers that fall on its own day (Start on Day 1's grid, End on Day 2's grid).
+
 ### 2026-02 — 8-day scenarios harder + cycle calc + multi-pairing
 - E1 rebalanced (was all clean): added an OVERNIGHT shift across Day −6 / Day −5, a 14-hr shift violation on Day −4, an 8-hr break violation on Day −1, and a multi-pairing split-sleeper day on Day −3.
 - E2 enhanced: new 8-hr break violation on Day −5, new OVERNIGHT shift across Day −1 / Day 0, multi-pairing split-sleeper on Day −3 (compound option removed). Cycle total recomputed to 74h (still over the 70-hr cap).

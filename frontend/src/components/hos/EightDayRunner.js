@@ -54,10 +54,17 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
   const restartScenario = () => resetAll(idx);
   const pickScenario = (n) => { resetAll(n); setShowPicker(false); };
 
+  // Detect an overnight pair: a day with continuesToNext followed by a day
+  // with continuesFromPrev. When in this state, render BOTH grids together
+  // and ask for one shift bracketed across the two days. Advancing skips
+  // both days since the second half is already covered.
+  const isOvernightPair = day && day.continuesToNext === true && days[dayIdx + 1] && days[dayIdx + 1].continuesFromPrev === true;
+
   // Skip off-duty days automatically — auto-record empty answer and advance.
-  const advanceDay = () => {
-    if (dayIdx + 1 < totalDays) {
-      setDayIdx(dayIdx + 1);
+  const advanceDay = (skip = 1) => {
+    const nextIdx = dayIdx + skip;
+    if (nextIdx < totalDays) {
+      setDayIdx(nextIdx);
       setDayPhase("shift");
       setTStart(""); setTEnd("");
     } else {
@@ -145,7 +152,7 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
       ))}
 
       {/* Active day card */}
-      {phase === "days" && (
+      {phase === "days" && !isOvernightPair && (
         <DayCard
           day={day}
           dayIdx={dayIdx}
@@ -161,12 +168,42 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
           onSubmitViolation={(v) => {
             setDayAnswers((a) => ({ ...a, [dayIdx]: { ...(a[dayIdx] || {}), violation: v } }));
           }}
-          onViolationNext={advanceDay}
+          onViolationNext={() => advanceDay(1)}
           onOffDayConfirm={() => {
             // Off-duty day: record empty shift + 'none' violation, advance
             setDayAnswers((a) => ({ ...a, [dayIdx]: { shift: { start: 0, end: 0, off: true }, violation: "none" } }));
-            advanceDay();
+            advanceDay(1);
           }}
+        />
+      )}
+
+      {/* Overnight pair card — two days bracketed by a single shift question */}
+      {phase === "days" && isOvernightPair && (
+        <OvernightPairCard
+          day1={day}
+          day2={days[dayIdx + 1]}
+          dayIdx={dayIdx}
+          totalDays={totalDays}
+          phase={dayPhase}
+          answer={dayAnswers[dayIdx]}
+          onSubmitShift={(v) => {
+            // Store the single overnightShift on BOTH days so the stepper +
+            // CompletedDayCard rendering pick it up for either day.
+            setDayAnswers((a) => ({
+              ...a,
+              [dayIdx]: { ...(a[dayIdx] || {}), shift: { ...v, overnight: true } },
+              [dayIdx + 1]: { ...(a[dayIdx + 1] || {}), shift: { ...v, overnight: true, continuesFromPrev: true } },
+            }));
+          }}
+          onShiftNext={() => setDayPhase("violation")}
+          onSubmitViolation={(v) => {
+            setDayAnswers((a) => ({
+              ...a,
+              [dayIdx]: { ...(a[dayIdx] || {}), violation: v, overnightCorrect: violationCorrectForOvernight(day, days[dayIdx + 1]) },
+              [dayIdx + 1]: { ...(a[dayIdx + 1] || {}), violation: v, overnightCorrect: violationCorrectForOvernight(day, days[dayIdx + 1]) },
+            }));
+          }}
+          onViolationNext={() => advanceDay(2)}
         />
       )}
 
@@ -223,7 +260,7 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
  *  Shows the grid with shift markers plus a one-line outcome summary. */
 function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
   const isOffDay = day.offDay === true;
-  const violationCorrect = (
+  const violationCorrect = answer?.overnightCorrect || (
     day.violation11 && day.violation14 ? "multi" :
     day.violation11 && day.violation8 ? "multi" :
     day.violation14 && day.violation8 ? "multi" :
@@ -236,7 +273,14 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
 
   const markers = [];
   if (!isOffDay) {
-    if (answer?.shift?.multi && Array.isArray(answer.shift.pairings)) {
+    if (answer?.shift?.overnight) {
+      // Overnight shift submitted on a paired day — render only the markers
+      // that fall on THIS day. The other half lives on the adjacent card.
+      const ov = answer.shift;
+      const myDayN = ov.continuesFromPrev ? 2 : 1; // this card's relative day#
+      if (ov.startDay === myDayN) markers.push({ min: ov.startMin, kind: "start", label: `Shift START · ${minToTimeStr(ov.startMin)}` });
+      if (ov.endDay === myDayN) markers.push({ min: ov.endMin, kind: "end", label: `Shift END · ${minToTimeStr(ov.endMin)}`, labelRow: 1 });
+    } else if (answer?.shift?.multi && Array.isArray(answer.shift.pairings)) {
       // Multi-pairing day: render every submitted pairing.
       answer.shift.pairings.forEach((p, i) => {
         markers.push({ min: p.start, kind: "start", label: `P${i + 1} START · ${minToTimeStr(p.start)}` });
@@ -317,7 +361,7 @@ function DayStepper({ days, answers, activeIdx, done }) {
         const completed = !!(ans && (ans.violation !== undefined || ans.shift?.off));
         const isActive = i === activeIdx;
         const v = ans?.violation;
-        const correctV = (
+        const correctV = ans?.overnightCorrect || (
           d.violation11 && d.violation14 ? "multi" :
           d.violation11 && d.violation8 ? "multi" :
           d.violation14 && d.violation8 ? "multi" :
@@ -547,6 +591,168 @@ function DayShiftQ({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
           </Button>
         </>
       )}
+    </div>
+  );
+}
+
+/* ─── Overnight pair card ─── */
+/** Renders TWO consecutive days side-by-side and asks for ONE shift bracketed
+ *  across them (Start day+time + End day+time). Used when a day flagged
+ *  continuesToNext is followed by a day flagged continuesFromPrev — bracketing
+ *  the full overnight requires looking at both days. After the user submits
+ *  the shift + violation, both days are marked complete and the runner skips
+ *  ahead by 2. */
+function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, onSubmitShift, onShiftNext, onSubmitViolation, onViolationNext }) {
+  const [tStart, setTStart] = useState({ day: 1, min: 18 * 60 });
+  const [tEnd, setTEnd] = useState({ day: 2, min: 5 * 60 });
+
+  const shiftAnswer = answer?.shift;
+  const shiftAnswered = shiftAnswer !== undefined;
+  const violationAnswered = answer?.violation !== undefined;
+
+  // Acceptable canonical shift across the two days.
+  const correctStartDay = day1.shiftStartMin > 0 ? 1 : 1;
+  const correctStartMin = day1.shiftStartMin;
+  const correctEndDay = 2;
+  const correctEndMin = day2.shiftEndMin;
+  const startMatch = shiftAnswered && shiftAnswer.startDay === correctStartDay && Math.abs(shiftAnswer.startMin - correctStartMin) <= 10;
+  const endMatch = shiftAnswered && shiftAnswer.endDay === correctEndDay && Math.abs(shiftAnswer.endMin - correctEndMin) <= 10;
+  const shiftCorrect = startMatch && endMatch;
+
+  const violation11 = !!(day1.violation11 || day2.violation11);
+  const violation14 = !!(day1.violation14 || day2.violation14);
+  const violation8 = !!(day1.violation8 || day2.violation8);
+  const violationCorrect = (
+    violation11 && violation14 ? "multi" :
+    violation11 && violation8 ? "multi" :
+    violation14 && violation8 ? "multi" :
+    violation11 ? "11" :
+    violation14 ? "14" :
+    violation8 ? "8" : "none"
+  );
+
+  const buildMarkersForDay = (dayN) => {
+    const m = [];
+    if (shiftAnswered) {
+      if (shiftAnswer.startDay === dayN) m.push({ min: shiftAnswer.startMin, kind: "start", label: `Shift START · ${minToTimeStr(shiftAnswer.startMin)}` });
+      if (shiftAnswer.endDay === dayN) m.push({ min: shiftAnswer.endMin, kind: "end", label: `Shift END · ${minToTimeStr(shiftAnswer.endMin)}`, labelRow: 1 });
+    }
+    return m;
+  };
+
+  return (
+    <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden space-y-0" data-testid={`overnight-pair-${dayIdx}`}>
+      <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2 flex-wrap">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]">Day {dayIdx + 1}–{dayIdx + 2} of {totalDays} · overnight pair</span>
+        <p className="text-[12.5px] font-bold">{day1.label} & {day2.label}</p>
+        {phase === "shift" && !shiftAnswered && (
+          <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-[#D4AF37]">
+            <Hand className="w-3 h-3" /> bracket the full shift across both days
+          </span>
+        )}
+      </div>
+      <div className="p-2 space-y-2">
+        <div className="rounded-md bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden">
+          <div className="bg-[#002855] text-white px-2 py-1 flex items-center gap-2">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]">Log</span>
+            <p className="text-[11.5px] font-bold">{day1.label} · {day1.dayName}</p>
+          </div>
+          <div className="p-1.5">
+            <EldGrid entries={day1.log} shiftMarkers={buildMarkersForDay(1)} />
+          </div>
+        </div>
+        <div className="rounded-md bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden">
+          <div className="bg-[#002855] text-white px-2 py-1 flex items-center gap-2">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]">Log</span>
+            <p className="text-[11.5px] font-bold">{day2.label} · {day2.dayName}</p>
+          </div>
+          <div className="p-1.5">
+            <EldGrid entries={day2.log} shiftMarkers={buildMarkersForDay(2)} />
+          </div>
+        </div>
+      </div>
+
+      {/* Shift question */}
+      {phase === "shift" && !shiftAnswered && (
+        <div className="p-3 border-t border-[#E2E8F0] space-y-2.5">
+          <div className="flex items-start gap-2">
+            <Target className="w-4 h-4 text-[#002855] mt-0.5 flex-shrink-0" />
+            <p className="text-[13px] font-bold text-[#002855] leading-snug">When did this work shift START and END? (it spans both days above)</p>
+          </div>
+          <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">
+            Pick the day + time for the START and the END. The shift continues across midnight, so the START and END will be on different days.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <PairDayTimePicker label="Shift START" color="#10B981" value={tStart} onChange={setTStart}
+              day1Label={day1.label} day2Label={day2.label} testid={`overnight-${dayIdx}-start`} />
+            <PairDayTimePicker label="Shift END" color="#DC2626" value={tEnd} onChange={setTEnd}
+              day1Label={day1.label} day2Label={day2.label} testid={`overnight-${dayIdx}-end`} />
+          </div>
+          <Button onClick={() => onSubmitShift({ startDay: tStart.day, startMin: tStart.min, endDay: tEnd.day, endMin: tEnd.min })}
+            className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`overnight-${dayIdx}-shift-submit`}>
+            Submit shift
+          </Button>
+        </div>
+      )}
+
+      {/* Shift feedback */}
+      {phase === "shift" && shiftAnswered && (
+        <div className="p-3 border-t border-[#E2E8F0] space-y-2">
+          <div className={`rounded-md p-2.5 border ${shiftCorrect ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              {shiftCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />}
+              <p className="text-[12px] font-bold text-[#334155]">{shiftCorrect ? "Correct" : `Correct: ${day1.label} ${minToTimeStr(correctStartMin)} → ${day2.label} ${minToTimeStr(correctEndMin)}`}</p>
+            </div>
+            <p className="text-[11.5px] text-[#334155] leading-relaxed"><CfrText text={day1.explanation.shift} /></p>
+            <p className="text-[11.5px] text-[#334155] leading-relaxed mt-1"><CfrText text={day2.explanation.shift} /></p>
+          </div>
+          <Button onClick={onShiftNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`overnight-${dayIdx}-shift-next`}>
+            Next: violation check <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      )}
+
+      {/* Violation question */}
+      {phase === "violation" && (
+        <DayViolationQ
+          day={day2}
+          correctValue={violationCorrect}
+          answered={violationAnswered}
+          answer={answer?.violation}
+          onPick={onSubmitViolation}
+          onNext={onViolationNext}
+          dayIdx={dayIdx}
+          isLast={dayIdx + 2 >= totalDays}
+        />
+      )}
+    </section>
+  );
+}
+
+function PairDayTimePicker({ label, color, value, onChange, day1Label, day2Label, testid }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>{label}</label>
+      <select
+        value={value.day}
+        onChange={(e) => onChange({ ...value, day: Number(e.target.value) })}
+        className="w-full px-2 py-1.5 text-[12px] font-bold border border-[#CBD5E1] rounded-md outline-none focus:border-[#002855]"
+        data-testid={`${testid}-day`}
+      >
+        <option value={1}>{day1Label}</option>
+        <option value={2}>{day2Label}</option>
+      </select>
+      <input
+        type="time"
+        value={minToTimeStr(value.min)}
+        onChange={(e) => {
+          const m = timeStrToMin(e.target.value);
+          if (m !== null) onChange({ ...value, min: m });
+        }}
+        className="w-full px-2 py-1.5 text-sm font-mono font-bold border border-[#CBD5E1] rounded-md outline-none focus:border-[#002855]"
+        style={{ color }}
+        data-testid={testid}
+      />
     </div>
   );
 }
@@ -954,4 +1160,17 @@ function minToTimeStr(min) {
   const hh = Math.floor(m / 60);
   const mm = m % 60;
   return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+// OR two days' violation flags into a single answer string. Used when an
+// overnight shift spans two days and the violation may surface on either.
+function violationCorrectForOvernight(d1, d2) {
+  const v11 = !!(d1?.violation11 || d2?.violation11);
+  const v14 = !!(d1?.violation14 || d2?.violation14);
+  const v8 = !!(d1?.violation8 || d2?.violation8);
+  if ((v11 && v14) || (v11 && v8) || (v14 && v8)) return "multi";
+  if (v11) return "11";
+  if (v14) return "14";
+  if (v8) return "8";
+  return "none";
 }
