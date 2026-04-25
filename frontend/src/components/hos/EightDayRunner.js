@@ -137,11 +137,11 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
       {/* Day stepper — visual progress across all 8 days */}
       <DayStepper days={days} answers={dayAnswers} activeIdx={phase === "days" ? dayIdx : -1} done={phase !== "days"} />
 
-      {/* Completed days — stay visible as readonly summary cards so the
-       * inspector can keep cross-day context (e.g. an SB block at the end of
-       * yesterday that pairs with this morning's rest as a split-sleeper
-       * Period A/B). Always visible whether we're on phase=days or beyond. */}
-      {Array.from({ length: phase === "days" ? dayIdx : days.length }).map((_, i) => (
+      {/* Completed days — visible only at cycle/OOS/done phases so the
+       * inspector can review every day at once when running the 70-hr math.
+       * During day-answering we keep the screen focused on the active day +
+       * a preview of the upcoming day (always two grids visible). */}
+      {phase !== "days" && Array.from({ length: days.length }).map((_, i) => (
         <CompletedDayCard
           key={`completed-${i}`}
           day={days[i]}
@@ -153,58 +153,73 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
 
       {/* Active day card */}
       {phase === "days" && !isOvernightPair && (
-        <DayCard
-          day={day}
-          dayIdx={dayIdx}
-          totalDays={totalDays}
-          phase={dayPhase}
-          answer={dayAnswers[dayIdx]}
-          tStart={tStart} setTStart={setTStart}
-          tEnd={tEnd} setTEnd={setTEnd}
-          onSubmitShift={(v) => {
-            setDayAnswers((a) => ({ ...a, [dayIdx]: { ...(a[dayIdx] || {}), shift: v } }));
-          }}
-          onShiftNext={() => setDayPhase("violation")}
-          onSubmitViolation={(v) => {
-            setDayAnswers((a) => ({ ...a, [dayIdx]: { ...(a[dayIdx] || {}), violation: v } }));
-          }}
-          onViolationNext={() => advanceDay(1)}
-          onOffDayConfirm={() => {
-            // Off-duty day: record empty shift + 'none' violation, advance
-            setDayAnswers((a) => ({ ...a, [dayIdx]: { shift: { start: 0, end: 0, off: true }, violation: "none" } }));
-            advanceDay(1);
-          }}
-        />
+        <>
+          <DayCard
+            day={day}
+            dayIdx={dayIdx}
+            totalDays={totalDays}
+            phase={dayPhase}
+            answer={dayAnswers[dayIdx]}
+            tStart={tStart} setTStart={setTStart}
+            tEnd={tEnd} setTEnd={setTEnd}
+            onSubmitShift={(v) => {
+              setDayAnswers((a) => ({ ...a, [dayIdx]: { ...(a[dayIdx] || {}), shift: v } }));
+            }}
+            onShiftNext={() => setDayPhase("violation")}
+            onSubmitViolation={(v) => {
+              setDayAnswers((a) => ({ ...a, [dayIdx]: { ...(a[dayIdx] || {}), violation: v } }));
+            }}
+            onViolationNext={() => advanceDay(1)}
+            onOffDayConfirm={() => {
+              // Off-duty day: record empty shift + 'none' violation, advance
+              setDayAnswers((a) => ({ ...a, [dayIdx]: { shift: { start: 0, end: 0, off: true }, violation: "none" } }));
+              advanceDay(1);
+            }}
+          />
+          {/* Always show the upcoming day's grid as readonly preview so the
+              inspector can keep cross-day context — split-sleeper continuations,
+              §395.3(a)(1) reset stretch into the next day, etc. */}
+          {dayIdx + 1 < totalDays && (
+            <NextDayPreview day={days[dayIdx + 1]} dayIdx={dayIdx + 1} totalDays={totalDays} />
+          )}
+        </>
       )}
 
       {/* Overnight pair card — two days bracketed by a single shift question */}
       {phase === "days" && isOvernightPair && (
-        <OvernightPairCard
-          day1={day}
-          day2={days[dayIdx + 1]}
-          dayIdx={dayIdx}
-          totalDays={totalDays}
-          phase={dayPhase}
-          answer={dayAnswers[dayIdx]}
-          onSubmitShift={(v) => {
-            // Store the single overnightShift on BOTH days so the stepper +
-            // CompletedDayCard rendering pick it up for either day.
-            setDayAnswers((a) => ({
-              ...a,
-              [dayIdx]: { ...(a[dayIdx] || {}), shift: { ...v, overnight: true } },
-              [dayIdx + 1]: { ...(a[dayIdx + 1] || {}), shift: { ...v, overnight: true, continuesFromPrev: true } },
-            }));
-          }}
-          onShiftNext={() => setDayPhase("violation")}
-          onSubmitViolation={(v) => {
-            setDayAnswers((a) => ({
-              ...a,
-              [dayIdx]: { ...(a[dayIdx] || {}), violation: v, overnightCorrect: violationCorrectForOvernight(day, days[dayIdx + 1]) },
-              [dayIdx + 1]: { ...(a[dayIdx + 1] || {}), violation: v, overnightCorrect: violationCorrectForOvernight(day, days[dayIdx + 1]) },
-            }));
-          }}
-          onViolationNext={() => advanceDay(2)}
-        />
+        <>
+          <OvernightPairCard
+            day1={day}
+            day2={days[dayIdx + 1]}
+            dayIdx={dayIdx}
+            totalDays={totalDays}
+            phase={dayPhase}
+            answer={dayAnswers[dayIdx]}
+            onSubmitShift={(v) => {
+              // Store the single overnightShift on BOTH days so the stepper +
+              // CompletedDayCard rendering pick it up for either day.
+              setDayAnswers((a) => ({
+                ...a,
+                [dayIdx]: { ...(a[dayIdx] || {}), shift: { ...v, overnight: true } },
+                [dayIdx + 1]: { ...(a[dayIdx + 1] || {}), shift: { ...v, overnight: true, continuesFromPrev: true } },
+              }));
+            }}
+            onShiftNext={() => setDayPhase("violation")}
+            onSubmitViolation={(v) => {
+              setDayAnswers((a) => ({
+                ...a,
+                [dayIdx]: { ...(a[dayIdx] || {}), violation: v, overnightCorrect: violationCorrectForOvernight(day, days[dayIdx + 1]) },
+                [dayIdx + 1]: { ...(a[dayIdx + 1] || {}), violation: v, overnightCorrect: violationCorrectForOvernight(day, days[dayIdx + 1]) },
+              }));
+            }}
+            onViolationNext={() => advanceDay(2)}
+          />
+          {/* Preview of the day AFTER the overnight pair (so the user keeps
+              two-or-more-day context as they navigate). */}
+          {dayIdx + 2 < totalDays && (
+            <NextDayPreview day={days[dayIdx + 2]} dayIdx={dayIdx + 2} totalDays={totalDays} />
+          )}
+        </>
       )}
 
       {phase === "cycle" && (
@@ -348,6 +363,23 @@ function ContextDayStrip({ label, log, note, testid }) {
         {note && (
           <p className="text-[11px] text-[#64748B] leading-relaxed mt-1.5 px-1 italic">{note}</p>
         )}
+      </div>
+    </section>
+  );
+}
+
+/** Readonly preview of the upcoming day — shown beneath the active day card
+ *  so the inspector sees two days at all times (current + next). The user
+ *  cannot interact with this grid; it's purely for cross-day context. */
+function NextDayPreview({ day, dayIdx, totalDays }) {
+  return (
+    <section className="bg-[#F8FAFC] rounded-xl border border-dashed border-[#94A3B8] overflow-hidden" data-testid={`next-day-preview-${dayIdx}`}>
+      <div className="bg-[#475569]/15 px-3 py-1.5 flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-[#64748B]">Upcoming · readonly</span>
+        <p className="text-[12px] font-bold text-[#475569]">Day {dayIdx + 1} of {totalDays} · {day.label} · {day.dayName}</p>
+      </div>
+      <div className="p-2">
+        <EldGrid entries={day.log} />
       </div>
     </section>
   );
