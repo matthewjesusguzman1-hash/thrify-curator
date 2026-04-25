@@ -94,14 +94,14 @@ export const ELD_TOPICS = [
     cfr: "49 CFR §395.24(a)(2) · §395.34(b)",
     color: "#7C3AED",
     summary:
-      "ELDs must offer at least one of two FMCSA-defined transfer method SETS. Telematics set = Web services + Email. Local set = USB 2.0 + Bluetooth. The inspector triggers the transfer by giving the driver a routing code; only Web services pushes the file directly into eRODS. Other methods (Email, USB, Bluetooth) deliver the file to the inspector — they CANNOT be uploaded into eRODS by the inspector and must be reviewed using the ELD viewer software the inspector has on their device.",
+      "ELDs must offer at least one of two FMCSA-defined transfer method SETS. Telematics set = Web services + Email. Local set = USB 2.0 + Bluetooth. The inspector triggers the transfer by giving the driver a routing code; the driver enters it on the ELD and the file is sent.",
     sections: [
       {
         heading: "Telematics transfer set",
-        body: "ELD sends the data file to FMCSA's eRODS web service over the internet AND offers email as a backup. The inspector provides a routing code (via eRODS); the driver enters it on the ELD screen; the ELD transmits the file. Works anywhere the ELD has cell/wifi data.",
+        body: "ELD transmits the data file over the internet. The inspector provides a routing code; the driver enters it on the ELD screen; the ELD sends the file. Works anywhere the ELD has cell/wifi data.",
         bullets: [
-          "Web services: real-time push directly into eRODS — ALWAYS the preferred method when available, because it's the only transfer that lands the file in eRODS for review.",
-          "Email: ELD emails the file to whatever address the inspector provides — there is no fixed FMCSA email. Inspectors should use their own state-issued enforcement email when this option is chosen. The emailed file is NOT loaded into eRODS; review it with whatever ELD viewer software the inspector's agency provides. Pick Web services first whenever the ELD supports it.",
+          "Web services: real-time push — preferred method when available.",
+          "Email: ELD emails the file to whatever address the inspector provides. There is no fixed FMCSA email; inspectors should use their state-issued enforcement email when choosing this option.",
         ],
       },
       {
