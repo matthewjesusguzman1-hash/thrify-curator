@@ -178,11 +178,6 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
         </div>
       )}
 
-      {/* Day before — context */}
-      {scenario.priorDayLog && (
-        <ContextDayStrip label="Day before" log={scenario.priorDayLog} note={scenario.priorDayNote} testid="prior-day-strip" />
-      )}
-
       {/* Day 1 + Day 2 grids — always both visible (no day-by-day reveal) */}
       <DaySection
         label={scenario.days[0].label}
@@ -259,12 +254,6 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
           }}
           testid={`another-${shiftIdx}`}
         />
-      )}
-
-      {/* Day after — only visible after all answers, since revealing it
-          earlier could give away whether shifts continued. */}
-      {allShiftsDone && scenario.nextDayLog && (
-        <ContextDayStrip label="Day after" log={scenario.nextDayLog} note={scenario.nextDayNote} testid="next-day-strip" />
       )}
 
       {/* Summary card after user declares no more shifts */}

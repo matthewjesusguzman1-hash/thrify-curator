@@ -193,7 +193,7 @@ export const COMBINED_SCENARIOS = [
 export const MULTIDAY_SCENARIOS = [
   {
     id: "M1",
-    primer: "OVERNIGHT shift carrying from the PRIOR DAY into Day 1 — the inspector must look at the prior day to see where the shift actually started, then confirm Day 2 has its own clean shift after a proper reset. Identify each day's shift bounds and check 11/14 compliance.",
+    primer: "Two-day scenario. The Day 1 work block began before the start of the day (continuing from a prior shift outside this window). Identify Day 1's work-shift bounds within this window and Day 2's shift, then check 11/14 compliance.",
     priorDayLog: [
       { status: "OFF", start: "00:00", end: "18:00" },
       { status: "OD",  start: "18:00", end: "19:00" },
@@ -351,7 +351,7 @@ export const MULTIDAY_SCENARIOS = [
   },
   {
     id: "M4",
-    primer: "Two contained day shifts — neither is overnight, BUT the rest period between them is short. Identify each day's shift, then evaluate whether the driver had a proper §395.3(a)(1) 10-hr reset before starting Day 2 (the prior day's logs matter for that check too).",
+    primer: "Two contained day shifts — neither is overnight, BUT the rest period between them is short. Identify each day's shift, then evaluate whether the driver had a proper §395.3(a)(1) 10-hr reset between the end of Day 1 and the start of Day 2.",
     priorDayLog: [
       { status: "OFF", start: "00:00", end: "06:00" },
       { status: "OD",  start: "06:00", end: "07:00" },
