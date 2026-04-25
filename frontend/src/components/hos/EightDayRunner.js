@@ -130,6 +130,20 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
       {/* Day stepper — visual progress across all 8 days */}
       <DayStepper days={days} answers={dayAnswers} activeIdx={phase === "days" ? dayIdx : -1} done={phase !== "days"} />
 
+      {/* Completed days — stay visible as readonly summary cards so the
+       * inspector can keep cross-day context (e.g. an SB block at the end of
+       * yesterday that pairs with this morning's rest as a split-sleeper
+       * Period A/B). Always visible whether we're on phase=days or beyond. */}
+      {Array.from({ length: phase === "days" ? dayIdx : days.length }).map((_, i) => (
+        <CompletedDayCard
+          key={`completed-${i}`}
+          day={days[i]}
+          dayIdx={i}
+          totalDays={totalDays}
+          answer={dayAnswers[i]}
+        />
+      ))}
+
       {/* Active day card */}
       {phase === "days" && (
         <DayCard
@@ -200,6 +214,64 @@ export function EightDayRunner({ scenarios, category = "eightday", initialIdx = 
         </section>
       )}
     </div>
+  );
+}
+
+/* ─── Completed day card (readonly summary) ─── */
+/** Renders a previously-answered day in collapsed readonly form so the
+ *  inspector keeps cross-day context as they advance through the 8 days.
+ *  Shows the grid with shift markers plus a one-line outcome summary. */
+function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
+  const isOffDay = day.offDay === true;
+  const violationCorrect = (
+    day.violation11 && day.violation14 ? "multi" :
+    day.violation11 && day.violation8 ? "multi" :
+    day.violation14 && day.violation8 ? "multi" :
+    day.violation11 ? "11" :
+    day.violation14 ? "14" :
+    day.violation8 ? "8" : "none"
+  );
+  const userViolation = answer?.violation;
+  const userRightV = userViolation === violationCorrect;
+
+  const markers = [];
+  if (!isOffDay) {
+    markers.push({ min: day.shiftStartMin, kind: "start", label: `START · ${minToTimeStr(day.shiftStartMin)}` });
+    markers.push({ min: day.shiftEndMin, kind: "end", label: `END · ${minToTimeStr(day.shiftEndMin)}`, labelRow: 1 });
+  }
+
+  const violationLabel = (
+    violationCorrect === "none" ? "Clean" :
+    violationCorrect === "11" ? "11-hr drive violation" :
+    violationCorrect === "14" ? "14-hr shift violation" :
+    violationCorrect === "8" ? "8-hr break violation" : "Multiple violations"
+  );
+
+  return (
+    <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden opacity-95" data-testid={`completed-day-${dayIdx}`}>
+      <div className="bg-[#475569] text-white px-3 py-1.5 flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-white/70">Day {dayIdx + 1} of {totalDays} · completed</span>
+        <p className="text-[12px] font-bold">{day.label} · {day.dayName}</p>
+        {day.hasSplitSleeper && (
+          <span className="text-[9.5px] font-bold text-[#FBBF24] bg-[#7C2D12] px-1.5 py-0.5 rounded uppercase tracking-wider">Split sleeper</span>
+        )}
+        <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
+          userRightV ? "bg-[#10B981]/30 text-[#A7F3D0]" : "bg-[#F59E0B]/30 text-[#FCD34D]"
+        }`}>
+          {userRightV ? "✓" : "!"} {violationLabel}
+        </span>
+      </div>
+      <div className="p-2">
+        <EldGrid entries={day.log} shiftMarkers={markers} />
+        {day.splitNote && (
+          <div className="mt-1.5 rounded-md border-l-[3px] border-[#7C2D12] bg-[#FEF3C7] px-2 py-1">
+            <p className="text-[10.5px] text-[#7C2D12] leading-snug">
+              <span className="font-bold uppercase tracking-wider text-[8.5px] mr-1">SB note</span>{day.splitNote}
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -375,7 +447,7 @@ function DayShiftQ({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
   };
   let correct = false;
   if (answered) {
-    correct = Math.abs(answer.start - day.shiftStartMin) <= 10 && Math.abs(answer.end - day.shiftEndMin) <= 10;
+    correct = Math.abs(answer.start - day.shiftStartMin) <= 5 && Math.abs(answer.end - day.shiftEndMin) <= 5;
   }
   return (
     <div className="p-4 border-t border-[#E2E8F0] space-y-3" data-testid={`day-${dayIdx}-shift`}>

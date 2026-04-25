@@ -109,15 +109,16 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   };
 
   // Drag support for shift markers flagged with draggable:true. We snap to
-  // 15-min intervals (same as onMinuteClick) and emit through onMarkerDrag.
-  // Pointer capture keeps drag alive even if the pointer leaves the marker.
+  // 5-min intervals so users can hit precise values like 07:00 without
+  // ending up at 07:15 due to a coarse snap. Pointer capture keeps drag
+  // alive even if the pointer leaves the marker.
   const handleMarkerPointerMove = (ev, sm) => {
     if (!onMarkerDrag) return;
     const svg = ev.currentTarget.ownerSVGElement || ev.currentTarget;
     const rect = svg.getBoundingClientRect();
     const scale = svgW / rect.width;
     const x = (ev.clientX - rect.left) * scale - LABEL_W;
-    const min = Math.round((x / HOUR_W) * 4) * 15;
+    const min = Math.round((x / HOUR_W) * 12) * 5;
     const clamped = Math.max(0, Math.min(24 * 60, min));
     onMarkerDrag(sm.kind, sm.markerId, clamped);
   };

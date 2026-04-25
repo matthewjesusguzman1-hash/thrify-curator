@@ -314,8 +314,8 @@ function ShiftCard({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
   if (answered) {
     const normEnd = answer.end === 0 && day.shiftEndMin === 24 * 60 ? 24 * 60 : answer.end;
     correct =
-      Math.abs(answer.start - day.shiftStartMin) <= 10 &&
-      Math.abs(normEnd - day.shiftEndMin) <= 10;
+      Math.abs(answer.start - day.shiftStartMin) <= 5 &&
+      Math.abs(normEnd - day.shiftEndMin) <= 5;
   }
 
   return (

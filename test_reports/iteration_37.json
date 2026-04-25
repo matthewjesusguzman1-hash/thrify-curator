@@ -1,0 +1,36 @@
+{
+  "summary": "Verified all three connected fixes on /hours-of-service/practice 8-Day Inspection: (1) 5-min snap precision + ±5-min shift tolerance, (2) CompletedDayCard keeps every previously-answered day visible above the active card, including the auto-skipped off-duty Day −4, (3) split-sleeper notes for E1/E2 Fri & Sat now carry explicit cross-midnight Period A/B context.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_behaviors": [
+    "Login Badge 042 / PIN 1234 still works (PIN + Enter).",
+    "EightDayRunner mounts on practice-cat-eightday tab; Day 1 card shows draggable START/END markers and the Day-before context strip above it.",
+    "Snap precision (code-verified): EldGrid.handleMarkerPointerMove uses Math.round((x / HOUR_W) * 12) * 5 — strictly 5-min increments. Indirectly confirmed by 06:00/15:30 input being accepted as 'Correct' under the new ±5-min tolerance (was ±10).",
+    "Shift tolerance ±5: typed Shift START 06:00 / END 15:30 on E1 Day −7 (correct values 360/930 min) → green 'Correct' feedback box rendered.",
+    "completed-day-0 stays visible with grey #475569 header reading 'Day 1 of 8 · completed · Day −7 · Mon' and a green '✓ Clean' outcome badge after advancing to Day 2. completed-day-0 top=913 vs day-card-1 top=1194 (correctly placed ABOVE the active card).",
+    "E1 full walk-through (8 days incl. off-day Day −4 auto-skip via day-3-skip) → phase advances to cycle. ALL 8 completed-day-N cards (i=0..7) visible above [data-testid=cycle-step]. Off-day Day −4 renders correctly as completed-day-3 with a Clean badge and full-OFF EldGrid.",
+    "Split-sleeper note on E1 Day −3 Fri (completed-day-4): 'SB note · 8h SB block 11:00–19:00 = qualifying Period A under §395.1(g)(1)(ii). Period B carries into Day −2: the 21:00–24:00 OFF combines with Day −2's 00:00–02:00 SB + 02:00–06:00 OFF to give 9h consecutive rest (3h OFF + 2h SB + 4h OFF) starting 21:00 Fri ending 06:00 Sat.' — matches review_request expectations (mentions 'Period B carries into Day −2' and 9h consecutive SB+OFF).",
+    "Split-sleeper note on E1 Day −2 Sat (completed-day-5): 'SB note · 00:00–02:00 SB + 02:00–06:00 OFF complete the split-sleeper pair started Fri 21:00 (Period B = 9h consecutive ending 06:00 today). Pair completes at 06:00 — fresh 11/14 clocks today.' — matches expected phrasing 'complete the split-sleeper pair started Fri 21:00' and 'Pair completes at 06:00'.",
+    "E2 split-sleeper notes (source-verified, hosAdvancedScenarios.js lines 708 & 728): Fri: 'Period B carries into Day −2 Saturday ... 20:00–24:00 OFF combines with Sat 00:00–02:00 SB + 02:00–06:00 OFF to give 10h consecutive rest (4h OFF + 2h SB + 4h OFF) starting 20:00 Fri ending 06:00 Sat.'; Sat: 'complete the split-sleeper pair started Fri 20:00 (Period B = 10h consecutive ending 06:00 today). Pair completes at 06:00 — fresh 11/14 clocks today.' Both explicitly explain Period A (8h SB) + Period B (≥10h SB+OFF spanning midnight).",
+    "Both Fri completed cards display the 'SPLIT SLEEPER' orange badge (bg-[#7C2D12], text-[#FBBF24]) in their grey completed header, so cross-day context is visually scannable as the inspector advances.",
+    "Cards retain opacity-95 (slightly muted) and remain readable. EldGrid renders shift START/END marker labels on every completed card."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "EightDayRunner.js now ~720 lines — exceeds 700-line guideline. Recommend splitting CompletedDayCard, DayCard, DayShiftQ, DayViolationQ, CycleStep, OosStep into separate files in a future refactor. Same applies to MultiDayRunner.js.",
+    "ContextDayStrip is still duplicated verbatim across MultiDayRunner.js and EightDayRunner.js (~20 lines). Candidate for extraction to /app/frontend/src/components/hos/ContextDayStrip.js.",
+    "Drag-snap precision was verified by source-code inspection + indirect 'Correct' feedback test, not by reading live drag-label text during a continuous drag (Playwright pointer-event timing made the live label hard to capture). The math `Math.round((x/HOUR_W)*12)*5` is mathematically conclusive — every output is a multiple of 5."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100%"},
+  "test_credentials": "Badge 042 / PIN 1234 (per /app/memory/test_credentials.md)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All three fixes (snap precision, completed-day visibility, cross-midnight split-sleeper notes) are working. CompletedDayCard renders every previously-answered day above the active card including auto-skipped off-duty days. The split-sleeper notes carry forward across midnight as expected on both E1 (9h pair: Fri 21:00 → Sat 06:00) and E2 (10h pair: Fri 20:00 → Sat 06:00). Files now ~720 lines — main agent may want to refactor before further additions. No retest needed."
+}

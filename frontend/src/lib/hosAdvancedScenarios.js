@@ -530,11 +530,11 @@ export const EIGHTDAY_SCENARIOS = [
         shiftStartMin: 6 * 60, shiftEndMin: 21 * 60,
         onDutyHours: 7,
         hasSplitSleeper: true,
-        splitNote: "Driver took an 8-hr SB block (11:00–19:00) — qualifying Period A of a split-sleeper pair; pairs with off-duty rest tomorrow morning.",
+        splitNote: "8h SB block 11:00–19:00 = qualifying Period A under §395.1(g)(1)(ii). Period B carries into Day −2: the 21:00–24:00 OFF combines with Day −2's 00:00–02:00 SB + 02:00–06:00 OFF to give 9h consecutive rest (3h OFF + 2h SB + 4h OFF) starting 21:00 Fri ending 06:00 Sat.",
         violation11: false, violation14: false, violation8: false,
         explanation: {
-          shift: "With the 8h SB block as Period A of a split-sleeper pair, the work shift bounds are 06:00 → 11:00 (1st segment) and 19:00 → 21:00 (2nd segment). For inspector identification, mark START 06:00 and END 21:00 covering both work segments.",
-          violation: "Clean — split-sleeper provision being used. Drive 4h+2h = 6h within shift, well under 11. The 8h SB qualifies as Period A under §395.1(g)(1)(ii).",
+          shift: "Split-sleeper day. Two work segments inside one shift bound by qualifying rests: 06:00–11:00 (5h work, before Period A) and 19:00–21:00 (2h work, after Period A). Mark START at 06:00 (first OD) and END at 21:00 (last D before Period B begins).",
+          violation: "Clean. 8h SB IS Period A of a split-sleeper pair; rest from 21:00 Fri through 06:00 Sat (9h consecutive SB+OFF) is Period B. Together they satisfy §395.1(g)(1)(ii) — Period A ≥ 7h SB and Period B ≥ 2h SB-or-OFF, combined ≥ 10h. Drive in today's two segments = 4h + 2h = 6h, well under 11.",
         },
       },
       {
@@ -551,11 +551,11 @@ export const EIGHTDAY_SCENARIOS = [
         shiftStartMin: 6 * 60, shiftEndMin: 16 * 60,
         onDutyHours: 9.5,
         hasSplitSleeper: true,
-        splitNote: "00:00–02:00 SB completes the split-sleeper pair started Friday. Today is treated as a fresh start for the 11/14 clocks.",
+        splitNote: "00:00–02:00 SB + 02:00–06:00 OFF complete the split-sleeper pair started Fri 21:00 (Period B = 9h consecutive ending 06:00 today). Pair completes at 06:00 — fresh 11/14 clocks today.",
         violation11: false, violation14: false, violation8: false,
         explanation: {
-          shift: "Shift 06:00 → 16:00 (10h). Drive 4.5h+4h = 8.5h.",
-          violation: "Clean. 30-min break at 11:30 right before the 8-cumulative threshold.",
+          shift: "Period B of yesterday's split-sleeper pair runs from 21:00 Fri through 06:00 Sat. Today's shift begins AFTER Period B ends — START at 06:00 (first OD) and END at 16:00 (last D). The early-morning SB+OFF count as Period B, NOT toward today's shift bounds.",
+          violation: "Clean. 30-min break at 11:30 right before the 8-cumulative threshold. Drive 4.5h+4h = 8.5h, under 11.",
         },
       },
       {
@@ -705,11 +705,11 @@ export const EIGHTDAY_SCENARIOS = [
         shiftStartMin: 5 * 60, shiftEndMin: 20 * 60,
         onDutyHours: 7,
         hasSplitSleeper: true,
-        splitNote: "8-hr SB block 10:00–18:00 = Period A of a split-sleeper pair. Driver pairs it with morning off-duty rest tomorrow.",
+        splitNote: "8h SB block 10:00–18:00 = qualifying Period A under §395.1(g)(1)(ii). Period B carries into Day −2 Saturday: the 20:00–24:00 OFF combines with Sat's 00:00–02:00 SB + 02:00–06:00 OFF to give 10h consecutive rest (4h OFF + 2h SB + 4h OFF) starting 20:00 Fri ending 06:00 Sat.",
         violation11: false, violation14: false, violation8: false,
         explanation: {
-          shift: "Split-sleeper day: Period A is the 8h SB (10:00–18:00). Mark shift START at 05:00 (first OD) and END at 20:00 (last D). Two work segments inside: 05:00–10:00 and 18:00–20:00.",
-          violation: "Clean. The 8h SB satisfies §395.1(g)(1)(ii) Period A. Drive within shift = 4h+2h = 6h, under 11.",
+          shift: "Split-sleeper day: Period A is the 8h SB (10:00–18:00). Mark shift START at 05:00 (first OD, before Period A) and END at 20:00 (last D before Period B begins). Two work segments inside: 05:00–10:00 (5h) and 18:00–20:00 (2h).",
+          violation: "Clean. 8h SB satisfies §395.1(g)(1)(ii) Period A; Period B (20:00 Fri → 06:00 Sat = 10h consecutive SB+OFF) completes the pair. Drive within today's segments = 4h+2h = 6h, under 11.",
         },
       },
       {
@@ -724,10 +724,12 @@ export const EIGHTDAY_SCENARIOS = [
         ],
         shiftStartMin: 6 * 60, shiftEndMin: 15 * 60 + 30,
         onDutyHours: 9.5,
+        hasSplitSleeper: true,
+        splitNote: "00:00–02:00 SB + 02:00–06:00 OFF complete the split-sleeper pair started Fri 20:00 (Period B = 10h consecutive ending 06:00 today). Pair completes at 06:00 — fresh 11/14 clocks today.",
         violation11: false, violation14: false, violation8: true,
         explanation: {
-          shift: "Shift 06:00 → 15:30 (9.5h). Drive 5h+3.5h = 8.5h continuous, NO 30-min break.",
-          violation: "8-hr break VIOLATION. Driver hit 8 cumulative hours of driving without taking a 30-min off-duty/SB break — §395.3(a)(3)(ii). The break should have been taken before 15:00 (8h after first drive).",
+          shift: "Period B of yesterday's split-sleeper pair runs 20:00 Fri → 06:00 Sat. Today's shift begins AFTER Period B ends — START at 06:00 (first OD) and END at 15:30 (last D). The early-morning SB+OFF count as Period B, NOT toward today's shift bounds.",
+          violation: "8-hr break VIOLATION. Driver hit 8 cumulative hours of driving without a 30-min off-duty/SB break — §395.3(a)(3)(ii). Break should have been taken before 15:00 (8h after first drive at 07:00).",
         },
       },
       {
