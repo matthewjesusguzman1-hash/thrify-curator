@@ -25,6 +25,14 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 
 ## Changelog
 
+
+### 2026-02 — 8-day scenarios harder + cycle calc + multi-pairing
+- E1 rebalanced (was all clean): added an OVERNIGHT shift across Day −6 / Day −5, a 14-hr shift violation on Day −4, an 8-hr break violation on Day −1, and a multi-pairing split-sleeper day on Day −3.
+- E2 enhanced: new 8-hr break violation on Day −5, new OVERNIGHT shift across Day −1 / Day 0, multi-pairing split-sleeper on Day −3 (compound option removed). Cycle total recomputed to 74h (still over the 70-hr cap).
+- Cycle calc in `EightDayRunner.js` now starts BLANK — inspector must enter each day's on-duty hours from the logs themselves, then click "Check my totals" to grade each cell against canonical `onDutyHours` (±0.25h tolerance, red border + "was X" hint on wrong cells).
+- New `MultiPairingShiftQ` component for split-sleeper days flagged `requireAllPairings: true`. Inspector must Add/Remove pairings iteratively until every work segment is bracketed, then submit. Grading lists each user pairing matched/unmatched against canonical pairings, and surfaces missed pairings explicitly.
+- Markers in active and completed day cards updated to render every submitted pairing for multi-pair days.
+
 ### 2026-02 — Multi-Day Runner overnight-shift continuity fix
 - User: "For the multi day scenario the start of the work shift begins in the first day and the end stops on the second day the app needs to compensate for that without giving away that the start and stop lines are on different days."
 - Rewrote `/app/frontend/src/components/hos/MultiDayRunner.js` to present BOTH Day 1 + Day 2 grids together with a single ShiftQuestionCard ("When did this work shift START and END?") whose Start/End handles each carry their own day picker (Day 1 or Day 2). The runner advances shift-by-shift via a neutral "Is there another work shift?" card so the UI never reveals scenario count or whether the active shift crosses midnight.

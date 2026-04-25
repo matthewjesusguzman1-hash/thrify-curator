@@ -236,12 +236,20 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
 
   const markers = [];
   if (!isOffDay) {
-    // Show the USER's answered shift bounds — same reasoning as the active
-    // DayCard (split-sleeper days have multiple valid bracketings).
-    const startMin = answer?.shift?.start ?? day.shiftStartMin;
-    const endMin = answer?.shift?.end ?? day.shiftEndMin;
-    markers.push({ min: startMin, kind: "start", label: `START · ${minToTimeStr(startMin)}` });
-    markers.push({ min: endMin, kind: "end", label: `END · ${minToTimeStr(endMin)}`, labelRow: 1 });
+    if (answer?.shift?.multi && Array.isArray(answer.shift.pairings)) {
+      // Multi-pairing day: render every submitted pairing.
+      answer.shift.pairings.forEach((p, i) => {
+        markers.push({ min: p.start, kind: "start", label: `P${i + 1} START · ${minToTimeStr(p.start)}` });
+        markers.push({ min: p.end, kind: "end", label: `P${i + 1} END · ${minToTimeStr(p.end)}`, labelRow: 1 });
+      });
+    } else {
+      // Show the USER's answered shift bounds — same reasoning as the active
+      // DayCard (split-sleeper days have multiple valid bracketings).
+      const startMin = answer?.shift?.start ?? day.shiftStartMin;
+      const endMin = answer?.shift?.end ?? day.shiftEndMin;
+      markers.push({ min: startMin, kind: "start", label: `START · ${minToTimeStr(startMin)}` });
+      markers.push({ min: endMin, kind: "end", label: `END · ${minToTimeStr(endMin)}`, labelRow: 1 });
+    }
   }
 
   const violationLabel = (
@@ -354,16 +362,26 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
   );
 
   const day1ShiftActive = phase === "shift" && answer?.shift === undefined;
+  const isMultiPair = !isOffDay && day.requireAllPairings === true;
   const markers = useMemo(() => {
     const m = [];
     if (answer?.shift && !answer.shift.off) {
-      // After answering, show the USER's shift bounds (not always the canonical
-      // single answer) — important on split-sleeper days where multiple valid
-      // bracketings exist.
-      m.push({ min: answer.shift.start, kind: "start", label: `Shift START · ${minToTimeStr(answer.shift.start)}` });
-      m.push({ min: answer.shift.end, kind: "end", label: `Shift END · ${minToTimeStr(answer.shift.end)}`, labelRow: 1 });
-      if (day.regulatoryEndMin !== undefined && day.regulatoryEndMin !== answer.shift.end) {
-        m.push({ min: day.regulatoryEndMin, kind: "end", color: "#D4AF37", label: `SHOULD have ended · ${minToTimeStr(day.regulatoryEndMin)}`, labelRow: 2 });
+      if (answer.shift.multi && Array.isArray(answer.shift.pairings)) {
+        // Render every pairing the user submitted, stacking labels so they
+        // don't collide.
+        answer.shift.pairings.forEach((p, i) => {
+          m.push({ min: p.start, kind: "start", label: `P${i + 1} START · ${minToTimeStr(p.start)}` });
+          m.push({ min: p.end, kind: "end", label: `P${i + 1} END · ${minToTimeStr(p.end)}`, labelRow: 1 });
+        });
+      } else {
+        // After answering, show the USER's shift bounds (not always the canonical
+        // single answer) — important on split-sleeper days where multiple valid
+        // bracketings exist.
+        m.push({ min: answer.shift.start, kind: "start", label: `Shift START · ${minToTimeStr(answer.shift.start)}` });
+        m.push({ min: answer.shift.end, kind: "end", label: `Shift END · ${minToTimeStr(answer.shift.end)}`, labelRow: 1 });
+        if (day.regulatoryEndMin !== undefined && day.regulatoryEndMin !== answer.shift.end) {
+          m.push({ min: day.regulatoryEndMin, kind: "end", color: "#D4AF37", label: `SHOULD have ended · ${minToTimeStr(day.regulatoryEndMin)}`, labelRow: 2 });
+        }
       }
     }
     if (day1ShiftActive && !isOffDay) {
@@ -411,9 +429,21 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
       )}
 
       {/* Shift question */}
-      {!isOffDay && phase === "shift" && (
+      {!isOffDay && phase === "shift" && !isMultiPair && (
         <DayShiftQ
           day={day} tStart={tStart} setTStart={setTStart} tEnd={tEnd} setTEnd={setTEnd}
+          answered={answer?.shift !== undefined}
+          answer={answer?.shift}
+          onSubmit={onSubmitShift}
+          onNext={onShiftNext}
+          dayIdx={dayIdx}
+        />
+      )}
+
+      {/* Multi-pairing shift question (split-sleeper days with > 1 work segments) */}
+      {!isOffDay && phase === "shift" && isMultiPair && (
+        <MultiPairingShiftQ
+          day={day}
           answered={answer?.shift !== undefined}
           answer={answer?.shift}
           onSubmit={onSubmitShift}
@@ -521,6 +551,127 @@ function DayShiftQ({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
   );
 }
 
+/* ─── Multi-pairing shift question (split-sleeper days with multiple work segments) ─── */
+function MultiPairingShiftQ({ day, answered, answer, onSubmit, onNext, dayIdx }) {
+  const [pairings, setPairings] = useState([]);
+  const [tStart, setTStart] = useState("");
+  const [tEnd, setTEnd] = useState("");
+  const required = day.acceptableShifts || [];
+
+  const submitOne = () => {
+    const sMin = timeStrToMin(tStart);
+    const eMin = timeStrToMin(tEnd);
+    if (sMin === null || eMin === null) return;
+    setPairings((p) => [...p, { start: sMin, end: eMin }]);
+    setTStart(""); setTEnd("");
+  };
+  const finish = () => {
+    onSubmit({ multi: true, pairings });
+  };
+
+  // Match each user pairing to a canonical pairing within ±10 min tolerance.
+  // Each canonical pairing can only be matched once.
+  let correctCount = 0;
+  let matchedRequired = new Array(required.length).fill(false);
+  let userMatchIdx = [];
+  if (answered && answer?.multi) {
+    answer.pairings.forEach((p) => {
+      const idx = required.findIndex((r, i) => !matchedRequired[i] && Math.abs(p.start - r.start) <= 10 && Math.abs(p.end - r.end) <= 10);
+      if (idx >= 0) {
+        matchedRequired[idx] = true;
+        userMatchIdx.push(idx);
+        correctCount++;
+      } else {
+        userMatchIdx.push(-1);
+      }
+    });
+  }
+  const allCovered = answered && correctCount === required.length && answer.pairings.length === required.length;
+
+  return (
+    <div className="p-4 border-t border-[#E2E8F0] space-y-3" data-testid={`day-${dayIdx}-shift`}>
+      <div className="flex items-start gap-2">
+        <Target className="w-4 h-4 text-[#002855] mt-0.5 flex-shrink-0" />
+        <p className="text-[13px] font-bold text-[#002855] leading-snug">Identify EVERY work segment on this day. Some days have more than one — keep adding pairings until every work block on the grid is bracketed.</p>
+      </div>
+      {!answered && (
+        <>
+          {pairings.length > 0 && (
+            <div className="rounded-md border border-[#10B981]/40 bg-[#F0FDF4] p-2 space-y-1" data-testid={`day-${dayIdx}-pairings-list`}>
+              <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#065F46]">Submitted pairings</p>
+              {pairings.map((p, i) => (
+                <div key={i} className="flex items-center gap-2 text-[12px] font-mono">
+                  <span className="text-[#065F46] font-bold">P{i + 1}</span>
+                  <span>{minToTimeStr(p.start)} → {minToTimeStr(p.end)}</span>
+                  <button onClick={() => setPairings((arr) => arr.filter((_, j) => j !== i))} className="ml-auto text-[10px] text-[#991B1B] hover:underline" data-testid={`day-${dayIdx}-pairing-${i}-remove`}>remove</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">Type the START and END for the next work segment, then click <span className="font-bold">Add pairing</span>. When you've bracketed every work block, click <span className="font-bold">Done — submit pairings</span>.</p>
+          <div className="space-y-2">
+            <div className="flex gap-2 items-center">
+              <label className="text-[11px] font-bold text-[#475569] w-28">Pairing START:</label>
+              <input type="time" value={tStart} onChange={(e) => setTStart(e.target.value)}
+                className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#10B981] focus:border-[#002855] focus:outline-none"
+                data-testid={`day-${dayIdx}-pairing-start`} />
+            </div>
+            <div className="flex gap-2 items-center">
+              <label className="text-[11px] font-bold text-[#475569] w-28">Pairing END:</label>
+              <input type="time" value={tEnd} onChange={(e) => setTEnd(e.target.value)}
+                className="flex-1 px-3 py-1.5 border border-[#CBD5E1] rounded-md font-mono text-sm font-bold text-[#DC2626] focus:border-[#002855] focus:outline-none"
+                data-testid={`day-${dayIdx}-pairing-end`} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={submitOne} disabled={!tStart || !tEnd} variant="outline" className="border-[#10B981] text-[#065F46] hover:bg-[#F0FDF4]" data-testid={`day-${dayIdx}-pairing-add`}>
+                Add pairing
+              </Button>
+              <Button onClick={finish} disabled={pairings.length === 0} className="bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`day-${dayIdx}-pairings-submit`}>
+                Done — submit
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+      {answered && (
+        <>
+          <div className="space-y-1 text-[12px] font-mono">
+            <p className="text-[11px] text-[#475569] font-sans not-italic">Your pairings vs canonical pairings:</p>
+            {answer.pairings.map((p, i) => {
+              const m = userMatchIdx[i];
+              return (
+                <div key={`u${i}`} className={`flex justify-between pl-2 ${m >= 0 ? "text-[#10B981]" : "text-[#DC2626]"}`}>
+                  <span>P{i + 1}:</span>
+                  <span className="font-bold">{minToTimeStr(p.start)} → {minToTimeStr(p.end)} {m >= 0 ? "✓" : "✗ no match"}</span>
+                </div>
+              );
+            })}
+            <div className="border-t border-[#E2E8F0] pt-1 mt-1 space-y-0.5">
+              <p className="text-[11px] text-[#475569] font-sans not-italic">Canonical pairings (all must be identified):</p>
+              {required.map((r, i) => (
+                <div key={`r${i}`} className={`flex justify-between pl-2 ${matchedRequired[i] ? "text-[#10B981]" : "text-[#F59E0B]"}`}>
+                  <span>{r.label}:</span>
+                  <span className="font-bold">{minToTimeStr(r.start)} → {minToTimeStr(r.end)} {matchedRequired[i] ? "✓ found" : "✗ MISSED"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className={`rounded-md p-2.5 border ${allCovered ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              {allCovered ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />}
+              <p className="text-[12px] font-bold text-[#334155]">{allCovered ? `Correct — ${correctCount}/${required.length} pairings` : `Identified ${correctCount}/${required.length} pairings`}</p>
+            </div>
+            <p className="text-[11.5px] text-[#334155] leading-relaxed"><CfrText text={day.explanation.shift} /></p>
+          </div>
+          <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`day-${dayIdx}-shift-next`}>
+            Next: violation check <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function DayViolationQ({ day, correctValue, answered, answer, onPick, onNext, dayIdx, isLast }) {
   const choices = [
     { value: "none", label: "No violation" },
@@ -585,8 +736,11 @@ function DayViolationQ({ day, correctValue, answered, answer, onPick, onNext, da
 function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
   const limit = scenario.cycleLimit || 70;
   const days = scenario.days;
-  // Pre-fill the calc with the scenario's known onDutyHours per day, but allow editing.
-  const [overrides, setOverrides] = useState(() => days.map((d) => String(d.onDutyHours ?? 0)));
+  // Start the cycle calc BLANK — the inspector must enter each day's on-duty
+  // hours by reading the logs above. After they fill it in, "Check my totals"
+  // grades each cell against the canonical onDutyHours per day.
+  const [overrides, setOverrides] = useState(() => days.map(() => ""));
+  const [checked, setChecked] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
   const total = useMemo(() => overrides.reduce((s, v) => {
@@ -594,6 +748,18 @@ function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
     return s + (isNaN(n) ? 0 : n);
   }, 0), [overrides]);
   const verdict = total > limit ? "over" : total === limit ? "atLimit" : "under";
+  const correctTotal = useMemo(() => days.reduce((s, d) => s + (d.onDutyHours || 0), 0), [days]);
+
+  // Per-cell grading (when checked): a cell is correct if it's within ±0.25h
+  // of the canonical day.onDutyHours, or both are 0 for an off-duty day.
+  const cellState = (i) => {
+    if (!checked) return "neutral";
+    const u = parseFloat(overrides[i]);
+    const expected = days[i].onDutyHours || 0;
+    if (isNaN(u)) return "wrong";
+    return Math.abs(u - expected) <= 0.25 ? "right" : "wrong";
+  };
+  const allFilled = overrides.every((v) => v !== "" && !isNaN(parseFloat(v)));
 
   const correctViolation = scenario.cycleViolation;
 
@@ -605,22 +771,39 @@ function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
           <p className="text-[12px] font-bold text-[#002855]">Mini {limit}-hr cycle calculator <span className="text-[9.5px] font-normal text-[#94A3B8]">(training only)</span></p>
         </div>
         <div className="p-3 space-y-2">
-          <p className="text-[10.5px] text-[#64748B] leading-snug">Each day's on-duty total is prefilled from the logs. Edit if needed (e.g., a 34-hr restart day might be zeroed out for cycle-counting). Total compares against the {limit}-hr cap.</p>
+          <p className="text-[10.5px] text-[#64748B] leading-snug">Read each day's log above and enter the on-duty total (driving + non-driving on-duty) for that day. Then click <span className="font-bold">Check my totals</span> to grade. The 8-day sum is compared against the {limit}-hr cap.</p>
           <div className="grid grid-cols-8 gap-1">
-            {days.map((d, i) => (
-              <div key={i} className="text-center">
-                <label className="block text-[8.5px] font-bold uppercase tracking-wider text-[#64748B] mb-0.5">{d.label}</label>
-                <input type="number" inputMode="decimal" step="0.25" min="0" value={overrides[i]}
-                  onChange={(e) => setOverrides((p) => p.map((x, j) => (j === i ? e.target.value : x)))}
-                  className="w-full px-1 py-1 text-[12px] font-mono font-bold text-center text-[#002855] border border-[#E2E8F0] rounded outline-none focus:border-[#D4AF37]"
-                  data-testid={`cycle-day-${i}`} />
-              </div>
-            ))}
+            {days.map((d, i) => {
+              const state = cellState(i);
+              const expected = d.onDutyHours || 0;
+              return (
+                <div key={i} className="text-center">
+                  <label className="block text-[8.5px] font-bold uppercase tracking-wider text-[#64748B] mb-0.5">{d.label}</label>
+                  <input type="number" inputMode="decimal" step="0.25" min="0" placeholder="—" value={overrides[i]}
+                    onChange={(e) => { setOverrides((p) => p.map((x, j) => (j === i ? e.target.value : x))); if (checked) setChecked(false); }}
+                    className={`w-full px-1 py-1 text-[12px] font-mono font-bold text-center border rounded outline-none focus:border-[#D4AF37] ${
+                      state === "right" ? "border-[#10B981] bg-[#F0FDF4] text-[#065F46]" :
+                      state === "wrong" ? "border-[#DC2626] bg-[#FEE2E2] text-[#991B1B]" :
+                      "border-[#E2E8F0] text-[#002855]"
+                    }`}
+                    data-testid={`cycle-day-${i}`} />
+                  {state === "wrong" && (
+                    <p className="text-[9px] font-mono text-[#991B1B] mt-0.5" data-testid={`cycle-day-${i}-correct`}>was {expected}</p>
+                  )}
+                  {state === "right" && (
+                    <p className="text-[9px] font-bold text-[#065F46] mt-0.5">✓</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#E2E8F0]">
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-[#64748B]">8-day total</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-[#64748B]">Your 8-day total</p>
               <p className="text-[18px] font-mono font-black text-[#002855]" data-testid="cycle-total">{total.toFixed(2).replace(/\.?0+$/, "")} h</p>
+              {checked && Math.abs(total - correctTotal) > 0.25 && (
+                <p className="text-[10px] font-mono text-[#991B1B]" data-testid="cycle-correct-total">canonical {correctTotal.toFixed(2).replace(/\.?0+$/, "")} h</p>
+              )}
             </div>
             <div>
               <p className="text-[9px] font-bold uppercase tracking-wider text-[#64748B]">vs {limit}-hr cap</p>
@@ -631,6 +814,16 @@ function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
               </p>
             </div>
           </div>
+          <button
+            onClick={() => setChecked(true)}
+            disabled={!allFilled}
+            className={`w-full text-[11px] font-bold py-1.5 rounded border ${
+              allFilled ? "bg-[#002855] text-white border-[#002855] hover:bg-[#001a3a]" : "bg-[#F1F5F9] text-[#94A3B8] border-[#E2E8F0] cursor-not-allowed"
+            }`}
+            data-testid="cycle-check"
+          >
+            {checked ? "Re-check" : "Check my totals"}
+          </button>
           {scenario.cycleNote && (
             <button onClick={() => setRevealed((v) => !v)} className="w-full text-[11px] font-bold text-[#002855] hover:text-[#D4AF37] py-1.5 rounded border border-dashed border-[#CBD5E1] hover:border-[#D4AF37]" data-testid="cycle-reveal">
               {revealed ? "Hide answer" : "Reveal cycle answer"}
