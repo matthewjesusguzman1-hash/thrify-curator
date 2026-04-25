@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Header } from "../components/app/Header";
-import { Plus, Trash2, ChevronLeft, Camera, Pencil, Check, X, Image, ShieldAlert, XCircle, Eye, Hourglass, Scale, Repeat, Share2 } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, Camera, Pencil, Check, X, Image, ShieldAlert, XCircle, Eye, Hourglass, Scale, Repeat, Share2, Languages } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -159,6 +159,12 @@ export default function InspectionDetail() {
     await axios.delete(`${API}/inspections/${id}/tiedown/${assessmentId}`);
     fetchInspection();
     toast.success("Tie-down assessment removed");
+  };
+
+  const removeElp = async (assessmentId) => {
+    await axios.delete(`${API}/inspections/${id}/elp/${assessmentId}`);
+    fetchInspection();
+    toast.success("ELP assessment removed");
   };
 
   const removeHos = async (assessmentId) => {
@@ -485,6 +491,95 @@ export default function InspectionDetail() {
                     >
                       <Repeat className="w-3 h-3" /> Recreate in Tie-Down Calculator
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ELP (English Language Proficiency) Assessments */}
+        {inspection.elp_assessments?.length > 0 && (
+          <div data-testid="elp-assessments-section">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                ELP Assessments ({inspection.elp_assessments.length})
+              </span>
+            </div>
+            <div className="space-y-3">
+              {inspection.elp_assessments.map((a) => {
+                const interviewItems = (a.interview_answers || []).filter((q) => q.result);
+                const signItems = (a.sign_answers || []).filter((s) => s.result);
+                const interviewFails = interviewItems.filter((q) => q.result === "fail").length;
+                const interviewInconclusive = interviewItems.filter((q) => q.result === "inconclusive").length;
+                const interviewPasses = interviewItems.filter((q) => q.result === "pass").length;
+                const signFails = signItems.filter((s) => s.result === "fail").length;
+                const signPasses = signItems.filter((s) => s.result === "pass").length;
+                const proficient = a.overall_disposition === "proficient";
+                return (
+                  <div key={a.assessment_id} className="bg-white rounded-lg border p-3" data-testid={`elp-assessment-${a.assessment_id}`}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Languages className="w-4 h-4 text-[#002855]" />
+                        <span className="text-sm font-bold text-[#002855]">ELP Assessment</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${proficient ? "bg-emerald-100 text-emerald-700" : a.overall_disposition === "not_proficient" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                          {proficient ? "PROFICIENT" : a.overall_disposition === "not_proficient" ? "NOT PROFICIENT" : "PENDING"}
+                        </span>
+                        {a.driver_name && (
+                          <span className="text-[10.5px] text-[#475569]">· {a.driver_name}</span>
+                        )}
+                      </div>
+                      <button onClick={() => removeElp(a.assessment_id)} className="text-[#CBD5E1] hover:text-[#DC2626] transition-colors flex-shrink-0" data-testid={`remove-elp-${a.assessment_id}`}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      {a.interview_administered && (
+                        <div className="bg-[#F8FAFC] rounded p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Test 1 — Interview</p>
+                          <p className="text-xs font-bold text-[#002855]">{interviewItems.length} answered</p>
+                          <p className="text-[10.5px] text-[#475569]">
+                            <span className="text-emerald-700 font-bold">{interviewPasses} pass</span>
+                            <span className="mx-1">·</span>
+                            <span className="text-amber-700 font-bold">{interviewInconclusive} inc.</span>
+                            <span className="mx-1">·</span>
+                            <span className="text-red-700 font-bold">{interviewFails} fail</span>
+                          </p>
+                        </div>
+                      )}
+                      {a.signs_administered && (
+                        <div className="bg-[#F8FAFC] rounded p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Test 2 — Sign Recognition</p>
+                          <p className="text-xs font-bold text-[#002855]">{signItems.length} signs</p>
+                          <p className="text-[10.5px] text-[#475569]">
+                            <span className="text-emerald-700 font-bold">{signPasses} pass</span>
+                            <span className="mx-1">·</span>
+                            <span className="text-red-700 font-bold">{signFails} fail</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {a.overall_disposition === "not_proficient" && a.citation_ref && (
+                      <div className="rounded border-l-[3px] border-[#DC2626] bg-[#FEE2E2] px-2 py-1.5 mb-2">
+                        <p className="text-[10.5px] text-[#7F1D1D]">
+                          <span className="font-bold">Citation:</span> {a.citation_ref} — Driver lacks sufficient English language proficiency
+                        </p>
+                      </div>
+                    )}
+
+                    {a.inspector_notes && (
+                      <div className="bg-[#FAFBFC] rounded px-2 py-1.5 mb-2">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Inspector Notes</p>
+                        <p className="text-[11px] text-[#334155] whitespace-pre-wrap">{a.inspector_notes}</p>
+                      </div>
+                    )}
+
+                    <p className="text-[9px] text-[#94A3B8]">
+                      {a.created_at?.slice(0, 16).replace("T", " ")}
+                      {a.cdl_number ? ` | CDL ${a.cdl_number}` : ""}
+                    </p>
                   </div>
                 );
               })}

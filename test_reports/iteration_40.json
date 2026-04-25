@@ -1,0 +1,51 @@
+{
+  "summary": "End-to-end smoke test of new ELP (English Language Proficiency) Roadside Assessment module. Tested backend POST/GET/DELETE for /api/inspections/{id}/elp + the full UI flow on /elp + the new ELP Assessments display on InspectionDetail. Backend 5/5 pytest cases pass. Frontend playwright covered all 13 listed scenarios — every assertion passed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "ELP Save → Create + Save",
+        "issue": "After clicking 'Create + Save', the toast 'Saved to new inspection' shows but the page stays on /elp. Inspector has to manually navigate to the new inspection to see the attached assessment. Minor UX gap vs the Tie-Down preview/save UX which (per request) was meant to mirror behavior. Inspection IS created with the ELP attached (verified via API: elp_assessments length = 1).",
+        "affected_selectors": ["elp-create-and-save"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "ELP page (PDFPreview + save modal)",
+        "issues": [
+          "Radix DialogContent A11y warnings: 'DialogContent requires a DialogTitle' and 'Missing Description or aria-describedby' — fires on Preview dialog & save modal. Low priority but pollutes console; same pattern likely exists elsewhere in app."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_elp_assessments.py",
+    "/app/test_reports/pytest/pytest_elp.xml"
+  ],
+  "action_items": [
+    "(Optional UX) Consider auto-navigating to /inspections/{id} after 'Create + Save' on the ELP page (or after pick-existing save) to mirror Tie-Down behavior.",
+    "(Optional A11y) Add hidden DialogTitle/Description to the ELP save modal and PDFPreview dialog to silence Radix warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py:1586 DELETE /inspections/{id}/elp/{assessment_id} silently returns ok:true even when the inspection_id does not exist or the assessment_id is not present (no matched_count check). Other delete endpoints (e.g. tiedown) follow the same pattern, so consistent — but a 404 path would be cleaner.",
+    "ElpAssessmentPage.js is ~650 lines with sub-components inline — within the 700-line guideline but approaching it; consider splitting InterviewRow / ReportContent / SaveModal into their own files if more is added.",
+    "Backend POST /elp accepts arbitrary overall_disposition strings (no enum validation); could be tightened to Literal['proficient','not_proficient',''] in SaveElpAssessmentRequest."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_elp_assessments.py (new pytest file)"
+  ],
+  "success_rate": {
+    "backend": "100% (5/5)",
+    "frontend": "100% (22/22 assertions across two runs)"
+  },
+  "test_credentials": "Badge 042 / PIN 1234 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created and cleaned up 'TEST_ELP_Inspection' (backend test) and 'TEST_ELP_UI_Inspection' (UI test) — both deleted at end of run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "ELP module is fully functional end-to-end. Backend endpoints: POST /api/inspections/{id}/elp, DELETE /api/inspections/{id}/elp/{aid}. UI page at /elp registered. InspectionDetail correctly renders elp_assessments[] with disposition badge, breakdown counts, citation card, inspector notes, and remove-elp-{aid} button. The only minor open item is the post-save navigation UX (stays on /elp rather than navigating to new inspection).",
+  "rca of the issue": "Not applicable — no failing flows. The post-save 'stays on /elp' behavior is a UX choice in the createAndSave handler in /app/frontend/src/pages/ElpAssessmentPage.js (does not call navigate() to the new inspection). To mirror Tie-Down, add `navigate('/inspections/' + newId)` after the toast inside createAndSave."
+}

@@ -20,6 +20,7 @@ import HoursOfServicePage from "./pages/HoursOfServicePage";
 import HosTrainingPage from "./pages/HosTrainingPage";
 import SplitSleeperPage from "./pages/SplitSleeperPage";
 import HosPracticePage from "./pages/HosPracticePage";
+import ElpAssessmentPage from "./pages/ElpAssessmentPage";
 
 const SPLASH_KEY = "inspnav_splash_v1";
 
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/hours-of-service/training" element={<HosTrainingPage />} />
       <Route path="/hours-of-service/split-sleeper" element={<SplitSleeperPage />} />
       <Route path="/hours-of-service/practice" element={<HosPracticePage />} />
+      <Route path="/elp" element={<ElpAssessmentPage />} />
     </Routes>
   );
 }
