@@ -26,6 +26,18 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — New Personal Conveyance reference module
+- User: "I want another module in hos general for personal conveyance under eld"
+- Added new HOS Training module **Personal Conveyance** between ELD Reference and HOS Exemptions.
+- New content file `/app/frontend/src/lib/pcContent.js` with 5 reference topics drawn from §395.8 + FMCSA Regulatory Guidance 83 FR 26377 (June 7, 2018):
+  1. What PC is — core test + carrier authorization + RODS recording
+  2. Allowed uses — FMCSA-listed acceptable PC use cases
+  3. Prohibited uses — load-advancing moves + red flags at roadside
+  4. PC vs Yard Move vs On-Duty — three-status decision tree with clock impacts
+  5. Investigating suspected false PC — documents to pull, §395.8(e) citation, §395.13 OOS criteria
+- New PcView + PcTopicCard renderer in HosTrainingPage (mirrors EldView pattern, accordion of topic cards). Car icon (lucide-react), green color (#10B981), 7-min minutes estimate.
+- Lint clean, frontend compiled cleanly.
+
 ### 2026-02 — Split-sleeper days now accept all valid pairing answers
 - User: "Again, it explains the two pairs but doesn't show them correctly." Screenshot showed answering 06:00→11:00 (Pairing A's morning shift) marked WRONG because grader only accepted the compound 06:00→21:00 form.
 - Added `acceptableShifts` array on each split-sleeper day (E1 Day −3 + E2 Day −3). Three valid forms per day under the rolling-pair interpretation:

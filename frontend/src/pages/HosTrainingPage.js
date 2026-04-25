@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft, BookOpen, Target, Calendar, RotateCcw, CheckCircle2, XCircle,
   ChevronRight, GraduationCap, Zap, Award, Clock, Layers, Lightbulb, FileText,
-  ShieldCheck, Plus, Minus, Smartphone,
+  ShieldCheck, Plus, Minus, Smartphone, Car,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { EldGrid } from "../components/hos/EldGrid";
@@ -15,6 +15,7 @@ import {
   EXEMPTIONS_TOP, EXEMPTIONS_OTHERS,
 } from "../lib/hosScenarios";
 import { ELD_TOPICS } from "../lib/eldContent";
+import { PC_TOPICS } from "../lib/pcContent";
 import { HosTabs } from "../components/hos/HosTabs";
 
 /**
@@ -32,6 +33,7 @@ const MODULES = [
   { id: "recap", learnKey: "recap", title: "70-Hour Recap",     subtitle: "Count rolling 8-day hours",    icon: Calendar,  color: "#7C3AED", minutes: 4, quiz: RECAP_SCENARIOS },
   { id: "split", learnKey: null,    title: "Split Sleeper", subtitle: "Learn the qualifying-pair rule",     icon: Layers,    color: "#0EA5E9", minutes: 6, quiz: null, route: "/hours-of-service/split-sleeper" },
   { id: "eld",    learnKey: "eld",    title: "ELD Reference",    subtitle: "Devices, data, malfunctions",  icon: Smartphone,  color: "#2563EB", minutes: 10, quiz: null, custom: "eld" },
+  { id: "pc",     learnKey: "pc",     title: "Personal Conveyance", subtitle: "When PC is allowed vs falsified", icon: Car,    color: "#10B981", minutes: 7, quiz: null, custom: "pc" },
   { id: "exempt", learnKey: "exempt", title: "HOS Exemptions",  subtitle: "Top roadside + others",        icon: ShieldCheck, color: "#475569", minutes: 6, quiz: null, custom: "exemptions" },
   { id: "practice", learnKey: null, title: "HOS Practice Scenarios", subtitle: "Combined · multi-day · 8-day · split sleeper",     icon: Target,    color: "#D4AF37", minutes: 12, quiz: null, route: "/hours-of-service/practice" },
 ];
@@ -56,6 +58,9 @@ export default function HosTrainingPage() {
   }
   if (mod && mod.custom === "eld") {
     return <EldView onBack={exitModule} />;
+  }
+  if (mod && mod.custom === "pc") {
+    return <PcView onBack={exitModule} />;
   }
   if (mod && phase === "learn") {
     return <LearnView mod={mod} onBack={exitModule} onQuiz={goToQuiz} />;
@@ -812,4 +817,111 @@ function EldTopicCard({ topic, open, onToggle }) {
   );
 }
 
+function PcView({ onBack }) {
+  const [openId, setOpenId] = useState(PC_TOPICS[0].id);
+  return (
+    <div className="min-h-screen bg-[#F0F2F5] pb-8" data-testid="pc-view">
+      <header className="sticky top-0 z-30 bg-[#002855] text-white border-b border-[#D4AF37]/30">
+        <div className="max-w-[900px] mx-auto px-3 py-2.5 flex items-center gap-2">
+          <button onClick={onBack} className="text-white/70 hover:text-white p-1" data-testid="pc-back-btn">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <Car className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <p className="text-sm font-bold leading-tight truncate" style={{ fontFamily: "Outfit, sans-serif" }}>Personal Conveyance</p>
+            </div>
+            <p className="text-[10px] text-white/50 font-mono">
+              <a href="https://www.ecfr.gov/current/title-49/section-395.8" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR §395.8</a> · FMCSA Guidance 83 FR 26377
+            </p>
+          </div>
+        </div>
+      </header>
 
+      <main className="max-w-[900px] mx-auto px-3 py-4 space-y-3">
+        <section className="bg-white rounded-xl border border-[#E2E8F0] p-4" data-testid="pc-intro">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Lightbulb className="w-4 h-4 text-[#D4AF37]" />
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Roadside Personal Conveyance reference</p>
+          </div>
+          <p className="text-[12.5px] text-[#334155] leading-relaxed">
+            Five quick-reference topics: what PC is, allowed uses, prohibited uses, PC vs Yard Move vs On-Duty, and how to investigate suspected false PC. PC time is recorded as Off-Duty and does NOT count against the 11- or 14-hr clocks — but mis-flagging on-duty driving as PC is a §395.8(e) falsification.
+          </p>
+        </section>
+
+        <div className="flex items-center gap-2 px-1 pt-1">
+          <div className="w-1 h-5 bg-[#D4AF37] rounded" />
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#002855]">Topics</p>
+          <p className="text-[10px] text-[#94A3B8]">· {PC_TOPICS.length} sections</p>
+        </div>
+
+        <div className="space-y-2">
+          {PC_TOPICS.map((t) => (
+            <PcTopicCard
+              key={t.id}
+              topic={t}
+              open={openId === t.id}
+              onToggle={() => setOpenId((cur) => (cur === t.id ? null : t.id))}
+            />
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function PcTopicCard({ topic, open, onToggle }) {
+  return (
+    <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden" data-testid={`pc-topic-${topic.id}`}>
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-[#F8FAFC]"
+        data-testid={`pc-topic-toggle-${topic.id}`}
+      >
+        <div
+          className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: `${topic.color}18`, color: topic.color }}
+        >
+          <Car className="w-4 h-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13.5px] font-bold text-[#002855] leading-tight">{topic.title}</p>
+          <p className="text-[10.5px] text-[#64748B] leading-tight">{topic.short}</p>
+          <p className="text-[10px] text-[#94A3B8] font-mono leading-tight mt-0.5">
+            <CfrText text={topic.cfr} />
+          </p>
+        </div>
+        {open ? <Minus className="w-4 h-4 text-[#64748B] flex-shrink-0" /> : <Plus className="w-4 h-4 text-[#64748B] flex-shrink-0" />}
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 pt-1 border-t border-[#F1F5F9] space-y-3" data-testid={`pc-topic-body-${topic.id}`}>
+          <div className="rounded-md border-l-[3px] border-[#D4AF37] bg-[#FFFBEB] px-2.5 py-1.5">
+            <p className="text-[11.5px] text-[#713F12] leading-relaxed">
+              <span className="font-bold uppercase tracking-wider text-[9px] mr-1">TL;DR</span>
+              <CfrText text={topic.summary} />
+            </p>
+          </div>
+          {topic.sections && topic.sections.map((s, i) => (
+            <div key={i} className="space-y-1.5">
+              <p className="text-[12.5px] font-bold text-[#002855] leading-snug">{s.heading}</p>
+              {s.body && (
+                <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={s.body} /></p>
+              )}
+              {s.bullets && s.bullets.length > 0 && (
+                <ul className="space-y-1 ml-3.5">
+                  {s.bullets.map((b, bi) => (
+                    <li key={bi} className="flex items-start gap-1.5 text-[11.5px] text-[#334155] leading-relaxed">
+                      <span className="text-[#D4AF37] font-bold flex-shrink-0 mt-0.5">●</span>
+                      <span><CfrText text={b} /></span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
