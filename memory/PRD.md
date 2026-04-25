@@ -26,6 +26,12 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — ELD grid: same size as trainer on wide, scales down to fit on narrow
+- User: "Now it is running off the page"
+- Previous revert went too far — fixed natural-pixel sizing with overflow-x-auto meant the grid was wider than the viewport on smaller laptops/phones.
+- New strategy: keep `width={svgW}` / `height={svgH}` (so the natural size is the trainer's 822×162) but add `style={{ maxWidth: "100%", height: "auto" }}` to the SVG. Container wider than 822 → grid renders at exactly natural trainer size. Container narrower → grid scales down proportionally to fit. No horizontal scroll, no overflow, fits on the page at every viewport.
+- Frontend compiled cleanly. Drag-marker scroll-lock preserved (touchAction:none on SVG when hasDraggable).
+
 ### 2026-02 — ELD grid reverted to original Split Sleeper Trainer dimensions
 - User: "Can you make it the same size the split sleeper trainer grid was?"
 - Found via git log: when EldGrid was first built, the Split Sleeper Trainer practice grid used `HOUR_W=28, ROW_H=32, LABEL_W=74, TOTAL_W=76, HEADER_H=22` and rendered at NATURAL pixel size (`width={svgW}` / `height={svgH}`) wrapped in `overflow-x-auto`. A later refactor switched to `width="100%"` + `viewBox` + `h-auto` for responsive scaling, which is what made the grid *appear* a different size depending on the container — and what made my prior "make it bigger" tweaks visually fall flat.

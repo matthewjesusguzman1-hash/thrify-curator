@@ -144,28 +144,24 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
 
   return (
     <div className="rounded-lg border border-[#CBD5E1] bg-white">
-      {/* Natural-pixel grid (matches the original Split Sleeper Trainer size)
-          inside an overflow-x-auto wrapper so narrow phones can scroll
-          horizontally rather than render a shrunk-to-fit grid. When draggable
-          markers are active, disable the wrapper's touch-pan so dragging a
-          marker horizontally never gets stolen as a scroll gesture. */}
-      <div
-        className="-mx-px"
-        style={{
-          overflowX: hasDraggable ? "visible" : "auto",
-          touchAction: hasDraggable ? "none" : "auto",
-        }}
-      >
+      {/* Natural-pixel grid (matches the original Split Sleeper Trainer size).
+          maxWidth:100% + height:auto on the SVG itself means: on wide screens
+          (container >= svgW), it renders at natural 822×162 — exactly the
+          trainer's size; on narrower screens it scales down proportionally so
+          nothing ever runs off the page. No horizontal scroll. */}
+      <div className="px-1">
       <svg
         width={svgW}
         height={svgH}
         viewBox={`0 0 ${svgW} ${svgH}`}
         className="block"
-        onClick={hasDraggable ? undefined : handleSvgClick}
         style={{
+          maxWidth: "100%",
+          height: "auto",
           cursor: onMinuteClick && !hasDraggable ? "crosshair" : "default",
           touchAction: hasDraggable ? "none" : "auto",
         }}
+        onClick={hasDraggable ? undefined : handleSvgClick}
       >
         {/* Brackets above the grid — call out spans the rule cares about.
          * `bracketRows[i]` tells us which vertical row to place the label on
