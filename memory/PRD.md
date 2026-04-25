@@ -26,6 +26,15 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — Split-sleeper rolling-pair interpretation on E1/E2 Day −3
+- User: "For day 5 of 8 the split sleeper rest periods appears wrong. There is another pairing using the off duty time from midnight to 6 am and then pairing it with the sleeper berth 11 am to 7 pm. That would satisfy the rules. Then you could pair the end of that sleeper time with the 2 hours of off duty time at the end of the day."
+- User caught a real teaching gap: the explanations only described ONE valid pairing on Day −3 (Friday), but under FMCSA's 2020 rolling-pair interpretation the same 8h SB block can serve as Period A for two different pairs — one with the morning OFF and one with the overnight SB+OFF.
+- Updated splitNote + explanation on E1 Day −3 and E2 Day −3 to enumerate BOTH pairings explicitly:
+  - E1: Pairing A (00:00–06:00 OFF + 11:00–19:00 SB → bounds morning shift 06:00–11:00). Pairing B (11:00–19:00 SB + 21:00 Fri → 06:00 Sat overnight rest → bounds evening shift 19:00–21:00).
+  - E2: Pairing A (00:00–05:00 OFF + 10:00–18:00 SB → bounds 05:00–10:00). Pairing B (10:00–18:00 SB + 20:00 Fri → 06:00 Sat → bounds 18:00–20:00).
+- Notes call out that the 8h SB block legally serves as Period A in BOTH pairings (rolling-pair interpretation) and explain that combined with the surrounding qualifying rests, every work segment is fully bracketed.
+- Frontend compiled cleanly. No code paths changed — pure data/explanation refinement.
+
 ### 2026-02 — 8-Day inspector workflow polish: 5-min snap, completed-day visibility, cross-midnight SB pairing
 - User: "I chose 7 and it read that I chose 7:15. Also the previous day when visible should be active not just the last day in the period. So when it goes the next day, the previous day should show. Also it's important that with the previous days logs that the split sleeper be applied correct. It should allow pairing with the previous days knowledge..."
 - **5-min snap precision** (`EldGrid.js`): drag handler snap changed from `Math.round(x/HOUR_W * 4) * 15` to `Math.round(x/HOUR_W * 12) * 5`. Users can now hit precise values (07:00, 07:05, 07:10, ...) without overshooting to 07:15. Shift-bounds correctness tolerance also tightened from ±10 min to ±5 min in both MultiDayRunner and EightDayRunner so 5-min precision actually grades as "Correct".

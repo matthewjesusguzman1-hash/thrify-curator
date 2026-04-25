@@ -530,11 +530,11 @@ export const EIGHTDAY_SCENARIOS = [
         shiftStartMin: 6 * 60, shiftEndMin: 21 * 60,
         onDutyHours: 7,
         hasSplitSleeper: true,
-        splitNote: "8h SB block 11:00–19:00 = qualifying Period A under §395.1(g)(1)(ii). Period B carries into Day −2: the 21:00–24:00 OFF combines with Day −2's 00:00–02:00 SB + 02:00–06:00 OFF to give 9h consecutive rest (3h OFF + 2h SB + 4h OFF) starting 21:00 Fri ending 06:00 Sat.",
+        splitNote: "Two valid split-sleeper pairings on this day under §395.1(g)(1)(ii) (rolling-pair interpretation): \n• PAIRING A — OFF 00:00–06:00 (6h ≥2h OFF) + SB 11:00–19:00 (8h ≥7h SB). Bounds the morning work shift 06:00–11:00. \n• PAIRING B — SB 11:00–19:00 (8h Period A — same block, used in second pair) + Fri 21:00 → Sat 06:00 (9h consecutive SB+OFF Period B). Bounds the evening work shift 19:00–21:00.",
         violation11: false, violation14: false, violation8: false,
         explanation: {
-          shift: "Split-sleeper day. Two work segments inside one shift bound by qualifying rests: 06:00–11:00 (5h work, before Period A) and 19:00–21:00 (2h work, after Period A). Mark START at 06:00 (first OD) and END at 21:00 (last D before Period B begins).",
-          violation: "Clean. 8h SB IS Period A of a split-sleeper pair; rest from 21:00 Fri through 06:00 Sat (9h consecutive SB+OFF) is Period B. Together they satisfy §395.1(g)(1)(ii) — Period A ≥ 7h SB and Period B ≥ 2h SB-or-OFF, combined ≥ 10h. Drive in today's two segments = 4h + 2h = 6h, well under 11.",
+          shift: "Two work segments inside this 24-hour day, each bounded by its own qualifying split-sleeper pair: \n• 06:00–11:00 (between Pairing A's OFF and SB rests) — 5h work, 4h drive \n• 19:00–21:00 (between Pairing B's SB and overnight rests) — 2h work, 2h drive \n\nFor the inspector quick-check, mark START at 06:00 (first OD of day) and END at 21:00 (last D of day) bounding both work segments together.",
+          violation: "Clean. The 8h SB block is the linchpin: it serves as Period A in BOTH pairings (the rolling-pair interpretation per FMCSA 2020 guidance). Combined with the morning 6h OFF and the evening 9h SB+OFF, every work segment is fully bracketed by qualifying rests. Drive total 4h+2h = 6h, well under 11. Wall-clock work = 5h+2h = 7h, well under 14.",
         },
       },
       {
@@ -705,11 +705,11 @@ export const EIGHTDAY_SCENARIOS = [
         shiftStartMin: 5 * 60, shiftEndMin: 20 * 60,
         onDutyHours: 7,
         hasSplitSleeper: true,
-        splitNote: "8h SB block 10:00–18:00 = qualifying Period A under §395.1(g)(1)(ii). Period B carries into Day −2 Saturday: the 20:00–24:00 OFF combines with Sat's 00:00–02:00 SB + 02:00–06:00 OFF to give 10h consecutive rest (4h OFF + 2h SB + 4h OFF) starting 20:00 Fri ending 06:00 Sat.",
+        splitNote: "Two valid split-sleeper pairings on this day (rolling-pair interpretation under §395.1(g)(1)(ii) and FMCSA 2020 guidance): \n• PAIRING A — OFF 00:00–05:00 (5h ≥2h OFF) + SB 10:00–18:00 (8h ≥7h SB). Bounds the morning work shift 05:00–10:00. \n• PAIRING B — SB 10:00–18:00 (8h Period A reused) + Fri 20:00 → Sat 06:00 (10h consecutive OFF+SB+OFF Period B). Bounds the evening work shift 18:00–20:00.",
         violation11: false, violation14: false, violation8: false,
         explanation: {
-          shift: "Split-sleeper day: Period A is the 8h SB (10:00–18:00). Mark shift START at 05:00 (first OD, before Period A) and END at 20:00 (last D before Period B begins). Two work segments inside: 05:00–10:00 (5h) and 18:00–20:00 (2h).",
-          violation: "Clean. 8h SB satisfies §395.1(g)(1)(ii) Period A; Period B (20:00 Fri → 06:00 Sat = 10h consecutive SB+OFF) completes the pair. Drive within today's segments = 4h+2h = 6h, under 11.",
+          shift: "Two work segments, each bracketed by its own qualifying split-sleeper pair: \n• 05:00–10:00 (between Pairing A's OFF and SB rests) — 5h work, 4h drive \n• 18:00–20:00 (between Pairing B's SB and overnight rests) — 2h work, 2h drive \n\nFor the inspector quick-check, mark START at 05:00 (first OD) and END at 20:00 (last D) covering both work segments.",
+          violation: "Clean. 8h SB serves as Period A for BOTH pairings (rolling-pair interpretation). Combined with the morning 5h OFF and the evening 10h consecutive OFF+SB+OFF, every work segment has qualifying rests on both sides. Drive total 4h+2h = 6h (under 11), wall-clock work 7h (under 14).",
         },
       },
       {
