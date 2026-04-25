@@ -26,6 +26,14 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — ELD grid size pushed further (~+110% vs original)
+- User: "Can you make it any bigger and still have everything visible on the page?"
+- Pushed non-compact dims further: HOUR_W 28→26, ROW_H 52→70, LABEL_W 74→80, TOTAL_W 76→84, HEADER_H 24→28. Aspect ratio drops from 3.37 to 2.46 — at a 840-wide container, displayed height grows from ~249px to ~341px (+37% vs previous tweak, +110% vs the original).
+- Font sizes bumped proportionally so labels don't look lost in the taller rows: row label 10→13, totals 13→16, hour ticks 9→11, START/END marker badges 9.5→11, marker text 10→12.
+- Marker badges resized: START/END flag width 44→54, CONTINUES 74→90, badge height 13→16. Marker label vertical spacing bumped 12→14 so the larger labels don't collide.
+- Compact dims also bumped (used in Learn cards): HOUR_W 22→24, ROW_H 38→48, etc., so Learn-card grids also benefit.
+- Lint clean; smoke test compiled successfully. Page layout unaffected — the grid is the focal element so growing it just gives it more room.
+
 ### 2026-02 — Split Sleeper rename, /practice header simplification, ELD grid genuinely larger
 - User: "Rename the split sleeper trainer to just split sleeper. When entering the practice scenarios the tabs for 70 hour calc and general tab are visible at the top, remove that. I just want a back button like all the others. The grid doesn't look any larger. I asked for it to be at least as large as the one that was in the split sleeper trainer practice area."
 - **Rename:** `Split Sleeper Trainer` → `Split Sleeper` everywhere it appears: SplitSleeperPage h1, HosTrainingPage hub tile (`module-split` title).
