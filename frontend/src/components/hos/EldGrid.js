@@ -28,7 +28,27 @@ import { useEffect, useRef } from "react";
  *                     labelRow: 0 | 1 — stack label on row 0 (default) or row 1
  *                     (prevents text overlap when two markers share a minute).
  */
-export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {}, shiftMarkers = [], onMarkerDrag = null }) {
+/** Like padDay() but stops padding at `truncateMin` instead of 24:00 — used
+ *  for in-progress days (e.g. a roadside inspection moment) where there are
+ *  no log entries yet past the inspection time. */
+function padDayUpTo(entries, truncateMin) {
+  const out = [];
+  const sorted = [...entries].sort((a, b) => hmToMin(a.start) - hmToMin(b.start));
+  let cursor = 0;
+  for (const e of sorted) {
+    const s = hmToMin(e.start);
+    if (s >= truncateMin) break;
+    if (s > cursor) out.push({ status: "OFF", start: minToHm(cursor), end: minToHm(s) });
+    const eMin = Math.min(hmToMin(e.end), truncateMin);
+    out.push({ ...e, end: minToHm(eMin) });
+    cursor = eMin;
+    if (cursor >= truncateMin) break;
+  }
+  // Don't pad past truncateMin — the rest of the day is "future" / not logged.
+  return out;
+}
+
+export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {}, shiftMarkers = [], onMarkerDrag = null, truncateAtMin = null }) {
   // Dimensions match the original Split Sleeper Trainer grid the user is
   // accustomed to. The SVG renders at NATURAL pixel size (width={svgW},
   // height={svgH}); the wrapper has overflow-x-auto so narrow phones get a
@@ -103,7 +123,12 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   const xFor = (hm) => LABEL_W + (hmToMin(hm) / 60) * HOUR_W;
   const xForMin = (m) => LABEL_W + (m / 60) * HOUR_W;
 
-  const padded = padDay(entries);
+  // For truncated days (in-progress, e.g. roadside-inspection moment) only
+  // pad up to the truncation minute. Entries past that point should remain
+  // visually empty (overlaid with a hatched "in progress" stripe).
+  const padded = (truncateAtMin !== null && truncateAtMin !== undefined)
+    ? padDayUpTo(entries, truncateAtMin)
+    : padDay(entries);
   const totals = { OFF: 0, SB: 0, D: 0, OD: 0 };
   for (const e of padded) {
     const d = hmToMin(e.end) - hmToMin(e.start);
@@ -252,6 +277,30 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
 
         {/* TOTAL column header */}
         <text x={LABEL_W + gridW + TOTAL_W / 2} y={HEADER_H - 6} textAnchor="middle" fontSize={compact ? "9" : "10"} fontWeight="800" fill="#002855" fontFamily="sans-serif">TOTAL</text>
+
+        {/* In-progress overlay — for truncated days (e.g. roadside-inspection
+            moment), stripe the unfilled portion of the day so it visually
+            reads "no log entries past this minute". A vertical "now" line
+            marks the inspection moment. */}
+        {(truncateAtMin !== null && truncateAtMin !== undefined) && (() => {
+          const xCut = xForMin(truncateAtMin);
+          const xRight = LABEL_W + gridW;
+          const w = Math.max(0, xRight - xCut);
+          return (
+            <g key="truncate-overlay">
+              <defs>
+                <pattern id="truncate-stripes" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <rect width="6" height="6" fill="#94A3B8" fillOpacity="0.22" />
+                  <line x1="0" y1="0" x2="0" y2="6" stroke="#64748B" strokeWidth="1.2" strokeOpacity="0.55" />
+                </pattern>
+              </defs>
+              <rect x={xCut} y={HEADER_H} width={w} height={4 * ROW_H} fill="url(#truncate-stripes)" />
+              <line x1={xCut} y1={HEADER_H - 2} x2={xCut} y2={HEADER_H + 4 * ROW_H + 4} stroke="#0EA5E9" strokeWidth="1.6" strokeDasharray="3 2" />
+              <rect x={xCut + 2} y={HEADER_H - 14} width={compact ? 78 : 96} height={12} rx={2} fill="#0EA5E9" />
+              <text x={xCut + (compact ? 41 : 50)} y={HEADER_H - 4} textAnchor="middle" fontSize={compact ? "8.5" : "9.5"} fontWeight="800" fill="#FFFFFF" fontFamily="sans-serif">INSPECTION · {minToHm(truncateAtMin)}</text>
+            </g>
+          );
+        })()}
 
         {/* Hour gridlines */}
         {Array.from({ length: HOURS + 1 }).map((_, h) => {

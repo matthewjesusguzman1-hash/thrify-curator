@@ -369,7 +369,7 @@ function CompletedDayCard({ day, dayIdx, totalDays, answer }) {
         </span>
       </div>
       <div className="p-2">
-        <EldGrid entries={day.log} shiftMarkers={markers} />
+        <EldGrid entries={day.log} shiftMarkers={markers} truncateAtMin={day.truncated ? lastEntryEndMin(day.log) : null} />
         {day.splitNote && (
           <div className="mt-1.5 rounded-md border-l-[3px] border-[#7C2D12] bg-[#FEF3C7] px-2 py-1">
             <p className="text-[10.5px] text-[#7C2D12] leading-snug">
@@ -415,7 +415,7 @@ function NextDayPreview({ day, dayIdx, totalDays }) {
         <p className="text-[12px] font-bold text-[#475569]">Day {dayIdx + 1} of {totalDays} · {day.label} · {day.dayName}</p>
       </div>
       <div className="p-2">
-        <EldGrid entries={day.log} />
+        <EldGrid entries={day.log} truncateAtMin={day.truncated ? lastEntryEndMin(day.log) : null} />
       </div>
     </section>
   );
@@ -555,6 +555,7 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
         <EldGrid
           entries={day.log}
           shiftMarkers={markers}
+          truncateAtMin={day.truncated ? lastEntryEndMin(day.log) : null}
           onMarkerDrag={(day1ShiftActive || phase === "regend") && !isOffDay ? (kind, markerId, newMin) => {
             const hhmm = minToTimeStr(newMin);
             if (markerId === "shiftStart") setTStart(hhmm);
@@ -906,7 +907,7 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
             <p className="text-[11.5px] font-bold">{day1.label} · {day1.dayName}</p>
           </div>
           <div className="p-1.5">
-            <EldGrid entries={day1.log} shiftMarkers={buildMarkersForDay(1)} onMarkerDrag={onDragForDay(1)} />
+            <EldGrid entries={day1.log} shiftMarkers={buildMarkersForDay(1)} onMarkerDrag={onDragForDay(1)} truncateAtMin={day1.truncated ? lastEntryEndMin(day1.log) : null} />
           </div>
         </div>
         <div className="rounded-md bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden">
@@ -915,7 +916,7 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, tRegE
             <p className="text-[11.5px] font-bold">{day2.label} · {day2.dayName}</p>
           </div>
           <div className="p-1.5">
-            <EldGrid entries={day2.log} shiftMarkers={buildMarkersForDay(2)} onMarkerDrag={onDragForDay(2)} />
+            <EldGrid entries={day2.log} shiftMarkers={buildMarkersForDay(2)} onMarkerDrag={onDragForDay(2)} truncateAtMin={day2.truncated ? lastEntryEndMin(day2.log) : null} />
           </div>
         </div>
       </div>
@@ -1261,9 +1262,13 @@ function DayViolationQ({ day, correctValue, answered, answer, onPick, onNext, da
 function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
   const limit = scenario.cycleLimit || 70;
   const days = scenario.days;
+  // Compute canonical on-duty hours for each day directly from its log
+  // (sum of D + OD durations). This is the source of truth — replaces any
+  // hardcoded onDutyHours data field that may drift out of sync with the log.
+  const canonical = useMemo(() => days.map((d) => computeOnDutyHoursFromLog(d.log)), [days]);
   // Start the cycle calc BLANK — the inspector must enter each day's on-duty
   // hours by reading the logs above. After they fill it in, "Check my totals"
-  // grades each cell against the canonical onDutyHours per day.
+  // grades each cell against the canonical (log-computed) total.
   const [overrides, setOverrides] = useState(() => days.map(() => ""));
   const [checked, setChecked] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -1273,14 +1278,14 @@ function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
     return s + (isNaN(n) ? 0 : n);
   }, 0), [overrides]);
   const verdict = total > limit ? "over" : total === limit ? "atLimit" : "under";
-  const correctTotal = useMemo(() => days.reduce((s, d) => s + (d.onDutyHours || 0), 0), [days]);
+  const correctTotal = useMemo(() => canonical.reduce((s, n) => s + n, 0), [canonical]);
 
   // Per-cell grading (when checked): a cell is correct if it's within ±0.25h
-  // of the canonical day.onDutyHours, or both are 0 for an off-duty day.
+  // of the log-computed total.
   const cellState = (i) => {
     if (!checked) return "neutral";
     const u = parseFloat(overrides[i]);
-    const expected = days[i].onDutyHours || 0;
+    const expected = canonical[i];
     if (isNaN(u)) return "wrong";
     return Math.abs(u - expected) <= 0.25 ? "right" : "wrong";
   };
@@ -1300,7 +1305,7 @@ function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
           <div className="grid grid-cols-8 gap-1">
             {days.map((d, i) => {
               const state = cellState(i);
-              const expected = d.onDutyHours || 0;
+              const expected = canonical[i];
               return (
                 <div key={i} className="text-center">
                   <label className="block text-[8.5px] font-bold uppercase tracking-wider text-[#64748B] mb-0.5">{d.label}</label>
@@ -1481,8 +1486,38 @@ function minToTimeStr(min) {
   return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
-// OR two days' violation flags into a single answer string. Used when an
-// overnight shift spans two days and the violation may surface on either.
+// Compute the on-duty hours total for a day's log by summing all D
+// (driving) and OD (on-duty not driving) durations. Source of truth for
+// the cycle calculator — replaces the hardcoded data.onDutyHours field
+// so the calculator always reflects the actual log content.
+// Compute the on-duty hours total for a day's log by summing all D
+// (driving) and OD (on-duty not driving) durations. Source of truth for
+// the cycle calculator — replaces any hardcoded data.onDutyHours field
+// so the calculator always reflects the actual log content.
+function computeOnDutyHoursFromLog(log) {
+  if (!log || !Array.isArray(log)) return 0;
+  let totalMin = 0;
+  log.forEach((e) => {
+    if (e.status === "D" || e.status === "OD") {
+      const s = timeStrToMin(e.start);
+      const eEnd = e.end === "24:00" ? 24 * 60 : timeStrToMin(e.end);
+      if (s !== null && eEnd !== null) totalMin += eEnd - s;
+    }
+  });
+  return Math.round((totalMin / 60) * 100) / 100;
+}
+
+// Find the latest end-time minute across all entries — used to position the
+// "INSPECTION · HH:MM" overlay line on truncated (in-progress) days.
+function lastEntryEndMin(log) {
+  if (!log || !Array.isArray(log) || log.length === 0) return null;
+  let max = 0;
+  log.forEach((e) => {
+    const m = e.end === "24:00" ? 24 * 60 : timeStrToMin(e.end);
+    if (m !== null && m > max) max = m;
+  });
+  return max;
+}
 function violationCorrectForOvernight(d1, d2) {
   const v11 = !!(d1?.violation11 || d2?.violation11);
   const v14 = !!(d1?.violation14 || d2?.violation14);
