@@ -434,7 +434,15 @@ function QuestionsStack({ scenario, qIdx, answers, setAnswer, onNextQ, onDone, s
           testid={`q-${q.key}`}
           answered={answers[q.key] !== undefined}
           answer={answers[q.key]}
-          setAnswer={(v) => setAnswer(q.key, v)}
+          setAnswer={(v) => {
+            setAnswer(q.key, v);
+            // When the user answers the LAST question there's no "Next question"
+            // button to advance. Auto-trigger onDone so the completion panel
+            // (Retry / Next scenario) appears at the bottom.
+            if (i === questions.length - 1) {
+              setTimeout(() => onDone(), 0);
+            }
+          }}
           onNext={() => {
             if (i === questions.length - 1) onDone();
             else onNextQ();
