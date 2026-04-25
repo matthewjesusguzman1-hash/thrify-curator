@@ -26,10 +26,6 @@ export const PC_TOPICS = [
         body: "PC is permitted ONLY when the driver is relieved from work and all responsibility for performing work by the motor carrier. The CMV may be loaded or unloaded — that is no longer a hard restriction — but the movement must be for the driver's personal benefit, NOT to advance the load or the carrier's business.",
       },
       {
-        heading: "Carrier authorization required",
-        body: "FMCSA guidance requires the motor carrier to AUTHORIZE the use of a CMV for personal conveyance. Carriers may set their own stricter limits (mileage caps, time-of-day, loaded vs unloaded, etc.). The driver must follow the carrier's policy — using PC against carrier policy is a falsification under §395.8.",
-      },
-      {
         heading: "Recorded as OFF-Duty",
         body: "PC time is recorded on the RODS as OFF-Duty status with the annotation 'Personal Conveyance' (or 'PC'). On an ELD, the driver selects the PC indicator before the CMV moves; the ELD will record the movement under Off-Duty when the indicator is on.",
       },
@@ -122,7 +118,6 @@ export const PC_TOPICS = [
         bullets: [
           "Was the driver off-duty (relieved from work) when the movement happened? If NO → cannot be PC.",
           "Did the movement advance the load or position the CMV for the carrier's next dispatch? If YES → cannot be PC; should be on-duty driving or yard move.",
-          "Was the carrier's authorization for PC in place at the time? If NO → falsification, even if the use otherwise looked personal.",
         ],
       },
     ],
@@ -144,7 +139,6 @@ export const PC_TOPICS = [
           "ELD detail report covering the day(s) in question — shows odometer reading, location (lat/lng), and event time at every status change.",
           "Bill of lading / shipping documents — confirms pickup and delivery locations and times.",
           "Driver's verbal answer to: where were you coming from, where were you going, and why?",
-          "Carrier's PC policy if the driver references it (drivers should know the carrier's stated mileage/time limits).",
           "Map/distance check — does the PC distance match a 'nearest safe rest' claim, or did the driver pass multiple closer truck stops?",
         ],
       },
