@@ -41,9 +41,11 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
   // current draggable handle state
   const [tStart, setTStart] = useState({ day: 1, min: 8 * 60 });
   const [tEnd, setTEnd] = useState({ day: 1, min: 18 * 60 });
-  // per-shift answers: array of { shiftAnswer:{startDay,startMin,endDay,endMin}, violation }
+  // draggable handle for the §395.3 regulatory-end pick (14-hr cap)
+  const [tRegEnd, setTRegEnd] = useState({ day: 1, min: 18 * 60 });
+  // per-shift answers: array of { shiftAnswer:{startDay,startMin,endDay,endMin}, violation, regEndAnswer?, regEndAnswered? }
   const [shiftAnswers, setShiftAnswers] = useState([]);
-  // phase within current shift: "shift" | "violation" | "another?"
+  // phase within current shift: "shift" | "violation" | "regend" | "another?"
   const [phase, setPhase] = useState("shift");
 
   const rawScenario = scenarios[idx];
@@ -66,6 +68,7 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
     setPhase("shift");
     setTStart({ day: 1, min: 8 * 60 });
     setTEnd({ day: 1, min: 18 * 60 });
+    setTRegEnd({ day: 1, min: 18 * 60 });
     setHintsRevealed(0);
   };
   const nextScenario = () => resetAll((idx + 1) % scenarios.length);
@@ -96,8 +99,10 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
           labelRow: 1,
         });
       }
-      // Show §395.3 cap end if this committed shift had a regulatory boundary
+      // Show §395.3 cap end ONLY after the user has submitted their own
+      // regulatory-end answer — otherwise the marker would spoil the question.
       if (
+        sa.regEndAnswered &&
         correctShift?.regulatoryEndDay === dayN &&
         correctShift?.regulatoryEndMin !== undefined &&
         !(correctShift.regulatoryEndDay === ans.endDay && correctShift.regulatoryEndMin === ans.endMin)
@@ -106,8 +111,22 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
           min: correctShift.regulatoryEndMin,
           kind: "end",
           color: "#D4AF37",
-          label: `SHOULD have ended · ${minToTimeStr(correctShift.regulatoryEndMin)}`,
+          label: `Actually closed · ${minToTimeStr(correctShift.regulatoryEndMin)}`,
           labelRow: 2,
+        });
+      }
+      // User's own committed regulatory-end pick (gold, dashed feel via label)
+      if (
+        sa.regEndAnswered &&
+        sa.regEndAnswer?.day === dayN &&
+        !(sa.regEndAnswer.day === correctShift?.regulatoryEndDay && sa.regEndAnswer.min === correctShift?.regulatoryEndMin)
+      ) {
+        markers.push({
+          min: sa.regEndAnswer.min,
+          kind: "end",
+          color: "#B45309",
+          label: `Your call · ${minToTimeStr(sa.regEndAnswer.min)}`,
+          labelRow: 3,
         });
       }
     });
@@ -133,11 +152,23 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
         });
       }
     }
+    // active draggable handle for the regulatory-end pick
+    if (phase === "regend" && !allShiftsDone && tRegEnd.day === dayN) {
+      markers.push({
+        min: tRegEnd.min,
+        kind: "end",
+        color: "#D4AF37",
+        markerId: "regEnd",
+        draggable: true,
+        label: `Drag → SHOULD HAVE ENDED · ${minToTimeStr(tRegEnd.min)}`,
+        labelRow: 2,
+      });
+    }
     return markers;
   };
 
-  const day1Markers = useMemo(() => buildMarkersForDay(1), [shiftAnswers, phase, tStart, tEnd, allShiftsDone, scenario]);
-  const day2Markers = useMemo(() => buildMarkersForDay(2), [shiftAnswers, phase, tStart, tEnd, allShiftsDone, scenario]);
+  const day1Markers = useMemo(() => buildMarkersForDay(1), [shiftAnswers, phase, tStart, tEnd, tRegEnd, allShiftsDone, scenario]);
+  const day2Markers = useMemo(() => buildMarkersForDay(2), [shiftAnswers, phase, tStart, tEnd, tRegEnd, allShiftsDone, scenario]);
 
   return (
     <div className="space-y-3">
@@ -196,20 +227,22 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
         label={scenario.days[0].label}
         log={scenario.days[0].log}
         markers={day1Markers}
-        active={phase === "shift" && !allShiftsDone}
-        onMarkerDrag={phase === "shift" && !allShiftsDone ? (kind, markerId, newMin) => {
+        active={(phase === "shift" || phase === "regend") && !allShiftsDone}
+        onMarkerDrag={(phase === "shift" || phase === "regend") && !allShiftsDone ? (kind, markerId, newMin) => {
           if (markerId === "shiftStart") setTStart({ day: 1, min: newMin });
           else if (markerId === "shiftEnd") setTEnd({ day: 1, min: newMin });
+          else if (markerId === "regEnd") setTRegEnd({ day: 1, min: newMin });
         } : null}
       />
       <DaySection
         label={scenario.days[1].label}
         log={scenario.days[1].log}
         markers={day2Markers}
-        active={phase === "shift" && !allShiftsDone}
-        onMarkerDrag={phase === "shift" && !allShiftsDone ? (kind, markerId, newMin) => {
+        active={(phase === "shift" || phase === "regend") && !allShiftsDone}
+        onMarkerDrag={(phase === "shift" || phase === "regend") && !allShiftsDone ? (kind, markerId, newMin) => {
           if (markerId === "shiftStart") setTStart({ day: 2, min: newMin });
           else if (markerId === "shiftEnd") setTEnd({ day: 2, min: newMin });
+          else if (markerId === "regEnd") setTRegEnd({ day: 2, min: newMin });
         } : null}
       />
 
@@ -244,8 +277,45 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
             updated[shiftIdx] = { ...updated[shiftIdx], violation: v };
             setShiftAnswers(updated);
           }}
-          onNext={() => setPhase("another?")}
+          onNext={() => {
+            // If the canonical shift had a 14-hr cap (i.e. a regulatory end
+            // moment) AND the user said there was a 14-hr violation, ask them
+            // when the shift SHOULD have ended. Otherwise skip to "another?".
+            const hasRegEnd = currentShift?.regulatoryEndMin !== undefined && currentShift?.regulatoryEndMin !== null;
+            const userCalledFourteen = currentAnswer.violation === "14" || currentAnswer.violation === "both";
+            if (hasRegEnd && userCalledFourteen) {
+              // seed the handle near the end of the user's shift bracket so
+              // they have a sensible starting drag position
+              setTRegEnd({ day: currentAnswer.shiftAnswer.endDay, min: currentAnswer.shiftAnswer.endMin });
+              setPhase("regend");
+            } else {
+              setPhase("another?");
+            }
+          }}
           testid={`violation-${shiftIdx}`}
+        />
+      )}
+
+      {/* Regulatory-end question — only when the shift had a 14-hr cap and
+          the user called a 14-hr violation. */}
+      {!allShiftsDone && phase === "regend" && currentAnswer?.shiftAnswer && (
+        <RegEndQuestionCard
+          shift={currentShift}
+          tRegEnd={tRegEnd}
+          setTRegEnd={setTRegEnd}
+          answered={!!currentAnswer.regEndAnswered}
+          answer={currentAnswer.regEndAnswer}
+          onSubmit={() => {
+            const updated = [...shiftAnswers];
+            updated[shiftIdx] = {
+              ...updated[shiftIdx],
+              regEndAnswer: { day: tRegEnd.day, min: tRegEnd.min },
+              regEndAnswered: true,
+            };
+            setShiftAnswers(updated);
+          }}
+          onNext={() => setPhase("another?")}
+          testid={`regend-${shiftIdx}`}
         />
       )}
 
@@ -257,6 +327,7 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
             setPhase("shift");
             setTStart({ day: 1, min: 8 * 60 });
             setTEnd({ day: 1, min: 18 * 60 });
+            setTRegEnd({ day: 1, min: 18 * 60 });
           }}
           onNo={() => {
             // User declares "no more shifts". If they're correct (matches
@@ -473,6 +544,56 @@ function ViolationQuestionCard({ shift, answered, answer, onPick, onNext, testid
               <p className="text-[12px] font-bold text-[#334155]">{answer === correctValue ? "Correct" : `Correct: ${choices.find((c) => c.value === correctValue).label}`}</p>
             </div>
             <p className="text-[11.5px] text-[#334155] leading-relaxed"><CfrText text={shift.explanation.violation} /></p>
+          </div>
+          <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-next`}>
+            Continue <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RegEndQuestionCard({ shift, tRegEnd, setTRegEnd, answered, answer, onSubmit, onNext, testid }) {
+  // Tolerance ±10 min, exact day match — same as ResultsSummary uses for shift bounds.
+  const correctDay = shift.regulatoryEndDay;
+  const correctMin = shift.regulatoryEndMin;
+  const isCorrect = answered && answer && answer.day === correctDay && Math.abs(answer.min - correctMin) <= 10;
+  return (
+    <div className="bg-white rounded-xl border border-[#D4AF37]/60 p-4 space-y-3" data-testid={testid}>
+      <div className="flex items-start gap-2">
+        <Target className="w-4 h-4 text-[#92400E] mt-0.5 flex-shrink-0" />
+        <p className="text-[13px] font-bold text-[#002855] leading-snug">When SHOULD this 14-hour shift have ended under §395.3(a)(2)?</p>
+      </div>
+      <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">
+        14 wall-clock hours after the shift START. Drag the gold handle on the grid (or pick day + time below) to mark when driving should have stopped.
+      </p>
+      <div className="max-w-[200px]">
+        <DayTimePicker
+          label="Cap closes at"
+          color="#B45309"
+          value={tRegEnd}
+          onChange={answered ? () => {} : setTRegEnd}
+          testid={`${testid}-regend`}
+        />
+      </div>
+      {!answered && (
+        <Button onClick={onSubmit} className="w-full bg-[#92400E] text-white hover:bg-[#7C2D12]" data-testid={`${testid}-submit`}>
+          Submit cap time
+        </Button>
+      )}
+      {answered && (
+        <>
+          <div className={`rounded-md p-2.5 border ${isCorrect ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              {isCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
+              <p className="text-[12px] font-bold text-[#334155]">
+                {isCorrect ? "Correct" : `Correct: Day ${correctDay} ${minToTimeStr(correctMin)}`}
+              </p>
+            </div>
+            <p className="text-[11.5px] text-[#334155] leading-relaxed">
+              §395.3(a)(2) closes the shift exactly 14 wall-clock hours after the first on-duty entry. Any driving past that minute is the 14-hour violation — flag the moment the cap was crossed and document the over-cap driving time.
+            </p>
           </div>
           <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-next`}>
             Continue <ChevronRight className="w-4 h-4 ml-1" />
