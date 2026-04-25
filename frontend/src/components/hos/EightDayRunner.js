@@ -1438,14 +1438,15 @@ function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
   const verdict = total > limit ? "over" : total === limit ? "atLimit" : "under";
   const correctTotal = useMemo(() => canonical.reduce((s, n) => s + n, 0), [canonical]);
 
-  // Per-cell grading (when checked): a cell is correct if it's within ±0.25h
-  // of the log-computed total.
+  // Per-cell grading (when checked): a cell must match the log-computed
+  // total exactly. The logs only use 15-min increments so quarter/half/whole
+  // hour totals are always achievable — no tolerance needed.
   const cellState = (i) => {
     if (!checked) return "neutral";
     const u = parseFloat(overrides[i]);
     const expected = canonical[i];
     if (isNaN(u)) return "wrong";
-    return Math.abs(u - expected) <= 0.25 ? "right" : "wrong";
+    return u === expected ? "right" : "wrong";
   };
   const allFilled = overrides.every((v) => v !== "" && !isNaN(parseFloat(v)));
 
@@ -1489,7 +1490,7 @@ function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
             <div>
               <p className="text-[9px] font-bold uppercase tracking-wider text-[#64748B]">Your 8-day total</p>
               <p className="text-[18px] font-mono font-black text-[#002855]" data-testid="cycle-total">{total.toFixed(2).replace(/\.?0+$/, "")} h</p>
-              {checked && Math.abs(total - correctTotal) > 0.25 && (
+              {checked && total !== correctTotal && (
                 <p className="text-[10px] font-mono text-[#991B1B]" data-testid="cycle-correct-total">canonical {correctTotal.toFixed(2).replace(/\.?0+$/, "")} h</p>
               )}
             </div>
