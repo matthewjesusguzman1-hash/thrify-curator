@@ -307,7 +307,7 @@ function RecapLearnVisual() {
 
 /* ═══════════════ Quiz shells (unchanged behavior) ═══════════════ */
 
-function DrillShell({ title, onBack, step, total, children, correct, done, onDone }) {
+function DrillShell({ title, onBack, step, total, children, correct, done, onDone, onRetry }) {
   return (
     <div className="min-h-screen bg-[#F0F2F5] pb-6">
       <div className="bg-[#002855] text-white sticky top-0 z-30 border-b border-[#D4AF37]/30">
@@ -327,13 +327,13 @@ function DrillShell({ title, onBack, step, total, children, correct, done, onDon
         )}
       </div>
       <main className="max-w-[900px] mx-auto px-3 py-4 space-y-3">
-        {done ? <FinalResult correct={correct} total={total} onDone={onDone} /> : children}
+        {done ? <FinalResult correct={correct} total={total} onDone={onDone} onRetry={onRetry} /> : children}
       </main>
     </div>
   );
 }
 
-function FinalResult({ correct, total, onDone }) {
+function FinalResult({ correct, total, onDone, onRetry }) {
   const perfect = correct === total;
   const pct = Math.round((correct / total) * 100);
   return (
@@ -346,7 +346,7 @@ function FinalResult({ correct, total, onDone }) {
         <p className="text-sm text-[#64748B]">{perfect ? "Perfect run!" : pct >= 70 ? "Nice work — keep practicing." : "Close. Try again for a cleaner run."}</p>
       </div>
       <div className="flex gap-2">
-        <Button onClick={() => window.location.reload()} variant="outline" className="flex-1 border-[#E2E8F0]" data-testid="drill-retry"><RotateCcw className="w-4 h-4 mr-1.5" /> Retry</Button>
+        <Button onClick={onRetry} variant="outline" className="flex-1 border-[#E2E8F0]" data-testid="drill-retry"><RotateCcw className="w-4 h-4 mr-1.5" /> Retry</Button>
         <Button onClick={onDone} className="flex-1 bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="drill-done">Back to Learn</Button>
       </div>
     </div>
@@ -369,8 +369,9 @@ function DutyStatusQuiz({ onBack }) {
     if (s === q.answer) setCorrect((c) => c + 1);
   };
   const next = () => { setPick(null); setRevealed(false); setIdx((i) => i + 1); };
+  const retry = () => { setPick(null); setRevealed(false); setIdx(0); setCorrect(0); };
 
-  if (done) return <DrillShell title="Duty Status 101" onBack={onBack} correct={correct} total={DUTY_STATUS_QUIZ.length} done onDone={onBack} />;
+  if (done) return <DrillShell title="Duty Status 101" onBack={onBack} correct={correct} total={DUTY_STATUS_QUIZ.length} done onDone={onBack} onRetry={retry} />;
 
   return (
     <DrillShell title="Duty Status 101" onBack={onBack} step={idx} total={DUTY_STATUS_QUIZ.length} correct={correct}>
@@ -445,8 +446,9 @@ function ViolationFinderQuiz({ title, scenarios, tolerance = 30, onBack }) {
     if (ok) setCorrect((c) => c + 1);
   };
   const next = () => { setMark(null); setRevealed(false); setPickedNone(false); setIdx((i) => i + 1); };
+  const retry = () => { setMark(null); setRevealed(false); setPickedNone(false); setIdx(0); setCorrect(0); };
 
-  if (done) return <DrillShell title={title} onBack={onBack} correct={correct} total={scenarios.length} done onDone={onBack} />;
+  if (done) return <DrillShell title={title} onBack={onBack} correct={correct} total={scenarios.length} done onDone={onBack} onRetry={retry} />;
 
   const wasCorrect = revealed && (
     (pickedNone && !s.hasViolation) ||
@@ -520,8 +522,9 @@ function RecapQuiz({ onBack }) {
     if (Math.abs(val - s.answer) < 0.25) setCorrect((c) => c + 1);
   };
   const next = () => { setEntry(""); setRevealed(false); setIdx((i) => i + 1); };
+  const retry = () => { setEntry(""); setRevealed(false); setIdx(0); setCorrect(0); };
 
-  if (done) return <DrillShell title="70-Hour Recap Drill" onBack={onBack} correct={correct} total={RECAP_SCENARIOS.length} done onDone={onBack} />;
+  if (done) return <DrillShell title="70-Hour Recap Drill" onBack={onBack} correct={correct} total={RECAP_SCENARIOS.length} done onDone={onBack} onRetry={retry} />;
 
   const total7 = s.days.reduce((sum, d) => sum + d.onDuty, 0);
   const val = parseFloat(entry);
