@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, CheckCircle2, XCircle, RotateCcw, Target, AlertTriangle, Hand, Repeat, List } from "lucide-react";
+import { ChevronRight, CheckCircle2, XCircle, Target, AlertTriangle, Hand, Repeat, List } from "lucide-react";
 import { Button } from "../ui/button";
 import { EldGrid } from "./EldGrid";
 import { CfrText } from "../../lib/cfrLinks";
@@ -235,7 +235,7 @@ export function PracticeRunner({ scenarios, mode = "split", category = "split", 
           </div>
         )}
 
-        {(phase === "questions" || phase === "done") && mode === "split" && answers.qualify === "yes" && (
+        {phase === "questions" && mode === "split" && answers.qualify === "yes" && (
           <div className={`rounded-lg p-3 border ${selectionCorrect ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`} data-testid="selection-feedback">
             <div className="flex items-center gap-2 mb-1">
               {selectionCorrect ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
@@ -266,24 +266,6 @@ export function PracticeRunner({ scenarios, mode = "split", category = "split", 
           setShiftTStart={setTStart}
           setShiftTEnd={setTEnd}
         />
-      )}
-
-      {phase === "done" && (
-        <section className="rounded-xl border-2 border-[#D4AF37]/40 bg-[#FFFBEB] p-4 space-y-2" data-testid="practice-done">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-[#D4AF37]" />
-            <p className="text-sm font-bold text-[#002855]">Scenario complete</p>
-          </div>
-          <p className="text-[12px] text-[#334155] leading-relaxed">Review each explanation above, then try the next scenario.</p>
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" onClick={restartScenario} className="border-[#E2E8F0]" data-testid="practice-retry">
-              <RotateCcw className="w-3.5 h-3.5 mr-1" /> Retry this one
-            </Button>
-            <Button onClick={nextScenario} className="flex-1 bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="practice-next-done">
-              Next scenario <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
-        </section>
       )}
     </div>
   );
@@ -576,9 +558,9 @@ function QuestionCard({ q, testid, answered, answer, setAnswer, onNext, isLast, 
         </div>
       )}
 
-      {answered && (
+      {answered && !isLast && (
         <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-next`}>
-          {isLast ? "Finish scenario" : "Next question"} <ChevronRight className="w-4 h-4 ml-1" />
+          Next question <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       )}
     </div>

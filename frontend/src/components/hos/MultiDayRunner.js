@@ -235,24 +235,6 @@ export function MultiDayRunner({ scenarios, category = "multiday", initialIdx = 
           testid="next-day-strip"
         />
       )}
-
-      {done && (
-        <section className="rounded-xl border-2 border-[#D4AF37]/40 bg-[#FFFBEB] p-4 space-y-2" data-testid="multi-done">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-[#D4AF37]" />
-            <p className="text-sm font-bold text-[#002855]">Scenario complete</p>
-          </div>
-          <p className="text-[12px] text-[#334155] leading-relaxed">Review each day's explanations above, then try the next scenario.</p>
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" onClick={restartScenario} className="border-[#E2E8F0]" data-testid="multi-retry">
-              <Repeat className="w-3.5 h-3.5 mr-1" /> Retry this one
-            </Button>
-            <Button onClick={nextScenario} className="flex-1 bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="multi-next-done">
-              Next scenario <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
-        </section>
-      )}
     </div>
   );
 }
@@ -428,9 +410,11 @@ function ViolationCard({ day, answered, answer, onPick, onNext, testid }) {
             </div>
             <p className="text-[12px] text-[#334155] leading-relaxed"><CfrText text={day.explanation.violation} /></p>
           </div>
-          <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-next`}>
-            {testid.includes("day2") ? "Finish scenario" : "Next question"} <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
+          {!testid.includes("day2") && (
+            <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`${testid}-next`}>
+              Next question <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          )}
         </>
       )}
     </div>
