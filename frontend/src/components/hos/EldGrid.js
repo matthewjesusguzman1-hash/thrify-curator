@@ -67,11 +67,35 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
   // extra stacked row beyond the first. First row labels still sit above the
   // bar like before; additional rows stack above that.
   const BRACKET_H = bracketRowCount > 0 ? 14 + bracketRowCount * BRACKET_ROW_H : 0;
-  const maxLabelRow = shiftMarkers.reduce((mx, m) => Math.max(mx, m.labelRow || 0), 0);
+  // Flag band — sits ABOVE the hour-numbers header so the START/END chips
+  // never cover the time labels (00, 01, 02, ...). Reserved only when there
+  // are actually shift markers to draw.
+  const FLAG_BAND_H = shiftMarkers && shiftMarkers.length > 0 ? 18 : 0;
+
+  // Auto-stack the post-grid labels: respect each marker's preferred labelRow,
+  // but if its label horizontally collides with another already on that row,
+  // push it down one row at a time until it fits.
+  const SHIFT_LABEL_FONT = compact ? 9 : 10;
+  const shiftLabelRows = (() => {
+    if (!shiftMarkers || shiftMarkers.length === 0) return [];
+    const rowEnds = {}; // row -> rightmost x already used
+    return shiftMarkers.map((sm) => {
+      const txt = sm.label || "";
+      const w = txt.length * SHIFT_LABEL_FONT * 0.55 + 8;
+      const cx = LABEL_W + (sm.min / 60) * HOUR_W;
+      const left = cx - w / 2;
+      const right = cx + w / 2;
+      let row = sm.labelRow || 0;
+      while ((rowEnds[row] !== undefined) && rowEnds[row] > left) row++;
+      rowEnds[row] = right;
+      return row;
+    });
+  })();
+  const maxLabelRow = shiftLabelRows.length ? Math.max(...shiftLabelRows) : 0;
   const MARKER_LABEL_H = shiftMarkers && shiftMarkers.length > 0 ? 14 + maxLabelRow * 12 : 0;
   const gridW = HOURS * HOUR_W;
   const svgW = LABEL_W + gridW + TOTAL_W;
-  const svgH = BRACKET_H + HEADER_H + 4 * ROW_H + 12 + MARKER_LABEL_H;
+  const svgH = BRACKET_H + FLAG_BAND_H + HEADER_H + 4 * ROW_H + 12 + MARKER_LABEL_H;
 
   const ROWS = ["OFF", "SB", "D", "OD"].map((k) => STATUS_META[k]);
   const rowIdx = (k) => ROWS.findIndex((r) => r.key === k);
@@ -188,7 +212,7 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           );
         })}
 
-        <g transform={`translate(0, ${BRACKET_H})`}>
+        <g transform={`translate(0, ${BRACKET_H + FLAG_BAND_H})`}>
         {/* Shaded spans — soft column overlay across all duty rows */}
         {shade.map((s, i) => {
           const x = xForMin(s.startMin);
@@ -300,11 +324,15 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const isEnd = sm.kind === "end";
           const isContinues = sm.kind === "continues";
           const color = sm.color || (isEnd ? "#DC2626" : isContinues ? "#F59E0B" : "#10B981");
-          const labelRow = sm.labelRow || 0;
+          const labelRow = shiftLabelRows[i] || 0;
           const labelY = HEADER_H + 4 * ROW_H + 22 + labelRow * 12;
           const flagText = isEnd ? "END" : isContinues ? "CONTINUES" : "START";
           const flagW = compact ? (flagText === "CONTINUES" ? 60 : 36) : (flagText === "CONTINUES" ? 74 : 44);
           const flagH = compact ? 11 : 13;
+          // Flag chip sits ABOVE the hour-numbers header so it never covers
+          // the time labels. y is negative inside the translated group, mapped
+          // into the FLAG_BAND_H band reserved at the top of the SVG.
+          const flagY = -(FLAG_BAND_H - 2);
           // Position: END opens to the LEFT of the line; START/CONTINUES opens to the RIGHT.
           // Clamp inside the grid so badges at 00:00 or 24:00 don't overflow.
           let badgeX = isEnd ? x - flagW : x;
@@ -316,9 +344,11 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
           const labelAnchor = sm.min < 60 ? "start" : (sm.min >= 23 * 60 ? "end" : "middle");
           return (
             <g key={`shift${i}`} data-testid={`shift-marker-${sm.kind || i}`}>
-              <line x1={x} y1={HEADER_H - 1} x2={x} y2={HEADER_H + 4 * ROW_H + 4} stroke={color} strokeWidth="2" strokeDasharray="5 3" />
-              <rect x={badgeX} y={HEADER_H - flagH - 2} width={flagW} height={flagH} rx={2} fill={color} />
-              <text x={badgeX + flagW / 2} y={HEADER_H - 4} textAnchor="middle" fontSize={compact ? "8.5" : "9.5"} fontWeight="800" fill="#FFFFFF" fontFamily="sans-serif" letterSpacing="0.3">{flagText}</text>
+              {/* Dashed line spans from the flag chip (above the header) all
+                  the way down through the duty rows. */}
+              <line x1={x} y1={flagY + flagH} x2={x} y2={HEADER_H + 4 * ROW_H + 4} stroke={color} strokeWidth="2" strokeDasharray="5 3" />
+              <rect x={badgeX} y={flagY} width={flagW} height={flagH} rx={2} fill={color} />
+              <text x={badgeX + flagW / 2} y={flagY + flagH - 3} textAnchor="middle" fontSize={compact ? "8.5" : "9.5"} fontWeight="800" fill="#FFFFFF" fontFamily="sans-serif" letterSpacing="0.3">{flagText}</text>
               <text x={x} y={labelY} textAnchor={labelAnchor} fontSize={compact ? "9" : "10"} fontWeight="700" fill={color}>{sm.label || `${isEnd ? "Shift end" : isContinues ? "Continues" : "Shift start"} · ${minToHm(sm.min)}`}</text>
               {/* Drag handle — wide invisible hit rect around the line. Shown
                   only when sm.draggable and onMarkerDrag are set, giving the
@@ -334,9 +364,9 @@ export function EldGrid({ entries, compact = false, highlightMinute = null, onMi
                       gesture as a page scroll. */}
                   <rect
                     x={x - 22}
-                    y={0}
+                    y={flagY}
                     width={44}
-                    height={HEADER_H + 4 * ROW_H + 14}
+                    height={HEADER_H + 4 * ROW_H + 14 - flagY}
                     fill={color}
                     fillOpacity="0.06"
                     stroke={color}
