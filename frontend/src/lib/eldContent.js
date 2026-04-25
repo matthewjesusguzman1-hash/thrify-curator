@@ -39,7 +39,7 @@ export const ELD_TOPICS = [
       },
       {
         heading: "What to check at roadside",
-        body: "Verify the driver qualifies for any claimed exemption. For short-haul, ask for the carrier's time records or ask the driver for start-time, CMV-release time, and return location. For pre-2000 engines, look at the engine's data plate. If a driver claims the 8-day rule, ask to see the prior 30 days — they should have ≤8 RODS days.",
+        body: "Verify the driver qualifies for any claimed exemption. For short-haul, ask for the carrier's time records or ask the driver for start-time, CMV-release time, and return location. For pre-2000 engines, look at the engine's data plate. If a driver claims the 8-day rule, INTERVIEW the driver about their recent duty pattern (How many days have you driven in the past 30? Where have you been working?) and review any logs they have readily available. Drivers using paper logs are NOT required to carry RODS for days outside the inspection period (current day + prior 7 days), so don't demand 30 days of logs at the roadside — that's a carrier-records review, not a roadside check. If the driver's account or the available logs suggest they exceeded 8 RODS days in any rolling 30-day window, document the concern and refer to the carrier records.",
       },
     ],
   },
