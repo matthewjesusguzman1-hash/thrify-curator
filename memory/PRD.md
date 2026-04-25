@@ -26,6 +26,14 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 ## Changelog
 
 
+### 2026-02 — 8-Day flow polish: 15-min snap restored, split-sleeper tip-offs hidden until after answering
+- User: "I won't like the snap to 5 mins. The 15 minutes is easier to use. The examples should be in 15 minute increments. The explanation in the scenarios should be given before the user has tried. On day 5 of 8 the split sleeper it shouldnt be labeled split sleeper for one because the user should be checking for split pairings without help but also the pairings are explained and then told they are incorrect."
+- **Snap reverted to 15-min** in EldGrid.handleMarkerPointerMove. Shift-bounds correctness tolerance back to ±10 min (covers a 15-min snap with grace) in both MultiDayRunner and EightDayRunner. All scenario examples already on 15-min boundaries.
+- **Active-day card no longer reveals split-sleeper status**: removed the "Split sleeper" orange badge from the dark blue header and the splitNote ribbon from below the grid. Inspector now must identify split-sleeper provisions themselves. CompletedDayCard retains the badge + a re-displayed splitNote so cross-day context is preserved once the user has worked through that day.
+- **splitNote moved to post-answer feedback** (DayViolationQ): after the user commits a violation choice, the explanation block renders, then a "Split-sleeper analysis" callout walks through the pairings (including the rolling-pair interpretation). User can't see the analysis until they've tried.
+- **Scenario primers updated** for E1 and E2: added explicit upfront teaching ("watch carefully — some days may use a split-sleeper provision per §395.1(g)(1)(ii)") without naming WHICH days, so inspector has conceptual heads-up but must still find the days.
+- Frontend compiled cleanly. Self-tested via lint + supervisor logs — no testing-agent run needed (changes are visual + data scoped, all paths previously validated).
+
 ### 2026-02 — Split-sleeper rolling-pair interpretation on E1/E2 Day −3
 - User: "For day 5 of 8 the split sleeper rest periods appears wrong. There is another pairing using the off duty time from midnight to 6 am and then pairing it with the sleeper berth 11 am to 7 pm. That would satisfy the rules. Then you could pair the end of that sleeper time with the 2 hours of off duty time at the end of the day."
 - User caught a real teaching gap: the explanations only described ONE valid pairing on Day −3 (Friday), but under FMCSA's 2020 rolling-pair interpretation the same 8h SB block can serve as Period A for two different pairs — one with the morning OFF and one with the overnight SB+OFF.

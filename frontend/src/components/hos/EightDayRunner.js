@@ -371,9 +371,6 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
       <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2">
         <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]">Day {dayIdx + 1} of {totalDays}</span>
         <p className="text-[12.5px] font-bold">{day.label} · {day.dayName}</p>
-        {day.hasSplitSleeper && (
-          <span className="ml-auto text-[10px] font-bold text-[#FBBF24] bg-[#7C2D12] px-1.5 py-0.5 rounded uppercase tracking-wider">Split sleeper</span>
-        )}
         {day1ShiftActive && !isOffDay && (
           <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-[#D4AF37]">
             <Hand className="w-3 h-3" /> drag the handles
@@ -390,13 +387,10 @@ function DayCard({ day, dayIdx, totalDays, phase, answer, tStart, setTStart, tEn
             else if (markerId === "shiftEnd") setTEnd(hhmm);
           } : null}
         />
-        {day.splitNote && (
-          <div className="mt-2 rounded-md border-l-[3px] border-[#7C2D12] bg-[#FEF3C7] px-2.5 py-1.5">
-            <p className="text-[11px] text-[#7C2D12] leading-snug">
-              <span className="font-bold uppercase tracking-wider text-[9.5px] mr-1">Note</span>{day.splitNote}
-            </p>
-          </div>
-        )}
+        {/* splitNote intentionally hidden on the ACTIVE day card — revealing
+            it would tip the inspector that this day uses a split-sleeper
+            provision. The note appears in the explanation feedback after the
+            user answers, and on the completed-day card afterwards. */}
       </div>
 
       {/* Off-duty day: skip both questions with a single confirmation */}
@@ -447,7 +441,7 @@ function DayShiftQ({ day, tStart, setTStart, tEnd, setTEnd, answered, answer, on
   };
   let correct = false;
   if (answered) {
-    correct = Math.abs(answer.start - day.shiftStartMin) <= 5 && Math.abs(answer.end - day.shiftEndMin) <= 5;
+    correct = Math.abs(answer.start - day.shiftStartMin) <= 10 && Math.abs(answer.end - day.shiftEndMin) <= 10;
   }
   return (
     <div className="p-4 border-t border-[#E2E8F0] space-y-3" data-testid={`day-${dayIdx}-shift`}>
@@ -539,6 +533,15 @@ function DayViolationQ({ day, correctValue, answered, answer, onPick, onNext, da
             </div>
             <p className="text-[11.5px] text-[#334155] leading-relaxed"><CfrText text={day.explanation.violation} /></p>
           </div>
+          {/* Split-sleeper note revealed AFTER answering — would have given
+              away the analysis if shown beforehand. */}
+          {day.splitNote && (
+            <div className="rounded-md border-l-[3px] border-[#7C2D12] bg-[#FEF3C7] px-2.5 py-1.5">
+              <p className="text-[11px] text-[#7C2D12] leading-snug whitespace-pre-line">
+                <span className="font-bold uppercase tracking-wider text-[9.5px] mr-1">Split-sleeper analysis</span>{day.splitNote}
+              </p>
+            </div>
+          )}
           <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid={`day-${dayIdx}-violation-next`}>
             {isLast ? "Continue: 70-hr cycle check" : `Next day → Day ${dayIdx + 2}`} <ChevronRight className="w-4 h-4 ml-1" />
           </Button>

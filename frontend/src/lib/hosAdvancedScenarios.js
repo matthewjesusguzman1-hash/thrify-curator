@@ -436,7 +436,7 @@ export const MULTIDAY_SCENARIOS = [
 export const EIGHTDAY_SCENARIOS = [
   {
     id: "E1",
-    primer: "Eight consecutive duty days. The driver is mostly compliant — work the inspector workflow end-to-end: identify each day's shift, catch any 11/14/8-hr violation, run the cycle calc, then make the OOS call.",
+    primer: "Eight consecutive duty days. Most days are routine, but watch carefully — some days may use a split-sleeper provision (a qualifying SB block paired with off-duty/SB time forming a valid rest under §395.1(g)(1)(ii)). For those days, work shifts may be bracketed by rest periods rather than spanning the full calendar day. Work the inspector workflow end-to-end: identify each day's shift bounds, catch any 11/14/8-hr violation, run the cycle calc, then make the OOS call.",
     cycleLimit: 70,
     priorDayLog: [
       { status: "OFF", start: "00:00", end: "24:00" },
@@ -602,7 +602,7 @@ export const EIGHTDAY_SCENARIOS = [
   },
   {
     id: "E2",
-    primer: "Eight consecutive duty days with mixed violations. Practice the full inspector workflow: shift identification, daily 11/14/8-hr violations, the 70-hr cycle math, and the OOS call. Pay attention to Day −3's split-sleeper usage too.",
+    primer: "Eight consecutive duty days with mixed compliance issues. Practice the full inspector workflow: shift identification, daily 11/14/8-hr violations, the 70-hr cycle math, and the OOS call. Pay attention — some days may use a split-sleeper provision (qualifying SB block paired with off-duty/SB time per §395.1(g)(1)(ii)) that affects how you bracket the work shift.",
     cycleLimit: 70,
     priorDayLog: [
       { status: "OFF", start: "00:00", end: "24:00" },
