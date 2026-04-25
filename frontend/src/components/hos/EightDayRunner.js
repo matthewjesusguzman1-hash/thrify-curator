@@ -524,9 +524,20 @@ function CycleStep({ scenario, dayAnswers, answer, onAnswer, onNext }) {
           })}
         </div>
         {answer !== undefined && (
-          <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="cycle-next">
-            Continue: OOS decision <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
+          <>
+            <div className={`rounded-md p-2.5 border ${answer === correctViolation ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`} data-testid="cycle-feedback">
+              <div className="flex items-center gap-2 mb-1">
+                {answer === correctViolation ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#DC2626]" />}
+                <p className="text-[12px] font-bold text-[#334155]">{answer === correctViolation ? "Correct" : `Correct: ${correctViolation ? "Yes — cycle exceeded" : "No cycle violation"}`}</p>
+              </div>
+              {scenario.cycleNote && (
+                <p className="text-[11.5px] text-[#334155] leading-relaxed">{scenario.cycleNote}</p>
+              )}
+            </div>
+            <Button onClick={onNext} className="w-full bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="cycle-next">
+              Continue: OOS decision <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </>
         )}
       </div>
     </section>
