@@ -669,8 +669,37 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, onSub
       if (shiftAnswer.startDay === dayN) m.push({ min: shiftAnswer.startMin, kind: "start", label: `Shift START · ${minToTimeStr(shiftAnswer.startMin)}` });
       if (shiftAnswer.endDay === dayN) m.push({ min: shiftAnswer.endMin, kind: "end", label: `Shift END · ${minToTimeStr(shiftAnswer.endMin)}`, labelRow: 1 });
     }
+    // Active draggable handles before the user submits — handles can sit on
+    // EITHER day's grid; the grid's drag callback updates state with the
+    // correct day number.
+    if (phase === "shift" && !shiftAnswered) {
+      if (tStart.day === dayN) {
+        m.push({
+          min: tStart.min,
+          kind: "start",
+          markerId: "shiftStart",
+          draggable: true,
+          label: `Drag → START · ${minToTimeStr(tStart.min)}`,
+        });
+      }
+      if (tEnd.day === dayN) {
+        m.push({
+          min: tEnd.min,
+          kind: "end",
+          markerId: "shiftEnd",
+          draggable: true,
+          label: `Drag → END · ${minToTimeStr(tEnd.min)}`,
+          labelRow: 1,
+        });
+      }
+    }
     return m;
   };
+
+  const onDragForDay = (dayN) => (phase === "shift" && !shiftAnswered) ? (kind, markerId, newMin) => {
+    if (markerId === "shiftStart") setTStart({ day: dayN, min: newMin });
+    else if (markerId === "shiftEnd") setTEnd({ day: dayN, min: newMin });
+  } : null;
 
   return (
     <section className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden space-y-0" data-testid={`overnight-pair-${dayIdx}`}>
@@ -690,7 +719,7 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, onSub
             <p className="text-[11.5px] font-bold">{day1.label} · {day1.dayName}</p>
           </div>
           <div className="p-1.5">
-            <EldGrid entries={day1.log} shiftMarkers={buildMarkersForDay(1)} />
+            <EldGrid entries={day1.log} shiftMarkers={buildMarkersForDay(1)} onMarkerDrag={onDragForDay(1)} />
           </div>
         </div>
         <div className="rounded-md bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden">
@@ -699,7 +728,7 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, onSub
             <p className="text-[11.5px] font-bold">{day2.label} · {day2.dayName}</p>
           </div>
           <div className="p-1.5">
-            <EldGrid entries={day2.log} shiftMarkers={buildMarkersForDay(2)} />
+            <EldGrid entries={day2.log} shiftMarkers={buildMarkersForDay(2)} onMarkerDrag={onDragForDay(2)} />
           </div>
         </div>
       </div>
@@ -712,7 +741,7 @@ function OvernightPairCard({ day1, day2, dayIdx, totalDays, phase, answer, onSub
             <p className="text-[13px] font-bold text-[#002855] leading-snug">When did this work shift START and END? (it spans both days above)</p>
           </div>
           <p className="text-[11px] text-[#64748B] italic leading-relaxed px-1">
-            Pick the day + time for the START and the END. The shift continues across midnight, so the START and END will be on different days.
+            Drag the green / red handles onto whichever day's grid the bounds fall on, or pick the day + time manually below. The shift continues across midnight, so START and END will be on different days.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <PairDayTimePicker label="Shift START" color="#10B981" value={tStart} onChange={setTStart}
