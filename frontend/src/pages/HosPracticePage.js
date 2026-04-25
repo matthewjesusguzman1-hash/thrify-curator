@@ -7,7 +7,6 @@ import {
   COMBINED_SCENARIOS, MULTIDAY_SCENARIOS, EIGHTDAY_SCENARIOS,
 } from "../lib/hosAdvancedScenarios";
 import { SPLIT_PRACTICE_SCENARIOS } from "../lib/hosScenarios";
-import { HosTabs } from "../components/hos/HosTabs";
 
 /**
  * HosPracticePage — single home for all HOS practice scenarios. Four
@@ -84,7 +83,6 @@ export default function HosPracticePage() {
             </div>
           </div>
         </div>
-        <HosTabs />
       </header>
 
       <main className="max-w-[900px] mx-auto px-3 py-4 space-y-3">

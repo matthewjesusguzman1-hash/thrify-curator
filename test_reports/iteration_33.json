@@ -1,0 +1,25 @@
+{
+  "summary": "Verified three small UI tweaks: (1) /hours-of-service/split-sleeper h1 now reads exactly 'Split Sleeper' (no 'Trainer'); (2) HOS Training hub tile data-testid=module-split title now reads 'Split Sleeper'; (3) /hours-of-service/practice no longer renders the HosTabs sibling tab strip — only back chevron + page title in header, while the 4 category tabs (combined/multiday/eightday/split) still render below the description. Regression check: /hours-of-service (60/70 calc) and /hours-of-service/training STILL render HosTabs. ELD grid in Combined/C1 visibly taller (HOUR_W=28, ROW_H=52 confirmed in source and screenshot).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global (pre-existing, unrelated to this change)", "issues": ["Console warning: React does not recognize the `fontFeatureSettings` prop on a DOM element — capitalization mismatch in some inline style or attribute. Pre-existing, not introduced by these three tweaks."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "All four reference files contain the requested edits: SplitSleeperPage.js h1='Split Sleeper'; HosTrainingPage.js MODULES split title='Split Sleeper'; HosPracticePage.js no longer imports or renders <HosTabs />; EldGrid.js non-compact constants are HOUR_W:28, ROW_H:52, LABEL_W:74, TOTAL_W:76, HEADER_H:24.",
+    "Pre-existing console warning about `fontFeatureSettings` prop casing should be addressed in a follow-up — not blocking."
+  ],
+  "updated_files": [],
+  "success_rate": {"frontend": "100%"},
+  "test_credentials": "Badge 042 / PIN 1234",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Verified counts via live preview URL: split-sleeper hos-tabs=0, training hos-tabs=1 (preserved), practice hos-tabs=0 (removed), /hours-of-service hos-tabs=1 (preserved). h1 texts and module-split title are exactly 'Split Sleeper'. Screenshot of /hours-of-service/practice with Combined active saved to /tmp/practice_combined_grid.png and embedded in the test run output — focal-day ELD grid renders with the new taller rows (~50% thicker rows than prior version). Tab strip test_id is `practice-category-tabs` (the 4-button row), distinct from the removed sibling `hos-tabs`.",
+  "rca of the issue": "N/A — verification-only test."
+}

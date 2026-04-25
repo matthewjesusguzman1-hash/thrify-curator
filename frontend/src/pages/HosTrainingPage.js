@@ -30,7 +30,7 @@ const MODULES = [
   { id: "11hr",  learnKey: "11hr",  title: "11-Hour Driving",   subtitle: "Count the driving time",       icon: Target,    color: "#F59E0B", minutes: 4, quiz: ELEVEN_HOUR_SCENARIOS },
   { id: "break", learnKey: "break", title: "30-Min Break",      subtitle: "Find the missed interruption", icon: Zap,       color: "#10B981", minutes: 3, quiz: BREAK_SCENARIOS },
   { id: "recap", learnKey: "recap", title: "70-Hour Recap",     subtitle: "Count rolling 8-day hours",    icon: Calendar,  color: "#7C3AED", minutes: 4, quiz: RECAP_SCENARIOS },
-  { id: "split", learnKey: null,    title: "Split Sleeper Trainer", subtitle: "Learn the qualifying-pair rule",     icon: Layers,    color: "#0EA5E9", minutes: 6, quiz: null, route: "/hours-of-service/split-sleeper" },
+  { id: "split", learnKey: null,    title: "Split Sleeper", subtitle: "Learn the qualifying-pair rule",     icon: Layers,    color: "#0EA5E9", minutes: 6, quiz: null, route: "/hours-of-service/split-sleeper" },
   { id: "practice", learnKey: null, title: "HOS Practice Scenarios", subtitle: "Combined · multi-day · 8-day · split sleeper",     icon: Target,    color: "#D4AF37", minutes: 12, quiz: null, route: "/hours-of-service/practice" },
   { id: "exempt", learnKey: "exempt", title: "HOS Exemptions",  subtitle: "Top roadside + others",        icon: ShieldCheck, color: "#475569", minutes: 6, quiz: null, custom: "exemptions" },
   { id: "eld",    learnKey: "eld",    title: "ELD Reference",    subtitle: "Devices, data, malfunctions",  icon: Smartphone,  color: "#2563EB", minutes: 10, quiz: null, custom: "eld" },

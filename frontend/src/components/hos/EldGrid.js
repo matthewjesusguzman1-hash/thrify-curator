@@ -29,11 +29,15 @@ import { useEffect, useRef } from "react";
  *                     (prevents text overlap when two markers share a minute).
  */
 export function EldGrid({ entries, compact = false, highlightMinute = null, onMinuteClick = null, markedMinute = null, brackets = [], shade = [], selectableIndices = [], selectedIndices = [], onEntryClick = null, blockMarks = {}, shiftMarkers = [], onMarkerDrag = null }) {
-  const HOUR_W = compact ? 22 : 34;
-  const ROW_H = compact ? 28 : 38;
-  const LABEL_W = compact ? 64 : 78;
-  const TOTAL_W = compact ? 68 : 80;
-  const HEADER_H = compact ? 20 : 26;
+  // Dimensions are tuned so the grid renders TALL relative to its width — when
+  // the SVG fits to container width (h-auto + viewBox), aspect ratio is what
+  // dictates the on-screen height. ROW_H is intentionally large vs HOUR_W so
+  // each duty row is thick enough to read at a glance roadside.
+  const HOUR_W = compact ? 22 : 28;
+  const ROW_H = compact ? 38 : 52;
+  const LABEL_W = compact ? 62 : 74;
+  const TOTAL_W = compact ? 66 : 76;
+  const HEADER_H = compact ? 20 : 24;
   const HOURS = 24;
 
   // Assign each bracket to a label row, pushing colliding labels down to a

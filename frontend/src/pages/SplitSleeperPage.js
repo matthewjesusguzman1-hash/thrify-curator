@@ -27,7 +27,7 @@ export default function SplitSleeperPage() {
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <Layers className="w-4 h-4 text-[#D4AF37]" />
             <div>
-              <h1 className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Split Sleeper Trainer</h1>
+              <h1 className="text-sm font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>Split Sleeper</h1>
               <p className="text-[10px] text-white/50">Property-carrying · <a href="https://www.ecfr.gov/current/title-49/section-395.1" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR §395.1(g)(1)(ii)</a></p>
             </div>
           </div>
