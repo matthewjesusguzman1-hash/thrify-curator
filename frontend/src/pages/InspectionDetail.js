@@ -520,7 +520,7 @@ export default function InspectionDetail() {
                         <Languages className="w-4 h-4 text-[#002855]" />
                         <span className="text-sm font-bold text-[#002855]">ELP Assessment</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${proficient ? "bg-emerald-100 text-emerald-700" : a.overall_disposition === "not_proficient" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                          {proficient ? "PROFICIENT" : a.overall_disposition === "not_proficient" ? "NOT PROFICIENT" : "PENDING"}
+                          {proficient ? "ELP PROFICIENT" : a.overall_disposition === "not_proficient" ? "NOT ELP PROFICIENT" : "PENDING"}
                         </span>
                       </div>
                       <button onClick={() => removeElp(a.assessment_id)} className="text-[#CBD5E1] hover:text-[#DC2626] transition-colors flex-shrink-0" data-testid={`remove-elp-${a.assessment_id}`}>

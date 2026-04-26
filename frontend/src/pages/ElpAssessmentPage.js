@@ -612,7 +612,7 @@ export default function ElpAssessmentPage() {
                 {suggestedDisposition && (
                   <div className="rounded border-l-[3px] border-[#3B82F6] bg-[#EEF6FF] p-2">
                     <p className="text-[10.5px] text-[#1E3A8A]">
-                      <span className="font-bold">Suggested:</span> {suggestedDisposition === "proficient" ? "PROFICIENT" : "NOT PROFICIENT"} (based on the test results above; inspector’s judgment overrides).
+                      <span className="font-bold">Suggested:</span> {suggestedDisposition === "proficient" ? "ELP PROFICIENT" : "NOT ELP PROFICIENT"} (based on the test results above; inspector’s judgment overrides).
                     </p>
                   </div>
                 )}
@@ -626,7 +626,7 @@ export default function ElpAssessmentPage() {
                       className={overallDisposition === "proficient" ? "bg-[#10B981] text-white hover:bg-[#059669]" : "border-[#10B981] text-[#065F46] hover:bg-[#F0FDF4]"}
                       data-testid="elp-disp-proficient"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Proficient
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> ELP Proficient
                     </Button>
                     <Button
                       onClick={() => setOverallDisposition("not_proficient")}
@@ -634,7 +634,7 @@ export default function ElpAssessmentPage() {
                       className={overallDisposition === "not_proficient" ? "bg-[#DC2626] text-white hover:bg-[#B91C1C]" : "border-[#DC2626] text-[#991B1B] hover:bg-[#FEE2E2]"}
                       data-testid="elp-disp-not-proficient"
                     >
-                      <XCircle className="w-3.5 h-3.5 mr-1.5" /> Not Proficient
+                      <XCircle className="w-3.5 h-3.5 mr-1.5" /> Not ELP Proficient
                     </Button>
                   </div>
                 </div>
@@ -903,7 +903,7 @@ function ElpReportContent({
 
       <div style={{ marginTop: 14, padding: 10, border: `2px solid ${overallDisposition === "proficient" ? "#10B981" : "#DC2626"}`, borderRadius: 6, background: overallDisposition === "proficient" ? "#F0FDF4" : "#FEE2E2" }}>
         <p style={{ margin: 0, fontWeight: 800, fontSize: 13, color: overallDisposition === "proficient" ? "#065F46" : "#7F1D1D" }}>
-          DISPOSITION: {overallDisposition === "proficient" ? "PROFICIENT" : overallDisposition === "not_proficient" ? "NOT PROFICIENT" : "Pending"}
+          DISPOSITION: {overallDisposition === "proficient" ? "ELP PROFICIENT" : overallDisposition === "not_proficient" ? "NOT ELP PROFICIENT" : "Pending"}
         </p>
         {overallDisposition === "not_proficient" && (
           <p style={{ margin: 0, marginTop: 4, fontSize: 11.5, color: "#7F1D1D" }}>
