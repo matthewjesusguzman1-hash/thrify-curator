@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus, Scale, Hourglass, Settings2, ChevronLeft, HardDrive, Languages } from "lucide-react";
+import { Upload, ExternalLink, Smartphone, GraduationCap, Globe, ClipboardList, Calculator, Camera, FileText, Briefcase, ChevronDown, ChevronRight, LogOut, Shield, KeyRound, MessageSquarePlus, Scale, Hourglass, Settings2, ChevronLeft, HardDrive } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -132,7 +132,7 @@ const NAV_BUTTONS = [
   { id: "bridge", label: "Bridge", icon: Scale, path: "/bridge-chart", style: "primary", testid: "bridge-chart-nav-btn" },
   { id: "hos", label: "HOS", icon: Hourglass, path: "/hours-of-service", style: "primary", testid: "hos-nav-btn", liteAllowed: true },
   { id: "hazmat", label: "HazMat", short: "HM", icon: null, path: "/hazmat-worksheet", style: "primary", testid: "hazmat-nav-btn" },
-  { id: "elp", label: "ELP", icon: Languages, path: "/elp", style: "primary", testid: "elp-nav-btn", liteAllowed: true },
+  { id: "elp", label: "ELP", icon: null, path: "/elp", style: "primary", testid: "elp-nav-btn", liteAllowed: true },
   // Photos nav hidden pre-launch per agency review. Code preserved at
   // /app/frontend/src/pages/QuickPhotos.js — re-enable this entry when ready.
   // { id: "photo", label: "Photos", icon: Camera, path: "/quick-photos", style: "outline", testid: "photo-annotator-nav-btn", liteAllowed: true },
