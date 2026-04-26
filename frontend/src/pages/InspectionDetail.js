@@ -508,11 +508,8 @@ export default function InspectionDetail() {
             </div>
             <div className="space-y-3">
               {inspection.elp_assessments.map((a) => {
-                const interviewItems = (a.interview_answers || []).filter((q) => q.result);
+                const interviewItems = (a.interview_answers || []);
                 const signItems = (a.sign_answers || []).filter((s) => s.result);
-                const interviewFails = interviewItems.filter((q) => q.result === "fail").length;
-                const interviewInconclusive = interviewItems.filter((q) => q.result === "inconclusive").length;
-                const interviewPasses = interviewItems.filter((q) => q.result === "pass").length;
                 const signFails = signItems.filter((s) => s.result === "fail").length;
                 const signPasses = signItems.filter((s) => s.result === "pass").length;
                 const proficient = a.overall_disposition === "proficient";
@@ -525,40 +522,53 @@ export default function InspectionDetail() {
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${proficient ? "bg-emerald-100 text-emerald-700" : a.overall_disposition === "not_proficient" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
                           {proficient ? "PROFICIENT" : a.overall_disposition === "not_proficient" ? "NOT PROFICIENT" : "PENDING"}
                         </span>
-                        {a.driver_name && (
-                          <span className="text-[10.5px] text-[#475569]">· {a.driver_name}</span>
-                        )}
                       </div>
                       <button onClick={() => removeElp(a.assessment_id)} className="text-[#CBD5E1] hover:text-[#DC2626] transition-colors flex-shrink-0" data-testid={`remove-elp-${a.assessment_id}`}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
+                    {(a.company_name || a.usdot_number) && (
+                      <p className="text-[10.5px] text-[#475569] mb-2">
+                        {a.company_name && <><span className="font-bold">Company:</span> {a.company_name}</>}
+                        {a.company_name && a.usdot_number ? " · " : ""}
+                        {a.usdot_number && <><span className="font-bold">USDOT #:</span> {a.usdot_number}</>}
+                      </p>
+                    )}
+
                     <div className="grid grid-cols-2 gap-2 mb-2">
-                      {a.interview_administered && (
-                        <div className="bg-[#F8FAFC] rounded p-2">
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Test 1 — Interview</p>
-                          <p className="text-xs font-bold text-[#002855]">{interviewItems.length} answered</p>
-                          <p className="text-[10.5px] text-[#475569]">
-                            <span className="text-emerald-700 font-bold">{interviewPasses} pass</span>
-                            <span className="mx-1">·</span>
-                            <span className="text-amber-700 font-bold">{interviewInconclusive} inc.</span>
-                            <span className="mx-1">·</span>
-                            <span className="text-red-700 font-bold">{interviewFails} fail</span>
-                          </p>
-                        </div>
-                      )}
-                      {a.signs_administered && (
-                        <div className="bg-[#F8FAFC] rounded p-2">
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Test 2 — Sign Recognition</p>
-                          <p className="text-xs font-bold text-[#002855]">{signItems.length} signs</p>
-                          <p className="text-[10.5px] text-[#475569]">
-                            <span className="text-emerald-700 font-bold">{signPasses} pass</span>
-                            <span className="mx-1">·</span>
-                            <span className="text-red-700 font-bold">{signFails} fail</span>
-                          </p>
-                        </div>
-                      )}
+                      <div className="bg-[#F8FAFC] rounded p-2">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Test 1 — Interview</p>
+                        {a.interview_administered ? (
+                          <>
+                            <p className={`text-xs font-bold ${a.interview_disposition === "pass" ? "text-emerald-700" : a.interview_disposition === "fail" ? "text-red-700" : "text-amber-700"}`}>
+                              {(a.interview_disposition || "—").toUpperCase()}
+                            </p>
+                            <p className="text-[10.5px] text-[#475569]">{interviewItems.length} questions documented</p>
+                          </>
+                        ) : (
+                          <p className="text-xs italic text-[#94A3B8]">Not administered</p>
+                        )}
+                      </div>
+                      <div className="bg-[#F8FAFC] rounded p-2">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Test 2 — Sign Recognition</p>
+                        {a.signs_administered ? (
+                          <>
+                            <p className={`text-xs font-bold ${a.sign_test_result === "sufficient" ? "text-emerald-700" : "text-red-700"}`}>
+                              {(a.sign_test_result || "—").toUpperCase()}
+                            </p>
+                            <p className="text-[10.5px] text-[#475569]">
+                              <span className="text-emerald-700 font-bold">{signPasses}</span>
+                              {" / "}
+                              <span>{signItems.length}</span>
+                              {" identified "}
+                              {signFails > 0 && <span className="text-red-700">({signFails} missed)</span>}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs italic text-[#94A3B8]">Not administered</p>
+                        )}
+                      </div>
                     </div>
 
                     {a.overall_disposition === "not_proficient" && a.citation_ref && (
@@ -578,7 +588,6 @@ export default function InspectionDetail() {
 
                     <p className="text-[9px] text-[#94A3B8]">
                       {a.created_at?.slice(0, 16).replace("T", " ")}
-                      {a.cdl_number ? ` | CDL ${a.cdl_number}` : ""}
                     </p>
                   </div>
                 );

@@ -186,7 +186,7 @@ class SaveTieDownRequest(BaseModel):
 class ElpInterviewAnswer(BaseModel):
     key: str = ""
     question: str = ""
-    result: str = ""  # "pass" | "inconclusive" | "fail" | ""
+    asked: bool = False
     notes: str = ""
 
 class ElpSignAnswer(BaseModel):
@@ -194,14 +194,18 @@ class ElpSignAnswer(BaseModel):
     text: str = ""
     meaning: str = ""
     result: str = ""  # "pass" | "fail" | ""
-    driver_response: str = ""
+    notes: str = ""
 
 class SaveElpAssessmentRequest(BaseModel):
-    driver_name: str = ""
-    cdl_number: str = ""
+    company_name: str = ""
+    usdot_number: str = ""
     interview_administered: bool = False
+    interview_disposition: str = ""  # "pass" | "inconclusive" | "fail" | ""
     interview_answers: List[ElpInterviewAnswer] = []
     signs_administered: bool = False
+    sign_test_result: str = ""  # "sufficient" | "insufficient" | ""
+    sign_pass_count: int = 0
+    sign_fail_count: int = 0
     sign_answers: List[ElpSignAnswer] = []
     overall_disposition: str = ""  # "proficient" | "not_proficient"
     citation_ref: str = ""

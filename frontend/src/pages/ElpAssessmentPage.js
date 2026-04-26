@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   ChevronLeft, ChevronRight, Eye, Share2, Save,
-  CheckCircle2, XCircle, AlertTriangle, FileText, Languages, Info,
-  RotateCcw,
+  CheckCircle2, XCircle, AlertTriangle, Languages, Info,
+  RotateCcw, Maximize2, Minimize2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -13,7 +13,11 @@ import { Dialog, DialogContent } from "../components/ui/dialog";
 import { PDFPreview } from "../components/app/PDFPreview";
 import { useAuth } from "../components/app/AuthContext";
 import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
-import { ELP_INTERVIEW_QUESTIONS, ELP_SIGNS, ELP_CITATION, ELP_PASS_THRESHOLD_NOTE } from "../lib/elpContent";
+import {
+  ELP_INTERVIEW_QUESTIONS, ELP_SIGNS, ELP_CITATION,
+  ELP_PASS_THRESHOLD_NOTE, ELP_REQUIRED_SIGNS, ELP_SIGN_PASS_THRESHOLD,
+  ELP_INSTRUCTIONS,
+} from "../lib/elpContent";
 import { SignDisplay } from "../components/elp/SignDisplay";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -22,22 +26,25 @@ export default function ElpAssessmentPage() {
   const navigate = useNavigate();
   const { badge } = useAuth();
 
-  // Driver context
-  const [driverName, setDriverName] = useState("");
-  const [cdlNumber, setCdlNumber] = useState("");
-  const [hauling, setHauling] = useState({ hm: false });
+  // Optional company / USDOT context (no driver PII per agency guidance).
+  const [companyName, setCompanyName] = useState("");
+  const [usdotNumber, setUsdotNumber] = useState("");
+  const [showHmQuestions, setShowHmQuestions] = useState(false);
 
-  // Phase: 'interview' (Test 1) → 'signs' (Test 2, optional) → 'summary'
+  // Phase: 'interview' → 'sign-select' → 'signs' → 'summary'
   const [phase, setPhase] = useState("interview");
 
-  // Interview answers — keyed by question key. Values: "pass" | "inconclusive" | "fail"
-  const [interviewAnswers, setInterviewAnswers] = useState({});
-  const [interviewNotes, setInterviewNotes] = useState({});
+  // Interview: per-question optional notes + overall inspector judgment.
+  const [interviewAsked, setInterviewAsked] = useState({});      // key -> bool (was the question asked?)
+  const [interviewNotes, setInterviewNotes] = useState({});      // key -> string
+  const [interviewDisposition, setInterviewDisposition] = useState(""); // "pass" | "inconclusive" | "fail"
 
-  // Sign answers — keyed by sign id. Values: "pass" | "fail"
-  const [signIdx, setSignIdx] = useState(0);
-  const [signAnswers, setSignAnswers] = useState({});
-  const [signResponses, setSignResponses] = useState({});
+  // Sign test
+  const [selectedSignIds, setSelectedSignIds] = useState([]);    // exactly 4
+  const [signRunIdx, setSignRunIdx] = useState(0);                // index inside selectedSignIds
+  const [signResults, setSignResults] = useState({});             // sign_id -> "pass" | "fail"
+  const [signNotes, setSignNotes] = useState({});                 // sign_id -> string
+  const [showingToDriver, setShowingToDriver] = useState(false);  // fullscreen mode
 
   // Final disposition + notes
   const [overallDisposition, setOverallDisposition] = useState("");
@@ -53,51 +60,65 @@ export default function ElpAssessmentPage() {
   const [saving, setSaving] = useState(false);
   const hiddenReportRef = useRef(null);
 
-  // Visible questions — HM questions show only when driver is hauling HM
+  // Visible questions: HM block toggled by inspector.
   const visibleQuestions = useMemo(
-    () => ELP_INTERVIEW_QUESTIONS.filter((q) => !q.hm || hauling.hm),
-    [hauling.hm]
+    () => ELP_INTERVIEW_QUESTIONS.filter((q) => !q.hm || showHmQuestions),
+    [showHmQuestions]
   );
 
-  // Counts for progress + grading
-  const interviewStats = useMemo(() => {
-    const total = visibleQuestions.length;
-    const answered = visibleQuestions.filter((q) => interviewAnswers[q.key]).length;
-    const fails = visibleQuestions.filter((q) => interviewAnswers[q.key] === "fail").length;
-    const inconclusive = visibleQuestions.filter((q) => interviewAnswers[q.key] === "inconclusive").length;
-    const passes = visibleQuestions.filter((q) => interviewAnswers[q.key] === "pass").length;
-    return { total, answered, fails, inconclusive, passes };
-  }, [visibleQuestions, interviewAnswers]);
+  const interviewAdministered = interviewDisposition !== "";
+  const signsAdministered = selectedSignIds.length === ELP_REQUIRED_SIGNS &&
+    selectedSignIds.every((id) => signResults[id]);
+  const passCount = selectedSignIds.filter((id) => signResults[id] === "pass").length;
+  const failCount = selectedSignIds.filter((id) => signResults[id] === "fail").length;
+  const signTestResult = signsAdministered
+    ? (passCount >= ELP_SIGN_PASS_THRESHOLD ? "sufficient" : "insufficient")
+    : "";
 
-  const signStats = useMemo(() => {
-    const total = ELP_SIGNS.length;
-    const answered = Object.keys(signAnswers).length;
-    const fails = Object.values(signAnswers).filter((v) => v === "fail").length;
-    const passes = Object.values(signAnswers).filter((v) => v === "pass").length;
-    return { total, answered, fails, passes };
-  }, [signAnswers]);
-
-  const interviewComplete = interviewStats.answered === interviewStats.total && interviewStats.total > 0;
-  const interviewNeedsSignTest = interviewComplete && (interviewStats.fails + interviewStats.inconclusive) > 0;
-  const signsAdministered = Object.keys(signAnswers).length > 0;
-  const hasData = interviewStats.answered > 0;
-
-  /* ── Interview answer setters ── */
-  const setInterviewAnswer = (key, value) => setInterviewAnswers((a) => ({ ...a, [key]: value }));
-  const setInterviewNote = (key, value) => setInterviewNotes((a) => ({ ...a, [key]: value }));
-
-  /* ── Sign answer setters ── */
-  const setSignAnswer = (id, value) => setSignAnswers((a) => ({ ...a, [id]: value }));
-  const setSignResponse = (id, value) => setSignResponses((a) => ({ ...a, [id]: value }));
+  const hasData = interviewAdministered || selectedSignIds.length > 0;
 
   /* ── Reset ── */
   const resetAll = () => {
-    setDriverName(""); setCdlNumber(""); setHauling({ hm: false });
-    setInterviewAnswers({}); setInterviewNotes({});
-    setSignIdx(0); setSignAnswers({}); setSignResponses({});
+    setCompanyName(""); setUsdotNumber(""); setShowHmQuestions(false);
+    setInterviewAsked({}); setInterviewNotes({}); setInterviewDisposition("");
+    setSelectedSignIds([]); setSignRunIdx(0); setSignResults({}); setSignNotes({});
+    setShowingToDriver(false);
     setOverallDisposition(""); setInspectorNotes("");
     setPhase("interview");
   };
+
+  /* ── Sign selection toggle (cap at 4) ── */
+  const toggleSignSelect = (id) => {
+    setSelectedSignIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= ELP_REQUIRED_SIGNS) {
+        toast.error(`Pick exactly ${ELP_REQUIRED_SIGNS} signs`);
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
+
+  const startSignRun = () => {
+    if (selectedSignIds.length !== ELP_REQUIRED_SIGNS) {
+      toast.error(`Select ${ELP_REQUIRED_SIGNS} signs first`);
+      return;
+    }
+    setSignRunIdx(0);
+    setShowingToDriver(false);
+    setPhase("signs");
+  };
+
+  /* ── Auto-suggest a final disposition ── */
+  const suggestedDisposition = useMemo(() => {
+    if (!interviewAdministered && !signsAdministered) return "";
+    const interviewBad = interviewDisposition === "fail" || interviewDisposition === "inconclusive";
+    const signsBad = signsAdministered && signTestResult === "insufficient";
+    if (interviewBad && (!signsAdministered || signsBad)) return "not_proficient";
+    if (interviewDisposition === "pass" && !signsAdministered) return "proficient";
+    if (signsAdministered && signTestResult === "sufficient" && interviewDisposition !== "fail") return "proficient";
+    return "";
+  }, [interviewAdministered, interviewDisposition, signsAdministered, signTestResult]);
 
   /* ── Share / save ── */
   const handleShare = useCallback(async () => {
@@ -127,26 +148,31 @@ export default function ElpAssessmentPage() {
   const openSaveModal = () => { fetchInspections(); setShowSaveModal(true); };
 
   const buildPayload = () => ({
-    driver_name: driverName,
-    cdl_number: cdlNumber,
-    interview_administered: interviewStats.answered > 0,
+    company_name: companyName,
+    usdot_number: usdotNumber,
+    interview_administered: interviewAdministered,
+    interview_disposition: interviewDisposition,
     interview_answers: visibleQuestions
-      .filter((q) => interviewAnswers[q.key])
+      .filter((q) => interviewAsked[q.key] || interviewNotes[q.key])
       .map((q) => ({
         key: q.key,
         question: q.text,
-        result: interviewAnswers[q.key],
+        asked: !!interviewAsked[q.key],
         notes: interviewNotes[q.key] || "",
       })),
     signs_administered: signsAdministered,
-    sign_answers: ELP_SIGNS
-      .filter((s) => signAnswers[s.id])
+    sign_test_result: signTestResult,
+    sign_pass_count: passCount,
+    sign_fail_count: failCount,
+    sign_answers: selectedSignIds
+      .map((id) => ELP_SIGNS.find((s) => s.id === id))
+      .filter(Boolean)
       .map((s) => ({
         sign_id: s.id,
         text: s.text.replace(/\n/g, " "),
         meaning: s.meaning,
-        result: signAnswers[s.id],
-        driver_response: signResponses[s.id] || "",
+        result: signResults[s.id] || "",
+        notes: signNotes[s.id] || "",
       })),
     overall_disposition: overallDisposition,
     citation_ref: overallDisposition === "not_proficient" ? ELP_CITATION.ref : "",
@@ -178,7 +204,42 @@ export default function ElpAssessmentPage() {
     finally { setSaving(false); }
   };
 
+  /* ──────────────── Show-to-driver fullscreen mode ──────────────── */
+  // ESC exits fullscreen.
+  useEffect(() => {
+    if (!showingToDriver) return;
+    const onKey = (e) => { if (e.key === "Escape") setShowingToDriver(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showingToDriver]);
+
+  if (showingToDriver) {
+    const sign = ELP_SIGNS.find((s) => s.id === selectedSignIds[signRunIdx]);
+    return (
+      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center" data-testid="elp-driver-view">
+        <div className="flex-1 w-full flex items-center justify-center p-4 sm:p-8">
+          <div className="w-full max-w-[640px]" style={{ aspectRatio: "1 / 1" }}>
+            {sign && <SignDisplay sign={sign} size={640} />}
+          </div>
+        </div>
+        <div className="w-full p-4 flex justify-center">
+          <Button
+            onClick={() => setShowingToDriver(false)}
+            className="bg-white text-black hover:bg-gray-200 h-12 px-6 text-base font-bold"
+            data-testid="elp-driver-back-btn"
+          >
+            <ChevronLeft className="w-5 h-5 mr-2" /> Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   /* ──────────────── RENDER ──────────────── */
+  const currentSign = phase === "signs" && selectedSignIds.length
+    ? ELP_SIGNS.find((s) => s.id === selectedSignIds[signRunIdx])
+    : null;
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <Toaster richColors position="top-center" />
@@ -227,83 +288,126 @@ export default function ElpAssessmentPage() {
           </div>
           <p className="text-[12px] text-[#1E3A8A] leading-relaxed font-bold mb-1">{ELP_CITATION.title}</p>
           <p className="text-[11.5px] text-[#1E3A8A] leading-relaxed">{ELP_CITATION.summary}</p>
-          <p className="text-[10.5px] text-[#1E3A8A] leading-relaxed mt-2 italic">Test protocol: <span className="font-bold">Interview first.</span> If proficiency remains in question after the interview, escalate to the highway sign recognition test.</p>
         </div>
 
-        {/* Driver context */}
+        {/* Optional context — NO driver PII */}
         <div className="bg-white rounded-xl border overflow-hidden">
-          <div className="bg-[#002855] text-white px-3 py-2">
-            <p className="text-[12px] font-bold">Driver context</p>
+          <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2">
+            <p className="text-[12px] font-bold">Optional Context</p>
+            <span className="ml-auto text-[10px] text-white/70">Both fields optional</span>
           </div>
           <div className="p-3 space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Driver name</label>
-                <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} className="h-8 text-[12px]" data-testid="elp-driver-name" />
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Company name</label>
+                <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Optional" className="h-8 text-[12px]" data-testid="elp-company-name" />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">CDL #</label>
-                <Input value={cdlNumber} onChange={(e) => setCdlNumber(e.target.value)} className="h-8 text-[12px]" data-testid="elp-cdl" />
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">USDOT #</label>
+                <Input value={usdotNumber} onChange={(e) => setUsdotNumber(e.target.value)} placeholder="Optional" className="h-8 text-[12px]" data-testid="elp-usdot" />
               </div>
             </div>
-            <label className="flex items-center gap-2 mt-1">
-              <input type="checkbox" checked={hauling.hm} onChange={(e) => setHauling({ hm: e.target.checked })} data-testid="elp-hm-checkbox" />
-              <span className="text-[12px] text-[#334155]">Driver is hauling hazardous materials (adds HM-specific interview questions)</span>
-            </label>
+            <p className="text-[10px] text-[#64748B] italic leading-relaxed">No driver name or CDL # is recorded on this assessment to avoid evidentiary issues with sensitive personal information.</p>
           </div>
         </div>
 
         {/* Phase tabs */}
-        <div className="grid grid-cols-3 gap-1 bg-white rounded-xl border p-1" data-testid="elp-phase-tabs">
-          <PhaseTab label={`Interview (${interviewStats.answered}/${interviewStats.total})`} active={phase === "interview"} onClick={() => setPhase("interview")} testid="elp-tab-interview" />
-          <PhaseTab label={`Sign Test (${signStats.answered}/${signStats.total})`} active={phase === "signs"} onClick={() => setPhase("signs")} disabled={!interviewComplete} testid="elp-tab-signs" />
-          <PhaseTab label="Disposition" active={phase === "summary"} onClick={() => setPhase("summary")} disabled={!interviewComplete} testid="elp-tab-summary" />
+        <div className="grid grid-cols-4 gap-1 bg-white rounded-xl border p-1" data-testid="elp-phase-tabs">
+          <PhaseTab label="Interview" active={phase === "interview"} onClick={() => setPhase("interview")} testid="elp-tab-interview" />
+          <PhaseTab label={`Pick ${ELP_REQUIRED_SIGNS} Signs`} active={phase === "sign-select"} onClick={() => setPhase("sign-select")} testid="elp-tab-pick" />
+          <PhaseTab label="Run Signs" active={phase === "signs"} onClick={() => selectedSignIds.length === ELP_REQUIRED_SIGNS && setPhase("signs")} disabled={selectedSignIds.length !== ELP_REQUIRED_SIGNS} testid="elp-tab-signs" />
+          <PhaseTab label="Disposition" active={phase === "summary"} onClick={() => setPhase("summary")} testid="elp-tab-summary" />
         </div>
 
         {/* PHASE: INTERVIEW */}
         {phase === "interview" && (
           <section className="space-y-2" data-testid="elp-phase-interview">
+            <div className="rounded-md bg-[#F8FAFC] border-l-[3px] border-[#94A3B8] p-2.5">
+              <p className="text-[10.5px] text-[#475569] leading-relaxed">{ELP_INSTRUCTIONS}</p>
+            </div>
+
             <div className="bg-white rounded-xl border overflow-hidden">
               <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2">
-                <p className="text-[12px] font-bold">Test 1 — Interview</p>
+                <p className="text-[12px] font-bold">Test 1 — Driver Interview</p>
                 <span className="ml-auto text-[10px] text-white/70">Attachment A</span>
               </div>
               <div className="divide-y">
-                {visibleQuestions.map((q, i) => (
+                {visibleQuestions.filter((q) => !q.hm).map((q) => (
                   <InterviewRow
                     key={q.key}
-                    idx={i + 1}
                     q={q}
-                    answer={interviewAnswers[q.key]}
+                    asked={!!interviewAsked[q.key]}
                     note={interviewNotes[q.key] || ""}
-                    onSet={(v) => setInterviewAnswer(q.key, v)}
-                    onNote={(v) => setInterviewNote(q.key, v)}
+                    onToggleAsked={(v) => setInterviewAsked((a) => ({ ...a, [q.key]: v }))}
+                    onNote={(v) => setInterviewNotes((a) => ({ ...a, [q.key]: v }))}
                   />
                 ))}
               </div>
+              {/* HM toggle */}
+              <div className="border-t bg-[#FFFBEB] px-3 py-2 flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold text-[#92400E]">Hazardous Material Questions (If applicable)</p>
+                  <p className="text-[10px] text-[#92400E]">Show 2 additional HM-specific questions when the driver is hauling hazmat.</p>
+                </div>
+                <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#92400E]">
+                  <input type="checkbox" checked={showHmQuestions} onChange={(e) => setShowHmQuestions(e.target.checked)} data-testid="elp-hm-toggle" />
+                  Show HM Qs
+                </label>
+              </div>
+              {showHmQuestions && (
+                <div className="divide-y border-t">
+                  {visibleQuestions.filter((q) => q.hm).map((q) => (
+                    <InterviewRow
+                      key={q.key}
+                      q={q}
+                      asked={!!interviewAsked[q.key]}
+                      note={interviewNotes[q.key] || ""}
+                      onToggleAsked={(v) => setInterviewAsked((a) => ({ ...a, [q.key]: v }))}
+                      onNote={(v) => setInterviewNotes((a) => ({ ...a, [q.key]: v }))}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-            {interviewComplete && (
-              <div className={`rounded-xl border p-3 ${interviewNeedsSignTest ? "border-[#F59E0B] bg-[#FFFBEB]" : "border-[#10B981] bg-[#F0FDF4]"}`} data-testid="elp-interview-result">
-                {interviewNeedsSignTest ? (
+
+            {/* Inspector judgment */}
+            <div className="bg-white rounded-xl border p-3" data-testid="elp-interview-judgment">
+              <p className="text-[12px] font-bold text-[#002855] mb-1">Inspector’s Judgment</p>
+              <p className="text-[10.5px] text-[#64748B] leading-relaxed mb-2">There is no required minimum number of questions. Use your judgment to decide whether the driver can sufficiently respond in English.</p>
+              <div className="grid grid-cols-3 gap-2">
+                <DispBtn label="Pass" desc="Driver responded sufficiently in English." active={interviewDisposition === "pass"} onClick={() => setInterviewDisposition("pass")} color="#10B981" testid="elp-interview-pass" />
+                <DispBtn label="Inconclusive" desc="Need the sign test." active={interviewDisposition === "inconclusive"} onClick={() => setInterviewDisposition("inconclusive")} color="#F59E0B" testid="elp-interview-inconclusive" />
+                <DispBtn label="Fail" desc="Did not respond sufficiently." active={interviewDisposition === "fail"} onClick={() => setInterviewDisposition("fail")} color="#DC2626" testid="elp-interview-fail" />
+              </div>
+            </div>
+
+            {interviewAdministered && (
+              <div className={`rounded-xl border p-3 ${interviewDisposition === "pass" ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`} data-testid="elp-interview-result">
+                {interviewDisposition === "pass" ? (
                   <>
                     <div className="flex items-center gap-2 mb-1">
-                      <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
-                      <p className="text-[12px] font-bold text-[#92400E]">Proficiency still in question — administer the sign test.</p>
+                      <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+                      <p className="text-[12px] font-bold text-[#065F46]">Interview marked PASS.</p>
                     </div>
-                    <p className="text-[11px] text-[#92400E] leading-relaxed">{interviewStats.fails} fail · {interviewStats.inconclusive} inconclusive · {interviewStats.passes} pass. Continue to <span className="font-bold">Test 2 — Sign Recognition</span> to complete the assessment.</p>
-                    <Button onClick={() => setPhase("signs")} className="w-full mt-2 bg-[#92400E] text-white hover:bg-[#7C2D12] h-9 text-[12px]" data-testid="elp-go-signs-btn">
-                      Continue to Sign Recognition Test <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                    </Button>
+                    <p className="text-[11px] text-[#065F46] leading-relaxed">You can record a final disposition now or still administer the sign test for additional documentation.</p>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <Button onClick={() => setPhase("sign-select")} variant="outline" className="border-[#94A3B8] h-9 text-[11px]" data-testid="elp-go-sign-pick-btn">
+                        Optional sign test <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                      </Button>
+                      <Button onClick={() => setPhase("summary")} className="bg-[#10B981] text-white hover:bg-[#059669] h-9 text-[11px]" data-testid="elp-go-summary-btn">
+                        Record disposition <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                      </Button>
+                    </div>
                   </>
                 ) : (
                   <>
                     <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-                      <p className="text-[12px] font-bold text-[#065F46]">Interview clean — driver passed all interview questions.</p>
+                      <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
+                      <p className="text-[12px] font-bold text-[#92400E]">Proficiency in question — administer the sign test.</p>
                     </div>
-                    <p className="text-[11px] text-[#065F46] leading-relaxed">No need to escalate to the sign test. Go to <span className="font-bold">Disposition</span> to record your finding.</p>
-                    <Button onClick={() => setPhase("summary")} className="w-full mt-2 bg-[#10B981] text-white hover:bg-[#059669] h-9 text-[12px]" data-testid="elp-go-summary-btn">
-                      Record disposition <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                    <p className="text-[11px] text-[#92400E] leading-relaxed">Continue to the highway sign recognition test. Pick {ELP_REQUIRED_SIGNS} signs and show each to the driver.</p>
+                    <Button onClick={() => setPhase("sign-select")} className="w-full mt-2 bg-[#92400E] text-white hover:bg-[#7C2D12] h-9 text-[12px]" data-testid="elp-go-signs-btn">
+                      Continue to Sign Selection <ChevronRight className="w-3.5 h-3.5 ml-1" />
                     </Button>
                   </>
                 )}
@@ -312,80 +416,170 @@ export default function ElpAssessmentPage() {
           </section>
         )}
 
-        {/* PHASE: SIGNS */}
-        {phase === "signs" && (
+        {/* PHASE: SIGN SELECTION */}
+        {phase === "sign-select" && (
+          <section className="space-y-2" data-testid="elp-phase-sign-select">
+            <div className="bg-white rounded-xl border overflow-hidden">
+              <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2">
+                <p className="text-[12px] font-bold">Test 2 — Pick {ELP_REQUIRED_SIGNS} Highway Signs</p>
+                <span className="ml-auto text-[10px] text-white/70">{selectedSignIds.length}/{ELP_REQUIRED_SIGNS} selected</span>
+              </div>
+              <div className="p-3">
+                <p className="text-[11px] text-[#64748B] italic leading-relaxed mb-3">{ELP_PASS_THRESHOLD_NOTE}</p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2" data-testid="elp-sign-grid">
+                  {ELP_SIGNS.map((s) => {
+                    const selected = selectedSignIds.includes(s.id);
+                    const idx = selectedSignIds.indexOf(s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => toggleSignSelect(s.id)}
+                        className={`relative bg-[#0F172A] rounded-lg p-1.5 transition-all border-2 ${selected ? "border-[#D4AF37] ring-2 ring-[#D4AF37]/40" : "border-transparent hover:border-[#64748B]"}`}
+                        data-testid={`elp-sign-pick-${s.id}`}
+                      >
+                        <div style={{ aspectRatio: "1 / 1" }}>
+                          <SignDisplay sign={s} size={120} />
+                        </div>
+                        <p className="text-center text-white/70 text-[9px] mt-1 font-bold uppercase tracking-wider">#{s.id}</p>
+                        {selected && (
+                          <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#D4AF37] text-[#002855] flex items-center justify-center text-[10px] font-black">
+                            {idx + 1}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={startSignRun}
+              disabled={selectedSignIds.length !== ELP_REQUIRED_SIGNS}
+              className="w-full bg-[#002855] text-white hover:bg-[#001a3a] h-10 text-[12px] disabled:opacity-50"
+              data-testid="elp-start-sign-run-btn"
+            >
+              {selectedSignIds.length === ELP_REQUIRED_SIGNS
+                ? "Start Sign Test"
+                : `Pick ${ELP_REQUIRED_SIGNS - selectedSignIds.length} more`}
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </section>
+        )}
+
+        {/* PHASE: SIGN RUN */}
+        {phase === "signs" && currentSign && (
           <section className="space-y-2" data-testid="elp-phase-signs">
             <div className="bg-white rounded-xl border overflow-hidden">
               <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2">
-                <p className="text-[12px] font-bold">Test 2 — Highway Sign Recognition</p>
-                <span className="ml-auto text-[10px] text-white/70">Attachment B · Sign {signIdx + 1} of {ELP_SIGNS.length}</span>
+                <p className="text-[12px] font-bold">Sign {signRunIdx + 1} of {ELP_REQUIRED_SIGNS}</p>
+                <span className="ml-auto text-[10px] text-white/70">Sign #{currentSign.id}</span>
               </div>
               <div className="p-3 space-y-3">
-                <p className="text-[11px] text-[#64748B] italic leading-relaxed">Hold the device up to the cab window so the driver can see the sign. Ask: <span className="font-bold not-italic text-[#002855]">"What does this sign mean?"</span> Record their response in English below and mark Pass / Fail.</p>
-                <div className="bg-[#0F172A] rounded-xl p-3 mx-auto" style={{ maxWidth: 360 }} data-testid="elp-sign-display">
+                {/* Inspector preview */}
+                <div className="bg-[#0F172A] rounded-xl p-3 mx-auto" style={{ maxWidth: 320 }}>
                   <div style={{ aspectRatio: "1 / 1" }}>
-                    <SignDisplay sign={ELP_SIGNS[signIdx]} />
+                    <SignDisplay sign={currentSign} size={300} />
                   </div>
-                  <p className="text-center text-white/70 text-[10.5px] mt-2 font-bold uppercase tracking-wider">Sign {ELP_SIGNS[signIdx].id}</p>
+                  <p className="text-center text-white/70 text-[10.5px] mt-2 font-bold uppercase tracking-wider">Sign #{currentSign.id} — Inspector view</p>
                 </div>
-                <div className="rounded-md bg-[#F8FAFC] border p-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Inspector reference (driver should not see)</p>
-                  <p className="text-[12px] font-bold text-[#002855]">Meaning: {ELP_SIGNS[signIdx].meaning}</p>
+
+                {/* Reference (driver does not see) */}
+                <div className="rounded-md bg-[#F8FAFC] border-l-[3px] border-[#3B82F6] p-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#1D4ED8]">Inspector reference</p>
+                  <p className="text-[12px] font-bold text-[#002855]">{currentSign.meaning}</p>
                 </div>
+
+                {/* Show to driver */}
+                <Button
+                  onClick={() => setShowingToDriver(true)}
+                  className="w-full bg-[#D4AF37] text-[#002855] hover:bg-[#B8941F] h-12 text-[13px] font-black"
+                  data-testid="elp-show-to-driver-btn"
+                >
+                  <Maximize2 className="w-4 h-4 mr-2" /> Show to Driver
+                </Button>
+
+                {/* Pass / Fail */}
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Driver's response</label>
-                  <Input
-                    value={signResponses[ELP_SIGNS[signIdx].id] || ""}
-                    onChange={(e) => setSignResponse(ELP_SIGNS[signIdx].id, e.target.value)}
-                    placeholder="What did the driver say?"
-                    className="h-8 text-[12px]"
-                    data-testid="elp-sign-response"
+                  <p className="text-[11px] font-bold text-[#002855] mb-1.5">Driver’s identification</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      onClick={() => setSignResults((r) => ({ ...r, [currentSign.id]: "pass" }))}
+                      variant={signResults[currentSign.id] === "pass" ? "default" : "outline"}
+                      className={signResults[currentSign.id] === "pass" ? "bg-[#10B981] text-white hover:bg-[#059669]" : "border-[#10B981] text-[#065F46] hover:bg-[#F0FDF4]"}
+                      data-testid="elp-sign-pass-btn"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Identified
+                    </Button>
+                    <Button
+                      onClick={() => setSignResults((r) => ({ ...r, [currentSign.id]: "fail" }))}
+                      variant={signResults[currentSign.id] === "fail" ? "default" : "outline"}
+                      className={signResults[currentSign.id] === "fail" ? "bg-[#DC2626] text-white hover:bg-[#B91C1C]" : "border-[#DC2626] text-[#991B1B] hover:bg-[#FEE2E2]"}
+                      data-testid="elp-sign-fail-btn"
+                    >
+                      <XCircle className="w-3.5 h-3.5 mr-1.5" /> Not Identified
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Notes</label>
+                  <textarea
+                    value={signNotes[currentSign.id] || ""}
+                    onChange={(e) => setSignNotes((n) => ({ ...n, [currentSign.id]: e.target.value }))}
+                    rows={2}
+                    placeholder="Driver’s response, paraphrase used, or other observations…"
+                    className="w-full rounded-md border px-2 py-1.5 text-[12px] outline-none focus:border-[#002855]"
+                    data-testid="elp-sign-notes"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={() => setSignAnswer(ELP_SIGNS[signIdx].id, "pass")}
-                    variant={signAnswers[ELP_SIGNS[signIdx].id] === "pass" ? "default" : "outline"}
-                    className={signAnswers[ELP_SIGNS[signIdx].id] === "pass" ? "bg-[#10B981] text-white hover:bg-[#059669]" : "border-[#10B981] text-[#065F46] hover:bg-[#F0FDF4]"}
-                    data-testid="elp-sign-pass">
-                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Pass
-                  </Button>
-                  <Button onClick={() => setSignAnswer(ELP_SIGNS[signIdx].id, "fail")}
-                    variant={signAnswers[ELP_SIGNS[signIdx].id] === "fail" ? "default" : "outline"}
-                    className={signAnswers[ELP_SIGNS[signIdx].id] === "fail" ? "bg-[#DC2626] text-white hover:bg-[#B91C1C]" : "border-[#DC2626] text-[#991B1B] hover:bg-[#FEE2E2]"}
-                    data-testid="elp-sign-fail">
-                    <XCircle className="w-3.5 h-3.5 mr-1.5" /> Fail
-                  </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button onClick={() => setSignIdx((i) => Math.max(0, i - 1))} disabled={signIdx === 0} variant="outline" className="flex-1 h-9 text-[12px]" data-testid="elp-sign-prev">
+
+                {/* Prev / Next */}
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    onClick={() => setSignRunIdx((i) => Math.max(0, i - 1))}
+                    disabled={signRunIdx === 0}
+                    variant="outline"
+                    className="flex-1 h-9 text-[12px]"
+                    data-testid="elp-sign-prev-btn"
+                  >
                     <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Prev
                   </Button>
-                  <Button onClick={() => signIdx === ELP_SIGNS.length - 1 ? setPhase("summary") : setSignIdx((i) => i + 1)} className="flex-1 h-9 text-[12px] bg-[#002855] text-white hover:bg-[#001a3a]" data-testid="elp-sign-next">
-                    {signIdx === ELP_SIGNS.length - 1 ? "Finish → Disposition" : "Next sign"} <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  <Button
+                    onClick={() => signRunIdx === ELP_REQUIRED_SIGNS - 1 ? setPhase("summary") : setSignRunIdx((i) => i + 1)}
+                    disabled={!signResults[currentSign.id]}
+                    className="flex-1 h-9 text-[12px] bg-[#002855] text-white hover:bg-[#001a3a] disabled:opacity-50"
+                    data-testid="elp-sign-next-btn"
+                  >
+                    {signRunIdx === ELP_REQUIRED_SIGNS - 1 ? "Finish → Disposition" : "Next sign"}
+                    <ChevronRight className="w-3.5 h-3.5 ml-1" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-12 gap-1 pt-2 border-t" data-testid="elp-sign-progress">
-                  {ELP_SIGNS.map((s, i) => (
+
+                {/* Progress dots */}
+                <div className="grid grid-cols-4 gap-1 pt-2 border-t" data-testid="elp-sign-progress">
+                  {selectedSignIds.map((sid, i) => (
                     <button
-                      key={s.id}
-                      onClick={() => setSignIdx(i)}
-                      className={`h-6 rounded text-[9px] font-bold ${
-                        i === signIdx ? "bg-[#002855] text-white ring-2 ring-[#D4AF37]" :
-                        signAnswers[s.id] === "pass" ? "bg-[#10B981] text-white" :
-                        signAnswers[s.id] === "fail" ? "bg-[#DC2626] text-white" :
+                      key={sid}
+                      onClick={() => setSignRunIdx(i)}
+                      className={`h-7 rounded text-[10px] font-bold ${
+                        i === signRunIdx ? "bg-[#002855] text-white ring-2 ring-[#D4AF37]" :
+                        signResults[sid] === "pass" ? "bg-[#10B981] text-white" :
+                        signResults[sid] === "fail" ? "bg-[#DC2626] text-white" :
                         "bg-[#E2E8F0] text-[#64748B]"
                       }`}
-                      data-testid={`elp-sign-jump-${s.id}`}
-                    >{s.id}</button>
+                      data-testid={`elp-sign-jump-${i}`}
+                    >
+                      #{sid}
+                    </button>
                   ))}
                 </div>
-                <p className="text-[10.5px] text-[#64748B] italic leading-relaxed pt-1 border-t">{ELP_PASS_THRESHOLD_NOTE}</p>
               </div>
             </div>
           </section>
         )}
 
-        {/* PHASE: SUMMARY / DISPOSITION */}
+        {/* PHASE: SUMMARY */}
         {phase === "summary" && (
           <section className="space-y-2" data-testid="elp-phase-summary">
             <div className="bg-white rounded-xl border overflow-hidden">
@@ -396,46 +590,73 @@ export default function ElpAssessmentPage() {
                 <div className="grid grid-cols-2 gap-2 text-[12px]">
                   <div className="rounded-md bg-[#F8FAFC] border p-2">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Interview</p>
-                    <p className="font-bold text-[#002855]">{interviewStats.answered}/{interviewStats.total} answered</p>
-                    <p className="text-[11px] text-[#475569]">{interviewStats.passes} pass · {interviewStats.inconclusive} inconclusive · {interviewStats.fails} fail</p>
+                    <p className="font-bold text-[#002855]">
+                      {interviewAdministered ? interviewDisposition.toUpperCase() : "Not administered"}
+                    </p>
                   </div>
                   <div className="rounded-md bg-[#F8FAFC] border p-2">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Sign Test</p>
-                    <p className="font-bold text-[#002855]">{signStats.answered}/{signStats.total} signs</p>
-                    <p className="text-[11px] text-[#475569]">{signStats.passes} pass · {signStats.fails} fail</p>
+                    <p className="font-bold text-[#002855]">
+                      {signsAdministered
+                        ? `${passCount}/${ELP_REQUIRED_SIGNS} — ${signTestResult.toUpperCase()}`
+                        : "Not administered"}
+                    </p>
+                    {signsAdministered && (
+                      <p className="text-[10.5px] text-[#475569]">
+                        Threshold: {ELP_SIGN_PASS_THRESHOLD} of {ELP_REQUIRED_SIGNS}
+                      </p>
+                    )}
                   </div>
                 </div>
+
+                {suggestedDisposition && (
+                  <div className="rounded border-l-[3px] border-[#3B82F6] bg-[#EEF6FF] p-2">
+                    <p className="text-[10.5px] text-[#1E3A8A]">
+                      <span className="font-bold">Suggested:</span> {suggestedDisposition === "proficient" ? "PROFICIENT" : "NOT PROFICIENT"} (based on the test results above; inspector’s judgment overrides).
+                    </p>
+                  </div>
+                )}
+
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Inspector's overall finding</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Inspector’s overall finding</label>
                   <div className="grid grid-cols-2 gap-2 mt-1">
-                    <Button onClick={() => setOverallDisposition("proficient")}
+                    <Button
+                      onClick={() => setOverallDisposition("proficient")}
                       variant={overallDisposition === "proficient" ? "default" : "outline"}
                       className={overallDisposition === "proficient" ? "bg-[#10B981] text-white hover:bg-[#059669]" : "border-[#10B981] text-[#065F46] hover:bg-[#F0FDF4]"}
-                      data-testid="elp-disp-proficient">
+                      data-testid="elp-disp-proficient"
+                    >
                       <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Proficient
                     </Button>
-                    <Button onClick={() => setOverallDisposition("not_proficient")}
+                    <Button
+                      onClick={() => setOverallDisposition("not_proficient")}
                       variant={overallDisposition === "not_proficient" ? "default" : "outline"}
                       className={overallDisposition === "not_proficient" ? "bg-[#DC2626] text-white hover:bg-[#B91C1C]" : "border-[#DC2626] text-[#991B1B] hover:bg-[#FEE2E2]"}
-                      data-testid="elp-disp-not-proficient">
+                      data-testid="elp-disp-not-proficient"
+                    >
                       <XCircle className="w-3.5 h-3.5 mr-1.5" /> Not Proficient
                     </Button>
                   </div>
                 </div>
+
                 {overallDisposition === "not_proficient" && (
                   <div className="rounded-md border-l-[3px] border-[#DC2626] bg-[#FEE2E2] p-2.5" data-testid="elp-citation-card">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[#991B1B] mb-1">Citation</p>
                     <p className="text-[12px] font-bold text-[#7F1D1D]">{ELP_CITATION.ref} — {ELP_CITATION.title}</p>
-                    <p className="text-[11px] text-[#7F1D1D] leading-relaxed mt-1">Cite based on the documented test result. The interview test (Attachment A) and/or the highway sign recognition test (Attachment B) results captured in this report support the §391.11(b)(2) violation.</p>
+                    <p className="text-[11px] text-[#7F1D1D] leading-relaxed mt-1">Cite based on the documented test result. The interview test (Attachment A) and/or the highway-sign recognition test (Attachment B) results captured in this report support the §391.11(b)(2) violation.</p>
                   </div>
                 )}
+
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Inspector notes</label>
-                  <textarea value={inspectorNotes} onChange={(e) => setInspectorNotes(e.target.value)}
+                  <textarea
+                    value={inspectorNotes}
+                    onChange={(e) => setInspectorNotes(e.target.value)}
                     rows={4}
                     className="w-full rounded-md border px-2 py-1.5 text-[12px] outline-none focus:border-[#002855]"
                     placeholder="Document context, demeanor, additional observations…"
-                    data-testid="elp-inspector-notes" />
+                    data-testid="elp-inspector-notes"
+                  />
                 </div>
               </div>
             </div>
@@ -446,9 +667,12 @@ export default function ElpAssessmentPage() {
       {/* Hidden report content for PDF generation */}
       <div ref={hiddenReportRef} aria-hidden="true" style={{ position: "absolute", left: -99999, top: 0, width: 700, padding: "20px 16px", fontFamily: "'IBM Plex Sans', Arial, sans-serif", fontSize: 13, color: "#0F172A", lineHeight: 1.6, background: "#fff", pointerEvents: "none" }}>
         <ElpReportContent
-          driverName={driverName} cdlNumber={cdlNumber} hauling={hauling}
-          visibleQuestions={visibleQuestions} interviewAnswers={interviewAnswers} interviewNotes={interviewNotes}
-          signsAdministered={signsAdministered} signAnswers={signAnswers} signResponses={signResponses}
+          companyName={companyName} usdotNumber={usdotNumber}
+          visibleQuestions={visibleQuestions} interviewAsked={interviewAsked} interviewNotes={interviewNotes}
+          interviewAdministered={interviewAdministered} interviewDisposition={interviewDisposition}
+          selectedSignIds={selectedSignIds} signResults={signResults} signNotes={signNotes}
+          signsAdministered={signsAdministered} signTestResult={signTestResult}
+          passCount={passCount} failCount={failCount}
           overallDisposition={overallDisposition} inspectorNotes={inspectorNotes}
         />
       </div>
@@ -462,9 +686,12 @@ export default function ElpAssessmentPage() {
         hideShareButton
       >
         <ElpReportContent
-          driverName={driverName} cdlNumber={cdlNumber} hauling={hauling}
-          visibleQuestions={visibleQuestions} interviewAnswers={interviewAnswers} interviewNotes={interviewNotes}
-          signsAdministered={signsAdministered} signAnswers={signAnswers} signResponses={signResponses}
+          companyName={companyName} usdotNumber={usdotNumber}
+          visibleQuestions={visibleQuestions} interviewAsked={interviewAsked} interviewNotes={interviewNotes}
+          interviewAdministered={interviewAdministered} interviewDisposition={interviewDisposition}
+          selectedSignIds={selectedSignIds} signResults={signResults} signNotes={signNotes}
+          signsAdministered={signsAdministered} signTestResult={signTestResult}
+          passCount={passCount} failCount={failCount}
           overallDisposition={overallDisposition} inspectorNotes={inspectorNotes}
         />
       </PDFPreview>
@@ -513,7 +740,7 @@ export default function ElpAssessmentPage() {
 function PhaseTab({ label, active, onClick, disabled, testid }) {
   return (
     <button onClick={onClick} disabled={disabled}
-      className={`px-2 py-2 rounded-lg text-[11px] font-bold ${
+      className={`px-2 py-2 rounded-lg text-[10.5px] font-bold ${
         active ? "bg-[#002855] text-white" :
         disabled ? "bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed" :
         "bg-white text-[#002855] hover:bg-[#F1F5F9]"
@@ -523,39 +750,68 @@ function PhaseTab({ label, active, onClick, disabled, testid }) {
   );
 }
 
-function InterviewRow({ idx, q, answer, note, onSet, onNote }) {
+function DispBtn({ label, desc, active, onClick, color, testid }) {
   return (
-    <div className="px-3 py-2.5 space-y-1.5" data-testid={`elp-q-${q.key}`}>
-      <p className="text-[12.5px] font-bold text-[#002855]"><span className="text-[#D4AF37]">{idx}.</span> {q.text}{q.hm && <span className="text-[9px] font-bold text-[#92400E] ml-1.5 uppercase">HM</span>}</p>
-      <div className="grid grid-cols-3 gap-1">
-        <RowBtn label="Pass"     active={answer === "pass"}         onClick={() => onSet("pass")}         color="#10B981" testid={`elp-q-${q.key}-pass`} />
-        <RowBtn label="Inconcl." active={answer === "inconclusive"} onClick={() => onSet("inconclusive")} color="#F59E0B" testid={`elp-q-${q.key}-inconclusive`} />
-        <RowBtn label="Fail"     active={answer === "fail"}         onClick={() => onSet("fail")}         color="#DC2626" testid={`elp-q-${q.key}-fail`} />
-      </div>
-      {answer && (
-        <input value={note} onChange={(e) => onNote(e.target.value)}
+    <button onClick={onClick}
+      className={`px-2 py-2 rounded-lg text-left ${active ? "text-white" : "border bg-white"}`}
+      style={active ? { background: color } : { borderColor: color, color }}
+      data-testid={testid}
+    >
+      <p className="text-[12px] font-bold">{label}</p>
+      <p className={`text-[9.5px] leading-tight mt-0.5 ${active ? "opacity-90" : "opacity-80"}`}>{desc}</p>
+    </button>
+  );
+}
+
+function InterviewRow({ q, asked, note, onToggleAsked, onNote }) {
+  return (
+    <div className="px-3 py-2 space-y-1" data-testid={`elp-q-${q.key}`}>
+      <label className="flex items-start gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={asked}
+          onChange={(e) => onToggleAsked(e.target.checked)}
+          className="mt-1"
+          data-testid={`elp-q-${q.key}-asked`}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] font-bold text-[#002855]">
+            <span className="text-[#D4AF37]">{q.num}.</span> {q.text}
+            {q.hm && <span className="text-[9px] font-bold text-[#92400E] ml-1.5 uppercase">HM</span>}
+          </p>
+          {q.paraphrases?.length > 0 && (
+            <p className="text-[10.5px] text-[#64748B] italic leading-snug mt-0.5">
+              Paraphrase: {q.paraphrases.join(" · ")}
+            </p>
+          )}
+        </div>
+      </label>
+      {asked && (
+        <input
+          value={note}
+          onChange={(e) => onNote(e.target.value)}
           placeholder="Optional notes…"
-          className="w-full px-2 py-1 border border-[#E2E8F0] rounded text-[11.5px] outline-none focus:border-[#002855]"
-          data-testid={`elp-q-${q.key}-note`} />
+          className="w-full px-2 py-1 ml-6 border border-[#E2E8F0] rounded text-[11.5px] outline-none focus:border-[#002855]"
+          style={{ width: "calc(100% - 1.5rem)" }}
+          data-testid={`elp-q-${q.key}-note`}
+        />
       )}
     </div>
   );
 }
 
-function RowBtn({ label, active, onClick, color, testid }) {
-  return (
-    <button onClick={onClick}
-      className={`px-2 py-1 rounded text-[10.5px] font-bold ${active ? "text-white" : "border bg-white"}`}
-      style={active ? { background: color } : { borderColor: color, color }}
-      data-testid={testid}
-    >{label}</button>
-  );
-}
-
 /* ──────────────── REPORT CONTENT ──────────────── */
 
-function ElpReportContent({ driverName, cdlNumber, hauling, visibleQuestions, interviewAnswers, interviewNotes, signsAdministered, signAnswers, signResponses, overallDisposition, inspectorNotes }) {
+function ElpReportContent({
+  companyName, usdotNumber,
+  visibleQuestions, interviewAsked, interviewNotes,
+  interviewAdministered, interviewDisposition,
+  selectedSignIds, signResults, signNotes,
+  signsAdministered, signTestResult, passCount, failCount,
+  overallDisposition, inspectorNotes,
+}) {
   const today = new Date().toLocaleDateString();
+  const askedQs = visibleQuestions.filter((q) => interviewAsked[q.key] || interviewNotes[q.key]);
   return (
     <div>
       <div style={{ borderBottom: "2px solid #002855", paddingBottom: 8, marginBottom: 16 }}>
@@ -563,67 +819,87 @@ function ElpReportContent({ driverName, cdlNumber, hauling, visibleQuestions, in
         <p style={{ fontSize: 11, color: "#64748B", margin: 0, marginTop: 4 }}>49 CFR §391.11(b)(2) · Two-Test Protocol · {today}</p>
       </div>
 
-      {(driverName || cdlNumber) && (
+      {(companyName || usdotNumber) && (
         <div style={{ marginBottom: 12, fontSize: 12 }}>
-          <p style={{ margin: 0 }}><strong>Driver:</strong> {driverName || "—"}{cdlNumber ? ` · CDL ${cdlNumber}` : ""}{hauling.hm ? " · hauling HM" : ""}</p>
+          <p style={{ margin: 0 }}>
+            {companyName && <><strong>Company:</strong> {companyName}</>}
+            {companyName && usdotNumber ? " · " : ""}
+            {usdotNumber && <><strong>USDOT #:</strong> {usdotNumber}</>}
+          </p>
         </div>
       )}
 
-      {visibleQuestions.some((q) => interviewAnswers[q.key]) && (
-        <div style={{ marginBottom: 14 }}>
-          <h2 style={{ fontSize: 13, color: "#002855", margin: 0, marginBottom: 6, borderBottom: "1px solid #E2E8F0", paddingBottom: 2 }}>TEST 1 — Interview (Attachment A)</h2>
+      <div style={{ marginBottom: 14 }}>
+        <h2 style={{ fontSize: 13, color: "#002855", margin: 0, marginBottom: 6, borderBottom: "1px solid #E2E8F0", paddingBottom: 2 }}>TEST 1 — Driver Interview (Attachment A)</h2>
+        <p style={{ margin: 0, fontSize: 12, marginBottom: 6 }}>
+          <strong>Inspector judgment:</strong>{" "}
+          <span style={{ fontWeight: 800, color: interviewDisposition === "pass" ? "#065F46" : interviewDisposition === "fail" ? "#991B1B" : "#92400E" }}>
+            {interviewAdministered ? interviewDisposition.toUpperCase() : "NOT ADMINISTERED"}
+          </span>
+        </p>
+        {askedQs.length > 0 && (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead><tr style={{ background: "#F8FAFC", borderBottom: "1px solid #CBD5E1" }}>
               <th style={{ textAlign: "left", padding: "4px 6px", width: 28 }}>#</th>
               <th style={{ textAlign: "left", padding: "4px 6px" }}>Question</th>
-              <th style={{ textAlign: "center", padding: "4px 6px", width: 70 }}>Result</th>
-              <th style={{ textAlign: "left", padding: "4px 6px", width: 180 }}>Notes</th>
+              <th style={{ textAlign: "center", padding: "4px 6px", width: 60 }}>Asked</th>
+              <th style={{ textAlign: "left", padding: "4px 6px", width: 220 }}>Notes</th>
             </tr></thead>
             <tbody>
-              {visibleQuestions.map((q, i) => {
-                const r = interviewAnswers[q.key];
-                if (!r) return null;
-                return (
-                  <tr key={q.key} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                    <td style={{ padding: "4px 6px" }}>{i + 1}</td>
-                    <td style={{ padding: "4px 6px" }}>{q.text}{q.hm ? " (HM)" : ""}</td>
-                    <td style={{ padding: "4px 6px", textAlign: "center", fontWeight: 700, color: r === "pass" ? "#065F46" : r === "fail" ? "#991B1B" : "#92400E" }}>{r.toUpperCase()}</td>
-                    <td style={{ padding: "4px 6px", color: "#475569" }}>{interviewNotes[q.key] || ""}</td>
-                  </tr>
-                );
-              })}
+              {askedQs.map((q) => (
+                <tr key={q.key} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                  <td style={{ padding: "4px 6px" }}>{q.num}</td>
+                  <td style={{ padding: "4px 6px" }}>{q.text}{q.hm ? " (HM)" : ""}</td>
+                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{interviewAsked[q.key] ? "✓" : ""}</td>
+                  <td style={{ padding: "4px 6px", color: "#475569" }}>{interviewNotes[q.key] || ""}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
 
-      {signsAdministered && (
-        <div style={{ marginBottom: 14 }}>
-          <h2 style={{ fontSize: 13, color: "#002855", margin: 0, marginBottom: 6, borderBottom: "1px solid #E2E8F0", paddingBottom: 2 }}>TEST 2 — Highway Sign Recognition (Attachment B)</h2>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-            <thead><tr style={{ background: "#F8FAFC", borderBottom: "1px solid #CBD5E1" }}>
-              <th style={{ textAlign: "left", padding: "4px 6px", width: 28 }}>#</th>
-              <th style={{ textAlign: "left", padding: "4px 6px" }}>Sign meaning</th>
-              <th style={{ textAlign: "left", padding: "4px 6px" }}>Driver's response</th>
-              <th style={{ textAlign: "center", padding: "4px 6px", width: 60 }}>Result</th>
-            </tr></thead>
-            <tbody>
-              {ELP_SIGNS.map((s) => {
-                const r = signAnswers[s.id];
-                if (!r) return null;
-                return (
-                  <tr key={s.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                    <td style={{ padding: "4px 6px" }}>{s.id}</td>
-                    <td style={{ padding: "4px 6px" }}>{s.meaning}</td>
-                    <td style={{ padding: "4px 6px", color: "#475569" }}>{signResponses[s.id] || "—"}</td>
-                    <td style={{ padding: "4px 6px", textAlign: "center", fontWeight: 700, color: r === "pass" ? "#065F46" : "#991B1B" }}>{r.toUpperCase()}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div style={{ marginBottom: 14 }}>
+        <h2 style={{ fontSize: 13, color: "#002855", margin: 0, marginBottom: 6, borderBottom: "1px solid #E2E8F0", paddingBottom: 2 }}>TEST 2 — Highway Sign Recognition (Attachment B)</h2>
+        {signsAdministered ? (
+          <>
+            <p style={{ margin: 0, fontSize: 12, marginBottom: 6 }}>
+              <strong>Result:</strong>{" "}
+              <span style={{ fontWeight: 800, color: signTestResult === "sufficient" ? "#065F46" : "#991B1B" }}>
+                {signTestResult.toUpperCase()}
+              </span>
+              {" "}({passCount}/{selectedSignIds.length} identified · threshold {ELP_SIGN_PASS_THRESHOLD} of {ELP_REQUIRED_SIGNS})
+            </p>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+              <thead><tr style={{ background: "#F8FAFC", borderBottom: "1px solid #CBD5E1" }}>
+                <th style={{ textAlign: "left", padding: "4px 6px", width: 30 }}>#</th>
+                <th style={{ textAlign: "left", padding: "4px 6px" }}>Sign meaning</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", width: 80 }}>Result</th>
+                <th style={{ textAlign: "left", padding: "4px 6px", width: 200 }}>Notes</th>
+              </tr></thead>
+              <tbody>
+                {selectedSignIds.map((id) => {
+                  const s = ELP_SIGNS.find((x) => x.id === id);
+                  if (!s) return null;
+                  const r = signResults[id];
+                  return (
+                    <tr key={id} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                      <td style={{ padding: "4px 6px" }}>{id}</td>
+                      <td style={{ padding: "4px 6px" }}>{s.meaning}</td>
+                      <td style={{ padding: "4px 6px", textAlign: "center", fontWeight: 700, color: r === "pass" ? "#065F46" : "#991B1B" }}>
+                        {r === "pass" ? "IDENTIFIED" : r === "fail" ? "NOT IDENTIFIED" : "—"}
+                      </td>
+                      <td style={{ padding: "4px 6px", color: "#475569" }}>{signNotes[id] || ""}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        ) : (
+          <p style={{ margin: 0, fontSize: 11.5, color: "#64748B", fontStyle: "italic" }}>Sign test not administered.</p>
+        )}
+      </div>
 
       <div style={{ marginTop: 14, padding: 10, border: `2px solid ${overallDisposition === "proficient" ? "#10B981" : "#DC2626"}`, borderRadius: 6, background: overallDisposition === "proficient" ? "#F0FDF4" : "#FEE2E2" }}>
         <p style={{ margin: 0, fontWeight: 800, fontSize: 13, color: overallDisposition === "proficient" ? "#065F46" : "#7F1D1D" }}>
@@ -644,7 +920,7 @@ function ElpReportContent({ driverName, cdlNumber, hauling, visibleQuestions, in
       )}
 
       <div style={{ marginTop: 18, fontSize: 9.5, color: "#94A3B8", borderTop: "1px solid #E2E8F0", paddingTop: 6 }}>
-        <p style={{ margin: 0 }}>Generated by Inspection Navigator · ELP Roadside Assessment Module</p>
+        <p style={{ margin: 0 }}>Generated by Inspection Navigator · ELP Roadside Assessment Module · No driver PII recorded</p>
       </div>
     </div>
   );
