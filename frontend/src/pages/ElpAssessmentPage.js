@@ -759,7 +759,7 @@ export default function ElpAssessmentPage() {
             <SignDisplay sign={driverSign} size={640} />
           </div>
           <p
-            className="absolute top-8 left-0 right-0 text-center text-white/70 text-xs font-bold uppercase tracking-[0.2em] elp-fade-hint"
+            className="absolute bottom-8 left-6 text-left text-white/70 text-xs font-bold uppercase tracking-[0.2em] elp-fade-hint"
             data-testid="elp-driver-tap-hint"
           >
             Tap to return
