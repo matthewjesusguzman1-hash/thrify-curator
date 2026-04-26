@@ -746,30 +746,25 @@ export default function ElpAssessmentPage() {
 
       {/* Show-to-Driver fullscreen overlay (rendered as a sibling so the
           underlying page stays mounted and scroll position is preserved when
-          the inspector exits). Tapping anywhere on the sign also exits. */}
+          the inspector exits). Tapping anywhere on the sign exits. */}
       {showingToDriver && driverSign && (
-        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center" data-testid="elp-driver-view">
-          <button
-            type="button"
-            onClick={() => setShowingToDriver(false)}
-            className="flex-1 w-full flex items-center justify-center p-4 sm:p-8 cursor-pointer focus:outline-none"
-            aria-label="Tap sign to return"
-            data-testid="elp-driver-sign-tap"
-          >
-            <div className="w-full max-w-[640px]" style={{ aspectRatio: "1 / 1" }}>
-              <SignDisplay sign={driverSign} size={640} />
-            </div>
-          </button>
-          <div className="w-full p-4 flex justify-center">
-            <Button
-              onClick={() => setShowingToDriver(false)}
-              className="bg-white text-black hover:bg-gray-200 h-12 px-6 text-base font-bold"
-              data-testid="elp-driver-back-btn"
-            >
-              <ChevronLeft className="w-5 h-5 mr-2" /> Back
-            </Button>
+        <button
+          type="button"
+          onClick={() => setShowingToDriver(false)}
+          className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center cursor-pointer focus:outline-none"
+          aria-label="Tap to return"
+          data-testid="elp-driver-view"
+        >
+          <div className="w-full max-w-[640px] px-4 sm:px-8" style={{ aspectRatio: "1 / 1" }}>
+            <SignDisplay sign={driverSign} size={640} />
           </div>
-        </div>
+          <p
+            className="absolute bottom-10 left-0 right-0 text-center text-white/70 text-xs font-bold uppercase tracking-[0.2em] elp-fade-hint"
+            data-testid="elp-driver-tap-hint"
+          >
+            Tap to return
+          </p>
+        </button>
       )}
     </div>
   );
