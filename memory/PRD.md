@@ -25,6 +25,17 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 
 ## Changelog
 
+### 2026-02 — ELP module rebuild (verbatim Attachments A & B + new flow)
+- **Verbatim content from agency reference**: 14 driver interview questions exactly as written on Attachment A (12 General + 2 HM-only) with all paraphrases preserved; all 24 highway signs exactly as illustrated on Attachment B with correct category-specific visuals.
+- **9 visual sign categories** rendered as inline SVG (no bitmaps): regulatory, regulatory_xl (4-line dense), regulatory_red (NO PARKING), warning (yellow diamond), warning_square (RUNAWAY TRUCK RAMP), construction (orange diamond), construction_h (ROAD WORK rectangle), wrongway (red horizontal), electronic (dark navy + amber dot-matrix). Embedded arrow icons (left/right/up_right) for ONE WAY, KEEP RIGHT, RUNAWAY TRUCK RAMP.
+- **Removed all driver PII** per agency evidentiary guidance — no more driver_name / cdl_number. Optional fields are now Company Name + USDOT #.
+- **Inspector-judged interview** — the inspector decides the disposition (Pass / Inconclusive / Fail) regardless of how many questions they asked. No fixed minimum.
+- **4-sign protocol** — inspector picks exactly 4 from the 24-sign grid (5th pick is rejected with a toast). Run-phase shows each sign with inspector reference + "Show to Driver" fullscreen button + per-sign Identified/Not Identified + Notes. Sufficiency = 3 of 4 correct.
+- **Show-to-Driver fullscreen mode** — replaces the entire viewport with ONLY the sign on a pure black canvas + a single "Back" button (also ESC exits). No headers, no meaning text, no progress dots are visible to the driver.
+- Updated backend `SaveElpAssessmentRequest` model: company_name, usdot_number, interview_disposition, sign_test_result, sign_pass_count, sign_fail_count, sign_answers[].notes. Older driver_name/cdl_number fields are dropped by Pydantic and not persisted.
+- InspectionDetail ELP card updated to render the new shape (company/USDOT line, interview disposition word, sign-test result word + counts).
+- Tested: 6/6 backend pytest + 100% frontend Playwright in `/app/test_reports/iteration_41.json`.
+
 ### 2026-02 — ELP (English Language Proficiency) Roadside Assessment module
 - New help-button workflow at `/elp` walks inspectors through the agency's two-test ELP protocol:
   1. **Test 1 — Interview** (Attachment A): 12 standard questions + 2 HM-only questions (auto-shown when "hauling HM" is checked); each marked Pass / Inconclusive / Fail with optional notes.
