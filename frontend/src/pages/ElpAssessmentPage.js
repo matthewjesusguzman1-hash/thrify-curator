@@ -206,18 +206,27 @@ export default function ElpAssessmentPage() {
 
   /* ──────────────── Show-to-driver fullscreen mode ──────────────── */
   // Saved scroll position so the page returns to where the inspector was
-  // (typically with the sign run panel near the top) when exiting fullscreen.
-  const savedScrollY = useRef(null);
-  // Snapshot scroll before entering fullscreen, restore on exit.
+  // when exiting fullscreen. The fullscreen view is rendered as a sibling
+  // overlay (not an early return) so the main page stays mounted underneath
+  // and the browser preserves scrollY automatically. We additionally lock
+  // body scroll while fullscreen is active so the saved position can't drift.
   useEffect(() => {
     if (showingToDriver) {
-      savedScrollY.current = window.scrollY;
-    } else if (savedScrollY.current !== null) {
-      // Use rAF so the layout is settled (run panel re-rendered) before
-      // restoring the scroll position.
-      const y = savedScrollY.current;
-      requestAnimationFrame(() => window.scrollTo({ top: y, left: 0, behavior: "auto" }));
-      savedScrollY.current = null;
+      const y = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${y}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+      return () => {
+        const restored = -parseInt(document.body.style.top || "0", 10) || 0;
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        document.body.style.width = "";
+        window.scrollTo(0, restored);
+      };
     }
   }, [showingToDriver]);
   // ESC exits fullscreen.
@@ -228,30 +237,11 @@ export default function ElpAssessmentPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [showingToDriver]);
 
-  if (showingToDriver) {
-    const sign = ELP_SIGNS.find((s) => s.id === selectedSignIds[signRunIdx]);
-    return (
-      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center" data-testid="elp-driver-view">
-        <div className="flex-1 w-full flex items-center justify-center p-4 sm:p-8">
-          <div className="w-full max-w-[640px]" style={{ aspectRatio: "1 / 1" }}>
-            {sign && <SignDisplay sign={sign} size={640} />}
-          </div>
-        </div>
-        <div className="w-full p-4 flex justify-center">
-          <Button
-            onClick={() => setShowingToDriver(false)}
-            className="bg-white text-black hover:bg-gray-200 h-12 px-6 text-base font-bold"
-            data-testid="elp-driver-back-btn"
-          >
-            <ChevronLeft className="w-5 h-5 mr-2" /> Back
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   /* ──────────────── RENDER ──────────────── */
   const currentSign = phase === "signs" && selectedSignIds.length
+    ? ELP_SIGNS.find((s) => s.id === selectedSignIds[signRunIdx])
+    : null;
+  const driverSign = showingToDriver
     ? ELP_SIGNS.find((s) => s.id === selectedSignIds[signRunIdx])
     : null;
 
@@ -743,6 +733,28 @@ export default function ElpAssessmentPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Show-to-Driver fullscreen overlay (rendered as a sibling so the
+          underlying page stays mounted and scroll position is preserved when
+          the inspector exits). */}
+      {showingToDriver && driverSign && (
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center" data-testid="elp-driver-view">
+          <div className="flex-1 w-full flex items-center justify-center p-4 sm:p-8">
+            <div className="w-full max-w-[640px]" style={{ aspectRatio: "1 / 1" }}>
+              <SignDisplay sign={driverSign} size={640} />
+            </div>
+          </div>
+          <div className="w-full p-4 flex justify-center">
+            <Button
+              onClick={() => setShowingToDriver(false)}
+              className="bg-white text-black hover:bg-gray-200 h-12 px-6 text-base font-bold"
+              data-testid="elp-driver-back-btn"
+            >
+              <ChevronLeft className="w-5 h-5 mr-2" /> Back
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
