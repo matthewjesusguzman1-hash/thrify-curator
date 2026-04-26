@@ -37,7 +37,7 @@ y_runs = runs(row_density > (W * 0.02), min_gap=15, min_len=40)
 # detected runs are sign rows. Keep them all.
 print(f"{len(y_runs)} sign rows detected (expected 6)")
 
-MARGIN = 12  # generous breathing room so no sign border ever clips
+MARGIN = 16  # extra-generous breathing room — no border ever clips
 sid = 1
 for ri, (y0, y1) in enumerate(y_runs):
     band = ink[y0:y1]
