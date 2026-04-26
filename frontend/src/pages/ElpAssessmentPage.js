@@ -304,6 +304,28 @@ export default function ElpAssessmentPage() {
           </a>
         </div>
 
+        {/* Evidence documentation callout — quoted from the FMCSA enforcement memo */}
+        <div className="rounded-xl border-l-[4px] border-[#D4AF37] bg-[#FFFBEB] p-3" data-testid="elp-evidence-callout">
+          <div className="flex items-center gap-1.5 mb-1">
+            <ShieldAlert className="w-4 h-4 text-[#92400E]" />
+            <p className="text-[10.5px] font-black uppercase tracking-wider text-[#92400E]">Evidence Documentation — Required</p>
+          </div>
+          <p className="text-[11.5px] text-[#78350F] leading-relaxed mb-1.5">
+            Per the FMCSA enforcement memo (MC-SEE-2026-0002):
+          </p>
+          <p className="text-[11.5px] text-[#78350F] leading-relaxed italic mb-1.5">
+            “If the inspector cites the driver for a violation of 49 CFR § 391.11(b)(2), the inspector <span className="font-black not-italic">must document all evidence</span> to support the identified violation including the driver’s responses or lack thereof.”
+          </p>
+          <p className="text-[11.5px] text-[#78350F] leading-relaxed italic mb-2">
+            “Inspectors <span className="font-black not-italic">must document the evidence</span> of the violation and for the OOS order so that, when warranted, FMCSA may initiate the driver disqualification proceedings…”
+          </p>
+          <ul className="text-[10.5px] text-[#78350F] leading-relaxed list-disc ml-4 space-y-0.5">
+            <li>Capture the driver’s verbatim responses (or lack thereof) in the per-question and per-sign notes fields below.</li>
+            <li>Note any paraphrases used and how the driver reacted.</li>
+            <li>Save / attach this completed assessment to the inspection record before completing the stop.</li>
+          </ul>
+        </div>
+
         {/* Optional context — NO driver PII */}
         <div className="bg-white rounded-xl border overflow-hidden">
           <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2">
