@@ -316,14 +316,9 @@ export default function ElpAssessmentPage() {
           <p className="text-[11.5px] text-[#78350F] leading-relaxed italic mb-1.5">
             “If the inspector cites the driver for a violation of 49 CFR § 391.11(b)(2), the inspector <span className="font-black not-italic">must document all evidence</span> to support the identified violation including the driver’s responses or lack thereof.”
           </p>
-          <p className="text-[11.5px] text-[#78350F] leading-relaxed italic mb-2">
+          <p className="text-[11.5px] text-[#78350F] leading-relaxed italic">
             “Inspectors <span className="font-black not-italic">must document the evidence</span> of the violation and for the OOS order so that, when warranted, FMCSA may initiate the driver disqualification proceedings…”
           </p>
-          <ul className="text-[10.5px] text-[#78350F] leading-relaxed list-disc ml-4 space-y-0.5">
-            <li>Capture the driver’s verbatim responses (or lack thereof) in the per-question and per-sign notes fields below.</li>
-            <li>Note any paraphrases used and how the driver reacted.</li>
-            <li>Save / attach this completed assessment to the inspection record before completing the stop.</li>
-          </ul>
         </div>
 
         {/* Optional context — NO driver PII */}
