@@ -205,6 +205,21 @@ export default function ElpAssessmentPage() {
   };
 
   /* ──────────────── Show-to-driver fullscreen mode ──────────────── */
+  // Saved scroll position so the page returns to where the inspector was
+  // (typically with the sign run panel near the top) when exiting fullscreen.
+  const savedScrollY = useRef(null);
+  // Snapshot scroll before entering fullscreen, restore on exit.
+  useEffect(() => {
+    if (showingToDriver) {
+      savedScrollY.current = window.scrollY;
+    } else if (savedScrollY.current !== null) {
+      // Use rAF so the layout is settled (run panel re-rendered) before
+      // restoring the scroll position.
+      const y = savedScrollY.current;
+      requestAnimationFrame(() => window.scrollTo({ top: y, left: 0, behavior: "auto" }));
+      savedScrollY.current = null;
+    }
+  }, [showingToDriver]);
   // ESC exits fullscreen.
   useEffect(() => {
     if (!showingToDriver) return;
