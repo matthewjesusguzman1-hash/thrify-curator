@@ -557,9 +557,9 @@ export function Header({ onUploadClick, stats }) {
           onClick={() => navigate(b.path)}
           className="bg-[#D4AF37] text-[#002855] hover:bg-[#c9a432] transition-colors h-8 px-3 sm:px-4 text-xs font-bold shadow-sm flex-shrink-0"
         >
-          {b.short ? <span className="text-[11px] font-black sm:mr-1">{b.short}</span> : null}
+          {b.short ? <span className="text-[11px] font-black sm:mr-1 sm:hidden">{b.short}</span> : null}
           {Icon ? <Icon className="w-3.5 h-3.5 sm:mr-1.5" /> : null}
-          <span className={b.short ? "hidden sm:inline" : "hidden sm:inline"}>{b.label}</span>
+          <span className="hidden sm:inline">{b.label}</span>
         </Button>
       );
     }
