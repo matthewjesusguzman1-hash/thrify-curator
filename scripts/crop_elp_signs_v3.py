@@ -37,7 +37,7 @@ y_runs = runs(row_density > (W * 0.02), min_gap=15, min_len=40)
 # detected runs are sign rows. Keep them all.
 print(f"{len(y_runs)} sign rows detected (expected 6)")
 
-MARGIN = 8
+MARGIN = 12  # generous breathing room so no sign border ever clips
 sid = 1
 for ri, (y0, y1) in enumerate(y_runs):
     band = ink[y0:y1]
@@ -52,22 +52,47 @@ for ri, (y0, y1) in enumerate(y_runs):
         keep_rows = np.where(row_w >= thresh)[0]
         if len(keep_rows) == 0:
             cy0, cy1 = 0, y1 - y0
+            bottom_safe = MARGIN
         else:
             cy0 = keep_rows[0]; cy1 = keep_rows[-1] + 1
-            # If there is a vertical gap > 4 px inside the cell, the bottom
-            # segment after the gap is a caption number — drop it.
+            # Detect the gap between sign body and the caption numeral.
             gaps = np.where(np.diff(keep_rows) > 4)[0]
-            if len(gaps): cy1 = keep_rows[gaps[-1]] + 1
+            if len(gaps):
+                gap_idx = gaps[-1]
+                body_end = keep_rows[gap_idx] + 1
+                caption_start = keep_rows[gap_idx + 1]
+                cy1 = body_end
+                # Bottom margin is whichever is smaller: standard MARGIN or
+                # half the gap to the caption (so the caption never enters).
+                bottom_safe = max(0, min(MARGIN, (caption_start - body_end) // 2))
+            else:
+                bottom_safe = MARGIN
         col_h = cell.sum(axis=0)
         keep_cols = np.where(col_h >= 2)[0]
         cx0 = keep_cols[0] if len(keep_cols) else 0
         cx1 = keep_cols[-1] + 1 if len(keep_cols) else (x1 - x0)
+
+        # The caption numeral often sits BELOW the detected row band — outside
+        # `cell`. Peek at the source pixels in the column range immediately
+        # below the band and clip the bottom margin so the caption is never
+        # included.
+        abs_body_end = y0 + cy1
+        look_ahead = ink[abs_body_end : min(H, abs_body_end + MARGIN + 4),
+                         x0 + cx0 : x0 + cx1]
+        if look_ahead.size > 0:
+            # Caption numerals are narrow (1-2 digits, ~5-15 ink pixels per
+            # row). Use a low absolute threshold so they trigger detection
+            # even when the column range is much wider than the caption.
+            caption_rows_below = look_ahead.sum(axis=1) >= 4
+            if caption_rows_below.any():
+                first_caption_offset = int(np.where(caption_rows_below)[0][0])
+                # Keep 1 px clear above the caption.
+                bottom_safe = max(0, min(bottom_safe, first_caption_offset - 1))
+
         L = max(0, x0 + cx0 - MARGIN)
         T = max(0, y0 + cy0 - MARGIN)
         R = min(W, x0 + cx1 + MARGIN)
-        # Bottom margin is intentionally smaller: caption numerals (1, 2, …,
-        # 24) sit just below each sign and must not bleed into the crop.
-        B = min(H, y0 + cy1 + 2)
+        B = min(H, y0 + cy1 + bottom_safe)
         crop = src.crop((L, T, R, B))
         # Mild unsharp ONLY (no upscale) — keeps original PNG sharpness.
         crop = crop.filter(ImageFilter.UnsharpMask(radius=0.8, percent=80, threshold=2))
