@@ -4,7 +4,7 @@ import axios from "axios";
 import {
   ChevronLeft, ChevronRight, Eye, Share2, Save,
   CheckCircle2, XCircle, AlertTriangle, Languages, Info,
-  RotateCcw, Maximize2, Minimize2,
+  RotateCcw, Maximize2, Minimize2, ShieldAlert,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -614,7 +614,7 @@ export default function ElpAssessmentPage() {
                 {suggestedDisposition && (
                   <div className="rounded border-l-[3px] border-[#3B82F6] bg-[#EEF6FF] p-2">
                     <p className="text-[10.5px] text-[#1E3A8A]">
-                      <span className="font-bold">Suggested:</span> {suggestedDisposition === "proficient" ? "ELP PROFICIENT" : "NOT ELP PROFICIENT"} (based on the test results above; inspector’s judgment overrides).
+                      <span className="font-bold">Suggested:</span> {suggestedDisposition === "proficient" ? "ELP PASS" : "ELP FAIL"} (based on the test results above; inspector’s judgment overrides).
                     </p>
                   </div>
                 )}
@@ -628,7 +628,7 @@ export default function ElpAssessmentPage() {
                       className={overallDisposition === "proficient" ? "bg-[#10B981] text-white hover:bg-[#059669]" : "border-[#10B981] text-[#065F46] hover:bg-[#F0FDF4]"}
                       data-testid="elp-disp-proficient"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> ELP Proficient
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> ELP Pass
                     </Button>
                     <Button
                       onClick={() => setOverallDisposition("not_proficient")}
@@ -636,16 +636,26 @@ export default function ElpAssessmentPage() {
                       className={overallDisposition === "not_proficient" ? "bg-[#DC2626] text-white hover:bg-[#B91C1C]" : "border-[#DC2626] text-[#991B1B] hover:bg-[#FEE2E2]"}
                       data-testid="elp-disp-not-proficient"
                     >
-                      <XCircle className="w-3.5 h-3.5 mr-1.5" /> Not ELP Proficient
+                      <XCircle className="w-3.5 h-3.5 mr-1.5" /> ELP Fail
                     </Button>
                   </div>
                 </div>
 
                 {overallDisposition === "not_proficient" && (
-                  <div className="rounded-md border-l-[3px] border-[#DC2626] bg-[#FEE2E2] p-2.5" data-testid="elp-citation-card">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#991B1B] mb-1">Citation</p>
-                    <p className="text-[12px] font-bold text-[#7F1D1D]">{ELP_CITATION.ref} — {ELP_CITATION.title}</p>
-                    <p className="text-[11px] text-[#7F1D1D] leading-relaxed mt-1">Cite based on the documented test result. The interview test (Attachment A) and/or the highway-sign recognition test (Attachment B) results captured in this report support the §391.11(b)(2) violation.</p>
+                  <div className="space-y-2" data-testid="elp-fail-block">
+                    <div className="rounded-md border-l-[3px] border-[#DC2626] bg-[#FEE2E2] p-2.5" data-testid="elp-citation-card">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#991B1B] mb-1">Citation</p>
+                      <p className="text-[12px] font-bold text-[#7F1D1D]">{ELP_CITATION.ref} — {ELP_CITATION.title}</p>
+                      <p className="text-[11px] text-[#7F1D1D] leading-relaxed mt-1">Cite based on the documented test result. The interview test (Attachment A) and/or the highway-sign recognition test (Attachment B) results captured in this report support the §391.11(b)(2) violation.</p>
+                    </div>
+                    <div className="rounded-md border-2 border-[#DC2626] bg-[#7F1D1D] p-2.5 text-white" data-testid="elp-oos-card">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <ShieldAlert className="w-4 h-4 text-[#FCA5A5]" />
+                        <p className="text-[10px] font-black uppercase tracking-wider text-[#FCA5A5]">Place Driver Out of Service</p>
+                      </div>
+                      <p className="text-[12.5px] font-black leading-tight">Place the driver out of service per the current CVSA OOS criteria for §391.11(b)(2).</p>
+                      <p className="text-[10.5px] mt-1 text-white/85 leading-relaxed">A driver who fails the English language proficiency assessment must be placed out of service. Document the OOS in the inspection record and notify the carrier.</p>
+                    </div>
                   </div>
                 )}
 
@@ -927,7 +937,7 @@ function ElpReportContent({
 
       <div style={{ marginTop: 14, padding: 10, border: `2px solid ${overallDisposition === "proficient" ? "#10B981" : "#DC2626"}`, borderRadius: 6, background: overallDisposition === "proficient" ? "#F0FDF4" : "#FEE2E2" }}>
         <p style={{ margin: 0, fontWeight: 800, fontSize: 13, color: overallDisposition === "proficient" ? "#065F46" : "#7F1D1D" }}>
-          DISPOSITION: {overallDisposition === "proficient" ? "ELP PROFICIENT" : overallDisposition === "not_proficient" ? "NOT ELP PROFICIENT" : "Pending"}
+          DISPOSITION: {overallDisposition === "proficient" ? "ELP PASS" : overallDisposition === "not_proficient" ? "ELP FAIL — DRIVER PLACED OUT OF SERVICE" : "Pending"}
         </p>
         {overallDisposition === "not_proficient" && (
           <p style={{ margin: 0, marginTop: 4, fontSize: 11.5, color: "#7F1D1D" }}>
