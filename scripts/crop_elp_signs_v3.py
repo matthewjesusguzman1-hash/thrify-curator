@@ -47,26 +47,30 @@ for ri, (y0, y1) in enumerate(y_runs):
         print(f"⚠ Row {ri+1}: detected {len(x_runs)} columns")
     for x0, x1 in x_runs:
         cell = ink[y0:y1, x0:x1]
+        cell_w = x1 - x0
         row_w = cell.sum(axis=1)
-        thresh = max(2, int((x1 - x0) * 0.10))
+        thresh = max(2, int(cell_w * 0.10))
         keep_rows = np.where(row_w >= thresh)[0]
         if len(keep_rows) == 0:
             cy0, cy1 = 0, y1 - y0
             bottom_safe = MARGIN
         else:
             cy0 = keep_rows[0]; cy1 = keep_rows[-1] + 1
-            # Detect the gap between sign body and the caption numeral.
+            bottom_safe = MARGIN
+            # Gap detection — but ONLY trim across a gap when the segment
+            # AFTER the gap is narrow (caption-shaped). A wide post-gap
+            # segment (>= 30% of cell width on any single row) is the sign's
+            # bottom border line and must be preserved.
             gaps = np.where(np.diff(keep_rows) > 4)[0]
-            if len(gaps):
-                gap_idx = gaps[-1]
-                body_end = keep_rows[gap_idx] + 1
-                caption_start = keep_rows[gap_idx + 1]
-                cy1 = body_end
-                # Bottom margin is whichever is smaller: standard MARGIN or
-                # half the gap to the caption (so the caption never enters).
-                bottom_safe = max(0, min(MARGIN, (caption_start - body_end) // 2))
-            else:
-                bottom_safe = MARGIN
+            for gap_idx in reversed(gaps):  # check the last gap first
+                after_gap_rows = keep_rows[gap_idx + 1:]
+                max_after_w = int(row_w[after_gap_rows].max()) if len(after_gap_rows) else 0
+                if max_after_w < cell_w * 0.30:
+                    # Narrow segment after this gap → caption — trim.
+                    cy1 = keep_rows[gap_idx] + 1
+                    break
+                # Wide segment → it's a border. Stop checking.
+                break
         col_h = cell.sum(axis=0)
         keep_cols = np.where(col_h >= 2)[0]
         cx0 = keep_cols[0] if len(keep_cols) else 0
