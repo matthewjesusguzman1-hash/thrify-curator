@@ -25,6 +25,12 @@ Full-stack application for CMV inspectors / DOT enforcement to search and filter
 
 ## Changelog
 
+### 2026-02 — ELP signs use pixel-perfect crops of agency Attachment B
+- Replaced SVG-rendered signs with **pixel-perfect crops** of the agency's Attachment B chart (24 PNGs at `/app/frontend/public/elp-signs/sign-{1..24}.png`).
+- The auto-crop pipeline (`/app/scripts/auto_crop_elp_signs.py`) projects ink density onto X/Y axes to find the 6×4 grid, then trims each cell to its actual sign body (excluding the small caption numerals beneath each sign). Adds a 6 px white margin to keep borders visible.
+- `SignDisplay.js` reduced to a thin `<img>` wrapper with `object-fit: contain` so each sign keeps its real aspect ratio (vertical regulatory rectangles, square diamonds, horizontal banners, electronic message bars).
+- Total asset weight: ~560 KB across all 24 signs.
+
 ### 2026-02 — ELP module rebuild (verbatim Attachments A & B + new flow)
 - **Verbatim content from agency reference**: 14 driver interview questions exactly as written on Attachment A (12 General + 2 HM-only) with all paraphrases preserved; all 24 highway signs exactly as illustrated on Attachment B with correct category-specific visuals.
 - **9 visual sign categories** rendered as inline SVG (no bitmaps): regulatory, regulatory_xl (4-line dense), regulatory_red (NO PARKING), warning (yellow diamond), warning_square (RUNAWAY TRUCK RAMP), construction (orange diamond), construction_h (ROAD WORK rectangle), wrongway (red horizontal), electronic (dark navy + amber dot-matrix). Embedded arrow icons (left/right/up_right) for ONE WAY, KEEP RIGHT, RUNAWAY TRUCK RAMP.
