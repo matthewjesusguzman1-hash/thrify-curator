@@ -746,14 +746,20 @@ export default function ElpAssessmentPage() {
 
       {/* Show-to-Driver fullscreen overlay (rendered as a sibling so the
           underlying page stays mounted and scroll position is preserved when
-          the inspector exits). */}
+          the inspector exits). Tapping anywhere on the sign also exits. */}
       {showingToDriver && driverSign && (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center" data-testid="elp-driver-view">
-          <div className="flex-1 w-full flex items-center justify-center p-4 sm:p-8">
+          <button
+            type="button"
+            onClick={() => setShowingToDriver(false)}
+            className="flex-1 w-full flex items-center justify-center p-4 sm:p-8 cursor-pointer focus:outline-none"
+            aria-label="Tap sign to return"
+            data-testid="elp-driver-sign-tap"
+          >
             <div className="w-full max-w-[640px]" style={{ aspectRatio: "1 / 1" }}>
               <SignDisplay sign={driverSign} size={640} />
             </div>
-          </div>
+          </button>
           <div className="w-full p-4 flex justify-center">
             <Button
               onClick={() => setShowingToDriver(false)}
