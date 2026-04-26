@@ -4,7 +4,7 @@ import axios from "axios";
 import {
   ChevronLeft, ChevronRight, Eye, Share2, Save,
   CheckCircle2, XCircle, AlertTriangle, Languages, Info,
-  RotateCcw, Maximize2, Minimize2, ShieldAlert,
+  RotateCcw, Maximize2, Minimize2, ShieldAlert, FileText,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -292,7 +292,16 @@ export default function ElpAssessmentPage() {
             <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#1D4ED8]">Reference · {ELP_CITATION.ref}</p>
           </div>
           <p className="text-[12px] text-[#1E3A8A] leading-relaxed font-bold mb-1">{ELP_CITATION.title}</p>
-          <p className="text-[11.5px] text-[#1E3A8A] leading-relaxed">{ELP_CITATION.summary}</p>
+          <p className="text-[11.5px] text-[#1E3A8A] leading-relaxed mb-2">{ELP_CITATION.summary}</p>
+          <a
+            href="/elp-docs/FMCSA-ELP-Guidance-2026.pdf"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#1D4ED8] hover:text-[#002855] underline-offset-2 hover:underline"
+            data-testid="elp-memo-link"
+          >
+            <FileText className="w-3.5 h-3.5" /> View full enforcement memo (MC-SEE-2026-0002, Apr 2026)
+          </a>
         </div>
 
         {/* Optional context — NO driver PII */}
