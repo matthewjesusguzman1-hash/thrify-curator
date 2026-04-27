@@ -31,13 +31,6 @@ export default function SplitSleeperPage() {
               <p className="text-[10px] text-white/50">Property-carrying · <a href="https://www.ecfr.gov/current/title-49/section-395.1" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:decoration-solid hover:text-[#D4AF37]" data-testid="cfr-link">49 CFR §395.1(g)(1)(ii)</a></p>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/hours-of-service/practice")}
-            className="ml-auto flex items-center gap-1 rounded-md bg-[#D4AF37] text-[#002855] hover:bg-[#E0BE50] px-2.5 py-1.5 text-[11px] font-bold transition-colors"
-            data-testid="goto-practice-btn"
-          >
-            <Target className="w-3.5 h-3.5" /> Practice
-          </button>
         </div>
       </header>
       <main className="max-w-[900px] mx-auto px-3 py-4 space-y-3">
