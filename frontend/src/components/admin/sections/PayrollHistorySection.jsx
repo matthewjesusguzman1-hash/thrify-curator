@@ -423,7 +423,7 @@ export default function PayrollHistorySection({
                           >
                             <div className="flex items-center gap-3">
                               <div className={`w-2 h-2 rounded-full ${
-                                period.balance > 0 ? 'bg-amber-500' : 'bg-gray-300'
+                                period.balance > 0 ? 'bg-amber-500' : period.amount_owed > 0 ? 'bg-green-500' : 'bg-gray-300'
                               }`} />
                               <div>
                                 <p className="font-medium text-gray-900">{period.period_label}</p>
@@ -435,7 +435,7 @@ export default function PayrollHistorySection({
                             <div className="flex items-center gap-4">
                               <div className="text-right">
                                 <p className="font-semibold text-gray-900">{formatCurrency(period.amount_owed)}</p>
-                                {period.balance !== 0 && (
+                                {period.amount_owed > 0 && (
                                   <p className={`text-xs ${period.balance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
                                     {period.balance > 0 ? `${formatCurrency(period.balance)} owed` : 'Paid'}
                                   </p>
