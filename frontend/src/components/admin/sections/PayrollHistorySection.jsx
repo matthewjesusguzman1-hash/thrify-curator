@@ -11,7 +11,8 @@ import {
   Wallet,
   CheckCircle,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  History
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
@@ -29,6 +30,7 @@ export default function PayrollHistorySection({
   const [loading, setLoading] = useState(false);
   const [expandedPeriods, setExpandedPeriods] = useState({});
   const [showEmployeeSelector, setShowEmployeeSelector] = useState(false);
+  const [showPreviousPeriods, setShowPreviousPeriods] = useState(false);
 
   // Fetch payroll history when employee is selected
   useEffect(() => {
@@ -45,8 +47,8 @@ export default function PayrollHistorySection({
         getAuthHeader()
       );
       setHistoryData(response.data);
-      // Auto-expand current period
-      setExpandedPeriods({ 0: true });
+      setExpandedPeriods({});
+      setShowPreviousPeriods(false);
     } catch (error) {
       console.error("Failed to fetch payroll history:", error);
     } finally {
@@ -70,6 +72,69 @@ export default function PayrollHistorySection({
 
   // Filter to only show employees (not admins without time entries)
   const selectableEmployees = employees.filter(e => e.role !== 'admin' || e.id);
+
+  // Separate current period from previous periods
+  const currentPeriod = historyData?.periods?.[0];
+  const previousPeriods = historyData?.periods?.slice(1) || [];
+
+  // Render period details (reusable for both current and previous)
+  const renderPeriodDetails = (period) => (
+    <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div>
+        <p className="text-xs text-gray-500 uppercase tracking-wide">Hours Worked</p>
+        <p className="text-lg font-semibold text-gray-900 mt-1">{period.hours_display}</p>
+      </div>
+      <div>
+        <p className="text-xs text-gray-500 uppercase tracking-wide">Hourly Rate</p>
+        <p className="text-lg font-semibold text-gray-900 mt-1">{formatCurrency(period.hourly_rate)}</p>
+      </div>
+      <div>
+        <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Owed</p>
+        <p className="text-lg font-semibold text-violet-600 mt-1">{formatCurrency(period.amount_owed)}</p>
+      </div>
+      <div>
+        <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Paid</p>
+        <p className="text-lg font-semibold text-emerald-600 mt-1">{formatCurrency(period.amount_paid)}</p>
+      </div>
+    </div>
+  );
+
+  // Render balance status
+  const renderBalanceStatus = (period) => (
+    <div className={`mt-3 p-3 rounded-lg flex items-center gap-3 ${
+      period.balance > 0 
+        ? 'bg-amber-50 text-amber-800' 
+        : period.balance < 0 
+          ? 'bg-blue-50 text-blue-800'
+          : 'bg-green-50 text-green-800'
+    }`}>
+      {period.balance > 0 ? (
+        <>
+          <AlertCircle className="w-5 h-5" />
+          <span className="font-medium">
+            Balance Due: {formatCurrency(period.balance)}
+          </span>
+        </>
+      ) : period.balance < 0 ? (
+        <>
+          <AlertCircle className="w-5 h-5" />
+          <span className="font-medium">
+            Overpaid by: {formatCurrency(Math.abs(period.balance))}
+          </span>
+        </>
+      ) : period.amount_owed > 0 ? (
+        <>
+          <CheckCircle className="w-5 h-5" />
+          <span className="font-medium">Fully Paid</span>
+        </>
+      ) : (
+        <>
+          <CheckCircle className="w-5 h-5" />
+          <span className="font-medium">No hours worked this period</span>
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -205,133 +270,123 @@ export default function PayrollHistorySection({
             </div>
           </div>
 
-          {/* Pay Period History List */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-100 bg-gray-50">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-violet-500" />
-                Pay Period History
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Click on a period to see details
-              </p>
-            </div>
-
-            <div className="divide-y divide-gray-100">
-              {historyData.periods?.map((period, index) => (
-                <div key={index} className="transition-colors hover:bg-gray-50">
-                  {/* Period Header (clickable) */}
-                  <button
-                    onClick={() => togglePeriod(index)}
-                    className="w-full p-4 flex items-center justify-between text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        period.is_current ? 'bg-green-500' : 
-                        period.balance > 0 ? 'bg-amber-500' : 'bg-gray-300'
-                      }`} />
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {period.period_label}
-                          {period.is_current && (
-                            <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                              Current
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {period.hours_display} · {period.shifts} shift{period.shifts !== 1 ? 's' : ''}
-                        </p>
-                      </div>
+          {/* Current Pay Period - Always Visible */}
+          {currentPeriod && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-violet-50 to-purple-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-white" />
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">{formatCurrency(period.amount_owed)}</p>
-                        {period.balance !== 0 && (
-                          <p className={`text-xs ${period.balance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                            {period.balance > 0 ? `${formatCurrency(period.balance)} owed` : 'Paid'}
-                          </p>
-                        )}
-                      </div>
-                      {expandedPeriods[index] ? (
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-gray-400" />
-                      )}
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Current Pay Period</h3>
+                      <p className="text-sm text-gray-600">{currentPeriod.period_label}</p>
                     </div>
-                  </button>
-
-                  {/* Period Details (expandable) */}
-                  <AnimatePresence>
-                    {expandedPeriods[index] && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-4 pb-4">
-                          <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <div>
-                              <p className="text-xs text-gray-500 uppercase tracking-wide">Hours Worked</p>
-                              <p className="text-lg font-semibold text-gray-900 mt-1">{period.hours_display}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 uppercase tracking-wide">Hourly Rate</p>
-                              <p className="text-lg font-semibold text-gray-900 mt-1">{formatCurrency(period.hourly_rate)}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Owed</p>
-                              <p className="text-lg font-semibold text-violet-600 mt-1">{formatCurrency(period.amount_owed)}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Paid</p>
-                              <p className="text-lg font-semibold text-emerald-600 mt-1">{formatCurrency(period.amount_paid)}</p>
-                            </div>
-                          </div>
-
-                          {/* Balance Status */}
-                          <div className={`mt-3 p-3 rounded-lg flex items-center gap-3 ${
-                            period.balance > 0 
-                              ? 'bg-amber-50 text-amber-800' 
-                              : period.balance < 0 
-                                ? 'bg-blue-50 text-blue-800'
-                                : 'bg-green-50 text-green-800'
-                          }`}>
-                            {period.balance > 0 ? (
-                              <>
-                                <AlertCircle className="w-5 h-5" />
-                                <span className="font-medium">
-                                  Balance Due: {formatCurrency(period.balance)}
-                                </span>
-                              </>
-                            ) : period.balance < 0 ? (
-                              <>
-                                <AlertCircle className="w-5 h-5" />
-                                <span className="font-medium">
-                                  Overpaid by: {formatCurrency(Math.abs(period.balance))}
-                                </span>
-                              </>
-                            ) : period.amount_owed > 0 ? (
-                              <>
-                                <CheckCircle className="w-5 h-5" />
-                                <span className="font-medium">Fully Paid</span>
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle className="w-5 h-5" />
-                                <span className="font-medium">No hours worked this period</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-violet-600">{formatCurrency(currentPeriod.amount_owed)}</p>
+                    <p className="text-sm text-gray-500">{currentPeriod.hours_display} · {currentPeriod.shifts} shift{currentPeriod.shifts !== 1 ? 's' : ''}</p>
+                  </div>
                 </div>
-              ))}
+              </div>
+              <div className="p-4">
+                {renderPeriodDetails(currentPeriod)}
+                {renderBalanceStatus(currentPeriod)}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Previous Pay Periods - Collapsible */}
+          {previousPeriods.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              {/* Collapsible Header */}
+              <button
+                onClick={() => setShowPreviousPeriods(!showPreviousPeriods)}
+                className="w-full p-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl flex items-center justify-center">
+                    <History className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-gray-900">Previous Pay Periods</h3>
+                    <p className="text-sm text-gray-500">{previousPeriods.length} period{previousPeriods.length !== 1 ? 's' : ''} · Click to {showPreviousPeriods ? 'hide' : 'view'}</p>
+                  </div>
+                </div>
+                <ChevronDown className={`w-6 h-6 text-gray-400 transition-transform ${showPreviousPeriods ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Collapsible Content */}
+              <AnimatePresence>
+                {showPreviousPeriods && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="divide-y divide-gray-100">
+                      {previousPeriods.map((period, index) => (
+                        <div key={index} className="transition-colors hover:bg-gray-50">
+                          {/* Period Header (clickable) */}
+                          <button
+                            onClick={() => togglePeriod(index)}
+                            className="w-full p-4 flex items-center justify-between text-left"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-2 h-2 rounded-full ${
+                                period.balance > 0 ? 'bg-amber-500' : 'bg-gray-300'
+                              }`} />
+                              <div>
+                                <p className="font-medium text-gray-900">{period.period_label}</p>
+                                <p className="text-sm text-gray-500">
+                                  {period.hours_display} · {period.shifts} shift{period.shifts !== 1 ? 's' : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="font-semibold text-gray-900">{formatCurrency(period.amount_owed)}</p>
+                                {period.balance !== 0 && (
+                                  <p className={`text-xs ${period.balance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                                    {period.balance > 0 ? `${formatCurrency(period.balance)} owed` : 'Paid'}
+                                  </p>
+                                )}
+                              </div>
+                              {expandedPeriods[index] ? (
+                                <ChevronDown className="w-5 h-5 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="w-5 h-5 text-gray-400" />
+                              )}
+                            </div>
+                          </button>
+
+                          {/* Period Details (expandable) */}
+                          <AnimatePresence>
+                            {expandedPeriods[index] && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-4 pb-4">
+                                  {renderPeriodDetails(period)}
+                                  {renderBalanceStatus(period)}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       )}
 
