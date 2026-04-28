@@ -3295,16 +3295,28 @@ export default function AdminDashboard() {
                       <p className="text-lg font-bold text-[#00A8CC]" data-testid="period-payroll">
                         ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
                       </p>
-                      <p className="text-[10px] text-[#666] leading-tight">To Be Paid</p>
+                      <p className="text-[10px] text-[#666] leading-tight">This Period</p>
                     </div>
                   </div>
+                  {/* Outstanding from Previous Periods */}
+                  {payrollSummary.outstanding_amount > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#F59E0B]/10 to-[#D97706]/5 rounded-lg border border-[#F59E0B]/20">
+                      <AlertCircle className="w-4 h-4 text-[#D97706]" />
+                      <div>
+                        <p className="text-lg font-bold text-[#D97706]" data-testid="outstanding-amount">
+                          ${payrollSummary.outstanding_amount?.toFixed(2) || '0.00'}
+                        </p>
+                        <p className="text-[10px] text-[#666] leading-tight">Unpaid</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/5 rounded-lg border border-[#10B981]/20">
                     <CheckCircle className="w-4 h-4 text-[#059669]" />
                     <div>
                       <p className="text-lg font-bold text-[#059669]" data-testid="month-total">
                         ${payrollSummary.month_total?.toFixed(2) || '0.00'}
                       </p>
-                      <p className="text-[10px] text-[#666] leading-tight">This Month</p>
+                      <p className="text-[10px] text-[#666] leading-tight">Paid This Month</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/5 rounded-lg border border-[#8B5CF6]/20">
@@ -3313,7 +3325,7 @@ export default function AdminDashboard() {
                       <p className="text-lg font-bold text-[#6D28D9]" data-testid="year-total">
                         ${payrollSummary.year_total?.toFixed(2) || '0.00'}
                       </p>
-                      <p className="text-[10px] text-[#666] leading-tight">This Year</p>
+                      <p className="text-[10px] text-[#666] leading-tight">Paid This Year</p>
                     </div>
                   </div>
                   <div className="ml-auto text-xs text-[#888]">

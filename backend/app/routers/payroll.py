@@ -54,28 +54,43 @@ async def get_payroll_settings(admin: dict = Depends(get_admin_user)):
 @router.get("/summary")
 async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     """Get payroll summary:
-    - Wages Owed: matches Employee Portal exactly (hours × rate)
+    - This Period: wages owed for current period (hours × rate)
+    - Outstanding: unpaid wages from previous periods
     - This Month/Year: actual payments from check_records
     """
     from app.services.helpers import get_biweekly_period
+    
+    # Owner emails to exclude from payroll calculations
+    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
     
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     default_rate = settings.get("default_hourly_rate", 15.00) if settings else 15.00
     
     now = datetime.now(timezone.utc)
     period_start, period_end = get_biweekly_period(period_index=0)
+    prev_period_start, prev_period_end = get_biweekly_period(period_index=-1)
     
     if period_start.tzinfo is None:
         period_start = period_start.replace(tzinfo=timezone.utc)
     if period_end.tzinfo is None:
         period_end = period_end.replace(tzinfo=timezone.utc)
+    if prev_period_start.tzinfo is None:
+        prev_period_start = prev_period_start.replace(tzinfo=timezone.utc)
+    if prev_period_end.tzinfo is None:
+        prev_period_end = prev_period_end.replace(tzinfo=timezone.utc)
     
-    # Get all employees
-    employees = await db.users.find({}, {"_id": 0}).to_list(100)
+    # Get all employees (excluding owners)
+    employees = await db.users.find(
+        {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
+        {"_id": 0}
+    ).to_list(100)
     
-    # Calculate wages owed (same as Employee Portal)
+    # Calculate wages owed for current period
     current_period_amount = 0
     current_period_hours = 0
+    
+    # Calculate wages owed for previous period (to check for outstanding)
+    prev_period_amount = 0
     
     for emp in employees:
         emp_id = emp.get("id")
@@ -84,10 +99,12 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             
         hourly_rate = emp.get("hourly_rate") or default_rate
         
-        # Get employee's time entries for current period
+        # Get employee's time entries
         entries = await db.time_entries.find({"user_id": emp_id}, {"_id": 0}).to_list(1000)
         
         emp_period_hours = 0
+        emp_prev_period_hours = 0
+        
         for e in entries:
             hours = e.get("total_hours", 0) or 0
             clock_in_str = e.get("clock_in", "")
@@ -95,35 +112,48 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
                 continue
             try:
                 clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
+                # Current period
                 if period_start <= clock_in_dt <= period_end:
                     emp_period_hours += hours
+                # Previous period
+                elif prev_period_start <= clock_in_dt <= prev_period_end:
+                    emp_prev_period_hours += hours
             except:
                 continue
         
-        # Calculate pay same as Employee Portal frontend
+        # Calculate pay for current period
         if emp_period_hours > 0:
             total_minutes = round(emp_period_hours * 60)
             rounded_hours = total_minutes / 60
             emp_pay = rounded_hours * hourly_rate
             current_period_amount += emp_pay
             current_period_hours += emp_period_hours
+        
+        # Calculate pay for previous period
+        if emp_prev_period_hours > 0:
+            total_minutes = round(emp_prev_period_hours * 60)
+            rounded_hours = total_minutes / 60
+            emp_pay = rounded_hours * hourly_rate
+            prev_period_amount += emp_pay
     
-    # Get ACTUAL PAYMENTS from payroll_check_records for This Month and This Year
+    # Get ACTUAL PAYMENTS from payroll_check_records
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
     # Fetch all check records (employee payments)
     check_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},  # Employee payments only
-        {"_id": 0, "amount": 1, "check_date": 1}
+        {"_id": 0, "amount": 1, "check_date": 1, "pay_periods": 1}
     ).to_list(1000)
     
     month_total = 0
     year_total = 0
+    prev_period_paid = 0
     
     for record in check_records:
         amount = record.get("amount", 0) or 0
         check_date_str = record.get("check_date", "")
+        pay_periods = record.get("pay_periods", [])
         
         if not check_date_str:
             continue
@@ -139,8 +169,20 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             # This Month
             if check_date >= month_start:
                 month_total += amount
+            
+            # Check if payment covers the previous period
+            for pp in pay_periods:
+                pp_start_str = pp.get("start", "")
+                if pp_start_str:
+                    pp_start = datetime.strptime(pp_start_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                    if pp_start.date() == prev_period_start.date():
+                        prev_period_paid += amount
+                        break
         except:
             continue
+    
+    # Calculate outstanding (previous period owed minus what was paid for that period)
+    outstanding_amount = max(0, prev_period_amount - prev_period_paid)
     
     return {
         "current_period": {
@@ -149,6 +191,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             "start": period_start.isoformat(),
             "end": period_end.isoformat()
         },
+        "outstanding_amount": round(outstanding_amount, 2),
         "month_total": round(month_total, 2),
         "year_total": round(year_total, 2)
     }
