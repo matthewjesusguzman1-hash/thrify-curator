@@ -874,7 +874,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
     # Get all payment records for this employee
     payment_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},
-        {"_id": 0, "amount": 1, "check_date": 1, "employee_name": 1}
+        {"_id": 0, "amount": 1, "check_date": 1, "employee_name": 1, "pay_periods": 1}
     ).to_list(1000)
     
     # Filter payments for this employee by name (case-insensitive)
@@ -926,19 +926,33 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         rounded_hours = round_hours_to_minute(period_hours)
         amount_owed = round(rounded_hours * hourly_rate, 2)
         
-        # Calculate amount paid in this period
+        # Calculate amount paid FOR THIS PERIOD (using pay_periods field, NOT check_date)
         amount_paid = 0
+        period_start_date = period_start.strftime("%Y-%m-%d")
+        
         for p in employee_payments:
-            check_date_str = p.get("check_date", "")
-            if not check_date_str:
-                continue
-            try:
-                check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-                # Payment applies to the period it falls within
-                if period_start <= check_date <= period_end:
-                    amount_paid += p.get("amount", 0) or 0
-            except (ValueError, TypeError):
-                continue
+            pay_periods_list = p.get("pay_periods", [])
+            
+            # If payment has pay_periods specified, use those to match
+            if pay_periods_list:
+                for pp in pay_periods_list:
+                    pp_start = pp.get("start", "")
+                    if pp_start == period_start_date:
+                        # This payment covers this period
+                        amount_paid += p.get("amount", 0) or 0
+                        break  # Don't double-count if somehow listed twice
+            else:
+                # Fallback: if no pay_periods specified, use check_date (legacy behavior)
+                check_date_str = p.get("check_date", "")
+                if not check_date_str:
+                    continue
+                try:
+                    check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                    # Payment applies to the period it falls within
+                    if period_start <= check_date <= period_end:
+                        amount_paid += p.get("amount", 0) or 0
+                except (ValueError, TypeError):
+                    continue
         
         amount_paid = round(amount_paid, 2)
         balance = round(amount_owed - amount_paid, 2)
