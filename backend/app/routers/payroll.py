@@ -743,7 +743,16 @@ async def get_check_image(record_id: str, admin: dict = Depends(get_admin_user))
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
     
-    image_data = base64.b64decode(record["image_data"])
+    image_data_b64 = record.get("image_data")
+    if not image_data_b64:
+        raise HTTPException(status_code=404, detail="No image data for this record")
+    
+    try:
+        image_data = base64.b64decode(image_data_b64)
+    except Exception as e:
+        print(f"[PayrollImage] Failed to decode base64 for record {record_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to decode image data")
+    
     return Response(
         content=image_data,
         media_type=record.get("content_type", "image/jpeg"),
@@ -877,11 +886,18 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         {"_id": 0, "amount": 1, "check_date": 1, "employee_name": 1, "pay_periods": 1}
     ).to_list(1000)
     
+    # Debug: Show all payment records
+    print(f"[PayrollHistory] Total payment records: {len(payment_records)}")
+    for p in payment_records[:10]:
+        print(f"[PayrollHistory] Payment: name='{p.get('employee_name')}', amount={p.get('amount')}, pay_periods={p.get('pay_periods', [])}")
+    
     # Filter payments for this employee by name (case-insensitive)
     employee_payments = [
         p for p in payment_records 
         if (p.get("employee_name") or "").strip().lower() == employee_name.strip().lower()
     ]
+    
+    print(f"[PayrollHistory] Employee '{employee_name}' matched {len(employee_payments)} payments")
     
     # Build pay period history (go back ~6 months / 13 periods)
     periods = []
@@ -933,12 +949,17 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         for p in employee_payments:
             pay_periods_list = p.get("pay_periods", [])
             
+            # Debug log
+            if pay_periods_list:
+                print(f"[PayrollHistory] Payment {p.get('amount')} has pay_periods: {[pp.get('start') for pp in pay_periods_list]}, matching against period_start: {period_start_date}")
+            
             # If payment has pay_periods specified, use those to match
             if pay_periods_list:
                 for pp in pay_periods_list:
                     pp_start = pp.get("start", "")
                     if pp_start == period_start_date:
                         # This payment covers this period
+                        print(f"[PayrollHistory] MATCH! Adding ${p.get('amount')} to period {period_start_date}")
                         amount_paid += p.get("amount", 0) or 0
                         break  # Don't double-count if somehow listed twice
             else:
