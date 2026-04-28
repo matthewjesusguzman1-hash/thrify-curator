@@ -476,16 +476,13 @@ export default function PayrollHistorySection({
         </div>
       )}
 
-              {/* Empty State */}
+              {/* Empty State - Compact */}
               {!loading && !selectedEmployee && (
-                <div className="bg-white rounded-xl p-8 text-center">
-                  <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <DollarSign className="w-8 h-8 text-violet-500" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">View Payroll History</h3>
-                  <p className="text-gray-500 mb-4">
-                    Select an employee above to see their complete payroll history including hours worked, amounts owed, and payments made.
-                  </p>
+                <div className="bg-gray-50 rounded-lg p-3 text-center text-sm text-gray-500">
+                  <span className="inline-flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-violet-400" />
+                    Select an employee above to view payroll history
+                  </span>
                 </div>
               )}
             </div>
