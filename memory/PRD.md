@@ -76,6 +76,15 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
   - Backend updated: Tax Prep summary pulls mileage from `gps_trips` collection
   - Testing: 100% pass (19/19 tests)
 
+### Completed This Session
+- **Payroll History Feature (Apr 28, 2026)**: NEW FEATURE - Added comprehensive payroll history tracking in Admin Dashboard → Payroll & Payments:
+  1. Employee selector to pick which employee to view
+  2. Summary cards showing Current Period, This Month, and This Year totals
+  3. Expandable pay period list going back 6 months (13 periods)
+  4. Each period shows: Hours worked, Shifts, Hourly rate, Amount owed, Amount paid (from Payment Records), and Balance
+  5. Payment Records are automatically synced - when you pay an employee, it reflects in the "Amount Paid" column
+  6. Status indicators show if balance is due, fully paid, or overpaid
+
 ### In Progress / Pending User Verification
 - **Admin Employee Portal View - Pay Period Summary Fix (Apr 13, 2026)**: FIXED - The Employee Portal View (accessed from Admin Dashboard → Team Management → View Portal) was showing 0 hours even when there were shifts in the period. This was because the backend was only checking the current period (Apr 13-26) but the shifts were in the previous period (Mar 30 - Apr 12). Fixed by:
   1. Backend `/api/admin/employee/{id}/summary` now falls back to previous period if current period has no hours

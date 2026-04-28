@@ -71,6 +71,7 @@ import LiveActivityService from "@/services/LiveActivityService";
 import GPSMileageTracker from "@/components/admin/sections/GPSMileageTracker";
 import useGPSTracking from "@/hooks/useGPSTracking";
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
+import PayrollHistorySection from "@/components/admin/sections/PayrollHistorySection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
 import MessagesSection from "@/components/admin/sections/MessagesSection";
 import ConversationsSection from "@/components/admin/sections/ConversationsSection";
@@ -3353,6 +3354,25 @@ export default function AdminDashboard() {
 
               {/* Payment Records Section */}
               <PaymentRecordsSection getAuthHeader={getAuthHeader} />
+
+              {/* Payroll History Section - Individual Employee Pay Period Tracking */}
+              <div className="dashboard-card" data-testid="payroll-history-section">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#333]">Payroll History</h3>
+                    <p className="text-xs text-[#888]">View detailed pay period breakdown by employee</p>
+                  </div>
+                </div>
+                <PayrollHistorySection 
+                  employees={employees}
+                  getAuthHeader={getAuthHeader}
+                  formatHoursToHMS={formatHoursToHMS}
+                  roundHoursToMinute={roundHoursToMinute}
+                />
+              </div>
             </DashboardGroup>
 
             {/* GROUP 3: Forms & Communications */}

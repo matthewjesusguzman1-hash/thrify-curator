@@ -763,3 +763,200 @@ async def get_client_payment_history(email: str):
         "total_paid": round(total_paid, 2),
         "payment_count": len(payments)
     }
+
+
+
+@router.get("/employee/{employee_id}/history")
+async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Get comprehensive payroll history for an employee.
+    Returns all pay periods with hours worked, amount owed, amount paid, and balance.
+    """
+    from app.services.helpers import get_biweekly_period
+    
+    # Get employee
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    employee_name = employee.get("name", "")
+    
+    # Get settings
+    settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
+    default_rate = settings.get("default_hourly_rate", 15.00) if settings else 15.00
+    hourly_rate = employee.get("hourly_rate") or default_rate
+    
+    # Get all time entries for this employee
+    entries = await db.time_entries.find({"user_id": employee_id}, {"_id": 0}).to_list(1000)
+    
+    # Get all payment records for this employee
+    payment_records = await db.payroll_check_records.find(
+        {"payment_type": {"$in": ["employee", None]}},
+        {"_id": 0, "amount": 1, "check_date": 1, "employee_name": 1}
+    ).to_list(1000)
+    
+    # Filter payments for this employee by name (case-insensitive)
+    employee_payments = [
+        p for p in payment_records 
+        if (p.get("employee_name") or "").strip().lower() == employee_name.strip().lower()
+    ]
+    
+    # Build pay period history (go back ~6 months / 13 periods)
+    periods = []
+    now = datetime.now(timezone.utc)
+    
+    for period_index in range(0, -13, -1):  # Current + 12 previous periods
+        period_start, period_end = get_biweekly_period(period_index=period_index)
+        
+        if period_start.tzinfo is None:
+            period_start = period_start.replace(tzinfo=timezone.utc)
+        if period_end.tzinfo is None:
+            period_end = period_end.replace(tzinfo=timezone.utc)
+        
+        # Calculate hours worked in this period
+        period_hours = 0
+        period_shifts = 0
+        
+        for e in entries:
+            clock_in_str = e.get("clock_in", "")
+            if not clock_in_str:
+                continue
+            try:
+                clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
+                if period_start <= clock_in_dt <= period_end:
+                    period_hours += e.get("total_hours", 0) or 0
+                    period_shifts += 1
+            except (ValueError, TypeError):
+                continue
+        
+        # Calculate amount owed (round to minute first, like Employee Portal)
+        rounded_hours = round_hours_to_minute(period_hours)
+        amount_owed = round(rounded_hours * hourly_rate, 2)
+        
+        # Calculate amount paid in this period
+        amount_paid = 0
+        for p in employee_payments:
+            check_date_str = p.get("check_date", "")
+            if not check_date_str:
+                continue
+            try:
+                check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                # Payment applies to the period it falls within
+                if period_start <= check_date <= period_end:
+                    amount_paid += p.get("amount", 0) or 0
+            except (ValueError, TypeError):
+                continue
+        
+        amount_paid = round(amount_paid, 2)
+        balance = round(amount_owed - amount_paid, 2)
+        
+        periods.append({
+            "period_start": period_start.isoformat(),
+            "period_end": period_end.isoformat(),
+            "period_label": f"{period_start.strftime('%b %d')} - {period_end.strftime('%b %d, %Y')}",
+            "is_current": period_index == 0,
+            "hours": round(period_hours, 2),
+            "hours_display": format_hours_hms(period_hours),
+            "shifts": period_shifts,
+            "hourly_rate": hourly_rate,
+            "amount_owed": amount_owed,
+            "amount_paid": amount_paid,
+            "balance": balance
+        })
+    
+    # Calculate monthly totals (current month)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if now.month == 12:
+        month_end = now.replace(year=now.year + 1, month=1, day=1) - timedelta(seconds=1)
+    else:
+        month_end = now.replace(month=now.month + 1, day=1) - timedelta(seconds=1)
+    
+    month_hours = 0
+    month_shifts = 0
+    for e in entries:
+        clock_in_str = e.get("clock_in", "")
+        if not clock_in_str:
+            continue
+        try:
+            clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
+            if month_start <= clock_in_dt <= month_end:
+                month_hours += e.get("total_hours", 0) or 0
+                month_shifts += 1
+        except (ValueError, TypeError):
+            continue
+    
+    month_owed = round(round_hours_to_minute(month_hours) * hourly_rate, 2)
+    
+    month_paid = 0
+    for p in employee_payments:
+        check_date_str = p.get("check_date", "")
+        if not check_date_str:
+            continue
+        try:
+            check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if month_start <= check_date <= month_end:
+                month_paid += p.get("amount", 0) or 0
+        except (ValueError, TypeError):
+            continue
+    month_paid = round(month_paid, 2)
+    
+    # Calculate yearly totals
+    year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    year_end = now.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+    
+    year_hours = 0
+    year_shifts = 0
+    for e in entries:
+        clock_in_str = e.get("clock_in", "")
+        if not clock_in_str:
+            continue
+        try:
+            clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
+            if year_start <= clock_in_dt <= year_end:
+                year_hours += e.get("total_hours", 0) or 0
+                year_shifts += 1
+        except (ValueError, TypeError):
+            continue
+    
+    year_owed = round(round_hours_to_minute(year_hours) * hourly_rate, 2)
+    
+    year_paid = 0
+    for p in employee_payments:
+        check_date_str = p.get("check_date", "")
+        if not check_date_str:
+            continue
+        try:
+            check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if year_start <= check_date <= year_end:
+                year_paid += p.get("amount", 0) or 0
+        except (ValueError, TypeError):
+            continue
+    year_paid = round(year_paid, 2)
+    
+    return {
+        "employee": {
+            "id": employee_id,
+            "name": employee_name,
+            "email": employee.get("email", ""),
+            "hourly_rate": hourly_rate
+        },
+        "current_period": periods[0] if periods else None,
+        "periods": periods,
+        "month_summary": {
+            "label": now.strftime("%B %Y"),
+            "hours": round(month_hours, 2),
+            "hours_display": format_hours_hms(month_hours),
+            "shifts": month_shifts,
+            "amount_owed": month_owed,
+            "amount_paid": month_paid,
+            "balance": round(month_owed - month_paid, 2)
+        },
+        "year_summary": {
+            "label": str(now.year),
+            "hours": round(year_hours, 2),
+            "hours_display": format_hours_hms(year_hours),
+            "shifts": year_shifts,
+            "amount_owed": year_owed,
+            "amount_paid": year_paid,
+            "balance": round(year_owed - year_paid, 2)
+        }
+    }
