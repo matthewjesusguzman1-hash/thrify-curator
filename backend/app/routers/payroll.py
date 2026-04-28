@@ -107,12 +107,12 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             current_period_amount += emp_pay
             current_period_hours += emp_period_hours
     
-    # Get ACTUAL PAYMENTS from check_records for This Month and This Year
+    # Get ACTUAL PAYMENTS from payroll_check_records for This Month and This Year
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
     # Fetch all check records (employee payments)
-    check_records = await db.check_records.find(
+    check_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},  # Employee payments only
         {"_id": 0, "amount": 1, "check_date": 1}
     ).to_list(1000)

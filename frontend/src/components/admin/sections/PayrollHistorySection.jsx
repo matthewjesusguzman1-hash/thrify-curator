@@ -23,7 +23,8 @@ export default function PayrollHistorySection({
   employees = [], 
   getAuthHeader,
   formatHoursToHMS,
-  roundHoursToMinute
+  roundHoursToMinute,
+  isCollapsible = false
 }) {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [historyData, setHistoryData] = useState(null);
@@ -31,6 +32,7 @@ export default function PayrollHistorySection({
   const [expandedPeriods, setExpandedPeriods] = useState({});
   const [showEmployeeSelector, setShowEmployeeSelector] = useState(false);
   const [showPreviousPeriods, setShowPreviousPeriods] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(!isCollapsible); // Start collapsed if collapsible
 
   // Fetch payroll history when employee is selected
   useEffect(() => {
@@ -138,8 +140,38 @@ export default function PayrollHistorySection({
 
   return (
     <div className="space-y-4">
-      {/* Employee Selector */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      {/* Collapsible Header (if isCollapsible) */}
+      {isCollapsible && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl hover:from-violet-100 hover:to-purple-100 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <History className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-left">
+              <h3 className="font-semibold text-gray-900">Employee Payroll History</h3>
+              <p className="text-xs text-gray-500">View detailed breakdown by employee</p>
+            </div>
+          </div>
+          <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        </button>
+      )}
+
+      {/* Content (collapsible or always visible) */}
+      <AnimatePresence>
+        {(isExpanded || !isCollapsible) && (
+          <motion.div
+            initial={isCollapsible ? { height: 0, opacity: 0 } : false}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={isCollapsible ? { height: 0, opacity: 0 } : undefined}
+            transition={{ duration: 0.2 }}
+            className={isCollapsible ? "overflow-hidden" : ""}
+          >
+            <div className="space-y-4">
+              {/* Employee Selector */}
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
@@ -390,18 +422,22 @@ export default function PayrollHistorySection({
         </div>
       )}
 
-      {/* Empty State */}
-      {!loading && !selectedEmployee && (
-        <div className="bg-white rounded-xl p-8 text-center">
-          <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <DollarSign className="w-8 h-8 text-violet-500" />
-          </div>
-          <h3 className="font-semibold text-gray-900 mb-2">View Payroll History</h3>
-          <p className="text-gray-500 mb-4">
-            Select an employee above to see their complete payroll history including hours worked, amounts owed, and payments made.
-          </p>
-        </div>
-      )}
+              {/* Empty State */}
+              {!loading && !selectedEmployee && (
+                <div className="bg-white rounded-xl p-8 text-center">
+                  <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <DollarSign className="w-8 h-8 text-violet-500" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">View Payroll History</h3>
+                  <p className="text-gray-500 mb-4">
+                    Select an employee above to see their complete payroll history including hours worked, amounts owed, and payments made.
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

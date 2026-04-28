@@ -3305,74 +3305,69 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Current Pay Period */}
+                  {/* Current Pay Period - TO BE PAID */}
                   <div className="p-5 bg-gradient-to-br from-[#00D4FF]/10 to-[#00A8CC]/5 rounded-xl border border-[#00D4FF]/20">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] rounded-xl flex items-center justify-center shadow-lg shadow-[#00D4FF]/30 flex-shrink-0">
-                        <DollarSign className="w-7 h-7 text-white" />
+                        <Clock className="w-7 h-7 text-white" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00A8CC] truncate" data-testid="period-payroll">
                           ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
                         </p>
-                        <p className="text-sm font-medium text-[#666]">Current Pay Period</p>
+                        <p className="text-sm font-medium text-[#666]">To Be Paid</p>
+                        <p className="text-xs text-[#888]">Current Period</p>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Month Total */}
+                  {/* Month Total - PAID */}
+                  <div className="p-5 bg-gradient-to-br from-[#10B981]/10 to-[#059669]/5 rounded-xl border border-[#10B981]/20">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-xl flex items-center justify-center shadow-lg shadow-[#10B981]/30 flex-shrink-0">
+                        <CheckCircle className="w-7 h-7 text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xl sm:text-2xl md:text-3xl font-bold text-[#059669] truncate" data-testid="month-total">
+                          ${payrollSummary.month_total?.toFixed(2) || '0.00'}
+                        </p>
+                        <p className="text-sm font-medium text-[#666]">Paid</p>
+                        <p className="text-xs text-[#888]">This Month</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Year Total - PAID */}
                   <div className="p-5 bg-gradient-to-br from-[#8B5CF6]/10 to-[#6D28D9]/5 rounded-xl border border-[#8B5CF6]/20">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] rounded-xl flex items-center justify-center shadow-lg shadow-[#8B5CF6]/30 flex-shrink-0">
-                        <Calendar className="w-7 h-7 text-white" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xl sm:text-2xl md:text-3xl font-bold text-[#6D28D9] truncate" data-testid="month-total">
-                          ${payrollSummary.month_total?.toFixed(2) || '0.00'}
-                        </p>
-                        <p className="text-sm font-medium text-[#666]">This Month</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Year Total */}
-                  <div className="p-5 bg-gradient-to-br from-[#FF1493]/10 to-[#E91E8C]/5 rounded-xl border border-[#FF1493]/20">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 bg-gradient-to-r from-[#FF1493] to-[#E91E8C] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF1493]/30 flex-shrink-0">
                         <TrendingUp className="w-7 h-7 text-white" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xl sm:text-2xl md:text-3xl font-bold text-[#E91E8C] truncate" data-testid="year-total">
+                        <p className="text-xl sm:text-2xl md:text-3xl font-bold text-[#6D28D9] truncate" data-testid="year-total">
                           ${payrollSummary.year_total?.toFixed(2) || '0.00'}
                         </p>
-                        <p className="text-sm font-medium text-[#666]">This Year</p>
+                        <p className="text-sm font-medium text-[#666]">Paid</p>
+                        <p className="text-xs text-[#888]">This Year</p>
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Payroll History - Collapsible Subsection */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <PayrollHistorySection 
+                    employees={employees}
+                    getAuthHeader={getAuthHeader}
+                    formatHoursToHMS={formatHoursToHMS}
+                    roundHoursToMinute={roundHoursToMinute}
+                    isCollapsible={true}
+                  />
                 </div>
               </div>
 
               {/* Payment Records Section */}
               <PaymentRecordsSection getAuthHeader={getAuthHeader} />
-
-              {/* Payroll History Section - Individual Employee Pay Period Tracking */}
-              <div className="dashboard-card" data-testid="payroll-history-section">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[#333]">Payroll History</h3>
-                    <p className="text-xs text-[#888]">View detailed pay period breakdown by employee</p>
-                  </div>
-                </div>
-                <PayrollHistorySection 
-                  employees={employees}
-                  getAuthHeader={getAuthHeader}
-                  formatHoursToHMS={formatHoursToHMS}
-                  roundHoursToMinute={roundHoursToMinute}
-                />
-              </div>
             </DashboardGroup>
 
             {/* GROUP 3: Forms & Communications */}
