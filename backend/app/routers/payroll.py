@@ -734,14 +734,11 @@ async def get_employees_for_payment(admin: dict = Depends(get_admin_user)):
 
 @router.get("/all-employees-for-payment")
 async def get_all_employees_for_payment(admin: dict = Depends(get_admin_user)):
-    """Get ALL users (employees and admins except owners) for payment selection dropdown."""
-    # Owner emails to exclude from the list
-    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
-    
-    # Get all users except owners
+    """Get ALL users for payroll history dropdown - includes everyone."""
+    # Get ALL users (including owners) for accurate payroll tracking
     employees = await db.users.find(
-        {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
-        {"_id": 0, "name": 1, "email": 1, "phone": 1, "hourly_rate": 1, "role": 1}
+        {},  # No filter - include everyone
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1, "hourly_rate": 1, "role": 1}
     ).sort("name", 1).to_list(500)
     return employees
 
@@ -788,6 +785,9 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
     # Get all time entries for this employee
     entries = await db.time_entries.find({"user_id": employee_id}, {"_id": 0}).to_list(1000)
     
+    # Debug: Log how many entries we found
+    print(f"[PayrollHistory] Employee: {employee_name} (ID: {employee_id}), Found {len(entries)} time entries")
+    
     # Get all payment records for this employee
     payment_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},
@@ -822,11 +822,22 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
                 continue
             try:
                 clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
+                # Make sure we're comparing timezone-aware datetimes
+                if clock_in_dt.tzinfo is None:
+                    clock_in_dt = clock_in_dt.replace(tzinfo=timezone.utc)
+                
                 if period_start <= clock_in_dt <= period_end:
-                    period_hours += e.get("total_hours", 0) or 0
+                    entry_hours = e.get("total_hours", 0) or 0
+                    period_hours += entry_hours
                     period_shifts += 1
-            except (ValueError, TypeError):
+                    if period_index == 0:  # Debug for current period
+                        print(f"[PayrollHistory] Current period entry found: clock_in={clock_in_str}, hours={entry_hours}")
+            except (ValueError, TypeError) as ex:
+                print(f"[PayrollHistory] Error parsing clock_in: {clock_in_str}, error: {ex}")
                 continue
+        
+        if period_index == 0:
+            print(f"[PayrollHistory] Current period ({period_start} to {period_end}): {period_hours} hours, {period_shifts} shifts")
         
         # Calculate amount owed (round to minute first, like Employee Portal)
         rounded_hours = round_hours_to_minute(period_hours)

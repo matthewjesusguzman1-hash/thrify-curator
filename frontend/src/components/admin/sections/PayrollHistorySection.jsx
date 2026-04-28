@@ -20,7 +20,7 @@ import axios from "axios";
 const API = process.env.REACT_APP_BACKEND_URL || "";
 
 export default function PayrollHistorySection({ 
-  employees = [], 
+  employees: passedEmployees = [], 
   getAuthHeader,
   formatHoursToHMS,
   roundHoursToMinute,
@@ -33,6 +33,25 @@ export default function PayrollHistorySection({
   const [showEmployeeSelector, setShowEmployeeSelector] = useState(false);
   const [showPreviousPeriods, setShowPreviousPeriods] = useState(false);
   const [isExpanded, setIsExpanded] = useState(!isCollapsible); // Start collapsed if collapsible
+  const [allEmployees, setAllEmployees] = useState([]);
+
+  // Fetch ALL employees for payroll (including those with time entries)
+  useEffect(() => {
+    const fetchAllEmployees = async () => {
+      try {
+        const response = await axios.get(
+          `${API}/api/admin/payroll/all-employees-for-payment`,
+          getAuthHeader()
+        );
+        setAllEmployees(response.data || []);
+      } catch (error) {
+        console.error("Failed to fetch employees for payroll:", error);
+        // Fallback to passed employees
+        setAllEmployees(passedEmployees);
+      }
+    };
+    fetchAllEmployees();
+  }, []);
 
   // Fetch payroll history when employee is selected
   useEffect(() => {
@@ -72,8 +91,8 @@ export default function PayrollHistorySection({
     }).format(amount || 0);
   };
 
-  // Filter to only show employees (not admins without time entries)
-  const selectableEmployees = employees.filter(e => e.role !== 'admin' || e.id);
+  // Use fetched allEmployees or fallback to passed employees
+  const selectableEmployees = allEmployees.length > 0 ? allEmployees : passedEmployees;
 
   // Separate current period from previous periods
   const currentPeriod = historyData?.periods?.[0];
