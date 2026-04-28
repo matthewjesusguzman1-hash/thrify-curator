@@ -13,7 +13,10 @@ import {
   Search,
   RefreshCw,
   Users,
-  Package
+  Package,
+  Calendar,
+  Check,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,13 +46,18 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     employee_name: "",
     payment_type: "employee",
     consignment_client_email: "",
-    commission_split: ""
+    commission_split: "",
+    pay_periods: []  // Array of selected pay periods
   });
   const [pendingCheckImage, setPendingCheckImage] = useState(null);
   const [editingCheckRecord, setEditingCheckRecord] = useState(null);
   const [checkSearchQuery, setCheckSearchQuery] = useState("");
   const [expandedCheckRecords, setExpandedCheckRecords] = useState({});
   const checkInputRef = useRef(null);
+  
+  // Available pay periods for selection
+  const [availablePayPeriods, setAvailablePayPeriods] = useState([]);
+  const [showPayPeriodPicker, setShowPayPeriodPicker] = useState(false);
   
   // Consignment clients for dropdown
   const [consignmentClients, setConsignmentClients] = useState([]);
@@ -132,12 +140,24 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     }
   }, [getAuthHeader]);
 
+  // Fetch available pay periods
+  const fetchPayPeriods = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/payroll/available-pay-periods`, getAuthHeader());
+      setAvailablePayPeriods(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch pay periods:", error);
+      setAvailablePayPeriods([]);
+    }
+  }, [getAuthHeader]);
+
   // Auto-fetch on mount
   useEffect(() => {
     fetchCheckRecords();
     fetchConsignmentClients();
     fetchEmployees();
-  }, [fetchCheckRecords, fetchConsignmentClients, fetchEmployees]);
+    fetchPayPeriods();
+  }, [fetchCheckRecords, fetchConsignmentClients, fetchEmployees, fetchPayPeriods]);
 
   // Auto-refresh when section is expanded
   useEffect(() => {
@@ -145,8 +165,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       fetchCheckRecords();
       fetchConsignmentClients();
       fetchEmployees();
+      fetchPayPeriods();
     }
-  }, [isExpanded, fetchCheckRecords, fetchConsignmentClients, fetchEmployees]);
+  }, [isExpanded, fetchCheckRecords, fetchConsignmentClients, fetchEmployees, fetchPayPeriods]);
   
   // Fetch data when tab changes
   useEffect(() => {
@@ -226,7 +247,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
           employee_name: checkUploadData.employee_name || null,
           payment_type: checkUploadData.payment_type || activeTab,
           consignment_client_email: checkUploadData.consignment_client_email || null,
-          commission_split: activeTab === "consignment" ? (checkUploadData.commission_split || null) : null
+          commission_split: activeTab === "consignment" ? (checkUploadData.commission_split || null) : null,
+          pay_periods: checkUploadData.pay_periods || []
         };
         
         // If new image was selected, include it
@@ -251,7 +273,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
           employee_name: checkUploadData.employee_name || null,
           payment_type: activeTab,
           consignment_client_email: activeTab === "consignment" ? checkUploadData.consignment_client_email : null,
-          commission_split: activeTab === "consignment" ? (checkUploadData.commission_split || null) : null
+          commission_split: activeTab === "consignment" ? (checkUploadData.commission_split || null) : null,
+          pay_periods: checkUploadData.pay_periods || []
         };
         
         await axios.post(`${API}/admin/payroll/check-records`, payload, getAuthHeader());
@@ -266,7 +289,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
         employee_name: "",
         payment_type: activeTab,
         consignment_client_email: "",
-        commission_split: ""
+        commission_split: "",
+        pay_periods: []
       });
       
       // Cleanup preview URL
@@ -298,7 +322,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       employee_name: record.employee_name || "",
       payment_type: record.payment_type || "employee",
       consignment_client_email: record.consignment_client_email || "",
-      commission_split: record.commission_split || ""
+      commission_split: record.commission_split || "",
+      pay_periods: record.pay_periods || []
     });
     // Clear any pending image
     if (pendingCheckImage?.previewUrl) {
@@ -318,7 +343,8 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       employee_name: "",
       payment_type: activeTab,
       consignment_client_email: "",
-      commission_split: ""
+      commission_split: "",
+      pay_periods: []
     });
     if (pendingCheckImage?.previewUrl) {
       URL.revokeObjectURL(pendingCheckImage.previewUrl);
@@ -327,6 +353,31 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     if (checkInputRef.current) {
       checkInputRef.current.value = "";
     }
+  };
+
+  // Toggle pay period selection
+  const togglePayPeriod = (period) => {
+    const currentPeriods = checkUploadData.pay_periods || [];
+    const exists = currentPeriods.find(p => p.start === period.start && p.end === period.end);
+    
+    if (exists) {
+      // Remove period
+      setCheckUploadData({
+        ...checkUploadData,
+        pay_periods: currentPeriods.filter(p => !(p.start === period.start && p.end === period.end))
+      });
+    } else {
+      // Add period
+      setCheckUploadData({
+        ...checkUploadData,
+        pay_periods: [...currentPeriods, { start: period.start, end: period.end, label: period.label }]
+      });
+    }
+  };
+
+  // Check if a period is selected
+  const isPeriodSelected = (period) => {
+    return (checkUploadData.pay_periods || []).some(p => p.start === period.start && p.end === period.end);
   };
 
   // Delete record
@@ -518,7 +569,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                     </div>
                   )}
                   
-                  {/* Employee Selection (only for employee tab) */}
+                  {/* Employee Selection (only for employee tab when creating) */}
                   {activeTab === "employee" && !editingCheckRecord && (
                     <div className="mb-3 relative z-10">
                       <Label className="text-xs text-[#666]">
@@ -539,6 +590,59 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                     </div>
                   )}
                   
+                  {/* Employee Selection for editing - show picker too */}
+                  {activeTab === "employee" && editingCheckRecord && (
+                    <div className="mb-3 relative z-10">
+                      <Label className="text-xs text-[#666]">
+                        Employee
+                        {employees.length > 0 && <span className="text-purple-600 ml-1">({employees.length} available)</span>}
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => { setPickerSearch(""); setShowEmployeePicker(true); }}
+                        className="w-full h-10 text-sm border border-gray-300 rounded-md px-3 bg-white text-left flex items-center justify-between hover:border-purple-500 transition-colors"
+                        data-testid="select-employee-edit"
+                      >
+                        <span className={checkUploadData.employee_name ? "text-gray-900" : "text-gray-500"}>
+                          {checkUploadData.employee_name || "-- Tap to change employee --"}
+                        </span>
+                        <Pencil className="w-4 h-4 text-purple-400" />
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Pay Period Selection (for employee tab) */}
+                  {activeTab === "employee" && (
+                    <div className="mb-3">
+                      <Label className="text-xs text-[#666] flex items-center gap-2">
+                        <Calendar className="w-3 h-3" />
+                        Pay Period(s) Covered
+                        <span className="text-gray-400 ml-1">(Select one or more)</span>
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPayPeriodPicker(true)}
+                        className="w-full min-h-10 text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-left flex items-center justify-between hover:border-purple-500 transition-colors"
+                        data-testid="select-pay-periods"
+                      >
+                        <div className="flex-1">
+                          {(checkUploadData.pay_periods || []).length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {checkUploadData.pay_periods.map((p, idx) => (
+                                <span key={idx} className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                                  {p.label}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">-- Tap to select pay period(s) --</span>
+                          )}
+                        </div>
+                        <Plus className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" />
+                      </button>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                     <div>
                       <Label className="text-xs text-[#666]">{activeTab === "employee" ? "Employee Name" : "Client Name"}</Label>
@@ -548,7 +652,6 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                         value={checkUploadData.employee_name}
                         onChange={(e) => setCheckUploadData({ ...checkUploadData, employee_name: e.target.value })}
                         className="h-9 text-sm"
-                        disabled={!editingCheckRecord}
                         data-testid="payment-name-input"
                       />
                     </div>
@@ -764,7 +867,7 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                             <p className="font-medium text-[#333] truncate">
                               {record.employee_name || 'Unnamed'}
                             </p>
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
                               {record.check_date && (
                                 <span>{new Date(record.check_date).toLocaleDateString()}</span>
                               )}
@@ -781,6 +884,15 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                               {record.commission_split && (
                                 <span className="text-purple-600 text-xs bg-purple-50 px-2 py-0.5 rounded">
                                   {record.commission_split}
+                                </span>
+                              )}
+                              {/* Pay Periods Badge */}
+                              {record.pay_periods && record.pay_periods.length > 0 && (
+                                <span className="text-blue-600 text-xs bg-blue-50 px-2 py-0.5 rounded flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {record.pay_periods.length === 1 
+                                    ? record.pay_periods[0].label 
+                                    : `${record.pay_periods.length} periods`}
                                 </span>
                               )}
                             </div>
@@ -853,6 +965,20 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                                       <div>
                                         <span className="text-gray-500">Description:</span>
                                         <span className="ml-2 text-[#333]">{record.description}</span>
+                                      </div>
+                                    )}
+                                    {/* Pay Periods covered */}
+                                    {record.pay_periods && record.pay_periods.length > 0 && (
+                                      <div>
+                                        <span className="text-gray-500">Pay Period(s) Covered:</span>
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                          {record.pay_periods.map((period, idx) => (
+                                            <span key={idx} className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                              <Calendar className="w-3 h-3" />
+                                              {period.label}
+                                            </span>
+                                          ))}
+                                        </div>
                                       </div>
                                     )}
                                     <div>
@@ -1044,6 +1170,114 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
               ).length === 0 && (
                 <div className="p-4 text-center text-gray-500">No clients match your search</div>
               )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Pay Period Picker Modal */}
+      {showPayPeriodPicker && createPortal(
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
+          onClick={() => setShowPayPeriodPicker(false)}
+        >
+          <div
+            className="bg-white w-[95%] sm:w-[420px] rounded-xl max-h-[80vh] overflow-hidden shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-blue-50">
+              <div>
+                <h3 className="font-semibold text-blue-900">Select Pay Period(s)</h3>
+                <p className="text-xs text-blue-600 mt-0.5">
+                  Select one or more periods this payment covers
+                </p>
+              </div>
+              <button onClick={() => setShowPayPeriodPicker(false)} className="p-1 hover:bg-blue-100 rounded">
+                <X className="w-5 h-5 text-blue-600" />
+              </button>
+            </div>
+            
+            {/* Selected periods summary */}
+            {(checkUploadData.pay_periods || []).length > 0 && (
+              <div className="p-3 bg-blue-50/50 border-b border-blue-100">
+                <div className="text-xs text-blue-700 font-medium mb-1">Selected ({checkUploadData.pay_periods.length}):</div>
+                <div className="flex flex-wrap gap-1">
+                  {checkUploadData.pay_periods.map((p, idx) => (
+                    <span 
+                      key={idx} 
+                      className="inline-flex items-center gap-1 text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded cursor-pointer hover:bg-blue-300"
+                      onClick={() => togglePayPeriod(p)}
+                      title="Click to remove"
+                    >
+                      {p.label}
+                      <X className="w-3 h-3" />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="overflow-y-auto max-h-[55vh]">
+              {availablePayPeriods.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">Loading pay periods...</div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {availablePayPeriods.map((period, index) => {
+                    const isSelected = isPeriodSelected(period);
+                    return (
+                      <button
+                        key={`period-${index}`}
+                        onClick={() => togglePayPeriod(period)}
+                        className={`w-full px-4 py-3 text-left flex items-center justify-between transition-colors ${
+                          isSelected 
+                            ? 'bg-blue-50 hover:bg-blue-100' 
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                            isSelected 
+                              ? 'bg-blue-600 border-blue-600' 
+                              : 'border-gray-300'
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <div>
+                            <div className={`font-medium ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
+                              {period.label}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {period.type === 'current' && (
+                                <span className="text-green-600 font-medium">Current Period</span>
+                              )}
+                              {period.type === 'previous' && (
+                                <span className="text-amber-600">Previous Period</span>
+                              )}
+                              {period.type === 'past' && (
+                                <span>Past Period</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Selected</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            
+            {/* Done button */}
+            <div className="p-3 border-t border-gray-200 bg-gray-50">
+              <Button
+                onClick={() => setShowPayPeriodPicker(false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Done ({(checkUploadData.pay_periods || []).length} selected)
+              </Button>
             </div>
           </div>
         </div>,

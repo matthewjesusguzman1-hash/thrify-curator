@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone, timedelta
+from typing import Optional, List
 import io
 
 from reportlab.lib import colors
@@ -552,7 +553,6 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
 import base64
 import uuid
 from pydantic import BaseModel
-from typing import Optional
 
 class CheckRecordUpload(BaseModel):
     image_data: str  # base64 encoded
@@ -565,6 +565,7 @@ class CheckRecordUpload(BaseModel):
     payment_type: Optional[str] = "employee"  # "employee" or "consignment"
     consignment_client_email: Optional[str] = None  # For linking to consignment agreement
     commission_split: Optional[str] = None  # e.g., "50/50", "60/40" - for consignment payments
+    pay_periods: Optional[List[dict]] = None  # List of pay periods this payment covers: [{"start": "2026-04-27", "end": "2026-05-10", "label": "Apr 27 - May 10"}]
 
 class CheckRecordUpdate(BaseModel):
     description: Optional[str] = None
@@ -577,6 +578,7 @@ class CheckRecordUpdate(BaseModel):
     payment_type: Optional[str] = None
     consignment_client_email: Optional[str] = None
     commission_split: Optional[str] = None  # e.g., "50/50", "60/40" - for consignment payments
+    pay_periods: Optional[List[dict]] = None  # List of pay periods this payment covers
 
 @router.get("/check-records")
 async def get_check_records(admin: dict = Depends(get_admin_user)):
@@ -601,6 +603,7 @@ async def upload_check_record(data: CheckRecordUpload, admin: dict = Depends(get
         "payment_type": data.payment_type or "employee",
         "consignment_client_email": data.consignment_client_email,
         "commission_split": data.commission_split,
+        "pay_periods": data.pay_periods or [],  # Store pay periods this payment covers
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": admin.get("name", "Admin")
     }
@@ -671,6 +674,8 @@ async def update_check_record(record_id: str, data: CheckRecordUpdate, admin: di
         update_data["consignment_client_email"] = data.consignment_client_email
     if data.commission_split is not None:
         update_data["commission_split"] = data.commission_split
+    if data.pay_periods is not None:
+        update_data["pay_periods"] = data.pay_periods
     if data.image_data is not None:
         update_data["image_data"] = data.image_data
         update_data["filename"] = data.filename
@@ -741,6 +746,39 @@ async def get_all_employees_for_payment(admin: dict = Depends(get_admin_user)):
         {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1, "hourly_rate": 1, "role": 1}
     ).sort("name", 1).to_list(500)
     return employees
+
+
+@router.get("/available-pay-periods")
+async def get_available_pay_periods(admin: dict = Depends(get_admin_user)):
+    """Get list of available pay periods for selection (current + last 12 periods)."""
+    from app.services.helpers import get_biweekly_period
+    
+    periods = []
+    for i in range(13):  # Current period + 12 previous periods
+        period_start, period_end = get_biweekly_period(period_index=-i)
+        
+        # Format the label nicely
+        start_str = period_start.strftime("%b %d")
+        end_str = period_end.strftime("%b %d, %Y")
+        label = f"{start_str} - {end_str}"
+        
+        # Determine if this is current, previous, or older
+        if i == 0:
+            period_type = "current"
+        elif i == 1:
+            period_type = "previous"
+        else:
+            period_type = "past"
+        
+        periods.append({
+            "start": period_start.strftime("%Y-%m-%d"),
+            "end": period_end.strftime("%Y-%m-%d"),
+            "label": label,
+            "type": period_type,
+            "index": -i
+        })
+    
+    return periods
 
 
 @router.get("/client-payment-history/{email}")
