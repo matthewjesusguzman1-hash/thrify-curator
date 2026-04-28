@@ -80,7 +80,7 @@ export default function PayrollHistorySection({
   const previousPeriods = historyData?.periods?.slice(1) || [];
 
   // Render period details (reusable for both current and previous)
-  const renderPeriodDetails = (period) => (
+  const renderPeriodDetails = (period, isCurrent = false) => (
     <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div>
         <p className="text-xs text-gray-500 uppercase tracking-wide">Hours Worked</p>
@@ -91,52 +91,77 @@ export default function PayrollHistorySection({
         <p className="text-lg font-semibold text-gray-900 mt-1">{formatCurrency(period.hourly_rate)}</p>
       </div>
       <div>
-        <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Owed</p>
+        <p className="text-xs text-gray-500 uppercase tracking-wide">{isCurrent ? "To Be Paid" : "Amount Owed"}</p>
         <p className="text-lg font-semibold text-violet-600 mt-1">{formatCurrency(period.amount_owed)}</p>
       </div>
-      <div>
-        <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Paid</p>
-        <p className="text-lg font-semibold text-emerald-600 mt-1">{formatCurrency(period.amount_paid)}</p>
-      </div>
-    </div>
-  );
-
-  // Render balance status
-  const renderBalanceStatus = (period) => (
-    <div className={`mt-3 p-3 rounded-lg flex items-center gap-3 ${
-      period.balance > 0 
-        ? 'bg-amber-50 text-amber-800' 
-        : period.balance < 0 
-          ? 'bg-blue-50 text-blue-800'
-          : 'bg-green-50 text-green-800'
-    }`}>
-      {period.balance > 0 ? (
-        <>
-          <AlertCircle className="w-5 h-5" />
-          <span className="font-medium">
-            Balance Due: {formatCurrency(period.balance)}
-          </span>
-        </>
-      ) : period.balance < 0 ? (
-        <>
-          <AlertCircle className="w-5 h-5" />
-          <span className="font-medium">
-            Overpaid by: {formatCurrency(Math.abs(period.balance))}
-          </span>
-        </>
-      ) : period.amount_owed > 0 ? (
-        <>
-          <CheckCircle className="w-5 h-5" />
-          <span className="font-medium">Fully Paid</span>
-        </>
-      ) : (
-        <>
-          <CheckCircle className="w-5 h-5" />
-          <span className="font-medium">No hours worked this period</span>
-        </>
+      {!isCurrent && (
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Paid</p>
+          <p className="text-lg font-semibold text-emerald-600 mt-1">{formatCurrency(period.amount_paid)}</p>
+        </div>
       )}
     </div>
   );
+
+  // Render balance status (only for previous periods)
+  const renderBalanceStatus = (period, isCurrent = false) => {
+    // Don't show balance for current period - tally isn't done yet
+    if (isCurrent) {
+      if (period.amount_owed > 0) {
+        return (
+          <div className="mt-3 p-3 rounded-lg flex items-center gap-3 bg-blue-50 text-blue-800">
+            <Clock className="w-5 h-5" />
+            <span className="font-medium">
+              Pay period in progress - final amount due at period end
+            </span>
+          </div>
+        );
+      }
+      return (
+        <div className="mt-3 p-3 rounded-lg flex items-center gap-3 bg-gray-50 text-gray-600">
+          <Clock className="w-5 h-5" />
+          <span className="font-medium">No hours worked yet this period</span>
+        </div>
+      );
+    }
+    
+    // For previous periods, show actual balance
+    return (
+      <div className={`mt-3 p-3 rounded-lg flex items-center gap-3 ${
+        period.balance > 0 
+          ? 'bg-amber-50 text-amber-800' 
+          : period.balance < 0 
+            ? 'bg-blue-50 text-blue-800'
+            : 'bg-green-50 text-green-800'
+      }`}>
+        {period.balance > 0 ? (
+          <>
+            <AlertCircle className="w-5 h-5" />
+            <span className="font-medium">
+              Balance Due: {formatCurrency(period.balance)}
+            </span>
+          </>
+        ) : period.balance < 0 ? (
+          <>
+            <AlertCircle className="w-5 h-5" />
+            <span className="font-medium">
+              Overpaid by: {formatCurrency(Math.abs(period.balance))}
+            </span>
+          </>
+        ) : period.amount_owed > 0 ? (
+          <>
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">Fully Paid</span>
+          </>
+        ) : (
+          <>
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">No hours worked this period</span>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -323,8 +348,8 @@ export default function PayrollHistorySection({
                 </div>
               </div>
               <div className="p-4">
-                {renderPeriodDetails(currentPeriod)}
-                {renderBalanceStatus(currentPeriod)}
+                {renderPeriodDetails(currentPeriod, true)}
+                {renderBalanceStatus(currentPeriod, true)}
               </div>
             </div>
           )}
