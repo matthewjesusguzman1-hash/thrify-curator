@@ -739,10 +739,12 @@ async def get_employees_for_payment(admin: dict = Depends(get_admin_user)):
 
 @router.get("/all-employees-for-payment")
 async def get_all_employees_for_payment(admin: dict = Depends(get_admin_user)):
-    """Get ALL users for payroll history dropdown - includes everyone."""
-    # Get ALL users (including owners) for accurate payroll tracking
+    """Get employees for payroll history dropdown - excludes business owners."""
+    # Owner emails to exclude - they don't need payroll tracking
+    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
+    
     employees = await db.users.find(
-        {},  # No filter - include everyone
+        {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
         {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1, "hourly_rate": 1, "role": 1}
     ).sort("name", 1).to_list(500)
     return employees

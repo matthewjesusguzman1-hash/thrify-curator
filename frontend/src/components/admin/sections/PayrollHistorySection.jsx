@@ -475,16 +475,6 @@ export default function PayrollHistorySection({
           )}
         </div>
       )}
-
-              {/* Empty State - Compact */}
-              {!loading && !selectedEmployee && (
-                <div className="bg-gray-50 rounded-lg p-3 text-center text-sm text-gray-500">
-                  <span className="inline-flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-violet-400" />
-                    Select an employee above to view payroll history
-                  </span>
-                </div>
-              )}
             </div>
           </motion.div>
         )}
