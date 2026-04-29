@@ -784,6 +784,70 @@ async def get_consignment_clients(admin: dict = Depends(get_admin_user)):
     return clients
 
 
+@router.get("/orphaned-payment-records")
+async def get_orphaned_payment_records(admin: dict = Depends(get_admin_user)):
+    """Find payment records that don't match any current employee name."""
+    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
+    
+    # Get all valid employee names
+    employees = await db.users.find(
+        {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
+        {"_id": 0, "name": 1}
+    ).to_list(100)
+    valid_names = set(emp.get("name", "").strip().lower() for emp in employees if emp.get("name"))
+    
+    # Get all employee payment records
+    payment_records = await db.payroll_check_records.find(
+        {"payment_type": {"$in": ["employee", None]}},
+        {"_id": 0, "id": 1, "employee_name": 1, "amount": 1, "check_date": 1}
+    ).to_list(1000)
+    
+    orphaned = []
+    for record in payment_records:
+        record_name = (record.get("employee_name") or "").strip().lower()
+        if record_name not in valid_names:
+            orphaned.append({
+                "id": record.get("id"),
+                "employee_name": record.get("employee_name"),
+                "amount": record.get("amount"),
+                "check_date": record.get("check_date")
+            })
+    
+    return {
+        "valid_employee_names": list(valid_names),
+        "orphaned_records": orphaned,
+        "orphaned_count": len(orphaned)
+    }
+
+
+@router.delete("/orphaned-payment-records")
+async def delete_orphaned_payment_records(admin: dict = Depends(get_admin_user)):
+    """Delete all payment records that don't match any current employee name."""
+    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
+    
+    # Get all valid employee names
+    employees = await db.users.find(
+        {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
+        {"_id": 0, "name": 1}
+    ).to_list(100)
+    valid_names = set(emp.get("name", "").strip().lower() for emp in employees if emp.get("name"))
+    
+    # Get all employee payment records
+    payment_records = await db.payroll_check_records.find(
+        {"payment_type": {"$in": ["employee", None]}},
+        {"_id": 0, "id": 1, "employee_name": 1}
+    ).to_list(1000)
+    
+    deleted_count = 0
+    for record in payment_records:
+        record_name = (record.get("employee_name") or "").strip().lower()
+        if record_name not in valid_names:
+            await db.payroll_check_records.delete_one({"id": record.get("id")})
+            deleted_count += 1
+    
+    return {"deleted_count": deleted_count, "message": f"Deleted {deleted_count} orphaned payment records"}
+
+
 @router.get("/employees-for-payment")
 async def get_employees_for_payment(admin: dict = Depends(get_admin_user)):
     """Get all employees (non-admin users) for payment selection dropdown.
