@@ -56,7 +56,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     """Get payroll summary:
     - This Period: wages owed for current period (hours × rate)
     - Outstanding: unpaid wages from previous periods
-    - This Month/Year: actual payments from check_records (only for valid employees)
+    - This Month/Year: actual payments from check_records (matching employee names exactly)
     """
     from app.services.helpers import get_biweekly_period
     
@@ -85,12 +85,12 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
         {"_id": 0}
     ).to_list(100)
     
-    # Build list of valid employee names (case-insensitive)
-    valid_employee_names = set()
+    # Build dict of valid employee names -> their exact name (for matching)
+    valid_employee_names = {}
     for emp in employees:
         emp_name = emp.get("name", "")
         if emp_name:
-            valid_employee_names.add(emp_name.strip().lower())
+            valid_employee_names[emp_name.strip().lower()] = emp_name.strip()
     
     # Calculate wages owed for current period
     current_period_amount = 0
@@ -143,13 +143,14 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             emp_pay = rounded_hours * hourly_rate
             prev_period_amount += emp_pay
     
-    # Get ACTUAL PAYMENTS from payroll_check_records (only for valid employees)
+    # Get ACTUAL PAYMENTS from payroll_check_records
+    # Match payments using EXACT employee names from db.users
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
     # Fetch all check records (employee payments)
     check_records = await db.payroll_check_records.find(
-        {"payment_type": {"$in": ["employee", None]}},  # Employee payments only
+        {"payment_type": {"$in": ["employee", None]}},
         {"_id": 0, "amount": 1, "check_date": 1, "pay_periods": 1, "employee_name": 1}
     ).to_list(1000)
     
@@ -158,7 +159,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     prev_period_paid = 0
     
     for record in check_records:
-        # Only count payments for valid employees
+        # Match payment record's employee_name against valid employees (case-insensitive)
         record_name = (record.get("employee_name") or "").strip().lower()
         if record_name not in valid_employee_names:
             continue
@@ -195,6 +196,10 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     
     # Calculate outstanding (previous period owed minus what was paid for that period)
     outstanding_amount = max(0, prev_period_amount - prev_period_paid)
+    
+    # Debug log
+    print(f"[PayrollSummary] Valid employees: {list(valid_employee_names.keys())}")
+    print(f"[PayrollSummary] Month total: ${month_total}, Year total: ${year_total}")
     
     return {
         "current_period": {
@@ -908,6 +913,52 @@ async def cleanup_payroll_data(admin: dict = Depends(get_admin_user)):
         "deleted_test_employees": deleted_employees,
         "deleted_orphaned_payments": deleted_payments,
         "message": f"Cleanup complete. Kept {len(employees_with_hours)} employee(s) with hours. Deleted {deleted_employees} test employee(s) and {deleted_payments} orphaned payment record(s)."
+    }
+
+
+@router.get("/debug-name-matching")
+async def debug_name_matching(admin: dict = Depends(get_admin_user)):
+    """Debug endpoint to show name matching between employees and payment records."""
+    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
+    
+    # Get all employees (excluding owners)
+    employees = await db.users.find(
+        {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
+        {"_id": 0, "id": 1, "name": 1, "email": 1}
+    ).to_list(100)
+    
+    employee_names = [{"name": e.get("name"), "name_lower": e.get("name", "").strip().lower(), "email": e.get("email")} for e in employees]
+    
+    # Get all payment records
+    payment_records = await db.payroll_check_records.find(
+        {"payment_type": {"$in": ["employee", None]}},
+        {"_id": 0, "id": 1, "employee_name": 1, "amount": 1, "check_date": 1}
+    ).to_list(1000)
+    
+    payment_names = [{"name": p.get("employee_name"), "name_lower": (p.get("employee_name") or "").strip().lower(), "amount": p.get("amount"), "date": p.get("check_date")} for p in payment_records]
+    
+    # Find matches and mismatches
+    employee_name_set = set(e["name_lower"] for e in employee_names)
+    
+    matched = []
+    unmatched = []
+    for p in payment_names:
+        if p["name_lower"] in employee_name_set:
+            matched.append(p)
+        else:
+            unmatched.append(p)
+    
+    return {
+        "employees_in_db": employee_names,
+        "payment_records": payment_names,
+        "matched_payments": matched,
+        "unmatched_payments": unmatched,
+        "summary": {
+            "total_employees": len(employee_names),
+            "total_payments": len(payment_names),
+            "matched": len(matched),
+            "unmatched": len(unmatched)
+        }
     }
 
 
