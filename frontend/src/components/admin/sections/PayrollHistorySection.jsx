@@ -294,23 +294,31 @@ export default function PayrollHistorySection({
               <div className="flex items-center gap-1 px-2 py-1 bg-violet-100 rounded-md">
                 <Calendar className="w-3 h-3 text-violet-600" />
                 <span className="font-semibold text-violet-700">{formatCurrency(historyData.current_period?.amount_owed || 0)}</span>
-                <span className="text-violet-600 text-xs">period</span>
+                <span className="text-violet-600 text-xs">to pay</span>
               </div>
+              {/* Show owed badge if there's unpaid balance */}
+              {(historyData.month_summary?.balance > 0 || historyData.year_summary?.balance > 0) && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-red-100 rounded-md">
+                  <AlertCircle className="w-3 h-3 text-red-600" />
+                  <span className="font-semibold text-red-700">{formatCurrency(Math.max(historyData.month_summary?.balance || 0, historyData.year_summary?.balance || 0))}</span>
+                  <span className="text-red-600 text-xs">owed</span>
+                </div>
+              )}
               <div className="flex items-center gap-1 px-2 py-1 bg-emerald-100 rounded-md">
                 <TrendingUp className="w-3 h-3 text-emerald-600" />
-                <span className="font-semibold text-emerald-700">{formatCurrency(historyData.month_summary?.amount_owed || 0)}</span>
-                <span className="text-emerald-600 text-xs">month</span>
+                <span className="font-semibold text-emerald-700">{formatCurrency(historyData.month_summary?.amount_paid || 0)}</span>
+                <span className="text-emerald-600 text-xs">paid month</span>
               </div>
               <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 rounded-md">
                 <Wallet className="w-3 h-3 text-amber-600" />
-                <span className="font-semibold text-amber-700">{formatCurrency(historyData.year_summary?.amount_owed || 0)}</span>
-                <span className="text-amber-600 text-xs">year</span>
+                <span className="font-semibold text-amber-700">{formatCurrency(historyData.year_summary?.amount_paid || 0)}</span>
+                <span className="text-amber-600 text-xs">paid year</span>
               </div>
             </div>
           ) : (
             /* Full Summary Cards */
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Current Period Card */}
+              {/* Current Period Card - To Be Paid */}
               <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl p-4 text-white">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar className="w-4 h-4 opacity-80" />
@@ -320,35 +328,41 @@ export default function PayrollHistorySection({
                   {formatCurrency(historyData.current_period?.amount_owed || 0)}
                 </p>
                 <p className="text-sm opacity-80 mt-1">
-                  {historyData.current_period?.hours_display || "0h 0m"} worked
+                  {historyData.current_period?.hours_display || "0h 0m"} worked • To Be Paid
                 </p>
               </div>
 
-              {/* This Month Card */}
+              {/* This Month Card - Amount Paid */}
               <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-4 text-white">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="w-4 h-4 opacity-80" />
                   <span className="text-sm opacity-80">{historyData.month_summary?.label || "This Month"}</span>
                 </div>
                 <p className="text-2xl font-bold">
-                  {formatCurrency(historyData.month_summary?.amount_owed || 0)}
+                  {formatCurrency(historyData.month_summary?.amount_paid || 0)}
                 </p>
                 <p className="text-sm opacity-80 mt-1">
-                  {historyData.month_summary?.hours_display || "0h 0m"} worked
+                  Paid This Month
+                  {historyData.month_summary?.balance > 0 && (
+                    <span className="ml-2 text-yellow-200">• {formatCurrency(historyData.month_summary.balance)} owed</span>
+                  )}
                 </p>
               </div>
 
-              {/* This Year Card */}
+              {/* This Year Card - Amount Paid */}
               <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-4 text-white">
                 <div className="flex items-center gap-2 mb-2">
                   <Wallet className="w-4 h-4 opacity-80" />
                   <span className="text-sm opacity-80">{historyData.year_summary?.label || "This Year"}</span>
                 </div>
                 <p className="text-2xl font-bold">
-                  {formatCurrency(historyData.year_summary?.amount_owed || 0)}
+                  {formatCurrency(historyData.year_summary?.amount_paid || 0)}
                 </p>
                 <p className="text-sm opacity-80 mt-1">
-                  {historyData.year_summary?.hours_display || "0h 0m"} worked
+                  Paid This Year
+                  {historyData.year_summary?.balance > 0 && (
+                    <span className="ml-2 text-yellow-200">• {formatCurrency(historyData.year_summary.balance)} owed</span>
+                  )}
                 </p>
               </div>
             </div>
