@@ -4,6 +4,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide Emergent badge */
+[class*="emergent"], 
+[id*="emergent"],
+a[href*="emergent"],
+div[style*="emergent"],
+iframe[src*="emergent"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+
 :root {
     /* Black Bold Color Palette */
     --primary: #00D4FF;
