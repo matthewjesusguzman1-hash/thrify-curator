@@ -18,6 +18,7 @@ import {
   ELP_REQUIRED_SIGNS, ELP_SIGN_PASS_THRESHOLD,
 } from "../lib/elpContent";
 import { SignDisplay } from "../components/elp/SignDisplay";
+import { PdfViewerModal } from "../components/elp/PdfViewerModal";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -840,44 +841,18 @@ export default function ElpAssessmentPage() {
         </DialogContent>
       </Dialog>
 
-      {/* FMCSA Enforcement Memo viewer — in-app PDF viewer to avoid the
-          blank-tab issue some mobile browsers have when opening a PDF via
-          target="_blank". Falls back to "Open in new tab" if the iframe
-          can't render the PDF inline. */}
+      {/* FMCSA Enforcement Memo viewer — pdf.js based, renders reliably on
+          iOS, Android and desktop. The previous <iframe> approach broke on
+          iOS Safari/PWA where the OS would replace it with a download prompt
+          that had no Close control. */}
       {showMemo && (
-        <div className="fixed inset-0 z-[120] bg-black/80 flex items-center justify-center p-2 sm:p-6" data-testid="elp-memo-modal">
-          <div className="bg-white rounded-xl w-full max-w-[900px] h-full sm:h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 bg-[#002855] text-white">
-              <FileText className="w-4 h-4 text-[#D4AF37]" />
-              <p className="text-[12.5px] font-bold flex-1 truncate">FMCSA ELP Enforcement Memo · MC-SEE-2026-0002</p>
-              <a
-                href="/elp-docs/FMCSA-ELP-Guidance-2026.pdf"
-                download="FMCSA-ELP-Guidance-2026.pdf"
-                className="text-[11px] font-bold bg-[#D4AF37] text-[#002855] hover:bg-[#E0BE50] rounded px-2 py-1 transition-colors"
-                data-testid="elp-memo-download"
-              >
-                Download
-              </a>
-              <button
-                onClick={() => setShowMemo(false)}
-                className="text-white/80 hover:text-white p-1"
-                data-testid="elp-memo-close"
-                aria-label="Close memo viewer"
-              >
-                <XCircle className="w-5 h-5" />
-              </button>
-            </div>
-            <iframe
-              src="/elp-docs/FMCSA-ELP-Guidance-2026.pdf#view=FitH"
-              title="FMCSA ELP Enforcement Memo"
-              className="flex-1 w-full bg-[#525659]"
-              data-testid="elp-memo-iframe"
-            />
-            <div className="px-3 py-2 bg-[#F8FAFC] border-t text-[10.5px] text-[#475569]">
-              Trouble viewing? <a href="/elp-docs/FMCSA-ELP-Guidance-2026.pdf" target="_blank" rel="noreferrer" className="text-[#1D4ED8] font-bold underline">Open in a new tab</a> or use Download.
-            </div>
-          </div>
-        </div>
+        <PdfViewerModal
+          src="/elp-docs/FMCSA-ELP-Guidance-2026.pdf"
+          title="FMCSA ELP Enforcement Memo · MC-SEE-2026-0002"
+          downloadName="FMCSA-ELP-Guidance-2026.pdf"
+          onClose={() => setShowMemo(false)}
+          data-testid="elp-memo-modal"
+        />
       )}
 
       {/* Show-to-Driver fullscreen overlay (rendered as a sibling so the
