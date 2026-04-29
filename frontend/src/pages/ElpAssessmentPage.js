@@ -504,13 +504,16 @@ export default function ElpAssessmentPage() {
                   <span className="font-bold">Only administer this test if the interview was Inconclusive.</span> If the driver failed Test 1, do not proceed — they are already OOS.
                 </li>
                 <li>
-                  <span className="font-bold">Explain to the driver</span> that one of the qualifications to drive a CMV is being able to understand the meaning of U.S. highway signs.
+                  <span className="font-bold">Explain to the driver</span> that one of the qualifications to drive a CMV that you are evaluating is that the driver can understand the meaning of U.S. highway signs.
                 </li>
                 <li>
-                  <span className="font-bold">Select {ELP_REQUIRED_SIGNS} signs</span> from the grid below (Attachment B — MUTCD-conforming traffic signs and electronic-display dynamic message signs the driver may encounter while operating a CMV).
+                  <span className="font-bold">Select {ELP_REQUIRED_SIGNS} signs from Attachment B</span> (the grid below — MUTCD-conforming traffic signs and electronic-display dynamic message signs the driver may encounter while operating a CMV).
                 </li>
                 <li>
-                  <span className="font-bold">On the run screen, tap a sign to enlarge it</span> for the driver. Tap anywhere to return.
+                  <span className="font-bold">Explain to the driver</span> that to be considered qualified in understanding highway traffic signs in English under the regulation, they must be able to satisfactorily explain the meaning of at least <span className="font-bold">{ELP_SIGN_PASS_THRESHOLD} of the {ELP_REQUIRED_SIGNS}</span> selected signs.
+                </li>
+                <li>
+                  <span className="font-bold">Ask the driver to explain the meaning of each of the {ELP_REQUIRED_SIGNS} selected highway signs.</span> On the run screen, tap a sign to enlarge it for the driver; tap anywhere to return.
                 </li>
                 <li>
                   <span className="font-bold text-[#7F1D1D]">If the driver cannot satisfactorily explain at least {ELP_SIGN_PASS_THRESHOLD} of {ELP_REQUIRED_SIGNS} signs</span>, cite §391.11(b)(2) and place the driver out of service.
@@ -908,7 +911,7 @@ export default function ElpAssessmentPage() {
 
 /* ──────────────── Sub-components ──────────────── */
 
-function CollapsibleInstructions({ title, subtitle, testid, children, defaultOpen = true }) {
+function CollapsibleInstructions({ title, subtitle, testid, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="rounded-xl bg-white border-l-[3px] border-[#002855] overflow-hidden" data-testid={testid}>
