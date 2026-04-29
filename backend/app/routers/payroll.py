@@ -978,19 +978,36 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         amount_paid = round(amount_paid, 2)
         balance = round(amount_owed - amount_paid, 2)
         
-        periods.append({
-            "period_start": period_start.isoformat(),
-            "period_end": period_end.isoformat(),
-            "period_label": f"{period_start.strftime('%b %d')} - {period_end.strftime('%b %d, %Y')}",
-            "is_current": period_index == 0,
-            "hours": round(period_hours, 2),
-            "hours_display": format_hours_hms(period_hours),
-            "shifts": period_shifts,
-            "hourly_rate": hourly_rate,
-            "amount_owed": amount_owed,
-            "amount_paid": amount_paid,
-            "balance": balance
-        })
+        # Only include periods where employee has worked hours OR has a balance
+        if period_hours > 0 or amount_paid > 0:
+            periods.append({
+                "period_start": period_start.isoformat(),
+                "period_end": period_end.isoformat(),
+                "period_label": f"{period_start.strftime('%b %d')} - {period_end.strftime('%b %d, %Y')}",
+                "is_current": period_index == 0,
+                "hours": round(period_hours, 2),
+                "hours_display": format_hours_hms(period_hours),
+                "shifts": period_shifts,
+                "hourly_rate": hourly_rate,
+                "amount_owed": amount_owed,
+                "amount_paid": amount_paid,
+                "balance": balance
+            })
+        elif period_index == 0:
+            # Always include current period even if no hours yet
+            periods.append({
+                "period_start": period_start.isoformat(),
+                "period_end": period_end.isoformat(),
+                "period_label": f"{period_start.strftime('%b %d')} - {period_end.strftime('%b %d, %Y')}",
+                "is_current": True,
+                "hours": 0,
+                "hours_display": "0h 0m",
+                "shifts": 0,
+                "hourly_rate": hourly_rate,
+                "amount_owed": 0,
+                "amount_paid": 0,
+                "balance": 0
+            })
     
     # Calculate monthly totals (current month)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
