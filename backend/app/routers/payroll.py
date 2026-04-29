@@ -91,7 +91,6 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
         emp_name = emp.get("name", "")
         if emp_name:
             valid_employee_names.add(emp_name.strip().lower())
-    ).to_list(100)
     
     # Calculate wages owed for current period
     current_period_amount = 0
