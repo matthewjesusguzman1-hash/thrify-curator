@@ -361,7 +361,15 @@ export default function ElpAssessmentPage() {
               <ol className="text-[11px] text-[#334155] leading-relaxed list-decimal ml-4 space-y-1">
                 <li>Tell the driver (in English or any language they understand) that you will conduct the interview <span className="font-bold">in English</span>, and that they should respond in English.</li>
                 <li>Speak slowly and naturally; paraphrase as needed (alternates are listed under each question).</li>
-                <li>There is <span className="font-bold">no minimum number of questions</span>. Use enough to form a judgment.</li>
+                <li>There is <span className="font-bold">no fixed minimum number of questions</span>, but the memo requires you to <span className="font-bold">at a minimum cover these five topics</span>:
+                  <ul className="list-disc ml-4 mt-1 space-y-0.5">
+                    <li>Origin and destination of the trip</li>
+                    <li>Time spent on duty, including driving time and the record of duty status (logbook)</li>
+                    <li>Information on the driver’s license</li>
+                    <li>Information on the shipping papers (including hazmat papers if applicable)</li>
+                    <li>Vehicle equipment subject to inspection</li>
+                  </ul>
+                </li>
                 <li>Tap the checkbox to log a question as asked, and capture the driver’s verbatim response in the notes field.</li>
               </ol>
             </div>
