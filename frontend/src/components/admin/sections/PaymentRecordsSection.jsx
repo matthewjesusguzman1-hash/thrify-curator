@@ -16,7 +16,8 @@ import {
   Package,
   Calendar,
   Check,
-  Plus
+  Plus,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,30 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
   const [showEmployeePicker, setShowEmployeePicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
+  
+  // Cleanup state
+  const [cleaningUp, setCleaningUp] = useState(false);
+
+  // Cleanup orphaned records
+  const handleCleanupPayrollData = async () => {
+    if (!window.confirm("This will remove test employees and payment records that don't match any current employee. Continue?")) {
+      return;
+    }
+    
+    setCleaningUp(true);
+    try {
+      const response = await axios.post(`${API}/admin/payroll/cleanup-payroll-data`, {}, getAuthHeader());
+      toast.success(response.data.message);
+      // Refresh data
+      fetchCheckRecords();
+      fetchEmployees();
+    } catch (error) {
+      console.error("Cleanup failed:", error);
+      toast.error("Failed to cleanup payroll data");
+    } finally {
+      setCleaningUp(false);
+    }
+  };
 
   // Helper: Filter check records by type and search
   const getFilteredCheckRecords = () => {
@@ -465,6 +490,15 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); handleCleanupPayrollData(); }}
+              disabled={cleaningUp}
+              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+              title="Cleanup orphaned records"
+              data-testid="cleanup-payroll-btn"
+            >
+              <Sparkles className={`w-4 h-4 ${cleaningUp ? 'animate-spin' : ''}`} />
+            </button>
             {isExpanded ? (
               <ChevronUp className="w-5 h-5 text-[#888]" />
             ) : (

@@ -848,6 +848,70 @@ async def delete_orphaned_payment_records(admin: dict = Depends(get_admin_user))
     return {"deleted_count": deleted_count, "message": f"Deleted {deleted_count} orphaned payment records"}
 
 
+@router.post("/cleanup-payroll-data")
+async def cleanup_payroll_data(admin: dict = Depends(get_admin_user)):
+    """
+    One-time cleanup: Keep only employees with actual hours worked and their payment records.
+    Removes test employees and orphaned payment records.
+    """
+    OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
+    
+    # Get all employees (excluding owners)
+    all_employees = await db.users.find(
+        {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Find employees with actual hours worked
+    employees_with_hours = []
+    employees_to_delete = []
+    
+    for emp in all_employees:
+        emp_id = emp.get("id")
+        emp_name = emp.get("name", "")
+        if not emp_id:
+            continue
+        
+        # Check if employee has any time entries
+        time_entries = await db.time_entries.find({"user_id": emp_id}).to_list(1)
+        
+        if time_entries:
+            employees_with_hours.append(emp_name.strip().lower())
+        else:
+            employees_to_delete.append(emp)
+    
+    # Delete test employees (no hours)
+    deleted_employees = 0
+    for emp in employees_to_delete:
+        emp_id = emp.get("id")
+        if emp_id:
+            await db.users.delete_one({"id": emp_id})
+            # Also delete their time entries (should be none, but just in case)
+            await db.time_entries.delete_many({"user_id": emp_id})
+            deleted_employees += 1
+    
+    # Delete payment records that don't match employees with hours
+    payment_records = await db.payroll_check_records.find(
+        {"payment_type": {"$in": ["employee", None]}},
+        {"_id": 0, "id": 1, "employee_name": 1}
+    ).to_list(1000)
+    
+    deleted_payments = 0
+    for record in payment_records:
+        record_name = (record.get("employee_name") or "").strip().lower()
+        if record_name not in employees_with_hours:
+            await db.payroll_check_records.delete_one({"id": record.get("id")})
+            deleted_payments += 1
+    
+    return {
+        "success": True,
+        "employees_with_hours": employees_with_hours,
+        "deleted_test_employees": deleted_employees,
+        "deleted_orphaned_payments": deleted_payments,
+        "message": f"Cleanup complete. Kept {len(employees_with_hours)} employee(s) with hours. Deleted {deleted_employees} test employee(s) and {deleted_payments} orphaned payment record(s)."
+    }
+
+
 @router.get("/employees-for-payment")
 async def get_employees_for_payment(admin: dict = Depends(get_admin_user)):
     """Get all employees (non-admin users) for payment selection dropdown.
