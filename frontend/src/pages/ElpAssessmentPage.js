@@ -355,22 +355,35 @@ export default function ElpAssessmentPage() {
         {/* PHASE: INTERVIEW */}
         {phase === "interview" && (
           <section className="space-y-2" data-testid="elp-phase-interview">
-            {/* How to run this test — instructions block */}
+            {/* How to run this test — instructions block (from FMCSA memo MC-SEE-2026-0002) */}
             <div className="rounded-xl bg-white border-l-[3px] border-[#002855] p-3" data-testid="elp-interview-instructions">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[#002855] mb-1.5">How to run Test 1 — Interview</p>
-              <ol className="text-[11px] text-[#334155] leading-relaxed list-decimal ml-4 space-y-1">
-                <li>Tell the driver (in English or any language they understand) that you will conduct the interview <span className="font-bold">in English</span>, and that they should respond in English.</li>
-                <li>Speak slowly and naturally; paraphrase as needed (alternates are listed under each question).</li>
-                <li>There is <span className="font-bold">no fixed minimum number of questions</span>, but the memo requires you to <span className="font-bold">at a minimum cover these five topics</span>:
+              <p className="text-[10px] font-black uppercase tracking-wider text-[#002855] mb-1.5">How to run Test 1 — Interview · per FMCSA memo</p>
+              <ol className="text-[11px] text-[#334155] leading-relaxed list-decimal ml-4 space-y-1.5">
+                <li>
+                  <span className="font-bold">Explain the assessment to the driver.</span> You may explain in English or any language the driver understands, that (a) the interview will be conducted in English; (b) you will evaluate the driver’s ability to respond in English, so the driver should respond in English; and (c) if the driver cannot respond sufficiently, you will cite §391.11(b)(2).
+                </li>
+                <li>
+                  <span className="font-bold">Speak slowly, but naturally.</span> Don’t rush the questions. Paraphrase in English as appropriate (alternates are listed under each question).
+                </li>
+                <li>
+                  <span className="font-bold">At a minimum, your inquiries must cover these five topics:</span>
                   <ul className="list-disc ml-4 mt-1 space-y-0.5">
                     <li>Origin and destination of the trip</li>
                     <li>Time spent on duty, including driving time and the record of duty status (logbook)</li>
-                    <li>Information on the driver’s license</li>
-                    <li>Information on the shipping papers (including hazmat papers if applicable)</li>
+                    <li>Information contained in the driver’s license</li>
+                    <li>Information on the shipping papers (including hazmat papers, if applicable)</li>
                     <li>Vehicle equipment subject to inspection</li>
                   </ul>
                 </li>
-                <li>Tap the checkbox to log a question as asked, and capture the driver’s verbatim response in the notes field.</li>
+                <li>
+                  <span className="font-bold text-[#7F1D1D]">Do NOT use communication aids during the interview.</span> Interpreters, I-Speak cards, cue cards, smartphone translation apps, and On-Call Telephone Interpretation Service must not be used — they mask the driver’s inability to communicate in English.
+                </li>
+                <li>
+                  <span className="font-bold">Document the driver’s responses (or lack thereof)</span> in the notes field for each question. This evidence supports the violation if cited.
+                </li>
+                <li>
+                  <span className="font-bold">If the driver cannot respond sufficiently in English</span>, mark the interview <span className="font-bold text-[#7F1D1D]">FAIL</span> and place the driver out of service. <span className="italic">Do not proceed to the highway sign test.</span>
+                </li>
               </ol>
             </div>
 
