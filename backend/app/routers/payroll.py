@@ -56,7 +56,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     """Get payroll summary:
     - This Period: wages owed for current period (hours × rate)
     - Outstanding: unpaid wages from previous periods
-    - This Month/Year: actual payments from check_records
+    - This Month/Year: actual payments from check_records (only for valid employees)
     """
     from app.services.helpers import get_biweekly_period
     
@@ -83,6 +83,14 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     employees = await db.users.find(
         {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
         {"_id": 0}
+    ).to_list(100)
+    
+    # Build list of valid employee names (case-insensitive)
+    valid_employee_names = set()
+    for emp in employees:
+        emp_name = emp.get("name", "")
+        if emp_name:
+            valid_employee_names.add(emp_name.strip().lower())
     ).to_list(100)
     
     # Calculate wages owed for current period
@@ -136,14 +144,14 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             emp_pay = rounded_hours * hourly_rate
             prev_period_amount += emp_pay
     
-    # Get ACTUAL PAYMENTS from payroll_check_records
+    # Get ACTUAL PAYMENTS from payroll_check_records (only for valid employees)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
     # Fetch all check records (employee payments)
     check_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},  # Employee payments only
-        {"_id": 0, "amount": 1, "check_date": 1, "pay_periods": 1}
+        {"_id": 0, "amount": 1, "check_date": 1, "pay_periods": 1, "employee_name": 1}
     ).to_list(1000)
     
     month_total = 0
@@ -151,6 +159,11 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     prev_period_paid = 0
     
     for record in check_records:
+        # Only count payments for valid employees
+        record_name = (record.get("employee_name") or "").strip().lower()
+        if record_name not in valid_employee_names:
+            continue
+            
         amount = record.get("amount", 0) or 0
         check_date_str = record.get("check_date", "")
         pay_periods = record.get("pay_periods", [])
