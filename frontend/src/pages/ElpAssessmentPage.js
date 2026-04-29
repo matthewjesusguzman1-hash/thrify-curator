@@ -513,12 +513,6 @@ export default function ElpAssessmentPage() {
                   <span className="font-bold">On the run screen, tap a sign to enlarge it</span> for the driver. Tap anywhere to return.
                 </li>
                 <li>
-                  <span className="font-bold">Tell the driver that to be considered qualified, they must satisfactorily explain at least {ELP_SIGN_PASS_THRESHOLD} of the {ELP_REQUIRED_SIGNS} signs.</span> Ask the driver to explain the meaning of each sign.
-                </li>
-                <li>
-                  <span className="font-bold">The driver’s explanation may be in any language</span>, provided you can understand the explanation. Mark <span className="font-bold">Identified</span> or <span className="font-bold">Not Identified</span>, and capture the verbatim response in the notes.
-                </li>
-                <li>
                   <span className="font-bold text-[#7F1D1D]">If the driver cannot satisfactorily explain at least {ELP_SIGN_PASS_THRESHOLD} of {ELP_REQUIRED_SIGNS} signs</span>, cite §391.11(b)(2) and place the driver out of service.
                 </li>
                 <li>
@@ -921,21 +915,21 @@ function CollapsibleInstructions({ title, subtitle, testid, children, defaultOpe
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#F8FAFC] transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 text-left bg-[#002855] hover:bg-[#001a3a] transition-colors"
         data-testid={`${testid}-toggle`}
         aria-expanded={open}
       >
-        <Info className="w-3.5 h-3.5 text-[#002855] flex-shrink-0" />
+        <Info className="w-3.5 h-3.5 text-[#D4AF37] flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-wider text-[#002855]">{title}</p>
-          {subtitle && <p className="text-[10.5px] text-[#475569] leading-tight truncate">{subtitle}</p>}
+          <p className="text-[10px] font-black uppercase tracking-wider text-white">{title}</p>
+          {subtitle && <p className="text-[10.5px] text-white/70 leading-tight truncate">{subtitle}</p>}
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-[#64748B] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`w-4 h-4 text-white/80 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
       {open && (
-        <div className="px-3 pb-3 pt-1 border-t border-[#F1F5F9]">
+        <div className="px-3 pb-3 pt-3">
           {children}
         </div>
       )}
