@@ -315,11 +315,8 @@ export default function ElpAssessmentPage() {
           <p className="text-[11.5px] text-[#78350F] leading-relaxed mb-1.5">
             Per the FMCSA enforcement memo (MC-SEE-2026-0002):
           </p>
-          <p className="text-[11.5px] text-[#78350F] leading-relaxed italic mb-1.5">
-            “If the inspector cites the driver for a violation of 49 CFR § 391.11(b)(2), the inspector <span className="font-black not-italic">must document all evidence</span> to support the identified violation including the driver’s responses or lack thereof.”
-          </p>
           <p className="text-[11.5px] text-[#78350F] leading-relaxed italic">
-            “Inspectors <span className="font-black not-italic">must document the evidence</span> of the violation and for the OOS order so that, when warranted, FMCSA may initiate the driver disqualification proceedings…”
+            “If the inspector cites the driver for a violation of 49 CFR § 391.11(b)(2), the inspector <span className="font-black not-italic">must document all evidence</span> to support the identified violation including the driver’s responses or lack thereof.”
           </p>
         </div>
 
