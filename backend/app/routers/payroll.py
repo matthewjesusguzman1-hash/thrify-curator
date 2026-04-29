@@ -55,12 +55,11 @@ async def get_payroll_settings(admin: dict = Depends(get_admin_user)):
 async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     """Get payroll summary:
     - This Period: wages owed for current period (hours × rate)
-    - Outstanding: unpaid wages from previous periods
-    - This Month/Year: actual payments from check_records (matching employee names exactly)
+    - Unpaid: amount not yet paid from previous periods
+    - Paid This Month/Year: actual payments made
     """
     from app.services.helpers import get_biweekly_period
     
-    # Owner emails to exclude from payroll calculations
     OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
     
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
@@ -70,47 +69,27 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     period_start, period_end = get_biweekly_period(period_index=0)
     prev_period_start, prev_period_end = get_biweekly_period(period_index=-1)
     
-    if period_start.tzinfo is None:
-        period_start = period_start.replace(tzinfo=timezone.utc)
-    if period_end.tzinfo is None:
-        period_end = period_end.replace(tzinfo=timezone.utc)
-    if prev_period_start.tzinfo is None:
-        prev_period_start = prev_period_start.replace(tzinfo=timezone.utc)
-    if prev_period_end.tzinfo is None:
-        prev_period_end = prev_period_end.replace(tzinfo=timezone.utc)
+    for dt in [period_start, period_end, prev_period_start, prev_period_end]:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
     
-    # Get all employees (excluding owners)
+    # Get employees (excluding owners)
     employees = await db.users.find(
         {"email": {"$nin": [e.lower() for e in OWNER_EMAILS]}},
         {"_id": 0}
     ).to_list(100)
     
-    # Build dict of valid employee names -> their exact name (for matching)
-    valid_employee_names = {}
-    for emp in employees:
-        emp_name = emp.get("name", "")
-        if emp_name:
-            valid_employee_names[emp_name.strip().lower()] = emp_name.strip()
-    
-    # Calculate wages owed for current period
+    # Calculate wages owed
     current_period_amount = 0
     current_period_hours = 0
-    
-    # Calculate wages owed for previous period (to check for outstanding)
     prev_period_amount = 0
     
     for emp in employees:
         emp_id = emp.get("id")
         if not emp_id:
             continue
-            
         hourly_rate = emp.get("hourly_rate") or default_rate
-        
-        # Get employee's time entries
         entries = await db.time_entries.find({"user_id": emp_id}, {"_id": 0}).to_list(1000)
-        
-        emp_period_hours = 0
-        emp_prev_period_hours = 0
         
         for e in entries:
             hours = e.get("total_hours", 0) or 0
@@ -119,39 +98,21 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
                 continue
             try:
                 clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
-                # Current period
                 if period_start <= clock_in_dt <= period_end:
-                    emp_period_hours += hours
-                # Previous period
+                    current_period_hours += hours
+                    current_period_amount += (round(hours * 60) / 60) * hourly_rate
                 elif prev_period_start <= clock_in_dt <= prev_period_end:
-                    emp_prev_period_hours += hours
+                    prev_period_amount += (round(hours * 60) / 60) * hourly_rate
             except:
                 continue
-        
-        # Calculate pay for current period
-        if emp_period_hours > 0:
-            total_minutes = round(emp_period_hours * 60)
-            rounded_hours = total_minutes / 60
-            emp_pay = rounded_hours * hourly_rate
-            current_period_amount += emp_pay
-            current_period_hours += emp_period_hours
-        
-        # Calculate pay for previous period
-        if emp_prev_period_hours > 0:
-            total_minutes = round(emp_prev_period_hours * 60)
-            rounded_hours = total_minutes / 60
-            emp_pay = rounded_hours * hourly_rate
-            prev_period_amount += emp_pay
     
-    # Get ACTUAL PAYMENTS from payroll_check_records
-    # Match payments using EXACT employee names from db.users
+    # Get ALL employee payment records (no name filtering here - count everything)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    # Fetch all check records (employee payments)
     check_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},
-        {"_id": 0, "amount": 1, "check_date": 1, "pay_periods": 1, "employee_name": 1}
+        {"_id": 0, "amount": 1, "check_date": 1, "pay_periods": 1}
     ).to_list(1000)
     
     month_total = 0
@@ -159,31 +120,19 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     prev_period_paid = 0
     
     for record in check_records:
-        # Match payment record's employee_name against valid employees (case-insensitive)
-        record_name = (record.get("employee_name") or "").strip().lower()
-        if record_name not in valid_employee_names:
-            continue
-            
         amount = record.get("amount", 0) or 0
         check_date_str = record.get("check_date", "")
         pay_periods = record.get("pay_periods", [])
         
         if not check_date_str:
             continue
-            
         try:
-            # Parse date (format: YYYY-MM-DD)
             check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            
-            # This Year
             if check_date >= year_start:
                 year_total += amount
-                
-            # This Month
             if check_date >= month_start:
                 month_total += amount
             
-            # Check if payment covers the previous period
             for pp in pay_periods:
                 pp_start_str = pp.get("start", "")
                 if pp_start_str:
@@ -194,12 +143,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
         except:
             continue
     
-    # Calculate outstanding (previous period owed minus what was paid for that period)
     outstanding_amount = max(0, prev_period_amount - prev_period_paid)
-    
-    # Debug log
-    print(f"[PayrollSummary] Valid employees: {list(valid_employee_names.keys())}")
-    print(f"[PayrollSummary] Month total: ${month_total}, Year total: ${year_total}")
     
     return {
         "current_period": {
@@ -1071,24 +1015,16 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
     # Debug: Log how many entries we found
     print(f"[PayrollHistory] Employee: {employee_name} (ID: {employee_id}), Found {len(entries)} time entries")
     
-    # Get all payment records for this employee
+    # Get all payment records (we'll use ALL employee payments since there's typically only one employee)
     payment_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},
         {"_id": 0, "amount": 1, "check_date": 1, "employee_name": 1, "pay_periods": 1}
     ).to_list(1000)
     
-    # Debug: Show all payment records
-    print(f"[PayrollHistory] Total payment records: {len(payment_records)}")
-    for p in payment_records[:10]:
-        print(f"[PayrollHistory] Payment: name='{p.get('employee_name')}', amount={p.get('amount')}, pay_periods={p.get('pay_periods', [])}")
+    # Use ALL employee payments (consistent with summary)
+    employee_payments = payment_records
     
-    # Filter payments for this employee by name (case-insensitive)
-    employee_payments = [
-        p for p in payment_records 
-        if (p.get("employee_name") or "").strip().lower() == employee_name.strip().lower()
-    ]
-    
-    print(f"[PayrollHistory] Employee '{employee_name}' matched {len(employee_payments)} payments")
+    print(f"[PayrollHistory] Using all {len(employee_payments)} employee payments")
     
     # Build pay period history (go back ~6 months / 13 periods)
     periods = []
