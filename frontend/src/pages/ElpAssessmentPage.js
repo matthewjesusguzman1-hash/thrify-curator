@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
-  ChevronLeft, ChevronRight, Eye, Share2, Save,
+  ChevronLeft, ChevronRight, ChevronDown, Eye, Share2, Save,
   CheckCircle2, XCircle, AlertTriangle, Languages, Info,
   RotateCcw, Maximize2, Minimize2, ShieldAlert, FileText,
 } from "lucide-react";
@@ -356,8 +356,7 @@ export default function ElpAssessmentPage() {
         {phase === "interview" && (
           <section className="space-y-2" data-testid="elp-phase-interview">
             {/* How to run this test — instructions block (from FMCSA memo MC-SEE-2026-0002) */}
-            <div className="rounded-xl bg-white border-l-[3px] border-[#002855] p-3" data-testid="elp-interview-instructions">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[#002855] mb-1.5">How to run Test 1 — Interview · per FMCSA memo</p>
+            <CollapsibleInstructions testid="elp-interview-instructions" title="Instructions" subtitle="How to run Test 1 — Interview · per FMCSA memo">
               <ol className="text-[11px] text-[#334155] leading-relaxed list-decimal ml-4 space-y-1.5">
                 <li>
                   <span className="font-bold">Explain the assessment to the driver.</span> You may explain in English or any language the driver understands, that (a) the interview will be conducted in English; (b) you will evaluate the driver’s ability to respond in English, so the driver should respond in English; and (c) if the driver cannot respond sufficiently, you will cite §391.11(b)(2).
@@ -385,7 +384,7 @@ export default function ElpAssessmentPage() {
                   <span className="font-bold">If the driver cannot respond sufficiently in English</span>, mark the interview <span className="font-bold text-[#7F1D1D]">FAIL</span> and place the driver out of service. <span className="italic">Do not proceed to the highway sign test.</span>
                 </li>
               </ol>
-            </div>
+            </CollapsibleInstructions>
 
             <div className="bg-white rounded-xl border overflow-hidden">
               <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2">
@@ -498,16 +497,35 @@ export default function ElpAssessmentPage() {
         {/* PHASE: SIGN SELECTION */}
         {phase === "sign-select" && (
           <section className="space-y-2" data-testid="elp-phase-sign-select">
-            {/* How to run this test — instructions block */}
-            <div className="rounded-xl bg-white border-l-[3px] border-[#002855] p-3" data-testid="elp-sign-instructions">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[#002855] mb-1.5">How to run Test 2 — Sign Recognition</p>
-              <ol className="text-[11px] text-[#334155] leading-relaxed list-decimal ml-4 space-y-1">
-                <li>Pick <span className="font-bold">{ELP_REQUIRED_SIGNS} signs</span> from the grid below.</li>
-                <li>On the run screen, tap a sign to enlarge it for the driver. Tap anywhere to return.</li>
-                <li>Ask the driver to identify each sign in English. Mark <span className="font-bold">Identified</span> or <span className="font-bold">Not Identified</span> and capture their verbatim response in the notes.</li>
-                <li>The driver passes the sign portion if they correctly identify <span className="font-bold">at least {ELP_SIGN_PASS_THRESHOLD} of {ELP_REQUIRED_SIGNS}</span>.</li>
+            {/* How to run this test — instructions block (from FMCSA memo MC-SEE-2026-0002) */}
+            <CollapsibleInstructions testid="elp-sign-instructions" title="Instructions" subtitle="How to run Test 2 — Highway Sign Recognition · per FMCSA memo">
+              <ol className="text-[11px] text-[#334155] leading-relaxed list-decimal ml-4 space-y-1.5">
+                <li>
+                  <span className="font-bold">Only administer this test if the interview was Inconclusive.</span> If the driver failed Test 1, do not proceed — they are already OOS.
+                </li>
+                <li>
+                  <span className="font-bold">Explain to the driver</span> that one of the qualifications to drive a CMV is being able to understand the meaning of U.S. highway signs.
+                </li>
+                <li>
+                  <span className="font-bold">Select {ELP_REQUIRED_SIGNS} signs</span> from the grid below (Attachment B — MUTCD-conforming traffic signs and electronic-display dynamic message signs the driver may encounter while operating a CMV).
+                </li>
+                <li>
+                  <span className="font-bold">On the run screen, tap a sign to enlarge it</span> for the driver. Tap anywhere to return.
+                </li>
+                <li>
+                  <span className="font-bold">Tell the driver that to be considered qualified, they must satisfactorily explain at least {ELP_SIGN_PASS_THRESHOLD} of the {ELP_REQUIRED_SIGNS} signs.</span> Ask the driver to explain the meaning of each sign.
+                </li>
+                <li>
+                  <span className="font-bold">The driver’s explanation may be in any language</span>, provided you can understand the explanation. Mark <span className="font-bold">Identified</span> or <span className="font-bold">Not Identified</span>, and capture the verbatim response in the notes.
+                </li>
+                <li>
+                  <span className="font-bold text-[#7F1D1D]">If the driver cannot satisfactorily explain at least {ELP_SIGN_PASS_THRESHOLD} of {ELP_REQUIRED_SIGNS} signs</span>, cite §391.11(b)(2) and place the driver out of service.
+                </li>
+                <li>
+                  <span className="font-bold">Document all evidence</span> — the per-sign notes form the record supporting the violation.
+                </li>
               </ol>
-            </div>
+            </CollapsibleInstructions>
 
             <div className="bg-white rounded-xl border overflow-hidden">
               <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2">
@@ -895,6 +913,35 @@ export default function ElpAssessmentPage() {
 }
 
 /* ──────────────── Sub-components ──────────────── */
+
+function CollapsibleInstructions({ title, subtitle, testid, children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl bg-white border-l-[3px] border-[#002855] overflow-hidden" data-testid={testid}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#F8FAFC] transition-colors"
+        data-testid={`${testid}-toggle`}
+        aria-expanded={open}
+      >
+        <Info className="w-3.5 h-3.5 text-[#002855] flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-wider text-[#002855]">{title}</p>
+          {subtitle && <p className="text-[10.5px] text-[#475569] leading-tight truncate">{subtitle}</p>}
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-[#64748B] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="px-3 pb-3 pt-1 border-t border-[#F1F5F9]">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PhaseTab({ label, active, onClick, disabled, testid }) {
   return (
