@@ -15,8 +15,7 @@ import { useAuth } from "../components/app/AuthContext";
 import { generatePDFBlob, sharePDFBlob } from "../lib/pdfShare";
 import {
   ELP_INTERVIEW_QUESTIONS, ELP_SIGNS, ELP_CITATION,
-  ELP_PASS_THRESHOLD_NOTE, ELP_REQUIRED_SIGNS, ELP_SIGN_PASS_THRESHOLD,
-  ELP_INSTRUCTIONS,
+  ELP_REQUIRED_SIGNS, ELP_SIGN_PASS_THRESHOLD,
 } from "../lib/elpContent";
 import { SignDisplay } from "../components/elp/SignDisplay";
 
@@ -294,14 +293,16 @@ export default function ElpAssessmentPage() {
             <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#1D4ED8]">Reference · {ELP_CITATION.ref}</p>
           </div>
           <p className="text-[12px] text-[#1E3A8A] leading-relaxed font-bold mb-1">{ELP_CITATION.title}</p>
-          <p className="text-[11.5px] text-[#1E3A8A] leading-relaxed mb-2">{ELP_CITATION.summary}</p>
+          <p className="text-[11.5px] text-[#1E3A8A] leading-relaxed mb-2">
+            Drivers must read &amp; speak English well enough to converse with the public, understand traffic signs, respond to official inquiries, and complete reports. A driver who fails this assessment is cited under §391.11(b)(2) and placed out of service per the current CVSA criteria.
+          </p>
           <button
             type="button"
             onClick={() => setShowMemo(true)}
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#1D4ED8] hover:text-[#002855] underline-offset-2 hover:underline"
+            className="inline-flex items-center gap-2 bg-[#1D4ED8] text-white hover:bg-[#1E40AF] rounded-md px-3 py-1.5 text-[11px] font-bold transition-colors"
             data-testid="elp-memo-link"
           >
-            <FileText className="w-3.5 h-3.5" /> View full enforcement memo (MC-SEE-2026-0002, Apr 2026)
+            <FileText className="w-3.5 h-3.5" /> Read full enforcement memo (MC-SEE-2026-0002)
           </button>
         </div>
 
@@ -354,8 +355,15 @@ export default function ElpAssessmentPage() {
         {/* PHASE: INTERVIEW */}
         {phase === "interview" && (
           <section className="space-y-2" data-testid="elp-phase-interview">
-            <div className="rounded-md bg-[#F8FAFC] border-l-[3px] border-[#94A3B8] p-2.5">
-              <p className="text-[10.5px] text-[#475569] leading-relaxed">{ELP_INSTRUCTIONS}</p>
+            {/* How to run this test — instructions block */}
+            <div className="rounded-xl bg-white border-l-[3px] border-[#002855] p-3" data-testid="elp-interview-instructions">
+              <p className="text-[10px] font-black uppercase tracking-wider text-[#002855] mb-1.5">How to run Test 1 — Interview</p>
+              <ol className="text-[11px] text-[#334155] leading-relaxed list-decimal ml-4 space-y-1">
+                <li>Tell the driver (in English or any language they understand) that you will conduct the interview <span className="font-bold">in English</span>, and that they should respond in English.</li>
+                <li>Speak slowly and naturally; paraphrase as needed (alternates are listed under each question).</li>
+                <li>There is <span className="font-bold">no minimum number of questions</span>. Use enough to form a judgment.</li>
+                <li>Tap the checkbox to log a question as asked, and capture the driver’s verbatim response in the notes field.</li>
+              </ol>
             </div>
 
             <div className="bg-white rounded-xl border overflow-hidden">
@@ -414,34 +422,52 @@ export default function ElpAssessmentPage() {
             </div>
 
             {interviewAdministered && (
-              <div className={`rounded-xl border p-3 ${interviewDisposition === "pass" ? "border-[#10B981] bg-[#F0FDF4]" : "border-[#F59E0B] bg-[#FFFBEB]"}`} data-testid="elp-interview-result">
-                {interviewDisposition === "pass" ? (
-                  <>
+              <div data-testid="elp-interview-result">
+                {interviewDisposition === "pass" && (
+                  <div className="rounded-xl border border-[#10B981] bg-[#F0FDF4] p-3">
                     <div className="flex items-center gap-2 mb-1">
                       <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-                      <p className="text-[12px] font-bold text-[#065F46]">Interview marked PASS.</p>
+                      <p className="text-[12px] font-bold text-[#065F46]">Interview marked PASS — Driver is ELP proficient.</p>
                     </div>
-                    <p className="text-[11px] text-[#065F46] leading-relaxed">You can record a final disposition now or still administer the sign test for additional documentation.</p>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <Button onClick={() => setPhase("sign-select")} variant="outline" className="border-[#94A3B8] h-9 text-[11px]" data-testid="elp-go-sign-pick-btn">
-                        Optional sign test <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                      </Button>
-                      <Button onClick={() => setPhase("summary")} className="bg-[#10B981] text-white hover:bg-[#059669] h-9 text-[11px]" data-testid="elp-go-summary-btn">
-                        Record disposition <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                      </Button>
+                    <p className="text-[11px] text-[#065F46] leading-relaxed">No further testing is needed. Record the disposition to finalize this assessment.</p>
+                    <Button
+                      onClick={() => { setOverallDisposition("proficient"); setPhase("summary"); }}
+                      className="w-full mt-2 bg-[#10B981] text-white hover:bg-[#059669] h-9 text-[12px]"
+                      data-testid="elp-go-summary-btn"
+                    >
+                      Record disposition <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                    </Button>
+                  </div>
+                )}
+
+                {interviewDisposition === "fail" && (
+                  <div className="rounded-xl border-2 border-[#DC2626] bg-[#FEE2E2] p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <ShieldAlert className="w-4 h-4 text-[#DC2626]" />
+                      <p className="text-[12px] font-bold text-[#7F1D1D]">Interview FAIL — Driver is OUT OF SERVICE.</p>
                     </div>
-                  </>
-                ) : (
-                  <>
+                    <p className="text-[11px] text-[#7F1D1D] leading-relaxed">A failed interview is sufficient to cite §391.11(b)(2) and place the driver out of service. <span className="font-bold">Do not administer the highway sign test.</span> Record the disposition to finalize.</p>
+                    <Button
+                      onClick={() => { setOverallDisposition("not_proficient"); setPhase("summary"); }}
+                      className="w-full mt-2 bg-[#DC2626] text-white hover:bg-[#B91C1C] h-9 text-[12px]"
+                      data-testid="elp-go-summary-btn"
+                    >
+                      Record disposition · OOS <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                    </Button>
+                  </div>
+                )}
+
+                {interviewDisposition === "inconclusive" && (
+                  <div className="rounded-xl border border-[#F59E0B] bg-[#FFFBEB] p-3">
                     <div className="flex items-center gap-2 mb-1">
                       <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
-                      <p className="text-[12px] font-bold text-[#92400E]">Proficiency in question — administer the sign test.</p>
+                      <p className="text-[12px] font-bold text-[#92400E]">Interview INCONCLUSIVE — Administer the sign test.</p>
                     </div>
-                    <p className="text-[11px] text-[#92400E] leading-relaxed">Continue to the highway sign recognition test. Pick {ELP_REQUIRED_SIGNS} signs and show each to the driver.</p>
+                    <p className="text-[11px] text-[#92400E] leading-relaxed">Continue to the highway sign recognition test. Pick {ELP_REQUIRED_SIGNS} signs and show each to the driver. The sign test result will determine the final disposition.</p>
                     <Button onClick={() => setPhase("sign-select")} className="w-full mt-2 bg-[#92400E] text-white hover:bg-[#7C2D12] h-9 text-[12px]" data-testid="elp-go-signs-btn">
                       Continue to Sign Selection <ChevronRight className="w-3.5 h-3.5 ml-1" />
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             )}
@@ -451,13 +477,23 @@ export default function ElpAssessmentPage() {
         {/* PHASE: SIGN SELECTION */}
         {phase === "sign-select" && (
           <section className="space-y-2" data-testid="elp-phase-sign-select">
+            {/* How to run this test — instructions block */}
+            <div className="rounded-xl bg-white border-l-[3px] border-[#002855] p-3" data-testid="elp-sign-instructions">
+              <p className="text-[10px] font-black uppercase tracking-wider text-[#002855] mb-1.5">How to run Test 2 — Sign Recognition</p>
+              <ol className="text-[11px] text-[#334155] leading-relaxed list-decimal ml-4 space-y-1">
+                <li>Pick <span className="font-bold">{ELP_REQUIRED_SIGNS} signs</span> from the grid below.</li>
+                <li>On the run screen, tap a sign to enlarge it for the driver. Tap anywhere to return.</li>
+                <li>Ask the driver to identify each sign in English. Mark <span className="font-bold">Identified</span> or <span className="font-bold">Not Identified</span> and capture their verbatim response in the notes.</li>
+                <li>The driver passes the sign portion if they correctly identify <span className="font-bold">at least {ELP_SIGN_PASS_THRESHOLD} of {ELP_REQUIRED_SIGNS}</span>.</li>
+              </ol>
+            </div>
+
             <div className="bg-white rounded-xl border overflow-hidden">
               <div className="bg-[#002855] text-white px-3 py-2 flex items-center gap-2">
                 <p className="text-[12px] font-bold">Test 2 — Pick {ELP_REQUIRED_SIGNS} Highway Signs</p>
                 <span className="ml-auto text-[10px] text-white/70">{selectedSignIds.length}/{ELP_REQUIRED_SIGNS} selected</span>
               </div>
               <div className="p-3">
-                <p className="text-[11px] text-[#64748B] italic leading-relaxed mb-3">{ELP_PASS_THRESHOLD_NOTE}</p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2" data-testid="elp-sign-grid">
                   {ELP_SIGNS.map((s) => {
                     const selected = selectedSignIds.includes(s.id);
