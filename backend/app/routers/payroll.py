@@ -799,8 +799,7 @@ async def delete_orphaned_payment_records(admin: dict = Depends(get_admin_user))
 @router.post("/cleanup-payroll-data")
 async def cleanup_payroll_data(admin: dict = Depends(get_admin_user)):
     """
-    One-time cleanup: Keep only employees with actual hours worked and their payment records.
-    Removes test employees and orphaned payment records.
+    Cleanup: Remove test employees and fix payment record names to match valid employees.
     """
     OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
     
@@ -811,20 +810,20 @@ async def cleanup_payroll_data(admin: dict = Depends(get_admin_user)):
     ).to_list(100)
     
     # Find employees with actual hours worked
-    employees_with_hours = []
+    employees_with_hours = {}
     employees_to_delete = []
     
     for emp in all_employees:
         emp_id = emp.get("id")
-        emp_name = emp.get("name", "")
-        if not emp_id:
+        emp_name = emp.get("name", "").strip()
+        if not emp_id or not emp_name:
             continue
         
         # Check if employee has any time entries
         time_entries = await db.time_entries.find({"user_id": emp_id}).to_list(1)
         
         if time_entries:
-            employees_with_hours.append(emp_name.strip().lower())
+            employees_with_hours[emp_name.lower()] = emp_name  # Store proper cased name
         else:
             employees_to_delete.append(emp)
     
@@ -834,29 +833,46 @@ async def cleanup_payroll_data(admin: dict = Depends(get_admin_user)):
         emp_id = emp.get("id")
         if emp_id:
             await db.users.delete_one({"id": emp_id})
-            # Also delete their time entries (should be none, but just in case)
             await db.time_entries.delete_many({"user_id": emp_id})
             deleted_employees += 1
     
-    # Delete payment records that don't match employees with hours
+    # Get all employee payment records
     payment_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},
-        {"_id": 0, "id": 1, "employee_name": 1}
+        {"_id": 0, "id": 1, "employee_name": 1, "amount": 1}
     ).to_list(1000)
     
+    # If there's exactly ONE employee with hours, update all payment records to use that name
+    fixed_payments = 0
     deleted_payments = 0
-    for record in payment_records:
-        record_name = (record.get("employee_name") or "").strip().lower()
-        if record_name not in employees_with_hours:
-            await db.payroll_check_records.delete_one({"id": record.get("id")})
-            deleted_payments += 1
+    
+    if len(employees_with_hours) == 1:
+        # Single employee - fix all payment record names to match
+        correct_name = list(employees_with_hours.values())[0]
+        for record in payment_records:
+            record_name = (record.get("employee_name") or "").strip()
+            if record_name.lower() != correct_name.lower():
+                # Update the record to use the correct name
+                await db.payroll_check_records.update_one(
+                    {"id": record.get("id")},
+                    {"$set": {"employee_name": correct_name}}
+                )
+                fixed_payments += 1
+    else:
+        # Multiple employees - delete orphaned payments
+        for record in payment_records:
+            record_name = (record.get("employee_name") or "").strip().lower()
+            if record_name not in employees_with_hours:
+                await db.payroll_check_records.delete_one({"id": record.get("id")})
+                deleted_payments += 1
     
     return {
         "success": True,
-        "employees_with_hours": employees_with_hours,
+        "employees_with_hours": list(employees_with_hours.values()),
         "deleted_test_employees": deleted_employees,
+        "fixed_payment_names": fixed_payments,
         "deleted_orphaned_payments": deleted_payments,
-        "message": f"Cleanup complete. Kept {len(employees_with_hours)} employee(s) with hours. Deleted {deleted_employees} test employee(s) and {deleted_payments} orphaned payment record(s)."
+        "message": f"Cleanup complete. {len(employees_with_hours)} employee(s) with hours. Fixed {fixed_payments} payment names, deleted {deleted_employees} test employees and {deleted_payments} orphaned payments."
     }
 
 
@@ -1015,16 +1031,19 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
     # Debug: Log how many entries we found
     print(f"[PayrollHistory] Employee: {employee_name} (ID: {employee_id}), Found {len(entries)} time entries")
     
-    # Get all payment records (we'll use ALL employee payments since there's typically only one employee)
+    # Get all payment records
     payment_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},
         {"_id": 0, "amount": 1, "check_date": 1, "employee_name": 1, "pay_periods": 1}
     ).to_list(1000)
     
-    # Use ALL employee payments (consistent with summary)
-    employee_payments = payment_records
+    # Filter payments for this employee by name (case-insensitive)
+    employee_payments = [
+        p for p in payment_records 
+        if (p.get("employee_name") or "").strip().lower() == employee_name.strip().lower()
+    ]
     
-    print(f"[PayrollHistory] Using all {len(employee_payments)} employee payments")
+    print(f"[PayrollHistory] Employee '{employee_name}' matched {len(employee_payments)} of {len(payment_records)} payments")
     
     # Build pay period history (go back ~6 months / 13 periods)
     periods = []
