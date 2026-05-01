@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   ShoppingCart,
   DollarSign,
-  Tag
+  Tag,
+  Filter
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { LineChart, Line, BarChart, Bar, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -45,6 +46,9 @@ const SalesDataSection = ({ getAuthHeader }) => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   
+  // Platform filter
+  const [selectedPlatform, setSelectedPlatform] = useState(null);
+  
   // Modal states
   const [showImportModal, setShowImportModal] = useState(false);
   const [showReportBuilder, setShowReportBuilder] = useState(false);
@@ -61,9 +65,15 @@ const SalesDataSection = ({ getAuthHeader }) => {
     try {
       const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
       
+      // Build analytics URL with optional platform filter
+      let analyticsUrl = `${API_URL}/api/inventory/analytics?year=${selectedYear}`;
+      if (selectedPlatform) {
+        analyticsUrl += `&platform=${encodeURIComponent(selectedPlatform)}`;
+      }
+      
       const [summaryRes, analyticsRes, yoyRes, reportsRes] = await Promise.all([
         fetch(`${API_URL}/api/inventory/summary`, { headers }),
-        fetch(`${API_URL}/api/inventory/analytics?year=${selectedYear}`, { headers }),
+        fetch(analyticsUrl, { headers }),
         fetch(`${API_URL}/api/inventory/analytics/yoy?current_year=${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/inventory/reports/saved`, { headers })
       ]);
@@ -79,7 +89,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
       console.error('Error fetching sales data:', error);
     }
     setLoading(false);
-  }, [getAuthHeader, selectedYear]);
+  }, [getAuthHeader, selectedYear, selectedPlatform]);
 
   useEffect(() => {
     fetchData();
@@ -114,14 +124,21 @@ const SalesDataSection = ({ getAuthHeader }) => {
   const getFilteredYoyData = () => {
     if (!yoyData?.months) return null;
     
-    // Only show months that have data in either year
+    // Only show months that have data in either year (non-zero)
     const filteredMonths = yoyData.months.filter(m => m.current > 0 || m.previous > 0);
     
     if (filteredMonths.length === 0) return null;
     
+    // Calculate filtered YTD
+    const filteredYtd = {
+      current: filteredMonths.reduce((sum, m) => sum + (m.current || 0), 0),
+      previous: filteredMonths.reduce((sum, m) => sum + (m.previous || 0), 0)
+    };
+    
     return {
       ...yoyData,
-      months: filteredMonths
+      months: filteredMonths,
+      ytd: filteredYtd
     };
   };
 
@@ -129,6 +146,15 @@ const SalesDataSection = ({ getAuthHeader }) => {
 
   // Calculate items listed (unsold)
   const itemsListed = summary?.total_items ? summary.total_items - (summary.sold_summary?.count || 0) : 0;
+
+  // Handle platform click - filter by that platform
+  const handlePlatformClick = (platform) => {
+    if (selectedPlatform === platform) {
+      setSelectedPlatform(null); // Deselect
+    } else {
+      setSelectedPlatform(platform);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -179,19 +205,40 @@ const SalesDataSection = ({ getAuthHeader }) => {
                     Refresh
                   </Button>
                   <div className="ml-auto">
+                    {/* iOS-friendly select with explicit styling */}
                     <select
                       value={selectedYear}
                       onChange={(e) => setSelectedYear(Number(e.target.value))}
-                      className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="px-3 py-2 bg-gray-800 border border-white/30 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none"
+                      style={{ 
+                        WebkitAppearance: 'none',
+                        backgroundColor: '#1f2937',
+                        color: 'white'
+                      }}
                     >
-                      {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3].map(year => (
-                        <option key={year} value={year} className="bg-gray-800">{year}</option>
-                      ))}
+                      <option value={currentYear} style={{ backgroundColor: '#1f2937', color: 'white' }}>{currentYear}</option>
+                      <option value={currentYear - 1} style={{ backgroundColor: '#1f2937', color: 'white' }}>{currentYear - 1}</option>
+                      <option value={currentYear - 2} style={{ backgroundColor: '#1f2937', color: 'white' }}>{currentYear - 2}</option>
+                      <option value={currentYear - 3} style={{ backgroundColor: '#1f2937', color: 'white' }}>{currentYear - 3}</option>
                     </select>
                   </div>
                 </>
               )}
             </div>
+
+            {/* Platform filter indicator */}
+            {selectedPlatform && (
+              <div className="flex items-center gap-2 p-2 bg-purple-500/20 rounded-lg">
+                <Filter className="w-4 h-4 text-purple-400" />
+                <span className="text-white text-sm">Filtered by: <strong>{selectedPlatform}</strong></span>
+                <button 
+                  onClick={() => setSelectedPlatform(null)}
+                  className="ml-auto text-white/60 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             {/* Summary Stats - 6 tiles */}
             {summary?.total_items > 0 && (
@@ -255,7 +302,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
                 </div>
 
                 {/* Year-over-Year Comparison Chart - Only shows months with data */}
-                {filteredYoyData && (
+                {filteredYoyData && filteredYoyData.months.length > 0 && (
                   <div className="bg-white rounded-xl p-4">
                     <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <LineChartIcon className="w-5 h-5 text-purple-600" />
@@ -282,7 +329,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
                             stroke="#8B5CF6" 
                             strokeWidth={3}
                             dot={{ fill: '#8B5CF6', strokeWidth: 2 }}
-                            connectNulls={false}
                           />
                           <Line 
                             type="monotone" 
@@ -292,7 +338,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
                             strokeWidth={2}
                             strokeDasharray="5 5"
                             dot={{ fill: '#94A3B8', strokeWidth: 2 }}
-                            connectNulls={false}
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -310,18 +355,23 @@ const SalesDataSection = ({ getAuthHeader }) => {
                   </div>
                 )}
 
-                {/* Platform Breakdown */}
+                {/* Platform Breakdown - Clickable to filter */}
                 {summary.by_platform && Object.keys(summary.by_platform).length > 0 && (
                   <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-white/60 text-xs uppercase mb-2">By Platform</p>
+                    <p className="text-white/60 text-xs uppercase mb-2">By Platform (tap to filter)</p>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(summary.by_platform).map(([platform, count]) => (
-                        <span 
+                        <button 
                           key={platform}
-                          className="px-3 py-1 bg-white/10 rounded-full text-sm text-white"
+                          onClick={() => handlePlatformClick(platform)}
+                          className={`px-3 py-1 rounded-full text-sm transition-all ${
+                            selectedPlatform === platform
+                              ? 'bg-purple-500 text-white ring-2 ring-purple-300'
+                              : 'bg-white/10 text-white hover:bg-white/20'
+                          }`}
                         >
                           {platform}: {count.toLocaleString()}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -627,6 +677,7 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
 
 // ==================== REPORT BUILDER MODAL ====================
 const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
+  const currentYear = new Date().getFullYear();
   const [reportName, setReportName] = useState('');
   const [reportType, setReportType] = useState('sales');
   const [dateRange, setDateRange] = useState('ytd');
@@ -635,13 +686,6 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
 
-  const reportTypes = [
-    { id: 'sales', label: 'Sales Overview' },
-    { id: 'brands', label: 'Top Brands' },
-    { id: 'platforms', label: 'Platform Breakdown' },
-    { id: 'monthly', label: 'Monthly Trends' }
-  ];
-
   const generateReport = async () => {
     setLoading(true);
     
@@ -649,9 +693,9 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
       let url = `${API_URL}/api/inventory/analytics?`;
       
       if (dateRange === 'ytd') {
-        url += `year=${new Date().getFullYear()}`;
+        url += `year=${currentYear}`;
       } else if (dateRange === 'last_year') {
-        url += `year=${new Date().getFullYear() - 1}`;
+        url += `year=${currentYear - 1}`;
       } else if (dateRange === 'custom' && customStart && customEnd) {
         url += `start_date=${customStart}&end_date=${customEnd}`;
       }
@@ -767,10 +811,12 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                style={{ backgroundColor: 'white', color: '#374151' }}
               >
-                {reportTypes.map(type => (
-                  <option key={type.id} value={type.id}>{type.label}</option>
-                ))}
+                <option value="sales" style={{ color: '#374151' }}>Sales Overview</option>
+                <option value="brands" style={{ color: '#374151' }}>Top Brands</option>
+                <option value="platforms" style={{ color: '#374151' }}>Platform Breakdown</option>
+                <option value="monthly" style={{ color: '#374151' }}>Monthly Trends</option>
               </select>
             </div>
 
@@ -780,10 +826,11 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                style={{ backgroundColor: 'white', color: '#374151' }}
               >
-                <option value="ytd">Year to Date ({new Date().getFullYear()})</option>
-                <option value="last_year">Last Year ({new Date().getFullYear() - 1})</option>
-                <option value="custom">Custom Range</option>
+                <option value="ytd" style={{ color: '#374151' }}>Year to Date ({currentYear})</option>
+                <option value="last_year" style={{ color: '#374151' }}>Last Year ({currentYear - 1})</option>
+                <option value="custom" style={{ color: '#374151' }}>Custom Range</option>
               </select>
             </div>
 
@@ -930,6 +977,7 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
 const ReportViewerModal = ({ report, getAuthHeader, onClose }) => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -938,9 +986,9 @@ const ReportViewerModal = ({ report, getAuthHeader, onClose }) => {
         const config = report.config;
 
         if (config.date_range === 'ytd') {
-          url += `year=${new Date().getFullYear()}`;
+          url += `year=${currentYear}`;
         } else if (config.date_range === 'last_year') {
-          url += `year=${new Date().getFullYear() - 1}`;
+          url += `year=${currentYear - 1}`;
         } else if (config.custom_start && config.custom_end) {
           url += `start_date=${config.custom_start}&end_date=${config.custom_end}`;
         }
@@ -956,7 +1004,7 @@ const ReportViewerModal = ({ report, getAuthHeader, onClose }) => {
     };
 
     fetchReport();
-  }, [report, getAuthHeader]);
+  }, [report, getAuthHeader, currentYear]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -1078,7 +1126,7 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
     fetchStaleItems();
   }, [fetchStaleItems]);
 
-  const exportStale = () => {
+  const exportCSV = () => {
     if (!data?.items) return;
 
     const csv = [
@@ -1101,6 +1149,66 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
     a.click();
   };
 
+  const exportPDF = () => {
+    // Create a simple printable HTML and use window.print()
+    const printWindow = window.open('', '_blank');
+    if (!printWindow || !data?.items) return;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Stale Inventory Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #333; border-bottom: 2px solid #f59e0b; padding-bottom: 10px; }
+          .summary { background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f4f6; font-weight: bold; }
+          tr:nth-child(even) { background: #f9fafb; }
+          .days { color: #f59e0b; font-weight: bold; }
+          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        </style>
+      </head>
+      <body>
+        <h1>Stale Inventory Report</h1>
+        <div class="summary">
+          <strong>${data.total_stale_items?.toLocaleString()}</strong> items have been in inventory for more than <strong>${days} days</strong>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>SKU</th>
+              <th>Platform</th>
+              <th>Listed Date</th>
+              <th>Days</th>
+              <th>Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.items.map(item => `
+              <tr>
+                <td>${item.title || '-'}</td>
+                <td>${item.sku || '-'}</td>
+                <td>${item.platform || '-'}</td>
+                <td>${item.listed_date || '-'}</td>
+                <td class="days">${item.days_in_inventory?.toLocaleString() || '-'}</td>
+                <td>${item.price_listed ? `$${item.price_listed.toFixed(2)}` : '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <script>window.onload = function() { window.print(); }</script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99999]" onClick={onClose}>
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -1117,27 +1225,31 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
 
         {/* Controls - Fixed */}
         <div className="flex-shrink-0 px-6 py-4 border-b bg-gray-50">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Items listed more than:</label>
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Items listed more than:</label>
               <select
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
                 className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                style={{ backgroundColor: 'white', color: '#374151' }}
               >
-                <option value={30}>30 days</option>
-                <option value={60}>60 days</option>
-                <option value={90}>90 days</option>
-                <option value={180}>6 months</option>
-                <option value={365}>1 year</option>
-                <option value={730}>2 years</option>
+                <option value={30} style={{ color: '#374151' }}>30 days</option>
+                <option value={60} style={{ color: '#374151' }}>60 days</option>
+                <option value={90} style={{ color: '#374151' }}>90 days</option>
+                <option value={180} style={{ color: '#374151' }}>6 months</option>
+                <option value={365} style={{ color: '#374151' }}>1 year</option>
+                <option value={730} style={{ color: '#374151' }}>2 years</option>
               </select>
             </div>
             <Button onClick={fetchStaleItems} disabled={loading} size="sm">
               {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Update'}
             </Button>
-            <Button onClick={exportStale} variant="outline" size="sm" disabled={!data?.items?.length}>
-              <Download className="w-4 h-4 mr-2" /> Export CSV
+            <Button onClick={exportCSV} variant="outline" size="sm" disabled={!data?.items?.length}>
+              <Download className="w-4 h-4 mr-1" /> CSV
+            </Button>
+            <Button onClick={exportPDF} variant="outline" size="sm" disabled={!data?.items?.length}>
+              <FileText className="w-4 h-4 mr-1" /> PDF
             </Button>
           </div>
           
@@ -1150,34 +1262,36 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
           )}
         </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* Scrollable Content - Both vertical and horizontal */}
+        <div className="flex-1 overflow-auto p-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="w-8 h-8 animate-spin text-purple-600" />
             </div>
           ) : data?.items?.length > 0 ? (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[700px]">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Listed</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Days</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">SKU</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Platform</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Listed</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Days</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Price</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y bg-white">
                   {data.items.map((item, idx) => (
                     <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm max-w-xs truncate">{item.title || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{item.sku || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{item.listed_date || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-right font-medium text-amber-600">
+                      <td className="px-4 py-3 text-sm">{item.title || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{item.sku || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{item.platform || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{item.listed_date || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-right font-medium text-amber-600 whitespace-nowrap">
                         {item.days_in_inventory?.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right">
+                      <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                         {item.price_listed ? `$${item.price_listed.toFixed(2)}` : '-'}
                       </td>
                     </tr>
