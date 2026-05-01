@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import axios from "axios";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import { useHaptics } from "@/hooks/useHaptics";
+import ThriftRunGame from "@/components/games/ThriftRunGame";
 
 const LOGO_URL = process.env.REACT_APP_LOGO_URL;
 const TIKTOK_URL = process.env.REACT_APP_TIKTOK_URL;
@@ -116,8 +117,30 @@ const isCapacitor = typeof window !== 'undefined' && window.Capacitor !== undefi
 export default function LandingPage() {
   const [shareLoading, setShareLoading] = useState(false);
   
+  // Hidden game state
+  const [showGame, setShowGame] = useState(false);
+  const longPressTimerRef = useRef(null);
+  
   // Haptic feedback
   const { buttonPress, lightTap, successFeedback, errorFeedback } = useHaptics();
+  
+  // Long press handlers for hidden game
+  const handleLogoTouchStart = () => {
+    longPressTimerRef.current = setTimeout(() => {
+      // Trigger haptic feedback and show game
+      if (typeof window !== 'undefined' && window.Capacitor?.Plugins?.Haptics) {
+        window.Capacitor.Plugins.Haptics.vibrate({ duration: 100 });
+      }
+      setShowGame(true);
+    }, 1500); // 1.5 second long press
+  };
+  
+  const handleLogoTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
   
   // reCAPTCHA hook - always call it (hook rules), but may return null executeRecaptcha
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -246,10 +269,21 @@ export default function LandingPage() {
         {/* Header with Logo */}
         <div className="flex flex-col items-center gap-4 mb-10">
           <div 
-            className="w-28 h-28 rounded-2xl overflow-hidden shadow-2xl ring-4 ring-white/20"
+            className="w-28 h-28 rounded-2xl overflow-hidden shadow-2xl ring-4 ring-white/20 cursor-pointer select-none"
             data-testid="logo-container"
+            onTouchStart={handleLogoTouchStart}
+            onTouchEnd={handleLogoTouchEnd}
+            onTouchCancel={handleLogoTouchEnd}
+            onMouseDown={handleLogoTouchStart}
+            onMouseUp={handleLogoTouchEnd}
+            onMouseLeave={handleLogoTouchEnd}
           >
-            <img src={LOGO_URL} alt="Thrifty Curator Logo" className="w-full h-full object-cover" />
+            <img 
+              src={LOGO_URL} 
+              alt="Thrifty Curator Logo" 
+              className="w-full h-full object-cover pointer-events-none" 
+              draggable="false"
+            />
           </div>
           <div className="text-center">
             <h1 className="font-poppins text-3xl md:text-4xl font-bold text-white tracking-tight" data-testid="main-title">
@@ -645,6 +679,11 @@ export default function LandingPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Hidden Thrift Run Game - activated by long press on logo */}
+      {showGame && (
+        <ThriftRunGame onClose={() => setShowGame(false)} />
+      )}
     </div>
   );
 }
