@@ -1650,8 +1650,82 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
       .map(([key, data]) => ({ monthKey: key, ...data }));
   };
 
+  // Group income entries by import batch (scan date in notes)
+  const getImportBatches = () => {
+    const entries = income.entries || [];
+    const batches = {};
+    
+    entries.forEach(e => {
+      // Extract scan date from notes like "Scanned 4/1/2026 | ..."
+      const scanMatch = e.notes?.match(/Scanned (\d{1,2}\/\d{1,2}\/\d{4})/);
+      const scanDate = scanMatch ? scanMatch[1] : 'Manual Entry';
+      
+      if (!batches[scanDate]) {
+        batches[scanDate] = {
+          scanDate,
+          entries: [],
+          totalGross: 0,
+          totalProfit: 0,
+          monthsCovered: new Set()
+        };
+      }
+      
+      batches[scanDate].entries.push(e);
+      
+      if (e.notes?.includes('Net Profit') || e.platform === 'profit') {
+        batches[scanDate].totalProfit += e.amount;
+      } else {
+        batches[scanDate].totalGross += e.amount;
+      }
+      
+      // Track months covered
+      const monthMatch = e.notes?.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+\s*-/i);
+      if (monthMatch) {
+        batches[scanDate].monthsCovered.add(e.date_received?.substring(0, 7));
+      }
+    });
+    
+    // Convert to array and sort by scan date (newest first)
+    return Object.values(batches)
+      .map(b => ({
+        ...b,
+        monthCount: b.monthsCovered.size
+      }))
+      .sort((a, b) => {
+        // Parse dates for sorting
+        const parseDate = (str) => {
+          if (str === 'Manual Entry') return new Date(0);
+          const parts = str.split('/');
+          return new Date(parts[2], parts[0] - 1, parts[1]);
+        };
+        return parseDate(b.scanDate) - parseDate(a.scanDate);
+      });
+  };
+  
+  const importBatches = getImportBatches();
+
+  const deleteImportBatch = async (batch) => {
+    if (!window.confirm(`Delete this entire import from ${batch.scanDate}?\n\nThis will remove ${batch.entries.length} entries totaling ${formatCurrency(batch.totalGross)} in gross revenue.\n\nThis cannot be undone.`)) return;
+    
+    setDeleting('batch');
+    try {
+      for (const entry of batch.entries) {
+        await fetch(`${API_URL}/api/financials/income/${entry.id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
+        });
+      }
+      fetchYearData(selectedYear);
+      if (selectedYear === initialYear) onDataChanged();
+    } catch (error) {
+      console.error('Delete batch error:', error);
+    }
+    setDeleting(null);
+  };
+
   const tabs = [
     { id: 'overview', label: 'Overview', count: null },
+    { id: 'imports', label: 'Imports', count: importBatches.filter(b => b.scanDate !== 'Manual Entry').length || null },
     { id: 'income', label: 'Income', count: income.entries?.length || 0 },
     { id: 'cogs', label: 'COGS', count: cogs.entries?.length || 0 },
     { id: 'expenses', label: 'Expenses', count: expenses.entries?.length || 0 }
@@ -1716,6 +1790,66 @@ const ManageDataModal = ({ year: initialYear, income: initialIncome, cogs: initi
     switch (activeTab) {
       case 'overview':
         return renderOverview();
+      case 'imports':
+        // Render import batches
+        if (importBatches.length === 0) {
+          return (
+            <div className="text-center py-8 text-gray-500">
+              No imports for {selectedYear}
+            </div>
+          );
+        }
+        
+        return (
+          <div className="space-y-3">
+            {importBatches.map((batch, idx) => (
+              <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      <span className="font-semibold text-gray-900">
+                        {batch.scanDate === 'Manual Entry' ? 'Manual Entries' : `Import: ${batch.scanDate}`}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>{batch.entries.length} entries • {batch.monthCount > 0 ? `${batch.monthCount} month(s)` : ''}</p>
+                      <p>Gross Revenue: <span className="font-medium text-gray-900">{formatCurrency(batch.totalGross)}</span></p>
+                      {batch.totalProfit > 0 && (
+                        <p>Net Profit: <span className="font-medium text-green-600">{formatCurrency(batch.totalProfit)}</span></p>
+                      )}
+                    </div>
+                  </div>
+                  {batch.scanDate !== 'Manual Entry' && (
+                    <button
+                      onClick={() => deleteImportBatch(batch)}
+                      disabled={deleting === 'batch'}
+                      className="p-2 text-red-500 hover:bg-red-100 rounded-lg flex items-center gap-1 text-sm"
+                      title="Delete this entire import"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Delete</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            {/* Delete All Button */}
+            {importBatches.some(b => b.scanDate !== 'Manual Entry') && (
+              <div className="pt-4 border-t">
+                <button
+                  onClick={() => deleteAllOfType('income')}
+                  disabled={deleting === 'all'}
+                  className="w-full py-2 px-4 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete All {selectedYear} Income Data
+                </button>
+              </div>
+            )}
+          </div>
+        );
       case 'income':
         entries = income.entries || [];
         // Group by month
