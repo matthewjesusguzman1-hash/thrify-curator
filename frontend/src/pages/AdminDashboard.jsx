@@ -81,6 +81,7 @@ import PasswordManagementSection from "@/components/admin/sections/PasswordManag
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
 import SalesDataSection from "@/components/admin/sections/SalesDataSection";
+import TaxesSection from "@/components/admin/sections/TaxesSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
@@ -3428,8 +3429,8 @@ export default function AdminDashboard() {
               {/* Sales Data Section - CSV Import, Reports, Analytics */}
               <SalesDataSection getAuthHeader={getAuthHeader} />
 
-              {/* Taxes Section - Deductions, Tax Prep, 1099s */}
-              <FinancialsSection getAuthHeader={getAuthHeader} />
+              {/* Taxes Section - Deductions and Tax Prep */}
+              <TaxesSection getAuthHeader={getAuthHeader} />
 
               {/* Tax Returns Archive - Store filed tax returns by year */}
               <TaxReturnsArchiveSection getAuthHeader={getAuthHeader} />

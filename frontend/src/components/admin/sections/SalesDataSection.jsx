@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { 
-  TrendingUp, 
-  TrendingDown,
-  DollarSign,
+  TrendingUp,
   Package,
   Upload,
   RefreshCw,
@@ -14,25 +12,23 @@ import {
   X,
   ChevronRight,
   ChevronDown,
-  Calendar,
   BarChart3,
-  PieChart,
   LineChart as LineChartIcon,
-  Filter,
   Save,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  ShoppingCart,
+  DollarSign,
+  Tag
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { LineChart, Line, BarChart, Bar, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 
-// Color palette for charts
 const CHART_COLORS = ['#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6366F1', '#14B8A6'];
 
 const SalesDataSection = ({ getAuthHeader }) => {
-  // Section expansion state
   const [expandedSections, setExpandedSections] = useState({
     salesData: true,
     reports: false
@@ -44,6 +40,10 @@ const SalesDataSection = ({ getAuthHeader }) => {
   const [yoyData, setYoyData] = useState(null);
   const [savedReports, setSavedReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Date range for summary tiles
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   
   // Modal states
   const [showImportModal, setShowImportModal] = useState(false);
@@ -61,13 +61,15 @@ const SalesDataSection = ({ getAuthHeader }) => {
     try {
       const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
       
-      const [summaryRes, yoyRes, reportsRes] = await Promise.all([
+      const [summaryRes, analyticsRes, yoyRes, reportsRes] = await Promise.all([
         fetch(`${API_URL}/api/inventory/summary`, { headers }),
-        fetch(`${API_URL}/api/inventory/analytics/yoy`, { headers }),
+        fetch(`${API_URL}/api/inventory/analytics?year=${selectedYear}`, { headers }),
+        fetch(`${API_URL}/api/inventory/analytics/yoy?current_year=${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/inventory/reports/saved`, { headers })
       ]);
       
       if (summaryRes.ok) setSummary(await summaryRes.json());
+      if (analyticsRes.ok) setAnalytics(await analyticsRes.json());
       if (yoyRes.ok) setYoyData(await yoyRes.json());
       if (reportsRes.ok) {
         const data = await reportsRes.json();
@@ -77,7 +79,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
       console.error('Error fetching sales data:', error);
     }
     setLoading(false);
-  }, [getAuthHeader]);
+  }, [getAuthHeader, selectedYear]);
 
   useEffect(() => {
     fetchData();
@@ -108,6 +110,26 @@ const SalesDataSection = ({ getAuthHeader }) => {
     }
   };
 
+  // Filter YoY data to only show months with actual data
+  const getFilteredYoyData = () => {
+    if (!yoyData?.months) return null;
+    
+    // Only show months that have data in either year
+    const filteredMonths = yoyData.months.filter(m => m.current > 0 || m.previous > 0);
+    
+    if (filteredMonths.length === 0) return null;
+    
+    return {
+      ...yoyData,
+      months: filteredMonths
+    };
+  };
+
+  const filteredYoyData = getFilteredYoyData();
+
+  // Calculate items listed (unsold)
+  const itemsListed = summary?.total_items ? summary.total_items - (summary.sold_summary?.count || 0) : 0;
+
   return (
     <div className="space-y-4">
       {/* ==================== SALES DATA SECTION ==================== */}
@@ -136,8 +158,8 @@ const SalesDataSection = ({ getAuthHeader }) => {
 
         {expandedSections.salesData && (
           <div className="px-4 pb-4 space-y-4">
-            {/* Import/Replace Actions */}
-            <div className="flex flex-wrap gap-2">
+            {/* Import/Replace Actions + Year Selector */}
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 onClick={() => setShowImportModal(true)}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -147,49 +169,101 @@ const SalesDataSection = ({ getAuthHeader }) => {
                 {summary?.total_items > 0 ? 'Replace CSV Data' : 'Import CSV'}
               </Button>
               {summary?.total_items > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => fetchData()}
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Refresh
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchData()}
+                    className="border-white/20 text-white hover:bg-white/10"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                  <div className="ml-auto">
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(Number(e.target.value))}
+                      className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3].map(year => (
+                        <option key={year} value={year} className="bg-gray-800">{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
             </div>
 
-            {/* Summary Stats */}
+            {/* Summary Stats - 6 tiles */}
             {summary?.total_items > 0 && (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {/* Items Listed (Unsold) */}
                   <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-white/60 text-xs uppercase">Total Items</p>
-                    <p className="text-xl font-bold text-white">{summary.total_items.toLocaleString()}</p>
+                    <p className="text-white/60 text-xs uppercase flex items-center gap-1">
+                      <Tag className="w-3 h-3" /> Items Listed
+                    </p>
+                    <p className="text-xl font-bold text-white">{itemsListed.toLocaleString()}</p>
                   </div>
+                  
+                  {/* Items Sold */}
                   <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-white/60 text-xs uppercase">Items Sold</p>
-                    <p className="text-xl font-bold text-green-400">{summary.sold_summary?.count?.toLocaleString() || 0}</p>
+                    <p className="text-white/60 text-xs uppercase flex items-center gap-1">
+                      <ShoppingCart className="w-3 h-3" /> Items Sold
+                    </p>
+                    <p className="text-xl font-bold text-green-400">
+                      {analytics?.summary?.items_sold?.toLocaleString() || summary.sold_summary?.count?.toLocaleString() || 0}
+                    </p>
                   </div>
+                  
+                  {/* Gross Revenue */}
                   <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-white/60 text-xs uppercase">Gross Revenue</p>
-                    <p className="text-xl font-bold text-green-400">{formatCurrency(summary.sold_summary?.total_revenue)}</p>
+                    <p className="text-white/60 text-xs uppercase flex items-center gap-1">
+                      <DollarSign className="w-3 h-3" /> Gross Revenue
+                    </p>
+                    <p className="text-xl font-bold text-green-400">
+                      {formatCurrency(analytics?.summary?.gross_sales || summary.sold_summary?.total_revenue)}
+                    </p>
                   </div>
+                  
+                  {/* COGS */}
                   <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-white/60 text-xs uppercase">Total Profit</p>
-                    <p className="text-xl font-bold text-emerald-400">{formatCurrency(summary.sold_summary?.total_profit)}</p>
+                    <p className="text-white/60 text-xs uppercase flex items-center gap-1">
+                      <Package className="w-3 h-3" /> Total COGS
+                    </p>
+                    <p className="text-xl font-bold text-amber-400">
+                      {formatCurrency(analytics?.summary?.total_cogs || summary.sold_summary?.total_cogs)}
+                    </p>
+                  </div>
+                  
+                  {/* Profit */}
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <p className="text-white/60 text-xs uppercase flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" /> Profit
+                    </p>
+                    <p className="text-xl font-bold text-emerald-400">
+                      {formatCurrency(analytics?.summary?.profit || summary.sold_summary?.total_profit)}
+                    </p>
+                  </div>
+                  
+                  {/* Profit Margin */}
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <p className="text-white/60 text-xs uppercase">Profit Margin</p>
+                    <p className="text-xl font-bold text-cyan-400">
+                      {analytics?.summary?.profit_margin || 0}%
+                    </p>
                   </div>
                 </div>
 
-                {/* Year-over-Year Comparison Chart */}
-                {yoyData && yoyData.months && (
+                {/* Year-over-Year Comparison Chart - Only shows months with data */}
+                {filteredYoyData && (
                   <div className="bg-white rounded-xl p-4">
                     <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <LineChartIcon className="w-5 h-5 text-purple-600" />
-                      Sales Comparison: {yoyData.current_year} vs {yoyData.previous_year}
+                      Sales Comparison: {filteredYoyData.current_year} vs {filteredYoyData.previous_year}
                     </h4>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={yoyData.months}>
+                        <LineChart data={filteredYoyData.months}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                           <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                           <YAxis 
@@ -204,31 +278,33 @@ const SalesDataSection = ({ getAuthHeader }) => {
                           <Line 
                             type="monotone" 
                             dataKey="current" 
-                            name={String(yoyData.current_year)}
+                            name={String(filteredYoyData.current_year)}
                             stroke="#8B5CF6" 
                             strokeWidth={3}
                             dot={{ fill: '#8B5CF6', strokeWidth: 2 }}
+                            connectNulls={false}
                           />
                           <Line 
                             type="monotone" 
                             dataKey="previous" 
-                            name={String(yoyData.previous_year)}
+                            name={String(filteredYoyData.previous_year)}
                             stroke="#94A3B8" 
                             strokeWidth={2}
                             strokeDasharray="5 5"
                             dot={{ fill: '#94A3B8', strokeWidth: 2 }}
+                            connectNulls={false}
                           />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                       <div className="bg-purple-50 rounded-lg p-3">
-                        <p className="text-purple-600 text-sm">{yoyData.current_year} YTD</p>
-                        <p className="text-2xl font-bold text-purple-700">{formatCurrency(yoyData.ytd?.current)}</p>
+                        <p className="text-purple-600 text-sm">{filteredYoyData.current_year} YTD</p>
+                        <p className="text-2xl font-bold text-purple-700">{formatCurrency(filteredYoyData.ytd?.current)}</p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-gray-600 text-sm">{yoyData.previous_year} YTD</p>
-                        <p className="text-2xl font-bold text-gray-700">{formatCurrency(yoyData.ytd?.previous)}</p>
+                        <p className="text-gray-600 text-sm">{filteredYoyData.previous_year} YTD</p>
+                        <p className="text-2xl font-bold text-gray-700">{formatCurrency(filteredYoyData.ytd?.previous)}</p>
                       </div>
                     </div>
                   </div>
@@ -363,7 +439,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
 
       {/* ==================== MODALS ==================== */}
       
-      {/* Import Modal */}
       {showImportModal && (
         <ImportModal
           getAuthHeader={getAuthHeader}
@@ -376,7 +451,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
         />
       )}
 
-      {/* Report Builder Modal */}
       {showReportBuilder && (
         <ReportBuilderModal
           getAuthHeader={getAuthHeader}
@@ -388,7 +462,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
         />
       )}
 
-      {/* Active Report Modal */}
       {activeReport && (
         <ReportViewerModal
           report={activeReport}
@@ -397,7 +470,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
         />
       )}
 
-      {/* Stale Inventory Modal */}
       {showStaleInventory && (
         <StaleInventoryModal
           getAuthHeader={getAuthHeader}
@@ -426,7 +498,6 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
     setError(null);
 
     try {
-      // Clear existing data first if needed
       if (hasExistingData) {
         setClearing(true);
         await fetch(`${API_URL}/api/inventory/clear-all`, {
@@ -436,7 +507,6 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
         setClearing(false);
       }
 
-      // Upload new file
       const formData = new FormData();
       formData.append('file', file);
       formData.append('source', 'vendoo');
@@ -562,8 +632,6 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
   const [dateRange, setDateRange] = useState('ytd');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
-  const [chartTypes, setChartTypes] = useState(['line']);
-  const [metrics, setMetrics] = useState(['gross_sales', 'net_sales', 'profit']);
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
 
@@ -571,17 +639,7 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
     { id: 'sales', label: 'Sales Overview' },
     { id: 'brands', label: 'Top Brands' },
     { id: 'platforms', label: 'Platform Breakdown' },
-    { id: 'custom', label: 'Custom Metrics' }
-  ];
-
-  const availableMetrics = [
-    { id: 'gross_sales', label: 'Gross Sales' },
-    { id: 'net_sales', label: 'Net Sales' },
-    { id: 'cogs', label: 'COGS' },
-    { id: 'profit', label: 'Profit' },
-    { id: 'items_sold', label: 'Items Sold' },
-    { id: 'avg_sale_price', label: 'Avg Sale Price' },
-    { id: 'avg_days_to_sale', label: 'Avg Days to Sale' }
+    { id: 'monthly', label: 'Monthly Trends' }
   ];
 
   const generateReport = async () => {
@@ -628,9 +686,7 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
           config: {
             date_range: dateRange,
             custom_start: customStart,
-            custom_end: customEnd,
-            chart_types: chartTypes,
-            metrics: metrics
+            custom_end: customEnd
           }
         })
       });
@@ -641,7 +697,7 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
           id: data.report_id,
           name: reportName,
           report_type: reportType,
-          config: { date_range: dateRange, chart_types: chartTypes, metrics },
+          config: { date_range: dateRange },
           created_at: new Date().toISOString()
         });
       }
@@ -682,8 +738,8 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
   };
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99999] overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-xl max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99999]" onClick={onClose}>
+      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
           <h3 className="text-xl font-semibold">Create Report</h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -970,7 +1026,6 @@ const ReportViewerModal = ({ report, getAuthHeader, onClose }) => {
                 </div>
               </div>
 
-              {/* Charts would go here based on report.config.chart_types */}
               {reportData.top_brands?.length > 0 && (
                 <div>
                   <h4 className="font-semibold mb-3">Top Brands</h4>
@@ -1004,10 +1059,10 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchStaleItems = async () => {
+  const fetchStaleItems = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/inventory/stale?days_threshold=${days}&limit=200`, {
+      const res = await fetch(`${API_URL}/api/inventory/stale?days_threshold=${days}&limit=500`, {
         headers: { ...getAuthHeader() }
       });
       if (res.ok) {
@@ -1017,11 +1072,11 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
       console.error('Error fetching stale inventory:', error);
     }
     setLoading(false);
-  };
+  }, [days, getAuthHeader]);
 
   useEffect(() => {
     fetchStaleItems();
-  }, []);
+  }, [fetchStaleItems]);
 
   const exportStale = () => {
     if (!data?.items) return;
@@ -1029,7 +1084,7 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
     const csv = [
       ['Title', 'SKU', 'Platform', 'Listed Date', 'Days in Inventory', 'Listed Price'],
       ...data.items.map(item => [
-        `"${item.title || ''}"`,
+        `"${(item.title || '').replace(/"/g, '""')}"`,
         item.sku || '',
         item.platform || '',
         item.listed_date || '',
@@ -1048,8 +1103,9 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
 
   return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99999]" onClick={onClose}>
-      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="border-b px-6 py-4 flex items-center justify-between">
+      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0 border-b px-6 py-4 flex items-center justify-between">
           <h3 className="text-xl font-semibold flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
             Stale Inventory Report
@@ -1059,13 +1115,11 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
           </button>
         </div>
 
-        <div className="p-6 space-y-4 flex-1 overflow-y-auto">
-          {/* Filter */}
-          <div className="flex flex-wrap items-end gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Items listed more than:
-              </label>
+        {/* Controls - Fixed */}
+        <div className="flex-shrink-0 px-6 py-4 border-b bg-gray-50">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Items listed more than:</label>
               <select
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
@@ -1079,28 +1133,33 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
                 <option value={730}>2 years</option>
               </select>
             </div>
-            <Button onClick={fetchStaleItems} disabled={loading}>
+            <Button onClick={fetchStaleItems} disabled={loading} size="sm">
               {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Update'}
             </Button>
-            <Button onClick={exportStale} variant="outline" disabled={!data?.items?.length}>
+            <Button onClick={exportStale} variant="outline" size="sm" disabled={!data?.items?.length}>
               <Download className="w-4 h-4 mr-2" /> Export CSV
             </Button>
           </div>
-
-          {/* Results */}
+          
           {data && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="text-amber-800">
                 <strong>{data.total_stale_items?.toLocaleString()}</strong> items have been in inventory for more than <strong>{days} days</strong>
               </p>
             </div>
           )}
+        </div>
 
-          {/* Items Table */}
-          {data?.items?.length > 0 && (
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="w-8 h-8 animate-spin text-purple-600" />
+            </div>
+          ) : data?.items?.length > 0 ? (
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
@@ -1126,9 +1185,7 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
                 </tbody>
               </table>
             </div>
-          )}
-
-          {data && data.items?.length === 0 && (
+          ) : (
             <div className="text-center py-8 text-gray-500">
               <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>No stale inventory found!</p>
