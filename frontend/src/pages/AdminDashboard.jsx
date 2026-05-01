@@ -80,7 +80,7 @@ import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeS
 import PasswordManagementSection from "@/components/admin/sections/PasswordManagementSection";
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
-import InventorySection from "@/components/admin/sections/InventorySection";
+import SalesDataSection from "@/components/admin/sections/SalesDataSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
@@ -3399,13 +3399,13 @@ export default function AdminDashboard() {
               </div>
             </DashboardGroup>
 
-            {/* GROUP 4: Operations & Reports */}
+            {/* GROUP 4: Reports & Operations */}
             <DashboardGroup
-              title="Operations & Reports"
+              title="Reports & Operations"
               icon={TrendingUp}
               gradient="from-[#FFB800] to-[#F59E0B]"
               defaultOpen={false}
-              badge="Sales, expenses & tax prep"
+              badge="Sales, reports & tax prep"
               testId="group-operations"
               forceOpen={forceOpenOperations}
               onOpenChange={(open) => {
@@ -3425,11 +3425,11 @@ export default function AdminDashboard() {
                 gpsTracker={gpsTracker}
               />
 
-              {/* Financials Section - Year-round tracking + Tax Prep */}
+              {/* Sales Data Section - CSV Import, Reports, Analytics */}
+              <SalesDataSection getAuthHeader={getAuthHeader} />
+
+              {/* Taxes Section - Deductions, Tax Prep, 1099s */}
               <FinancialsSection getAuthHeader={getAuthHeader} />
-              
-              {/* Inventory Section - Vendoo CSV Import & Dashboard */}
-              <InventorySection getAuthHeader={getAuthHeader} />
 
               {/* Tax Returns Archive - Store filed tax returns by year */}
               <TaxReturnsArchiveSection getAuthHeader={getAuthHeader} />

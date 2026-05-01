@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
 import csv
 import io
@@ -506,3 +506,299 @@ async def get_inventory_years():
     return {
         "years": [{"year": int(y["_id"]), "count": y["count"]} for y in years if y["_id"] and y["_id"].isdigit()]
     }
+
+
+# ============== ANALYTICS ENDPOINTS ==============
+
+@router.get("/analytics")
+async def get_inventory_analytics(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    year: Optional[int] = None
+):
+    """
+    Get comprehensive analytics for inventory/sales data.
+    Supports date range filtering.
+    """
+    
+    # Build date filter
+    date_filter = {}
+    if start_date and end_date:
+        date_filter = {
+            "sold_date": {"$gte": start_date, "$lte": end_date}
+        }
+    elif year:
+        year_str = str(year)
+        date_filter = {"sold_date": {"$regex": f"^{year_str}"}}
+    
+    # Get sold items
+    sold_query = {"status": {"$regex": "sold", "$options": "i"}}
+    if date_filter:
+        sold_query.update(date_filter)
+    
+    sold_items = await db.inventory_items.find(sold_query, {"_id": 0}).to_list(length=None)
+    
+    # Get unsold items (no date filter - we want all unsold)
+    unsold_query = {
+        "$or": [
+            {"status": {"$regex": "listed|active|available", "$options": "i"}},
+            {"status": {"$exists": False}},
+            {"sold_date": None}
+        ]
+    }
+    unsold_items = await db.inventory_items.find(unsold_query, {"_id": 0}).to_list(length=None)
+    
+    # Calculate metrics
+    gross_sales = sum(item.get("price_sold", 0) or 0 for item in sold_items)
+    total_cogs = sum(item.get("cogs", 0) or 0 for item in sold_items)
+    total_fees = sum(item.get("fees", 0) or 0 for item in sold_items)
+    total_shipping = sum(item.get("shipping_cost", 0) or 0 for item in sold_items)
+    net_sales = gross_sales - total_fees - total_shipping
+    profit = sum(item.get("profit", 0) or 0 for item in sold_items)
+    
+    # If profit not provided, calculate it
+    if profit == 0 and gross_sales > 0:
+        profit = net_sales - total_cogs
+    
+    # Calculate average days to sale
+    days_to_sale = []
+    for item in sold_items:
+        if item.get("sold_date") and item.get("listed_date"):
+            try:
+                sold = datetime.strptime(item["sold_date"][:10], "%Y-%m-%d")
+                listed = datetime.strptime(item["listed_date"][:10], "%Y-%m-%d")
+                days = (sold - listed).days
+                if days >= 0:
+                    days_to_sale.append(days)
+            except:
+                pass
+    
+    avg_days_to_sale = round(sum(days_to_sale) / len(days_to_sale), 1) if days_to_sale else None
+    
+    # Top brands
+    brand_sales = {}
+    for item in sold_items:
+        brand = item.get("brand") or "Unknown"
+        if brand not in brand_sales:
+            brand_sales[brand] = {"count": 0, "revenue": 0}
+        brand_sales[brand]["count"] += 1
+        brand_sales[brand]["revenue"] += item.get("price_sold", 0) or 0
+    
+    top_brands = sorted(
+        [{"brand": k, **v} for k, v in brand_sales.items()],
+        key=lambda x: x["revenue"],
+        reverse=True
+    )[:10]
+    
+    # Top platforms
+    platform_sales = {}
+    for item in sold_items:
+        platform = item.get("platform") or "Unknown"
+        if platform not in platform_sales:
+            platform_sales[platform] = {"count": 0, "revenue": 0}
+        platform_sales[platform]["count"] += 1
+        platform_sales[platform]["revenue"] += item.get("price_sold", 0) or 0
+    
+    top_platforms = sorted(
+        [{"platform": k, **v} for k, v in platform_sales.items()],
+        key=lambda x: x["revenue"],
+        reverse=True
+    )
+    
+    # Monthly breakdown for charts
+    monthly_sales = {}
+    for item in sold_items:
+        if item.get("sold_date"):
+            month_key = item["sold_date"][:7]  # YYYY-MM
+            if month_key not in monthly_sales:
+                monthly_sales[month_key] = {"gross": 0, "net": 0, "count": 0, "cogs": 0}
+            monthly_sales[month_key]["gross"] += item.get("price_sold", 0) or 0
+            monthly_sales[month_key]["cogs"] += item.get("cogs", 0) or 0
+            monthly_sales[month_key]["count"] += 1
+            fees = (item.get("fees", 0) or 0) + (item.get("shipping_cost", 0) or 0)
+            monthly_sales[month_key]["net"] += (item.get("price_sold", 0) or 0) - fees
+    
+    monthly_data = [
+        {"month": k, **v, "profit": v["net"] - v["cogs"]}
+        for k, v in sorted(monthly_sales.items())
+    ]
+    
+    return {
+        "summary": {
+            "gross_sales": round(gross_sales, 2),
+            "net_sales": round(net_sales, 2),
+            "total_cogs": round(total_cogs, 2),
+            "total_fees": round(total_fees, 2),
+            "profit": round(profit, 2),
+            "profit_margin": round((profit / gross_sales * 100), 1) if gross_sales > 0 else 0,
+            "items_sold": len(sold_items),
+            "items_unsold": len(unsold_items),
+            "avg_days_to_sale": avg_days_to_sale,
+            "avg_sale_price": round(gross_sales / len(sold_items), 2) if sold_items else 0
+        },
+        "top_brands": top_brands,
+        "top_platforms": top_platforms,
+        "monthly_data": monthly_data,
+        "date_range": {
+            "start": start_date,
+            "end": end_date,
+            "year": year
+        }
+    }
+
+
+@router.get("/analytics/yoy")
+async def get_year_over_year_comparison(
+    current_year: Optional[int] = None
+):
+    """Get year-over-year sales comparison data for charts"""
+    
+    if not current_year:
+        current_year = datetime.now().year
+    
+    previous_year = current_year - 1
+    
+    # Get sales for both years
+    result = {"current_year": current_year, "previous_year": previous_year, "months": []}
+    
+    for month in range(1, 13):
+        month_str = f"{month:02d}"
+        
+        # Current year
+        current_query = {
+            "sold_date": {"$regex": f"^{current_year}-{month_str}"},
+            "status": {"$regex": "sold", "$options": "i"}
+        }
+        current_items = await db.inventory_items.find(current_query, {"price_sold": 1}).to_list(length=None)
+        current_sales = sum(item.get("price_sold", 0) or 0 for item in current_items)
+        
+        # Previous year
+        prev_query = {
+            "sold_date": {"$regex": f"^{previous_year}-{month_str}"},
+            "status": {"$regex": "sold", "$options": "i"}
+        }
+        prev_items = await db.inventory_items.find(prev_query, {"price_sold": 1}).to_list(length=None)
+        prev_sales = sum(item.get("price_sold", 0) or 0 for item in prev_items)
+        
+        month_name = datetime(2000, month, 1).strftime("%b")
+        result["months"].append({
+            "month": month_name,
+            "month_num": month,
+            "current": round(current_sales, 2),
+            "previous": round(prev_sales, 2),
+            "change": round(current_sales - prev_sales, 2),
+            "change_pct": round((current_sales - prev_sales) / prev_sales * 100, 1) if prev_sales > 0 else 0
+        })
+    
+    # Calculate YTD totals
+    result["ytd"] = {
+        "current": sum(m["current"] for m in result["months"]),
+        "previous": sum(m["previous"] for m in result["months"])
+    }
+    
+    return result
+
+
+@router.get("/stale")
+async def get_stale_inventory(
+    days_threshold: int = Query(365, description="Items listed more than X days ago"),
+    limit: int = Query(100, le=500)
+):
+    """Get items that haven't sold and have been listed for longer than threshold"""
+    
+    cutoff_date = (datetime.now() - timedelta(days=days_threshold)).strftime("%Y-%m-%d")
+    
+    # Find unsold items listed before cutoff
+    query = {
+        "$and": [
+            {"listed_date": {"$lte": cutoff_date, "$ne": None}},
+            {"$or": [
+                {"status": {"$regex": "listed|active|available", "$options": "i"}},
+                {"sold_date": None}
+            ]}
+        ]
+    }
+    
+    items = await db.inventory_items.find(query, {"_id": 0}).sort("listed_date", 1).limit(limit).to_list(length=limit)
+    
+    # Calculate days in inventory for each
+    today = datetime.now()
+    for item in items:
+        if item.get("listed_date"):
+            try:
+                listed = datetime.strptime(item["listed_date"][:10], "%Y-%m-%d")
+                item["days_in_inventory"] = (today - listed).days
+            except:
+                item["days_in_inventory"] = None
+    
+    # Get total count
+    total_count = await db.inventory_items.count_documents(query)
+    
+    return {
+        "threshold_days": days_threshold,
+        "cutoff_date": cutoff_date,
+        "total_stale_items": total_count,
+        "items": items
+    }
+
+
+# ============== SAVED REPORTS ==============
+
+class SavedReport(BaseModel):
+    name: str
+    report_type: str  # 'sales', 'stale_inventory', 'brands', 'platforms', 'custom'
+    config: Dict[str, Any]  # date_range, filters, chart_types, etc.
+
+
+@router.post("/reports/save")
+async def save_report(report: SavedReport):
+    """Save a report configuration for later use"""
+    
+    report_doc = {
+        "id": str(uuid.uuid4()),
+        "name": report.name,
+        "report_type": report.report_type,
+        "config": report.config,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.saved_reports.insert_one(report_doc)
+    
+    return {"message": "Report saved", "report_id": report_doc["id"]}
+
+
+@router.get("/reports/saved")
+async def get_saved_reports():
+    """Get all saved reports"""
+    
+    reports = await db.saved_reports.find({}, {"_id": 0}).sort("created_at", -1).to_list(length=50)
+    return {"reports": reports}
+
+
+@router.delete("/reports/saved/{report_id}")
+async def delete_saved_report(report_id: str):
+    """Delete a saved report"""
+    
+    result = await db.saved_reports.delete_one({"id": report_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    return {"message": "Report deleted"}
+
+
+@router.delete("/clear-all")
+async def clear_all_inventory_data():
+    """Clear all inventory data for fresh import"""
+    
+    result = await db.inventory_items.delete_many({})
+    
+    return {
+        "message": f"Cleared {result.deleted_count} inventory items",
+        "deleted_count": result.deleted_count
+    }
+
+
+# Need to import timedelta at the top
+from datetime import timedelta
