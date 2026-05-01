@@ -80,6 +80,7 @@ import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeS
 import PasswordManagementSection from "@/components/admin/sections/PasswordManagementSection";
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
+import InventorySection from "@/components/admin/sections/InventorySection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
@@ -3426,6 +3427,9 @@ export default function AdminDashboard() {
 
               {/* Financials Section - Year-round tracking + Tax Prep */}
               <FinancialsSection getAuthHeader={getAuthHeader} />
+              
+              {/* Inventory Section - Vendoo CSV Import & Dashboard */}
+              <InventorySection getAuthHeader={getAuthHeader} />
 
               {/* Tax Returns Archive - Store filed tax returns by year */}
               <TaxReturnsArchiveSection getAuthHeader={getAuthHeader} />
