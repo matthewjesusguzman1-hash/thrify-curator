@@ -1,91 +1,94 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { X, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ShoppingCart, Trophy, Heart, Shirt, DollarSign } from "lucide-react";
+import { X, Trophy, Heart, Shirt, Volume2, VolumeX } from "lucide-react";
 
 // Game constants
-const TILE_SIZE = 28;
-const GAME_WIDTH = 13;
-const GAME_HEIGHT = 15;
+const TILE_WIDTH = 48;
+const TILE_HEIGHT = 28;
+const GAME_COLS = 9;
+const GAME_ROWS = 11;
+
+// Convert grid to isometric position
+const toIso = (col, row) => {
+  const x = (col - row) * (TILE_WIDTH / 2) + 180;
+  const y = (col + row) * (TILE_HEIGHT / 2) + 20;
+  return { x, y };
+};
 
 // Tile types
 const TILES = {
-  EMPTY: 0,
+  FLOOR: 0,
   RACK: 1,
-  PLAYER: 2,
-  KAREN: 3,
-  HOMELESS: 4,
-  CLOTHING: 5,
-  REGISTER: 6,
-  WALL: 7,
+  REGISTER: 2,
 };
 
-// Create level layout
-const createLevel = (level) => {
-  const baseMap = [
-    [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7],
-    [7, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 7],
-    [7, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 7],
-    [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7],
-    [7, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 7],
-    [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7],
-    [7, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 7],
-    [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7],
-    [7, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 7],
-    [7, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 7],
-    [7, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7],
-    [7, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 7],
-    [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7],
-    [7, 7, 7, 7, 7, 6, 6, 6, 7, 7, 7, 7, 7],
-    [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7],
-  ];
-  return baseMap;
-};
+// Create level
+const createLevel = () => [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 1, 0, 1, 0, 1, 0, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 1, 1, 0, 1, 0, 1, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 1, 0, 1, 1, 1, 0, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 1, 1, 0, 1, 0, 1, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 2, 2, 2, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+];
 
 // Generate entities
 const generateEntities = (map, level) => {
-  const entities = { karens: [], homeless: [], clothing: [] };
-  const emptySpots = [];
+  const entities = { enemies: [], clothing: [] };
+  const spots = [];
   
-  for (let y = 2; y < GAME_HEIGHT - 2; y++) {
-    for (let x = 1; x < GAME_WIDTH - 1; x++) {
-      if (map[y][x] === TILES.EMPTY && !(x <= 2 && y <= 2)) {
-        emptySpots.push({ x, y });
+  for (let r = 1; r < GAME_ROWS - 2; r++) {
+    for (let c = 1; c < GAME_COLS - 1; c++) {
+      if (map[r][c] === TILES.FLOOR && !(c <= 1 && r <= 1)) {
+        spots.push({ col: c, row: r });
       }
     }
   }
   
-  // Shuffle
-  for (let i = emptySpots.length - 1; i > 0; i--) {
+  for (let i = spots.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [emptySpots[i], emptySpots[j]] = [emptySpots[j], emptySpots[i]];
+    [spots[i], spots[j]] = [spots[j], spots[i]];
   }
   
-  const karenCount = Math.min(2 + level, 6);
-  for (let i = 0; i < karenCount && emptySpots.length > 0; i++) {
-    const spot = emptySpots.pop();
-    entities.karens.push({ ...spot, dir: Math.random() > 0.5 ? 1 : -1, frame: 0 });
+  // Enemies (Karens and wanderers)
+  const enemyCount = Math.min(2 + level, 5);
+  for (let i = 0; i < enemyCount && spots.length > 0; i++) {
+    const spot = spots.pop();
+    entities.enemies.push({
+      ...spot,
+      type: i % 2 === 0 ? 'karen' : 'wanderer',
+      dir: Math.random() > 0.5 ? 1 : -1,
+      moveAxis: i % 2 === 0 ? 'col' : 'row',
+      animFrame: 0,
+    });
   }
   
-  const homelessCount = Math.min(1 + Math.floor(level / 2), 4);
-  for (let i = 0; i < homelessCount && emptySpots.length > 0; i++) {
-    const spot = emptySpots.pop();
-    entities.homeless.push({ ...spot, dir: Math.random() > 0.5 ? 1 : -1, frame: 0 });
-  }
-  
-  const clothingCount = Math.min(4 + level, 10);
-  for (let i = 0; i < clothingCount && emptySpots.length > 0; i++) {
-    const spot = emptySpots.pop();
-    entities.clothing.push({ ...spot, collected: false, type: Math.floor(Math.random() * 4) });
+  // Clothing
+  const clothingCount = Math.min(5 + level, 12);
+  for (let i = 0; i < clothingCount && spots.length > 0; i++) {
+    const spot = spots.pop();
+    entities.clothing.push({
+      ...spot,
+      collected: false,
+      type: Math.floor(Math.random() * 5),
+      bobOffset: Math.random() * Math.PI * 2,
+    });
   }
   
   return entities;
 };
 
-// Clothing colors
-const clothingColors = [
-  { primary: '#EC4899', secondary: '#DB2777' }, // Pink
-  { primary: '#3B82F6', secondary: '#2563EB' }, // Blue
-  { primary: '#10B981', secondary: '#059669' }, // Green
-  { primary: '#F59E0B', secondary: '#D97706' }, // Orange
+// Clothing styles
+const CLOTHING_STYLES = [
+  { emoji: '👗', color: '#EC4899' },
+  { emoji: '👔', color: '#3B82F6' },
+  { emoji: '👕', color: '#10B981' },
+  { emoji: '👖', color: '#6366F1' },
+  { emoji: '🧥', color: '#F59E0B' },
 ];
 
 export default function ThriftRunGame({ onClose }) {
@@ -93,182 +96,226 @@ export default function ThriftRunGame({ onClose }) {
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
-  const [player, setPlayer] = useState({ x: 1, y: 1 });
-  const [map, setMap] = useState(() => createLevel(1));
-  const [entities, setEntities] = useState(() => generateEntities(createLevel(1), 1));
-  const [itemsCollected, setItemsCollected] = useState(0);
-  const [playerFrame, setPlayerFrame] = useState(0);
-  const [flashPlayer, setFlashPlayer] = useState(false);
+  const [player, setPlayer] = useState({ col: 0, row: 0 });
+  const [playerDir, setPlayerDir] = useState('down');
+  const [map] = useState(() => createLevel());
+  const [entities, setEntities] = useState(() => generateEntities(createLevel(), 1));
+  const [particles, setParticles] = useState([]);
+  const [screenShake, setScreenShake] = useState(0);
+  const [invincible, setInvincible] = useState(false);
+  const [animTime, setAnimTime] = useState(0);
   const [highScore, setHighScore] = useState(() => {
-    const saved = localStorage.getItem("thriftrun_highscore");
-    return saved ? parseInt(saved) : 0;
+    return parseInt(localStorage.getItem("thriftrun_hs") || "0");
   });
   
-  const gameLoopRef = useRef(null);
-  const animationRef = useRef(null);
   const lastMoveRef = useRef(0);
+  const touchStartRef = useRef(null);
 
-  // Player animation
+  // Animation loop
   useEffect(() => {
-    if (gameState !== "playing") return;
-    animationRef.current = setInterval(() => {
-      setPlayerFrame(f => (f + 1) % 4);
-    }, 200);
-    return () => clearInterval(animationRef.current);
-  }, [gameState]);
+    const interval = setInterval(() => setAnimTime(t => t + 1), 50);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Screen shake decay
+  useEffect(() => {
+    if (screenShake > 0) {
+      const timeout = setTimeout(() => setScreenShake(s => Math.max(0, s - 1)), 50);
+      return () => clearTimeout(timeout);
+    }
+  }, [screenShake]);
+
+  // Particle cleanup
+  useEffect(() => {
+    if (particles.length > 0) {
+      const timeout = setTimeout(() => {
+        setParticles(p => p.filter(particle => Date.now() - particle.created < 1000));
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [particles]);
+
+  const addParticles = (col, row, color, count = 8) => {
+    const pos = toIso(col, row);
+    const newParticles = [];
+    for (let i = 0; i < count; i++) {
+      newParticles.push({
+        id: Date.now() + i,
+        x: pos.x,
+        y: pos.y,
+        vx: (Math.random() - 0.5) * 8,
+        vy: (Math.random() - 0.5) * 8 - 3,
+        color,
+        created: Date.now(),
+      });
+    }
+    setParticles(p => [...p, ...newParticles]);
+  };
 
   const startGame = useCallback(() => {
-    const newMap = createLevel(1);
-    setMap(newMap);
-    setEntities(generateEntities(newMap, 1));
-    setPlayer({ x: 1, y: 1 });
+    setEntities(generateEntities(map, 1));
+    setPlayer({ col: 0, row: 0 });
+    setPlayerDir('down');
     setLevel(1);
     setScore(0);
     setLives(3);
-    setItemsCollected(0);
+    setParticles([]);
+    setInvincible(false);
     setGameState("playing");
-  }, []);
+  }, [map]);
 
   const nextLevel = useCallback(() => {
     const newLevel = level + 1;
-    const newMap = createLevel(newLevel);
-    setMap(newMap);
-    setEntities(generateEntities(newMap, newLevel));
-    setPlayer({ x: 1, y: 1 });
+    setEntities(generateEntities(map, newLevel));
+    setPlayer({ col: 0, row: 0 });
     setLevel(newLevel);
-    setItemsCollected(0);
-    setScore(s => s + 500);
-  }, [level]);
+    setScore(s => s + 1000);
+    addParticles(4, 5, '#22C55E', 20);
+  }, [level, map]);
 
-  const movePlayer = useCallback((dx, dy) => {
-    if (gameState !== "playing") return;
+  const movePlayer = useCallback((dCol, dRow) => {
+    if (gameState !== "playing" || invincible) return;
     
     const now = Date.now();
-    if (now - lastMoveRef.current < 120) return;
+    if (now - lastMoveRef.current < 150) return;
     lastMoveRef.current = now;
     
+    // Set direction
+    if (dCol > 0) setPlayerDir('right');
+    else if (dCol < 0) setPlayerDir('left');
+    else if (dRow > 0) setPlayerDir('down');
+    else if (dRow < 0) setPlayerDir('up');
+    
     setPlayer(prev => {
-      const newX = prev.x + dx;
-      const newY = prev.y + dy;
+      const newCol = Math.max(0, Math.min(GAME_COLS - 1, prev.col + dCol));
+      const newRow = Math.max(0, Math.min(GAME_ROWS - 1, prev.row + dRow));
       
-      if (newX < 0 || newX >= GAME_WIDTH || newY < 0 || newY >= GAME_HEIGHT) return prev;
+      if (map[newRow][newCol] === TILES.RACK) return prev;
       
-      const tile = map[newY][newX];
-      if (tile === TILES.RACK || tile === TILES.WALL) return prev;
-      
-      if (tile === TILES.REGISTER) {
+      if (map[newRow][newCol] === TILES.REGISTER) {
         setGameState("levelComplete");
         return prev;
       }
       
-      return { x: newX, y: newY };
+      return { col: newCol, row: newRow };
     });
-  }, [gameState, map]);
+  }, [gameState, invincible, map]);
 
-  // Collision detection
+  // Collision & collection
   useEffect(() => {
     if (gameState !== "playing") return;
     
-    const checkCollision = () => {
-      for (const karen of entities.karens) {
-        if (karen.x === player.x && karen.y === player.y) {
-          handleHit();
-          return;
+    // Enemy collision
+    if (!invincible) {
+      for (const enemy of entities.enemies) {
+        if (enemy.col === player.col && enemy.row === player.row) {
+          setScreenShake(10);
+          setInvincible(true);
+          setTimeout(() => setInvincible(false), 1500);
+          addParticles(player.col, player.row, '#EF4444', 12);
+          
+          setLives(l => {
+            if (l <= 1) {
+              setGameState("lost");
+              if (score > highScore) {
+                setHighScore(score);
+                localStorage.setItem("thriftrun_hs", score.toString());
+              }
+              return 0;
+            }
+            setPlayer({ col: 0, row: 0 });
+            return l - 1;
+          });
+          break;
         }
       }
-      for (const h of entities.homeless) {
-        if (h.x === player.x && h.y === player.y) {
-          handleHit();
-          return;
-        }
-      }
-    };
-    
-    const handleHit = () => {
-      setFlashPlayer(true);
-      setTimeout(() => setFlashPlayer(false), 500);
-      
-      setLives(l => {
-        const newLives = l - 1;
-        if (newLives <= 0) {
-          setGameState("lost");
-          if (score > highScore) {
-            setHighScore(score);
-            localStorage.setItem("thriftrun_highscore", score.toString());
-          }
-        } else {
-          setPlayer({ x: 1, y: 1 });
-        }
-        return newLives;
-      });
-    };
-    
-    checkCollision();
+    }
     
     // Clothing collection
     setEntities(prev => {
       let collected = false;
       const newClothing = prev.clothing.map(c => {
-        if (!c.collected && c.x === player.x && c.y === player.y) {
+        if (!c.collected && c.col === player.col && c.row === player.row) {
           collected = true;
+          addParticles(c.col, c.row, CLOTHING_STYLES[c.type].color, 10);
           return { ...c, collected: true };
         }
         return c;
       });
-      
-      if (collected) {
-        setScore(s => s + 100);
-        setItemsCollected(i => i + 1);
-      }
-      
+      if (collected) setScore(s => s + 150);
       return { ...prev, clothing: newClothing };
     });
-  }, [player, entities, gameState, score, highScore]);
+  }, [player, entities.enemies, gameState, invincible, score, highScore]);
 
-  // Enemy movement
+  // Enemy AI
   useEffect(() => {
     if (gameState !== "playing") return;
     
-    const moveEnemies = () => {
-      setEntities(prev => {
-        const newKarens = prev.karens.map(karen => {
-          let newX = karen.x + karen.dir;
-          if (newX < 1 || newX >= GAME_WIDTH - 1 || map[karen.y][newX] === TILES.RACK || map[karen.y][newX] === TILES.WALL) {
-            return { ...karen, dir: -karen.dir, frame: (karen.frame + 1) % 2 };
+    const interval = setInterval(() => {
+      setEntities(prev => ({
+        ...prev,
+        enemies: prev.enemies.map(enemy => {
+          let newCol = enemy.col;
+          let newRow = enemy.row;
+          let newDir = enemy.dir;
+          
+          if (enemy.moveAxis === 'col') {
+            newCol += enemy.dir;
+            if (newCol < 1 || newCol >= GAME_COLS - 1 || map[enemy.row][newCol] === TILES.RACK) {
+              newDir = -enemy.dir;
+              newCol = enemy.col;
+            }
+          } else {
+            newRow += enemy.dir;
+            if (newRow < 1 || newRow >= GAME_ROWS - 2 || map[newRow][enemy.col] === TILES.RACK) {
+              newDir = -enemy.dir;
+              newRow = enemy.row;
+            }
           }
-          return { ...karen, x: newX, frame: (karen.frame + 1) % 2 };
-        });
-        
-        const newHomeless = prev.homeless.map(h => {
-          let newY = h.y + h.dir;
-          if (newY < 1 || newY >= GAME_HEIGHT - 2 || map[newY][h.x] === TILES.RACK || map[newY][h.x] === TILES.WALL) {
-            return { ...h, dir: -h.dir, frame: (h.frame + 1) % 2 };
-          }
-          return { ...h, y: newY, frame: (h.frame + 1) % 2 };
-        });
-        
-        return { ...prev, karens: newKarens, homeless: newHomeless };
-      });
-    };
+          
+          return { ...enemy, col: newCol, row: newRow, dir: newDir, animFrame: (enemy.animFrame + 1) % 4 };
+        }),
+      }));
+    }, 700 - Math.min(level * 50, 300));
     
-    gameLoopRef.current = setInterval(moveEnemies, 600 - Math.min(level * 40, 250));
-    return () => clearInterval(gameLoopRef.current);
+    return () => clearInterval(interval);
   }, [gameState, level, map]);
 
   // Keyboard
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKey = (e) => {
       if (gameState !== "playing") return;
-      switch (e.key) {
-        case "ArrowUp": case "w": e.preventDefault(); movePlayer(0, -1); break;
-        case "ArrowDown": case "s": e.preventDefault(); movePlayer(0, 1); break;
-        case "ArrowLeft": case "a": e.preventDefault(); movePlayer(-1, 0); break;
-        case "ArrowRight": case "d": e.preventDefault(); movePlayer(1, 0); break;
+      const moves = {
+        ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+        w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0],
+      };
+      if (moves[e.key]) {
+        e.preventDefault();
+        movePlayer(...moves[e.key]);
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, [gameState, movePlayer]);
+
+  // Touch controls
+  const handleTouchStart = (e) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  
+  const handleTouchEnd = (e) => {
+    if (!touchStartRef.current || gameState !== "playing") return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    const threshold = 30;
+    
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > threshold) {
+      movePlayer(dx > 0 ? 1 : -1, 0);
+    } else if (Math.abs(dy) > threshold) {
+      movePlayer(0, dy > 0 ? 1 : -1);
+    }
+    touchStartRef.current = null;
+  };
 
   // Level complete
   useEffect(() => {
@@ -281,382 +328,412 @@ export default function ThriftRunGame({ onClose }) {
     }
   }, [gameState, nextLevel]);
 
-  // Render player (prominent shopping cart)
-  const renderPlayer = () => {
-    const bounce = playerFrame % 2 === 0 ? 'translateY(-2px)' : 'translateY(0)';
-    return (
-      <div 
-        className="absolute z-50 flex items-center justify-center"
-        style={{
-          left: player.x * TILE_SIZE,
-          top: player.y * TILE_SIZE,
-          width: TILE_SIZE,
-          height: TILE_SIZE,
-          transform: bounce,
-          transition: 'left 0.1s, top 0.1s',
-        }}
-      >
-        {/* Glow effect */}
-        <div 
-          className="absolute inset-0 rounded-full animate-pulse"
-          style={{
-            background: 'radial-gradient(circle, rgba(0,212,255,0.6) 0%, rgba(0,212,255,0) 70%)',
-            transform: 'scale(1.8)',
-          }}
-        />
-        {/* Player circle */}
-        <div 
-          className={`relative w-6 h-6 rounded-full flex items-center justify-center shadow-lg ${flashPlayer ? 'animate-ping' : ''}`}
-          style={{
-            background: 'linear-gradient(135deg, #00D4FF 0%, #0EA5E9 50%, #0284C7 100%)',
-            boxShadow: '0 0 15px rgba(0,212,255,0.8), 0 0 30px rgba(0,212,255,0.4)',
-            border: '2px solid #fff',
-          }}
-        >
-          <ShoppingCart className="w-4 h-4 text-white drop-shadow-md" strokeWidth={2.5} />
-        </div>
-        {/* Direction indicator */}
-        <div 
-          className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0"
-          style={{
-            borderLeft: '4px solid transparent',
-            borderRight: '4px solid transparent',
-            borderBottom: '6px solid #00D4FF',
-          }}
-        />
-      </div>
-    );
-  };
+  const shakeStyle = screenShake > 0 ? {
+    transform: `translate(${(Math.random() - 0.5) * screenShake}px, ${(Math.random() - 0.5) * screenShake}px)`
+  } : {};
 
-  // Render tile
-  const renderTile = (tileType, x, y) => {
-    const karen = entities.karens.find(k => k.x === x && k.y === y);
-    const homeless = entities.homeless.find(h => h.x === x && h.y === y);
-    const clothing = entities.clothing.find(c => c.x === x && c.y === y && !c.collected);
-    
-    let bgStyle = { background: '#FEF3C7' }; // Warm floor
-    let content = null;
-    
-    if (tileType === TILES.WALL) {
-      bgStyle = { background: 'linear-gradient(135deg, #1F2937 0%, #111827 100%)' };
-    } else if (tileType === TILES.RACK) {
-      bgStyle = { background: '#FDE68A' };
-      content = (
-        <div className="w-full h-full flex items-center justify-center p-0.5">
-          <div 
-            className="w-full h-full rounded-sm flex flex-col items-center justify-center"
-            style={{
-              background: 'linear-gradient(180deg, #92400E 0%, #78350F 100%)',
-              boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.3)',
-            }}
-          >
-            {/* Hanging clothes */}
-            <div className="flex gap-0.5 mt-1">
-              <div className="w-1.5 h-3 rounded-sm" style={{ background: '#EC4899' }} />
-              <div className="w-1.5 h-3 rounded-sm" style={{ background: '#3B82F6' }} />
-              <div className="w-1.5 h-3 rounded-sm" style={{ background: '#10B981' }} />
-            </div>
-            {/* Rack bar */}
-            <div className="w-5 h-0.5 bg-gray-400 mt-0.5 rounded-full" />
-          </div>
-        </div>
-      );
-    } else if (tileType === TILES.REGISTER) {
-      bgStyle = { background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' };
-      content = (
-        <div className="w-full h-full flex flex-col items-center justify-center">
-          <DollarSign className="w-4 h-4 text-white animate-bounce" strokeWidth={3} />
-          <span className="text-[6px] font-bold text-white/90 mt-0.5">REGISTER</span>
-        </div>
-      );
-    }
-    
-    // Entities
-    if (karen) {
-      content = (
-        <div className="w-full h-full flex items-center justify-center">
-          <div 
-            className="relative flex flex-col items-center"
-            style={{ transform: karen.frame === 0 ? 'scaleX(1)' : 'scaleX(-1)' }}
-          >
-            {/* Karen with cart */}
-            <div className="text-base leading-none">👩</div>
-            <div 
-              className="w-4 h-2 rounded-sm -mt-0.5"
-              style={{ background: '#DC2626', boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
-            />
-          </div>
-          {/* Danger indicator */}
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-        </div>
-      );
-    } else if (homeless) {
-      content = (
-        <div className="w-full h-full flex items-center justify-center">
-          <div 
-            className="text-base leading-none"
-            style={{ 
-              transform: homeless.frame === 0 ? 'translateY(0)' : 'translateY(-1px)',
-              filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.3))'
-            }}
-          >
-            🧔
-          </div>
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-        </div>
-      );
-    } else if (clothing) {
-      const colors = clothingColors[clothing.type];
-      content = (
-        <div className="w-full h-full flex items-center justify-center">
-          <div 
-            className="relative"
-            style={{
-              animation: 'float 2s ease-in-out infinite',
-            }}
-          >
-            <Shirt 
-              className="w-5 h-5 drop-shadow-lg" 
-              style={{ color: colors.primary }}
-              strokeWidth={2}
-            />
-            <div 
-              className="absolute inset-0 rounded-full animate-ping opacity-30"
-              style={{ background: colors.primary }}
-            />
-          </div>
-        </div>
-      );
-    }
+  // Render isometric tile
+  const renderTile = (type, col, row) => {
+    const { x, y } = toIso(col, row);
+    const zIndex = row + col;
     
     return (
       <div
-        key={`${x}-${y}`}
-        className="relative"
-        style={{ 
-          width: TILE_SIZE, 
-          height: TILE_SIZE,
-          ...bgStyle,
-          borderRight: '1px solid rgba(217,119,6,0.2)',
-          borderBottom: '1px solid rgba(217,119,6,0.2)',
+        key={`${col}-${row}`}
+        className="absolute"
+        style={{
+          left: x,
+          top: y,
+          width: TILE_WIDTH,
+          height: TILE_HEIGHT * 2,
+          zIndex,
         }}
       >
-        {content}
+        {/* Floor tile */}
+        <svg width={TILE_WIDTH} height={TILE_HEIGHT * 2} viewBox="0 0 48 56">
+          {/* Isometric floor diamond */}
+          <polygon
+            points="24,0 48,14 24,28 0,14"
+            fill={type === TILES.REGISTER ? '#22C55E' : '#FEF3C7'}
+            stroke={type === TILES.REGISTER ? '#16A34A' : '#D97706'}
+            strokeWidth="1"
+          />
+          {type === TILES.FLOOR && (
+            <polygon
+              points="24,2 46,14 24,26 2,14"
+              fill="url(#floorGradient)"
+              opacity="0.3"
+            />
+          )}
+        </svg>
+        
+        {/* Rack */}
+        {type === TILES.RACK && (
+          <div className="absolute" style={{ left: 4, top: -20 }}>
+            <svg width="40" height="50" viewBox="0 0 40 50">
+              {/* Rack frame */}
+              <rect x="4" y="20" width="4" height="30" fill="#78350F" />
+              <rect x="32" y="20" width="4" height="30" fill="#78350F" />
+              <rect x="4" y="18" width="32" height="4" fill="#92400E" rx="1" />
+              {/* Hanging clothes */}
+              <g transform="translate(8, 22)">
+                {[0, 8, 16].map((offset, i) => (
+                  <g key={i} transform={`translate(${offset}, ${Math.sin(animTime * 0.1 + i) * 2})`}>
+                    <rect x="0" y="0" width="6" height="12" rx="1" fill={['#EC4899', '#3B82F6', '#10B981'][i]} />
+                    <rect x="1" y="0" width="4" height="2" rx="0.5" fill={['#DB2777', '#2563EB', '#059669'][i]} />
+                  </g>
+                ))}
+              </g>
+            </svg>
+          </div>
+        )}
+        
+        {/* Register */}
+        {type === TILES.REGISTER && (
+          <div className="absolute flex flex-col items-center" style={{ left: 8, top: -16 }}>
+            <div 
+              className="text-xl"
+              style={{ 
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+                animation: 'bounce 1s ease-in-out infinite',
+              }}
+            >
+              💰
+            </div>
+            <span className="text-[8px] font-bold text-green-800 bg-green-200 px-1 rounded">REGISTER</span>
+          </div>
+        )}
       </div>
     );
   };
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
-      style={{
-        background: 'linear-gradient(180deg, #0F172A 0%, #1E1B4B 50%, #0F172A 100%)',
-      }}
-    >
-      {/* Scanline effect */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-10"
+  // Render player
+  const renderPlayer = () => {
+    const { x, y } = toIso(player.col, player.row);
+    const zIndex = player.row + player.col + 0.5;
+    const bob = Math.sin(animTime * 0.3) * 2;
+    
+    return (
+      <div
+        className={`absolute transition-all duration-150 ${invincible ? 'animate-pulse opacity-70' : ''}`}
         style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)',
+          left: x + 8,
+          top: y - 24 + bob,
+          zIndex: zIndex + 100,
+        }}
+      >
+        {/* Shadow */}
+        <div 
+          className="absolute rounded-full bg-black/30"
+          style={{ width: 32, height: 12, left: 0, top: 44, filter: 'blur(4px)' }}
+        />
+        
+        {/* Player character */}
+        <div className="relative">
+          {/* Glow */}
+          <div 
+            className="absolute rounded-full animate-ping"
+            style={{
+              width: 40, height: 40, left: -4, top: 4,
+              background: 'radial-gradient(circle, rgba(6,182,212,0.4) 0%, transparent 70%)',
+            }}
+          />
+          
+          {/* Body */}
+          <svg width="32" height="48" viewBox="0 0 32 48">
+            {/* Cart */}
+            <rect x="4" y="32" width="24" height="14" rx="3" fill="#0891B2" stroke="#0E7490" strokeWidth="2" />
+            <circle cx="8" cy="48" r="3" fill="#334155" />
+            <circle cx="24" cy="48" r="3" fill="#334155" />
+            <rect x="6" y="34" width="20" height="4" fill="#22D3EE" rx="1" />
+            
+            {/* Person */}
+            <circle cx="16" cy="12" r="10" fill="#FBBF24" stroke="#F59E0B" strokeWidth="2" />
+            <circle cx="12" cy="10" r="2" fill="#1F2937" />
+            <circle cx="20" cy="10" r="2" fill="#1F2937" />
+            <path d="M12 16 Q16 20 20 16" stroke="#1F2937" strokeWidth="2" fill="none" />
+            
+            {/* Body */}
+            <rect x="10" y="22" width="12" height="14" rx="2" fill="#6366F1" />
+          </svg>
+          
+          {/* Direction indicator */}
+          <div 
+            className="absolute w-0 h-0"
+            style={{
+              left: playerDir === 'left' ? -8 : playerDir === 'right' ? 32 : 12,
+              top: playerDir === 'up' ? -4 : playerDir === 'down' ? 48 : 20,
+              borderLeft: playerDir === 'right' ? '8px solid #06B6D4' : '6px solid transparent',
+              borderRight: playerDir === 'left' ? '8px solid #06B6D4' : '6px solid transparent',
+              borderTop: playerDir === 'down' ? '8px solid #06B6D4' : '6px solid transparent',
+              borderBottom: playerDir === 'up' ? '8px solid #06B6D4' : '6px solid transparent',
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // Render enemy
+  const renderEnemy = (enemy) => {
+    const { x, y } = toIso(enemy.col, enemy.row);
+    const zIndex = enemy.row + enemy.col + 0.5;
+    const wobble = Math.sin(animTime * 0.2 + enemy.col) * 3;
+    
+    return (
+      <div
+        key={`enemy-${enemy.col}-${enemy.row}`}
+        className="absolute transition-all duration-300"
+        style={{ left: x + 8, top: y - 20 + wobble, zIndex }}
+      >
+        {/* Shadow */}
+        <div 
+          className="absolute rounded-full bg-black/30"
+          style={{ width: 28, height: 10, left: 2, top: 42, filter: 'blur(3px)' }}
+        />
+        
+        {enemy.type === 'karen' ? (
+          <div className="relative">
+            {/* Danger indicator */}
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-red-500 rounded-full animate-ping opacity-50" />
+            
+            <svg width="32" height="44" viewBox="0 0 32 44">
+              {/* Cart */}
+              <rect x="2" y="28" width="28" height="12" rx="2" fill="#DC2626" stroke="#B91C1C" strokeWidth="2" />
+              <circle cx="6" cy="42" r="2.5" fill="#1F2937" />
+              <circle cx="26" cy="42" r="2.5" fill="#1F2937" />
+              
+              {/* Karen */}
+              <circle cx="16" cy="10" r="8" fill="#FCD34D" stroke="#FBBF24" strokeWidth="2" />
+              <path d="M8 6 Q16 -2 24 6" stroke="#92400E" strokeWidth="3" fill="none" />
+              <circle cx="12" cy="9" r="1.5" fill="#1F2937" />
+              <circle cx="20" cy="9" r="1.5" fill="#1F2937" />
+              <path d="M12 14 L20 14" stroke="#1F2937" strokeWidth="2" />
+              <rect x="10" y="18" width="12" height="12" rx="2" fill="#F472B6" />
+            </svg>
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-orange-500 rounded-full animate-pulse" />
+            
+            <svg width="28" height="40" viewBox="0 0 28 40">
+              <circle cx="14" cy="10" r="8" fill="#D4A574" stroke="#A3724E" strokeWidth="2" />
+              <rect x="4" y="4" width="20" height="8" rx="2" fill="#78350F" />
+              <circle cx="10" cy="9" r="1.5" fill="#1F2937" />
+              <circle cx="18" cy="9" r="1.5" fill="#1F2937" />
+              <rect x="8" y="18" width="12" height="16" rx="2" fill="#6B7280" />
+              <rect x="6" y="34" width="6" height="6" fill="#4B5563" />
+              <rect x="16" y="34" width="6" height="6" fill="#4B5563" />
+            </svg>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render clothing
+  const renderClothing = (item) => {
+    if (item.collected) return null;
+    const { x, y } = toIso(item.col, item.row);
+    const zIndex = item.row + item.col;
+    const bob = Math.sin(animTime * 0.15 + item.bobOffset) * 4;
+    const style = CLOTHING_STYLES[item.type];
+    
+    return (
+      <div
+        key={`cloth-${item.col}-${item.row}`}
+        className="absolute"
+        style={{ left: x + 14, top: y - 8 + bob, zIndex }}
+      >
+        <div className="relative">
+          <div 
+            className="absolute inset-0 rounded-full animate-pulse"
+            style={{ 
+              background: `radial-gradient(circle, ${style.color}40 0%, transparent 70%)`,
+              transform: 'scale(2)',
+            }}
+          />
+          <span className="text-2xl drop-shadow-lg">{style.emoji}</span>
+        </div>
+      </div>
+    );
+  };
+
+  // Render particles
+  const renderParticles = () => particles.map(p => {
+    const age = (Date.now() - p.created) / 1000;
+    const opacity = 1 - age;
+    return (
+      <div
+        key={p.id}
+        className="absolute w-2 h-2 rounded-full"
+        style={{
+          left: p.x + p.vx * age * 60,
+          top: p.y + p.vy * age * 60 + age * age * 100,
+          background: p.color,
+          opacity,
+          transform: `scale(${1 - age * 0.5})`,
         }}
       />
+    );
+  });
+
+  return (
+    <div 
+      className="fixed inset-0 z-[9999] overflow-hidden"
+      style={{ background: 'linear-gradient(180deg, #1E1B4B 0%, #312E81 50%, #1E1B4B 100%)' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* SVG Defs */}
+      <svg className="absolute w-0 h-0">
+        <defs>
+          <linearGradient id="floorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFF" />
+            <stop offset="100%" stopColor="#FDE68A" />
+          </linearGradient>
+        </defs>
+      </svg>
       
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 p-2 bg-red-500/80 hover:bg-red-500 rounded-full text-white z-50 backdrop-blur-sm transition-all"
-      >
+      {/* Close */}
+      <button onClick={onClose} className="absolute top-4 right-4 z-50 p-2 bg-red-500/80 hover:bg-red-500 rounded-full text-white">
         <X className="w-5 h-5" />
       </button>
       
       {/* Title */}
-      <div className="mb-3 text-center">
-        <h1 
-          className="text-2xl font-black tracking-wider"
-          style={{
-            background: 'linear-gradient(135deg, #F472B6 0%, #A855F7 50%, #06B6D4 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            textShadow: '0 0 30px rgba(168,85,247,0.5)',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-          }}
-        >
-          THRIFT RUN
-        </h1>
-        <p className="text-[10px] text-cyan-400/70 tracking-widest uppercase">Get to the register!</p>
+      <div className="absolute top-4 left-0 right-0 text-center z-40">
+        <h1 className="text-2xl font-black tracking-widest" style={{
+          background: 'linear-gradient(135deg, #F472B6, #A855F7, #06B6D4)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+        }}>THRIFT RUN</h1>
       </div>
       
       {/* HUD */}
-      <div className="flex items-center gap-2 mb-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-900/60 rounded-full backdrop-blur-sm border border-purple-500/30">
+      <div className="absolute top-14 left-0 right-0 flex justify-center gap-3 z-40">
+        <div className="flex items-center gap-1 px-3 py-1 bg-black/40 backdrop-blur rounded-full">
           <Trophy className="w-4 h-4 text-yellow-400" />
-          <span className="text-yellow-400 font-bold text-sm tabular-nums">{score}</span>
+          <span className="text-yellow-400 font-bold tabular-nums">{score}</span>
         </div>
-        <div className="flex items-center gap-0.5 px-3 py-1.5 bg-red-900/60 rounded-full backdrop-blur-sm border border-red-500/30">
+        <div className="flex items-center gap-1 px-3 py-1 bg-black/40 backdrop-blur rounded-full">
           {[...Array(3)].map((_, i) => (
-            <Heart key={i} className={`w-4 h-4 transition-all ${i < lives ? 'text-red-500 fill-red-500 scale-100' : 'text-gray-600 scale-75'}`} />
+            <Heart key={i} className={`w-4 h-4 ${i < lives ? 'text-red-500 fill-red-500' : 'text-gray-600'}`} />
           ))}
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-900/60 rounded-full backdrop-blur-sm border border-cyan-500/30">
-          <Shirt className="w-4 h-4 text-cyan-400" />
-          <span className="text-cyan-400 font-bold text-sm tabular-nums">{itemsCollected}</span>
-        </div>
-        <div className="px-3 py-1.5 bg-green-900/60 rounded-full backdrop-blur-sm border border-green-500/30">
-          <span className="text-green-400 font-bold text-xs">LVL {level}</span>
+        <div className="px-3 py-1 bg-black/40 backdrop-blur rounded-full">
+          <span className="text-green-400 font-bold text-sm">LVL {level}</span>
         </div>
       </div>
       
-      {/* High score */}
-      <div className="mb-2 text-[10px] text-gray-500">
-        Best: <span className="text-yellow-500/80 font-bold tabular-nums">{highScore}</span>
-      </div>
-      
-      {/* Game board */}
-      <div 
-        className="relative rounded-lg overflow-hidden"
-        style={{ 
-          width: GAME_WIDTH * TILE_SIZE + 8,
-          boxShadow: '0 0 40px rgba(168,85,247,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-          border: '4px solid #78350F',
-          background: '#451A03',
-        }}
-      >
-        <div className="p-0.5 relative">
-          {map.map((row, y) => (
-            <div key={y} className="flex">
-              {row.map((tile, x) => renderTile(tile, x, y))}
-            </div>
-          ))}
-          {/* Player rendered on top */}
+      {/* Game Area */}
+      <div className="absolute inset-0 flex items-center justify-center" style={shakeStyle}>
+        <div className="relative" style={{ width: 400, height: 450 }}>
+          {/* Tiles */}
+          {map.map((row, r) => row.map((tile, c) => renderTile(tile, c, r)))}
+          
+          {/* Clothing */}
+          {entities.clothing.map(renderClothing)}
+          
+          {/* Enemies */}
+          {entities.enemies.map(renderEnemy)}
+          
+          {/* Player */}
           {gameState === "playing" && renderPlayer()}
+          
+          {/* Particles */}
+          {renderParticles()}
         </div>
       </div>
       
       {/* D-Pad */}
-      <div className="mt-4 relative" style={{ width: 130, height: 130 }}>
-        {/* Center glow */}
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)' }}
-        />
-        
-        {[
-          { dir: 'up', dx: 0, dy: -1, icon: ArrowUp, pos: 'top-0 left-1/2 -translate-x-1/2' },
-          { dir: 'down', dx: 0, dy: 1, icon: ArrowDown, pos: 'bottom-0 left-1/2 -translate-x-1/2' },
-          { dir: 'left', dx: -1, dy: 0, icon: ArrowLeft, pos: 'left-0 top-1/2 -translate-y-1/2' },
-          { dir: 'right', dx: 1, dy: 0, icon: ArrowRight, pos: 'right-0 top-1/2 -translate-y-1/2' },
-        ].map(({ dir, dx, dy, icon: Icon, pos }) => (
-          <button
-            key={dir}
-            onTouchStart={(e) => { e.preventDefault(); movePlayer(dx, dy); }}
-            onMouseDown={() => movePlayer(dx, dy)}
-            className={`absolute ${pos} w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90`}
-            style={{
-              background: 'linear-gradient(145deg, #374151 0%, #1F2937 100%)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.1)',
-            }}
-          >
-            <Icon className="w-5 h-5 text-gray-300" strokeWidth={2.5} />
-          </button>
-        ))}
-        
-        {/* Center */}
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full"
-          style={{
-            background: 'linear-gradient(145deg, #1F2937 0%, #111827 100%)',
-            border: '2px solid #374151',
-          }}
-        />
-      </div>
+      {gameState === "playing" && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40">
+          <div className="relative w-32 h-32">
+            {[
+              { d: 'up', x: '50%', y: 0, tx: '-50%', ty: 0, dc: 0, dr: -1 },
+              { d: 'down', x: '50%', y: 'auto', b: 0, tx: '-50%', dc: 0, dr: 1 },
+              { d: 'left', x: 0, y: '50%', ty: '-50%', dc: -1, dr: 0 },
+              { d: 'right', x: 'auto', r: 0, y: '50%', ty: '-50%', dc: 1, dr: 0 },
+            ].map(({ d, dc, dr, ...pos }) => (
+              <button
+                key={d}
+                onTouchStart={(e) => { e.stopPropagation(); movePlayer(dc, dr); }}
+                onClick={() => movePlayer(dc, dr)}
+                className="absolute w-11 h-11 rounded-xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center active:bg-white/30 active:scale-95 transition-all"
+                style={{
+                  left: pos.x, top: pos.y, right: pos.r, bottom: pos.b,
+                  transform: `translateX(${pos.tx || 0}) translateY(${pos.ty || 0})`,
+                }}
+              >
+                <span className="text-white/80 text-lg">
+                  {d === 'up' ? '▲' : d === 'down' ? '▼' : d === 'left' ? '◀' : '▶'}
+                </span>
+              </button>
+            ))}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/5 border border-white/10" />
+          </div>
+        </div>
+      )}
       
       {/* Start Screen */}
       {gameState === "start" && (
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center z-20 p-6">
-          <div 
-            className="text-4xl font-black mb-2 tracking-wider"
-            style={{
-              background: 'linear-gradient(135deg, #F472B6 0%, #A855F7 50%, #06B6D4 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            THRIFT RUN
-          </div>
-          <p className="text-cyan-400/60 text-xs mb-6 tracking-widest">ARCADE EDITION</p>
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-50 p-6">
+          <h2 className="text-4xl font-black mb-2" style={{
+            background: 'linear-gradient(135deg, #F472B6, #A855F7, #06B6D4)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>THRIFT RUN</h2>
+          <p className="text-indigo-400 text-sm mb-8 tracking-widest">ISOMETRIC EDITION</p>
           
-          <div className="text-gray-400 text-sm mb-8 text-center space-y-2 max-w-xs">
-            <p className="text-white/80 font-medium">Navigate the thrift store!</p>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-lg">👩</span>
-              <span>Avoid Karens with carts</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-lg">🧔</span>
-              <span>Watch for obstacles</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <Shirt className="w-5 h-5 text-pink-500" />
-              <span>Collect clothes +100pts</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <DollarSign className="w-5 h-5 text-green-500" />
-              <span>Reach the REGISTER!</span>
-            </div>
+          <div className="space-y-3 text-gray-300 text-sm mb-8">
+            <p className="flex items-center gap-3"><span className="text-xl">🛒</span> Navigate the thrift store</p>
+            <p className="flex items-center gap-3"><span className="text-xl">👩</span> Avoid Karens with carts</p>
+            <p className="flex items-center gap-3"><span className="text-xl">🧔</span> Watch for wanderers</p>
+            <p className="flex items-center gap-3"><span className="text-xl">👗</span> Collect clothes +150pts</p>
+            <p className="flex items-center gap-3"><span className="text-xl">💰</span> Reach the REGISTER!</p>
           </div>
           
-          <button
-            onClick={startGame}
-            className="px-10 py-3 rounded-full text-white font-bold text-lg transition-all hover:scale-105 active:scale-95"
-            style={{
-              background: 'linear-gradient(135deg, #EC4899 0%, #8B5CF6 50%, #06B6D4 100%)',
-              boxShadow: '0 0 30px rgba(139,92,246,0.5)',
-            }}
-          >
-            START GAME
+          <p className="text-gray-500 text-xs mb-6">Swipe or use D-Pad to move</p>
+          
+          <button onClick={startGame} className="px-12 py-4 rounded-2xl text-white font-bold text-xl shadow-xl active:scale-95 transition-all" style={{
+            background: 'linear-gradient(135deg, #EC4899, #8B5CF6)',
+            boxShadow: '0 0 40px rgba(139,92,246,0.4)',
+          }}>
+            START
           </button>
+          
+          {highScore > 0 && (
+            <p className="mt-4 text-gray-500 text-sm">Best: <span className="text-yellow-400 font-bold">{highScore}</span></p>
+          )}
         </div>
       )}
       
       {/* Level Complete */}
       {gameState === "levelComplete" && (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-20">
-          <div className="text-3xl font-black text-green-400 mb-2 animate-bounce">
-            LEVEL {level} COMPLETE!
-          </div>
-          <p className="text-cyan-400 text-lg">+500 BONUS</p>
-          <p className="text-gray-400 mt-4">Loading Level {level + 1}...</p>
+        <div className="absolute inset-0 bg-black/70 backdrop-blur flex flex-col items-center justify-center z-50">
+          <h2 className="text-4xl font-black text-green-400 mb-4 animate-bounce">LEVEL {level}!</h2>
+          <p className="text-2xl text-yellow-400 font-bold">+1000 BONUS</p>
+          <p className="text-gray-400 mt-6">Next level loading...</p>
         </div>
       )}
       
       {/* Game Over */}
       {gameState === "lost" && (
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center z-20">
-          <div className="text-3xl font-black text-red-500 mb-4">GAME OVER</div>
-          <p className="text-gray-400 mb-1">Final Score</p>
-          <p className="text-4xl font-bold text-yellow-400 mb-4">{score}</p>
+        <div className="absolute inset-0 bg-black/80 backdrop-blur flex flex-col items-center justify-center z-50">
+          <h2 className="text-4xl font-black text-red-500 mb-6">GAME OVER</h2>
+          <p className="text-gray-400 mb-2">Final Score</p>
+          <p className="text-5xl font-black text-yellow-400 mb-6">{score}</p>
           {score >= highScore && score > 0 && (
-            <p className="text-yellow-400 mb-6 animate-pulse font-bold">🏆 NEW HIGH SCORE! 🏆</p>
+            <p className="text-yellow-300 text-lg mb-6 animate-pulse">🏆 NEW RECORD! 🏆</p>
           )}
-          <button
-            onClick={startGame}
-            className="px-10 py-3 rounded-full text-white font-bold text-lg transition-all hover:scale-105"
-            style={{
-              background: 'linear-gradient(135deg, #EC4899 0%, #8B5CF6 100%)',
-              boxShadow: '0 0 20px rgba(139,92,246,0.4)',
-            }}
-          >
-            PLAY AGAIN
+          <button onClick={startGame} className="px-12 py-4 rounded-2xl text-white font-bold text-xl shadow-xl" style={{
+            background: 'linear-gradient(135deg, #EC4899, #8B5CF6)',
+          }}>
+            RETRY
           </button>
         </div>
       )}
       
-      {/* CSS Animation */}
       <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-3px); }
-        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
       `}</style>
     </div>
   );
