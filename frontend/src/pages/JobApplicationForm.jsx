@@ -35,7 +35,28 @@ export default function JobApplicationForm() {
     tasks_able_to_perform: [],
     background_check_consent: null,
     has_reliable_transportation: null,
-    additional_info: ""
+    additional_info: "",
+    // Work history - last 2 years
+    work_history: [
+      {
+        employer: "",
+        dates_from: "",
+        dates_to: "",
+        title: "",
+        responsibilities: "",
+        reason_for_leaving: "",
+        may_contact: null
+      },
+      {
+        employer: "",
+        dates_from: "",
+        dates_to: "",
+        title: "",
+        responsibilities: "",
+        reason_for_leaving: "",
+        may_contact: null
+      }
+    ]
   });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -61,6 +82,12 @@ export default function JobApplicationForm() {
         tasks_able_to_perform: formData.tasks_able_to_perform.filter(t => t !== taskId)
       });
     }
+  };
+
+  const handleWorkHistoryChange = (index, field, value) => {
+    const updatedHistory = [...formData.work_history];
+    updatedHistory[index] = { ...updatedHistory[index], [field]: value };
+    setFormData({ ...formData, work_history: updatedHistory });
   };
 
   const handleSubmit = async (e) => {
@@ -226,6 +253,124 @@ export default function JobApplicationForm() {
                 className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg min-h-[120px]"
                 data-testid="input-resume"
               />
+            </div>
+
+            {/* Work History Section */}
+            <div className="border-t-2 border-gray-100 pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Briefcase className="w-5 h-5 text-[#8B5CF6]" />
+                <Label className="text-base font-bold text-[#1A1A2E]">Work History (Last 2 Years)</Label>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">Please list your most recent employment first.</p>
+              
+              {formData.work_history.map((job, index) => (
+                <div key={index} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm font-semibold text-[#8B5CF6] mb-4">
+                    {index === 0 ? "Most Recent Employer" : "Previous Employer"}
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-1 block">Past Employer</Label>
+                      <Input
+                        type="text"
+                        value={job.employer}
+                        onChange={(e) => handleWorkHistoryChange(index, 'employer', e.target.value)}
+                        placeholder="Company name"
+                        className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg bg-white"
+                        data-testid={`work-history-${index}-employer`}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-sm font-semibold text-[#1A1A2E] mb-1 block">From</Label>
+                        <Input
+                          type="text"
+                          value={job.dates_from}
+                          onChange={(e) => handleWorkHistoryChange(index, 'dates_from', e.target.value)}
+                          placeholder="MM/YYYY"
+                          className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg bg-white"
+                          data-testid={`work-history-${index}-from`}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-[#1A1A2E] mb-1 block">To</Label>
+                        <Input
+                          type="text"
+                          value={job.dates_to}
+                          onChange={(e) => handleWorkHistoryChange(index, 'dates_to', e.target.value)}
+                          placeholder="MM/YYYY or Present"
+                          className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg bg-white"
+                          data-testid={`work-history-${index}-to`}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-1 block">Your Title</Label>
+                      <Input
+                        type="text"
+                        value={job.title}
+                        onChange={(e) => handleWorkHistoryChange(index, 'title', e.target.value)}
+                        placeholder="Job title"
+                        className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg bg-white"
+                        data-testid={`work-history-${index}-title`}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-1 block">What was your primary responsibility or responsibilities?</Label>
+                      <Textarea
+                        value={job.responsibilities}
+                        onChange={(e) => handleWorkHistoryChange(index, 'responsibilities', e.target.value)}
+                        placeholder="Describe your main duties and responsibilities..."
+                        className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg min-h-[80px] bg-white"
+                        data-testid={`work-history-${index}-responsibilities`}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-1 block">Why did you leave?</Label>
+                      <Textarea
+                        value={job.reason_for_leaving}
+                        onChange={(e) => handleWorkHistoryChange(index, 'reason_for_leaving', e.target.value)}
+                        placeholder="Reason for leaving..."
+                        className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg min-h-[60px] bg-white"
+                        data-testid={`work-history-${index}-reason`}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">May we contact this employer?</Label>
+                      <div className="flex gap-6">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`contact_employer_${index}`}
+                            checked={job.may_contact === true}
+                            onChange={() => handleWorkHistoryChange(index, 'may_contact', true)}
+                            className="w-5 h-5 accent-[#00D4FF]"
+                            data-testid={`work-history-${index}-contact-yes`}
+                          />
+                          <span className="text-sm text-[#1A1A2E]">Yes</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`contact_employer_${index}`}
+                            checked={job.may_contact === false}
+                            onChange={() => handleWorkHistoryChange(index, 'may_contact', false)}
+                            className="w-5 h-5 accent-[#00D4FF]"
+                            data-testid={`work-history-${index}-contact-no`}
+                          />
+                          <span className="text-sm text-[#1A1A2E]">No</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div>
