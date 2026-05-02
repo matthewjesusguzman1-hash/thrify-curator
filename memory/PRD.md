@@ -115,6 +115,75 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - ConsignmentAgreementForm.jsx is a fragile 4000+ line monolith - high risk for changes
 - PaymentRecordsSection.jsx is ~1200 lines and growing
 
+## iOS App Store Submission Checklist
+
+### Required Info.plist Privacy Keys
+Add these to `ios/App/App/Info.plist` in Xcode:
+
+```xml
+<key>NSCameraUsageDescription</key>
+<string>This app needs camera access to take photos of items and receipts</string>
+
+<key>NSPhotoLibraryUsageDescription</key>
+<string>This app needs photo library access to upload item images</string>
+
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>This app uses your location to track mileage for business trips</string>
+
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>This app tracks your location in the background to accurately log business mileage</string>
+
+<key>NSFaceIDUsageDescription</key>
+<string>This app uses Face ID for secure and quick login</string>
+```
+
+### Build Configuration
+Before building for App Store submission:
+
+1. **Ensure Production Backend URL** in `frontend/.env`:
+   ```
+   REACT_APP_BACKEND_URL=https://thrifty-curator.com
+   ```
+
+2. **Rebuild and sync**:
+   ```bash
+   cd frontend
+   yarn build
+   npx cap sync ios
+   ```
+
+3. **Verify in Xcode** that the app doesn't show "Frontend Preview Only" message
+
+### App Store Connect - Review Information
+When submitting, provide in the **App Review Information** section:
+
+- **Demo Account Username:** `4399`
+- **Demo Account Password:** (leave blank or put "N/A")
+- **Notes for Reviewer:**
+  ```
+  To test the app:
+  1. Enter "4399" in the Email field on the login screen
+  2. Tap "Continue"
+  3. This will log you in as an admin user with full access
+  
+  The app is a business management tool for a reselling company.
+  Admin features include: employee time tracking, consignment management, 
+  GPS mileage tracking, and payroll management.
+  ```
+
+### Common Rejection Reasons & Fixes
+1. **Guideline 2.1(a) - App Completeness / Login Failed**
+   - Cause: App pointing to preview backend (which sleeps) instead of production
+   - Fix: Rebuild with `REACT_APP_BACKEND_URL=https://thrifty-curator.com`
+
+2. **Privacy Crash (TCC Violation)**
+   - Cause: Missing NSCameraUsageDescription or other privacy keys
+   - Fix: Add all required privacy keys to Info.plist
+
+3. **UIBackgroundModes "processing" rejection**
+   - Cause: Declared background processing without using it
+   - Fix: Remove "processing" from Background Modes in Xcode Signing & Capabilities
+
 ## Credentials
 - Admin login (Matthew Guzman): Access code `4399`
 - Admin login (Eunice Guzman): Access code `0826`
