@@ -38,6 +38,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
   const [summary, setSummary] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [yoyData, setYoyData] = useState(null);
+  const [prevYearAnalytics, setPrevYearAnalytics] = useState(null);
   const [savedReports, setSavedReports] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -63,16 +64,20 @@ const SalesDataSection = ({ getAuthHeader }) => {
       
       // Build analytics URL for selected year
       let analyticsUrl = `${API_URL}/api/inventory/analytics?year=${selectedYear}`;
+      // For previous year, get same period (Jan through last complete month) for fair comparison
+      let prevYearAnalyticsUrl = `${API_URL}/api/inventory/analytics?year=${selectedYear - 1}&same_period_as_current=true`;
       
-      const [summaryRes, analyticsRes, yoyRes, reportsRes] = await Promise.all([
+      const [summaryRes, analyticsRes, prevAnalyticsRes, yoyRes, reportsRes] = await Promise.all([
         fetch(`${API_URL}/api/inventory/summary`, { headers }),
         fetch(analyticsUrl, { headers }),
+        fetch(prevYearAnalyticsUrl, { headers }),
         fetch(`${API_URL}/api/inventory/analytics/yoy?current_year=${selectedYear}`, { headers }),
         fetch(`${API_URL}/api/inventory/reports/saved`, { headers })
       ]);
       
       if (summaryRes.ok) setSummary(await summaryRes.json());
       if (analyticsRes.ok) setAnalytics(await analyticsRes.json());
+      if (prevAnalyticsRes.ok) setPrevYearAnalytics(await prevAnalyticsRes.json());
       if (yoyRes.ok) setYoyData(await yoyRes.json());
       if (reportsRes.ok) {
         const data = await reportsRes.json();
@@ -95,6 +100,23 @@ const SalesDataSection = ({ getAuthHeader }) => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount || 0);
+  };
+
+  // Helper to render YoY comparison in tiles
+  const renderYoyComparison = (currentVal, prevVal, prefix = '', suffix = '') => {
+    if (prevVal === null || prevVal === undefined || prevVal === 0) return null;
+    const change = currentVal - prevVal;
+    const changePct = ((change / prevVal) * 100).toFixed(1);
+    const isUp = change >= 0;
+    
+    return (
+      <div className="mt-1 text-xs">
+        <span className="text-white/40">{selectedYear - 1}: {prefix}{typeof prevVal === 'number' && prevVal >= 1000 ? prevVal.toLocaleString() : prevVal}{suffix}</span>
+        <span className={`ml-2 font-medium ${isUp ? 'text-green-400' : 'text-red-400'}`}>
+          {isUp ? '↑' : '↓'}{Math.abs(changePct)}%
+        </span>
+      </div>
+    );
   };
 
   const handleDeleteReport = async (reportId) => {
@@ -206,7 +228,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
               )}
             </div>
 
-            {/* Summary Stats - 6 tiles */}
+            {/* Summary Stats - 6 tiles with YoY comparison */}
             {summary?.total_items > 0 && (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -216,6 +238,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
                       <Tag className="w-3 h-3" /> Items Listed
                     </p>
                     <p className="text-xl font-bold text-white">{itemsListed.toLocaleString()}</p>
+                    {renderYoyComparison(itemsListed, prevYearAnalytics?.summary?.items_unsold)}
                   </div>
                   
                   {/* Items Sold */}
@@ -226,6 +249,10 @@ const SalesDataSection = ({ getAuthHeader }) => {
                     <p className="text-xl font-bold text-green-400">
                       {analytics?.summary?.items_sold?.toLocaleString() || summary.sold_summary?.count?.toLocaleString() || 0}
                     </p>
+                    {renderYoyComparison(
+                      analytics?.summary?.items_sold || 0, 
+                      prevYearAnalytics?.summary?.items_sold
+                    )}
                   </div>
                   
                   {/* Gross Revenue */}
@@ -236,6 +263,11 @@ const SalesDataSection = ({ getAuthHeader }) => {
                     <p className="text-xl font-bold text-green-400">
                       {formatCurrency(analytics?.summary?.gross_sales || summary.sold_summary?.total_revenue)}
                     </p>
+                    {renderYoyComparison(
+                      analytics?.summary?.gross_sales || 0, 
+                      prevYearAnalytics?.summary?.gross_sales,
+                      '$'
+                    )}
                   </div>
                   
                   {/* COGS */}
@@ -246,6 +278,11 @@ const SalesDataSection = ({ getAuthHeader }) => {
                     <p className="text-xl font-bold text-amber-400">
                       {formatCurrency(analytics?.summary?.total_cogs || summary.sold_summary?.total_cogs)}
                     </p>
+                    {renderYoyComparison(
+                      analytics?.summary?.total_cogs || 0, 
+                      prevYearAnalytics?.summary?.total_cogs,
+                      '$'
+                    )}
                   </div>
                   
                   {/* Profit */}
@@ -256,6 +293,11 @@ const SalesDataSection = ({ getAuthHeader }) => {
                     <p className="text-xl font-bold text-emerald-400">
                       {formatCurrency(analytics?.summary?.profit || summary.sold_summary?.total_profit)}
                     </p>
+                    {renderYoyComparison(
+                      analytics?.summary?.profit || 0, 
+                      prevYearAnalytics?.summary?.profit,
+                      '$'
+                    )}
                   </div>
                   
                   {/* Profit Margin */}
@@ -264,6 +306,12 @@ const SalesDataSection = ({ getAuthHeader }) => {
                     <p className="text-xl font-bold text-cyan-400">
                       {analytics?.summary?.profit_margin || 0}%
                     </p>
+                    {renderYoyComparison(
+                      analytics?.summary?.profit_margin || 0, 
+                      prevYearAnalytics?.summary?.profit_margin,
+                      '',
+                      '%'
+                    )}
                   </div>
                 </div>
 
@@ -320,73 +368,17 @@ const SalesDataSection = ({ getAuthHeader }) => {
                       </ResponsiveContainer>
                     </div>
                     
-                    {/* YoY Comparison Tiles - Same period comparison */}
-                    {(() => {
-                      // Calculate same-period comparison (YTD for both years)
-                      const currentYtd = filteredYoyData.ytd?.current || 0;
-                      const currentYearMonths = filteredYoyData.currentYearData?.length || 0;
-                      
-                      // Get previous year's same period (Jan through last complete month of current year)
-                      const prevSamePeriod = filteredYoyData.months
-                        .slice(0, currentYearMonths)
-                        .reduce((sum, m) => sum + (m.previous || 0), 0);
-                      
-                      const ytdChange = currentYtd - prevSamePeriod;
-                      const ytdChangePct = prevSamePeriod > 0 ? ((ytdChange / prevSamePeriod) * 100).toFixed(1) : 0;
-                      const isUp = ytdChange >= 0;
-                      
-                      // Calculate average monthly sales
-                      const currentAvgMonthly = currentYearMonths > 0 ? currentYtd / currentYearMonths : 0;
-                      const prevAvgMonthly = currentYearMonths > 0 ? prevSamePeriod / currentYearMonths : 0;
-                      const avgChange = currentAvgMonthly - prevAvgMonthly;
-                      const avgChangePct = prevAvgMonthly > 0 ? ((avgChange / prevAvgMonthly) * 100).toFixed(1) : 0;
-                      const avgIsUp = avgChange >= 0;
-                      
-                      return (
-                        <div className="mt-4 space-y-3">
-                          {/* Main YTD Comparison */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-purple-50 rounded-lg p-3 text-center">
-                              <p className="text-purple-600 text-xs uppercase tracking-wide">{filteredYoyData.current_year} YTD</p>
-                              <p className="text-2xl font-bold text-purple-700">{formatCurrency(currentYtd)}</p>
-                              <p className="text-xs text-purple-500">Jan - {filteredYoyData.currentYearData?.[currentYearMonths-1]?.month || 'N/A'}</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-3 text-center">
-                              <p className="text-gray-600 text-xs uppercase tracking-wide">{filteredYoyData.previous_year} Same Period</p>
-                              <p className="text-2xl font-bold text-gray-700">{formatCurrency(prevSamePeriod)}</p>
-                              <p className="text-xs text-gray-500">Jan - {filteredYoyData.currentYearData?.[currentYearMonths-1]?.month || 'N/A'}</p>
-                            </div>
-                          </div>
-                          
-                          {/* Change Indicators */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className={`rounded-lg p-3 text-center ${isUp ? 'bg-green-50' : 'bg-red-50'}`}>
-                              <p className={`text-xs uppercase tracking-wide ${isUp ? 'text-green-600' : 'text-red-600'}`}>YTD Change</p>
-                              <p className={`text-xl font-bold ${isUp ? 'text-green-700' : 'text-red-700'}`}>
-                                {isUp ? '↑' : '↓'} {formatCurrency(Math.abs(ytdChange))}
-                              </p>
-                              <p className={`text-sm font-medium ${isUp ? 'text-green-600' : 'text-red-600'}`}>
-                                {isUp ? '+' : ''}{ytdChangePct}%
-                              </p>
-                            </div>
-                            <div className={`rounded-lg p-3 text-center ${avgIsUp ? 'bg-green-50' : 'bg-red-50'}`}>
-                              <p className={`text-xs uppercase tracking-wide ${avgIsUp ? 'text-green-600' : 'text-red-600'}`}>Avg Monthly</p>
-                              <p className={`text-xl font-bold ${avgIsUp ? 'text-green-700' : 'text-red-700'}`}>
-                                {avgIsUp ? '↑' : '↓'} {formatCurrency(currentAvgMonthly)}
-                              </p>
-                              <p className={`text-sm font-medium ${avgIsUp ? 'text-green-600' : 'text-red-600'}`}>
-                                {avgIsUp ? '+' : ''}{avgChangePct}% vs {filteredYoyData.previous_year}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Full Year Reference */}
-                          <div className="bg-gray-100 rounded-lg p-2 text-center">
-                            <p className="text-gray-500 text-xs">{filteredYoyData.previous_year} Full Year: {formatCurrency(filteredYoyData.ytd?.previous)}</p>
-                          </div>
-                        </div>
-                      );
-                    })()}
+                    {/* Simple YTD Summary below chart */}
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="bg-purple-50 rounded-lg p-2 text-center">
+                        <p className="text-purple-600 text-xs">{filteredYoyData.current_year} YTD</p>
+                        <p className="text-lg font-bold text-purple-700">{formatCurrency(filteredYoyData.ytd?.current)}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <p className="text-gray-600 text-xs">{filteredYoyData.previous_year} Full Year</p>
+                        <p className="text-lg font-bold text-gray-700">{formatCurrency(filteredYoyData.ytd?.previous)}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </>

@@ -514,7 +514,8 @@ async def get_inventory_years():
 async def get_inventory_analytics(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    year: Optional[int] = None
+    year: Optional[int] = None,
+    same_period_as_current: Optional[bool] = False
 ):
     """
     Get comprehensive analytics for inventory/sales data.
@@ -523,7 +524,14 @@ async def get_inventory_analytics(
     When filtering by year:
     - Sales metrics use items SOLD in that year
     - Avg days to sale uses items LISTED in that year (that have sold)
+    
+    If same_period_as_current=True and year is previous year:
+    - Only returns data up to the current month (for fair YoY comparison)
     """
+    
+    # Determine date filter based on parameters
+    current_date = datetime.now()
+    current_month = current_date.month
     
     # Build date filter for SOLD items
     sold_date_filter = {}
@@ -533,7 +541,16 @@ async def get_inventory_analytics(
         }
     elif year:
         year_str = str(year)
-        sold_date_filter = {"sold_date": {"$regex": f"^{year_str}"}}
+        # If same_period_as_current, only include months before current month
+        if same_period_as_current and year < current_date.year:
+            # Build regex to match Jan through month before current
+            month_patterns = [f"^{year_str}-{m:02d}" for m in range(1, current_month)]
+            if month_patterns:
+                sold_date_filter = {"$or": [{"sold_date": {"$regex": p}} for p in month_patterns]}
+            else:
+                sold_date_filter = {"sold_date": {"$regex": "^$"}}  # Match nothing
+        else:
+            sold_date_filter = {"sold_date": {"$regex": f"^{year_str}"}}
     
     # Get sold items (for revenue calculations)
     sold_query = {"status": {"$regex": "sold", "$options": "i"}}
