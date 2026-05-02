@@ -3842,8 +3842,8 @@ export default function ConsignmentAgreementForm() {
         </div>
       )}
       
-      {/* Onboarding Modal for first-time consignors */}
-      {isLoggedIn && <OnboardingModal userType="consignor" />}
+      {/* Onboarding Modal for consignors with existing agreement */}
+      {existingAgreement && <OnboardingModal userType="consignor" />}
     </div>
   );
 }
