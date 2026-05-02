@@ -683,20 +683,23 @@ Thrifty Curator Team`;
                     {visitorStats?.daily_stats?.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-[#8B5CF6]/20">
                         <p className="text-xs text-[#888] mb-2">Last 7 days activity:</p>
-                        <div className="flex gap-1">
-                          {visitorStats.daily_stats.slice(-7).map((day, idx) => (
-                            <div key={idx} className="flex-1 text-center">
-                              <div 
-                                className="h-8 bg-gradient-to-t from-[#8B5CF6] to-[#00D4FF] rounded-sm mx-auto"
-                                style={{ 
-                                  width: '100%',
-                                  opacity: Math.max(0.2, day.unique_visitors / Math.max(...visitorStats.daily_stats.slice(-7).map(d => d.unique_visitors || 1)))
-                                }}
-                                title={`${day.date}: ${day.unique_visitors} visitors`}
-                              />
-                              <p className="text-[10px] text-[#888] mt-1">{day.unique_visitors}</p>
-                            </div>
-                          ))}
+                        <div className="flex gap-2 items-end h-16">
+                          {visitorStats.daily_stats.slice(-7).map((day, idx) => {
+                            const maxVisitors = Math.max(...visitorStats.daily_stats.slice(-7).map(d => d.unique_visitors || 1));
+                            const heightPercent = Math.max(15, (day.unique_visitors / maxVisitors) * 100);
+                            const dayLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+                            return (
+                              <div key={idx} className="flex-1 flex flex-col items-center">
+                                <div 
+                                  className="w-full bg-gradient-to-t from-[#8B5CF6] to-[#00D4FF] rounded-t-sm transition-all duration-300"
+                                  style={{ height: `${heightPercent}%`, minHeight: '8px' }}
+                                  title={`${day.date}: ${day.unique_visitors} visitors`}
+                                />
+                                <p className="text-[10px] font-medium text-[#1A1A2E] mt-1">{day.unique_visitors}</p>
+                                <p className="text-[9px] text-[#888]">{dayLabel}</p>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
