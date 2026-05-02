@@ -1,5 +1,23 @@
 # Thrifty Curator - Changelog
 
+## [May 2, 2026] - Sales Data Section UI Refinements
+
+### Changed
+- **Average Days to Sale metric**: Now shows both year-filtered value AND overall all-time average side by side
+- **Report Builder simplified**: Removed "Report Type" dropdown - reports now auto-expand all data
+- **Platform filter buttons removed**: Removed non-functional "By Platform" filter buttons from Sales Data section
+- **Overall analytics fetching**: Added separate API call to fetch overall analytics for all-time average calculation
+
+### Technical
+- File: `/app/frontend/src/components/admin/sections/SalesDataSection.jsx`
+- Removed `selectedPlatform` state and `handlePlatformClick` function
+- Removed `Filter` import (no longer used)
+- Added `overallAvgDays` state to track all-time average
+- Modified `fetchData` to include overall analytics fetch (without year filter)
+- Simplified ReportBuilderModal by removing `reportType` state and dropdown
+
+---
+
 ## [Mar 28, 2026] - GPS Tracker Refactoring & Component Extraction
 
 ### Added

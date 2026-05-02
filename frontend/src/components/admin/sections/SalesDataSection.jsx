@@ -19,8 +19,7 @@ import {
   AlertTriangle,
   ShoppingCart,
   DollarSign,
-  Tag,
-  Filter
+  Tag
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { LineChart, Line, BarChart, Bar, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -46,8 +45,8 @@ const SalesDataSection = ({ getAuthHeader }) => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   
-  // Platform filter
-  const [selectedPlatform, setSelectedPlatform] = useState(null);
+  // Overall average days to sale (across all data)
+  const [overallAvgDays, setOverallAvgDays] = useState(null);
   
   // Modal states
   const [showImportModal, setShowImportModal] = useState(false);
@@ -65,17 +64,16 @@ const SalesDataSection = ({ getAuthHeader }) => {
     try {
       const headers = { 'Content-Type': 'application/json', ...getAuthHeader() };
       
-      // Build analytics URL with optional platform filter
+      // Build analytics URL for selected year
       let analyticsUrl = `${API_URL}/api/inventory/analytics?year=${selectedYear}`;
-      if (selectedPlatform) {
-        analyticsUrl += `&platform=${encodeURIComponent(selectedPlatform)}`;
-      }
       
-      const [summaryRes, analyticsRes, yoyRes, reportsRes] = await Promise.all([
+      const [summaryRes, analyticsRes, yoyRes, reportsRes, overallAnalyticsRes] = await Promise.all([
         fetch(`${API_URL}/api/inventory/summary`, { headers }),
         fetch(analyticsUrl, { headers }),
         fetch(`${API_URL}/api/inventory/analytics/yoy?current_year=${selectedYear}`, { headers }),
-        fetch(`${API_URL}/api/inventory/reports/saved`, { headers })
+        fetch(`${API_URL}/api/inventory/reports/saved`, { headers }),
+        // Fetch overall analytics (no year filter) for overall avg days
+        fetch(`${API_URL}/api/inventory/analytics`, { headers })
       ]);
       
       if (summaryRes.ok) setSummary(await summaryRes.json());
@@ -85,11 +83,15 @@ const SalesDataSection = ({ getAuthHeader }) => {
         const data = await reportsRes.json();
         setSavedReports(data.reports || []);
       }
+      if (overallAnalyticsRes.ok) {
+        const overallData = await overallAnalyticsRes.json();
+        setOverallAvgDays(overallData.summary?.avg_days_to_sale || null);
+      }
     } catch (error) {
       console.error('Error fetching sales data:', error);
     }
     setLoading(false);
-  }, [getAuthHeader, selectedYear, selectedPlatform]);
+  }, [getAuthHeader, selectedYear]);
 
   useEffect(() => {
     fetchData();
@@ -146,15 +148,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
 
   // Calculate items listed (unsold)
   const itemsListed = summary?.total_items ? summary.total_items - (summary.sold_summary?.count || 0) : 0;
-
-  // Handle platform click - filter by that platform
-  const handlePlatformClick = (platform) => {
-    if (selectedPlatform === platform) {
-      setSelectedPlatform(null); // Deselect
-    } else {
-      setSelectedPlatform(platform);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -226,20 +219,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
               )}
             </div>
 
-            {/* Platform filter indicator */}
-            {selectedPlatform && (
-              <div className="flex items-center gap-2 p-2 bg-purple-500/20 rounded-lg">
-                <Filter className="w-4 h-4 text-purple-400" />
-                <span className="text-white text-sm">Filtered by: <strong>{selectedPlatform}</strong></span>
-                <button 
-                  onClick={() => setSelectedPlatform(null)}
-                  className="ml-auto text-white/60 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
             {/* Summary Stats - 6 tiles */}
             {summary?.total_items > 0 && (
               <>
@@ -301,6 +280,31 @@ const SalesDataSection = ({ getAuthHeader }) => {
                   </div>
                 </div>
 
+                {/* Average Days to Sale - Full width card with year & overall stats */}
+                {(analytics?.summary?.avg_days_to_sale || overallAvgDays) && (
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <p className="text-white/60 text-xs uppercase flex items-center gap-1 mb-2">
+                      <Clock className="w-3 h-3" /> Average Days to Sale
+                    </p>
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <p className="text-xl font-bold text-purple-400">
+                          {analytics?.summary?.avg_days_to_sale || 'N/A'}
+                        </p>
+                        <p className="text-xs text-white/50">{selectedYear} only</p>
+                      </div>
+                      {overallAvgDays && (
+                        <div className="border-l border-white/20 pl-4">
+                          <p className="text-lg font-semibold text-white/70">
+                            {overallAvgDays}
+                          </p>
+                          <p className="text-xs text-white/50">All-time avg</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Year-over-Year Comparison Chart - Only shows months with data */}
                 {filteredYoyData && filteredYoyData.months.length > 0 && (
                   <div className="bg-white rounded-xl p-4">
@@ -351,28 +355,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
                         <p className="text-gray-600 text-sm">{filteredYoyData.previous_year} YTD</p>
                         <p className="text-2xl font-bold text-gray-700">{formatCurrency(filteredYoyData.ytd?.previous)}</p>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Platform Breakdown - Clickable to filter */}
-                {summary.by_platform && Object.keys(summary.by_platform).length > 0 && (
-                  <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-white/60 text-xs uppercase mb-2">By Platform (tap to filter)</p>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(summary.by_platform).map(([platform, count]) => (
-                        <button 
-                          key={platform}
-                          onClick={() => handlePlatformClick(platform)}
-                          className={`px-3 py-1 rounded-full text-sm transition-all ${
-                            selectedPlatform === platform
-                              ? 'bg-purple-500 text-white ring-2 ring-purple-300'
-                              : 'bg-white/10 text-white hover:bg-white/20'
-                          }`}
-                        >
-                          {platform}: {count.toLocaleString()}
-                        </button>
-                      ))}
                     </div>
                   </div>
                 )}
@@ -679,7 +661,6 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
 const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
   const currentYear = new Date().getFullYear();
   const [reportName, setReportName] = useState('');
-  const [reportType, setReportType] = useState('sales');
   const [dateRange, setDateRange] = useState('ytd');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -726,7 +707,7 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify({
           name: reportName,
-          report_type: reportType,
+          report_type: 'full', // Always save as full report (all data)
           config: {
             date_range: dateRange,
             custom_start: customStart,
@@ -740,7 +721,7 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
         onSave({
           id: data.report_id,
           name: reportName,
-          report_type: reportType,
+          report_type: 'full',
           config: { date_range: dateRange },
           created_at: new Date().toISOString()
         });
@@ -792,7 +773,7 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Report Configuration */}
+          {/* Report Configuration - Simplified (removed Report Type) */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Report Name</label>
@@ -803,21 +784,6 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
                 placeholder="e.g., Q1 2025 Sales"
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
-              <select
-                value={reportType}
-                onChange={(e) => setReportType(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                style={{ backgroundColor: 'white', color: '#374151' }}
-              >
-                <option value="sales" style={{ color: '#374151' }}>Sales Overview</option>
-                <option value="brands" style={{ color: '#374151' }}>Top Brands</option>
-                <option value="platforms" style={{ color: '#374151' }}>Platform Breakdown</option>
-                <option value="monthly" style={{ color: '#374151' }}>Monthly Trends</option>
-              </select>
             </div>
 
             <div>
@@ -835,7 +801,7 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
             </div>
 
             {dateRange === 'custom' && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 md:col-span-2">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Start</label>
                   <input

@@ -6,6 +6,11 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 ## Core Features
 
 ### Completed
+- **Sales Data Section UI Refinements (May 2, 2026)**:
+  - "Average Days to Sale" now shows both year-filtered AND all-time average
+  - Report Builder simplified (removed Report Type dropdown)
+  - Platform filter buttons removed (were non-functional)
+  
 - **Payment Records Enhancement (Apr 28, 2026)**:
   - Added Pay Period(s) multi-select picker: Users can now select one or more bi-weekly pay periods when recording payments
   - Supports paying for multiple periods at once (e.g., employee who quit mid-period)
@@ -34,6 +39,7 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - **Payroll History Feature**: Comprehensive payroll history tracking in Admin Dashboard
 
 ### Pending User Verification
+- **Sales Data Section UI (May 2, 2026)**: Need user to verify Average Days to Sale displays correctly, platform buttons are gone, and Report Builder is simplified
 - **Compact Layout (Apr 28, 2026)**: Need user to confirm the compact Payroll Summary/History layout
 - **Login on Cellular/LTE**: Need user to confirm if Xcode `.env` pointing to production domain resolved the issue
 - **iOS App Store Rejection**: Need user to confirm if removing "processing" from `UIBackgroundModes` resolved the rejection
@@ -67,10 +73,12 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 
 ### Key Files
 - `/app/frontend/src/pages/AdminDashboard.jsx` - Admin dashboard with compact payroll layout
+- `/app/frontend/src/components/admin/sections/SalesDataSection.jsx` - Sales analytics with CSV import, YoY charts, reports
 - `/app/frontend/src/components/admin/sections/PayrollHistorySection.jsx` - Compact employee payroll breakdown
 - `/app/frontend/src/components/admin/sections/PaymentRecordsSection.jsx` - Payment records with pay period selection
 - `/app/frontend/src/pages/ConsignmentAgreementForm.jsx` - NEEDS REFACTOR (4000+ lines)
 - `/app/backend/app/routers/payroll.py` - Payroll endpoints including pay periods
+- `/app/backend/app/routers/inventory.py` - Vendoo CSV import and analytics endpoints
 
 ### Key DB Schema
 - `users`: Core data source for calculating `hourly_rate`
