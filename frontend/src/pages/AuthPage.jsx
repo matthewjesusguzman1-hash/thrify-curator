@@ -360,11 +360,17 @@ export default function AuthPage() {
         }
       }
       
-      // Check for network/timeout errors
+      // Check for network/timeout errors - be more specific
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
         errorMessage = "Connection timed out. Please check your internet and try again.";
-      } else if (!error.response && error.message?.includes('Network')) {
-        errorMessage = "Network error. Please check your connection.";
+      } else if (!error.response) {
+        // No response at all means backend is unreachable
+        if (error.message?.includes('Network') || error.message?.includes('network')) {
+          errorMessage = "Cannot connect to server. Please check your internet connection.";
+        } else {
+          errorMessage = "Server unavailable. Please try again in a moment.";
+        }
+        console.error('[Auth] Backend unreachable:', error.message);
       }
       
       toast.error(errorMessage);
