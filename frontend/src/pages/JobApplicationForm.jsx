@@ -40,6 +40,8 @@ export default function JobApplicationForm() {
     work_history: [
       {
         employer: "",
+        employer_address: "",
+        employer_phone: "",
         dates_from: "",
         dates_to: "",
         title: "",
@@ -89,6 +91,8 @@ export default function JobApplicationForm() {
         ...formData.work_history,
         {
           employer: "",
+          employer_address: "",
+          employer_phone: "",
           dates_from: "",
           dates_to: "",
           title: "",
@@ -307,6 +311,30 @@ export default function JobApplicationForm() {
                         placeholder="Company name"
                         className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg bg-white"
                         data-testid={`work-history-${index}-employer`}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-1 block">Company Address</Label>
+                      <Input
+                        type="text"
+                        value={job.employer_address}
+                        onChange={(e) => handleWorkHistoryChange(index, 'employer_address', e.target.value)}
+                        placeholder="Street, City, State, ZIP"
+                        className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg bg-white"
+                        data-testid={`work-history-${index}-address`}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-semibold text-[#1A1A2E] mb-1 block">Company Phone</Label>
+                      <Input
+                        type="tel"
+                        value={job.employer_phone}
+                        onChange={(e) => handleWorkHistoryChange(index, 'employer_phone', e.target.value)}
+                        placeholder="(555) 123-4567"
+                        className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg bg-white"
+                        data-testid={`work-history-${index}-phone`}
                       />
                     </div>
                     
