@@ -329,13 +329,14 @@ export default function useGPSTracking() {
     try {
       setError(null);
       
-      // Reset state
+      // Reset state COMPLETELY before starting new tracking
       locationsRef.current = [];
       lastLocationRef.current = null;
       startPointRef.current = null; // Reset start point for bounce-back detection
       totalDistanceRef.current = 0;
       setTotalMiles(0);
       setLocationCount(0);
+      setCurrentLocation(null); // Also reset current location display
       setIsPaused(false);
       isPausedRef.current = false;
 
@@ -358,12 +359,18 @@ export default function useGPSTracking() {
             setIsTracking(true);
             isTrackingRef.current = true;
             
-            // Get initial position
+            // Small delay to ensure GPS hardware resets and gets fresh reading
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Get initial position - FORCE FRESH (no cache)
             const location = await BackgroundGeolocation.getCurrentPosition({
-              samples: 1,
-              persist: true
+              samples: 3, // Take 3 samples for better accuracy
+              persist: true,
+              maximumAge: 0, // CRITICAL: Don't use cached positions
+              timeout: 15000, // 15 second timeout
+              desiredAccuracy: 10 // High accuracy
             });
-            console.log('[GPS] Initial position:', location.coords?.latitude, location.coords?.longitude);
+            console.log('[GPS] Initial position (FRESH):', location.coords?.latitude, location.coords?.longitude);
             processLocation(location);
             
             // Set up a polling fallback every 2 seconds to catch locations
@@ -378,7 +385,7 @@ export default function useGPSTracking() {
                   samples: 1,
                   persist: false,
                   desiredAccuracy: 10, // Request high accuracy for polling too
-                  maximumAge: 1000 // Don't use cached positions older than 1 second
+                  maximumAge: 0 // CRITICAL: Never use cached positions
                 });
                 console.log('[GPS] Poll location:', currentLoc.coords?.latitude, currentLoc.coords?.longitude);
                 processLocation(currentLoc);
@@ -498,8 +505,26 @@ export default function useGPSTracking() {
     console.log('Tracking stopped. Total distance:', totalDistanceRef.current);
   }, []);
 
-  // Reset all state
-  const reset = useCallback(() => {
+  // Reset all state - called when canceling/discarding a trip
+  const reset = useCallback(async () => {
+    // Clear polling interval if running
+    if (window._gpsPollingInterval) {
+      clearInterval(window._gpsPollingInterval);
+      window._gpsPollingInterval = null;
+    }
+    
+    // Stop BackgroundGeolocation if it's running
+    if (isNative() && bgGeoReadyRef.current) {
+      try {
+        const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
+        await BackgroundGeolocation.stop();
+        console.log('[GPS] BackgroundGeolocation stopped during reset');
+      } catch (err) {
+        console.log('[GPS] Error stopping BackgroundGeolocation during reset:', err);
+      }
+    }
+    
+    // Reset all refs and state
     locationsRef.current = [];
     lastLocationRef.current = null;
     startPointRef.current = null; // Reset start point for bounce-back detection
@@ -512,7 +537,7 @@ export default function useGPSTracking() {
     isTrackingRef.current = false;
     setIsPaused(false);
     isPausedRef.current = false;
-    console.log('GPS tracking reset');
+    console.log('[GPS] GPS tracking fully reset - ready for new trip');
   }, []);
 
   // Get all recorded locations
