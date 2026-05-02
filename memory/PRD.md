@@ -6,6 +6,12 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 ## Core Features
 
 ### Completed
+- **Job Application Visitor Tracking (May 2, 2026)**:
+  - Added silent visitor tracking on the `/apply` page (invisible to applicants)
+  - Visitor stats displayed in Admin Dashboard > Forms & Communications > Form Submissions > Job Applications
+  - Shows unique visitors and total page views (excludes Matthew & Eunice)
+  - Includes 7-day activity mini-chart
+
 - **Job Application Work History Update (May 2, 2026)**:
   - Modified Work History section to show only the most recent employer by default
   - Added "+ Add Another Employer" button to dynamically add more work history entries

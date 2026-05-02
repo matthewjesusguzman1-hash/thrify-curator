@@ -1576,3 +1576,130 @@ async def get_my_payments(
         "total": total,
         "count": len(payments)
     }
+
+
+
+# ============ PAGE VISIT TRACKING ============
+
+@router.post("/forms/track-visit")
+async def track_page_visit(
+    page: str,
+    visitor_id: str = None,
+    user_agent: str = None
+):
+    """Track a page visit for analytics. Excludes admin users."""
+    
+    # List of admin identifiers to exclude (visitor_ids that start with admin emails)
+    admin_emails = ["matthewguzman88@gmail.com", "euniceguzman"]
+    
+    # Skip tracking if visitor_id matches admin patterns
+    if visitor_id:
+        visitor_lower = visitor_id.lower()
+        for admin in admin_emails:
+            if admin.lower() in visitor_lower:
+                return {"tracked": False, "reason": "admin_excluded"}
+    
+    visit_record = {
+        "page": page,
+        "visitor_id": visitor_id or "anonymous",
+        "user_agent": user_agent,
+        "timestamp": datetime.now(timezone.utc),
+        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    }
+    
+    await db.page_visits.insert_one(visit_record)
+    return {"tracked": True}
+
+
+@router.get("/forms/admin/page-visits")
+async def get_page_visit_stats(
+    page: str = "job-application",
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get page visit statistics for admin dashboard."""
+    
+    # Admin emails to exclude from counts
+    admin_patterns = ["matthewguzman88", "euniceguzman", "matthew", "eunice"]
+    
+    # Build exclusion filter
+    exclusion_conditions = []
+    for pattern in admin_patterns:
+        exclusion_conditions.append({"visitor_id": {"$not": {"$regex": pattern, "$options": "i"}}})
+    
+    # Get all visits for the page, excluding admins
+    pipeline = [
+        {
+            "$match": {
+                "page": page,
+                "$and": exclusion_conditions
+            }
+        },
+        {
+            "$group": {
+                "_id": "$visitor_id",
+                "first_visit": {"$min": "$timestamp"},
+                "last_visit": {"$max": "$timestamp"},
+                "visit_count": {"$sum": 1}
+            }
+        }
+    ]
+    
+    unique_visitors = await db.page_visits.aggregate(pipeline).to_list(1000)
+    
+    # Get visits by date for the last 30 days
+    from datetime import timedelta
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    
+    daily_pipeline = [
+        {
+            "$match": {
+                "page": page,
+                "timestamp": {"$gte": thirty_days_ago},
+                "$and": exclusion_conditions
+            }
+        },
+        {
+            "$group": {
+                "_id": "$date",
+                "visits": {"$sum": 1},
+                "unique_visitors": {"$addToSet": "$visitor_id"}
+            }
+        },
+        {"$sort": {"_id": 1}}
+    ]
+    
+    daily_stats = await db.page_visits.aggregate(daily_pipeline).to_list(100)
+    
+    # Format daily stats
+    formatted_daily = []
+    for day in daily_stats:
+        formatted_daily.append({
+            "date": day["_id"],
+            "total_visits": day["visits"],
+            "unique_visitors": len(day["unique_visitors"])
+        })
+    
+    # Get total unique visitors (all time)
+    total_unique = len(unique_visitors)
+    
+    # Get total visits (all time, excluding admins)
+    total_visits = await db.page_visits.count_documents({
+        "page": page,
+        "$and": exclusion_conditions
+    })
+    
+    return {
+        "page": page,
+        "total_unique_visitors": total_unique,
+        "total_visits": total_visits,
+        "daily_stats": formatted_daily,
+        "recent_visitors": [
+            {
+                "visitor_id": v["_id"][:20] + "..." if len(v["_id"]) > 20 else v["_id"],
+                "first_visit": v["first_visit"].isoformat() if v["first_visit"] else None,
+                "last_visit": v["last_visit"].isoformat() if v["last_visit"] else None,
+                "visit_count": v["visit_count"]
+            }
+            for v in sorted(unique_visitors, key=lambda x: x.get("last_visit") or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[:10]
+        ]
+    }

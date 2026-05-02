@@ -33,6 +33,7 @@ import {
   CreditCard,
   Calendar,
   User,
+  Users,
   Edit3,
   CheckCircle,
   XCircle,
@@ -98,6 +99,26 @@ export default function FormSubmissionsSection({
   const [newResetPassword, setNewResetPassword] = useState("");
   const [resettingPassword, setResettingPassword] = useState(false);
 
+  // Visitor tracking stats
+  const [visitorStats, setVisitorStats] = useState(null);
+  const [loadingVisitorStats, setLoadingVisitorStats] = useState(false);
+
+  // Fetch visitor stats for job application page
+  const fetchVisitorStats = async () => {
+    setLoadingVisitorStats(true);
+    try {
+      const response = await axios.get(`${API}/forms/admin/page-visits`, {
+        params: { page: "job-application" },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      setVisitorStats(response.data);
+    } catch (error) {
+      console.error("Failed to fetch visitor stats:", error);
+    } finally {
+      setLoadingVisitorStats(false);
+    }
+  };
+
   // Fetch consignment passwords
   const fetchConsignmentPasswords = async () => {
     setLoadingPasswords(true);
@@ -161,6 +182,7 @@ export default function FormSubmissionsSection({
   useEffect(() => {
     if (isExpanded) {
       fetchFormSubmissions();
+      fetchVisitorStats();
       if (fetchPaymentMethodChanges) {
         fetchPaymentMethodChanges();
       }
@@ -637,6 +659,49 @@ Thrifty Curator Team`;
               {/* Job Applications Tab */}
               {activeFormTab === "job_applications" && (
                 <div data-testid="job-applications-list">
+                  {/* Visitor Stats Card */}
+                  <div className="mb-4 p-4 bg-gradient-to-r from-[#8B5CF6]/10 to-[#00D4FF]/10 rounded-lg border border-[#8B5CF6]/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] flex items-center justify-center">
+                          <Users className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-[#888]">Prospective Applicant Visits</p>
+                          <p className="text-2xl font-bold text-[#1A1A2E]">
+                            {loadingVisitorStats ? "..." : (visitorStats?.total_unique_visitors || 0)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-[#888]">Total page views</p>
+                        <p className="text-lg font-semibold text-[#666]">
+                          {loadingVisitorStats ? "..." : (visitorStats?.total_visits || 0)}
+                        </p>
+                      </div>
+                    </div>
+                    {visitorStats?.daily_stats?.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-[#8B5CF6]/20">
+                        <p className="text-xs text-[#888] mb-2">Last 7 days activity:</p>
+                        <div className="flex gap-1">
+                          {visitorStats.daily_stats.slice(-7).map((day, idx) => (
+                            <div key={idx} className="flex-1 text-center">
+                              <div 
+                                className="h-8 bg-gradient-to-t from-[#8B5CF6] to-[#00D4FF] rounded-sm mx-auto"
+                                style={{ 
+                                  width: '100%',
+                                  opacity: Math.max(0.2, day.unique_visitors / Math.max(...visitorStats.daily_stats.slice(-7).map(d => d.unique_visitors || 1)))
+                                }}
+                                title={`${day.date}: ${day.unique_visitors} visitors`}
+                              />
+                              <p className="text-[10px] text-[#888] mt-1">{day.unique_visitors}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {loadingForms ? (
                     <p className="text-center text-[#888] py-8">Loading...</p>
                   ) : !formSubmissions?.jobApplications?.length ? (

@@ -59,6 +59,26 @@ export default function JobApplicationForm() {
     window.scrollTo(0, 0);
   }, []);
 
+  // Silent visitor tracking (invisible to applicants)
+  useEffect(() => {
+    const trackVisit = async () => {
+      try {
+        // Generate a simple visitor ID based on browser fingerprint
+        const visitorId = `${navigator.userAgent.slice(0, 50)}_${screen.width}x${screen.height}`;
+        await axios.post(`${API}/forms/track-visit`, null, {
+          params: {
+            page: "job-application",
+            visitor_id: visitorId,
+            user_agent: navigator.userAgent
+          }
+        });
+      } catch (err) {
+        // Silently fail - don't affect user experience
+      }
+    };
+    trackVisit();
+  }, []);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
