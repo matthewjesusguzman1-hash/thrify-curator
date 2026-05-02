@@ -64,8 +64,15 @@ const SalesDataSection = ({ getAuthHeader }) => {
       
       // Build analytics URL for selected year
       let analyticsUrl = `${API_URL}/api/inventory/analytics?year=${selectedYear}`;
-      // For previous year, get same period (Jan through last complete month) for fair comparison
-      let prevYearAnalyticsUrl = `${API_URL}/api/inventory/analytics?year=${selectedYear - 1}&same_period_as_current=true`;
+      
+      // For previous year comparison:
+      // - If viewing current year (2026), compare with same period of previous year (Jan-Apr 2025)
+      // - If viewing a past year (2025), compare with full previous year (2024)
+      const isCurrentYear = selectedYear === currentYear;
+      let prevYearAnalyticsUrl = `${API_URL}/api/inventory/analytics?year=${selectedYear - 1}`;
+      if (isCurrentYear) {
+        prevYearAnalyticsUrl += '&same_period_as_current=true';
+      }
       
       const [summaryRes, analyticsRes, prevAnalyticsRes, yoyRes, reportsRes] = await Promise.all([
         fetch(`${API_URL}/api/inventory/summary`, { headers }),
@@ -87,7 +94,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
       console.error('Error fetching sales data:', error);
     }
     setLoading(false);
-  }, [getAuthHeader, selectedYear]);
+  }, [getAuthHeader, selectedYear, currentYear]);
 
   useEffect(() => {
     fetchData();
