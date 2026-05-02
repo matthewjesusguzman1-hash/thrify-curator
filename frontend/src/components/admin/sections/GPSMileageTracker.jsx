@@ -297,11 +297,68 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
           setTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
         }
         setLocationCount(response.data.active_trip.location_count || 0);
+      } else {
+        // NO ACTIVE TRIP in backend - force stop any orphaned GPS tracking
+        console.log("[GPS] No active trip in backend - ensuring GPS is stopped");
+        if (externalGpsTracker?.forceStop) {
+          await externalGpsTracker.forceStop();
+        }
+        setActiveTrip(null);
+        setTrackingStatus("idle");
       }
     } catch (error) {
       console.error("Failed to fetch active trip:", error);
     }
-  }, [getAuthHeader, externalTrip, setActiveTrip, setTrackingStatus]);
+  }, [getAuthHeader, externalTrip, setActiveTrip, setTrackingStatus, externalGpsTracker]);
+
+  // CRITICAL: On component mount, verify GPS state matches backend
+  // This catches cases where app was killed but GPS kept running
+  useEffect(() => {
+    const syncGPSStateWithBackend = async () => {
+      try {
+        const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
+        const hasActiveTrip = !!response.data.active_trip;
+        
+        console.log("[GPS] State sync check - Backend has active trip:", hasActiveTrip);
+        
+        if (!hasActiveTrip) {
+          // No active trip in backend, but GPS might be running from a previous session
+          // Force stop to ensure clean state
+          console.log("[GPS] No active trip - forcing GPS stop to ensure clean state");
+          if (externalGpsTracker?.forceStop) {
+            await externalGpsTracker.forceStop();
+          }
+          await stopLocationTracking();
+          setActiveTrip(null);
+          setTrackingStatus("idle");
+        }
+      } catch (error) {
+        console.error("[GPS] State sync check failed:", error);
+      }
+    };
+    
+    // Run on mount
+    syncGPSStateWithBackend();
+    
+    // Also run when app resumes from background (Capacitor App plugin)
+    const setupAppStateListener = async () => {
+      if (window.Capacitor?.isNativePlatform?.()) {
+        try {
+          const { App } = await import('@capacitor/app');
+          App.addListener('appStateChange', async ({ isActive }) => {
+            if (isActive) {
+              console.log("[GPS] App resumed - syncing GPS state with backend");
+              await syncGPSStateWithBackend();
+            }
+          });
+        } catch (err) {
+          console.log("[GPS] Could not set up app state listener:", err);
+        }
+      }
+    };
+    
+    setupAppStateListener();
+  }, [getAuthHeader, externalGpsTracker, setActiveTrip, setTrackingStatus]);
 
   // Fetch trip history
   const fetchTripHistory = useCallback(async () => {
@@ -751,8 +808,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       }
       
       try {
-        // Stop whichever tracking method is active
-        if (externalGpsTracker?.stopTracking) {
+        // FORCE STOP GPS to ensure it's really stopped
+        if (externalGpsTracker?.forceStop) {
+          console.log("[GPS] Force stopping GPS tracker on complete");
+          await externalGpsTracker.forceStop();
+        } else if (externalGpsTracker?.stopTracking) {
           await externalGpsTracker.stopTracking();
         } else {
           await stopLocationTracking();
@@ -845,12 +905,14 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
     
     try {
-      // Stop the external GPS tracker if provided
-      // Stop whichever tracking method is active
-      if (externalGpsTracker?.stopTracking) {
+      // FORCE STOP GPS - use the aggressive stop to ensure it's really stopped
+      if (externalGpsTracker?.forceStop) {
+        console.log("[GPS] Force stopping GPS tracker on cancel");
+        await externalGpsTracker.forceStop();
+      } else if (externalGpsTracker?.stopTracking) {
         await externalGpsTracker.stopTracking();
         if (externalGpsTracker?.reset) {
-          externalGpsTracker.reset();
+          await externalGpsTracker.reset();
         }
       } else {
         await stopLocationTracking();

@@ -11,6 +11,40 @@ const isNative = () => {
   return window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative;
 };
 
+// LocalStorage key to persist tracking state
+const TRACKING_STATE_KEY = 'gps_tracking_active';
+
+// Save tracking state to localStorage for recovery
+const saveTrackingState = (isActive, tripId = null) => {
+  try {
+    if (isActive && tripId) {
+      localStorage.setItem(TRACKING_STATE_KEY, JSON.stringify({ active: true, tripId, timestamp: Date.now() }));
+    } else {
+      localStorage.removeItem(TRACKING_STATE_KEY);
+    }
+  } catch (e) {
+    console.log('[GPS] Error saving tracking state:', e);
+  }
+};
+
+// Get saved tracking state
+const getSavedTrackingState = () => {
+  try {
+    const saved = localStorage.getItem(TRACKING_STATE_KEY);
+    if (saved) {
+      const state = JSON.parse(saved);
+      // Only valid if saved within last 24 hours
+      if (Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
+        return state;
+      }
+      localStorage.removeItem(TRACKING_STATE_KEY);
+    }
+  } catch (e) {
+    console.log('[GPS] Error reading tracking state:', e);
+  }
+  return null;
+};
+
 // Haversine formula for distance calculation
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 3959; // Earth's radius in miles
@@ -473,12 +507,10 @@ export default function useGPSTracking() {
 
   // Stop tracking
   const stopTracking = useCallback(async () => {
-    console.log('stopTracking called, isTracking:', isTrackingRef.current);
+    console.log('[GPS] stopTracking called, isTracking:', isTrackingRef.current);
     
-    if (!isTrackingRef.current) {
-      console.log('Not tracking, nothing to stop');
-      return;
-    }
+    // Clear tracking state from localStorage
+    saveTrackingState(false);
 
     // Clear polling interval
     if (window._gpsPollingInterval) {
@@ -486,48 +518,71 @@ export default function useGPSTracking() {
       window._gpsPollingInterval = null;
     }
 
-    // Stop Transistorsoft Background Geolocation
-    if (isNative() && bgGeoReadyRef.current) {
+    // ALWAYS try to stop Transistorsoft Background Geolocation on native, even if we think we're not tracking
+    // This handles edge cases where the plugin is running but our state got out of sync
+    if (isNative()) {
       try {
         const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
         await BackgroundGeolocation.stop();
-        console.log('BackgroundGeolocation stopped');
+        await BackgroundGeolocation.removeListeners();
+        console.log('[GPS] BackgroundGeolocation stopped and listeners removed');
       } catch (err) {
-        console.log('Error stopping BackgroundGeolocation:', err);
+        console.log('[GPS] Error stopping BackgroundGeolocation:', err);
       }
     }
     
+    bgGeoReadyRef.current = false; // Force re-init on next start
     setIsTracking(false);
     isTrackingRef.current = false;
     setIsPaused(false);
     isPausedRef.current = false;
     
-    console.log('Tracking stopped. Total distance:', totalDistanceRef.current);
+    console.log('[GPS] Tracking stopped. Total distance:', totalDistanceRef.current);
   }, []);
 
-  // Reset all state - called when canceling/discarding a trip
-  const reset = useCallback(async () => {
-    // Clear polling interval if running
+  // FORCE STOP - Aggressively stop all GPS tracking regardless of state
+  // Use this when you need to guarantee GPS is stopped (e.g., on app resume with no active trip)
+  const forceStop = useCallback(async () => {
+    console.log('[GPS] FORCE STOP initiated');
+    
+    // Clear tracking state from localStorage
+    saveTrackingState(false);
+    
+    // Clear polling interval
     if (window._gpsPollingInterval) {
       clearInterval(window._gpsPollingInterval);
       window._gpsPollingInterval = null;
     }
     
-    // Stop BackgroundGeolocation if it's running
-    if (isNative() && bgGeoReadyRef.current) {
+    // Aggressively stop native GPS tracking
+    if (isNative()) {
       try {
         const BackgroundGeolocation = (await import('@transistorsoft/capacitor-background-geolocation')).default;
+        
+        // Remove all listeners first
+        await BackgroundGeolocation.removeListeners();
+        console.log('[GPS] All listeners removed');
+        
+        // Stop tracking
         await BackgroundGeolocation.stop();
-        console.log('[GPS] BackgroundGeolocation stopped during reset');
+        console.log('[GPS] BackgroundGeolocation stopped');
+        
+        // Also try changePace to stationary in case stop didn't fully work
+        try {
+          await BackgroundGeolocation.changePace(false);
+        } catch (e) {
+          // Ignore - might not be in a state where this works
+        }
       } catch (err) {
-        console.log('[GPS] Error stopping BackgroundGeolocation during reset:', err);
+        console.log('[GPS] Error during force stop:', err);
       }
     }
     
-    // Reset all refs and state
+    // Reset all state
+    bgGeoReadyRef.current = false;
     locationsRef.current = [];
     lastLocationRef.current = null;
-    startPointRef.current = null; // Reset start point for bounce-back detection
+    startPointRef.current = null;
     totalDistanceRef.current = 0;
     setTotalMiles(0);
     setLocationCount(0);
@@ -537,20 +592,42 @@ export default function useGPSTracking() {
     isTrackingRef.current = false;
     setIsPaused(false);
     isPausedRef.current = false;
-    console.log('[GPS] GPS tracking fully reset - ready for new trip');
+    
+    console.log('[GPS] FORCE STOP complete - all GPS tracking stopped');
   }, []);
+
+  // Reset all state - called when canceling/discarding a trip
+  const reset = useCallback(async () => {
+    console.log('[GPS] Reset initiated');
+    
+    // Use forceStop to ensure everything is cleaned up
+    await forceStop();
+    
+    console.log('[GPS] GPS tracking fully reset - ready for new trip');
+  }, [forceStop]);
 
   // Get all recorded locations
   const getLocations = useCallback(() => {
     return [...locationsRef.current];
   }, []);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - aggressively stop GPS
   useEffect(() => {
     return () => {
-      if (isTrackingRef.current && isNative() && bgGeoReadyRef.current) {
+      console.log('[GPS] Hook unmounting - cleaning up');
+      // Clear tracking state
+      saveTrackingState(false);
+      
+      // Clear polling interval
+      if (window._gpsPollingInterval) {
+        clearInterval(window._gpsPollingInterval);
+        window._gpsPollingInterval = null;
+      }
+      
+      if (isNative()) {
         import('@transistorsoft/capacitor-background-geolocation').then(({ default: BackgroundGeolocation }) => {
-          BackgroundGeolocation.stop();
+          BackgroundGeolocation.removeListeners().catch(() => {});
+          BackgroundGeolocation.stop().catch(() => {});
         });
       }
     };
@@ -573,6 +650,7 @@ export default function useGPSTracking() {
     resumeTracking,
     getCurrentPosition,
     getLocations,
-    reset
+    reset,
+    forceStop  // New: Force stop all GPS tracking regardless of state
   };
 }
