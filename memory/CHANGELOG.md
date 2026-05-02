@@ -10,16 +10,17 @@
 - **Enhanced Report display**: Avg Days to Sale now shows the count of items it's based on (e.g., "Based on 331 items")
 - **Added Avg Sale Price**: Report now includes average sale price stat
 
+### Fixed
+- **YoY Chart no longer shows $0 for future months**: Chart now only displays months up to the current month (May), preventing misleading $0 flatlines for Jun-Dec
+- Avg Days to Sale was showing 186 days for 2026 (impossible since year is ~120 days old) - now shows correct 20.1 days
+
 ### Technical
 - Files modified: 
   - `/app/frontend/src/components/admin/sections/SalesDataSection.jsx`
   - `/app/backend/app/routers/inventory.py`
 - Backend: Added separate query for items LISTED in year X that have sold (vs items SOLD in year X)
 - Backend: Added `avg_days_to_sale_count` to analytics response for transparency
-- Frontend: Removed `overallAvgDays` state (no longer needed in main view)
-
-### Fixed
-- Avg Days to Sale was showing 186 days for 2026 (impossible since year is ~120 days old) - now shows correct 20.1 days
+- Frontend: YoY chart now truncates to current month for current year comparisons
 
 ---
 

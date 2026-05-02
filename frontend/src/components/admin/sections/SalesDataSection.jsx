@@ -113,16 +113,31 @@ const SalesDataSection = ({ getAuthHeader }) => {
     }
   };
 
-  // Filter YoY data to only show months with actual data
+  // Filter YoY data to only show meaningful comparisons
+  // Only show months up to current month - don't show future empty data
   const getFilteredYoyData = () => {
     if (!yoyData?.months) return null;
     
-    // Only show months that have data in either year (non-zero)
-    const filteredMonths = yoyData.months.filter(m => m.current > 0 || m.previous > 0);
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-indexed (Jan=0, May=4)
+    const currentYear = now.getFullYear();
+    const isCurrentYear = yoyData.current_year === currentYear;
     
+    // If viewing current year, only show Jan through current month
+    // If viewing past year, show all 12 months
+    const monthsToShow = isCurrentYear ? currentMonth + 1 : 12;
+    
+    // Slice data to only include months we want to show
+    const filteredMonths = yoyData.months.slice(0, monthsToShow).map((m) => ({
+      month: m.month,
+      current: m.current,
+      previous: m.previous
+    }));
+    
+    // If no data, return null
     if (filteredMonths.length === 0) return null;
     
-    // Calculate filtered YTD
+    // Calculate YTD based on displayed months
     const filteredYtd = {
       current: filteredMonths.reduce((sum, m) => sum + (m.current || 0), 0),
       previous: filteredMonths.reduce((sum, m) => sum + (m.previous || 0), 0)
@@ -299,6 +314,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
                             stroke="#8B5CF6" 
                             strokeWidth={3}
                             dot={{ fill: '#8B5CF6', strokeWidth: 2 }}
+                            connectNulls={false}
                           />
                           <Line 
                             type="monotone" 
@@ -308,6 +324,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
                             strokeWidth={2}
                             strokeDasharray="5 5"
                             dot={{ fill: '#94A3B8', strokeWidth: 2 }}
+                            connectNulls={false}
                           />
                         </LineChart>
                       </ResponsiveContainer>
