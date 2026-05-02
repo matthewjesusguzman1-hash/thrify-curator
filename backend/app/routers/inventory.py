@@ -699,7 +699,8 @@ async def get_year_over_year_comparison(
     result = {"current_year": current_year, "previous_year": previous_year, "months": []}
     
     current_date = datetime.now()
-    current_month_num = current_date.month  # 1-indexed
+    current_month_num = current_date.month  # 1-indexed (May = 5)
+    current_day = current_date.day
     is_current_year_view = current_year == current_date.year
     
     for month in range(1, 13):
@@ -714,9 +715,10 @@ async def get_year_over_year_comparison(
         prev_items = await db.inventory_items.find(prev_query, {"price_sold": 1}).to_list(length=None)
         prev_sales = sum(item.get("price_sold", 0) or 0 for item in prev_items)
         
-        # Current year - only include up to current month if viewing current year
-        current_sales = None  # Use None for future months
-        if not is_current_year_view or month <= current_month_num:
+        # Current year - only include COMPLETE months (exclude current partial month)
+        # If viewing current year, only show months BEFORE the current month
+        current_sales = None  # Use None for months without data
+        if not is_current_year_view or month < current_month_num:
             current_query = {
                 "sold_date": {"$regex": f"^{current_year}-{month_str}"},
                 "status": {"$regex": "sold", "$options": "i"}
@@ -730,7 +732,7 @@ async def get_year_over_year_comparison(
             "previous": round(prev_sales, 2)
         }
         
-        # Only add current if it's not None (i.e., not a future month)
+        # Only add current if it's not None (i.e., a complete month)
         if current_sales is not None:
             month_data["current"] = current_sales
             month_data["change"] = round(current_sales - prev_sales, 2)
