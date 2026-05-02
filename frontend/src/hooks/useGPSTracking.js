@@ -407,8 +407,8 @@ export default function useGPSTracking() {
             console.log('[GPS] Initial position (FRESH):', location.coords?.latitude, location.coords?.longitude);
             processLocation(location);
             
-            // Set up a polling fallback every 2 seconds to catch locations
-            // This helps when onLocation events don't fire reliably
+            // Set up a polling fallback every 1 second for better accuracy on curves
+            // Higher frequency = more accurate mileage on winding roads
             const pollInterval = setInterval(async () => {
               if (!isTrackingRef.current) {
                 clearInterval(pollInterval);
@@ -426,7 +426,7 @@ export default function useGPSTracking() {
               } catch (pollErr) {
                 console.log('[GPS] Poll error:', pollErr);
               }
-            }, 2000); // Poll every 2 seconds for more responsive tracking
+            }, 1000); // Poll every 1 second for better accuracy on curves
             
             // Store interval ID for cleanup
             window._gpsPollingInterval = pollInterval;
