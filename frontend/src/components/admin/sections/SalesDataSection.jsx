@@ -319,16 +319,74 @@ const SalesDataSection = ({ getAuthHeader }) => {
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-4 text-center">
-                      <div className="bg-purple-50 rounded-lg p-3">
-                        <p className="text-purple-600 text-sm">{filteredYoyData.current_year} YTD</p>
-                        <p className="text-2xl font-bold text-purple-700">{formatCurrency(filteredYoyData.ytd?.current)}</p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-gray-600 text-sm">{filteredYoyData.previous_year} Full Year</p>
-                        <p className="text-2xl font-bold text-gray-700">{formatCurrency(filteredYoyData.ytd?.previous)}</p>
-                      </div>
-                    </div>
+                    
+                    {/* YoY Comparison Tiles - Same period comparison */}
+                    {(() => {
+                      // Calculate same-period comparison (YTD for both years)
+                      const currentYtd = filteredYoyData.ytd?.current || 0;
+                      const currentYearMonths = filteredYoyData.currentYearData?.length || 0;
+                      
+                      // Get previous year's same period (Jan through last complete month of current year)
+                      const prevSamePeriod = filteredYoyData.months
+                        .slice(0, currentYearMonths)
+                        .reduce((sum, m) => sum + (m.previous || 0), 0);
+                      
+                      const ytdChange = currentYtd - prevSamePeriod;
+                      const ytdChangePct = prevSamePeriod > 0 ? ((ytdChange / prevSamePeriod) * 100).toFixed(1) : 0;
+                      const isUp = ytdChange >= 0;
+                      
+                      // Calculate average monthly sales
+                      const currentAvgMonthly = currentYearMonths > 0 ? currentYtd / currentYearMonths : 0;
+                      const prevAvgMonthly = currentYearMonths > 0 ? prevSamePeriod / currentYearMonths : 0;
+                      const avgChange = currentAvgMonthly - prevAvgMonthly;
+                      const avgChangePct = prevAvgMonthly > 0 ? ((avgChange / prevAvgMonthly) * 100).toFixed(1) : 0;
+                      const avgIsUp = avgChange >= 0;
+                      
+                      return (
+                        <div className="mt-4 space-y-3">
+                          {/* Main YTD Comparison */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-purple-50 rounded-lg p-3 text-center">
+                              <p className="text-purple-600 text-xs uppercase tracking-wide">{filteredYoyData.current_year} YTD</p>
+                              <p className="text-2xl font-bold text-purple-700">{formatCurrency(currentYtd)}</p>
+                              <p className="text-xs text-purple-500">Jan - {filteredYoyData.currentYearData?.[currentYearMonths-1]?.month || 'N/A'}</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-3 text-center">
+                              <p className="text-gray-600 text-xs uppercase tracking-wide">{filteredYoyData.previous_year} Same Period</p>
+                              <p className="text-2xl font-bold text-gray-700">{formatCurrency(prevSamePeriod)}</p>
+                              <p className="text-xs text-gray-500">Jan - {filteredYoyData.currentYearData?.[currentYearMonths-1]?.month || 'N/A'}</p>
+                            </div>
+                          </div>
+                          
+                          {/* Change Indicators */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className={`rounded-lg p-3 text-center ${isUp ? 'bg-green-50' : 'bg-red-50'}`}>
+                              <p className={`text-xs uppercase tracking-wide ${isUp ? 'text-green-600' : 'text-red-600'}`}>YTD Change</p>
+                              <p className={`text-xl font-bold ${isUp ? 'text-green-700' : 'text-red-700'}`}>
+                                {isUp ? '↑' : '↓'} {formatCurrency(Math.abs(ytdChange))}
+                              </p>
+                              <p className={`text-sm font-medium ${isUp ? 'text-green-600' : 'text-red-600'}`}>
+                                {isUp ? '+' : ''}{ytdChangePct}%
+                              </p>
+                            </div>
+                            <div className={`rounded-lg p-3 text-center ${avgIsUp ? 'bg-green-50' : 'bg-red-50'}`}>
+                              <p className={`text-xs uppercase tracking-wide ${avgIsUp ? 'text-green-600' : 'text-red-600'}`}>Avg Monthly</p>
+                              <p className={`text-xl font-bold ${avgIsUp ? 'text-green-700' : 'text-red-700'}`}>
+                                {avgIsUp ? '↑' : '↓'} {formatCurrency(currentAvgMonthly)}
+                              </p>
+                              <p className={`text-sm font-medium ${avgIsUp ? 'text-green-600' : 'text-red-600'}`}>
+                                {avgIsUp ? '+' : ''}{avgChangePct}% vs {filteredYoyData.previous_year}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Full Year Reference */}
+                          <div className="bg-gray-100 rounded-lg p-2 text-center">
+                            <p className="text-gray-500 text-xs">{filteredYoyData.previous_year} Full Year: {formatCurrency(filteredYoyData.ytd?.previous)}</p>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </>
