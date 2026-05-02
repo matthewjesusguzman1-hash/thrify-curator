@@ -3,18 +3,23 @@
 ## [May 2, 2026] - Sales Data Section UI Refinements
 
 ### Changed
-- **Average Days to Sale metric**: Now shows both year-filtered value AND overall all-time average side by side
-- **Report Builder simplified**: Removed "Report Type" dropdown - reports now auto-expand all data
+- **Average Days to Sale relocated**: Moved from main Sales Data stats to Reports section only (per user request)
+- **Average Days to Sale calculation fixed**: Now correctly calculates days from listing creation to sale date for items LISTED in the selected year (not sold in that year)
+- **Report Builder simplified**: Removed "Report Type" dropdown - reports now auto-expand all data with charts
 - **Platform filter buttons removed**: Removed non-functional "By Platform" filter buttons from Sales Data section
-- **Overall analytics fetching**: Added separate API call to fetch overall analytics for all-time average calculation
+- **Enhanced Report display**: Avg Days to Sale now shows the count of items it's based on (e.g., "Based on 331 items")
+- **Added Avg Sale Price**: Report now includes average sale price stat
 
 ### Technical
-- File: `/app/frontend/src/components/admin/sections/SalesDataSection.jsx`
-- Removed `selectedPlatform` state and `handlePlatformClick` function
-- Removed `Filter` import (no longer used)
-- Added `overallAvgDays` state to track all-time average
-- Modified `fetchData` to include overall analytics fetch (without year filter)
-- Simplified ReportBuilderModal by removing `reportType` state and dropdown
+- Files modified: 
+  - `/app/frontend/src/components/admin/sections/SalesDataSection.jsx`
+  - `/app/backend/app/routers/inventory.py`
+- Backend: Added separate query for items LISTED in year X that have sold (vs items SOLD in year X)
+- Backend: Added `avg_days_to_sale_count` to analytics response for transparency
+- Frontend: Removed `overallAvgDays` state (no longer needed in main view)
+
+### Fixed
+- Avg Days to Sale was showing 186 days for 2026 (impossible since year is ~120 days old) - now shows correct 20.1 days
 
 ---
 

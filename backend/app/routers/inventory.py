@@ -519,22 +519,26 @@ async def get_inventory_analytics(
     """
     Get comprehensive analytics for inventory/sales data.
     Supports date range filtering.
+    
+    When filtering by year:
+    - Sales metrics use items SOLD in that year
+    - Avg days to sale uses items LISTED in that year (that have sold)
     """
     
-    # Build date filter
-    date_filter = {}
+    # Build date filter for SOLD items
+    sold_date_filter = {}
     if start_date and end_date:
-        date_filter = {
+        sold_date_filter = {
             "sold_date": {"$gte": start_date, "$lte": end_date}
         }
     elif year:
         year_str = str(year)
-        date_filter = {"sold_date": {"$regex": f"^{year_str}"}}
+        sold_date_filter = {"sold_date": {"$regex": f"^{year_str}"}}
     
-    # Get sold items
+    # Get sold items (for revenue calculations)
     sold_query = {"status": {"$regex": "sold", "$options": "i"}}
-    if date_filter:
-        sold_query.update(date_filter)
+    if sold_date_filter:
+        sold_query.update(sold_date_filter)
     
     sold_items = await db.inventory_items.find(sold_query, {"_id": 0}).to_list(length=None)
     
@@ -560,18 +564,50 @@ async def get_inventory_analytics(
     if profit == 0 and gross_sales > 0:
         profit = net_sales - total_cogs
     
-    # Calculate average days to sale
+    # Calculate average days to sale for items LISTED in the selected year
+    # This is separate from the sales metrics - we want items created/listed in year X
     days_to_sale = []
-    for item in sold_items:
-        if item.get("sold_date") and item.get("listed_date"):
-            try:
-                sold = datetime.strptime(item["sold_date"][:10], "%Y-%m-%d")
-                listed = datetime.strptime(item["listed_date"][:10], "%Y-%m-%d")
-                days = (sold - listed).days
-                if days >= 0:
-                    days_to_sale.append(days)
-            except:
-                pass
+    avg_days_to_sale = None
+    
+    if year:
+        # For year filter: get items LISTED in that year that have sold
+        year_str = str(year)
+        listed_in_year_query = {
+            "status": {"$regex": "sold", "$options": "i"},
+            "sold_date": {"$ne": None},
+            "$or": [
+                {"listed_date": {"$regex": f"^{year_str}"}},
+                {"created_date": {"$regex": f"^{year_str}"}}
+            ]
+        }
+        items_listed_in_year = await db.inventory_items.find(listed_in_year_query, {"_id": 0}).to_list(length=None)
+        
+        for item in items_listed_in_year:
+            listed_date_str = item.get("listed_date") or item.get("created_date")
+            sold_date_str = item.get("sold_date")
+            if listed_date_str and sold_date_str:
+                try:
+                    sold = datetime.strptime(sold_date_str[:10], "%Y-%m-%d")
+                    listed = datetime.strptime(listed_date_str[:10], "%Y-%m-%d")
+                    days = (sold - listed).days
+                    if days >= 0:
+                        days_to_sale.append(days)
+                except:
+                    pass
+    else:
+        # No year filter - use all sold items
+        for item in sold_items:
+            listed_date_str = item.get("listed_date") or item.get("created_date")
+            sold_date_str = item.get("sold_date")
+            if listed_date_str and sold_date_str:
+                try:
+                    sold = datetime.strptime(sold_date_str[:10], "%Y-%m-%d")
+                    listed = datetime.strptime(listed_date_str[:10], "%Y-%m-%d")
+                    days = (sold - listed).days
+                    if days >= 0:
+                        days_to_sale.append(days)
+                except:
+                    pass
     
     avg_days_to_sale = round(sum(days_to_sale) / len(days_to_sale), 1) if days_to_sale else None
     
@@ -634,6 +670,7 @@ async def get_inventory_analytics(
             "items_sold": len(sold_items),
             "items_unsold": len(unsold_items),
             "avg_days_to_sale": avg_days_to_sale,
+            "avg_days_to_sale_count": len(days_to_sale),  # How many items this is based on
             "avg_sale_price": round(gross_sales / len(sold_items), 2) if sold_items else 0
         },
         "top_brands": top_brands,

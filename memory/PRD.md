@@ -7,7 +7,9 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 
 ### Completed
 - **Sales Data Section UI Refinements (May 2, 2026)**:
-  - "Average Days to Sale" now shows both year-filtered AND all-time average
+  - "Average Days to Sale" moved to Reports section only (not in main stats)
+  - Calculation fixed: now shows days from listing to sale for items LISTED in selected year
+  - 2026 avg is now 20.1 days (was incorrectly showing 186 days)
   - Report Builder simplified (removed Report Type dropdown)
   - Platform filter buttons removed (were non-functional)
   
@@ -39,7 +41,10 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 - **Payroll History Feature**: Comprehensive payroll history tracking in Admin Dashboard
 
 ### Pending User Verification
-- **Sales Data Section UI (May 2, 2026)**: Need user to verify Average Days to Sale displays correctly, platform buttons are gone, and Report Builder is simplified
+- **Sales Data Section UI (May 2, 2026)**: Need user to verify:
+  - Avg Days to Sale displays correctly in Reports (20.1 days for 2026)
+  - Platform buttons are gone
+  - Report Builder is simplified (no Report Type dropdown)
 - **Compact Layout (Apr 28, 2026)**: Need user to confirm the compact Payroll Summary/History layout
 - **Login on Cellular/LTE**: Need user to confirm if Xcode `.env` pointing to production domain resolved the issue
 - **iOS App Store Rejection**: Need user to confirm if removing "processing" from `UIBackgroundModes` resolved the rejection

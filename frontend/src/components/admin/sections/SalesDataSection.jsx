@@ -45,9 +45,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   
-  // Overall average days to sale (across all data)
-  const [overallAvgDays, setOverallAvgDays] = useState(null);
-  
   // Modal states
   const [showImportModal, setShowImportModal] = useState(false);
   const [showReportBuilder, setShowReportBuilder] = useState(false);
@@ -67,13 +64,11 @@ const SalesDataSection = ({ getAuthHeader }) => {
       // Build analytics URL for selected year
       let analyticsUrl = `${API_URL}/api/inventory/analytics?year=${selectedYear}`;
       
-      const [summaryRes, analyticsRes, yoyRes, reportsRes, overallAnalyticsRes] = await Promise.all([
+      const [summaryRes, analyticsRes, yoyRes, reportsRes] = await Promise.all([
         fetch(`${API_URL}/api/inventory/summary`, { headers }),
         fetch(analyticsUrl, { headers }),
         fetch(`${API_URL}/api/inventory/analytics/yoy?current_year=${selectedYear}`, { headers }),
-        fetch(`${API_URL}/api/inventory/reports/saved`, { headers }),
-        // Fetch overall analytics (no year filter) for overall avg days
-        fetch(`${API_URL}/api/inventory/analytics`, { headers })
+        fetch(`${API_URL}/api/inventory/reports/saved`, { headers })
       ]);
       
       if (summaryRes.ok) setSummary(await summaryRes.json());
@@ -82,10 +77,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
       if (reportsRes.ok) {
         const data = await reportsRes.json();
         setSavedReports(data.reports || []);
-      }
-      if (overallAnalyticsRes.ok) {
-        const overallData = await overallAnalyticsRes.json();
-        setOverallAvgDays(overallData.summary?.avg_days_to_sale || null);
       }
     } catch (error) {
       console.error('Error fetching sales data:', error);
@@ -279,31 +270,6 @@ const SalesDataSection = ({ getAuthHeader }) => {
                     </p>
                   </div>
                 </div>
-
-                {/* Average Days to Sale - Full width card with year & overall stats */}
-                {(analytics?.summary?.avg_days_to_sale || overallAvgDays) && (
-                  <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-white/60 text-xs uppercase flex items-center gap-1 mb-2">
-                      <Clock className="w-3 h-3" /> Average Days to Sale
-                    </p>
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <p className="text-xl font-bold text-purple-400">
-                          {analytics?.summary?.avg_days_to_sale || 'N/A'}
-                        </p>
-                        <p className="text-xs text-white/50">{selectedYear} only</p>
-                      </div>
-                      {overallAvgDays && (
-                        <div className="border-l border-white/20 pl-4">
-                          <p className="text-lg font-semibold text-white/70">
-                            {overallAvgDays}
-                          </p>
-                          <p className="text-xs text-white/50">All-time avg</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Year-over-Year Comparison Chart - Only shows months with data */}
                 {filteredYoyData && filteredYoyData.months.length > 0 && (
@@ -861,7 +827,7 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
               </div>
 
               {/* Additional Stats */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4 text-center">
                   <p className="text-gray-600 text-sm">Items Sold</p>
                   <p className="text-xl font-bold">{reportData.summary.items_sold?.toLocaleString()}</p>
@@ -871,8 +837,19 @@ const ReportBuilderModal = ({ getAuthHeader, onClose, onSave }) => {
                   <p className="text-xl font-bold">{reportData.summary.items_unsold?.toLocaleString()}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 text-center">
-                  <p className="text-gray-600 text-sm">Avg Days to Sale</p>
-                  <p className="text-xl font-bold">{reportData.summary.avg_days_to_sale || 'N/A'}</p>
+                  <p className="text-gray-600 text-sm">Avg Sale Price</p>
+                  <p className="text-xl font-bold">{formatCurrency(reportData.summary.avg_sale_price)}</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <p className="text-purple-600 text-sm">Avg Days to Sale</p>
+                  <p className="text-xl font-bold text-purple-700">
+                    {reportData.summary.avg_days_to_sale !== null ? `${reportData.summary.avg_days_to_sale} days` : 'N/A'}
+                  </p>
+                  {reportData.summary.avg_days_to_sale_count > 0 && (
+                    <p className="text-xs text-purple-500 mt-1">
+                      Based on {reportData.summary.avg_days_to_sale_count.toLocaleString()} items
+                    </p>
+                  )}
                 </div>
               </div>
 
