@@ -11,16 +11,20 @@
 - **Added Avg Sale Price**: Report now includes average sale price stat
 
 ### Fixed
-- **YoY Chart no longer shows $0 for future months**: Chart now only displays months up to the current month (May), preventing misleading $0 flatlines for Jun-Dec
+- **YoY Chart now shows full year with proper line termination**: 
+  - Full year (Jan-Dec) visible on X-axis for trend comparison
+  - 2025 line shows all 12 months of historical data
+  - 2026 line STOPS at current month (May) - no more false $0 flatline for future months
+  - Backend updated to not return data for future months
 - Avg Days to Sale was showing 186 days for 2026 (impossible since year is ~120 days old) - now shows correct 20.1 days
 
 ### Technical
 - Files modified: 
   - `/app/frontend/src/components/admin/sections/SalesDataSection.jsx`
   - `/app/backend/app/routers/inventory.py`
-- Backend: Added separate query for items LISTED in year X that have sold (vs items SOLD in year X)
-- Backend: Added `avg_days_to_sale_count` to analytics response for transparency
-- Frontend: YoY chart now truncates to current month for current year comparisons
+- Backend: YoY endpoint now excludes `current` key for future months instead of returning $0
+- Frontend: Uses separate filtered data array for current year line
+- Frontend: Chart uses two Line components with different data arrays
 
 ---
 

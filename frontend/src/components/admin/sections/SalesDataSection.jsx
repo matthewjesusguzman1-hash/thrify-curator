@@ -113,40 +113,21 @@ const SalesDataSection = ({ getAuthHeader }) => {
     }
   };
 
-  // Filter YoY data to only show meaningful comparisons
-  // Only show months up to current month - don't show future empty data
+  // Prepare YoY data - full year visible, 2026 line stops where data ends
   const getFilteredYoyData = () => {
     if (!yoyData?.months) return null;
     
-    const now = new Date();
-    const currentMonth = now.getMonth(); // 0-indexed (Jan=0, May=4)
-    const currentYear = now.getFullYear();
-    const isCurrentYear = yoyData.current_year === currentYear;
-    
-    // If viewing current year, only show Jan through current month
-    // If viewing past year, show all 12 months
-    const monthsToShow = isCurrentYear ? currentMonth + 1 : 12;
-    
-    // Slice data to only include months we want to show
-    const filteredMonths = yoyData.months.slice(0, monthsToShow).map((m) => ({
-      month: m.month,
-      current: m.current,
-      previous: m.previous
-    }));
-    
-    // If no data, return null
-    if (filteredMonths.length === 0) return null;
-    
-    // Calculate YTD based on displayed months
-    const filteredYtd = {
-      current: filteredMonths.reduce((sum, m) => sum + (m.current || 0), 0),
-      previous: filteredMonths.reduce((sum, m) => sum + (m.previous || 0), 0)
-    };
+    // Backend now returns months without 'current' key for future months
+    // Frontend just needs to filter for the current year line
+    const currentYearData = yoyData.months.filter(m => m.current !== undefined && m.current !== null);
     
     return {
       ...yoyData,
-      months: filteredMonths,
-      ytd: filteredYtd
+      // Full months array for X-axis and 2025 line
+      months: yoyData.months,
+      // Filtered data for 2026 line (only months with data)
+      currentYearData: currentYearData,
+      ytd: yoyData.ytd
     };
   };
 
@@ -286,7 +267,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
                   </div>
                 </div>
 
-                {/* Year-over-Year Comparison Chart - Only shows months with data */}
+                {/* Year-over-Year Comparison Chart - Full year visible, 2026 stops at current month */}
                 {filteredYoyData && filteredYoyData.months.length > 0 && (
                   <div className="bg-white rounded-xl p-4">
                     <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -295,36 +276,45 @@ const SalesDataSection = ({ getAuthHeader }) => {
                     </h4>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={filteredYoyData.months}>
+                        <LineChart>
                           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                          <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                          <XAxis 
+                            dataKey="month" 
+                            type="category"
+                            tick={{ fontSize: 12 }}
+                            allowDuplicatedCategory={false}
+                          />
                           <YAxis 
                             tick={{ fontSize: 12 }} 
                             tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`}
                           />
                           <Tooltip 
-                            formatter={(value) => formatCurrency(value)}
+                            formatter={(value) => value != null ? formatCurrency(value) : 'No data yet'}
                             labelStyle={{ fontWeight: 'bold' }}
                           />
                           <Legend />
+                          {/* Previous year - full 12 months */}
                           <Line 
-                            type="monotone" 
-                            dataKey="current" 
-                            name={String(filteredYoyData.current_year)}
-                            stroke="#8B5CF6" 
-                            strokeWidth={3}
-                            dot={{ fill: '#8B5CF6', strokeWidth: 2 }}
-                            connectNulls={false}
-                          />
-                          <Line 
+                            data={filteredYoyData.months}
                             type="monotone" 
                             dataKey="previous" 
                             name={String(filteredYoyData.previous_year)}
                             stroke="#94A3B8" 
                             strokeWidth={2}
                             strokeDasharray="5 5"
-                            dot={{ fill: '#94A3B8', strokeWidth: 2 }}
-                            connectNulls={false}
+                            dot={{ fill: '#94A3B8', strokeWidth: 2, r: 3 }}
+                            isAnimationActive={false}
+                          />
+                          {/* Current year - only months with actual data */}
+                          <Line 
+                            data={filteredYoyData.currentYearData}
+                            type="monotone" 
+                            dataKey="current" 
+                            name={String(filteredYoyData.current_year)}
+                            stroke="#8B5CF6" 
+                            strokeWidth={3}
+                            dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 4 }}
+                            isAnimationActive={false}
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -335,7 +325,7 @@ const SalesDataSection = ({ getAuthHeader }) => {
                         <p className="text-2xl font-bold text-purple-700">{formatCurrency(filteredYoyData.ytd?.current)}</p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-gray-600 text-sm">{filteredYoyData.previous_year} YTD</p>
+                        <p className="text-gray-600 text-sm">{filteredYoyData.previous_year} Full Year</p>
                         <p className="text-2xl font-bold text-gray-700">{formatCurrency(filteredYoyData.ytd?.previous)}</p>
                       </div>
                     </div>

@@ -698,18 +698,15 @@ async def get_year_over_year_comparison(
     # Get sales for both years
     result = {"current_year": current_year, "previous_year": previous_year, "months": []}
     
+    current_date = datetime.now()
+    current_month_num = current_date.month  # 1-indexed
+    is_current_year_view = current_year == current_date.year
+    
     for month in range(1, 13):
         month_str = f"{month:02d}"
+        month_name = datetime(2000, month, 1).strftime("%b")
         
-        # Current year
-        current_query = {
-            "sold_date": {"$regex": f"^{current_year}-{month_str}"},
-            "status": {"$regex": "sold", "$options": "i"}
-        }
-        current_items = await db.inventory_items.find(current_query, {"price_sold": 1}).to_list(length=None)
-        current_sales = sum(item.get("price_sold", 0) or 0 for item in current_items)
-        
-        # Previous year
+        # Previous year - always include all 12 months
         prev_query = {
             "sold_date": {"$regex": f"^{previous_year}-{month_str}"},
             "status": {"$regex": "sold", "$options": "i"}
@@ -717,19 +714,33 @@ async def get_year_over_year_comparison(
         prev_items = await db.inventory_items.find(prev_query, {"price_sold": 1}).to_list(length=None)
         prev_sales = sum(item.get("price_sold", 0) or 0 for item in prev_items)
         
-        month_name = datetime(2000, month, 1).strftime("%b")
-        result["months"].append({
+        # Current year - only include up to current month if viewing current year
+        current_sales = None  # Use None for future months
+        if not is_current_year_view or month <= current_month_num:
+            current_query = {
+                "sold_date": {"$regex": f"^{current_year}-{month_str}"},
+                "status": {"$regex": "sold", "$options": "i"}
+            }
+            current_items = await db.inventory_items.find(current_query, {"price_sold": 1}).to_list(length=None)
+            current_sales = round(sum(item.get("price_sold", 0) or 0 for item in current_items), 2)
+        
+        month_data = {
             "month": month_name,
             "month_num": month,
-            "current": round(current_sales, 2),
-            "previous": round(prev_sales, 2),
-            "change": round(current_sales - prev_sales, 2),
-            "change_pct": round((current_sales - prev_sales) / prev_sales * 100, 1) if prev_sales > 0 else 0
-        })
+            "previous": round(prev_sales, 2)
+        }
+        
+        # Only add current if it's not None (i.e., not a future month)
+        if current_sales is not None:
+            month_data["current"] = current_sales
+            month_data["change"] = round(current_sales - prev_sales, 2)
+            month_data["change_pct"] = round((current_sales - prev_sales) / prev_sales * 100, 1) if prev_sales > 0 else 0
+        
+        result["months"].append(month_data)
     
-    # Calculate YTD totals
+    # Calculate YTD totals (only from months that have current data)
     result["ytd"] = {
-        "current": sum(m["current"] for m in result["months"]),
+        "current": sum(m.get("current", 0) for m in result["months"] if "current" in m),
         "previous": sum(m["previous"] for m in result["months"])
     }
     
