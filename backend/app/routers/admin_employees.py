@@ -1,5 +1,5 @@
 """Employee management routes for admin dashboard."""
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from typing import List
 from datetime import datetime, timezone, timedelta
 import uuid
@@ -7,6 +7,7 @@ import uuid
 from app.database import db
 from app.dependencies import get_admin_user
 from app.models.user import UserResponse, CreateEmployee, UpdateEmployeeDetails, UpdateEmployeeRate
+from app.services.email_service import send_new_employee_welcome_email
 
 router = APIRouter(prefix="/admin", tags=["Admin - Employees"])
 
@@ -20,7 +21,7 @@ def is_owner(admin_email: str) -> bool:
 
 
 @router.post("/create-employee", response_model=UserResponse)
-async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(get_admin_user)):
+async def create_employee(employee_data: CreateEmployee, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
     """Create a new employee or admin."""
     email_normalized = employee_data.email.lower().strip()
     
@@ -67,6 +68,14 @@ async def create_employee(employee_data: CreateEmployee, admin: dict = Depends(g
         user_doc["admin_code"] = admin_code
     
     await db.users.insert_one(user_doc)
+    
+    # Send welcome email to new employee (in background so it doesn't slow down the response)
+    if role == "employee":
+        background_tasks.add_task(
+            send_new_employee_welcome_email,
+            to_email=email_normalized,
+            employee_name=employee_data.name
+        )
     
     return UserResponse(
         id=user_id,

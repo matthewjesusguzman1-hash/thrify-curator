@@ -588,3 +588,88 @@ def get_email_status() -> dict:
         "sender_email": SENDER_EMAIL if EMAIL_ENABLED else None,
         "message": "Email sending is active" if EMAIL_ENABLED else "Emails are being logged to console (MOCKED). Add RESEND_API_KEY to enable real sending."
     }
+
+
+async def send_new_employee_welcome_email(to_email: str, employee_name: str, portal_url: str = "https://thrifty-curator.com/login") -> dict:
+    """
+    Send a welcome email to a newly added employee with instructions for:
+    - Accessing the employee portal
+    - Submitting their W9 form
+    
+    Args:
+        to_email: Employee's email address
+        employee_name: Employee's name
+        portal_url: URL to the employee portal login
+    
+    Returns:
+        dict with status and message
+    """
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{employee_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Welcome to the <strong>Thrifty Curator</strong> team! We're excited to have you on board.
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        This email contains important information about accessing your employee portal and completing your onboarding paperwork.
+    </p>
+    
+    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); border-radius: 12px; padding: 25px; margin: 25px 0;">
+        <h3 style="color: #ffffff; margin: 0 0 15px 0; font-size: 18px;">📱 Accessing the Employee Portal</h3>
+        <p style="color: #ffffff; line-height: 1.6; margin: 0 0 15px 0;">
+            The employee portal is where you'll clock in/out, view your hours, and manage your account.
+        </p>
+        <ol style="color: #ffffff; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li>Go to <a href="{portal_url}" style="color: #ffffff; font-weight: bold;">{portal_url}</a></li>
+            <li>Enter your email address: <strong>{to_email}</strong></li>
+            <li>Click "Find My Account"</li>
+            <li>You'll be prompted to set up a password on your first login</li>
+        </ol>
+    </div>
+    
+    <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 20px; margin: 25px 0;">
+        <h3 style="color: #92400E; margin: 0 0 15px 0; font-size: 18px;">📋 W9 Form Submission (Required)</h3>
+        <p style="color: #78350F; line-height: 1.6; margin: 0 0 15px 0;">
+            Before you can receive payment, you must submit a completed W9 form. Here's how:
+        </p>
+        <ol style="color: #78350F; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li>Log into the Employee Portal using the steps above</li>
+            <li>Look for the <strong>"W9 Form"</strong> or <strong>"Tax Documents"</strong> section</li>
+            <li>Download the W9 form template (if provided) or use a standard IRS W9</li>
+            <li>Fill out the form completely and sign it</li>
+            <li>Upload a photo or scan of your completed W9</li>
+        </ol>
+        <p style="color: #78350F; line-height: 1.6; margin: 15px 0 0 0;">
+            <strong>⚠️ Important:</strong> Your W9 must be submitted before your first payday.
+        </p>
+    </div>
+    
+    <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 8px; padding: 20px; margin: 25px 0;">
+        <h3 style="color: #166534; margin: 0 0 10px 0; font-size: 16px;">✅ Quick Checklist</h3>
+        <ul style="color: #166534; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li>Set up your employee portal login</li>
+            <li>Submit your W9 form</li>
+            <li>Review your hourly rate in the portal</li>
+            <li>Clock in for your first shift!</li>
+        </ul>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        If you have any questions or need help accessing the portal, please reply to this email or contact your manager.
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Welcome aboard! 🎉
+    </p>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        — The Thrifty Curator Team
+    </p>
+    """
+    
+    html = build_email_template("Welcome to Thrifty Curator! 🎉", content)
+    return await send_email(to_email, "Welcome to Thrifty Curator - Employee Portal Access & W9 Instructions", html)
+
