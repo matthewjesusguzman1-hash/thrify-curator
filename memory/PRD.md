@@ -6,6 +6,12 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 ## Core Features
 
 ### Completed
+- **Job Application Work History Update (May 2, 2026)**:
+  - Modified Work History section to show only the most recent employer by default
+  - Added "+ Add Another Employer" button to dynamically add more work history entries
+  - Each additional employer entry has a delete button (trash icon)
+  - Added `/apply` route alias for `/job-application` page
+
 - **Sales Data Section UI Refinements (May 2, 2026)**:
   - "Average Days to Sale" moved to Reports section only (not in main stats)
   - Calculation fixed: now shows days from listing to sale for items LISTED in selected year

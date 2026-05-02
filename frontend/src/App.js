@@ -181,6 +181,11 @@ function AnimatedRoutes() {
             <JobApplicationForm />
           </PageTransition>
         } />
+        <Route path="/apply" element={
+          <PageTransition>
+            <JobApplicationForm />
+          </PageTransition>
+        } />
         <Route path="/consignment-inquiry" element={
           <PageTransition>
             <ConsignmentInquiryForm />

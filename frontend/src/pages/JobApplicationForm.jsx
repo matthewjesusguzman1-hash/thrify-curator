@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Briefcase, Send, CheckCircle, Mail } from "lucide-react";
+import { ArrowLeft, Briefcase, Send, CheckCircle, Mail, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,17 +36,8 @@ export default function JobApplicationForm() {
     background_check_consent: null,
     has_reliable_transportation: null,
     additional_info: "",
-    // Work history - last 2 years
+    // Work history - last 2 years (start with 1, can add more)
     work_history: [
-      {
-        employer: "",
-        dates_from: "",
-        dates_to: "",
-        title: "",
-        responsibilities: "",
-        reason_for_leaving: "",
-        may_contact: null
-      },
       {
         employer: "",
         dates_from: "",
@@ -87,6 +78,31 @@ export default function JobApplicationForm() {
   const handleWorkHistoryChange = (index, field, value) => {
     const updatedHistory = [...formData.work_history];
     updatedHistory[index] = { ...updatedHistory[index], [field]: value };
+    setFormData({ ...formData, work_history: updatedHistory });
+  };
+
+  const addWorkHistoryEntry = () => {
+    lightTap();
+    setFormData({
+      ...formData,
+      work_history: [
+        ...formData.work_history,
+        {
+          employer: "",
+          dates_from: "",
+          dates_to: "",
+          title: "",
+          responsibilities: "",
+          reason_for_leaving: "",
+          may_contact: null
+        }
+      ]
+    });
+  };
+
+  const removeWorkHistoryEntry = (index) => {
+    lightTap();
+    const updatedHistory = formData.work_history.filter((_, i) => i !== index);
     setFormData({ ...formData, work_history: updatedHistory });
   };
 
@@ -264,10 +280,22 @@ export default function JobApplicationForm() {
               <p className="text-sm text-gray-500 mb-4">Please list your most recent employment first.</p>
               
               {formData.work_history.map((job, index) => (
-                <div key={index} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm font-semibold text-[#8B5CF6] mb-4">
-                    {index === 0 ? "Most Recent Employer" : "Previous Employer"}
-                  </p>
+                <div key={index} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 relative">
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-sm font-semibold text-[#8B5CF6]">
+                      {index === 0 ? "Most Recent Employer" : `Previous Employer ${index}`}
+                    </p>
+                    {index > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => removeWorkHistoryEntry(index)}
+                        className="text-red-500 hover:text-red-700 p-1 transition-colors"
+                        data-testid={`work-history-${index}-remove`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                   
                   <div className="space-y-4">
                     <div>
@@ -371,6 +399,17 @@ export default function JobApplicationForm() {
                   </div>
                 </div>
               ))}
+
+              {/* Add Employer Button */}
+              <button
+                type="button"
+                onClick={addWorkHistoryEntry}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 border-2 border-dashed border-[#8B5CF6]/50 rounded-lg text-[#8B5CF6] hover:bg-[#8B5CF6]/10 hover:border-[#8B5CF6] transition-all duration-200"
+                data-testid="add-work-history-btn"
+              >
+                <Plus className="w-5 h-5" />
+                Add Another Employer
+              </button>
             </div>
 
             <div>
