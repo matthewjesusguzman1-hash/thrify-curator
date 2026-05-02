@@ -322,68 +322,103 @@ const SalesDataSection = ({ getAuthHeader }) => {
                   </div>
                 </div>
 
-                {/* Year-over-Year Comparison Chart - Full year visible, 2026 stops at current month */}
+                {/* Year-over-Year Comparison Chart - Gross Sales & Profit */}
                 {filteredYoyData && filteredYoyData.months.length > 0 && (
                   <div className="bg-white rounded-xl p-4">
                     <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <LineChartIcon className="w-5 h-5 text-purple-600" />
-                      Sales Comparison: {filteredYoyData.current_year} vs {filteredYoyData.previous_year}
+                      Sales & Profit: {filteredYoyData.current_year} vs {filteredYoyData.previous_year}
                     </h4>
-                    <div className="h-64">
+                    <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart>
                           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                           <XAxis 
                             dataKey="month" 
                             type="category"
-                            tick={{ fontSize: 12 }}
+                            tick={{ fontSize: 11 }}
                             allowDuplicatedCategory={false}
                           />
                           <YAxis 
-                            tick={{ fontSize: 12 }} 
+                            tick={{ fontSize: 11 }} 
                             tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`}
                           />
                           <Tooltip 
-                            formatter={(value) => value != null ? formatCurrency(value) : 'No data yet'}
+                            formatter={(value, name) => value != null ? [formatCurrency(value), name] : ['No data yet', name]}
                             labelStyle={{ fontWeight: 'bold' }}
                           />
                           <Legend />
-                          {/* Previous year - full 12 months */}
+                          
+                          {/* Previous year GROSS SALES - dashed gray */}
                           <Line 
                             data={filteredYoyData.months}
                             type="monotone" 
                             dataKey="previous" 
-                            name={String(filteredYoyData.previous_year)}
+                            name={`${filteredYoyData.previous_year} Gross`}
                             stroke="#94A3B8" 
                             strokeWidth={2}
                             strokeDasharray="5 5"
-                            dot={{ fill: '#94A3B8', strokeWidth: 2, r: 3 }}
+                            dot={{ fill: '#94A3B8', strokeWidth: 1, r: 2 }}
                             isAnimationActive={false}
                           />
-                          {/* Current year - only months with actual data */}
+                          
+                          {/* Previous year PROFIT - dashed green */}
+                          <Line 
+                            data={filteredYoyData.months}
+                            type="monotone" 
+                            dataKey="previous_profit" 
+                            name={`${filteredYoyData.previous_year} Profit`}
+                            stroke="#6EE7B7" 
+                            strokeWidth={2}
+                            strokeDasharray="5 5"
+                            dot={{ fill: '#6EE7B7', strokeWidth: 1, r: 2 }}
+                            isAnimationActive={false}
+                          />
+                          
+                          {/* Current year GROSS SALES - solid purple */}
                           <Line 
                             data={filteredYoyData.currentYearData}
                             type="monotone" 
                             dataKey="current" 
-                            name={String(filteredYoyData.current_year)}
+                            name={`${filteredYoyData.current_year} Gross`}
                             stroke="#8B5CF6" 
                             strokeWidth={3}
-                            dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 4 }}
+                            dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 3 }}
+                            isAnimationActive={false}
+                          />
+                          
+                          {/* Current year PROFIT - solid emerald */}
+                          <Line 
+                            data={filteredYoyData.currentYearData}
+                            type="monotone" 
+                            dataKey="current_profit" 
+                            name={`${filteredYoyData.current_year} Profit`}
+                            stroke="#10B981" 
+                            strokeWidth={3}
+                            dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
                             isAnimationActive={false}
                           />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
                     
-                    {/* Simple YTD Summary below chart */}
-                    <div className="mt-4 grid grid-cols-2 gap-3">
+                    {/* YTD Summary - Gross & Profit */}
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
                       <div className="bg-purple-50 rounded-lg p-2 text-center">
-                        <p className="text-purple-600 text-xs">{filteredYoyData.current_year} YTD</p>
-                        <p className="text-lg font-bold text-purple-700">{formatCurrency(filteredYoyData.ytd?.current)}</p>
+                        <p className="text-purple-600 text-xs">{filteredYoyData.current_year} Gross</p>
+                        <p className="text-base font-bold text-purple-700">{formatCurrency(filteredYoyData.ytd?.current)}</p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-lg p-2 text-center">
+                        <p className="text-emerald-600 text-xs">{filteredYoyData.current_year} Profit</p>
+                        <p className="text-base font-bold text-emerald-700">{formatCurrency(filteredYoyData.ytd?.current_profit)}</p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-2 text-center">
-                        <p className="text-gray-600 text-xs">{filteredYoyData.previous_year} Full Year</p>
-                        <p className="text-lg font-bold text-gray-700">{formatCurrency(filteredYoyData.ytd?.previous)}</p>
+                        <p className="text-gray-600 text-xs">{filteredYoyData.previous_year} Gross</p>
+                        <p className="text-base font-bold text-gray-700">{formatCurrency(filteredYoyData.ytd?.previous)}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <p className="text-gray-500 text-xs">{filteredYoyData.previous_year} Profit</p>
+                        <p className="text-base font-bold text-gray-600">{formatCurrency(filteredYoyData.ytd?.previous_profit)}</p>
                       </div>
                     </div>
                   </div>

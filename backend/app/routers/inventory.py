@@ -729,29 +729,46 @@ async def get_year_over_year_comparison(
             "sold_date": {"$regex": f"^{previous_year}-{month_str}"},
             "status": {"$regex": "sold", "$options": "i"}
         }
-        prev_items = await db.inventory_items.find(prev_query, {"price_sold": 1}).to_list(length=None)
+        prev_items = await db.inventory_items.find(prev_query, {"price_sold": 1, "cogs": 1, "fees": 1, "shipping_cost": 1, "profit": 1}).to_list(length=None)
         prev_sales = sum(item.get("price_sold", 0) or 0 for item in prev_items)
+        # Calculate profit for previous year
+        prev_profit = sum(item.get("profit", 0) or 0 for item in prev_items)
+        if prev_profit == 0:
+            # Calculate if not stored
+            prev_cogs = sum(item.get("cogs", 0) or 0 for item in prev_items)
+            prev_fees = sum((item.get("fees", 0) or 0) + (item.get("shipping_cost", 0) or 0) for item in prev_items)
+            prev_profit = prev_sales - prev_cogs - prev_fees
         
         # Current year - only include COMPLETE months (exclude current partial month)
         # If viewing current year, only show months BEFORE the current month
         current_sales = None  # Use None for months without data
+        current_profit = None
         if not is_current_year_view or month < current_month_num:
             current_query = {
                 "sold_date": {"$regex": f"^{current_year}-{month_str}"},
                 "status": {"$regex": "sold", "$options": "i"}
             }
-            current_items = await db.inventory_items.find(current_query, {"price_sold": 1}).to_list(length=None)
+            current_items = await db.inventory_items.find(current_query, {"price_sold": 1, "cogs": 1, "fees": 1, "shipping_cost": 1, "profit": 1}).to_list(length=None)
             current_sales = round(sum(item.get("price_sold", 0) or 0 for item in current_items), 2)
+            # Calculate profit for current year
+            current_profit = sum(item.get("profit", 0) or 0 for item in current_items)
+            if current_profit == 0:
+                current_cogs = sum(item.get("cogs", 0) or 0 for item in current_items)
+                current_fees = sum((item.get("fees", 0) or 0) + (item.get("shipping_cost", 0) or 0) for item in current_items)
+                current_profit = current_sales - current_cogs - current_fees
+            current_profit = round(current_profit, 2)
         
         month_data = {
             "month": month_name,
             "month_num": month,
-            "previous": round(prev_sales, 2)
+            "previous": round(prev_sales, 2),
+            "previous_profit": round(prev_profit, 2)
         }
         
         # Only add current if it's not None (i.e., a complete month)
         if current_sales is not None:
             month_data["current"] = current_sales
+            month_data["current_profit"] = current_profit
             month_data["change"] = round(current_sales - prev_sales, 2)
             month_data["change_pct"] = round((current_sales - prev_sales) / prev_sales * 100, 1) if prev_sales > 0 else 0
         
@@ -760,7 +777,9 @@ async def get_year_over_year_comparison(
     # Calculate YTD totals (only from months that have current data)
     result["ytd"] = {
         "current": sum(m.get("current", 0) for m in result["months"] if "current" in m),
-        "previous": sum(m["previous"] for m in result["months"])
+        "current_profit": sum(m.get("current_profit", 0) for m in result["months"] if "current_profit" in m),
+        "previous": sum(m["previous"] for m in result["months"]),
+        "previous_profit": sum(m["previous_profit"] for m in result["months"])
     }
     
     return result
