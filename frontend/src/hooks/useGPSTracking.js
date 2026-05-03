@@ -393,40 +393,23 @@ export default function useGPSTracking() {
             setIsTracking(true);
             isTrackingRef.current = true;
             
-            // Get initial position - allow slightly cached for faster startup
-            const location = await BackgroundGeolocation.getCurrentPosition({
-              samples: 1,
-              persist: true,
-              maximumAge: 5000, // Allow positions up to 5 seconds old for faster startup
-              timeout: 30000, // 30 second timeout
-              desiredAccuracy: 10
-            });
-            console.log('[GPS] Initial position:', location.coords?.latitude, location.coords?.longitude);
-            processLocation(location);
+            // Get initial position with reasonable settings
+            try {
+              const location = await BackgroundGeolocation.getCurrentPosition({
+                samples: 1,
+                persist: true,
+                timeout: 30000,
+                maximumAge: 10000, // Accept positions up to 10 seconds old
+                desiredAccuracy: 10
+              });
+              console.log('[GPS] Initial position:', location.coords?.latitude, location.coords?.longitude);
+              processLocation(location);
+            } catch (initErr) {
+              console.log('[GPS] Initial position error (non-fatal, will use onLocation):', initErr);
+            }
             
-            // Set up a polling fallback every 1 second for better accuracy on curves
-            const pollInterval = setInterval(async () => {
-              if (!isTrackingRef.current) {
-                clearInterval(pollInterval);
-                return;
-              }
-              try {
-                const currentLoc = await BackgroundGeolocation.getCurrentPosition({
-                  samples: 1,
-                  persist: false,
-                  desiredAccuracy: 10,
-                  maximumAge: 2000, // Allow positions up to 2 seconds old
-                  timeout: 10000
-                });
-                console.log('[GPS] Poll location:', currentLoc.coords?.latitude, currentLoc.coords?.longitude);
-                processLocation(currentLoc);
-              } catch (pollErr) {
-                console.log('[GPS] Poll error:', pollErr);
-              }
-            }, 1000); // Poll every 1 second for better accuracy on curves
-            
-            // Store interval ID for cleanup
-            window._gpsPollingInterval = pollInterval;
+            // The plugin's onLocation callback (set up in initBackgroundGeolocation) 
+            // handles continuous tracking. No polling needed - trust the plugin.
             
             toast.success('GPS tracking started - works in background!');
             return true;
