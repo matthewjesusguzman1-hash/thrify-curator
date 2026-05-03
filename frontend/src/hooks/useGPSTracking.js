@@ -393,22 +393,18 @@ export default function useGPSTracking() {
             setIsTracking(true);
             isTrackingRef.current = true;
             
-            // Small delay to ensure GPS hardware resets and gets fresh reading
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Get initial position - FORCE FRESH (no cache)
+            // Get initial position - allow slightly cached for faster startup
             const location = await BackgroundGeolocation.getCurrentPosition({
-              samples: 3, // Take 3 samples for better accuracy
+              samples: 1,
               persist: true,
-              maximumAge: 0, // CRITICAL: Don't use cached positions
-              timeout: 15000, // 15 second timeout
-              desiredAccuracy: 10 // High accuracy
+              maximumAge: 5000, // Allow positions up to 5 seconds old for faster startup
+              timeout: 30000, // 30 second timeout
+              desiredAccuracy: 10
             });
-            console.log('[GPS] Initial position (FRESH):', location.coords?.latitude, location.coords?.longitude);
+            console.log('[GPS] Initial position:', location.coords?.latitude, location.coords?.longitude);
             processLocation(location);
             
             // Set up a polling fallback every 1 second for better accuracy on curves
-            // Higher frequency = more accurate mileage on winding roads
             const pollInterval = setInterval(async () => {
               if (!isTrackingRef.current) {
                 clearInterval(pollInterval);
@@ -418,8 +414,9 @@ export default function useGPSTracking() {
                 const currentLoc = await BackgroundGeolocation.getCurrentPosition({
                   samples: 1,
                   persist: false,
-                  desiredAccuracy: 10, // Request high accuracy for polling too
-                  maximumAge: 0 // CRITICAL: Never use cached positions
+                  desiredAccuracy: 10,
+                  maximumAge: 2000, // Allow positions up to 2 seconds old
+                  timeout: 10000
                 });
                 console.log('[GPS] Poll location:', currentLoc.coords?.latitude, currentLoc.coords?.longitude);
                 processLocation(currentLoc);
