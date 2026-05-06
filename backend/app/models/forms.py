@@ -4,6 +4,18 @@ from datetime import datetime, timezone
 import uuid
 
 
+class WorkHistoryEntry(BaseModel):
+    employer: str = ""
+    employer_address: str = ""
+    employer_phone: str = ""
+    dates_from: str = ""
+    dates_to: str = ""
+    title: str = ""
+    responsibilities: str = ""
+    reason_for_leaving: str = ""
+    may_contact: Optional[bool] = None
+
+
 class JobApplication(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -15,6 +27,7 @@ class JobApplication(BaseModel):
     why_join: str
     availability: str
     tasks_able_to_perform: List[str] = []
+    work_history: List[WorkHistoryEntry] = []
     background_check_consent: bool = False
     has_reliable_transportation: bool = False
     additional_info: str = ""
