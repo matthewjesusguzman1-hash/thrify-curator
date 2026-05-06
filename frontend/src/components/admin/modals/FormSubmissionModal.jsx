@@ -343,12 +343,73 @@ Thrifty Curator Team`
           {/* Job Application Details */}
           {submission.formType === "job_applications" && (
             <div className="space-y-4">
+              {/* Address */}
+              {submission.address && (
+                <div>
+                  <Label className="text-sm font-medium text-[#666] mb-2 block">Address</Label>
+                  <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl">{submission.address}</p>
+                </div>
+              )}
+              
               {submission.resume_text && (
                 <div>
                   <Label className="text-sm font-medium text-[#666] mb-2 block">Resume / Experience</Label>
                   <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl whitespace-pre-wrap">{submission.resume_text}</p>
                 </div>
               )}
+              
+              {/* Work History Section */}
+              {submission.work_history && submission.work_history.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium text-[#666] mb-2 block flex items-center gap-2">
+                    <Briefcase className="w-4 h-4" />
+                    Work History
+                  </Label>
+                  <div className="space-y-3">
+                    {submission.work_history.map((job, index) => (
+                      <div key={index} className="bg-[#F9F6F7] p-4 rounded-xl border-l-4 border-[#8B5CF6]">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-semibold text-[#333]">{job.employer || "Not provided"}</p>
+                            <p className="text-sm text-[#666]">{job.title || "No title"}</p>
+                          </div>
+                          <span className="text-xs text-[#888] bg-white px-2 py-1 rounded">
+                            {job.dates_from || "?"} - {job.dates_to || "?"}
+                          </span>
+                        </div>
+                        {job.employer_address && (
+                          <p className="text-sm text-[#666] flex items-center gap-1 mb-1">
+                            <MapPin className="w-3 h-3" /> {job.employer_address}
+                          </p>
+                        )}
+                        {job.employer_phone && (
+                          <p className="text-sm text-[#666] flex items-center gap-1 mb-2">
+                            <Phone className="w-3 h-3" /> {job.employer_phone}
+                          </p>
+                        )}
+                        {job.responsibilities && (
+                          <div className="mb-2">
+                            <p className="text-xs text-[#888]">Responsibilities:</p>
+                            <p className="text-sm text-[#333]">{job.responsibilities}</p>
+                          </div>
+                        )}
+                        {job.reason_for_leaving && (
+                          <div className="mb-2">
+                            <p className="text-xs text-[#888]">Reason for leaving:</p>
+                            <p className="text-sm text-[#333]">{job.reason_for_leaving}</p>
+                          </div>
+                        )}
+                        <div className="mt-2 pt-2 border-t border-[#E0E0E0]">
+                          <span className={`text-xs px-2 py-1 rounded ${job.may_contact ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {job.may_contact ? "OK to contact" : "Do not contact"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {submission.why_join && (
                 <div>
                   <Label className="text-sm font-medium text-[#666] mb-2 block">Why Join Us?</Label>
@@ -373,6 +434,15 @@ Thrifty Curator Team`
                   </div>
                 </div>
               )}
+              
+              {/* Additional Info */}
+              {submission.additional_info && (
+                <div>
+                  <Label className="text-sm font-medium text-[#666] mb-2 block">Additional Information</Label>
+                  <p className="text-[#333] bg-[#F9F6F7] p-4 rounded-xl whitespace-pre-wrap">{submission.additional_info}</p>
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-[#F9F6F7] rounded-xl">
                   <p className="text-xs text-[#888]">Background Check Consent</p>
