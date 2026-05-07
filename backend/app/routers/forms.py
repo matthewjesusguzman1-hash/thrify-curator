@@ -779,6 +779,35 @@ async def delete_job_application(submission_id: str, admin: dict = Depends(get_a
     return {"message": "Submission deleted"}
 
 
+@router.post("/admin/forms/job-applications/{submission_id}/invite")
+async def send_interview_invite(submission_id: str, admin: dict = Depends(get_admin_user)):
+    """Send a friendly 'let's meet' invitation email to a job applicant"""
+    from app.services.email_service import send_interview_invite_email
+    
+    # Get the application
+    application = await db.job_applications.find_one({"id": submission_id}, {"_id": 0})
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Send the invite email
+    result = await send_interview_invite_email(
+        to_email=application["email"],
+        applicant_name=application["full_name"]
+    )
+    
+    # Update the application to track that invite was sent
+    await db.job_applications.update_one(
+        {"id": submission_id},
+        {"$set": {
+            "invite_sent": True,
+            "invite_sent_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Invite email sent successfully", "result": result}
+
+
+
 @router.delete("/admin/forms/consignment-inquiries/{submission_id}")
 async def delete_consignment_inquiry(submission_id: str, admin: dict = Depends(get_admin_user)):
     """Delete a consignment inquiry submission"""

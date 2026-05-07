@@ -673,3 +673,65 @@ async def send_new_employee_welcome_email(to_email: str, employee_name: str, por
     html = build_email_template("Welcome to Thrifty Curator! 🎉", content)
     return await send_email(to_email, "Welcome to Thrifty Curator - Employee Portal Access & W9 Instructions", html)
 
+
+
+async def send_interview_invite_email(to_email: str, applicant_name: str, business_name: str = "Thrifty Curator") -> dict:
+    """
+    Send a friendly invitation to meet with a job applicant.
+    Uses soft language - "meet and chat" rather than formal "interview".
+    
+    Args:
+        to_email: Applicant's email address
+        applicant_name: Applicant's name
+        business_name: Business name (default: Thrifty Curator)
+    
+    Returns:
+        dict with status and message
+    """
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{applicant_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Thank you so much for your interest in joining the <strong>{business_name}</strong> team! We've had a chance to look over your application, and we'd love the opportunity to meet you in person.
+    </p>
+    
+    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); border-radius: 12px; padding: 25px; margin: 25px 0;">
+        <h3 style="color: #ffffff; margin: 0 0 15px 0; font-size: 18px;">☕ Let's Get Together!</h3>
+        <p style="color: #ffffff; line-height: 1.6; margin: 0;">
+            We'd like to invite you to stop by so we can chat, get to know each other a bit, and give you a better idea of what working with us looks like. It's casual — no need to stress!
+        </p>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        <strong>Here's what to expect:</strong>
+    </p>
+    <ul style="color: #333; line-height: 1.8; padding-left: 20px;">
+        <li>A relaxed conversation about your experience and interests</li>
+        <li>A chance to ask us any questions you have</li>
+        <li>A quick walkthrough of what a typical day looks like</li>
+    </ul>
+    
+    <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 20px; margin: 25px 0;">
+        <h3 style="color: #92400E; margin: 0 0 10px 0; font-size: 16px;">📅 Next Steps</h3>
+        <p style="color: #78350F; line-height: 1.6; margin: 0;">
+            Please reply to this email with a few days and times that work for you, and we'll find a time that fits both our schedules.
+        </p>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        We're excited to meet you and learn more about what you'd bring to our team!
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Looking forward to hearing from you,
+    </p>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        — The {business_name} Team
+    </p>
+    """
+    
+    html = build_email_template(f"We'd Love to Meet You! ☕", content)
+    return await send_email(to_email, f"{business_name} - We'd Love to Meet You!", html)

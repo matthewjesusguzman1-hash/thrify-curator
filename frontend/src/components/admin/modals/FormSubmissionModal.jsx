@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import { 
   X, Trash2, Download, Mail, Phone, MapPin,
   Briefcase, Package, FileSignature, Send,
-  CheckCircle, XCircle, Clock, RotateCcw, Gift
+  CheckCircle, XCircle, Clock, RotateCcw, Gift,
+  Coffee, Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -56,6 +57,7 @@ export default function FormSubmissionModal({
     admin_notes: submission?.admin_notes || ""
   });
   const [submittingApproval, setSubmittingApproval] = useState(false);
+  const [sendingInvite, setSendingInvite] = useState(false);
 
   if (!submission) return null;
 
@@ -63,6 +65,28 @@ export default function FormSubmissionModal({
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
     return { headers: { Authorization: `Bearer ${token}` } };
+  };
+
+  // Send interview invite email
+  const handleSendInvite = async () => {
+    setSendingInvite(true);
+    try {
+      await axios.post(
+        `${API}/api/admin/forms/job-applications/${submission.id}/invite`,
+        {},
+        getAuthHeader()
+      );
+      toast.success(`Invite sent to ${submission.full_name}!`);
+      // Update local state to show invite was sent
+      submission.invite_sent = true;
+      submission.invite_sent_at = new Date().toISOString();
+      if (refreshData) refreshData();
+    } catch (error) {
+      console.error("Error sending invite:", error);
+      toast.error("Failed to send invite. Please try again.");
+    } finally {
+      setSendingInvite(false);
+    }
   };
 
   // Handle approval submission
@@ -273,34 +297,58 @@ Thrifty Curator Team`
         </div>
 
         {/* Action Buttons Bar */}
-        <div className="flex items-center justify-end gap-2 px-6 py-3 bg-[#F9F6F7] border-b">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onDownload && onDownload(submission)}
-            className="text-[#10B981] border-[#10B981] hover:bg-[#10B981]/10"
-          >
-            <Download className="w-4 h-4 mr-1" /> Download
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSendEmail}
-            className="text-[#00D4FF] border-[#00D4FF] hover:bg-[#00D4FF]/10"
-          >
-            <Send className="w-4 h-4 mr-1" /> Email
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              onDelete(submission.formType, submission.id);
-              onClose();
-            }}
-            className="text-red-500 border-red-500 hover:bg-red-50"
-          >
-            <Trash2 className="w-4 h-4 mr-1" /> Delete
-          </Button>
+        <div className="flex items-center justify-between gap-2 px-6 py-3 bg-[#F9F6F7] border-b">
+          {/* Left side - Invite button for job applications */}
+          <div>
+            {submission.formType === "job_applications" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSendInvite}
+                disabled={sendingInvite}
+                className={`${
+                  submission.invite_sent 
+                    ? "text-green-600 border-green-600 bg-green-50" 
+                    : "text-[#8B5CF6] border-[#8B5CF6] hover:bg-[#8B5CF6]/10"
+                }`}
+                data-testid="invite-to-meet-btn"
+              >
+                <Coffee className="w-4 h-4 mr-1" />
+                {sendingInvite ? "Sending..." : submission.invite_sent ? "Invite Sent ✓" : "Invite to Meet"}
+              </Button>
+            )}
+          </div>
+          
+          {/* Right side - Standard actions */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onDownload && onDownload(submission)}
+              className="text-[#10B981] border-[#10B981] hover:bg-[#10B981]/10"
+            >
+              <Download className="w-4 h-4 mr-1" /> Download
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendEmail}
+              className="text-[#00D4FF] border-[#00D4FF] hover:bg-[#00D4FF]/10"
+            >
+              <Send className="w-4 h-4 mr-1" /> Email
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                onDelete(submission.formType, submission.id);
+                onClose();
+              }}
+              className="text-red-500 border-red-500 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4 mr-1" /> Delete
+            </Button>
+          </div>
         </div>
 
         {/* Modal Content */}
