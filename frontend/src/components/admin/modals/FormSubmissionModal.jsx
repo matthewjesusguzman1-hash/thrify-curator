@@ -59,9 +59,44 @@ export default function FormSubmissionModal({
   const [submittingApproval, setSubmittingApproval] = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showInvitePreview, setShowInvitePreview] = useState(false);
   const [inviteSlots, setInviteSlots] = useState([
     { date: "", startTime: "", endTime: "" }
   ]);
+
+  // Format time for preview (24h to 12h)
+  const formatTime12h = (time24) => {
+    if (!time24) return "";
+    try {
+      const [hour, minute] = time24.split(':');
+      let h = parseInt(hour);
+      const suffix = h >= 12 ? "PM" : "AM";
+      if (h === 0) h = 12;
+      else if (h > 12) h -= 12;
+      return `${h}:${minute} ${suffix}`;
+    } catch {
+      return time24;
+    }
+  };
+
+  // Format date for preview
+  const formatDateReadable = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      const dt = new Date(dateStr + 'T00:00:00');
+      return dt.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Get valid slots for preview
+  const getValidSlots = () => inviteSlots.filter(s => s.date && s.startTime && s.endTime);
 
   if (!submission) return null;
 
@@ -93,7 +128,7 @@ export default function FormSubmissionModal({
   // Send interview invite email with availability slots
   const handleSendInvite = async () => {
     // Validate at least one complete slot
-    const validSlots = inviteSlots.filter(s => s.date && s.startTime && s.endTime);
+    const validSlots = getValidSlots();
     if (validSlots.length === 0) {
       toast.error("Please add at least one available date and time range");
       return;
@@ -111,6 +146,7 @@ export default function FormSubmissionModal({
       submission.invite_sent = true;
       submission.invite_sent_at = new Date().toISOString();
       setShowInviteModal(false);
+      setShowInvitePreview(false);
       setInviteSlots([{ date: "", startTime: "", endTime: "" }]);
       if (refreshData) refreshData();
     } catch (error) {
@@ -385,7 +421,7 @@ Thrifty Curator Team`
 
         {/* Invite to Meet Modal */}
         {showInviteModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => setShowInviteModal(false)}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => { setShowInviteModal(false); setShowInvitePreview(false); }}>
             <div 
               className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
@@ -393,88 +429,199 @@ Thrifty Curator Team`
               <div className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] p-4 text-white">
                 <h3 className="font-bold text-lg flex items-center gap-2">
                   <Coffee className="w-5 h-5" />
-                  Invite {submission.full_name?.split(' ')[0]} to Meet
+                  {showInvitePreview ? "Preview Email" : `Invite ${submission.full_name?.split(' ')[0]} to Meet`}
                 </h3>
-                <p className="text-sm opacity-90">Add your available dates and times</p>
+                <p className="text-sm opacity-90">
+                  {showInvitePreview ? "Review before sending" : "Add your available dates and times"}
+                </p>
               </div>
               
-              <div className="p-4 max-h-[60vh] overflow-y-auto">
-                <p className="text-sm text-gray-600 mb-4">
-                  The applicant will receive an email with these options and reply with their preference.
-                </p>
-                
-                {inviteSlots.map((slot, index) => (
-                  <div key={index} className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">Option {index + 1}</span>
-                      {inviteSlots.length > 1 && (
-                        <button 
-                          onClick={() => removeTimeSlot(index)}
-                          className="text-red-500 hover:text-red-700 text-sm"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-xs text-gray-500">Date</label>
-                        <Input
-                          type="date"
-                          value={slot.date}
-                          onChange={(e) => updateTimeSlot(index, 'date', e.target.value)}
-                          className="w-full"
-                          min={new Date().toISOString().split('T')[0]}
-                        />
+              {!showInvitePreview ? (
+                /* Step 1: Select dates/times */
+                <>
+                  <div className="p-4 max-h-[60vh] overflow-y-auto">
+                    <p className="text-sm text-gray-600 mb-4">
+                      The applicant will receive an email with these options and reply with their preference.
+                    </p>
+                    
+                    {inviteSlots.map((slot, index) => (
+                      <div key={index} className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium text-gray-700">Option {index + 1}</span>
+                          {inviteSlots.length > 1 && (
+                            <button 
+                              onClick={() => removeTimeSlot(index)}
+                              className="text-red-500 hover:text-red-700 text-sm"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-xs text-gray-500">Date</label>
+                            <Input
+                              type="date"
+                              value={slot.date}
+                              onChange={(e) => updateTimeSlot(index, 'date', e.target.value)}
+                              className="w-full"
+                              min={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs text-gray-500">From</label>
+                              <Input
+                                type="time"
+                                value={slot.startTime}
+                                onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500">To</label>
+                              <Input
+                                type="time"
+                                value={slot.endTime}
+                                onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-xs text-gray-500">From</label>
-                          <Input
-                            type="time"
-                            value={slot.startTime}
-                            onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
-                          />
+                    ))}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addTimeSlot}
+                      className="w-full mb-4 border-dashed"
+                    >
+                      <Calendar className="w-4 h-4 mr-1" /> Add Another Option
+                    </Button>
+                  </div>
+                  
+                  <div className="p-4 bg-gray-50 border-t flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowInviteModal(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (getValidSlots().length === 0) {
+                          toast.error("Please add at least one complete date and time range");
+                          return;
+                        }
+                        setShowInvitePreview(true);
+                      }}
+                      className="flex-1 bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] text-white"
+                    >
+                      Preview Email
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                /* Step 2: Email Preview */
+                <>
+                  <div className="p-4 max-h-[60vh] overflow-y-auto">
+                    {/* Email Preview Card */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                      {/* Email Header */}
+                      <div className="bg-gray-100 px-4 py-2 border-b text-sm">
+                        <p><span className="text-gray-500">To:</span> {submission.current_email || submission.email}</p>
+                        <p><span className="text-gray-500">Subject:</span> Thrifty Curator - We'd Love to Meet You!</p>
+                      </div>
+                      
+                      {/* Email Body Preview */}
+                      <div className="p-4 text-sm space-y-4">
+                        <p>Hi <strong>{submission.full_name?.split(' ')[0]}</strong>,</p>
+                        
+                        <p className="text-gray-700">
+                          Thank you so much for your interest in joining the <strong>Thrifty Curator</strong> team! 
+                          We've had a chance to look over your application, and we'd love the opportunity to meet you in person.
+                        </p>
+                        
+                        {/* Purple banner */}
+                        <div className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] text-white p-4 rounded-lg">
+                          <p className="font-bold flex items-center gap-2">
+                            <Coffee className="w-4 h-4" /> Let's Get Together!
+                          </p>
+                          <p className="text-sm mt-2 opacity-90">
+                            We'd like to invite you to stop by so we can chat, get to know each other a bit, 
+                            and give you a better idea of what working with us looks like. It's casual — no need to stress!
+                          </p>
                         </div>
+                        
                         <div>
-                          <label className="text-xs text-gray-500">To</label>
-                          <Input
-                            type="time"
-                            value={slot.endTime}
-                            onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
-                          />
+                          <p className="font-medium text-gray-800">Here's what to expect:</p>
+                          <ul className="list-disc list-inside text-gray-600 mt-1 space-y-1">
+                            <li>A relaxed conversation about your experience and interests</li>
+                            <li>A chance to ask us any questions you have</li>
+                            <li>A quick walkthrough of what a typical day looks like</li>
+                          </ul>
                         </div>
+                        
+                        {/* Available Times */}
+                        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+                          <p className="font-bold text-green-800 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" /> Available Times to Meet
+                          </p>
+                          <p className="text-sm text-green-700 mt-2">
+                            Here are some times that work for us — just let us know which one works best for you:
+                          </p>
+                          <ul className="mt-3 space-y-2">
+                            {getValidSlots().map((slot, i) => (
+                              <li key={i} className="text-green-800">
+                                <strong>{formatDateReadable(slot.date)}</strong><br />
+                                <span className="text-green-600 text-sm">
+                                  Between {formatTime12h(slot.startTime)} and {formatTime12h(slot.endTime)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        {/* Next Steps */}
+                        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+                          <p className="font-bold text-amber-800">Next Steps</p>
+                          <p className="text-sm text-amber-700 mt-1">
+                            Simply reply to this email with your preferred time from the options above, 
+                            or let us know if none of them work and we'll find another time!
+                          </p>
+                        </div>
+                        
+                        <p className="text-gray-700">
+                          We're excited to meet you and learn more about what you'd bring to our team!
+                        </p>
+                        
+                        <p className="text-gray-600">
+                          Looking forward to hearing from you,<br />
+                          <strong>— The Thrifty Curator Team</strong>
+                        </p>
                       </div>
                     </div>
                   </div>
-                ))}
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addTimeSlot}
-                  className="w-full mb-4 border-dashed"
-                >
-                  <Calendar className="w-4 h-4 mr-1" /> Add Another Option
-                </Button>
-              </div>
-              
-              <div className="p-4 bg-gray-50 border-t flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowInviteModal(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSendInvite}
-                  disabled={sendingInvite}
-                  className="flex-1 bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] text-white"
-                >
-                  {sendingInvite ? "Sending..." : "Send Invite"}
-                </Button>
-              </div>
+                  
+                  <div className="p-4 bg-gray-50 border-t flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowInvitePreview(false)}
+                      className="flex-1"
+                    >
+                      ← Edit
+                    </Button>
+                    <Button
+                      onClick={handleSendInvite}
+                      disabled={sendingInvite}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {sendingInvite ? "Sending..." : "Send Email"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
