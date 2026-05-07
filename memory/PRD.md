@@ -6,6 +6,13 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 ## Core Features
 
 ### Completed
+- **Interview Invite Feature (May 7, 2026)**:
+  - Admin can send "Invite to Meet" emails to job applicants with customizable availability slots
+  - Modal in FormSubmissionModal.jsx allows adding multiple date/time options
+  - Email template shows nicely formatted times (12h format) for applicant to choose from
+  - Tracks invite_sent, invite_sent_at, and invite_availability_slots on application record
+  - Button changes to "Send Another Invite" after first invite sent
+
 - **Job Application Visitor Tracking (May 2, 2026)**:
   - Added silent visitor tracking on the `/apply` page (invisible to applicants)
   - Visitor stats displayed in Admin Dashboard > Forms & Communications > Form Submissions > Job Applications
