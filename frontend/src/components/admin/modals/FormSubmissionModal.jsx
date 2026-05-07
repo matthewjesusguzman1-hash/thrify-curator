@@ -58,6 +58,10 @@ export default function FormSubmissionModal({
   });
   const [submittingApproval, setSubmittingApproval] = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteSlots, setInviteSlots] = useState([
+    { date: "", startTime: "", endTime: "" }
+  ]);
 
   if (!submission) return null;
 
@@ -67,19 +71,47 @@ export default function FormSubmissionModal({
     return { headers: { Authorization: `Bearer ${token}` } };
   };
 
-  // Send interview invite email
+  // Add a new time slot
+  const addTimeSlot = () => {
+    setInviteSlots([...inviteSlots, { date: "", startTime: "", endTime: "" }]);
+  };
+
+  // Remove a time slot
+  const removeTimeSlot = (index) => {
+    if (inviteSlots.length > 1) {
+      setInviteSlots(inviteSlots.filter((_, i) => i !== index));
+    }
+  };
+
+  // Update a time slot
+  const updateTimeSlot = (index, field, value) => {
+    const updated = [...inviteSlots];
+    updated[index][field] = value;
+    setInviteSlots(updated);
+  };
+
+  // Send interview invite email with availability slots
   const handleSendInvite = async () => {
+    // Validate at least one complete slot
+    const validSlots = inviteSlots.filter(s => s.date && s.startTime && s.endTime);
+    if (validSlots.length === 0) {
+      toast.error("Please add at least one available date and time range");
+      return;
+    }
+
     setSendingInvite(true);
     try {
       await axios.post(
         `${API}/api/admin/forms/job-applications/${submission.id}/invite`,
-        {},
+        { availability_slots: validSlots },
         getAuthHeader()
       );
       toast.success(`Invite sent to ${submission.full_name}!`);
       // Update local state to show invite was sent
       submission.invite_sent = true;
       submission.invite_sent_at = new Date().toISOString();
+      setShowInviteModal(false);
+      setInviteSlots([{ date: "", startTime: "", endTime: "" }]);
       if (refreshData) refreshData();
     } catch (error) {
       console.error("Error sending invite:", error);
@@ -304,7 +336,7 @@ Thrifty Curator Team`
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleSendInvite}
+                onClick={() => setShowInviteModal(true)}
                 disabled={sendingInvite}
                 className={`${
                   submission.invite_sent 
@@ -314,7 +346,7 @@ Thrifty Curator Team`
                 data-testid="invite-to-meet-btn"
               >
                 <Coffee className="w-4 h-4 mr-1" />
-                {sendingInvite ? "Sending..." : submission.invite_sent ? "Invite Sent ✓" : "Invite to Meet"}
+                {submission.invite_sent ? "Send Another Invite" : "Invite to Meet"}
               </Button>
             )}
           </div>
@@ -350,6 +382,102 @@ Thrifty Curator Team`
             </Button>
           </div>
         </div>
+
+        {/* Invite to Meet Modal */}
+        {showInviteModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => setShowInviteModal(false)}>
+            <div 
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] p-4 text-white">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <Coffee className="w-5 h-5" />
+                  Invite {submission.full_name?.split(' ')[0]} to Meet
+                </h3>
+                <p className="text-sm opacity-90">Add your available dates and times</p>
+              </div>
+              
+              <div className="p-4 max-h-[60vh] overflow-y-auto">
+                <p className="text-sm text-gray-600 mb-4">
+                  The applicant will receive an email with these options and reply with their preference.
+                </p>
+                
+                {inviteSlots.map((slot, index) => (
+                  <div key={index} className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">Option {index + 1}</span>
+                      {inviteSlots.length > 1 && (
+                        <button 
+                          onClick={() => removeTimeSlot(index)}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-xs text-gray-500">Date</label>
+                        <Input
+                          type="date"
+                          value={slot.date}
+                          onChange={(e) => updateTimeSlot(index, 'date', e.target.value)}
+                          className="w-full"
+                          min={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-gray-500">From</label>
+                          <Input
+                            type="time"
+                            value={slot.startTime}
+                            onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500">To</label>
+                          <Input
+                            type="time"
+                            value={slot.endTime}
+                            onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addTimeSlot}
+                  className="w-full mb-4 border-dashed"
+                >
+                  <Calendar className="w-4 h-4 mr-1" /> Add Another Option
+                </Button>
+              </div>
+              
+              <div className="p-4 bg-gray-50 border-t flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowInviteModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendInvite}
+                  disabled={sendingInvite}
+                  className="flex-1 bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] text-white"
+                >
+                  {sendingInvite ? "Sending..." : "Send Invite"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal Content */}
         <div className="p-6 max-h-[60vh] overflow-y-auto">
