@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
+from pydantic import BaseModel, EmailStr
 import os
 import uuid as uuid_module
 import base64
@@ -779,9 +780,12 @@ async def delete_job_application(submission_id: str, admin: dict = Depends(get_a
     return {"message": "Submission deleted"}
 
 
+class InterviewInviteRequest(BaseModel):
+    availability_slots: List[dict]  # List of {date, startTime, endTime}
+
 @router.post("/admin/forms/job-applications/{submission_id}/invite")
-async def send_interview_invite(submission_id: str, admin: dict = Depends(get_admin_user)):
-    """Send a friendly 'let's meet' invitation email to a job applicant"""
+async def send_interview_invite(submission_id: str, invite_data: InterviewInviteRequest, admin: dict = Depends(get_admin_user)):
+    """Send a friendly 'let's meet' invitation email to a job applicant with availability options"""
     from app.services.email_service import send_interview_invite_email
     
     # Get the application
@@ -789,10 +793,11 @@ async def send_interview_invite(submission_id: str, admin: dict = Depends(get_ad
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
     
-    # Send the invite email
+    # Send the invite email with availability slots
     result = await send_interview_invite_email(
         to_email=application["email"],
-        applicant_name=application["full_name"]
+        applicant_name=application["full_name"],
+        availability_slots=invite_data.availability_slots
     )
     
     # Update the application to track that invite was sent
@@ -800,7 +805,8 @@ async def send_interview_invite(submission_id: str, admin: dict = Depends(get_ad
         {"id": submission_id},
         {"$set": {
             "invite_sent": True,
-            "invite_sent_at": datetime.now(timezone.utc).isoformat()
+            "invite_sent_at": datetime.now(timezone.utc).isoformat(),
+            "invite_availability_slots": invite_data.availability_slots
         }}
     )
     
@@ -977,7 +983,6 @@ async def get_forms_summary(admin: dict = Depends(get_admin_user)):
 
 
 # Email Configuration Endpoints
-from pydantic import BaseModel, EmailStr
 
 class TestEmailRequest(BaseModel):
     email: EmailStr
@@ -1448,9 +1453,6 @@ async def download_consignment_agreement_pdf(submission_id: str, admin: dict = D
 
 
 # ============== CONSIGNOR PAYMENTS ==============
-
-from pydantic import BaseModel
-from typing import Optional
 
 class ConsignorPaymentCreate(BaseModel):
     consignor_email: str

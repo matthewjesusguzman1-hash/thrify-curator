@@ -675,7 +675,7 @@ async def send_new_employee_welcome_email(to_email: str, employee_name: str, por
 
 
 
-async def send_interview_invite_email(to_email: str, applicant_name: str, business_name: str = "Thrifty Curator") -> dict:
+async def send_interview_invite_email(to_email: str, applicant_name: str, availability_slots: list = None, business_name: str = "Thrifty Curator") -> dict:
     """
     Send a friendly invitation to meet with a job applicant.
     Uses soft language - "meet and chat" rather than formal "interview".
@@ -683,11 +683,79 @@ async def send_interview_invite_email(to_email: str, applicant_name: str, busine
     Args:
         to_email: Applicant's email address
         applicant_name: Applicant's name
+        availability_slots: List of availability dicts with {date, startTime, endTime}
         business_name: Business name (default: Thrifty Curator)
     
     Returns:
         dict with status and message
     """
+    
+    # Format availability slots into readable text
+    availability_html = ""
+    if availability_slots and len(availability_slots) > 0:
+        def format_time(time_str):
+            """Convert 24h time to 12h format"""
+            try:
+                hour, minute = time_str.split(':')
+                hour = int(hour)
+                suffix = "AM" if hour < 12 else "PM"
+                if hour == 0:
+                    hour = 12
+                elif hour > 12:
+                    hour -= 12
+                return f"{hour}:{minute} {suffix}"
+            except:
+                return time_str
+        
+        def format_date(date_str):
+            """Format date to readable format"""
+            try:
+                from datetime import datetime
+                dt = datetime.strptime(date_str, "%Y-%m-%d")
+                return dt.strftime("%A, %B %d, %Y")
+            except:
+                return date_str
+        
+        slots_list = ""
+        for i, slot in enumerate(availability_slots):
+            date = format_date(slot.get('date', ''))
+            start = format_time(slot.get('startTime', ''))
+            end = format_time(slot.get('endTime', ''))
+            slots_list += f"""
+            <li style="margin-bottom: 8px;">
+                <strong>{date}</strong><br>
+                <span style="color: #666;">Between {start} and {end}</span>
+            </li>
+            """
+        
+        availability_html = f"""
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 16px;">📅 Available Times to Meet</h3>
+            <p style="color: #166534; line-height: 1.6; margin: 0 0 10px 0;">
+                Here are some times that work for us — just let us know which one works best for you:
+            </p>
+            <ul style="color: #166534; line-height: 1.6; margin: 0; padding-left: 20px; list-style-type: none;">
+                {slots_list}
+            </ul>
+        </div>
+        
+        <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h3 style="color: #92400E; margin: 0 0 10px 0; font-size: 16px;">📩 Next Steps</h3>
+            <p style="color: #78350F; line-height: 1.6; margin: 0;">
+                Simply reply to this email with your preferred time from the options above, or let us know if none of them work and we'll find another time!
+            </p>
+        </div>
+        """
+    else:
+        availability_html = """
+        <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h3 style="color: #92400E; margin: 0 0 10px 0; font-size: 16px;">📅 Next Steps</h3>
+            <p style="color: #78350F; line-height: 1.6; margin: 0;">
+                Please reply to this email with a few days and times that work for you, and we'll find a time that fits both our schedules.
+            </p>
+        </div>
+        """
+    
     content = f"""
     <p style="color: #333; line-height: 1.6;">
         Hi <strong>{applicant_name}</strong>,
@@ -713,12 +781,7 @@ async def send_interview_invite_email(to_email: str, applicant_name: str, busine
         <li>A quick walkthrough of what a typical day looks like</li>
     </ul>
     
-    <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 20px; margin: 25px 0;">
-        <h3 style="color: #92400E; margin: 0 0 10px 0; font-size: 16px;">📅 Next Steps</h3>
-        <p style="color: #78350F; line-height: 1.6; margin: 0;">
-            Please reply to this email with a few days and times that work for you, and we'll find a time that fits both our schedules.
-        </p>
-    </div>
+    {availability_html}
     
     <p style="color: #333; line-height: 1.6;">
         We're excited to meet you and learn more about what you'd bring to our team!

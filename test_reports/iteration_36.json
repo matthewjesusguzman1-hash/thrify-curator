@@ -1,0 +1,77 @@
+{
+  "summary": "Interview Invite feature fully tested. Backend API endpoint POST /api/admin/forms/job-applications/{submission_id}/invite works correctly with availability slots. Frontend modal with date/time pickers functions as expected. Email service sends formatted interview invitations.",
+  "mode": "generate",
+  "baseline_commit": "fa311cad2c51080fc75b50e58167a62c8be4c575",
+  "head_commit": "d39c799a02cac9e30d0cd9fa010a5d5cfab93558",
+  "specs_created": [
+    "/app/tests/e2e/interview-invite.spec.ts",
+    "/app/backend/tests/test_interview_invite.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/interview-invite.spec.ts",
+    "/app/backend/tests/test_interview_invite.py",
+    "/app/test_reports/pytest/test_interview_invite.xml"
+  ],
+  "regression_results": {
+    "total_specs": 13,
+    "passed": 13,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/interview-invite.spec.ts",
+    "/app/backend/tests/test_interview_invite.py",
+    "/app/.emergent/testing_baseline_commit"
+  ],
+  "test_results": {
+    "backend": "100% (7/7 passed)",
+    "frontend": "100% (6/6 passed)"
+  },
+  "seed_data_creation": "Used existing job application with ID 140b3a2b-40b7-45cc-a076-804ab6479c46 for testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Interview Invite feature is fully implemented and tested. Backend endpoint accepts availability_slots array and sends formatted email. Frontend modal allows adding multiple date/time slots. The invite_sent flag and invite_sent_at timestamp are properly stored on the job application record.",
+  "features_verified": {
+    "interview_invite_api": {
+      "status": "PASS",
+      "details": "POST /api/admin/forms/job-applications/{id}/invite accepts availability_slots and sends email"
+    },
+    "email_template_formatting": {
+      "status": "PASS",
+      "details": "Email includes formatted date/time options with 12-hour format"
+    },
+    "frontend_invite_modal": {
+      "status": "PASS",
+      "details": "Modal opens with date/time pickers, supports multiple slots, Cancel and Send buttons work"
+    },
+    "application_record_update": {
+      "status": "PASS",
+      "details": "invite_sent, invite_sent_at, and invite_availability_slots are stored on application"
+    },
+    "button_state_change": {
+      "status": "PASS",
+      "details": "Button shows 'Send Another Invite' after invite is sent"
+    }
+  },
+  "backend_tests": {
+    "test_send_invite_with_single_slot": "PASS",
+    "test_send_invite_with_multiple_slots": "PASS",
+    "test_invite_updates_application_record": "PASS",
+    "test_invite_with_invalid_submission_id": "PASS",
+    "test_invite_without_auth_fails": "PASS",
+    "test_invite_with_empty_slots": "PASS",
+    "test_email_service_status": "PASS"
+  },
+  "frontend_tests": {
+    "Admin can access job applications and see Invite to Meet button": "PASS",
+    "Invite to Meet modal opens with date/time pickers": "PASS",
+    "Can add multiple availability slots in invite modal": "PASS",
+    "Can fill in availability slots and send invite": "PASS",
+    "Invite button shows different text after invite is sent": "PASS",
+    "Cancel button closes invite modal without sending": "PASS"
+  }
+}
