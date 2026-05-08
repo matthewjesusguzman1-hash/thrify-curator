@@ -928,6 +928,77 @@ async def submit_application_response(token: str, response: str):
     }
 
 
+# ==================== REJECTION HISTORY ====================
+
+@router.get("/admin/rejection-history")
+async def get_rejection_history(admin: dict = Depends(get_admin_user)):
+    """Get history of all rejection emails sent"""
+    
+    # Get pre-interview rejections from job_applications
+    pre_interview_rejections = await db.job_applications.find(
+        {"status": "rejected"},
+        {"_id": 0, "id": 1, "full_name": 1, "email": 1, "rejection_sent_at": 1, 
+         "rejection_sent_by": 1, "keep_on_file_response": 1, "keep_on_file_responded_at": 1}
+    ).to_list(100)
+    
+    # Get post-interview rejections from interview_bookings
+    post_interview_rejections = await db.interview_bookings.find(
+        {"rejection_sent": True},
+        {"_id": 0, "id": 1, "applicant_name": 1, "applicant_email": 1, "interview_date": 1,
+         "interview_time": 1, "rejection_sent_at": 1, "rejection_sent_by": 1, 
+         "keep_on_file_response": 1, "keep_on_file_responded_at": 1}
+    ).to_list(100)
+    
+    # Format the results
+    history = []
+    
+    for r in pre_interview_rejections:
+        history.append({
+            "id": r.get("id"),
+            "applicant_name": r.get("full_name"),
+            "applicant_email": r.get("email"),
+            "rejection_type": "pre_interview",
+            "rejection_type_label": "Before Interview",
+            "sent_at": r.get("rejection_sent_at"),
+            "sent_by": r.get("rejection_sent_by", "Admin"),
+            "keep_on_file_response": r.get("keep_on_file_response"),
+            "responded_at": r.get("keep_on_file_responded_at")
+        })
+    
+    for r in post_interview_rejections:
+        history.append({
+            "id": r.get("id"),
+            "applicant_name": r.get("applicant_name"),
+            "applicant_email": r.get("applicant_email"),
+            "rejection_type": "post_interview",
+            "rejection_type_label": "After Interview",
+            "interview_date": r.get("interview_date"),
+            "interview_time": r.get("interview_time"),
+            "sent_at": r.get("rejection_sent_at"),
+            "sent_by": r.get("rejection_sent_by", "Admin"),
+            "keep_on_file_response": r.get("keep_on_file_response"),
+            "responded_at": r.get("keep_on_file_responded_at")
+        })
+    
+    # Sort by sent_at descending (most recent first)
+    history.sort(key=lambda x: x.get("sent_at") or "", reverse=True)
+    
+    # Stats
+    total = len(history)
+    keep_on_file_yes = len([h for h in history if h.get("keep_on_file_response") is True])
+    keep_on_file_no = len([h for h in history if h.get("keep_on_file_response") is False])
+    pending_response = len([h for h in history if h.get("keep_on_file_response") is None])
+    
+    return {
+        "rejections": history,
+        "stats": {
+            "total": total,
+            "keep_on_file_yes": keep_on_file_yes,
+            "keep_on_file_no": keep_on_file_no,
+            "pending_response": pending_response
+        }
+    }
+
 
 @router.delete("/admin/forms/consignment-inquiries/{submission_id}")
 async def delete_consignment_inquiry(submission_id: str, admin: dict = Depends(get_admin_user)):

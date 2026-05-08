@@ -83,6 +83,7 @@ import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArch
 import SalesDataSection from "@/components/admin/sections/SalesDataSection";
 import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
+import RejectionHistorySection from "@/components/admin/sections/RejectionHistorySection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
@@ -3403,6 +3404,11 @@ export default function AdminDashboard() {
               {/* Interview Scheduler Section */}
               <div data-testid="interview-scheduler-section">
                 <InterviewSchedulerSection getAuthHeader={getAuthHeader} />
+              </div>
+
+              {/* Rejection History Section */}
+              <div data-testid="rejection-history-section">
+                <RejectionHistorySection getAuthHeader={getAuthHeader} />
               </div>
             </DashboardGroup>
 
