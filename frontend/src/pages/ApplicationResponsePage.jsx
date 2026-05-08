@@ -22,7 +22,7 @@ export default function ApplicationResponsePage() {
 
   const checkStatus = async () => {
     try {
-      const response = await axios.get(`${API}/api/forms/application-response/${token}`);
+      const response = await axios.get(`${API}/api/application-response/${token}`);
       setApplicantName(response.data.applicant_name);
       setAlreadyResponded(response.data.already_responded);
       
@@ -42,7 +42,7 @@ export default function ApplicationResponsePage() {
   const submitResponse = async (keepIt) => {
     setSubmitting(true);
     try {
-      await axios.post(`${API}/api/forms/application-response/${token}?response=${keepIt ? 'yes' : 'no'}`);
+      await axios.post(`${API}/api/application-response/${token}?response=${keepIt ? 'yes' : 'no'}`);
       setKeepOnFile(keepIt);
       setResponseSubmitted(true);
     } catch (err) {
