@@ -82,6 +82,7 @@ import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
 import SalesDataSection from "@/components/admin/sections/SalesDataSection";
 import TaxesSection from "@/components/admin/sections/TaxesSection";
+import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
@@ -3397,6 +3398,15 @@ export default function AdminDashboard() {
                   getAuthHeader={getAuthHeader}
                   onViewConsignorPortal={handleViewConsignorPortal}
                 />
+              </div>
+
+              {/* Interview Scheduler Section */}
+              <div data-testid="interview-scheduler-section" className="bg-white/80 backdrop-blur rounded-2xl p-6 shadow-lg border border-white/20">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                  Interview Scheduler
+                </h3>
+                <InterviewSchedulerSection getAuthHeader={getAuthHeader} />
               </div>
             </DashboardGroup>
 
