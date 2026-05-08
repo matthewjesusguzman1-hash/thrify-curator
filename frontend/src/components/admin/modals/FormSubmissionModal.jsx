@@ -1202,15 +1202,6 @@ Thrifty Curator Team`
           <div className="flex flex-wrap justify-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
-              onClick={handleSendEmail}
-              className="text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10"
-              data-testid="email-submission-btn"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Send Email
-            </Button>
-            <Button
-              variant="outline"
               onClick={() => onDownload(submission)}
               className="text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10"
               data-testid="download-submission-btn"
