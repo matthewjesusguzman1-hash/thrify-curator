@@ -142,7 +142,8 @@ async def send_interview_confirmation_sms(
 
 Need to reschedule or cancel? Visit: {manage_url}
 
-See you soon!
+(Auto msg - To reply: thrifty-curator.com/contact)
+
 - Thrifty Curator"""
     
     return await send_sms(to_phone, message)
@@ -169,13 +170,17 @@ async def send_interview_cancelled_sms(
     if cancelled_by == "applicant":
         message = f"""Hi {first_name}, your interview on {formatted_date} has been cancelled as requested.
 
-If you'd like to reschedule, just reply to this message or email us.
+If you'd like to reschedule, visit: thrifty-curator.com/contact
+
+(Auto msg)
 
 - Thrifty Curator"""
     else:
         message = f"""Hi {first_name}, we need to reschedule your interview that was planned for {formatted_date}.
 
 We apologize for any inconvenience. We'll send you a new scheduling link shortly.
+
+(Auto msg - To reply: thrifty-curator.com/contact)
 
 - Thrifty Curator"""
     
@@ -222,6 +227,8 @@ NEW TIME: {formatted_date} at {formatted_time}
 
 Manage appointment: {manage_url}
 
+(Auto msg - To reply: thrifty-curator.com/contact)
+
 - Thrifty Curator"""
     
     return await send_sms(to_phone, message)
@@ -256,6 +263,8 @@ async def send_interview_reminder_sms(
 
 We're looking forward to meeting you!
 
+(Auto msg - To reply: thrifty-curator.com/contact)
+
 - Thrifty Curator"""
     
     return await send_sms(to_phone, message)
@@ -283,10 +292,11 @@ async def send_scheduler_invite_sms(
 
 Pick a time that works for you: {booking_url}
 
+(Auto msg - To reply: thrifty-curator.com/contact)
+
 - Thrifty Curator"""
     
     return await send_sms(to_phone, message)
-
 
 
 async def send_application_received_sms(to_phone: str, applicant_name: str) -> dict:
@@ -297,6 +307,8 @@ async def send_application_received_sms(to_phone: str, applicant_name: str) -> d
     message = f"""Hi {first_name}! Thanks for applying to Thrifty Curator.
 
 We got your application and will review it soon. If we think you'd be a great fit, we'll reach out to schedule a chat.
+
+(Auto msg - To reply: thrifty-curator.com/contact)
 
 - Thrifty Curator"""
     

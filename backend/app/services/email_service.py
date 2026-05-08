@@ -45,6 +45,18 @@ else:
     logger.info("📧 Email service running in MOCK mode (no RESEND_API_KEY). Emails logged to console.")
 
 
+def get_automated_message_footer():
+    """Footer for automated messages with contact link"""
+    return """
+    <div style="border-top: 1px solid #e5e5e5; margin-top: 30px; padding-top: 20px;">
+        <p style="color: #999; font-size: 12px; margin: 0; text-align: center;">
+            This is an automated message. To send us a message directly, visit 
+            <a href="https://thrifty-curator.com/contact" style="color: #8B5CF6;">thrifty-curator.com/contact</a>
+        </p>
+    </div>
+    """
+
+
 def get_email_header():
     """Common email header with branding"""
     return """
@@ -861,6 +873,8 @@ async def send_scheduler_invite_email(to_email: str, applicant_name: str, bookin
     <p style="color: #666; font-size: 14px; margin-top: 30px;">
         — The Thrifty Curator Team
     </p>
+    
+    {get_automated_message_footer()}
     """
     
     html = build_email_template("Schedule Your Interview!", content)
@@ -964,6 +978,8 @@ async def send_interview_confirmation_email(
     <p style="color: #666; font-size: 14px; margin-top: 30px;">
         — The Thrifty Curator Team
     </p>
+    
+    {get_automated_message_footer()}
     """
     
     html = build_email_template("Interview Confirmed! ✅", content)
@@ -1030,6 +1046,8 @@ async def send_interview_cancelled_email(
     <p style="color: #666; font-size: 14px; margin-top: 30px;">
         — The Thrifty Curator Team
     </p>
+    
+    {get_automated_message_footer()}
     """
     
     html = build_email_template("Interview Cancelled", content)
@@ -1119,6 +1137,8 @@ async def send_interview_rescheduled_email(
     <p style="color: #666; font-size: 14px; margin-top: 30px;">
         — The Thrifty Curator Team
     </p>
+    
+    {get_automated_message_footer()}
     """
     
     html = build_email_template("Interview Rescheduled ✅", content)
@@ -1237,12 +1257,6 @@ async def send_application_received_email(to_email: str, applicant_name: str) ->
         <li>This usually takes a few days, so sit tight!</li>
     </ul>
     
-    <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; margin: 20px 0;">
-        <p style="color: #666; margin: 0; font-size: 14px;">
-            <strong>Have questions?</strong> Just reply to this email and we'll get back to you.
-        </p>
-    </div>
-    
     <p style="color: #333; line-height: 1.6;">
         Thanks again for your interest in Thrifty Curator!
     </p>
@@ -1250,6 +1264,13 @@ async def send_application_received_email(to_email: str, applicant_name: str) ->
     <p style="color: #666; font-size: 14px; margin-top: 30px;">
         — The Thrifty Curator Team
     </p>
+    
+    <div style="border-top: 1px solid #e5e5e5; margin-top: 30px; padding-top: 20px;">
+        <p style="color: #999; font-size: 12px; margin: 0; text-align: center;">
+            This is an automated message. To send us a message directly, visit 
+            <a href="https://thrifty-curator.com/contact" style="color: #8B5CF6;">thrifty-curator.com/contact</a>
+        </p>
+    </div>
     """
     
     html = build_email_template("Application Received! ✓", content)
