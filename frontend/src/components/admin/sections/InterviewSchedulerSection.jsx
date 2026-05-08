@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Clock, Plus, Trash2, Send, User, Phone, Mail, 
   ChevronLeft, ChevronRight, CheckCircle, XCircle, RefreshCw,
-  MessageSquare
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { toast } from 'sonner';
 const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function InterviewSchedulerSection({ getAuthHeader }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar'); // 'calendar', 'slots', 'applicants'
   const [slots, setSlots] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -190,10 +192,28 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
-  if (loading) {
+  if (loading && isExpanded) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
+      <div className="bg-white/80 backdrop-blur rounded-2xl shadow-lg border border-white/20 overflow-hidden">
+        {/* Header */}
+        <div 
+          className="flex items-center justify-between p-4 cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-lg text-gray-900">Interview Scheduler</h2>
+              <p className="text-sm text-gray-500">Manage interview slots</p>
+            </div>
+          </div>
+          <ChevronUp className="w-5 h-5 text-gray-500" />
+        </div>
+        <div className="flex items-center justify-center py-12 border-t">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
+        </div>
       </div>
     );
   }
@@ -201,24 +221,62 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   const days = getDaysInMonth(currentMonth);
   const availableSlots = slots.filter(s => !s.is_booked);
   const bookedSlots = slots.filter(s => s.is_booked);
+  const scheduledCount = bookings.filter(b => b.status === 'confirmed').length;
 
   return (
-    <div className="space-y-6">
-      {/* Stats Bar */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-3 sm:p-4 text-white">
-          <div className="text-xl sm:text-2xl font-bold">{availableSlots.length}</div>
-          <div className="text-purple-100 text-xs sm:text-sm">Available Slots</div>
+    <div className="bg-white/80 backdrop-blur rounded-2xl shadow-lg border border-white/20 overflow-hidden">
+      {/* Collapsible Header */}
+      <div 
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50/50 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+        data-testid="interview-scheduler-toggle"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <Calendar className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg text-gray-900">Interview Scheduler</h2>
+            <p className="text-sm text-gray-500">
+              {availableSlots.length} available slots
+              {scheduledCount > 0 && <span className="text-green-600 ml-2">• {scheduledCount} scheduled</span>}
+              {applications.length > 0 && <span className="text-blue-600 ml-2">• {applications.length} pending</span>}
+            </p>
+          </div>
         </div>
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-3 sm:p-4 text-white">
-          <div className="text-xl sm:text-2xl font-bold">{bookings.filter(b => b.status === 'confirmed').length}</div>
-          <div className="text-green-100 text-xs sm:text-sm">Scheduled</div>
-        </div>
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-3 sm:p-4 text-white">
-          <div className="text-xl sm:text-2xl font-bold">{applications.length}</div>
-          <div className="text-blue-100 text-xs sm:text-sm">Pending Invite</div>
-        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-5 h-5 text-gray-500" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-gray-500" />
+        )}
       </div>
+
+      {/* Collapsible Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 pt-0 space-y-6 border-t">
+    {/* Stats Bar */}
+    <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4">
+      <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-3 sm:p-4 text-white">
+        <div className="text-xl sm:text-2xl font-bold">{availableSlots.length}</div>
+        <div className="text-purple-100 text-xs sm:text-sm">Available Slots</div>
+      </div>
+      <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-3 sm:p-4 text-white">
+        <div className="text-xl sm:text-2xl font-bold">{scheduledCount}</div>
+        <div className="text-green-100 text-xs sm:text-sm">Scheduled</div>
+      </div>
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-3 sm:p-4 text-white">
+        <div className="text-xl sm:text-2xl font-bold">{applications.length}</div>
+        <div className="text-blue-100 text-xs sm:text-sm">Pending Invite</div>
+      </div>
+    </div>
 
       {/* Tabs */}
       <div className="flex gap-1 sm:gap-2 border-b border-gray-200 pb-2 overflow-x-auto">
@@ -336,17 +394,6 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          booking.preferred_contact === 'text' 
-                            ? 'bg-purple-100 text-purple-700' 
-                            : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          {booking.preferred_contact === 'text' ? (
-                            <><MessageSquare className="w-3 h-3 inline mr-1" />Text</>
-                          ) : (
-                            <><Mail className="w-3 h-3 inline mr-1" />Email</>
-                          )}
-                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -376,39 +423,41 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
             
             <div className="space-y-3">
               {newSlots.map((slot, index) => (
-                <div key={index} className="flex items-center gap-3">
+                <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
                   <Input
                     type="date"
                     value={slot.date}
                     onChange={(e) => updateSlotRow(index, 'date', e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
-                    className="flex-1"
+                    className="w-full sm:flex-1"
                   />
-                  <Input
-                    type="time"
-                    value={slot.start_time}
-                    onChange={(e) => updateSlotRow(index, 'start_time', e.target.value)}
-                    className="w-32"
-                    placeholder="Start"
-                  />
-                  <span className="text-gray-400">to</span>
-                  <Input
-                    type="time"
-                    value={slot.end_time}
-                    onChange={(e) => updateSlotRow(index, 'end_time', e.target.value)}
-                    className="w-32"
-                    placeholder="End"
-                  />
-                  {newSlots.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSlotRow(index)}
-                      className="text-red-500"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Input
+                      type="time"
+                      value={slot.start_time}
+                      onChange={(e) => updateSlotRow(index, 'start_time', e.target.value)}
+                      className="flex-1 sm:w-28 min-w-0"
+                      placeholder="Start"
+                    />
+                    <span className="text-gray-400 flex-shrink-0">to</span>
+                    <Input
+                      type="time"
+                      value={slot.end_time}
+                      onChange={(e) => updateSlotRow(index, 'end_time', e.target.value)}
+                      className="flex-1 sm:w-28 min-w-0"
+                      placeholder="End"
+                    />
+                    {newSlots.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSlotRow(index)}
+                        className="text-red-500 flex-shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -521,13 +570,6 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          app.preferred_contact === 'text'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          Prefers: {app.preferred_contact === 'text' ? 'Text' : 'Email'}
-                        </span>
                         {app.scheduler_invite_sent && (
                           <span className="text-xs text-green-600">✓ Invite sent</span>
                         )}
@@ -548,6 +590,10 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           )}
         </div>
       )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

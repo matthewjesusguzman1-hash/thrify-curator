@@ -3401,11 +3401,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Interview Scheduler Section */}
-              <div data-testid="interview-scheduler-section" className="bg-white/80 backdrop-blur rounded-2xl p-6 shadow-lg border border-white/20">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-purple-600" />
-                  Interview Scheduler
-                </h3>
+              <div data-testid="interview-scheduler-section">
                 <InterviewSchedulerSection getAuthHeader={getAuthHeader} />
               </div>
             </DashboardGroup>
