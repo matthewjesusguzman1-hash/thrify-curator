@@ -822,6 +822,112 @@ async def send_interview_invite(submission_id: str, invite_data: InterviewInvite
     return {"message": "Invite email sent successfully", "result": result}
 
 
+# ==================== JOB APPLICATION REJECTION ====================
+
+@router.get("/admin/forms/job-applications/{submission_id}/rejection-preview")
+async def get_rejection_preview(submission_id: str, admin: dict = Depends(get_admin_user)):
+    """Get a preview of the rejection email before sending"""
+    from app.services.email_service import get_rejection_email_preview
+    
+    application = await db.job_applications.find_one({"id": submission_id}, {"_id": 0})
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    preview = get_rejection_email_preview(application["full_name"])
+    return {
+        "applicant_name": application["full_name"],
+        "applicant_email": application["email"],
+        **preview
+    }
+
+
+@router.post("/admin/forms/job-applications/{submission_id}/send-rejection")
+async def send_rejection_email(submission_id: str, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
+    """Send a soft rejection email to a job applicant"""
+    from app.services.email_service import send_application_rejection_email
+    import secrets
+    import os
+    
+    application = await db.job_applications.find_one({"id": submission_id}, {"_id": 0})
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Check if already rejected
+    if application.get("status") == "rejected":
+        raise HTTPException(status_code=400, detail="Rejection email already sent to this applicant")
+    
+    # Generate a unique token for the keep-on-file response
+    response_token = secrets.token_urlsafe(16)
+    
+    # Store the token
+    await db.job_applications.update_one(
+        {"id": submission_id},
+        {"$set": {
+            "status": "rejected",
+            "rejection_sent_at": datetime.now(timezone.utc).isoformat(),
+            "rejection_sent_by": admin.get("name", admin.get("email", "Admin")),
+            "keep_on_file_token": response_token,
+            "keep_on_file_response": None  # Will be updated when applicant responds
+        }}
+    )
+    
+    # Build the response URL
+    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    keep_on_file_url = f"{frontend_url}/application-response/{response_token}"
+    
+    # Send the email
+    background_tasks.add_task(
+        send_application_rejection_email,
+        to_email=application["email"],
+        applicant_name=application["full_name"],
+        keep_on_file_url=keep_on_file_url
+    )
+    
+    return {"message": "Rejection email sent successfully", "applicant_name": application["full_name"]}
+
+
+# Public endpoint for applicant to respond to keep-on-file question
+@router.get("/application-response/{token}")
+async def get_application_response_status(token: str):
+    """Check if the response token is valid"""
+    application = await db.job_applications.find_one(
+        {"keep_on_file_token": token},
+        {"_id": 0, "full_name": 1, "keep_on_file_response": 1}
+    )
+    if not application:
+        raise HTTPException(status_code=404, detail="Invalid or expired link")
+    
+    return {
+        "applicant_name": application["full_name"],
+        "already_responded": application.get("keep_on_file_response") is not None
+    }
+
+
+@router.post("/application-response/{token}")
+async def submit_application_response(token: str, response: str):
+    """Applicant responds to keep-on-file question"""
+    application = await db.job_applications.find_one({"keep_on_file_token": token})
+    if not application:
+        raise HTTPException(status_code=404, detail="Invalid or expired link")
+    
+    # Validate response
+    keep_on_file = response.lower() in ["yes", "true", "1"]
+    
+    # Update the application
+    await db.job_applications.update_one(
+        {"keep_on_file_token": token},
+        {"$set": {
+            "keep_on_file_response": keep_on_file,
+            "keep_on_file_responded_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "message": "Thank you for your response!",
+        "keep_on_file": keep_on_file
+    }
+
+
 
 @router.delete("/admin/forms/consignment-inquiries/{submission_id}")
 async def delete_consignment_inquiry(submission_id: str, admin: dict = Depends(get_admin_user)):

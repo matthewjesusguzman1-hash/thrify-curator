@@ -23,6 +23,7 @@ import TaxPrepStepPage from "@/pages/TaxPrepStepPage";
 import Issued1099sPage from "@/pages/Issued1099sPage";
 import ScheduleInterviewPage from "@/pages/ScheduleInterviewPage";
 import ManageInterviewPage from "@/pages/ManageInterviewPage";
+import ApplicationResponsePage from "@/pages/ApplicationResponsePage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
@@ -256,6 +257,11 @@ function AnimatedRoutes() {
         <Route path="/manage-interview/:cancelToken" element={
           <PageTransition>
             <ManageInterviewPage />
+          </PageTransition>
+        } />
+        <Route path="/application-response/:token" element={
+          <PageTransition>
+            <ApplicationResponsePage />
           </PageTransition>
         } />
         </Routes>

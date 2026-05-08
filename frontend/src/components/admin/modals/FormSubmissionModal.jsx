@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, Trash2, Download, Mail, Phone, MapPin,
   Briefcase, Package, FileSignature, Send,
   CheckCircle, XCircle, Clock, RotateCcw, Gift,
-  Calendar
+  Calendar, UserX, Eye, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,12 @@ export default function FormSubmissionModal({
   });
   const [submittingApproval, setSubmittingApproval] = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
+  
+  // Rejection states
+  const [showRejectionPreview, setShowRejectionPreview] = useState(false);
+  const [rejectionPreview, setRejectionPreview] = useState(null);
+  const [loadingRejectionPreview, setLoadingRejectionPreview] = useState(false);
+  const [sendingRejection, setSendingRejection] = useState(false);
 
   if (!submission) return null;
 
@@ -85,6 +91,46 @@ export default function FormSubmissionModal({
       toast.error("Failed to send invite. Please try again.");
     } finally {
       setSendingInvite(false);
+    }
+  };
+
+  // Load rejection preview
+  const handleLoadRejectionPreview = async () => {
+    setLoadingRejectionPreview(true);
+    try {
+      const response = await axios.get(
+        `${API}/api/admin/forms/job-applications/${submission.id}/rejection-preview`,
+        getAuthHeader()
+      );
+      setRejectionPreview(response.data);
+      setShowRejectionPreview(true);
+    } catch (error) {
+      console.error("Error loading rejection preview:", error);
+      toast.error("Failed to load rejection preview");
+    } finally {
+      setLoadingRejectionPreview(false);
+    }
+  };
+
+  // Send rejection email
+  const handleSendRejection = async () => {
+    setSendingRejection(true);
+    try {
+      await axios.post(
+        `${API}/api/admin/forms/job-applications/${submission.id}/send-rejection`,
+        {},
+        getAuthHeader()
+      );
+      toast.success(`Rejection email sent to ${submission.full_name}`);
+      submission.status = "rejected";
+      setShowRejectionPreview(false);
+      if (refreshData) refreshData();
+    } catch (error) {
+      console.error("Error sending rejection:", error);
+      const errorMsg = error.response?.data?.detail || "Failed to send rejection email";
+      toast.error(errorMsg);
+    } finally {
+      setSendingRejection(false);
     }
   };
 
@@ -297,24 +343,51 @@ Thrifty Curator Team`
 
         {/* Action Buttons Bar */}
         <div className="flex items-center justify-between gap-2 px-6 py-3 bg-[#F9F6F7] border-b">
-          {/* Left side - Invite button for job applications */}
-          <div>
+          {/* Left side - Invite & Reject buttons for job applications */}
+          <div className="flex items-center gap-2">
             {submission.formType === "job_applications" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSendSchedulerInvite}
-                disabled={sendingInvite}
-                className={`${
-                  submission.scheduler_invite_sent 
-                    ? "text-green-600 border-green-600 bg-green-50" 
-                    : "text-[#8B5CF6] border-[#8B5CF6] hover:bg-[#8B5CF6]/10"
-                }`}
-                data-testid="invite-to-meet-btn"
-              >
-                <Calendar className="w-4 h-4 mr-1" />
-                {sendingInvite ? "Sending..." : submission.scheduler_invite_sent ? "Resend Scheduling Link" : "Send Scheduling Link"}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSendSchedulerInvite}
+                  disabled={sendingInvite}
+                  className={`${
+                    submission.scheduler_invite_sent 
+                      ? "text-green-600 border-green-600 bg-green-50" 
+                      : "text-[#8B5CF6] border-[#8B5CF6] hover:bg-[#8B5CF6]/10"
+                  }`}
+                  data-testid="invite-to-meet-btn"
+                >
+                  <Calendar className="w-4 h-4 mr-1" />
+                  {sendingInvite ? "Sending..." : submission.scheduler_invite_sent ? "Resend Scheduling Link" : "Send Scheduling Link"}
+                </Button>
+                
+                {/* Send Rejection Button */}
+                {submission.status !== "rejected" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLoadRejectionPreview}
+                    disabled={loadingRejectionPreview}
+                    className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                    data-testid="send-rejection-btn"
+                  >
+                    {loadingRejectionPreview ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <UserX className="w-4 h-4 mr-1" />
+                    )}
+                    {loadingRejectionPreview ? "Loading..." : "Not Moving Forward"}
+                  </Button>
+                )}
+                
+                {submission.status === "rejected" && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full bg-orange-100 text-orange-700">
+                    <UserX className="w-4 h-4" /> Rejection Sent
+                  </span>
+                )}
+              </>
             )}
           </div>
           
@@ -1154,6 +1227,94 @@ Thrifty Curator Team`
           </div>
         </div>
       </motion.div>
+      
+      {/* Rejection Preview Modal */}
+      <AnimatePresence>
+        {showRejectionPreview && rejectionPreview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+            onClick={() => setShowRejectionPreview(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Eye className="w-6 h-6 text-white" />
+                  <h3 className="text-lg font-semibold text-white">Preview Rejection Email</h3>
+                </div>
+                <button
+                  onClick={() => setShowRejectionPreview(false)}
+                  className="text-white/80 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Email Preview */}
+              <div className="p-6">
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500 mb-1">To:</p>
+                  <p className="font-medium text-gray-900">{rejectionPreview.applicant_email}</p>
+                </div>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500 mb-1">Subject:</p>
+                  <p className="font-medium text-gray-900">{rejectionPreview.subject}</p>
+                </div>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500 mb-2">Message Preview:</p>
+                  <div className="bg-gray-50 rounded-xl p-4 max-h-[300px] overflow-y-auto">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+                      {rejectionPreview.preview_text}
+                    </pre>
+                  </div>
+                </div>
+                
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-orange-800">
+                    <strong>Note:</strong> The email will include buttons for the applicant to choose whether to keep their application on file for future opportunities.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRejectionPreview(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendRejection}
+                  disabled={sendingRejection}
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                >
+                  {sendingRejection ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Rejection Email
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
