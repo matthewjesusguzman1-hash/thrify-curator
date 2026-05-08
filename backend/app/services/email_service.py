@@ -1201,5 +1201,59 @@ async def send_direct_admin_email(to_email: str, subject: str, message: str, fro
     return await send_email(to_email, subject, html)
 
 
+
+
+async def send_application_received_email(to_email: str, applicant_name: str) -> dict:
+    """Send confirmation email when job application is received"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{first_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Thank you for applying to join the <strong>Thrifty Curator</strong> team! 
+        We're excited to learn more about you.
+    </p>
+    
+    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+        <div style="background: rgba(255,255,255,0.2); width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center;">
+            <span style="font-size: 28px;">✓</span>
+        </div>
+        <h3 style="color: #ffffff; margin: 0 0 10px 0; font-size: 20px;">Application Received!</h3>
+        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 14px;">
+            We've got your application and will review it soon.
+        </p>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        <strong>What happens next?</strong>
+    </p>
+    <ul style="color: #333; line-height: 1.8; padding-left: 20px;">
+        <li>Our team will review your application</li>
+        <li>If we think you'd be a great fit, we'll reach out to schedule a casual chat</li>
+        <li>This usually takes a few days, so sit tight!</li>
+    </ul>
+    
+    <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <p style="color: #666; margin: 0; font-size: 14px;">
+            <strong>Have questions?</strong> Just reply to this email and we'll get back to you.
+        </p>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Thanks again for your interest in Thrifty Curator!
+    </p>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        — The Thrifty Curator Team
+    </p>
+    """
+    
+    html = build_email_template("Application Received! ✓", content)
+    return await send_email(to_email, "Thrifty Curator - We Got Your Application!", html)
+
 # Import db for admin notification
 from app.database import db

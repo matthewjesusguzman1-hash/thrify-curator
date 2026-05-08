@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Briefcase, Send, CheckCircle, Mail, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Briefcase, Send, CheckCircle, Mail, Plus, Trash2, Phone, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +36,7 @@ export default function JobApplicationForm() {
     background_check_consent: null,
     has_reliable_transportation: null,
     additional_info: "",
+    preferred_contact: "email", // "email" or "text"
     // Work history - last 2 years (start with 1, can add more)
     work_history: [
       {
@@ -168,11 +169,19 @@ export default function JobApplicationForm() {
             </p>
             <div className="mb-6 bg-gradient-to-r from-[#00D4FF]/20 to-[#8B5CF6]/20 border-2 border-[#00D4FF] rounded-xl p-4">
               <div className="flex items-center justify-center gap-3">
-                <div className="w-10 h-10 bg-[#00D4FF] rounded-full flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-white" />
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  formData.preferred_contact === "text" ? "bg-[#8B5CF6]" : "bg-[#00D4FF]"
+                }`}>
+                  {formData.preferred_contact === "text" ? (
+                    <MessageSquare className="w-5 h-5 text-white" />
+                  ) : (
+                    <Mail className="w-5 h-5 text-white" />
+                  )}
                 </div>
                 <p className="text-[#1A1A2E] font-semibold text-base">
-                  We will contact you via email at the address you provided
+                  {formData.preferred_contact === "text" 
+                    ? "We've sent a confirmation text to your phone!"
+                    : "We've sent a confirmation email to your inbox!"}
                 </p>
               </div>
             </div>
@@ -267,6 +276,44 @@ export default function JobApplicationForm() {
                 className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg"
                 data-testid="input-phone"
               />
+            </div>
+
+            {/* Communication Preference */}
+            <div>
+              <Label className="text-sm font-semibold text-[#1A1A2E] mb-3 block">
+                How would you prefer we contact you? *
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, preferred_contact: "email" }))}
+                  className={`p-4 rounded-xl border-2 flex items-center justify-center gap-3 transition-all ${
+                    formData.preferred_contact === "email"
+                      ? "border-[#00D4FF] bg-[#00D4FF]/10 text-[#00D4FF]"
+                      : "border-gray-200 text-gray-600 hover:border-[#00D4FF]/50"
+                  }`}
+                  data-testid="contact-pref-email"
+                >
+                  <Mail className="w-5 h-5" />
+                  <span className="font-medium">Email</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, preferred_contact: "text" }))}
+                  className={`p-4 rounded-xl border-2 flex items-center justify-center gap-3 transition-all ${
+                    formData.preferred_contact === "text"
+                      ? "border-[#8B5CF6] bg-[#8B5CF6]/10 text-[#8B5CF6]"
+                      : "border-gray-200 text-gray-600 hover:border-[#8B5CF6]/50"
+                  }`}
+                  data-testid="contact-pref-text"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  <span className="font-medium">Text</span>
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                We'll send updates about your application via your preferred method.
+              </p>
             </div>
 
             <div>

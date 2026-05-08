@@ -286,3 +286,18 @@ Pick a time that works for you: {booking_url}
 - Thrifty Curator"""
     
     return await send_sms(to_phone, message)
+
+
+
+async def send_application_received_sms(to_phone: str, applicant_name: str) -> dict:
+    """Send SMS confirmation when job application is received"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    message = f"""Hi {first_name}! Thanks for applying to Thrifty Curator.
+
+We got your application and will review it soon. If we think you'd be a great fit, we'll reach out to schedule a chat.
+
+- Thrifty Curator"""
+    
+    return await send_sms(to_phone, message)

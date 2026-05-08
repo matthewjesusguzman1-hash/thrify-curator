@@ -6,6 +6,26 @@ Thrifty Curator is a reselling application with web and native mobile (iOS/Andro
 ## Core Features
 
 ### Completed
+- **Interview Scheduler System (May 8, 2026)**:
+  - Full self-service scheduling for job applicants (like Calendly)
+  - Admin creates available time slots → Applicant picks from available times
+  - Slots disappear when booked (no double-booking)
+  - Cancel/reschedule flow with reason tracking
+  - Auto-sends confirmation via applicant's preferred method (email or text)
+  - Calendar view of all scheduled interviews in Admin Dashboard
+  - Direct email/SMS sending from admin dashboard
+
+- **Twilio SMS Integration (May 8, 2026)**:
+  - Configured Twilio with phone number +1 (402) 999-4920
+  - Interview confirmations, cancellations, reschedules via SMS
+  - Direct SMS messaging from admin dashboard
+  - SMS templates for all interview-related notifications
+
+- **Communication Preference on Job Applications (May 8, 2026)**:
+  - Applicants choose "Email" or "Text" as their preferred contact method
+  - Auto-sends "Application Received" confirmation via chosen method
+  - Preference stored and used for all future communications
+
 - **Interview Invite Feature (May 7, 2026)**:
   - Admin can send "Invite to Meet" emails to job applicants with customizable availability slots
   - Modal in FormSubmissionModal.jsx allows adding multiple date/time options
