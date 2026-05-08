@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Calendar, Clock, CheckCircle, AlertCircle, Phone, Mail } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertCircle, Mail } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -21,8 +20,6 @@ export default function ScheduleInterviewPage() {
   const [existingBooking, setExistingBooking] = useState(null);
   
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [contactPreference, setContactPreference] = useState('email');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [booking, setBooking] = useState(false);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [manageUrl, setManageUrl] = useState('');
@@ -83,18 +80,11 @@ export default function ScheduleInterviewPage() {
       toast.error('Please select a time slot');
       return;
     }
-    
-    if (contactPreference === 'text' && !phoneNumber) {
-      toast.error('Please enter your phone number for text notifications');
-      return;
-    }
 
     setBooking(true);
     try {
       const response = await axios.post(`${API}/api/interview-scheduler/book/${token}`, {
-        slot_id: selectedSlot.id,
-        preferred_contact: contactPreference,
-        phone_number: phoneNumber || null
+        slot_id: selectedSlot.id
       });
       
       setManageUrl(response.data.manage_url);
@@ -171,14 +161,11 @@ export default function ScheduleInterviewPage() {
             <p className="text-sm text-gray-600">
               <strong>Location:</strong> Thrifty Curator Store
             </p>
-            <p className="text-sm text-gray-600 mt-2">
-              <strong>Notifications via:</strong> {contactPreference === 'text' ? 'Text Message' : 'Email'}
-            </p>
           </div>
           
           <p className="text-sm text-gray-500 mb-4">
-            A confirmation has been sent to your {contactPreference === 'text' ? 'phone' : 'email'}.
-            If anything changes, we'll reach out via your preferred method.
+            A confirmation has been sent to your email.
+            If anything changes, we'll reach out to let you know.
           </p>
           
           <Button 
@@ -250,53 +237,6 @@ export default function ScheduleInterviewPage() {
             )}
           </div>
         </div>
-
-        {/* Contact Preference */}
-        {selectedSlot && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-            <h2 className="font-semibold text-gray-900 mb-4">How should we contact you?</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              We'll use this to send confirmations and notify you if anything changes.
-            </p>
-            
-            <div className="flex gap-3 mb-4">
-              <button
-                onClick={() => setContactPreference('email')}
-                className={`flex-1 p-4 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${
-                  contactPreference === 'email'
-                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                    : 'border-gray-200 text-gray-600 hover:border-purple-300'
-                }`}
-              >
-                <Mail className="w-5 h-5" />
-                Email
-              </button>
-              <button
-                onClick={() => setContactPreference('text')}
-                className={`flex-1 p-4 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${
-                  contactPreference === 'text'
-                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                    : 'border-gray-200 text-gray-600 hover:border-purple-300'
-                }`}
-              >
-                <Phone className="w-5 h-5" />
-                Text
-              </button>
-            </div>
-            
-            {contactPreference === 'text' && (
-              <div>
-                <label className="text-sm text-gray-600 block mb-2">Phone Number</label>
-                <Input
-                  type="tel"
-                  placeholder="(555) 123-4567"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Book Button */}
         {selectedSlot && (

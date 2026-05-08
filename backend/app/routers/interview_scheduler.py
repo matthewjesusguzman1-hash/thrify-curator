@@ -34,8 +34,6 @@ class CreateSlotsRequest(BaseModel):
 
 class BookSlotRequest(BaseModel):
     slot_id: str
-    preferred_contact: str = "email"  # "email" or "text"
-    phone_number: Optional[str] = None
 
 class CancelBookingRequest(BaseModel):
     reason: str
@@ -312,7 +310,6 @@ async def get_available_slots_for_applicant(token: str):
 async def book_slot(token: str, request: BookSlotRequest, background_tasks: BackgroundTasks):
     """Applicant books a time slot"""
     from app.services.email_service import send_interview_confirmation_email
-    from app.services.sms_service import send_interview_confirmation_sms
     
     # Verify token
     application = await db.job_applications.find_one({"scheduler_token": token}, {"_id": 0})
@@ -344,8 +341,7 @@ async def book_slot(token: str, request: BookSlotRequest, background_tasks: Back
         "applicant_id": application["id"],
         "applicant_name": application["full_name"],
         "applicant_email": application["email"],
-        "applicant_phone": request.phone_number or application.get("phone"),
-        "preferred_contact": request.preferred_contact,
+        "applicant_phone": application.get("phone"),
         "interview_date": slot["date"],
         "interview_time": f"{slot['start_time']} - {slot['end_time']}",
         "status": "confirmed",
@@ -376,12 +372,11 @@ async def book_slot(token: str, request: BookSlotRequest, background_tasks: Back
         }}
     )
     
-    # Send confirmation via preferred method
+    # Send confirmation email
     import os
     frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
     manage_url = f"{frontend_url}/manage-interview/{cancel_token}"
     
-    # Always send email
     background_tasks.add_task(
         send_interview_confirmation_email,
         to_email=application["email"],
@@ -389,20 +384,8 @@ async def book_slot(token: str, request: BookSlotRequest, background_tasks: Back
         interview_date=slot["date"],
         interview_time=f"{slot['start_time']} - {slot['end_time']}",
         manage_url=manage_url,
-        preferred_contact=request.preferred_contact
+        preferred_contact="email"
     )
-    
-    # Also send SMS if they prefer text and have a phone number
-    phone = request.phone_number or application.get("phone")
-    if request.preferred_contact == "text" and phone:
-        background_tasks.add_task(
-            send_interview_confirmation_sms,
-            to_phone=phone,
-            applicant_name=application["full_name"],
-            interview_date=slot["date"],
-            interview_time=f"{slot['start_time']} - {slot['end_time']}",
-            manage_url=manage_url
-        )
     
     booking.pop("_id", None)
     return {"success": True, "booking": booking, "manage_url": manage_url}
@@ -433,7 +416,6 @@ async def get_booking_details(cancel_token: str):
 async def cancel_booking(cancel_token: str, request: CancelBookingRequest, background_tasks: BackgroundTasks):
     """Applicant cancels their booking"""
     from app.services.email_service import send_interview_cancelled_email, send_admin_interview_cancelled_notification
-    from app.services.sms_service import send_interview_cancelled_sms
     
     booking = await db.interview_bookings.find_one({"cancel_token": cancel_token})
     if not booking:
@@ -473,7 +455,7 @@ async def cancel_booking(cancel_token: str, request: CancelBookingRequest, backg
         }}
     )
     
-    # Send confirmation to applicant (email always)
+    # Send confirmation to applicant (email)
     background_tasks.add_task(
         send_interview_cancelled_email,
         to_email=booking["applicant_email"],
@@ -482,16 +464,6 @@ async def cancel_booking(cancel_token: str, request: CancelBookingRequest, backg
         interview_time=booking["interview_time"],
         cancelled_by="applicant"
     )
-    
-    # Also SMS if they prefer text
-    if booking.get("preferred_contact") == "text" and booking.get("applicant_phone"):
-        background_tasks.add_task(
-            send_interview_cancelled_sms,
-            to_phone=booking["applicant_phone"],
-            applicant_name=booking["applicant_name"],
-            interview_date=booking["interview_date"],
-            cancelled_by="applicant"
-        )
     
     # Notify admin
     background_tasks.add_task(
@@ -509,7 +481,6 @@ async def cancel_booking(cancel_token: str, request: CancelBookingRequest, backg
 async def reschedule_booking(cancel_token: str, request: RescheduleRequest, background_tasks: BackgroundTasks):
     """Applicant reschedules their booking"""
     from app.services.email_service import send_interview_rescheduled_email
-    from app.services.sms_service import send_interview_rescheduled_sms
     
     booking = await db.interview_bookings.find_one({"cancel_token": cancel_token})
     if not booking:
@@ -576,7 +547,7 @@ async def reschedule_booking(cancel_token: str, request: RescheduleRequest, back
     frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
     manage_url = f"{frontend_url}/manage-interview/{cancel_token}"
     
-    # Email always
+    # Send email confirmation
     background_tasks.add_task(
         send_interview_rescheduled_email,
         to_email=booking["applicant_email"],
@@ -587,17 +558,6 @@ async def reschedule_booking(cancel_token: str, request: RescheduleRequest, back
         new_time=f"{new_slot['start_time']} - {new_slot['end_time']}",
         manage_url=manage_url
     )
-    
-    # SMS if preferred
-    if booking.get("preferred_contact") == "text" and booking.get("applicant_phone"):
-        background_tasks.add_task(
-            send_interview_rescheduled_sms,
-            to_phone=booking["applicant_phone"],
-            applicant_name=booking["applicant_name"],
-            new_date=new_slot["date"],
-            new_time=f"{new_slot['start_time']} - {new_slot['end_time']}",
-            manage_url=manage_url
-        )
     
     return {
         "success": True, 

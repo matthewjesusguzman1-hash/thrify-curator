@@ -134,24 +134,14 @@ async def submit_job_application(application: JobApplication, background_tasks: 
         notification_type="job_application"
     )
     
-    # Send confirmation to applicant via their preferred method
+    # Send confirmation email to applicant
     from app.services.email_service import send_application_received_email
-    from app.services.sms_service import send_application_received_sms
     
-    # Always send email confirmation
     background_tasks.add_task(
         send_application_received_email,
         to_email=application.email,
         applicant_name=application.full_name
     )
-    
-    # Also send SMS if they prefer text
-    if application.preferred_contact == "text" and application.phone:
-        background_tasks.add_task(
-            send_application_received_sms,
-            to_phone=application.phone,
-            applicant_name=application.full_name
-        )
     
     return application
 
