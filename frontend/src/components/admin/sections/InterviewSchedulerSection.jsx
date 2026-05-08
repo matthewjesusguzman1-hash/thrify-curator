@@ -205,23 +205,23 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   return (
     <div className="space-y-6">
       {/* Stats Bar */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 text-white">
-          <div className="text-2xl font-bold">{availableSlots.length}</div>
-          <div className="text-purple-100 text-sm">Available Slots</div>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-3 sm:p-4 text-white">
+          <div className="text-xl sm:text-2xl font-bold">{availableSlots.length}</div>
+          <div className="text-purple-100 text-xs sm:text-sm">Available Slots</div>
         </div>
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-4 text-white">
-          <div className="text-2xl font-bold">{bookings.filter(b => b.status === 'confirmed').length}</div>
-          <div className="text-green-100 text-sm">Scheduled</div>
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-3 sm:p-4 text-white">
+          <div className="text-xl sm:text-2xl font-bold">{bookings.filter(b => b.status === 'confirmed').length}</div>
+          <div className="text-green-100 text-xs sm:text-sm">Scheduled</div>
         </div>
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white">
-          <div className="text-2xl font-bold">{applications.length}</div>
-          <div className="text-blue-100 text-sm">Pending Invite</div>
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-3 sm:p-4 text-white">
+          <div className="text-xl sm:text-2xl font-bold">{applications.length}</div>
+          <div className="text-blue-100 text-xs sm:text-sm">Pending Invite</div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 pb-2">
+      <div className="flex gap-1 sm:gap-2 border-b border-gray-200 pb-2 overflow-x-auto">
         {[
           { id: 'calendar', label: 'Calendar', icon: Calendar },
           { id: 'slots', label: 'Manage Slots', icon: Clock },
@@ -230,14 +230,15 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+            className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg transition-all whitespace-nowrap text-sm ${
               activeTab === tab.id
                 ? 'bg-purple-100 text-purple-700 font-medium'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <tab.icon className="w-4 h-4" />
-            {tab.label}
+            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
           </button>
         ))}
       </div>
@@ -259,10 +260,11 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 text-center text-sm">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="p-2 font-medium text-gray-500 bg-gray-50 border-b">
-                {day}
+          <div className="grid grid-cols-7 text-center text-xs sm:text-sm">
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+              <div key={i} className="p-1 sm:p-2 font-medium text-gray-500 bg-gray-50 border-b">
+                <span className="sm:hidden">{day}</span>
+                <span className="hidden sm:inline">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i]}</span>
               </div>
             ))}
             {days.map((day, index) => {
@@ -274,16 +276,16 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
               return (
                 <div
                   key={index}
-                  className={`min-h-[80px] p-1 border-b border-r text-left ${
+                  className={`min-h-[50px] sm:min-h-[80px] p-0.5 sm:p-1 border-b border-r text-left ${
                     !day ? 'bg-gray-50' : ''
                   } ${isToday ? 'bg-purple-50' : ''}`}
                 >
                   {day && (
                     <>
-                      <div className={`text-sm font-medium mb-1 ${isToday ? 'text-purple-600' : 'text-gray-700'}`}>
+                      <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isToday ? 'text-purple-600' : 'text-gray-700'}`}>
                         {day.getDate()}
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-0.5 sm:space-y-1 hidden sm:block">
                         {hasAvailable && (
                           <div className="text-xs bg-purple-100 text-purple-700 px-1 py-0.5 rounded truncate">
                             {events.slots.filter(s => !s.is_booked).length} available
@@ -297,6 +299,11 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
                         {events.bookings.length > 2 && (
                           <div className="text-xs text-gray-500">+{events.bookings.length - 2} more</div>
                         )}
+                      </div>
+                      {/* Mobile dots indicator */}
+                      <div className="sm:hidden flex gap-0.5 mt-0.5">
+                        {hasAvailable && <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>}
+                        {hasBooked && <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>}
                       </div>
                     </>
                   )}
