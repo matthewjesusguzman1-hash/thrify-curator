@@ -18,8 +18,30 @@ import secrets
 
 from app.database import db
 from app.dependencies import get_admin_user
+from app.services.apns_service import send_admin_push_notification
 
 router = APIRouter(prefix="/interview-scheduler", tags=["Interview Scheduler"])
+
+
+# Helper to create admin notification
+async def create_admin_notification(
+    notification_type: str,
+    applicant_name: str,
+    message: str,
+    details: dict = None
+):
+    """Create a notification for the admin dashboard"""
+    notification_doc = {
+        "id": str(uuid.uuid4()),
+        "type": notification_type,
+        "employee_id": details.get("applicant_id", "") if details else "",
+        "employee_name": applicant_name,
+        "message": message,
+        "details": details or {},
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.admin_notifications.insert_one(notification_doc)
 
 
 # ==================== MODELS ====================
@@ -386,6 +408,27 @@ async def book_slot(token: str, request: BookSlotRequest, background_tasks: Back
         manage_url=manage_url
     )
     
+    # Create admin notification for booked interview
+    await create_admin_notification(
+        notification_type="interview_booked",
+        applicant_name=application["full_name"],
+        message=f"{application['full_name']} booked an interview",
+        details={
+            "applicant_id": application["id"],
+            "interview_date": slot["date"],
+            "interview_time": f"{slot['start_time']} - {slot['end_time']}",
+            "booking_id": booking_id
+        }
+    )
+    
+    # Send push notification
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title="Interview Booked",
+        body=f"{application['full_name']} booked an interview for {slot['date']}",
+        notification_type="interview_booked"
+    )
+    
     booking.pop("_id", None)
     return {"success": True, "booking": booking, "manage_url": manage_url}
 
@@ -464,7 +507,28 @@ async def cancel_booking(cancel_token: str, request: CancelBookingRequest, backg
         cancelled_by="applicant"
     )
     
-    # Notify admin
+    # Create admin notification for cancelled interview
+    await create_admin_notification(
+        notification_type="interview_cancelled",
+        applicant_name=booking["applicant_name"],
+        message=f"{booking['applicant_name']} cancelled their interview",
+        details={
+            "applicant_id": booking["applicant_id"],
+            "interview_date": booking["interview_date"],
+            "interview_time": booking["interview_time"],
+            "cancel_reason": request.reason
+        }
+    )
+    
+    # Send push notification
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title="Interview Cancelled",
+        body=f"{booking['applicant_name']} cancelled their interview",
+        notification_type="interview_cancelled"
+    )
+    
+    # Notify admin via email as well
     background_tasks.add_task(
         send_admin_interview_cancelled_notification,
         applicant_name=booking["applicant_name"],
@@ -556,6 +620,29 @@ async def reschedule_booking(cancel_token: str, request: RescheduleRequest, back
         new_date=new_slot["date"],
         new_time=f"{new_slot['start_time']} - {new_slot['end_time']}",
         manage_url=manage_url
+    )
+    
+    # Create admin notification for rescheduled interview
+    await create_admin_notification(
+        notification_type="interview_rescheduled",
+        applicant_name=booking["applicant_name"],
+        message=f"{booking['applicant_name']} rescheduled their interview",
+        details={
+            "applicant_id": booking["applicant_id"],
+            "old_date": old_date,
+            "old_time": old_time,
+            "new_date": new_slot["date"],
+            "new_time": f"{new_slot['start_time']} - {new_slot['end_time']}",
+            "reschedule_reason": request.reason
+        }
+    )
+    
+    # Send push notification
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title="Interview Rescheduled",
+        body=f"{booking['applicant_name']} rescheduled to {new_slot['date']}",
+        notification_type="interview_rescheduled"
     )
     
     return {

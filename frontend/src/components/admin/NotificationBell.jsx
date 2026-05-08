@@ -1,7 +1,36 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, CheckCheck, LogIn, LogOut } from "lucide-react";
+import { 
+  Bell, CheckCheck, LogIn, LogOut, Briefcase, FileSignature, 
+  MessageSquare, Calendar, XCircle, RefreshCw, Package
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// Get icon and colors based on notification type
+const getNotificationStyle = (type) => {
+  switch (type) {
+    case "clock_in":
+      return { icon: LogIn, bg: "bg-green-100", color: "text-green-600" };
+    case "clock_out":
+      return { icon: LogOut, bg: "bg-orange-100", color: "text-orange-600" };
+    case "job_application":
+      return { icon: Briefcase, bg: "bg-blue-100", color: "text-blue-600" };
+    case "consignment_agreement":
+      return { icon: FileSignature, bg: "bg-purple-100", color: "text-purple-600" };
+    case "consignment_inquiry":
+      return { icon: Package, bg: "bg-indigo-100", color: "text-indigo-600" };
+    case "new_message":
+      return { icon: MessageSquare, bg: "bg-cyan-100", color: "text-cyan-600" };
+    case "interview_booked":
+      return { icon: Calendar, bg: "bg-emerald-100", color: "text-emerald-600" };
+    case "interview_cancelled":
+      return { icon: XCircle, bg: "bg-red-100", color: "text-red-600" };
+    case "interview_rescheduled":
+      return { icon: RefreshCw, bg: "bg-amber-100", color: "text-amber-600" };
+    default:
+      return { icon: Bell, bg: "bg-gray-100", color: "text-gray-600" };
+  }
+};
 
 export default function NotificationBell({ 
   notifications, 
@@ -85,36 +114,33 @@ export default function NotificationBell({
                   <p>No notifications yet</p>
                 </div>
               ) : (
-                notifications.slice(0, 10).map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                      !notif.read ? "bg-[#00D4FF]/5" : ""
-                    }`}
-                    data-testid={`notification-${notif.id}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        notif.notification_type === "clock_in" 
-                          ? "bg-green-100 text-green-600"
-                          : "bg-orange-100 text-orange-600"
-                      }`}>
-                        {notif.notification_type === "clock_in" ? (
-                          <LogIn className="w-4 h-4" />
-                        ) : (
-                          <LogOut className="w-4 h-4" />
+                notifications.slice(0, 10).map((notif) => {
+                  const style = getNotificationStyle(notif.type || notif.notification_type);
+                  const Icon = style.icon;
+                  
+                  return (
+                    <div
+                      key={notif.id}
+                      className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                        !notif.read ? "bg-[#00D4FF]/5" : ""
+                      }`}
+                      data-testid={`notification-${notif.id}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${style.bg} ${style.color}`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-[#1A1A2E]">{notif.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">{formatTime(notif.created_at)}</p>
+                        </div>
+                        {!notif.read && (
+                          <span className="w-2 h-2 bg-[#00D4FF] rounded-full flex-shrink-0" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-[#1A1A2E]">{notif.message}</p>
-                        <p className="text-xs text-gray-400 mt-1">{formatTime(notif.created_at)}</p>
-                      </div>
-                      {!notif.read && (
-                        <span className="w-2 h-2 bg-[#00D4FF] rounded-full flex-shrink-0" />
-                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </motion.div>
