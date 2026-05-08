@@ -383,8 +383,7 @@ async def book_slot(token: str, request: BookSlotRequest, background_tasks: Back
         applicant_name=application["full_name"],
         interview_date=slot["date"],
         interview_time=f"{slot['start_time']} - {slot['end_time']}",
-        manage_url=manage_url,
-        preferred_contact="email"
+        manage_url=manage_url
     )
     
     booking.pop("_id", None)

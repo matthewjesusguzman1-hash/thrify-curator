@@ -251,7 +251,7 @@ export default function ScheduleInterviewPage() {
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-500 mt-6">
-          Questions? Reply to your invite email or call us at the store.
+          Questions? Visit our <a href="https://thrifty-curator.com/contact" className="text-purple-600 hover:underline">contact page</a> or call us at the store.
         </p>
       </div>
     </div>

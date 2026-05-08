@@ -886,8 +886,7 @@ async def send_interview_confirmation_email(
     applicant_name: str, 
     interview_date: str, 
     interview_time: str,
-    manage_url: str,
-    preferred_contact: str = "email"
+    manage_url: str
 ) -> dict:
     """Send confirmation after applicant books an interview"""
     
@@ -918,7 +917,6 @@ async def send_interview_confirmation_email(
             return time_range
     
     formatted_time = format_time_range(interview_time)
-    contact_method = "email" if preferred_contact == "email" else "text message"
     
     content = f"""
     <p style="color: #333; line-height: 1.6;">
@@ -939,13 +937,6 @@ async def send_interview_confirmation_email(
         </p>
         <p style="color: #166534; margin: 15px 0 0 0; font-size: 14px;">
             <strong>📍 Location:</strong> Thrifty Curator Store
-        </p>
-    </div>
-    
-    <div style="background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0 8px 8px 0; padding: 15px; margin: 20px 0;">
-        <p style="color: #1e40af; margin: 0; font-size: 14px;">
-            <strong>📱 Contact Preference:</strong> You've chosen to be contacted via <strong>{contact_method}</strong>. 
-            If anything changes, we'll reach out to you through your preferred method.
         </p>
     </div>
     
