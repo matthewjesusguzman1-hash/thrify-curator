@@ -798,3 +798,408 @@ async def send_interview_invite_email(to_email: str, applicant_name: str, availa
     
     html = build_email_template(f"We'd Love to Meet You! ☕", content)
     return await send_email(to_email, f"{business_name} - We'd Love to Meet You!", html)
+
+
+
+# ==================== INTERVIEW SCHEDULER EMAIL TEMPLATES ====================
+
+async def send_scheduler_invite_email(to_email: str, applicant_name: str, booking_url: str) -> dict:
+    """Send email with link to self-schedule an interview"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{first_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Great news! We've reviewed your application and would love to meet you. 
+        We've made it easy for you to pick a time that works best for your schedule.
+    </p>
+    
+    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+        <h3 style="color: #ffffff; margin: 0 0 15px 0; font-size: 18px;">📅 Schedule Your Interview</h3>
+        <p style="color: #ffffff; line-height: 1.6; margin: 0 0 20px 0;">
+            Click the button below to choose a time that works for you.
+        </p>
+        <a href="{booking_url}" 
+           style="background: #ffffff; 
+                  color: #8B5CF6; 
+                  text-decoration: none; 
+                  padding: 14px 35px; 
+                  border-radius: 8px; 
+                  font-weight: bold;
+                  display: inline-block;
+                  font-size: 16px;">
+            Choose Your Time
+        </a>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        <strong>What to expect at our meeting:</strong>
+    </p>
+    <ul style="color: #333; line-height: 1.8; padding-left: 20px;">
+        <li>A relaxed, casual conversation</li>
+        <li>Learn about what a typical day looks like</li>
+        <li>Ask us any questions you have</li>
+    </ul>
+    
+    <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <p style="color: #666; margin: 0; font-size: 13px;">
+            <strong>Can't click the button?</strong> Copy and paste this link:
+        </p>
+        <p style="color: #8B5CF6; margin: 10px 0 0 0; font-size: 12px; word-break: break-all;">
+            {booking_url}
+        </p>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        We're looking forward to meeting you!
+    </p>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        — The Thrifty Curator Team
+    </p>
+    """
+    
+    html = build_email_template("Schedule Your Interview!", content)
+    return await send_email(to_email, "Thrifty Curator - Schedule Your Interview!", html)
+
+
+async def send_interview_confirmation_email(
+    to_email: str, 
+    applicant_name: str, 
+    interview_date: str, 
+    interview_time: str,
+    manage_url: str,
+    preferred_contact: str = "email"
+) -> dict:
+    """Send confirmation after applicant books an interview"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    # Format the date nicely
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(interview_date, "%Y-%m-%d")
+        formatted_date = dt.strftime("%A, %B %d, %Y")
+    except:
+        formatted_date = interview_date
+    
+    # Format time to 12h
+    def format_time_range(time_range):
+        try:
+            parts = time_range.split(" - ")
+            formatted = []
+            for t in parts:
+                h, m = t.split(":")
+                h = int(h)
+                suffix = "AM" if h < 12 else "PM"
+                if h == 0: h = 12
+                elif h > 12: h -= 12
+                formatted.append(f"{h}:{m} {suffix}")
+            return " - ".join(formatted)
+        except:
+            return time_range
+    
+    formatted_time = format_time_range(interview_time)
+    contact_method = "email" if preferred_contact == "email" else "text message"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{first_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Your interview is confirmed! We're excited to meet you.
+    </p>
+    
+    <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 25px; margin: 25px 0;">
+        <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">✅ Interview Confirmed</h3>
+        <p style="color: #166534; margin: 5px 0; font-size: 16px;">
+            <strong>📅 Date:</strong> {formatted_date}
+        </p>
+        <p style="color: #166534; margin: 5px 0; font-size: 16px;">
+            <strong>🕐 Time:</strong> {formatted_time}
+        </p>
+        <p style="color: #166534; margin: 15px 0 0 0; font-size: 14px;">
+            <strong>📍 Location:</strong> Thrifty Curator Store
+        </p>
+    </div>
+    
+    <div style="background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0 8px 8px 0; padding: 15px; margin: 20px 0;">
+        <p style="color: #1e40af; margin: 0; font-size: 14px;">
+            <strong>📱 Contact Preference:</strong> You've chosen to be contacted via <strong>{contact_method}</strong>. 
+            If anything changes, we'll reach out to you through your preferred method.
+        </p>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        <strong>Need to make changes?</strong>
+    </p>
+    <p style="color: #333; line-height: 1.6;">
+        If something comes up, you can reschedule or cancel using the link below. 
+        We just ask that you give us as much notice as possible.
+    </p>
+    
+    <div style="text-align: center; margin: 25px 0;">
+        <a href="{manage_url}" 
+           style="background: #f3f4f6; 
+                  color: #374151; 
+                  text-decoration: none; 
+                  padding: 12px 25px; 
+                  border-radius: 8px; 
+                  font-weight: 500;
+                  display: inline-block;
+                  border: 1px solid #d1d5db;">
+            Reschedule or Cancel
+        </a>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        See you soon!
+    </p>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        — The Thrifty Curator Team
+    </p>
+    """
+    
+    html = build_email_template("Interview Confirmed! ✅", content)
+    return await send_email(to_email, f"Thrifty Curator - Interview Confirmed for {formatted_date}", html)
+
+
+async def send_interview_cancelled_email(
+    to_email: str,
+    applicant_name: str,
+    interview_date: str,
+    interview_time: str,
+    cancelled_by: str = "applicant"
+) -> dict:
+    """Send confirmation when interview is cancelled"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    # Format date
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(interview_date, "%Y-%m-%d")
+        formatted_date = dt.strftime("%A, %B %d, %Y")
+    except:
+        formatted_date = interview_date
+    
+    if cancelled_by == "applicant":
+        message = "Your interview has been cancelled as requested."
+        extra = """
+        <p style="color: #333; line-height: 1.6;">
+            If you change your mind or would like to reschedule, just reply to this email 
+            and we'll send you a new scheduling link.
+        </p>
+        """
+    else:
+        message = "Unfortunately, we need to cancel your scheduled interview."
+        extra = """
+        <p style="color: #333; line-height: 1.6;">
+            We sincerely apologize for any inconvenience. We'll be in touch soon with 
+            a new scheduling link so we can find another time to meet.
+        </p>
+        """
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{first_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        {message}
+    </p>
+    
+    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin: 25px 0;">
+        <h3 style="color: #991b1b; margin: 0 0 10px 0; font-size: 16px;">❌ Interview Cancelled</h3>
+        <p style="color: #991b1b; margin: 5px 0;">
+            <strong>Original Date:</strong> {formatted_date}
+        </p>
+        <p style="color: #991b1b; margin: 5px 0;">
+            <strong>Original Time:</strong> {interview_time}
+        </p>
+    </div>
+    
+    {extra}
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        — The Thrifty Curator Team
+    </p>
+    """
+    
+    html = build_email_template("Interview Cancelled", content)
+    return await send_email(to_email, "Thrifty Curator - Interview Cancelled", html)
+
+
+async def send_interview_rescheduled_email(
+    to_email: str,
+    applicant_name: str,
+    old_date: str,
+    old_time: str,
+    new_date: str,
+    new_time: str,
+    manage_url: str
+) -> dict:
+    """Send confirmation when interview is rescheduled"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    # Format dates
+    def format_date(d):
+        try:
+            from datetime import datetime
+            dt = datetime.strptime(d, "%Y-%m-%d")
+            return dt.strftime("%A, %B %d, %Y")
+        except:
+            return d
+    
+    def format_time_range(time_range):
+        try:
+            parts = time_range.split(" - ")
+            formatted = []
+            for t in parts:
+                h, m = t.split(":")
+                h = int(h)
+                suffix = "AM" if h < 12 else "PM"
+                if h == 0: h = 12
+                elif h > 12: h -= 12
+                formatted.append(f"{h}:{m} {suffix}")
+            return " - ".join(formatted)
+        except:
+            return time_range
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{first_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Your interview has been rescheduled as requested.
+    </p>
+    
+    <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <p style="color: #92400e; margin: 0; text-decoration: line-through;">
+            <strong>Previous:</strong> {format_date(old_date)} at {format_time_range(old_time)}
+        </p>
+    </div>
+    
+    <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 25px; margin: 25px 0;">
+        <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">✅ New Interview Time</h3>
+        <p style="color: #166534; margin: 5px 0; font-size: 16px;">
+            <strong>📅 Date:</strong> {format_date(new_date)}
+        </p>
+        <p style="color: #166534; margin: 5px 0; font-size: 16px;">
+            <strong>🕐 Time:</strong> {format_time_range(new_time)}
+        </p>
+    </div>
+    
+    <div style="text-align: center; margin: 25px 0;">
+        <a href="{manage_url}" 
+           style="background: #f3f4f6; 
+                  color: #374151; 
+                  text-decoration: none; 
+                  padding: 12px 25px; 
+                  border-radius: 8px; 
+                  font-weight: 500;
+                  display: inline-block;
+                  border: 1px solid #d1d5db;">
+            Manage Appointment
+        </a>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        See you at the new time!
+    </p>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        — The Thrifty Curator Team
+    </p>
+    """
+    
+    html = build_email_template("Interview Rescheduled ✅", content)
+    return await send_email(to_email, f"Thrifty Curator - Interview Rescheduled to {format_date(new_date)}", html)
+
+
+async def send_admin_interview_cancelled_notification(
+    applicant_name: str,
+    interview_date: str,
+    interview_time: str,
+    cancel_reason: str
+) -> dict:
+    """Notify admin when an applicant cancels their interview"""
+    
+    # Get admin emails
+    admins = await db.users.find({"role": "admin"}, {"email": 1}).to_list(10)
+    admin_emails = [a["email"] for a in admins if a.get("email")]
+    
+    if not admin_emails:
+        return {"status": "skipped", "message": "No admin emails found"}
+    
+    # Format date
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(interview_date, "%Y-%m-%d")
+        formatted_date = dt.strftime("%A, %B %d, %Y")
+    except:
+        formatted_date = interview_date
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        An applicant has cancelled their scheduled interview.
+    </p>
+    
+    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin: 25px 0;">
+        <h3 style="color: #991b1b; margin: 0 0 15px 0; font-size: 16px;">❌ Interview Cancelled</h3>
+        <p style="color: #333; margin: 5px 0;">
+            <strong>Applicant:</strong> {applicant_name}
+        </p>
+        <p style="color: #333; margin: 5px 0;">
+            <strong>Original Date:</strong> {formatted_date}
+        </p>
+        <p style="color: #333; margin: 5px 0;">
+            <strong>Original Time:</strong> {interview_time}
+        </p>
+        <p style="color: #333; margin: 15px 0 0 0;">
+            <strong>Reason given:</strong> {cancel_reason}
+        </p>
+    </div>
+    
+    <p style="color: #666; line-height: 1.6;">
+        The time slot has been freed up and is now available for other applicants.
+    </p>
+    """
+    
+    html = build_email_template("Interview Cancelled by Applicant", content)
+    
+    # Send to all admins
+    for email in admin_emails:
+        await send_email(email, f"Interview Cancelled - {applicant_name}", html)
+    
+    return {"status": "success", "message": f"Notified {len(admin_emails)} admin(s)"}
+
+
+async def send_direct_admin_email(to_email: str, subject: str, message: str, from_name: str = "Thrifty Curator") -> dict:
+    """Send a direct email from admin with custom message"""
+    
+    content = f"""
+    <div style="white-space: pre-wrap; color: #333; line-height: 1.8;">
+{message}
+    </div>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+        — {from_name}<br>
+        <span style="color: #888;">Thrifty Curator</span>
+    </p>
+    """
+    
+    html = build_email_template(subject, content)
+    return await send_email(to_email, subject, html)
+
+
+# Import db for admin notification
+from app.database import db
