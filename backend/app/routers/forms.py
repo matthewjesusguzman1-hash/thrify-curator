@@ -890,15 +890,30 @@ async def send_rejection_email(submission_id: str, background_tasks: BackgroundT
 @router.get("/application-response/{token}")
 async def get_application_response_status(token: str):
     """Check if the response token is valid"""
+    
+    # Check job_applications first
     application = await db.job_applications.find_one(
         {"keep_on_file_token": token},
         {"_id": 0, "full_name": 1, "keep_on_file_response": 1}
     )
+    
+    # If not found, check interview_bookings
+    if not application:
+        booking = await db.interview_bookings.find_one(
+            {"keep_on_file_token": token},
+            {"_id": 0, "applicant_name": 1, "keep_on_file_response": 1}
+        )
+        if booking:
+            application = {
+                "full_name": booking.get("applicant_name"),
+                "keep_on_file_response": booking.get("keep_on_file_response")
+            }
+    
     if not application:
         raise HTTPException(status_code=404, detail="Invalid or expired link")
     
     return {
-        "applicant_name": application["full_name"],
+        "applicant_name": application.get("full_name"),
         "already_responded": application.get("keep_on_file_response") is not None
     }
 
@@ -906,21 +921,38 @@ async def get_application_response_status(token: str):
 @router.post("/application-response/{token}")
 async def submit_application_response(token: str, response: str):
     """Applicant responds to keep-on-file question"""
+    
+    # Check job_applications first (pre-interview rejections)
     application = await db.job_applications.find_one({"keep_on_file_token": token})
+    
+    # If not found, check interview_bookings (post-interview rejections)
+    booking = None
     if not application:
+        booking = await db.interview_bookings.find_one({"keep_on_file_token": token})
+    
+    if not application and not booking:
         raise HTTPException(status_code=404, detail="Invalid or expired link")
     
     # Validate response
     keep_on_file = response.lower() in ["yes", "true", "1"]
     
-    # Update the application
-    await db.job_applications.update_one(
-        {"keep_on_file_token": token},
-        {"$set": {
-            "keep_on_file_response": keep_on_file,
-            "keep_on_file_responded_at": datetime.now(timezone.utc).isoformat()
-        }}
-    )
+    # Update the appropriate collection
+    if application:
+        await db.job_applications.update_one(
+            {"keep_on_file_token": token},
+            {"$set": {
+                "keep_on_file_response": keep_on_file,
+                "keep_on_file_responded_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    else:
+        await db.interview_bookings.update_one(
+            {"keep_on_file_token": token},
+            {"$set": {
+                "keep_on_file_response": keep_on_file,
+                "keep_on_file_responded_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
     
     return {
         "message": "Thank you for your response!",
