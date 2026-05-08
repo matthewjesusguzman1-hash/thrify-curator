@@ -552,37 +552,34 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           ) : (
             <div className="space-y-3">
               {applications.map(app => (
-                <div key={app.id} className="flex items-center justify-between p-4 rounded-lg border bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <User className="w-6 h-6 text-blue-600" />
+                <div key={app.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border bg-gray-50 gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-900">{app.full_name}</p>
-                      <div className="flex items-center gap-3 text-sm text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" /> {app.email}
-                        </span>
-                        {app.phone && (
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {app.phone}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        {app.scheduler_invite_sent && (
-                          <span className="text-xs text-green-600">✓ Invite sent</span>
-                        )}
-                      </div>
+                      <p className="text-sm text-gray-500 flex items-center gap-1 truncate">
+                        <Mail className="w-3 h-3 flex-shrink-0" /> 
+                        <span className="truncate">{app.email}</span>
+                      </p>
+                      {app.phone && (
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                          <Phone className="w-3 h-3 flex-shrink-0" /> {app.phone}
+                        </p>
+                      )}
+                      {app.scheduler_invite_sent && (
+                        <span className="text-xs text-green-600">✓ Invite sent</span>
+                      )}
                     </div>
                   </div>
                   <Button
                     onClick={() => sendInvite(app.id, app.full_name)}
                     disabled={availableSlots.length === 0}
-                    className="bg-gradient-to-r from-purple-500 to-blue-500 text-white"
+                    className="bg-gradient-to-r from-purple-500 to-blue-500 text-white w-full sm:w-auto flex-shrink-0"
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    {app.scheduler_invite_sent ? 'Resend Invite' : 'Send Invite'}
+                    {app.scheduler_invite_sent ? 'Resend' : 'Send Invite'}
                   </Button>
                 </div>
               ))}
