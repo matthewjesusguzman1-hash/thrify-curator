@@ -1304,12 +1304,12 @@ async def send_application_rejection_email(
         </p>
         <div style="display: flex; gap: 10px;">
             <a href="{keep_on_file_url}?response=yes" 
-               style="background: #8B5CF6; color: white; text-decoration: none; padding: 12px 35px; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 16px;">
-                Yes
+               style="background: #8B5CF6; color: white; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: 500; display: inline-block;">
+                Yes, keep my application on file
             </a>
             <a href="{keep_on_file_url}?response=no" 
-               style="background: #f3f4f6; color: #374151; text-decoration: none; padding: 12px 35px; border-radius: 6px; font-weight: 600; display: inline-block; border: 1px solid #d1d5db; font-size: 16px;">
-                No
+               style="background: #f3f4f6; color: #374151; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: 500; display: inline-block; border: 1px solid #d1d5db;">
+                No thank you
             </a>
         </div>
     </div>
@@ -1347,7 +1347,7 @@ Unfortunately, we weren't able to find availability that works for both of us at
 Would you like us to keep your application on file?
 If your availability changes or a position opens up that works with your schedule, we'd love to reach out to you directly.
 
-[Yes]  [No]
+[Yes, keep my application on file]  [No thank you]
 
 We wish you the very best and hope our paths cross again in the future. Thank you again for considering Thrifty Curator!
 
