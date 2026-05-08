@@ -651,3 +651,81 @@ async def reschedule_booking(cancel_token: str, request: RescheduleRequest, back
         "new_date": new_slot["date"],
         "new_time": f"{new_slot['start_time']} - {new_slot['end_time']}"
     }
+
+
+
+# ==================== POST-INTERVIEW REJECTION ====================
+
+@router.get("/admin/booking/{booking_id}/rejection-preview")
+async def get_post_interview_rejection_preview(booking_id: str, admin: dict = Depends(get_admin_user)):
+    """Get a preview of the post-interview rejection email"""
+    from app.services.email_service import get_post_interview_rejection_preview
+    
+    booking = await db.interview_bookings.find_one({"id": booking_id}, {"_id": 0})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    preview = get_post_interview_rejection_preview(booking["applicant_name"])
+    return {
+        "applicant_name": booking["applicant_name"],
+        "applicant_email": booking["applicant_email"],
+        "interview_date": booking.get("interview_date", ""),
+        "interview_time": booking.get("interview_time", ""),
+        **preview
+    }
+
+
+@router.post("/admin/booking/{booking_id}/send-rejection")
+async def send_post_interview_rejection(booking_id: str, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
+    """Send a rejection email to an applicant after their interview"""
+    from app.services.email_service import send_post_interview_rejection_email
+    import os
+    
+    booking = await db.interview_bookings.find_one({"id": booking_id}, {"_id": 0})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Check if already rejected
+    if booking.get("rejection_sent"):
+        raise HTTPException(status_code=400, detail="Rejection email already sent")
+    
+    # Generate a unique token for the keep-on-file response
+    response_token = secrets.token_urlsafe(16)
+    
+    # Update the booking with rejection status
+    await db.interview_bookings.update_one(
+        {"id": booking_id},
+        {"$set": {
+            "rejection_sent": True,
+            "rejection_sent_at": datetime.now(timezone.utc).isoformat(),
+            "rejection_sent_by": admin.get("name", admin.get("email", "Admin")),
+            "keep_on_file_token": response_token,
+            "keep_on_file_response": None
+        }}
+    )
+    
+    # Also update the job application if it exists
+    if booking.get("applicant_id"):
+        await db.job_applications.update_one(
+            {"id": booking["applicant_id"]},
+            {"$set": {
+                "status": "rejected_after_interview",
+                "rejection_sent_at": datetime.now(timezone.utc).isoformat(),
+                "keep_on_file_token": response_token,
+                "keep_on_file_response": None
+            }}
+        )
+    
+    # Build the response URL
+    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    keep_on_file_url = f"{frontend_url}/application-response/{response_token}"
+    
+    # Send the email
+    background_tasks.add_task(
+        send_post_interview_rejection_email,
+        to_email=booking["applicant_email"],
+        applicant_name=booking["applicant_name"],
+        keep_on_file_url=keep_on_file_url
+    )
+    
+    return {"message": "Rejection email sent successfully", "applicant_name": booking["applicant_name"]}

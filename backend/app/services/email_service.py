@@ -1355,5 +1355,90 @@ Warm regards,
 The Thrifty Curator Team"""
     }
 
+
+async def send_post_interview_rejection_email(
+    to_email: str, 
+    applicant_name: str,
+    keep_on_file_url: str
+) -> dict:
+    """Send a rejection email to an applicant after their interview"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{first_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Thank you so much for taking the time to meet with us. We truly enjoyed getting to know you 
+        and learning more about your background.
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        After careful consideration, we've decided not to move forward at this time. 
+        We sincerely appreciate your interest in Thrifty Curator and the effort you put into the interview process.
+    </p>
+    
+    <div style="background: #f8f4ff; border-left: 4px solid #8B5CF6; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+        <p style="color: #333; margin: 0 0 15px 0; font-weight: 600;">
+            Would you like us to keep your application on file?
+        </p>
+        <p style="color: #666; margin: 0 0 15px 0; font-size: 14px;">
+            If a position opens up in the future, we'd love to reach out to you directly.
+        </p>
+        <div style="display: flex; gap: 10px;">
+            <a href="{keep_on_file_url}?response=yes" 
+               style="background: #8B5CF6; color: white; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: 500; display: inline-block;">
+                Yes, keep my application on file
+            </a>
+            <a href="{keep_on_file_url}?response=no" 
+               style="background: #f3f4f6; color: #374151; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: 500; display: inline-block; border: 1px solid #d1d5db;">
+                No thank you
+            </a>
+        </div>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        We wish you all the best in your future endeavors. Thank you again for considering Thrifty Curator!
+    </p>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        Warm regards,<br>
+        <strong>The Thrifty Curator Team</strong>
+    </p>
+    
+    {get_automated_message_footer()}
+    """
+    
+    html = build_email_template("Thank You for Meeting With Us", content)
+    return await send_email(to_email, "Thrifty Curator - Thank You for Your Time", html)
+
+
+def get_post_interview_rejection_preview(applicant_name: str) -> dict:
+    """Get a preview of the post-interview rejection email"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    return {
+        "subject": "Thrifty Curator - Thank You for Your Time",
+        "preview_text": f"""Hi {first_name},
+
+Thank you so much for taking the time to meet with us. We truly enjoyed getting to know you and learning more about your background.
+
+After careful consideration, we've decided not to move forward at this time. We sincerely appreciate your interest in Thrifty Curator and the effort you put into the interview process.
+
+Would you like us to keep your application on file?
+If a position opens up in the future, we'd love to reach out to you directly.
+
+[Yes, keep my application on file]  [No thank you]
+
+We wish you all the best in your future endeavors. Thank you again for considering Thrifty Curator!
+
+Warm regards,
+The Thrifty Curator Team"""
+    }
+
+
 # Import db for admin notification
 from app.database import db

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Clock, Plus, Trash2, Send, User, Phone, Mail, 
   ChevronLeft, ChevronRight, CheckCircle, XCircle, RefreshCw,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, UserX, Eye, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,13 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   const [bookings, setBookings] = useState([]);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Rejection modal state
+  const [showRejectionPreview, setShowRejectionPreview] = useState(false);
+  const [rejectionPreview, setRejectionPreview] = useState(null);
+  const [loadingRejectionPreview, setLoadingRejectionPreview] = useState(false);
+  const [sendingRejection, setSendingRejection] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
   
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -174,6 +181,47 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
       fetchData();
     } catch (error) {
       toast.error('Failed to cancel booking');
+    }
+  };
+
+  // Load post-interview rejection preview
+  const handleLoadRejectionPreview = async (bookingId) => {
+    setSelectedBookingId(bookingId);
+    setLoadingRejectionPreview(true);
+    try {
+      const response = await axios.get(
+        `${API}/api/interview-scheduler/admin/booking/${bookingId}/rejection-preview`,
+        getAuthHeader()
+      );
+      setRejectionPreview(response.data);
+      setShowRejectionPreview(true);
+    } catch (error) {
+      console.error("Error loading rejection preview:", error);
+      toast.error(error.response?.data?.detail || "Failed to load rejection preview");
+    } finally {
+      setLoadingRejectionPreview(false);
+    }
+  };
+
+  // Send post-interview rejection email
+  const handleSendRejection = async () => {
+    setSendingRejection(true);
+    try {
+      await axios.post(
+        `${API}/api/interview-scheduler/admin/booking/${selectedBookingId}/send-rejection`,
+        {},
+        getAuthHeader()
+      );
+      toast.success(`Rejection email sent to ${rejectionPreview.applicant_name}`);
+      setShowRejectionPreview(false);
+      setRejectionPreview(null);
+      setSelectedBookingId(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error sending rejection:", error);
+      toast.error(error.response?.data?.detail || "Failed to send rejection email");
+    } finally {
+      setSendingRejection(false);
     }
   };
 
@@ -381,9 +429,9 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
                   .filter(b => b.status === 'confirmed')
                   .sort((a, b) => a.interview_date.localeCompare(b.interview_date))
                   .map(booking => (
-                    <div key={booking.id} className="flex items-center justify-between bg-white p-3 rounded-lg border">
+                    <div key={booking.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-3 rounded-lg border gap-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <User className="w-5 h-5 text-green-600" />
                         </div>
                         <div>
@@ -393,7 +441,27 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 ml-auto">
+                        {!booking.rejection_sent ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleLoadRejectionPreview(booking.id)}
+                            disabled={loadingRejectionPreview && selectedBookingId === booking.id}
+                            className="text-orange-600 border-orange-300 hover:bg-orange-50 text-xs"
+                          >
+                            {loadingRejectionPreview && selectedBookingId === booking.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <UserX className="w-3 h-3 mr-1" />
+                            )}
+                            Not Moving Forward
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                            Rejection Sent
+                          </span>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -588,6 +656,100 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
         </div>
       )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Post-Interview Rejection Preview Modal */}
+      <AnimatePresence>
+        {showRejectionPreview && rejectionPreview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+            onClick={() => setShowRejectionPreview(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Eye className="w-6 h-6 text-white" />
+                  <h3 className="text-lg font-semibold text-white">Preview Rejection Email</h3>
+                </div>
+                <button
+                  onClick={() => setShowRejectionPreview(false)}
+                  className="text-white/80 hover:text-white"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Email Preview */}
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500 mb-1">To:</p>
+                  <p className="font-medium text-gray-900">{rejectionPreview.applicant_email}</p>
+                </div>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500 mb-1">Interview was:</p>
+                  <p className="font-medium text-gray-900">
+                    {rejectionPreview.interview_date} at {rejectionPreview.interview_time}
+                  </p>
+                </div>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500 mb-1">Subject:</p>
+                  <p className="font-medium text-gray-900">{rejectionPreview.subject}</p>
+                </div>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500 mb-2">Message Preview:</p>
+                  <div className="bg-gray-50 rounded-xl p-4 max-h-[250px] overflow-y-auto">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+                      {rejectionPreview.preview_text}
+                    </pre>
+                  </div>
+                </div>
+                
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-orange-800">
+                    <strong>Note:</strong> The email will include buttons for the applicant to choose whether to keep their application on file for future opportunities.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRejectionPreview(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendRejection}
+                  disabled={sendingRejection}
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                >
+                  {sendingRejection ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Rejection Email
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
