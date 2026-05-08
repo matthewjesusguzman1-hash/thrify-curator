@@ -934,7 +934,7 @@ async def send_interview_confirmation_email(
             <strong>🕐 Time:</strong> {formatted_time}
         </p>
         <p style="color: #166534; margin: 15px 0 0 0; font-size: 14px;">
-            <strong>📍 Location:</strong> Thrifty Curator Store
+            <strong>📍 Location:</strong> 11904 S 51st St, Papillion, NE 68133
         </p>
     </div>
     
