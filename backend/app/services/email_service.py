@@ -1289,9 +1289,9 @@ async def send_application_rejection_email(
     </p>
     
     <p style="color: #333; line-height: 1.6;">
-        After careful consideration, we've decided not to move forward with your application 
-        at this time. This was not an easy decision, and we want you to know that we were 
-        impressed by your interest in our company.
+        Unfortunately, we weren't able to find availability that works for both of us 
+        at this time. We know how tricky scheduling can be, and we genuinely appreciate 
+        your flexibility and patience throughout this process.
     </p>
     
     <div style="background: #f8f4ff; border-left: 4px solid #8B5CF6; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
@@ -1299,7 +1299,8 @@ async def send_application_rejection_email(
             Would you like us to keep your application on file?
         </p>
         <p style="color: #666; margin: 0 0 15px 0; font-size: 14px;">
-            If a position opens up that matches your skills, we'd love to reach out to you directly.
+            If your availability changes or a position opens up that works with your schedule, 
+            we'd love to reach out to you directly.
         </p>
         <div style="display: flex; gap: 10px;">
             <a href="{keep_on_file_url}?response=yes" 
@@ -1314,8 +1315,8 @@ async def send_application_rejection_email(
     </div>
     
     <p style="color: #333; line-height: 1.6;">
-        We wish you the very best in your job search and future endeavors. Thank you again 
-        for considering Thrifty Curator.
+        We wish you the very best and hope our paths cross again in the future. 
+        Thank you again for considering Thrifty Curator!
     </p>
     
     <p style="color: #666; font-size: 14px; margin-top: 30px;">
@@ -1341,14 +1342,14 @@ def get_rejection_email_preview(applicant_name: str) -> dict:
 
 Thank you so much for taking the time to apply to Thrifty Curator. We truly appreciate your interest in joining our team.
 
-After careful consideration, we've decided not to move forward with your application at this time. This was not an easy decision, and we want you to know that we were impressed by your interest in our company.
+Unfortunately, we weren't able to find availability that works for both of us at this time. We know how tricky scheduling can be, and we genuinely appreciate your flexibility and patience throughout this process.
 
 Would you like us to keep your application on file?
-If a position opens up that matches your skills, we'd love to reach out to you directly.
+If your availability changes or a position opens up that works with your schedule, we'd love to reach out to you directly.
 
 [Yes, keep my application]  [No thanks]
 
-We wish you the very best in your job search and future endeavors. Thank you again for considering Thrifty Curator.
+We wish you the very best and hope our paths cross again in the future. Thank you again for considering Thrifty Curator!
 
 Warm regards,
 The Thrifty Curator Team"""
