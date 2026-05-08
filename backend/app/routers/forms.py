@@ -871,8 +871,8 @@ async def send_rejection_email(submission_id: str, background_tasks: BackgroundT
         }}
     )
     
-    # Build the response URL
-    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    # Build the response URL - always use production URL
+    frontend_url = "https://thrifty-curator.com"
     keep_on_file_url = f"{frontend_url}/application-response/{response_token}"
     
     # Send the email

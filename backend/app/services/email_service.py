@@ -495,10 +495,8 @@ async def send_password_reset_email(
     
     first_name = full_name.split()[0] if full_name else "there"
     
-    # Build the reset URL
-    # Use the frontend URL from environment or default
-    import os
-    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    # Build the reset URL - always use production URL
+    frontend_url = "https://thrifty-curator.com"
     reset_url = f"{frontend_url}/reset-password/{reset_token}"
     
     portal_name = "Employee Portal" if user_type == "employee" else "Consignment Portal"

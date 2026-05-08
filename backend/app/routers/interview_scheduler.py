@@ -170,7 +170,8 @@ async def send_scheduler_invite(application_id: str, background_tasks: Backgroun
     
     # Send the email with booking link
     import os
-    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    # Always use production URL for scheduling links
+    frontend_url = "https://thrifty-curator.com"
     booking_url = f"{frontend_url}/schedule-interview/{booking_token}"
     
     background_tasks.add_task(
@@ -395,8 +396,8 @@ async def book_slot(token: str, request: BookSlotRequest, background_tasks: Back
     )
     
     # Send confirmation email
-    import os
-    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    # Always use production URL
+    frontend_url = "https://thrifty-curator.com"
     manage_url = f"{frontend_url}/manage-interview/{cancel_token}"
     
     background_tasks.add_task(
@@ -606,8 +607,8 @@ async def reschedule_booking(cancel_token: str, request: RescheduleRequest, back
     )
     
     # Send confirmation
-    import os
-    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    # Always use production URL
+    frontend_url = "https://thrifty-curator.com"
     manage_url = f"{frontend_url}/manage-interview/{cancel_token}"
     
     # Send email confirmation
@@ -716,8 +717,8 @@ async def send_post_interview_rejection(booking_id: str, background_tasks: Backg
             }}
         )
     
-    # Build the response URL
-    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    # Build the response URL - always use production URL
+    frontend_url = "https://thrifty-curator.com"
     keep_on_file_url = f"{frontend_url}/application-response/{response_token}"
     
     # Send the email
