@@ -3,7 +3,8 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserX, ChevronDown, ChevronUp, Mail, Calendar, Clock,
-  CheckCircle, XCircle, HelpCircle, FileText, RefreshCw
+  CheckCircle, XCircle, HelpCircle, FileText, RefreshCw,
+  Trash2, Eye, X, Phone, MapPin, Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -20,6 +21,8 @@ export default function RejectionHistorySection({ getAuthHeader }) {
     keep_on_file_no: 0,
     pending_response: 0
   });
+  const [viewingApplication, setViewingApplication] = useState(null);
+  const [loadingApplication, setLoadingApplication] = useState(false);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -35,6 +38,40 @@ export default function RejectionHistorySection({ getAuthHeader }) {
       toast.error('Failed to load rejection history');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (rejectionId, rejectionType, applicantName) => {
+    if (!window.confirm(`Delete ${applicantName} from rejection history? This will also delete their application.`)) {
+      return;
+    }
+    
+    try {
+      await axios.delete(
+        `${API}/api/admin/rejection-history/${rejectionId}?rejection_type=${rejectionType}`,
+        getAuthHeader()
+      );
+      toast.success(`${applicantName} removed from rejection history`);
+      fetchHistory();
+    } catch (error) {
+      console.error('Error deleting from rejection history:', error);
+      toast.error('Failed to delete');
+    }
+  };
+
+  const handleViewApplication = async (rejectionId, rejectionType) => {
+    setLoadingApplication(true);
+    try {
+      const response = await axios.get(
+        `${API}/api/admin/rejection-history/${rejectionId}/application?rejection_type=${rejectionType}`,
+        getAuthHeader()
+      );
+      setViewingApplication(response.data);
+    } catch (error) {
+      console.error('Error fetching application:', error);
+      toast.error('Failed to load application details');
+    } finally {
+      setLoadingApplication(false);
     }
   };
 
@@ -204,11 +241,32 @@ export default function RejectionHistorySection({ getAuthHeader }) {
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
+                        <div className="flex flex-col items-end gap-2">
                           {getResponseBadge(rejection.keep_on_file_response)}
                           <span className="text-xs text-gray-400">
                             Sent {formatDate(rejection.sent_at)}
                           </span>
+                          <div className="flex items-center gap-1 mt-1">
+                            {rejection.keep_on_file_response === true && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewApplication(rejection.id, rejection.rejection_type)}
+                                className="text-blue-600 border-blue-300 hover:bg-blue-50 text-xs px-2 py-1 h-auto"
+                              >
+                                <Eye className="w-3 h-3 mr-1" />
+                                View App
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(rejection.id, rejection.rejection_type, rejection.applicant_name)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 h-auto"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -216,6 +274,146 @@ export default function RejectionHistorySection({ getAuthHeader }) {
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Application Details Modal */}
+      <AnimatePresence>
+        {viewingApplication && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+            onClick={() => setViewingApplication(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-6 h-6 text-white" />
+                  <h3 className="text-lg font-semibold text-white">Application on File</h3>
+                </div>
+                <button
+                  onClick={() => setViewingApplication(null)}
+                  className="text-white/80 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Content */}
+              <div className="p-6 overflow-y-auto max-h-[70vh]">
+                {loadingApplication ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Name & Contact */}
+                    <div className="border-b pb-4">
+                      <h4 className="text-xl font-bold text-gray-900">{viewingApplication.full_name}</h4>
+                      <div className="flex flex-col gap-1 mt-2 text-sm text-gray-600">
+                        <span className="flex items-center gap-2">
+                          <Mail className="w-4 h-4" /> {viewingApplication.email}
+                        </span>
+                        {viewingApplication.phone && (
+                          <span className="flex items-center gap-2">
+                            <Phone className="w-4 h-4" /> {viewingApplication.phone}
+                          </span>
+                        )}
+                        {viewingApplication.address && (
+                          <span className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4" /> {viewingApplication.address}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Position & Availability */}
+                    {(viewingApplication.position_interest || viewingApplication.availability) && (
+                      <div className="border-b pb-4">
+                        <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <Briefcase className="w-4 h-4" /> Position & Availability
+                        </h5>
+                        {viewingApplication.position_interest && (
+                          <p className="text-sm text-gray-600">
+                            <strong>Interested in:</strong> {viewingApplication.position_interest}
+                          </p>
+                        )}
+                        {viewingApplication.availability && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            <strong>Availability:</strong> {viewingApplication.availability}
+                          </p>
+                        )}
+                        {viewingApplication.start_date && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            <strong>Can start:</strong> {viewingApplication.start_date}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Work History */}
+                    {viewingApplication.work_history && viewingApplication.work_history.length > 0 && (
+                      <div className="border-b pb-4">
+                        <h5 className="font-semibold text-gray-900 mb-2">Work History</h5>
+                        <div className="space-y-3">
+                          {viewingApplication.work_history.map((job, idx) => (
+                            <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                              <p className="font-medium text-gray-900">{job.position || job.title}</p>
+                              <p className="text-sm text-gray-600">{job.company}</p>
+                              {job.duration && (
+                                <p className="text-xs text-gray-500">{job.duration}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Info */}
+                    {viewingApplication.additional_info && (
+                      <div>
+                        <h5 className="font-semibold text-gray-900 mb-2">Additional Information</h5>
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                          {viewingApplication.additional_info}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Interview Info (for post-interview rejections) */}
+                    {viewingApplication.interview_info && (
+                      <div className="bg-purple-50 rounded-lg p-4 mt-4">
+                        <h5 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                          <Calendar className="w-4 h-4" /> Interview Details
+                        </h5>
+                        <p className="text-sm text-purple-700">
+                          <strong>Date:</strong> {viewingApplication.interview_info.interview_date}
+                        </p>
+                        <p className="text-sm text-purple-700">
+                          <strong>Time:</strong> {viewingApplication.interview_info.interview_time}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 bg-gray-50 border-t flex justify-end">
+                <Button onClick={() => setViewingApplication(null)}>
+                  Close
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1032,6 +1032,55 @@ async def get_rejection_history(admin: dict = Depends(get_admin_user)):
     }
 
 
+@router.get("/admin/rejection-history/{rejection_id}/application")
+async def get_rejected_application_details(rejection_id: str, rejection_type: str, admin: dict = Depends(get_admin_user)):
+    """Get full application details for a rejected applicant"""
+    
+    if rejection_type == "pre_interview":
+        application = await db.job_applications.find_one({"id": rejection_id}, {"_id": 0})
+        if not application:
+            raise HTTPException(status_code=404, detail="Application not found")
+        return application
+    else:
+        # For post-interview, get from interview_bookings and also fetch the original application
+        booking = await db.interview_bookings.find_one({"id": rejection_id}, {"_id": 0})
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+        
+        # Try to get the original application too
+        if booking.get("applicant_id"):
+            application = await db.job_applications.find_one({"id": booking["applicant_id"]}, {"_id": 0})
+            if application:
+                return {**application, "interview_info": booking}
+        
+        return booking
+
+
+@router.delete("/admin/rejection-history/{rejection_id}")
+async def delete_from_rejection_history(rejection_id: str, rejection_type: str, admin: dict = Depends(get_admin_user)):
+    """Delete an entry from rejection history (also deletes the application)"""
+    
+    if rejection_type == "pre_interview":
+        # Delete from job_applications
+        result = await db.job_applications.delete_one({"id": rejection_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Application not found")
+    else:
+        # Delete from interview_bookings
+        booking = await db.interview_bookings.find_one({"id": rejection_id})
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+        
+        # Delete the booking
+        await db.interview_bookings.delete_one({"id": rejection_id})
+        
+        # Also delete the original application if exists
+        if booking.get("applicant_id"):
+            await db.job_applications.delete_one({"id": booking["applicant_id"]})
+    
+    return {"message": "Successfully deleted from rejection history"}
+
+
 @router.delete("/admin/forms/consignment-inquiries/{submission_id}")
 async def delete_consignment_inquiry(submission_id: str, admin: dict = Depends(get_admin_user)):
     """Delete a consignment inquiry submission"""
