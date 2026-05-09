@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -278,9 +279,10 @@ export default function RejectionHistorySection({ getAuthHeader }) {
         )}
       </AnimatePresence>
 
-      {/* Application Details Modal */}
-      <AnimatePresence>
-        {viewingApplication && (
+      {/* Application Details Modal - Using Portal */}
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {viewingApplication && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -416,7 +418,9 @@ export default function RejectionHistorySection({ getAuthHeader }) {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+    )}
     </div>
   );
 }
