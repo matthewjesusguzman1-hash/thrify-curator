@@ -679,8 +679,18 @@ async def download_item_addition_pdf(update_id: str, admin: dict = Depends(get_a
 # Admin form management routes
 @router.get("/admin/forms/job-applications")
 async def get_job_applications(admin: dict = Depends(get_admin_user)):
-    """Get all job application submissions"""
-    submissions = await db.job_applications.find({}, {"_id": 0}).sort("submitted_at", -1).to_list(500)
+    """Get all job application submissions (excludes rejected applicants who chose to keep on file)"""
+    # Exclude applications that are rejected AND chose to keep on file
+    # Those are only viewable in Rejection History
+    submissions = await db.job_applications.find(
+        {
+            "$or": [
+                {"status": {"$ne": "rejected"}},  # Not rejected
+                {"keep_on_file_response": {"$ne": True}}  # Or rejected but didn't choose to keep on file
+            ]
+        }, 
+        {"_id": 0}
+    ).sort("submitted_at", -1).to_list(500)
     return submissions
 
 
