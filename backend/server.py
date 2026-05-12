@@ -28,6 +28,7 @@ from app.routers.gps_trips import router as gps_trips_router
 from app.routers.financials import router as financials_router
 from app.routers.inventory import router as inventory_router
 from app.routers.interview_scheduler import router as interview_scheduler_router
+from app.routers.reports_assistant import router as reports_assistant_router
 
 # Configure logging
 logging.basicConfig(
@@ -153,6 +154,7 @@ app.include_router(gps_trips_router, prefix="/api")
 app.include_router(financials_router, prefix="/api")
 app.include_router(inventory_router, prefix="/api")
 app.include_router(interview_scheduler_router, prefix="/api")
+app.include_router(reports_assistant_router, prefix="/api")
 
 
 @app.get("/api/")
