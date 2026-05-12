@@ -84,7 +84,6 @@ import SalesDataSection from "@/components/admin/sections/SalesDataSection";
 import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
 import RejectionHistorySection from "@/components/admin/sections/RejectionHistorySection";
-import ReportsAssistantSection from "@/components/admin/sections/ReportsAssistantSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
@@ -3239,11 +3238,6 @@ export default function AdminDashboard() {
 
           {/* ====== GROUPED DASHBOARD SECTIONS ====== */}
           <div className="space-y-6">
-            
-            {/* AI Reports Assistant - Top Level for Easy Access */}
-            <div data-testid="reports-assistant-section">
-              <ReportsAssistantSection getAuthHeader={getAuthHeader} />
-            </div>
             
             {/* GROUP 1: Team Management */}
             <DashboardGroup

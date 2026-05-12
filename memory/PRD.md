@@ -1,78 +1,100 @@
 # Thrifty Curator - Product Requirements Document
 
 ## Original Problem Statement
-Building a comprehensive reselling application with native iOS/Android apps via Capacitor. Core features include consignment management, employee time tracking, GPS mileage tracking, tax prep tools, and job application/interview scheduling.
+Build a "Thrifty Curator" reselling application wrapped for native iOS/Android using Capacitor. The app manages employee time tracking, consignment agreements, job applications, admin workflows, and business operations.
+
+## Core Features
+
+### Employee Portal
+- Clock in/out with GPS tracking
+- Time entry management
+- W-9 document uploads
+- Mileage tracking
+- Password-based authentication
+
+### Consignor Portal
+- Consignment agreement submissions
+- Payment history with date filtering
+- My Account overview
+- Custom commission splits for item additions
+
+### Admin Dashboard
+- Team Management (employees)
+- Payroll & Payments tracking
+- Forms & Communications
+- Reports & Operations
+- Interview Scheduler (email-based)
+- Soft Rejection workflow with "Keep on file" tracking
+- Rejection History section
+- Password Management for employees/consignors
+
+### Mobile App (Capacitor)
+- Native iOS and Android builds
+- Push notifications via Firebase
+- Biometric authentication
+- Background GPS tracking
+
+## User Personas
+1. **Admin/Owner**: Matthew & Eunice Guzman - Full access to all features
+2. **Employees**: Clock in/out, track time, submit W-9s
+3. **Consignors**: Submit items, track payments, manage account
+
+## Tech Stack
+- Frontend: React with Tailwind CSS, Shadcn UI
+- Backend: FastAPI (Python)
+- Database: MongoDB
+- Mobile: Capacitor v8
+- Email: Resend
+- GPS: Transistorsoft Background Geolocation
+- Payments: Stripe (requires user API key)
 
 ## What's Been Implemented
 
-### Session - May 8, 2026
-- **Admin Dashboard Notifications** - Added notification triggers for:
-  - Interview booked/cancelled/rescheduled
-  - All notification types now have unique icons and colors
-  
-- **Soft Rejection System (Pre-Interview)** - For applicants who won't get an interview:
-  - "Not Moving Forward" button in Form Submissions
-  - Preview modal before sending
-  - Availability-focused messaging (not mentioning other candidates)
-  - Keep-on-file response with Yes/No buttons
-  - Response tracking page for applicants
+### Completed Features
+- Full employee time tracking with GPS
+- Consignment agreement/inquiry forms
+- Admin dashboard with all core sections
+- Job application system with interview scheduling
+- Email-based interview invitations and management
+- Soft rejection workflow (pre & post-interview)
+- Rejection history tracking
+- Password reset via magic link emails
+- First-time password setup prompts
+- Payment history for consignors
+- My Account section for consignors
+- Admin password management
+- Push notifications for admin alerts
 
-- **Post-Interview Rejection System** - For applicants who had an interview but won't be hired:
-  - "Not Moving Forward" button in Interview Scheduler (Upcoming Interviews)
-  - Preview modal with interview date/time
-  - Simple, warm thank-you message
-  - Same keep-on-file option
+### Recently Removed
+- AI Reports Assistant (removed 2026-05-12 per user request)
 
-- **UI Fixes**:
-  - Removed "Prefers: Text/Email" badges (email only now)
-  - Made Interview Scheduler collapsible
-  - Removed password key icon from Form Submissions header
-  - Fixed applicant card layout (email/phone no longer running off page)
-  - Fixed schedule page footer to link to contact page instead of "reply to email"
-  - Removed "Contact Preference" from confirmation emails
+## Technical Debt / Refactoring Needed
+1. **CRITICAL**: `frontend/src/pages/ConsignmentAgreementForm.jsx` (~3850 lines) - Must be broken into smaller components
+2. **HIGH**: `frontend/src/components/admin/modals/FormSubmissionModal.jsx` (~1200 lines) - Needs refactoring
 
-- **Twilio Cleanup**:
-  - Stripped all SMS/Twilio functionality per user request
-  - System is now 100% email-based for notifications
+## Pending Verification
+- GPS Tracking reliability on live devices
+- Custom commission splits for item additions
 
-### Previously Implemented
-- Full Interview Scheduler system (Admin UI, Applicant Booking, Cancel/Reschedule)
-- Job Application form with work history
-- GPS Mileage tracking
-- Employee time tracking and payroll
-- Consignment management portal
-- Password reset via magic link
-- Tax prep tools
+## Upcoming Tasks (Priority Order)
+1. Amazon Business Supplies quick links section
+2. Android app submission guidance (`.aab` file)
+3. Fast Shipping Labels with Pirate Ship integration
+4. Auto-calculate 2026+ 1099s
+5. Dynamic QR code update with `onelink.to`
 
-## Prioritized Backlog
+## Known Issues
+- Production vs Preview deployment confusion - user often tests live app without redeploying
+- Modal CSS stacking context issues - use ReactDOM.createPortal for all new modals
 
-### P0 (Critical)
-- Refactor `ConsignmentAgreementForm.jsx` (~3850 lines) - Major tech debt
+## Credentials
+- Admin codes: `4399` (Matthew), `0826` (Eunice)
+- Production URL: https://thrifty-curator.com
+- Preview URL: https://curator-app-3.preview.emergentagent.com
 
-### P1 (High)
-- Android app submission guidance
-- Payroll Summary penny-for-penny verification in production
-- Refactor `FormSubmissionModal.jsx` (>1100 lines)
-
-### P2 (Medium)
-- Amazon Business Supplies Quick Links
-- Fast Shipping Labels (Pirate Ship integration)
-- Dynamic QR Code for app stores (onelink.to)
-- Auto-calculate future 1099s
-
-### P3 (Low)
-- Additional notification customization
-
-## Technical Architecture
-- Frontend: React + Capacitor (iOS/Android)
-- Backend: FastAPI + MongoDB
-- Email: Resend
-- Push Notifications: Firebase + APNs
-
-## Key Files
-- `/app/backend/app/routers/interview_scheduler.py` - Interview scheduling + rejection
-- `/app/backend/app/routers/forms.py` - Form submissions + pre-interview rejection
-- `/app/backend/app/services/email_service.py` - All email templates
-- `/app/frontend/src/components/admin/sections/InterviewSchedulerSection.jsx`
-- `/app/frontend/src/components/admin/modals/FormSubmissionModal.jsx`
-- `/app/frontend/src/pages/ApplicationResponsePage.jsx` - Keep-on-file response
+## 3rd Party Integrations
+- Capacitor v8
+- Transistorsoft Background Geolocation
+- Stripe (Payments) - requires user API key
+- Resend (Emails) - configured
+- Firebase (Push notifications) - configured
