@@ -6,32 +6,34 @@ export function cn(...inputs) {
 }
 
 /**
- * Round decimal hours to nearest minute and return as decimal hours
- * Used for pay calculations to match displayed time
+ * Round decimal hours UP to the next whole minute and return as decimal hours
+ * This ensures employees are always paid for the full minute worked
+ * Example: 1.333 hours (1h 20m) with 1 extra second = 1.35 hours (1h 21m)
  * @param {number} decimalHours - Hours in decimal format
- * @returns {number} Hours rounded to nearest minute as decimal
+ * @returns {number} Hours rounded UP to next minute as decimal
  */
 export function roundHoursToMinute(decimalHours) {
-  if (decimalHours === null || decimalHours === undefined || isNaN(decimalHours)) {
+  if (decimalHours === null || decimalHours === undefined || isNaN(decimalHours) || decimalHours <= 0) {
     return 0;
   }
-  const totalMinutes = Math.round(decimalHours * 60);
+  // Round UP (ceiling) to next minute
+  const totalMinutes = Math.ceil(decimalHours * 60);
   return totalMinutes / 60;
 }
 
 /**
- * Format decimal hours to h:m format (rounded to nearest minute)
- * Used for all reporting, tracking, and viewing displays
+ * Format decimal hours to h:m format (rounded UP to next whole minute)
+ * This ensures displayed time always rounds in the employee's favor
  * @param {number} decimalHours - Hours in decimal format (e.g., 1.5 = 1 hour 30 minutes)
  * @returns {string} Formatted time string (e.g., "1h 30m")
  */
 export function formatHoursToHMS(decimalHours) {
-  if (decimalHours === null || decimalHours === undefined || isNaN(decimalHours)) {
+  if (decimalHours === null || decimalHours === undefined || isNaN(decimalHours) || decimalHours <= 0) {
     return "0h 0m";
   }
   
-  // Round to nearest minute
-  const totalMinutes = Math.round(decimalHours * 60);
+  // Round UP to next minute (ceiling)
+  const totalMinutes = Math.ceil(decimalHours * 60);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   

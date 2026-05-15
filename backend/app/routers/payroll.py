@@ -16,23 +16,28 @@ from app.dependencies import get_admin_user
 from app.models.payroll import PayrollSettings, PayrollReportRequest
 from app.services.helpers import get_biweekly_period, get_monthly_period, get_yearly_period
 
+import math
+
 router = APIRouter(prefix="/admin/payroll", tags=["Payroll"])
 
 
-def round_hours_to_minute(decimal_hours: float) -> float:
-    """Round decimal hours to nearest minute, return as decimal hours.
-    Used for pay calculations to match displayed time."""
-    if decimal_hours is None or decimal_hours < 0:
+def round_hours_up_to_minute(decimal_hours: float) -> float:
+    """Round decimal hours UP to the next whole minute, return as decimal hours.
+    This ensures employees are always paid for the full minute worked.
+    Example: 1.333 hours (1h 20m) with 1 extra second = 1.35 hours (1h 21m)"""
+    if decimal_hours is None or decimal_hours <= 0:
         return 0
-    total_minutes = round(decimal_hours * 60)
+    # Convert to minutes and round UP (ceiling)
+    total_minutes = math.ceil(decimal_hours * 60)
     return total_minutes / 60
 
 
 def format_hours_hms(decimal_hours: float) -> str:
-    """Convert decimal hours to h:m format for display."""
-    if decimal_hours is None or decimal_hours < 0:
+    """Convert decimal hours to h:m format for display, rounded UP to next minute."""
+    if decimal_hours is None or decimal_hours <= 0:
         return "0h 0m"
-    total_minutes = round(decimal_hours * 60)
+    # Round UP to next minute
+    total_minutes = math.ceil(decimal_hours * 60)
     hours = total_minutes // 60
     minutes = total_minutes % 60
     return f"{hours}h {minutes}m"
@@ -100,9 +105,9 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
                 clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
                 if period_start <= clock_in_dt <= period_end:
                     current_period_hours += hours
-                    current_period_amount += (round(hours * 60) / 60) * hourly_rate
+                    current_period_amount += (math.ceil(hours * 60) / 60) * hourly_rate
                 elif prev_period_start <= clock_in_dt <= prev_period_end:
-                    prev_period_amount += (round(hours * 60) / 60) * hourly_rate
+                    prev_period_amount += (math.ceil(hours * 60) / 60) * hourly_rate
             except:
                 continue
     
@@ -247,7 +252,7 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
         data["total_hours"] = round(data["total_hours"], 2)
         emp_rate = data["hourly_rate"]
         # Use rounded hours for pay calculation to match displayed time
-        rounded_total = round_hours_to_minute(data["total_hours"])
+        rounded_total = round_hours_up_to_minute(data["total_hours"])
         data["gross_wages"] = round(rounded_total * emp_rate, 2)
         # Also store the formatted time for display
         data["total_hours_formatted"] = format_hours_hms(data["total_hours"])
@@ -441,7 +446,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     
     total_hours = sum(e["total_hours"] for e in employee_data.values())
     # Use rounded hours for pay calculation to match displayed time
-    total_wages = sum(round_hours_to_minute(e["total_hours"]) * e["hourly_rate"] for e in employee_data.values())
+    total_wages = sum(round_hours_up_to_minute(e["total_hours"]) * e["hourly_rate"] for e in employee_data.values())
     total_shifts = sum(e["total_shifts"] for e in employee_data.values())
     
     # SUMMARY section
@@ -473,7 +478,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         for uid, data in employee_data.items():
             hours = data["total_hours"]
             emp_rate = data["hourly_rate"]
-            rounded_hours = round_hours_to_minute(hours)
+            rounded_hours = round_hours_up_to_minute(hours)
             wages = round(rounded_hours * emp_rate, 2)
             
             # Employee name as sub-header
@@ -1085,7 +1090,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
             print(f"[PayrollHistory] Current period ({period_start} to {period_end}): {period_hours} hours, {period_shifts} shifts")
         
         # Calculate amount owed (round to minute first, like Employee Portal)
-        rounded_hours = round_hours_to_minute(period_hours)
+        rounded_hours = round_hours_up_to_minute(period_hours)
         amount_owed = round(rounded_hours * hourly_rate, 2)
         
         # Calculate amount paid FOR THIS PERIOD (using pay_periods field, NOT check_date)
@@ -1176,7 +1181,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         except (ValueError, TypeError):
             continue
     
-    month_owed = round(round_hours_to_minute(month_hours) * hourly_rate, 2)
+    month_owed = round(round_hours_up_to_minute(month_hours) * hourly_rate, 2)
     
     month_paid = 0
     for p in employee_payments:
@@ -1209,7 +1214,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         except (ValueError, TypeError):
             continue
     
-    year_owed = round(round_hours_to_minute(year_hours) * hourly_rate, 2)
+    year_owed = round(round_hours_up_to_minute(year_hours) * hourly_rate, 2)
     
     year_paid = 0
     for p in employee_payments:

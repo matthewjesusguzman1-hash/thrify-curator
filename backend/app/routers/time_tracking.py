@@ -49,11 +49,19 @@ async def trigger_admin_live_activity_update():
         print(f"Failed to trigger admin Live Activity update: {e}")
 
 
-def round_to_nearest_minute(seconds: float) -> float:
-    """Convert seconds to hours with full precision.
-    Time is stored precisely - rounding to minute is done only for display.
+import math
+
+def round_up_to_minute(seconds: float) -> float:
+    """Convert seconds to hours, rounded UP to the next whole minute.
+    This ensures employees are always paid for the full minute worked.
+    Example: 1 hour 20 minutes 1 second = 1 hour 21 minutes (1.35 hours)
     """
-    return round(seconds / 3600, 4)  # Store with 4 decimal precision
+    if seconds <= 0:
+        return 0
+    # Convert to minutes and round UP (ceiling)
+    total_minutes = math.ceil(seconds / 60)
+    # Convert back to decimal hours
+    return total_minutes / 60
 
 
 @router.post("/clock", response_model=TimeEntry)
@@ -126,10 +134,10 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         # Calculate session time in seconds
         session_seconds = (clock_out_time - clock_in_time).total_seconds()
         
-        # Calculate total hours (accumulated + current session), rounded to nearest minute
+        # Calculate total hours (accumulated + current session), rounded UP to nearest minute
         accumulated_seconds = active.get("accumulated_hours", 0.0) * 3600
         total_seconds = accumulated_seconds + session_seconds
-        total_hours = round_to_nearest_minute(total_seconds)
+        total_hours = round_up_to_minute(total_seconds)
         
         await db.time_entries.update_one(
             {"id": active["id"]},
@@ -213,10 +221,10 @@ async def auto_clock_out(user: dict = Depends(get_current_user)):
     if session_seconds < 0:
         session_seconds = 0
     
-    # Calculate total hours, rounded to nearest minute
+    # Calculate total hours, rounded UP to next whole minute
     accumulated_seconds = active.get("accumulated_hours", 0.0) * 3600
     total_seconds = accumulated_seconds + session_seconds
-    total_hours = round_to_nearest_minute(total_seconds)
+    total_hours = round_up_to_minute(total_seconds)
     
     await db.time_entries.update_one(
         {"id": active["id"]},
