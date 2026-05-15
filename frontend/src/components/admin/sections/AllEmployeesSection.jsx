@@ -465,7 +465,7 @@ export default function AllEmployeesSection({
                                   <span className={emp.hourly_rate ? 'font-medium text-[#333]' : 'text-[#888]'}>
                                     {emp.hourly_rate 
                                       ? `${emp.hourly_rate.toFixed(2)}/hr` 
-                                      : `${payrollSettings?.default_hourly_rate?.toFixed(2) || '15.00'}/hr`}
+                                      : `${payrollSettings?.default_hourly_rate?.toFixed(2) || '20.00'}/hr`}
                                   </span>
                                   {!emp.hourly_rate && <span className="text-[#aaa] text-xs ml-1">(default)</span>}
                                   <Edit3 className="w-3 h-3 text-[#aaa] ml-1" />

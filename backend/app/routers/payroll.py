@@ -51,7 +51,7 @@ async def get_payroll_settings(admin: dict = Depends(get_admin_user)):
         return {
             "id": "payroll_settings",
             "pay_period_start_date": "2026-01-06",
-            "default_hourly_rate": 15.00
+            "default_hourly_rate": 20.00
         }
     return settings
 
@@ -68,7 +68,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
     
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
-    default_rate = settings.get("default_hourly_rate", 15.00) if settings else 15.00
+    default_rate = settings.get("default_hourly_rate", 20.00) if settings else 15.00
     
     now = datetime.now(timezone.utc)
     period_start, period_end = get_biweekly_period(period_index=0)
@@ -179,7 +179,7 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
     """Generate payroll report for specified period"""
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     if not settings:
-        settings = {"default_hourly_rate": 15.00}
+        settings = {"default_hourly_rate": 20.00}
     
     if request.period_type == "biweekly":
         # Use first Monday of year as anchor
@@ -212,7 +212,7 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
     all_employees = await db.users.find({}, {"_id": 0}).to_list(1000)
     employee_rates = {e["id"]: e.get("hourly_rate") for e in all_employees}
     
-    default_rate = request.hourly_rate or settings.get("default_hourly_rate", 15.00)
+    default_rate = request.hourly_rate or settings.get("default_hourly_rate", 20.00)
     
     employee_data = {}
     for entry in entries:
@@ -293,7 +293,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     """Generate PDF payroll report"""
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     if not settings:
-        settings = {"default_hourly_rate": 15.00}
+        settings = {"default_hourly_rate": 20.00}
     
     if request.period_type == "biweekly":
         # Use first Monday of year as anchor
@@ -323,7 +323,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     all_employees = await db.users.find({}, {"_id": 0}).to_list(1000)
     employee_rates = {e["id"]: e.get("hourly_rate") for e in all_employees}
     
-    default_rate = request.hourly_rate or settings.get("default_hourly_rate", 15.00)
+    default_rate = request.hourly_rate or settings.get("default_hourly_rate", 20.00)
     
     employee_data = {}
     for entry in entries:
@@ -1027,7 +1027,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
     
     # Get settings
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
-    default_rate = settings.get("default_hourly_rate", 15.00) if settings else 15.00
+    default_rate = settings.get("default_hourly_rate", 20.00) if settings else 15.00
     hourly_rate = employee.get("hourly_rate") or default_rate
     
     # Get all time entries for this employee

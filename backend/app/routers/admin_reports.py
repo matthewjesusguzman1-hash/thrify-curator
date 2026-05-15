@@ -39,9 +39,9 @@ async def get_shift_report(
         raise HTTPException(status_code=400, detail="Invalid date format")
     
     payroll_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
-    default_rate = 15.00
+    default_rate = 20.00
     if payroll_settings:
-        default_rate = payroll_settings.get("default_hourly_rate", 15.00)
+        default_rate = payroll_settings.get("default_hourly_rate", 20.00)
     
     query = {"clock_in": {"$gte": start.isoformat(), "$lte": end.isoformat()}}
     if employee_id:
@@ -123,7 +123,7 @@ async def download_shift_report_csv(
         clock_in = entry["clock_in"][:16].replace("T", " ") if entry["clock_in"] else ""
         clock_out = entry["clock_out"][:16].replace("T", " ") if entry["clock_out"] else "Active"
         hours = entry["total_hours"] or 0
-        hourly_rate = entry.get("hourly_rate", 15.00)
+        hourly_rate = entry.get("hourly_rate", 20.00)
         rounded_hours = round_hours_to_minute(hours)
         est_pay = rounded_hours * hourly_rate
         writer.writerow([
@@ -296,7 +296,7 @@ async def get_shift_report_pdf(
         clock_out = entry["clock_out"][5:16].replace("T", " ") if entry["clock_out"] else "Active"
         admin_note = entry.get("admin_note") or ""
         hours = entry["total_hours"] or 0
-        hourly_rate = entry.get("hourly_rate", 15.00)
+        hourly_rate = entry.get("hourly_rate", 20.00)
         rounded_hours = round_hours_to_minute(hours)
         est_pay = rounded_hours * hourly_rate
         

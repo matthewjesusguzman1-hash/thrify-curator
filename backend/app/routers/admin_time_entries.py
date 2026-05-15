@@ -29,7 +29,7 @@ async def get_clocked_in_employees(admin: dict = Depends(get_admin_user)):
     
     # Get payroll settings for default rate
     payroll_settings = await db.payroll_settings.find_one({}, {"_id": 0})
-    default_rate = payroll_settings.get("default_hourly_rate", 15) if payroll_settings else 15
+    default_rate = payroll_settings.get("default_hourly_rate", 20) if payroll_settings else 20
     
     employees = []
     for entry in clocked_in:

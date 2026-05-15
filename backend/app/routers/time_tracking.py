@@ -280,10 +280,10 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     week_hours = sum(e.get("total_hours", 0) or 0 for e in week_entries)
     
     payroll_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
-    default_rate = 15.00
+    default_rate = 20.00
     
     if payroll_settings:
-        default_rate = payroll_settings.get("default_hourly_rate", 15.00)
+        default_rate = payroll_settings.get("default_hourly_rate", 20.00)
     
     # Helper function to filter entries by period
     def get_entries_for_period(start, end):

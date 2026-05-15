@@ -323,7 +323,7 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
     
     hourly_rate = employee.get("hourly_rate")
     if not hourly_rate:
-        hourly_rate = settings.get("default_hourly_rate", 15.0) if settings else 15.0
+        hourly_rate = settings.get("default_hourly_rate", 20.0) if settings else 20.0
     
     # Get YTD actual payments from payment records
     today = datetime.now(timezone.utc)

@@ -229,7 +229,7 @@ export default function PayrollHistorySection({
                 {selectedEmployee ? selectedEmployee.name : "Select employee..."}
               </p>
               {selectedEmployee && !compactMode && (
-                <p className="text-xs text-gray-500 truncate">${selectedEmployee.hourly_rate || 15}/hr</p>
+                <p className="text-xs text-gray-500 truncate">${selectedEmployee.hourly_rate || 20}/hr</p>
               )}
             </div>
           </div>
@@ -268,7 +268,7 @@ export default function PayrollHistorySection({
                     }`}
                   >
                     <p className="font-medium text-gray-900 text-sm truncate">{emp.name}</p>
-                    <p className="text-[10px] text-violet-600">${emp.hourly_rate || 15}/hr</p>
+                    <p className="text-[10px] text-violet-600">${emp.hourly_rate || 20}/hr</p>
                   </button>
                 ))}
               </div>

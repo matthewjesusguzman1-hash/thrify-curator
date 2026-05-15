@@ -20,7 +20,7 @@ const formatElapsedTime = (clockInTime) => {
 };
 
 // Calculate estimated pay
-const calculatePay = (clockInTime, hourlyRate = 15) => {
+const calculatePay = (clockInTime, hourlyRate = 20) => {
   if (!clockInTime) return 0;
   const start = new Date(clockInTime);
   const now = new Date();

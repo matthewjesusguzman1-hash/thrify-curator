@@ -6,7 +6,7 @@ class PayrollSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = "payroll_settings"
     pay_period_start_date: str
-    default_hourly_rate: float = 15.00
+    default_hourly_rate: float = 20.00
 
 
 class PayrollReportRequest(BaseModel):
