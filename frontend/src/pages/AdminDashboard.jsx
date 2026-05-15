@@ -180,6 +180,10 @@ export default function AdminDashboard() {
   });
   const [addingEntry, setAddingEntry] = useState(false);
   
+  // Welcome email preview state
+  const [showWelcomeEmailPreview, setShowWelcomeEmailPreview] = useState(false);
+  const [welcomeEmailData, setWelcomeEmailData] = useState(null);
+  
   // Payroll state
   const [showPayroll, setShowPayroll] = useState(false);
   const [payrollSettings, setPayrollSettings] = useState({
@@ -1765,6 +1769,13 @@ export default function AdminDashboard() {
       const response = await axios.post(`${API}/admin/create-employee`, payload, getAuthHeader());
       const newEmployeeId = response.data.id;
       
+      // Store employee data for welcome email preview
+      const createdEmployeeData = {
+        name: newEmployee.name,
+        email: newEmployee.email,
+        role: newEmployee.role || "employee"
+      };
+      
       // If W-9 file was attached, upload it
       if (newEmployeeW9File && newEmployeeId) {
         const formData = new FormData();
@@ -1793,6 +1804,12 @@ export default function AdminDashboard() {
       setSelectedJobApp("");
       setShowAddEmployee(false);
       fetchData();
+      
+      // Show welcome email preview for regular employees (not admins)
+      if (createdEmployeeData.role === "employee") {
+        setWelcomeEmailData(createdEmployeeData);
+        setShowWelcomeEmailPreview(true);
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to create employee");
     } finally {
@@ -3027,6 +3044,138 @@ export default function AdminDashboard() {
             handleRemoveEmployee={handleRemoveEmployeeSubmit}
             removingEmployee={removingEmployee}
           />
+
+          {/* Welcome Email Preview Modal */}
+          {showWelcomeEmailPreview && welcomeEmailData && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto"
+              onClick={() => setShowWelcomeEmailPreview(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl overflow-hidden w-full max-w-2xl shadow-2xl my-4"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="welcome-email-preview-modal"
+              >
+                {/* Header */}
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Welcome Email Sent!</h2>
+                      <p className="text-green-100 text-sm">An onboarding email was sent to {welcomeEmailData.email}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Email Preview */}
+                <div className="p-6 max-h-[60vh] overflow-y-auto">
+                  <div className="border rounded-xl overflow-hidden">
+                    {/* Email Header */}
+                    <div className="bg-gray-50 p-4 border-b">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <span className="font-medium">To:</span>
+                        <span>{welcomeEmailData.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <span className="font-medium">Subject:</span>
+                        <span>Welcome to Thrifty Curator - Employee Portal Access & W9 Instructions</span>
+                      </div>
+                    </div>
+                    
+                    {/* Email Body Preview */}
+                    <div className="p-6 bg-white">
+                      <p className="text-gray-700 mb-4">
+                        Hi <strong>{welcomeEmailData.name}</strong>,
+                      </p>
+                      
+                      <p className="text-gray-700 mb-4">
+                        Welcome to the <strong>Thrifty Curator</strong> team! We're excited to have you on board.
+                      </p>
+                      
+                      <p className="text-gray-700 mb-4">
+                        This email contains important information about accessing your employee portal and completing your onboarding paperwork.
+                      </p>
+                      
+                      {/* Portal Access Section */}
+                      <div className="bg-gradient-to-r from-violet-500 to-cyan-500 rounded-xl p-5 mb-4 text-white">
+                        <h3 className="font-bold mb-2 flex items-center gap-2">
+                          📱 Accessing the Employee Portal
+                        </h3>
+                        <p className="text-sm mb-3 text-white/90">
+                          The employee portal is where you'll clock in/out, view your hours, and manage your account.
+                        </p>
+                        <ol className="text-sm space-y-1 list-decimal list-inside text-white/90">
+                          <li>Go to <span className="font-semibold">https://thrifty-curator.com/login</span></li>
+                          <li>Enter your email address: <strong>{welcomeEmailData.email}</strong></li>
+                          <li>Click "Find My Account"</li>
+                          <li>You'll be prompted to set up a password on your first login</li>
+                        </ol>
+                      </div>
+                      
+                      {/* W9 Section */}
+                      <div className="bg-amber-50 border-l-4 border-amber-400 rounded-r-xl p-5 mb-4">
+                        <h3 className="font-bold text-amber-800 mb-2 flex items-center gap-2">
+                          📋 W9 Form Submission (Required)
+                        </h3>
+                        <p className="text-sm text-amber-900 mb-3">
+                          Before you can receive payment, you must submit a completed W9 form.
+                        </p>
+                        <ol className="text-sm space-y-1 list-decimal list-inside text-amber-900">
+                          <li>Log into the Employee Portal using the steps above</li>
+                          <li>Look for the "W9 Form" or "Tax Documents" section</li>
+                          <li>Download the W9 form template (if provided) or use a standard IRS W9</li>
+                          <li>Fill out the form completely and sign it</li>
+                          <li>Upload a photo or scan of your completed W9</li>
+                        </ol>
+                        <p className="text-sm text-amber-900 mt-3 font-medium">
+                          ⚠️ Important: Your W9 must be submitted before your first payday.
+                        </p>
+                      </div>
+                      
+                      {/* Checklist */}
+                      <div className="bg-green-50 border-l-4 border-green-500 rounded-r-xl p-5 mb-4">
+                        <h3 className="font-bold text-green-800 mb-2">✅ Quick Checklist</h3>
+                        <ul className="text-sm space-y-1 list-disc list-inside text-green-800">
+                          <li>Set up your employee portal login</li>
+                          <li>Submit your W9 form</li>
+                          <li>Review your hourly rate in the portal</li>
+                          <li>Clock in for your first shift!</li>
+                        </ul>
+                      </div>
+                      
+                      <p className="text-gray-700 mb-2">
+                        If you have any questions or need help accessing the portal, please reply to this email or contact your manager.
+                      </p>
+                      
+                      <p className="text-gray-700 font-medium">
+                        Welcome aboard! 🎉
+                      </p>
+                      
+                      <p className="text-gray-500 text-sm mt-4">
+                        — The Thrifty Curator Team
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Footer */}
+                <div className="border-t p-4 bg-gray-50 flex justify-end">
+                  <Button
+                    onClick={() => setShowWelcomeEmailPreview(false)}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
+                  >
+                    Got It
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
 
           {/* Edit Employee Modal - Extracted Component */}
           <EditEmployeeModal
