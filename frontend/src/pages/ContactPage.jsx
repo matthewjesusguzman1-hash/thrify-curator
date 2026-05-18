@@ -148,20 +148,6 @@ export default function ContactPage() {
           </motion.form>
         )}
 
-        {/* Contact Info */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mt-8 text-center"
-        >
-          <p className="text-white/40 text-sm">
-            You can also reach us at
-          </p>
-          <a href="mailto:thriftycurator1@gmail.com" className="text-pink-400 hover:text-pink-300 transition-colors">
-            thriftycurator1@gmail.com
-          </a>
-        </motion.div>
       </div>
     </div>
   );

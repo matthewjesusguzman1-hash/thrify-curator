@@ -112,9 +112,10 @@ def build_email_template(title: str, content: str) -> str:
     """
 
 
-async def send_email(to_email: str, subject: str, html_content: str, attachments: list = None) -> dict:
+async def send_email(to_email: str, subject: str, html_content: str, attachments: list = None, email_type: str = "general", recipient_name: str = None, context: dict = None) -> dict:
     """
     Send an email using Resend API or log to console if not configured.
+    Also logs the email to the database for tracking.
     
     Args:
         to_email: Recipient email address
@@ -123,10 +124,19 @@ async def send_email(to_email: str, subject: str, html_content: str, attachments
         attachments: Optional list of attachments. Each attachment should be a dict with:
             - filename: Name of the file
             - content: Base64 encoded content or raw bytes
+        email_type: Type of email for logging (e.g., "welcome", "password_reset", "interview_invite")
+        recipient_name: Name of recipient for logging
+        context: Additional context to store with the log
     
     Returns:
         dict with status and message
     """
+    from app.database import get_database
+    import uuid
+    
+    status = "sent"
+    result = None
+    
     if EMAIL_ENABLED:
         try:
             # Debug: Log the sender email being used
@@ -146,10 +156,11 @@ async def send_email(to_email: str, subject: str, html_content: str, attachments
             # Run sync SDK in thread to keep FastAPI non-blocking
             email = await asyncio.to_thread(resend.Emails.send, params)
             logger.info(f"✅ Email sent to {to_email}: {subject}")
-            return {"status": "success", "message": f"Email sent to {to_email}", "email_id": email.get("id")}
+            result = {"status": "success", "message": f"Email sent to {to_email}", "email_id": email.get("id")}
         except Exception as e:
             logger.error(f"❌ Failed to send email to {to_email} (FROM: {SENDER_EMAIL}): {str(e)}")
-            return {"status": "error", "message": str(e)}
+            status = "failed"
+            result = {"status": "error", "message": str(e)}
     else:
         # MOCK MODE - Log to console
         attachment_info = f" with {len(attachments)} attachment(s)" if attachments else ""
@@ -161,7 +172,27 @@ Subject: {subject}{attachment_info}
 [HTML content logged - {len(html_content)} characters]
 ==================================
         """)
-        return {"status": "mocked", "message": f"Email logged (MOCKED) to {to_email}"}
+        status = "mocked"
+        result = {"status": "mocked", "message": f"Email logged (MOCKED) to {to_email}"}
+    
+    # Log email to database
+    try:
+        db = get_database()
+        email_log = {
+            "id": str(uuid.uuid4()),
+            "recipient_email": to_email,
+            "recipient_name": recipient_name,
+            "subject": subject,
+            "email_type": email_type,
+            "status": status,
+            "sent_at": datetime.now().isoformat(),
+            "context": context or {}
+        }
+        await db.email_logs.insert_one(email_log)
+    except Exception as log_error:
+        logger.warning(f"Failed to log email: {log_error}")
+    
+    return result
 
 
 # =============================================================================
@@ -222,7 +253,8 @@ async def send_consignment_agreement_confirmation(
     """
     
     html = build_email_template("Your Consignment Agreement is Confirmed!", content)
-    return await send_email(to_email, "Welcome to Thrifty Curator - Agreement Confirmed", html)
+    return await send_email(to_email, "Welcome to Thrifty Curator - Agreement Confirmed", html, 
+                           email_type="consignment_agreement", recipient_name=client_name)
 
 
 async def send_item_addition_confirmation(
@@ -262,7 +294,8 @@ async def send_item_addition_confirmation(
     """
     
     html = build_email_template("Items Added to Your Consignment", content)
-    return await send_email(to_email, f"Thrifty Curator - {items_to_add} Item{'s' if items_to_add > 1 else ''} Added", html)
+    return await send_email(to_email, f"Thrifty Curator - {items_to_add} Item{'s' if items_to_add > 1 else ''} Added", html,
+                           email_type="item_addition", recipient_name=client_name)
 
 
 async def send_info_update_confirmation(
@@ -481,7 +514,7 @@ async def send_password_reset_notification(
     """
     
     html = build_email_template("Your Password Has Been Reset", content)
-    return await send_email(to_email, f"Thrifty Curator - Password Reset for {portal_name}", html)
+    return await send_email(to_email, f"Thrifty Curator - Password Reset for {portal_name}", html, email_type="password_reset_admin", recipient_name=user_name)
 
 
 
@@ -545,7 +578,7 @@ async def send_password_reset_email(
     """
     
     html = build_email_template("Reset Your Password", content)
-    return await send_email(to_email, "Thrifty Curator - Password Reset Request", html)
+    return await send_email(to_email, "Thrifty Curator - Password Reset Request", html, email_type="password_reset_request")
 
 
 async def send_consignment_inquiry_confirmation(to_email: str, full_name: str) -> dict:
@@ -587,7 +620,7 @@ async def send_consignment_inquiry_confirmation(to_email: str, full_name: str) -
     """
     
     html = build_email_template("Thank You for Your Consignment Inquiry", content)
-    return await send_email(to_email, "Thrifty Curator - We've Received Your Inquiry!", html)
+    return await send_email(to_email, "Thrifty Curator - We've Received Your Inquiry!", html, email_type="consignment_inquiry", recipient_name=client_name)
 
 
 def get_email_status() -> dict:
@@ -681,7 +714,7 @@ async def send_new_employee_welcome_email(to_email: str, employee_name: str, por
     """
     
     html = build_email_template("Welcome to Thrifty Curator! 🎉", content)
-    return await send_email(to_email, "Welcome to Thrifty Curator - Employee Portal Access & W9 Instructions", html)
+    return await send_email(to_email, "Welcome to Thrifty Curator - Employee Portal Access & W9 Instructions", html, email_type="employee_welcome", recipient_name=employee_name)
 
 
 
@@ -807,7 +840,7 @@ async def send_interview_invite_email(to_email: str, applicant_name: str, availa
     """
     
     html = build_email_template(f"We'd Love to Meet You! ☕", content)
-    return await send_email(to_email, f"{business_name} - We'd Love to Meet You!", html)
+    return await send_email(to_email, f"{business_name} - We'd Love to Meet You!", html, email_type="interview_invite", recipient_name=applicant_name)
 
 
 
@@ -876,7 +909,7 @@ async def send_scheduler_invite_email(to_email: str, applicant_name: str, bookin
     """
     
     html = build_email_template("Schedule Your Interview!", content)
-    return await send_email(to_email, "Thrifty Curator - Schedule Your Interview!", html)
+    return await send_email(to_email, "Thrifty Curator - Schedule Your Interview!", html, email_type="interview_schedule_link", recipient_name=applicant_name)
 
 
 async def send_interview_confirmation_email(
@@ -972,7 +1005,7 @@ async def send_interview_confirmation_email(
     """
     
     html = build_email_template("Interview Confirmed! ✅", content)
-    return await send_email(to_email, f"Thrifty Curator - Interview Confirmed for {formatted_date}", html)
+    return await send_email(to_email, f"Thrifty Curator - Interview Confirmed for {formatted_date}", html, email_type="interview_confirmed", recipient_name=applicant_name)
 
 
 async def send_interview_cancelled_email(
@@ -1040,7 +1073,7 @@ async def send_interview_cancelled_email(
     """
     
     html = build_email_template("Interview Cancelled", content)
-    return await send_email(to_email, "Thrifty Curator - Interview Cancelled", html)
+    return await send_email(to_email, "Thrifty Curator - Interview Cancelled", html, email_type="interview_cancelled", recipient_name=applicant_name)
 
 
 async def send_interview_rescheduled_email(
@@ -1263,7 +1296,7 @@ async def send_application_received_email(to_email: str, applicant_name: str) ->
     """
     
     html = build_email_template("Application Received! ✓", content)
-    return await send_email(to_email, "Thrifty Curator - We Got Your Application!", html)
+    return await send_email(to_email, "Thrifty Curator - We Got Your Application!", html, email_type="job_application_received", recipient_name=applicant_name)
 
 
 
@@ -1326,7 +1359,7 @@ async def send_application_rejection_email(
     """
     
     html = build_email_template("Thank You for Your Application", content)
-    return await send_email(to_email, "Thrifty Curator - Thank You for Applying", html)
+    return await send_email(to_email, "Thrifty Curator - Thank You for Applying", html, email_type="rejection_pre_interview", recipient_name=applicant_name)
 
 
 def get_rejection_email_preview(applicant_name: str) -> dict:
@@ -1410,7 +1443,7 @@ async def send_post_interview_rejection_email(
     """
     
     html = build_email_template("Thank You for Meeting With Us", content)
-    return await send_email(to_email, "Thrifty Curator - Thank You for Your Time", html)
+    return await send_email(to_email, "Thrifty Curator - Thank You for Your Time", html, email_type="rejection_post_interview", recipient_name=applicant_name)
 
 
 def get_post_interview_rejection_preview(applicant_name: str) -> dict:

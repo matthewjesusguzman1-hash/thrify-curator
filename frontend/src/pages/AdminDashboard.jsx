@@ -84,6 +84,7 @@ import SalesDataSection from "@/components/admin/sections/SalesDataSection";
 import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
 import RejectionHistorySection from "@/components/admin/sections/RejectionHistorySection";
+import EmailLogsSection from "@/components/admin/sections/EmailLogsSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
@@ -3558,6 +3559,11 @@ export default function AdminDashboard() {
               {/* Rejection History Section */}
               <div data-testid="rejection-history-section">
                 <RejectionHistorySection getAuthHeader={getAuthHeader} />
+              </div>
+
+              {/* Email Logs Section */}
+              <div data-testid="email-logs-section">
+                <EmailLogsSection getAuthHeader={getAuthHeader} />
               </div>
             </DashboardGroup>
 
