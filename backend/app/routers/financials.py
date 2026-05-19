@@ -2774,7 +2774,10 @@ async def email_1099_to_contractor(entry_id: str, request: EmailRequest):
             to_email=email,
             subject=subject,
             html_content=html_content,
-            attachments=attachments
+            attachments=attachments,
+            email_type="1099_nec",
+            recipient_name=entry.get("contractor_name"),
+            context={"year": entry.get("tax_year"), "entry_id": entry_id}
         )
         
         if result.get("status") == "error":

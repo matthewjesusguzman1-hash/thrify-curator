@@ -347,11 +347,13 @@ async def send_info_update_confirmation(
     html = build_email_template("Your Information Has Been Updated", content)
     
     # If email was changed, send to both old and new email
-    result = await send_email(to_email, "Thrifty Curator - Account Information Updated", html)
+    result = await send_email(to_email, "Thrifty Curator - Account Information Updated", html,
+                             email_type="info_update", recipient_name=full_name)
     
     # Also send to new email if it changed
     if new_email and new_email.lower() != to_email.lower():
-        await send_email(new_email, "Thrifty Curator - Account Information Updated", html)
+        await send_email(new_email, "Thrifty Curator - Account Information Updated", html,
+                        email_type="info_update", recipient_name=full_name)
     
     return result
 
@@ -426,7 +428,8 @@ async def send_approval_notification(
     
     subject = f"Thrifty Curator - Your Submission has been {status_text}"
     html = build_email_template(f"Submission {status_text}", content)
-    return await send_email(to_email, subject, html)
+    return await send_email(to_email, subject, html, email_type="submission_status", recipient_name=client_name,
+                           context={"status": status_text})
 
 
 async def send_test_email(to_email: str) -> dict:
@@ -459,7 +462,7 @@ async def send_test_email(to_email: str) -> dict:
     """
     
     html = build_email_template("Test Email - Configuration Verified", content)
-    return await send_email(to_email, "Thrifty Curator - Test Email", html)
+    return await send_email(to_email, "Thrifty Curator - Test Email", html, email_type="test_email")
 
 
 
@@ -1164,7 +1167,8 @@ async def send_interview_rescheduled_email(
     """
     
     html = build_email_template("Interview Rescheduled ✅", content)
-    return await send_email(to_email, f"Thrifty Curator - Interview Rescheduled to {format_date(new_date)}", html)
+    return await send_email(to_email, f"Thrifty Curator - Interview Rescheduled to {format_date(new_date)}", html,
+                           email_type="interview_rescheduled", recipient_name=applicant_name)
 
 
 async def send_admin_interview_cancelled_notification(
@@ -1220,7 +1224,8 @@ async def send_admin_interview_cancelled_notification(
     
     # Send to all admins
     for email in admin_emails:
-        await send_email(email, f"Interview Cancelled - {applicant_name}", html)
+        await send_email(email, f"Interview Cancelled - {applicant_name}", html,
+                        email_type="admin_notification", context={"type": "interview_cancelled", "applicant": applicant_name})
     
     return {"status": "success", "message": f"Notified {len(admin_emails)} admin(s)"}
 
@@ -1240,7 +1245,8 @@ async def send_direct_admin_email(to_email: str, subject: str, message: str, fro
     """
     
     html = build_email_template(subject, content)
-    return await send_email(to_email, subject, html)
+    return await send_email(to_email, subject, html, email_type="admin_custom_message", recipient_name=to_name,
+                           context={"from_name": from_name})
 
 
 

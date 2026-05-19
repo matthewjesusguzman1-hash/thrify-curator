@@ -35,6 +35,12 @@ const EMAIL_TYPE_LABELS = {
   rejection_post_interview: "Rejection (Post-Interview)",
   password_reset_admin: "Password Reset (Admin)",
   password_reset_request: "Password Reset Request",
+  submission_status: "Submission Status",
+  info_update: "Info Update",
+  admin_notification: "Admin Notification",
+  admin_custom_message: "Admin Message",
+  test_email: "Test Email",
+  "1099_nec": "1099-NEC Tax Form",
   general: "General",
 };
 
