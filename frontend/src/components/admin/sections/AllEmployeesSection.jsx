@@ -15,6 +15,7 @@ import {
   ChevronUp,
   CheckCheck,
   X,
+  XCircle,
   ArrowUpDown,
   ArrowUp,
   Trash2,
@@ -227,6 +228,32 @@ export default function AllEmployeesSection({
       onRefreshEmployees();
     } catch (error) {
       toast.error("Failed to approve W-9");
+    }
+  };
+
+  // Reject W-9
+  const handleRejectW9 = async (doc) => {
+    if (!selectedEmployee || !doc || !doc.id) return;
+    
+    const reason = window.prompt(
+      "Please provide a reason for rejection (this will be shown to the employee):",
+      "Please review and correct your W-9 form"
+    );
+    
+    if (reason === null) return; // User cancelled
+    
+    try {
+      await axios.post(
+        `${API}/admin/employees/${selectedEmployee.id}/w9/${doc.id}/reject`,
+        { reason: reason || "Please review and correct your W-9 form" },
+        getAuthHeader()
+      );
+      toast.success("W-9 returned for corrections");
+      // Refresh the list
+      handleOpenW9Modal(selectedEmployee);
+      onRefreshEmployees();
+    } catch (error) {
+      toast.error("Failed to reject W-9");
     }
   };
 
@@ -634,16 +661,28 @@ export default function AllEmployeesSection({
                             Preview
                           </Button>
                           {doc.status !== 'approved' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleApproveW9(doc)}
-                              className="flex-1 min-w-[80px] text-[#8B5CF6] border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/10 bg-transparent"
-                              data-testid={`approve-w9-${doc.id}`}
-                            >
-                              <CheckCheck className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleApproveW9(doc)}
+                                className="flex-1 min-w-[80px] text-green-400 border-green-400/30 hover:bg-green-400/10 bg-transparent"
+                                data-testid={`approve-w9-${doc.id}`}
+                              >
+                                <CheckCheck className="w-4 h-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRejectW9(doc)}
+                                className="flex-1 min-w-[80px] text-red-400 border-red-400/30 hover:bg-red-400/10 bg-transparent"
+                                data-testid={`reject-w9-${doc.id}`}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Deny
+                              </Button>
+                            </>
                           )}
                           <Button
                             variant="outline"

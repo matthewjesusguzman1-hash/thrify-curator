@@ -1,6 +1,7 @@
 """W-9 document management routes for admin dashboard."""
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import Response, RedirectResponse
+from pydantic import BaseModel
 from datetime import datetime, timezone
 import uuid
 import base64
@@ -250,6 +251,41 @@ async def approve_specific_w9(employee_id: str, doc_id: str, admin: dict = Depen
         )
     
     return {"message": "W-9 approved successfully"}
+
+
+class W9RejectRequest(BaseModel):
+    reason: str = "Please review and correct your W-9 form"
+
+
+@router.post("/employees/{employee_id}/w9/{doc_id}/reject")
+async def reject_specific_w9(employee_id: str, doc_id: str, reject_data: W9RejectRequest, admin: dict = Depends(get_admin_user)):
+    """Reject a specific W-9 document and request corrections."""
+    result = await db.w9_documents.update_one(
+        {"employee_id": employee_id, "id": doc_id},
+        {"$set": {
+            "status": "needs_correction",
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "reviewed_by": admin["id"],
+            "rejection_reason": reject_data.reason
+        }}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="W-9 document not found")
+    
+    # Update user's overall W-9 status if this is their latest submission
+    latest_doc = await db.w9_documents.find_one(
+        {"employee_id": employee_id},
+        {"_id": 0, "id": 1},
+        sort=[("uploaded_at", -1)]
+    )
+    if latest_doc and latest_doc.get("id") == doc_id:
+        await db.users.update_one(
+            {"id": employee_id},
+            {"$set": {"w9_status": "needs_correction"}}
+        )
+    
+    return {"message": "W-9 returned for corrections", "reason": reject_data.reason}
 
 
 @router.post("/employees/{employee_id}/w9/reject")

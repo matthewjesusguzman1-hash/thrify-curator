@@ -4,6 +4,7 @@ import {
   X,
   FileText,
   CheckCircle,
+  XCircle,
   Upload,
   Download,
   Trash2,
@@ -24,6 +25,7 @@ export default function W9ViewerModal({
   loading,
   fromPortal = false,
   onApproveDoc,
+  onRejectDoc,
   onDeleteDoc,
   onUploadW9,
   getAuthHeader
@@ -248,16 +250,26 @@ export default function W9ViewerModal({
           <div className="flex gap-2">
             {viewingW9 && (
               <>
-                {/* Only show Approve button when NOT from portal view */}
+                {/* Only show Approve/Deny buttons when NOT from portal view */}
                 {!fromPortal && viewingW9.status !== 'approved' && (
-                  <Button
-                    variant="outline"
-                    onClick={() => onApproveDoc(viewingW9.employeeId, viewingW9.docId)}
-                    className="text-green-600 border-green-300 hover:bg-green-50"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Approve
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => onApproveDoc(viewingW9.employeeId, viewingW9.docId)}
+                      className="text-green-600 border-green-300 hover:bg-green-50"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => onRejectDoc && onRejectDoc(viewingW9.employeeId, viewingW9.docId)}
+                      className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Deny
+                    </Button>
+                  </>
                 )}
                 {/* Only show Delete button when NOT from portal view */}
                 {!fromPortal && (
