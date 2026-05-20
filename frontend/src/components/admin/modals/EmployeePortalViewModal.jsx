@@ -397,52 +397,98 @@ export default function EmployeePortalViewModal({
                     )}
                   </div>
                   
-                  {/* W-9 Status and View Button */}
-                  {portalData.w9Status?.has_w9 ? (
-                    <>
-                      <div className="flex items-center justify-between p-4 bg-[#F9F6F7] rounded-xl">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                            portalData.w9Status.status === 'approved' 
-                              ? 'bg-green-100' 
-                              : portalData.w9Status.status === 'pending_review'
-                              ? 'bg-yellow-100'
-                              : 'bg-red-100'
-                          }`}>
-                            {portalData.w9Status.status === 'approved' ? (
-                              <CheckCircle className="w-5 h-5 text-green-600" />
-                            ) : portalData.w9Status.status === 'pending_review' ? (
-                              <Clock className="w-5 h-5 text-yellow-600" />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-red-600" />
+                  {/* W-9 Documents List - Matching Employee Dashboard Style */}
+                  {portalData.w9Status?.w9_documents && portalData.w9Status.w9_documents.filter(doc => doc && doc.id).length > 0 ? (
+                    <div className="space-y-3">
+                      {portalData.w9Status.w9_documents.filter(doc => doc && doc.id).map((doc, index) => {
+                        // Determine status styling
+                        const getStatusStyle = (status) => {
+                          switch(status) {
+                            case 'approved':
+                              return {
+                                bg: 'bg-green-50 border-green-200',
+                                icon: 'bg-green-100',
+                                iconColor: 'text-green-600',
+                                badge: 'bg-green-100 text-green-700',
+                                text: 'Approved'
+                              };
+                            case 'needs_correction':
+                              return {
+                                bg: 'bg-red-50 border-red-200',
+                                icon: 'bg-red-100',
+                                iconColor: 'text-red-600',
+                                badge: 'bg-red-100 text-red-700',
+                                text: 'Denied'
+                              };
+                            default:
+                              return {
+                                bg: 'bg-yellow-50 border-yellow-200',
+                                icon: 'bg-yellow-100',
+                                iconColor: 'text-yellow-600',
+                                badge: 'bg-yellow-100 text-yellow-700',
+                                text: 'Pending'
+                              };
+                          }
+                        };
+                        const statusStyle = getStatusStyle(doc.status);
+                        
+                        return (
+                          <div
+                            key={doc.id}
+                            className={`p-4 rounded-xl border ${statusStyle.bg}`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${statusStyle.icon}`}>
+                                  {doc.status === 'approved' ? (
+                                    <CheckCircle className={`w-5 h-5 ${statusStyle.iconColor}`} />
+                                  ) : doc.status === 'needs_correction' ? (
+                                    <XCircle className={`w-5 h-5 ${statusStyle.iconColor}`} />
+                                  ) : (
+                                    <Clock className={`w-5 h-5 ${statusStyle.iconColor}`} />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium text-[#333]">
+                                      {doc.filename || `W-9 #${index + 1}`}
+                                    </p>
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusStyle.badge}`}>
+                                      {statusStyle.text}
+                                    </span>
+                                  </div>
+                                  {doc.uploaded_at && (
+                                    <p className="text-xs text-[#888]">
+                                      Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onOpenW9Modal(employee.id, employee.name)}
+                                className="text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10"
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                            </div>
+                            
+                            {/* Show rejection reason if denied */}
+                            {doc.status === 'needs_correction' && doc.rejection_reason && (
+                              <div className="mt-3 p-3 bg-red-100 border border-red-200 rounded-lg">
+                                <p className="text-xs text-red-600 font-medium mb-1 flex items-center gap-1">
+                                  <XCircle className="w-3 h-3" />
+                                  Action Required
+                                </p>
+                                <p className="text-sm text-red-800">{doc.rejection_reason}</p>
+                              </div>
                             )}
                           </div>
-                          <div>
-                            <p className="font-medium text-[#333]">
-                              {portalData.w9Status.filename || 'W-9 Document'}
-                            </p>
-                            <p className="text-xs text-[#888]">
-                              Uploaded {new Date(portalData.w9Status.uploaded_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => onOpenW9Modal(employee.id, employee.name)}
-                          className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View
-                        </Button>
-                      </div>
-                      
-                      {/* Show rejection reason if denied */}
-                      {portalData.w9Status?.status === 'needs_correction' && portalData.w9Status?.rejection_reason && (
-                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-                          <p className="text-xs text-red-600 font-medium mb-1">Denial Reason:</p>
-                          <p className="text-sm text-red-800">{portalData.w9Status.rejection_reason}</p>
-                        </div>
-                      )}
-                    </>
+                        );
+                      })}
+                    </div>
                   ) : (
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
                       <div className="flex items-center gap-3">
