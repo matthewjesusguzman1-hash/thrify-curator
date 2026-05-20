@@ -253,7 +253,8 @@ export default function AllEmployeesSection({
       handleOpenW9Modal(selectedEmployee);
       onRefreshEmployees();
     } catch (error) {
-      toast.error("Failed to reject W-9");
+      console.error("W-9 reject error:", error.response?.data || error.message);
+      toast.error(error.response?.data?.detail || "Failed to reject W-9");
     }
   };
 
