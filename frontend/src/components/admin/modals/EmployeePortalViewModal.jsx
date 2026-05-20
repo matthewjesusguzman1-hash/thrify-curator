@@ -11,6 +11,7 @@ import {
   StopCircle,
   FileText,
   CheckCircle,
+  XCircle,
   Eye,
   Download
 } from "lucide-react";
@@ -390,7 +391,7 @@ export default function EmployeePortalViewModal({
                           : portalData.w9Status.status === 'pending_review'
                           ? 'Pending'
                           : portalData.w9Status.status === 'needs_correction'
-                          ? 'Needs Fix'
+                          ? 'Denied'
                           : 'Submitted'}
                       </span>
                     )}
@@ -398,40 +399,50 @@ export default function EmployeePortalViewModal({
                   
                   {/* W-9 Status and View Button */}
                   {portalData.w9Status?.has_w9 ? (
-                    <div className="flex items-center justify-between p-4 bg-[#F9F6F7] rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          portalData.w9Status.status === 'approved' 
-                            ? 'bg-green-100' 
-                            : portalData.w9Status.status === 'pending_review'
-                            ? 'bg-yellow-100'
-                            : 'bg-orange-100'
-                        }`}>
-                          {portalData.w9Status.status === 'approved' ? (
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                          ) : portalData.w9Status.status === 'pending_review' ? (
-                            <Clock className="w-5 h-5 text-yellow-600" />
-                          ) : (
-                            <FileText className="w-5 h-5 text-orange-600" />
-                          )}
+                    <>
+                      <div className="flex items-center justify-between p-4 bg-[#F9F6F7] rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            portalData.w9Status.status === 'approved' 
+                              ? 'bg-green-100' 
+                              : portalData.w9Status.status === 'pending_review'
+                              ? 'bg-yellow-100'
+                              : 'bg-red-100'
+                          }`}>
+                            {portalData.w9Status.status === 'approved' ? (
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                            ) : portalData.w9Status.status === 'pending_review' ? (
+                              <Clock className="w-5 h-5 text-yellow-600" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-600" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-[#333]">
+                              {portalData.w9Status.filename || 'W-9 Document'}
+                            </p>
+                            <p className="text-xs text-[#888]">
+                              Uploaded {new Date(portalData.w9Status.uploaded_at).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-[#333]">
-                            {portalData.w9Status.filename || 'W-9 Document'}
-                          </p>
-                          <p className="text-xs text-[#888]">
-                            Uploaded {new Date(portalData.w9Status.uploaded_at).toLocaleDateString()}
-                          </p>
-                        </div>
+                        <Button
+                          onClick={() => onOpenW9Modal(employee.id, employee.name)}
+                          className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View
+                        </Button>
                       </div>
-                      <Button
-                        onClick={() => onOpenW9Modal(employee.id, employee.name)}
-                        className="bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white"
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View
-                      </Button>
-                    </div>
+                      
+                      {/* Show rejection reason if denied */}
+                      {portalData.w9Status?.status === 'needs_correction' && portalData.w9Status?.rejection_reason && (
+                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                          <p className="text-xs text-red-600 font-medium mb-1">Denial Reason:</p>
+                          <p className="text-sm text-red-800">{portalData.w9Status.rejection_reason}</p>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
                       <div className="flex items-center gap-3">

@@ -1509,7 +1509,7 @@ export default function EmployeeDashboard() {
                               bg: 'bg-red-500/10 border-red-500/30',
                               icon: 'text-red-400',
                               badge: 'bg-red-500/20 text-red-400',
-                              text: 'Needs Correction'
+                              text: 'Denied'
                             };
                           default:
                             return {

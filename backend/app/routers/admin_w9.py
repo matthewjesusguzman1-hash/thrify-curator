@@ -76,6 +76,9 @@ async def get_w9_status(employee_id: str, admin: dict = Depends(get_admin_user))
     return {
         "has_w9": True,
         "status": latest.get("status", "submitted"),
+        "filename": latest.get("filename"),
+        "uploaded_at": latest.get("uploaded_at"),
+        "rejection_reason": latest.get("rejection_reason"),
         "total_documents": len(w9_docs),
         "w9_documents": w9_docs
     }
