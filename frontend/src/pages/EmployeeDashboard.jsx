@@ -1493,31 +1493,50 @@ export default function EmployeeDashboard() {
 
                 {w9Status?.w9_documents && w9Status.w9_documents.filter(doc => doc && doc.id).length > 0 ? (
                   <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-                    {w9Status.w9_documents.filter(doc => doc && doc.id).map((doc, index) => (
+                    {w9Status.w9_documents.filter(doc => doc && doc.id).map((doc, index) => {
+                      // Determine status colors and text
+                      const getStatusStyle = (status) => {
+                        switch(status) {
+                          case 'approved':
+                            return {
+                              bg: 'bg-[#00D4FF]/10 border-[#00D4FF]/30',
+                              icon: 'text-[#00D4FF]',
+                              badge: 'bg-[#00D4FF]/20 text-[#00D4FF]',
+                              text: 'Approved'
+                            };
+                          case 'needs_correction':
+                            return {
+                              bg: 'bg-red-500/10 border-red-500/30',
+                              icon: 'text-red-400',
+                              badge: 'bg-red-500/20 text-red-400',
+                              text: 'Needs Correction'
+                            };
+                          default:
+                            return {
+                              bg: 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30',
+                              icon: 'text-[#8B5CF6]',
+                              badge: 'bg-[#8B5CF6]/20 text-[#8B5CF6]',
+                              text: 'Pending Review'
+                            };
+                        }
+                      };
+                      const statusStyle = getStatusStyle(doc.status);
+                      
+                      return (
                       <div 
                         key={doc.id} 
-                        className={`p-4 rounded-xl border ${
-                          doc.status === 'approved' 
-                            ? 'bg-[#00D4FF]/10 border-[#00D4FF]/30' 
-                            : 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30'
-                        }`}
+                        className={`p-4 rounded-xl border ${statusStyle.bg}`}
                         data-testid={`w9-submission-${doc.id}`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <FileText className={`w-4 h-4 ${
-                                doc.status === 'approved' ? 'text-[#00D4FF]' : 'text-[#8B5CF6]'
-                              }`} />
+                              <FileText className={`w-4 h-4 ${statusStyle.icon}`} />
                               <span className="font-medium text-white truncate">
                                 {doc.filename || `W-9 #${index + 1}`}
                               </span>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                doc.status === 'approved' 
-                                  ? 'bg-[#00D4FF]/20 text-[#00D4FF]' 
-                                  : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
-                              }`}>
-                                {doc.status === 'approved' ? 'Approved' : 'Pending'}
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusStyle.badge}`}>
+                                {statusStyle.text}
                               </span>
                             </div>
                             <div className="flex items-center gap-3 text-xs text-white/50">
@@ -1528,6 +1547,35 @@ export default function EmployeeDashboard() {
                                 </span>
                               )}
                             </div>
+                            
+                            {/* Show rejection reason if status is needs_correction */}
+                            {doc.status === 'needs_correction' && doc.rejection_reason && (
+                              <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                <p className="text-xs text-red-300 font-medium mb-1 flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" />
+                                  Action Required
+                                </p>
+                                <p className="text-sm text-white/80">{doc.rejection_reason}</p>
+                                <p className="text-xs text-white/50 mt-2">
+                                  Please submit a corrected W-9 form using the button above.
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* Show generic message if needs correction but no reason */}
+                            {doc.status === 'needs_correction' && !doc.rejection_reason && (
+                              <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                <p className="text-xs text-red-300 font-medium mb-1 flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" />
+                                  Action Required
+                                </p>
+                                <p className="text-sm text-white/80">Your W-9 form needs to be corrected and resubmitted.</p>
+                                <p className="text-xs text-white/50 mt-2">
+                                  Please submit a corrected W-9 form using the button above.
+                                </p>
+                              </div>
+                            )}
+                            
                             {doc.notes && (
                               <div className="mt-2 p-2 bg-white/5 rounded-lg">
                                 <p className="text-xs text-white/60 flex items-start gap-1">
@@ -1568,7 +1616,7 @@ export default function EmployeeDashboard() {
                             <Eye className="w-4 h-4 mr-1" />
                             Preview
                           </Button>
-                          {/* Delete button - available for admins and for pending (non-approved) documents */}
+                          {/* Delete button - available for admins and for non-approved documents */}
                           {(user?.role === 'admin' || doc.status !== 'approved') && (
                             <Button
                               variant="outline"
@@ -1593,7 +1641,8 @@ export default function EmployeeDashboard() {
                           )}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-6 bg-white/5 rounded-xl border border-white/10">
