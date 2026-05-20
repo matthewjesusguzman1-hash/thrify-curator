@@ -604,33 +604,28 @@ export default function AllEmployeesSection({
                 ) : (
                   <div className="space-y-3">
                     {employeeW9Docs.map((doc, index) => {
-                      // Determine status styling
-                      const getStatusStyle = (status) => {
-                        switch(status) {
-                          case 'approved':
-                            return {
-                              bg: 'bg-[#00D4FF]/10 border-[#00D4FF]/30',
-                              icon: 'text-[#00D4FF]',
-                              badge: 'bg-[#00D4FF]/20 text-[#00D4FF]',
-                              text: 'Approved'
-                            };
-                          case 'needs_correction':
-                            return {
-                              bg: 'bg-red-500/10 border-red-500/30',
-                              icon: 'text-red-400',
-                              badge: 'bg-red-500/20 text-red-400',
-                              text: 'Denied'
-                            };
-                          default:
-                            return {
-                              bg: 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30',
-                              icon: 'text-[#8B5CF6]',
-                              badge: 'bg-[#8B5CF6]/20 text-[#8B5CF6]',
-                              text: 'Pending'
-                            };
+                      // Use pre-computed status styles for better performance
+                      const statusStyles = {
+                        approved: {
+                          bg: 'bg-[#00D4FF]/10 border-[#00D4FF]/30',
+                          icon: 'text-[#00D4FF]',
+                          badge: 'bg-[#00D4FF]/20 text-[#00D4FF]',
+                          text: 'Approved'
+                        },
+                        needs_correction: {
+                          bg: 'bg-red-500/10 border-red-500/30',
+                          icon: 'text-red-400',
+                          badge: 'bg-red-500/20 text-red-400',
+                          text: 'Denied'
+                        },
+                        default: {
+                          bg: 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30',
+                          icon: 'text-[#8B5CF6]',
+                          badge: 'bg-[#8B5CF6]/20 text-[#8B5CF6]',
+                          text: 'Pending'
                         }
                       };
-                      const statusStyle = getStatusStyle(doc.status);
+                      const statusStyle = statusStyles[doc.status] || statusStyles.default;
                       
                       return (
                       <div

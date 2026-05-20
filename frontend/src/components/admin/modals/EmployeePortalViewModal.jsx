@@ -401,36 +401,31 @@ export default function EmployeePortalViewModal({
                   {portalData.w9Status?.w9_documents && portalData.w9Status.w9_documents.filter(doc => doc && doc.id).length > 0 ? (
                     <div className="space-y-3">
                       {portalData.w9Status.w9_documents.filter(doc => doc && doc.id).map((doc, index) => {
-                        // Determine status styling
-                        const getStatusStyle = (status) => {
-                          switch(status) {
-                            case 'approved':
-                              return {
-                                bg: 'bg-green-50 border-green-200',
-                                icon: 'bg-green-100',
-                                iconColor: 'text-green-600',
-                                badge: 'bg-green-100 text-green-700',
-                                text: 'Approved'
-                              };
-                            case 'needs_correction':
-                              return {
-                                bg: 'bg-red-50 border-red-200',
-                                icon: 'bg-red-100',
-                                iconColor: 'text-red-600',
-                                badge: 'bg-red-100 text-red-700',
-                                text: 'Denied'
-                              };
-                            default:
-                              return {
-                                bg: 'bg-yellow-50 border-yellow-200',
-                                icon: 'bg-yellow-100',
-                                iconColor: 'text-yellow-600',
-                                badge: 'bg-yellow-100 text-yellow-700',
-                                text: 'Pending'
-                              };
+                        // Use pre-computed status styles for better performance
+                        const statusStyles = {
+                          approved: {
+                            bg: 'bg-green-50 border-green-200',
+                            icon: 'bg-green-100',
+                            iconColor: 'text-green-600',
+                            badge: 'bg-green-100 text-green-700',
+                            text: 'Approved'
+                          },
+                          needs_correction: {
+                            bg: 'bg-red-50 border-red-200',
+                            icon: 'bg-red-100',
+                            iconColor: 'text-red-600',
+                            badge: 'bg-red-100 text-red-700',
+                            text: 'Denied'
+                          },
+                          default: {
+                            bg: 'bg-yellow-50 border-yellow-200',
+                            icon: 'bg-yellow-100',
+                            iconColor: 'text-yellow-600',
+                            badge: 'bg-yellow-100 text-yellow-700',
+                            text: 'Pending'
                           }
                         };
-                        const statusStyle = getStatusStyle(doc.status);
+                        const statusStyle = statusStyles[doc.status] || statusStyles.default;
                         
                         return (
                           <div
