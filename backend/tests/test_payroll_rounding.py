@@ -1,28 +1,28 @@
 """
 Backend API Tests for Payroll Rounding Fix
-Tests that payroll reports use individually rounded shift hours for consistency
+Tests that payroll reports use round UP to minute for consistency
 
-The fix ensures: sum(rounded individual shift hours) == total displayed hours
-NOT: round(sum(raw hours))
+The fix ensures: 
+1. Sum raw hours per employee first
+2. Round UP the total to the next whole minute (benefits employee)
 
 Example at $20/hr:
-- Shift 1: 0.5083 hours (30 min 30 sec) -> rounds to 0.5 hours (30 min) = $10.00
-- Shift 2: 0.5083 hours (30 min 30 sec) -> rounds to 0.5 hours (30 min) = $10.00
-- Correct total: 0.5 + 0.5 = 1.0 hours = $20.00
-- Wrong total: round(1.0167) = 1.0167 hours = $20.33
+- 8h 19m 30s = 8.325 hours -> ceil(8.325 * 60) = 500 min = 8.333 hours = $166.67
+- 8h 19m 0s = 8.3167 hours -> ceil(8.3167 * 60) = 499 min = 8.3167 hours = $166.33
 """
 import pytest
 import requests
 import os
+import math
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://curator-app-3.preview.emergentagent.com')
 
 
-def round_hours_to_minute(decimal_hours: float) -> float:
-    """Python version of the backend rounding function for comparison"""
-    if decimal_hours is None or decimal_hours < 0:
+def round_hours_up_to_minute(decimal_hours: float) -> float:
+    """Python version of the backend rounding function - round UP to next minute"""
+    if decimal_hours is None or decimal_hours <= 0:
         return 0
-    total_minutes = round(decimal_hours * 60)
+    total_minutes = math.ceil(decimal_hours * 60)
     return total_minutes / 60
 
 
@@ -112,10 +112,13 @@ class TestShiftReportRounding:
             assert "total_hours" in summary, "Summary missing total_hours"
             assert "hourly_rate" in summary, "Summary missing hourly_rate"
     
-    def test_rounded_hours_matches_sum_of_individual_shifts(self, auth_headers):
+    def test_rounded_hours_uses_round_up_on_total(self, auth_headers):
         """
-        Test that rounded_hours equals sum of individually rounded shift hours
-        This is the key fix - each shift should be rounded, then summed
+        Test that rounded_hours in shift report uses round UP on individual shifts.
+        
+        Note: The shift report rounds each shift individually and sums them,
+        which is different from the payroll report that sums raw hours first
+        then rounds the total. This is intentional for detailed shift reporting.
         """
         response = requests.get(
             f"{BASE_URL}/api/admin/reports/shifts",
@@ -133,13 +136,14 @@ class TestShiftReportRounding:
             employee_entries[emp_name].append(entry)
         
         # For each employee, verify rounded_hours = sum of individually rounded shifts
+        # (shift report uses per-shift rounding for detailed reporting)
         for summary in data.get("summary", []):
             emp_name = summary.get("employee_name")
             entries = employee_entries.get(emp_name, [])
             
-            # Calculate sum of individually rounded hours
+            # Calculate sum of individually rounded hours (using round UP)
             sum_of_rounded = sum(
-                round_hours_to_minute(e.get("total_hours", 0) or 0) 
+                round_hours_up_to_minute(e.get("total_hours", 0) or 0) 
                 for e in entries
             )
             
@@ -161,7 +165,7 @@ class TestShiftReportRounding:
         
         for summary in data.get("summary", []):
             rounded_hours = summary.get("rounded_hours", 0)
-            hourly_rate = summary.get("hourly_rate", 15)
+            hourly_rate = summary.get("hourly_rate", 20)
             estimated_pay = summary.get("estimated_pay", 0)
             
             expected_pay = round(rounded_hours * hourly_rate, 2)
@@ -171,34 +175,34 @@ class TestShiftReportRounding:
 
 
 class TestRoundingLogic:
-    """Tests for the rounding logic itself"""
+    """Tests for the round UP rounding logic"""
     
-    def test_round_hours_to_minute_basic(self):
-        """Test basic rounding to nearest minute"""
-        # Python uses banker's rounding: round(0.5) = 0, round(1.5) = 2
-        # So 30 seconds (0.5 minutes) rounds to 0 minutes
+    def test_round_up_to_minute_basic(self):
+        """Test basic round UP to next minute"""
+        # Any fractional minute should round UP to next whole minute
         
-        # 31 seconds = 31/3600 hours = 0.5167 minutes -> rounds to 1 minute
+        # 31 seconds = 31/3600 hours = 0.5167 minutes -> ceil = 1 minute
         just_over_half_min = 31/3600
-        result = round_hours_to_minute(just_over_half_min)
+        result = round_hours_up_to_minute(just_over_half_min)
         expected = 1/60  # 1 minute in hours
-        assert abs(result - expected) < 0.0001, f"31 seconds should round to 1 minute, got {result}"
+        assert abs(result - expected) < 0.0001, f"31 seconds should round UP to 1 minute, got {result}"
         
-        # 25 seconds = 25/3600 hours = 0.417 minutes -> rounds to 0 minutes
+        # 25 seconds = 25/3600 hours = 0.417 minutes -> ceil = 1 minute (round UP!)
         under_half = 25/3600
-        assert round_hours_to_minute(under_half) == 0  # < 0.5 min -> 0 min
+        result = round_hours_up_to_minute(under_half)
+        assert abs(result - 1/60) < 0.0001, f"25 seconds should round UP to 1 minute"
         
-        # Exactly 1 minute
-        assert abs(round_hours_to_minute(1/60) - 1/60) < 0.0001
+        # Exactly 1 minute stays 1 minute
+        assert abs(round_hours_up_to_minute(1/60) - 1/60) < 0.0001
         
-        # Exactly 30 minutes
-        assert round_hours_to_minute(0.5) == 0.5
+        # Exactly 30 minutes stays 30 minutes
+        assert round_hours_up_to_minute(0.5) == 0.5
     
     def test_round_hours_1_minute_at_20_per_hour(self):
         """Test that 1 minute at $20/hr = $0.33"""
         # 1 minute = 1/60 hours
         one_minute = 1/60
-        rounded = round_hours_to_minute(one_minute)
+        rounded = round_hours_up_to_minute(one_minute)
         
         hourly_rate = 20
         pay = round(rounded * hourly_rate, 2)
@@ -209,9 +213,9 @@ class TestRoundingLogic:
     
     def test_round_handles_edge_cases(self):
         """Test rounding handles edge cases"""
-        assert round_hours_to_minute(0) == 0
-        assert round_hours_to_minute(-1) == 0
-        assert round_hours_to_minute(None) == 0
+        assert round_hours_up_to_minute(0) == 0
+        assert round_hours_up_to_minute(-1) == 0
+        assert round_hours_up_to_minute(None) == 0
 
 
 class TestCSVExportRounding:
@@ -341,18 +345,17 @@ class TestPayrollReportJSON:
             assert "total_hours" in emp, "Employee missing total_hours"
             assert "hourly_rate" in emp, "Employee missing hourly_rate"
             
-            # Verify gross_wages is properly calculated (rounded)
-            # Note: backend uses round_hours_to_minute for pay calculation
+            # Verify gross_wages is properly calculated (round UP)
             hours = emp.get("total_hours", 0)
-            rate = emp.get("hourly_rate", 15)
+            rate = emp.get("hourly_rate", 20)
             gross = emp.get("gross_wages", 0)
             
-            # Calculate expected using rounded hours
-            rounded_hours = round_hours_to_minute(hours)
+            # Calculate expected using round UP
+            rounded_hours = round_hours_up_to_minute(hours)
             expected_gross = round(rounded_hours * rate, 2)
             
             assert abs(gross - expected_gross) < 0.01, \
-                f"gross_wages ({gross}) doesn't match rounded calculation ({expected_gross})"
+                f"gross_wages ({gross}) doesn't match round UP calculation ({expected_gross})"
 
 
 class TestPayrollConsistency:

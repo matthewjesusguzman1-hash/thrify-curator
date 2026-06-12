@@ -1,0 +1,73 @@
+{
+  "summary": "Payroll rounding fix verified. The fix changes rounding from banker's rounding (round to nearest) to round UP (ceiling) to always benefit employees. Admin payroll report and Employee payroll history now use consistent rounding logic: sum raw hours per employee first, then round UP the total to the nearest minute.",
+  "mode": "update",
+  "baseline_commit": "d39c799a02cac9e30d0cd9fa010a5d5cfab93558",
+  "head_commit": "4c319924ac0f785130dec4271467034b71fa4a87",
+  "specs_created": [
+    "/app/backend/tests/test_payroll_rounding_fix.py"
+  ],
+  "specs_updated": [
+    "/app/backend/tests/test_payroll_rounding.py"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_payroll_rounding_fix.py",
+    "/app/backend/tests/test_payroll_rounding.py",
+    "/app/test_reports/pytest/payroll_rounding_fix.xml"
+  ],
+  "regression_results": {
+    "total_specs": 28,
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_payroll_rounding_fix.py",
+    "/app/backend/tests/test_payroll_rounding.py",
+    "/app/.emergent/testing_baseline_commit"
+  ],
+  "test_results": {
+    "backend": "100% (28/28 passed)",
+    "frontend": "N/A - no frontend changes in this fix"
+  },
+  "seed_data_creation": "Used existing time entries and employees for testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Payroll rounding fix has been verified. The key changes are: 1) round_hours_to_minute() now uses math.ceil() instead of round() to always round UP to the next whole minute, 2) Payroll report sums raw hours per employee first, then rounds UP the total, 3) Employee payroll history uses the same logic. The shift report (/api/admin/reports/shifts) still rounds each shift individually and sums them, which is intentional for detailed shift-by-shift reporting.",
+  "features_verified": {
+    "payroll_report_rounding": {
+      "status": "PASS",
+      "details": "POST /api/admin/payroll/report uses round UP (ceil) on total hours per employee"
+    },
+    "employee_payroll_history_rounding": {
+      "status": "PASS",
+      "details": "GET /api/admin/payroll/employee/{id}/history uses round UP (ceil) on total hours per period"
+    },
+    "consistency_between_endpoints": {
+      "status": "PASS",
+      "details": "Admin payroll report and Employee payroll history return consistent amounts for the same time entries"
+    },
+    "round_up_logic": {
+      "status": "PASS",
+      "details": "8h 19m 30s rounds UP to 8h 20m = $166.67, 8h 19m 0s stays at 8h 19m = $166.33"
+    }
+  },
+  "backend_tests": {
+    "test_round_up_basic_cases": "PASS",
+    "test_round_up_vs_old_round": "PASS",
+    "test_8h_19m_30s_example": "PASS",
+    "test_8h_19m_exactly": "PASS",
+    "test_edge_cases": "PASS",
+    "test_payroll_report_uses_round_up": "PASS",
+    "test_payroll_report_has_formatted_hours": "PASS",
+    "test_employee_history_uses_round_up": "PASS",
+    "test_payroll_summary_structure": "PASS",
+    "test_payroll_summary_amounts_rounded": "PASS",
+    "test_admin_and_employee_amounts_consistent": "PASS",
+    "test_pdf_report_generates": "PASS",
+    "test_pdf_report_different_periods": "PASS"
+  },
+  "rca_of_issue": "The original bug was caused by using Python's round() function which uses banker's rounding (round to nearest, ties to even). This meant fractional seconds could round DOWN, causing employees to be paid slightly less. The fix changes to math.ceil() which always rounds UP to the next whole minute, ensuring employees are always paid for the full minute worked. Example: 8h 19m 30s (8.325 hours) now rounds UP to 8h 20m (8.333 hours) = $166.67 instead of potentially rounding down to 8h 19m = $166.33."
+}

@@ -328,7 +328,9 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     if hourly_rate is None:
         hourly_rate = default_rate
     
-    estimated_pay = round(period_hours * hourly_rate, 2)
+    # Round hours UP to nearest minute for pay calculation (benefits employee)
+    rounded_hours = round_up_to_minute(period_hours * 3600)  # Convert to seconds then round up
+    estimated_pay = round(rounded_hours * hourly_rate, 2)
     
     # Get YTD actual payments from payment records for this employee
     year_start = today.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)

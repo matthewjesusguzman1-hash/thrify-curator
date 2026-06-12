@@ -85,9 +85,10 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     ).to_list(100)
     
     # Calculate wages owed
-    current_period_amount = 0
+    # Strategy: Sum raw hours per employee first, then round UP the total (benefits employee)
     current_period_hours = 0
-    prev_period_amount = 0
+    prev_period_hours_by_emp = {}  # {emp_id: (hours, rate)}
+    current_period_hours_by_emp = {}  # {emp_id: (hours, rate)}
     
     for emp in employees:
         emp_id = emp.get("id")
@@ -95,6 +96,9 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             continue
         hourly_rate = emp.get("hourly_rate") or default_rate
         entries = await db.time_entries.find({"user_id": emp_id}, {"_id": 0}).to_list(1000)
+        
+        emp_current_hours = 0
+        emp_prev_hours = 0
         
         for e in entries:
             hours = e.get("total_hours", 0) or 0
@@ -104,12 +108,28 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             try:
                 clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
                 if period_start <= clock_in_dt <= period_end:
-                    current_period_hours += hours
-                    current_period_amount += (math.ceil(hours * 60) / 60) * hourly_rate
+                    emp_current_hours += hours
                 elif prev_period_start <= clock_in_dt <= prev_period_end:
-                    prev_period_amount += (math.ceil(hours * 60) / 60) * hourly_rate
+                    emp_prev_hours += hours
             except:
                 continue
+        
+        if emp_current_hours > 0:
+            current_period_hours_by_emp[emp_id] = (emp_current_hours, hourly_rate)
+            current_period_hours += emp_current_hours
+        if emp_prev_hours > 0:
+            prev_period_hours_by_emp[emp_id] = (emp_prev_hours, hourly_rate)
+    
+    # Now calculate amounts by rounding UP each employee's TOTAL hours (not individual entries)
+    current_period_amount = 0
+    for emp_id, (hours, rate) in current_period_hours_by_emp.items():
+        rounded_hours = round_hours_up_to_minute(hours)
+        current_period_amount += rounded_hours * rate
+    
+    prev_period_amount = 0
+    for emp_id, (hours, rate) in prev_period_hours_by_emp.items():
+        rounded_hours = round_hours_up_to_minute(hours)
+        prev_period_amount += rounded_hours * rate
     
     # Get ALL employee payment records (no name filtering here - count everything)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
