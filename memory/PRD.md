@@ -64,6 +64,7 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - My Account section for consignors
 - Admin password management
 - Push notifications for admin alerts
+- **Payroll rounding fix (2026-06-12)**: Updated payroll calculation to always round UP to the nearest minute (benefits employee). Admin payroll module now matches Employee portal calculations.
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)
