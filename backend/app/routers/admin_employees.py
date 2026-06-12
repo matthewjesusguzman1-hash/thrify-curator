@@ -8,6 +8,7 @@ from app.database import db
 from app.dependencies import get_admin_user
 from app.models.user import UserResponse, CreateEmployee, UpdateEmployeeDetails, UpdateEmployeeRate
 from app.services.email_service import send_new_employee_welcome_email
+from app.services.time_helpers import round_hours_to_minute
 
 router = APIRouter(prefix="/admin", tags=["Admin - Employees"])
 
@@ -357,7 +358,7 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
         "total_hours": round(total_hours, 2),
         "total_shifts": total_shifts,
         "hourly_rate": hourly_rate,
-        "estimated_pay": round(period_hours * hourly_rate, 2),
+        "estimated_pay": round(round_hours_to_minute(period_hours) * hourly_rate, 2),
         "period_start": period_start.isoformat(),
         "period_end": period_end.isoformat(),
         "is_previous_period": is_previous_period,

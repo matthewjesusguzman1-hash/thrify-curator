@@ -78,20 +78,20 @@ async def get_shift_report(
             summary[emp_id] = {
                 "employee_name": item["employee_name"],
                 "total_hours": 0,
-                "rounded_hours": 0,
                 "total_shifts": 0,
                 "hourly_rate": item["hourly_rate"],
                 "estimated_pay": 0
             }
         raw_hours = item["total_hours"] or 0
         summary[emp_id]["total_hours"] += raw_hours
-        rounded_shift = round_hours_to_minute(raw_hours)
-        summary[emp_id]["rounded_hours"] += rounded_shift
         summary[emp_id]["total_shifts"] += 1
-        summary[emp_id]["estimated_pay"] += rounded_shift * item["hourly_rate"]
     
+    # Calculate pay by rounding the TOTAL hours (not each shift individually)
+    # This ensures rounding always benefits the employee
     for emp_id in summary:
-        summary[emp_id]["estimated_pay"] = round(summary[emp_id]["estimated_pay"], 2)
+        rounded_total = round_hours_to_minute(summary[emp_id]["total_hours"])
+        summary[emp_id]["rounded_hours"] = rounded_total
+        summary[emp_id]["estimated_pay"] = round(rounded_total * summary[emp_id]["hourly_rate"], 2)
     
     return {
         "start_date": start_date,

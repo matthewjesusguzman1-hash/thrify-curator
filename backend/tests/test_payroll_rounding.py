@@ -141,18 +141,19 @@ class TestShiftReportRounding:
             emp_name = summary.get("employee_name")
             entries = employee_entries.get(emp_name, [])
             
-            # Calculate sum of individually rounded hours (using round UP)
-            sum_of_rounded = sum(
-                round_hours_up_to_minute(e.get("total_hours", 0) or 0) 
+            # Calculate sum of RAW hours, then round UP the total (new behavior)
+            sum_of_raw = sum(
+                e.get("total_hours", 0) or 0 
                 for e in entries
             )
+            expected_rounded = round_hours_up_to_minute(sum_of_raw)
             
             # Compare with reported rounded_hours
             reported_rounded = summary.get("rounded_hours", 0)
             
             # Should match within floating point tolerance
-            assert abs(sum_of_rounded - reported_rounded) < 0.001, \
-                f"For {emp_name}: sum of rounded shifts ({sum_of_rounded}) != reported rounded_hours ({reported_rounded})"
+            assert abs(expected_rounded - reported_rounded) < 0.001, \
+                f"For {emp_name}: expected rounded total ({expected_rounded}) != reported rounded_hours ({reported_rounded})"
     
     def test_estimated_pay_uses_rounded_hours(self, auth_headers):
         """Test that estimated_pay = rounded_hours * hourly_rate"""
