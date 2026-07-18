@@ -14,6 +14,49 @@ const isNative = () => {
 // LocalStorage key to persist tracking state
 const TRACKING_STATE_KEY = 'gps_tracking_active';
 
+// Simple Kalman filter for GPS smoothing
+class GPSKalmanFilter {
+  constructor() {
+    this.Q = 0.00001; // Process noise - how much we trust the model
+    this.R = 0.01;    // Measurement noise - how much we trust GPS readings
+    this.P = 1;       // Estimation error
+    this.X = null;    // State (lat/lng)
+    this.K = 0;       // Kalman gain
+  }
+
+  filter(lat, lng, accuracy) {
+    // Adjust R based on reported accuracy (higher accuracy = lower noise)
+    const dynamicR = accuracy ? Math.max(0.001, accuracy / 1000) : this.R;
+    
+    if (this.X === null) {
+      // First reading - initialize state
+      this.X = { lat, lng };
+      this.P = 1;
+      return { lat, lng };
+    }
+
+    // Prediction step (assume stationary model for simplicity)
+    this.P = this.P + this.Q;
+
+    // Update step
+    this.K = this.P / (this.P + dynamicR);
+    
+    this.X = {
+      lat: this.X.lat + this.K * (lat - this.X.lat),
+      lng: this.X.lng + this.K * (lng - this.X.lng)
+    };
+    
+    this.P = (1 - this.K) * this.P;
+
+    return { lat: this.X.lat, lng: this.X.lng };
+  }
+
+  reset() {
+    this.X = null;
+    this.P = 1;
+  }
+}
+
 // Save tracking state to localStorage for recovery
 const saveTrackingState = (isActive, tripId = null) => {
   try {
@@ -126,6 +169,7 @@ export default function useGPSTracking() {
   const [totalMiles, setTotalMiles] = useState(0);
   const [locationCount, setLocationCount] = useState(0);
   const [error, setError] = useState(null);
+  const [gpsQuality, setGpsQuality] = useState('unknown'); // 'excellent', 'good', 'fair', 'poor'
   
   // Use refs to track state that shouldn't trigger re-renders
   const locationsRef = useRef([]);
@@ -135,6 +179,9 @@ export default function useGPSTracking() {
   const isTrackingRef = useRef(false);
   const isPausedRef = useRef(false);
   const bgGeoReadyRef = useRef(false);
+  const kalmanFilterRef = useRef(new GPSKalmanFilter());
+  const lastValidSpeedRef = useRef(0); // Track last known valid speed
+  const consecutiveRejectsRef = useRef(0); // Track consecutive rejected points
 
   // Update refs when state changes
   useEffect(() => {
@@ -145,7 +192,7 @@ export default function useGPSTracking() {
     isPausedRef.current = isPaused;
   }, [isPaused]);
 
-  // Process incoming location
+  // Process incoming location with improved filtering
   const processLocation = useCallback((location) => {
     console.log('[GPS] Raw location received:', JSON.stringify(location).substring(0, 500));
     
@@ -161,28 +208,57 @@ export default function useGPSTracking() {
     const lng = location.coords?.longitude ?? location.longitude;
     const acc = location.coords?.accuracy ?? location.accuracy;
     const spd = location.coords?.speed ?? location.speed;
-    
-    const point = {
-      latitude: lat,
-      longitude: lng,
-      accuracy: acc,
-      speed: spd,
-      timestamp: location.timestamp || location.time || new Date().toISOString()
-    };
-
-    console.log('[GPS] Parsed point:', point.latitude, point.longitude, 'accuracy:', point.accuracy);
+    const timestamp = location.timestamp || location.time || new Date().toISOString();
 
     // Basic validation
-    if (typeof point.latitude !== 'number' || typeof point.longitude !== 'number') {
-      console.log('[GPS] Invalid location - lat/lng not numbers:', typeof point.latitude, typeof point.longitude);
+    if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+      console.log('[GPS] Invalid location - lat/lng not valid numbers');
       return;
     }
 
-    // Skip low accuracy readings (> 20 meters is unreliable for navigation)
-    if (point.accuracy && point.accuracy > 20) {
-      console.log('[GPS] Skipping low accuracy reading:', point.accuracy, 'meters (threshold: 20m)');
+    // Dynamic accuracy threshold based on movement and history
+    // Be more lenient if we have few points or haven't moved much
+    const pointCount = locationsRef.current.length;
+    let accuracyThreshold = 30; // Default: 30 meters
+    
+    if (pointCount < 5) {
+      accuracyThreshold = 50; // More lenient at start
+    } else if (lastValidSpeedRef.current > 10) {
+      accuracyThreshold = 40; // More lenient when moving fast (highway)
+    } else if (consecutiveRejectsRef.current > 5) {
+      accuracyThreshold = 60; // Accept lower quality if we've been rejecting too many
+      console.log('[GPS] Relaxing accuracy threshold due to consecutive rejects');
+    }
+
+    // Update GPS quality indicator
+    if (acc) {
+      if (acc <= 5) setGpsQuality('excellent');
+      else if (acc <= 15) setGpsQuality('good');
+      else if (acc <= 30) setGpsQuality('fair');
+      else setGpsQuality('poor');
+    }
+
+    // Skip very low accuracy readings
+    if (acc && acc > accuracyThreshold) {
+      console.log(`[GPS] Skipping low accuracy: ${acc}m (threshold: ${accuracyThreshold}m)`);
+      consecutiveRejectsRef.current++;
       return;
     }
+
+    // Apply Kalman filter to smooth GPS noise
+    const filtered = kalmanFilterRef.current.filter(lat, lng, acc);
+    
+    const point = {
+      latitude: filtered.lat,
+      longitude: filtered.lng,
+      rawLatitude: lat,
+      rawLongitude: lng,
+      accuracy: acc,
+      speed: spd,
+      timestamp: timestamp
+    };
+
+    console.log('[GPS] Filtered point:', point.latitude.toFixed(6), point.longitude.toFixed(6), 'accuracy:', point.accuracy);
 
     // Store first point as start point for bounce-back detection
     if (!startPointRef.current && locationsRef.current.length === 0) {
@@ -190,12 +266,16 @@ export default function useGPSTracking() {
       console.log('[GPS] Start point recorded:', point.latitude, point.longitude);
     }
 
-    // Check for bounce-back to earlier position
-    if (isBounceBack(point, locationsRef.current, startPointRef.current)) {
+    // Check for bounce-back to earlier position (less aggressive)
+    if (pointCount > 10 && isBounceBack(point, locationsRef.current, startPointRef.current)) {
       console.log('[GPS] REJECTED - bounce-back detected, not adding to route');
+      consecutiveRejectsRef.current++;
       return;
     }
 
+    // Reset consecutive rejects on successful point
+    consecutiveRejectsRef.current = 0;
+    
     console.log('[GPS] Point accepted! Updating state...');
     
     // Update current location
@@ -210,17 +290,46 @@ export default function useGPSTracking() {
         point.longitude
       );
 
-      // Filter out extreme GPS jumps (> 2 miles in one reading)
-      // Reduced minimum from 0.01 to 0.002 miles (~10 feet) to capture more road curves
-      // Only filter truly tiny jitter movements
-      if (distance > 0.002 && distance < 2.0) {
-        totalDistanceRef.current += distance;
-        setTotalMiles(totalDistanceRef.current);
-        console.log('Added distance:', distance.toFixed(4), 'Total:', totalDistanceRef.current.toFixed(4));
-      } else if (distance >= 2.0) {
-        console.log('Skipping extreme GPS jump:', distance.toFixed(4), 'miles');
+      // Calculate time difference for speed-based validation
+      let timeDiffSeconds = 0;
+      try {
+        const prevTime = new Date(lastLocationRef.current.timestamp).getTime();
+        const currTime = new Date(point.timestamp).getTime();
+        timeDiffSeconds = (currTime - prevTime) / 1000;
+      } catch (e) {
+        timeDiffSeconds = 5; // Default assumption
+      }
+
+      // Calculate implied speed (mph)
+      const impliedSpeed = timeDiffSeconds > 0 ? (distance / timeDiffSeconds) * 3600 : 0;
+      
+      // Update last valid speed if reasonable
+      if (impliedSpeed > 0 && impliedSpeed < 100) {
+        lastValidSpeedRef.current = impliedSpeed;
+      }
+
+      // More nuanced distance filtering:
+      // - Minimum: 0.001 miles (~5 feet) to filter GPS jitter
+      // - Maximum: Based on time and realistic max speed (100 mph)
+      const maxReasonableDistance = timeDiffSeconds > 0 ? (100 * timeDiffSeconds / 3600) : 0.5;
+      const minDistance = 0.001; // ~5 feet
+
+      if (distance >= minDistance && distance <= maxReasonableDistance) {
+        // Additional sanity check: if implied speed is way higher than last known speed
+        // and we're not accelerating from stop, might be GPS jump
+        const speedJumpRatio = lastValidSpeedRef.current > 5 ? impliedSpeed / lastValidSpeedRef.current : 1;
+        
+        if (speedJumpRatio > 3 && impliedSpeed > 60) {
+          console.log(`[GPS] Skipping suspicious speed jump: ${impliedSpeed.toFixed(1)}mph vs last ${lastValidSpeedRef.current.toFixed(1)}mph`);
+        } else {
+          totalDistanceRef.current += distance;
+          setTotalMiles(totalDistanceRef.current);
+          console.log(`[GPS] Added ${distance.toFixed(4)}mi at ${impliedSpeed.toFixed(1)}mph. Total: ${totalDistanceRef.current.toFixed(4)}mi`);
+        }
+      } else if (distance > maxReasonableDistance) {
+        console.log(`[GPS] Skipping unrealistic jump: ${distance.toFixed(4)}mi in ${timeDiffSeconds.toFixed(1)}s (max: ${maxReasonableDistance.toFixed(4)}mi)`);
       } else {
-        console.log('Skipping tiny movement (GPS jitter):', distance.toFixed(4), 'miles');
+        console.log(`[GPS] Skipping tiny movement (GPS jitter): ${distance.toFixed(4)}mi`);
       }
     }
 
@@ -368,11 +477,15 @@ export default function useGPSTracking() {
       lastLocationRef.current = null;
       startPointRef.current = null; // Reset start point for bounce-back detection
       totalDistanceRef.current = 0;
+      lastValidSpeedRef.current = 0;
+      consecutiveRejectsRef.current = 0;
+      kalmanFilterRef.current.reset(); // Reset Kalman filter
       setTotalMiles(0);
       setLocationCount(0);
       setCurrentLocation(null); // Also reset current location display
       setIsPaused(false);
       isPausedRef.current = false;
+      setGpsQuality('unknown');
 
       // Try to use Transistorsoft Background Geolocation on native platforms
       if (isNative()) {
@@ -564,6 +677,9 @@ export default function useGPSTracking() {
     lastLocationRef.current = null;
     startPointRef.current = null;
     totalDistanceRef.current = 0;
+    lastValidSpeedRef.current = 0;
+    consecutiveRejectsRef.current = 0;
+    kalmanFilterRef.current.reset();
     setTotalMiles(0);
     setLocationCount(0);
     setCurrentLocation(null);
@@ -572,6 +688,7 @@ export default function useGPSTracking() {
     isTrackingRef.current = false;
     setIsPaused(false);
     isPausedRef.current = false;
+    setGpsQuality('unknown');
     
     console.log('[GPS] FORCE STOP complete - all GPS tracking stopped');
   }, []);
@@ -622,6 +739,7 @@ export default function useGPSTracking() {
     locationCount,
     error,
     isNative: isNative(),
+    gpsQuality, // NEW: 'excellent', 'good', 'fair', 'poor', 'unknown'
     
     // Actions
     startTracking,

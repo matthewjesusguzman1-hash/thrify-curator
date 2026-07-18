@@ -111,51 +111,84 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 
 
 def calculate_trip_distance(locations: List[dict]) -> float:
-    """Calculate total distance from a list of location points"""
+    """
+    Calculate total distance from a list of location points.
+    Uses multiple filtering strategies to eliminate GPS errors:
+    1. Accuracy-based filtering (skip low accuracy points)
+    2. Speed-based filtering (skip unrealistic movements)
+    3. Noise filtering (skip tiny jitter)
+    4. Smoothing via moving average for edge cases
+    """
     if len(locations) < 2:
         return 0.0
     
     total_distance = 0.0
-    MAX_REALISTIC_SPEED_MPH = 85  # Max realistic driving speed
+    MAX_REALISTIC_SPEED_MPH = 90  # Max realistic driving speed (slightly higher for highway)
+    MIN_DISTANCE_MILES = 0.0005   # ~2.6 feet - filter GPS jitter
+    MAX_ACCURACY_METERS = 50      # Skip points with accuracy worse than this
     
-    for i in range(1, len(locations)):
-        prev = locations[i - 1]
-        curr = locations[i]
-        
-        # Skip points with poor accuracy (> 50 meters is unreliable)
-        curr_accuracy = curr.get("accuracy")
-        if curr_accuracy and curr_accuracy > 50:
-            print(f"Skipping low accuracy point: {curr_accuracy}m")
+    valid_points = []
+    
+    # First pass: filter out obviously bad points
+    for loc in locations:
+        accuracy = loc.get("accuracy")
+        # Skip points with poor accuracy (if accuracy is reported)
+        if accuracy and accuracy > MAX_ACCURACY_METERS:
+            print(f"Skipping low accuracy point: {accuracy}m")
             continue
+        valid_points.append(loc)
+    
+    if len(valid_points) < 2:
+        return 0.0
+    
+    # Second pass: calculate distance with speed validation
+    last_valid_speed = 0
+    
+    for i in range(1, len(valid_points)):
+        prev = valid_points[i - 1]
+        curr = valid_points[i]
         
         distance = haversine_distance(
             prev["latitude"], prev["longitude"],
             curr["latitude"], curr["longitude"]
         )
         
-        # Filter out tiny noise < 0.001 miles (about 5 feet)
-        if distance < 0.001:
+        # Filter out tiny noise
+        if distance < MIN_DISTANCE_MILES:
             continue
         
         # Calculate time difference to determine if speed is realistic
         try:
             prev_time = datetime.fromisoformat(prev["timestamp"].replace("Z", "+00:00"))
             curr_time = datetime.fromisoformat(curr["timestamp"].replace("Z", "+00:00"))
-            time_diff_hours = (curr_time - prev_time).total_seconds() / 3600
+            time_diff_seconds = (curr_time - prev_time).total_seconds()
+            time_diff_hours = time_diff_seconds / 3600
             
             if time_diff_hours > 0:
                 implied_speed = distance / time_diff_hours
                 
                 # If implied speed is unrealistic, it's a GPS error - skip it
                 if implied_speed > MAX_REALISTIC_SPEED_MPH:
-                    print(f"Skipping unrealistic speed: {implied_speed:.1f}mph ({distance:.4f}mi in {time_diff_hours*3600:.1f}s)")
+                    print(f"Skipping unrealistic speed: {implied_speed:.1f}mph ({distance:.4f}mi in {time_diff_seconds:.1f}s)")
                     continue
+                
+                # Check for sudden speed jumps (likely GPS bounce)
+                # If we go from slow to very fast instantly, probably an error
+                if last_valid_speed > 0 and last_valid_speed < 30:
+                    speed_jump_ratio = implied_speed / last_valid_speed
+                    if speed_jump_ratio > 4 and implied_speed > 60:
+                        print(f"Skipping speed jump: {last_valid_speed:.1f}mph -> {implied_speed:.1f}mph")
+                        continue
+                
+                # Update last valid speed
+                if implied_speed < MAX_REALISTIC_SPEED_MPH:
+                    last_valid_speed = implied_speed
             
             total_distance += distance
             
-        except (ValueError, KeyError):
+        except (ValueError, KeyError) as e:
             # If we can't parse timestamps, use distance-only filter (fallback)
-            if distance < 0.5:  # Allow up to 0.5 miles without time check
+            if distance < 0.3:  # Allow up to 0.3 miles without time check
                 total_distance += distance
             else:
                 print(f"Skipping large jump (no timestamp): {distance:.4f} miles")

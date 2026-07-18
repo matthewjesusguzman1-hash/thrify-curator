@@ -64,7 +64,14 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - My Account section for consignors
 - Admin password management
 - Push notifications for admin alerts
-- **Payroll rounding fix (2026-06-12)**: Updated payroll calculation to always round UP to the nearest minute (benefits employee). Admin payroll module now matches Employee portal calculations.
+- **Payroll rounding fix (2026-06-12)**: Updated payroll calculation to always round UP to the nearest minute (benefits employee). Fixed floating-point precision bug that caused 1-minute discrepancies. Admin payroll, Employee Dashboard, and Employee Portal View now all match.
+- **GPS Mileage Tracking improvements (2026-06-12)**:
+  - Added Kalman filter for GPS smoothing (reduces noise)
+  - Dynamic accuracy thresholds based on movement speed and conditions
+  - Better bounce-back detection (less aggressive, smarter)
+  - Speed-based validation to catch GPS jumps
+  - GPS quality indicator in UI (Excellent/Good/Fair/Poor)
+  - Backend improvements with multi-pass filtering
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)

@@ -1311,6 +1311,27 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                         </div>
                       </div>
                       
+                      {/* GPS Quality Indicator */}
+                      {gpsTracker?.gpsQuality && gpsTracker.gpsQuality !== 'unknown' && (
+                        <div className="mb-3 flex items-center justify-center gap-2 text-xs">
+                          <span className="text-gray-500">GPS Signal:</span>
+                          <span className={`font-medium flex items-center gap-1 ${
+                            gpsTracker.gpsQuality === 'excellent' ? 'text-green-600' :
+                            gpsTracker.gpsQuality === 'good' ? 'text-green-500' :
+                            gpsTracker.gpsQuality === 'fair' ? 'text-amber-500' :
+                            'text-red-500'
+                          }`}>
+                            <span className={`w-2 h-2 rounded-full ${
+                              gpsTracker.gpsQuality === 'excellent' ? 'bg-green-500' :
+                              gpsTracker.gpsQuality === 'good' ? 'bg-green-400' :
+                              gpsTracker.gpsQuality === 'fair' ? 'bg-amber-400' :
+                              'bg-red-400'
+                            }`} />
+                            {gpsTracker.gpsQuality.charAt(0).toUpperCase() + gpsTracker.gpsQuality.slice(1)}
+                          </span>
+                        </div>
+                      )}
+                      
                       {/* Live Map During Tracking */}
                       {(trackingStatus === "tracking" || trackingStatus === "paused") && (
                         <div className="mt-3">
