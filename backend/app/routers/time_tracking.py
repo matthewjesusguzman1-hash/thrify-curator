@@ -55,11 +55,15 @@ def round_up_to_minute(seconds: float) -> float:
     """Convert seconds to hours, rounded UP to the next whole minute.
     This ensures employees are always paid for the full minute worked.
     Example: 1 hour 20 minutes 1 second = 1 hour 21 minutes (1.35 hours)
+    
+    Uses rounding to handle floating-point precision issues before ceiling.
     """
     if seconds <= 0:
         return 0
-    # Convert to minutes and round UP (ceiling)
-    total_minutes = math.ceil(seconds / 60)
+    # Round to 6 decimal places first to handle floating-point precision
+    minutes_raw = round(seconds / 60, 6)
+    # Then apply ceiling to get next whole minute
+    total_minutes = math.ceil(minutes_raw)
     # Convert back to decimal hours
     return total_minutes / 60
 

@@ -16,8 +16,10 @@ export function roundHoursToMinute(decimalHours) {
   if (decimalHours === null || decimalHours === undefined || isNaN(decimalHours) || decimalHours <= 0) {
     return 0;
   }
-  // Round UP (ceiling) to next minute
-  const totalMinutes = Math.ceil(decimalHours * 60);
+  // Round to 6 decimal places first to handle floating-point precision issues
+  // Then apply ceiling to get next whole minute
+  const minutesRaw = Math.round(decimalHours * 60 * 1000000) / 1000000;
+  const totalMinutes = Math.ceil(minutesRaw);
   return totalMinutes / 60;
 }
 
@@ -32,8 +34,10 @@ export function formatHoursToHMS(decimalHours) {
     return "0h 0m";
   }
   
-  // Round UP to next minute (ceiling)
-  const totalMinutes = Math.ceil(decimalHours * 60);
+  // Round to 6 decimal places first to handle floating-point precision issues
+  // Then apply ceiling to get next whole minute
+  const minutesRaw = Math.round(decimalHours * 60 * 1000000) / 1000000;
+  const totalMinutes = Math.ceil(minutesRaw);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   
