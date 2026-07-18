@@ -244,14 +244,14 @@ export default function EmployeePortalViewModal({
                     </div>
                     <div className="bg-[#F5F0FF] rounded-xl p-4 text-center">
                       <DollarSign className="w-6 h-6 text-[#8B5CF6] mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-[#333]">${(roundHoursToMinute(portalData.summary?.period_hours || 0) * (portalData.summary?.hourly_rate || 15)).toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-[#333]">${(portalData.summary?.estimated_pay || 0).toFixed(2)}</p>
                       <p className="text-xs text-[#888]">Est. Pay</p>
                     </div>
                   </div>
                   <div className="mt-4 pt-4 border-t border-[#eee] text-center text-sm text-[#888]">
-                    Rate: <span className="font-medium text-[#333]">${portalData.summary?.hourly_rate?.toFixed(2) || '15.00'}/hr</span>
+                    Rate: <span className="font-medium text-[#333]">${portalData.summary?.hourly_rate?.toFixed(2) || '20.00'}/hr</span>
                     <span className="mx-2">•</span>
-                    {formatHoursToHMS(portalData.summary?.period_hours)} × ${portalData.summary?.hourly_rate?.toFixed(2) || '15.00'} = ${(roundHoursToMinute(portalData.summary?.period_hours || 0) * (portalData.summary?.hourly_rate || 15)).toFixed(2)}
+                    {formatHoursToHMS(portalData.summary?.period_hours)} × ${portalData.summary?.hourly_rate?.toFixed(2) || '20.00'} = ${(portalData.summary?.estimated_pay || 0).toFixed(2)}
                   </div>
                   {/* YTD Paid */}
                   {portalData.summary?.ytd_paid > 0 && (

@@ -1208,7 +1208,7 @@ export default function EmployeeDashboard() {
                 <div className="bg-gradient-to-br from-[#FF1493]/10 to-[#FF1493]/5 rounded-xl p-3 sm:p-4 text-center">
                   <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF1493] mx-auto mb-1 sm:mb-2" />
                   <p className="text-sm sm:text-2xl font-bold text-[#1A1A2E]" data-testid="estimated-pay">
-                    {formatCurrency(roundHoursToMinute(summary.period_hours) * summary.hourly_rate)}
+                    {formatCurrency(summary.estimated_pay)}
                   </p>
                   <p className="text-[10px] sm:text-xs text-gray-500">Est. Pay</p>
                 </div>
