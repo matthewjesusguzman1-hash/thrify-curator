@@ -262,14 +262,18 @@ async def generate_video_task(module_id: str, prompt: str):
         if video_bytes:
             video_gen.save_video(video_bytes, output_path)
             
-            # Update status to complete
-            await db.training_video_status.update_one(
-                {"module_id": module_id},
-                {"$set": {
-                    "status": "complete",
-                    "completed_at": datetime.now(timezone.utc).isoformat()
-                }}
-            )
+            # Update status to complete - use sync update to ensure it completes
+            try:
+                await db.training_video_status.update_one(
+                    {"module_id": module_id},
+                    {"$set": {
+                        "status": "complete",
+                        "completed_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                print(f"[Training] Video generation complete for {module_id}")
+            except Exception as status_error:
+                print(f"[Training] Failed to update status for {module_id}: {status_error}")
         else:
             raise Exception("Video generation returned no data")
             
@@ -514,9 +518,24 @@ async def cancel_video_generation(
     if not module:
         raise HTTPException(status_code=404, detail="Module not found")
     
-    # Check if currently generating
+    # Check current status
     status_doc = await db.training_video_status.find_one({"module_id": module_id})
-    if not status_doc or status_doc.get("status") != "generating":
+    
+    # Allow cancel if generating, or if stuck for more than 20 minutes
+    can_cancel = False
+    if status_doc:
+        if status_doc.get("status") == "generating":
+            can_cancel = True
+        # Also allow force-cancel if started more than 20 minutes ago (stuck)
+        elif status_doc.get("started_at"):
+            try:
+                started = datetime.fromisoformat(status_doc["started_at"].replace("Z", "+00:00"))
+                if (datetime.now(timezone.utc) - started).total_seconds() > 1200:  # 20 minutes
+                    can_cancel = True
+            except:
+                pass
+    
+    if not can_cancel:
         raise HTTPException(status_code=400, detail="No generation in progress for this module")
     
     # Update status to cancelled
@@ -532,6 +551,25 @@ async def cancel_video_generation(
     return {
         "success": True,
         "message": f"Cancelled generation for '{module['title']}'. You can now start a new generation."
+    }
+
+
+@router.post("/reset-status/{module_id}")
+async def reset_generation_status(
+    module_id: str,
+    admin: dict = Depends(get_admin_user)
+):
+    """Force reset the generation status for a module (admin only) - use when stuck"""
+    module = await get_module_by_id(module_id)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    
+    # Delete the status document entirely so it can be regenerated fresh
+    await db.training_video_status.delete_one({"module_id": module_id})
+    
+    return {
+        "success": True,
+        "message": f"Reset status for '{module['title']}'. You can now generate the video again."
     }
 
 

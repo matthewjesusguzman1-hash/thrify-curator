@@ -193,6 +193,18 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
     }
   };
 
+  // Reset stuck generation status (admin only)
+  const resetGenerationStatus = async (moduleId) => {
+    try {
+      await axios.post(`${API}/training/reset-status/${moduleId}`, {}, getAuthHeader());
+      toast.success("Status reset. You can now regenerate the video.");
+      fetchData();
+    } catch (error) {
+      console.error("Failed to reset status:", error);
+      toast.error(error.response?.data?.detail || "Failed to reset status");
+    }
+  };
+
   // Delete video (admin only)
   const deleteVideo = async (moduleId) => {
     if (!window.confirm("Are you sure you want to delete this video? You'll need to regenerate it.")) {
@@ -698,7 +710,8 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
         {modules.map((module, index) => {
           const Icon = MODULE_ICONS[module.id] || BookOpen;
           const isCompleted = progress.completed_modules.includes(module.id);
-          const isGenerating = module.generation_status === "generating" || generatingVideos[module.id];
+          // Only show "generating" if video doesn't exist yet - if video exists, generation completed
+          const isGenerating = (module.generation_status === "generating" || generatingVideos[module.id]) && !module.video_exists;
           
           return (
             <motion.div
@@ -737,22 +750,56 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                   {/* Video Status */}
                   <div className="flex items-center gap-2">
                     {isGenerating ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="flex items-center gap-1 text-amber-600 text-sm">
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Generating...
                         </span>
                         {isAdmin && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs text-red-600 hover:bg-red-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cancelGeneration(module.id);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs text-amber-600 hover:bg-amber-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                resetGenerationStatus(module.id);
+                              }}
+                              title="Use if stuck for more than 10 minutes"
+                            >
+                              Reset
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    ) : module.generation_status === "failed" ? (
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-red-600 text-sm">
+                          <AlertCircle className="w-4 h-4" />
+                          Failed
+                        </span>
+                        {isAdmin && (
                           <Button
                             size="sm"
-                            variant="ghost"
-                            className="h-6 px-2 text-xs text-red-600 hover:bg-red-50"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
                             onClick={(e) => {
                               e.stopPropagation();
-                              cancelGeneration(module.id);
+                              generateVideo(module.id);
                             }}
                           >
-                            Cancel
+                            Retry
                           </Button>
                         )}
                       </div>
