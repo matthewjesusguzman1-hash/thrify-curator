@@ -496,6 +496,37 @@ async def update_module_prompt(
     }
 
 
+@router.post("/cancel-generation/{module_id}")
+async def cancel_video_generation(
+    module_id: str,
+    admin: dict = Depends(get_admin_user)
+):
+    """Cancel a video generation in progress (admin only)"""
+    module = await get_module_by_id(module_id)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    
+    # Check if currently generating
+    status_doc = await db.training_video_status.find_one({"module_id": module_id})
+    if not status_doc or status_doc.get("status") != "generating":
+        raise HTTPException(status_code=400, detail="No generation in progress for this module")
+    
+    # Update status to cancelled
+    await db.training_video_status.update_one(
+        {"module_id": module_id},
+        {"$set": {
+            "status": "cancelled",
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
+            "cancelled_by": admin.get("email", "admin")
+        }}
+    )
+    
+    return {
+        "success": True,
+        "message": f"Cancelled generation for '{module['title']}'. You can now start a new generation."
+    }
+
+
 # ============ MODULE CRUD OPERATIONS ============
 
 @router.post("/module")

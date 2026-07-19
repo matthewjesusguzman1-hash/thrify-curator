@@ -163,6 +163,18 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
     }
   };
 
+  // Cancel video generation (admin only)
+  const cancelGeneration = async (moduleId) => {
+    try {
+      await axios.post(`${API}/training/cancel-generation/${moduleId}`, {}, getAuthHeader());
+      toast.success("Generation cancelled. You can start over now.");
+      fetchData();
+    } catch (error) {
+      console.error("Failed to cancel generation:", error);
+      toast.error(error.response?.data?.detail || "Failed to cancel generation");
+    }
+  };
+
   // Delete video (admin only)
   const deleteVideo = async (moduleId) => {
     if (!window.confirm("Are you sure you want to delete this video? You'll need to regenerate it.")) {
@@ -673,10 +685,25 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                   {/* Video Status */}
                   <div className="flex items-center gap-2">
                     {isGenerating ? (
-                      <span className="flex items-center gap-1 text-amber-600 text-sm">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Generating...
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-amber-600 text-sm">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Generating...
+                        </span>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-xs text-red-600 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelGeneration(module.id);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
                     ) : module.video_exists ? (
                       <span className="flex items-center gap-1 text-green-600 text-sm">
                         <Video className="w-4 h-4" />
