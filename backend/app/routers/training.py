@@ -309,6 +309,12 @@ async def generate_training_video(
     if status_doc and status_doc.get("status") == "generating":
         raise HTTPException(status_code=400, detail="Video is already being generated")
     
+    # Delete any existing video file first (so we don't serve stale content)
+    video_path = os.path.join(VIDEOS_DIR, f"{request.module_id}.mp4")
+    if os.path.exists(video_path):
+        os.remove(video_path)
+        print(f"[Training] Deleted old video for {request.module_id}")
+    
     # Get the prompt from module
     prompt = module.get("video_prompt", "")
     if not prompt:
