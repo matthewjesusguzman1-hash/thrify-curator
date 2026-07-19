@@ -30,7 +30,8 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
-  Users
+  Users,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -173,6 +174,22 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
     } catch (error) {
       console.error("Failed to cancel generation:", error);
       toast.error(error.response?.data?.detail || "Failed to cancel generation");
+    }
+  };
+
+  // Cleanup duplicate modules (admin only)
+  const cleanupDuplicates = async () => {
+    try {
+      const res = await axios.post(`${API}/training/cleanup-duplicates`, {}, getAuthHeader());
+      if (res.data.duplicates_removed > 0) {
+        toast.success(`Removed ${res.data.duplicates_removed} duplicate module(s)`);
+        fetchData();
+      } else {
+        toast.info("No duplicate modules found");
+      }
+    } catch (error) {
+      console.error("Failed to cleanup duplicates:", error);
+      toast.error(error.response?.data?.detail || "Failed to cleanup duplicates");
     }
   };
 
@@ -456,6 +473,15 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Push Updates to Employees
+            </Button>
+            <Button 
+              onClick={cleanupDuplicates}
+              variant="secondary"
+              size="sm"
+              className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-100"
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              Fix Duplicates
             </Button>
           </div>
         )}

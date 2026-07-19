@@ -160,7 +160,15 @@ async def get_all_modules() -> List[dict]:
             await db.training_modules.insert_one(module_data)
         modules = await db.training_modules.find({}, {"_id": 0}).sort("order", 1).to_list(100)
     
-    return modules
+    # Deduplicate modules by ID (keep first occurrence based on order)
+    seen_ids = set()
+    unique_modules = []
+    for module in modules:
+        if module.get("id") not in seen_ids:
+            seen_ids.add(module.get("id"))
+            unique_modules.append(module)
+    
+    return unique_modules
 
 
 async def get_module_by_id(module_id: str) -> Optional[dict]:
@@ -738,3 +746,33 @@ async def get_all_employee_progress(admin: dict = Depends(get_admin_user)):
         })
     
     return {"employees": result, "total_modules": total_modules}
+
+
+
+@router.post("/cleanup-duplicates")
+async def cleanup_duplicate_modules(admin: dict = Depends(get_admin_user)):
+    """Remove duplicate training modules from the database (admin only)"""
+    # Get all modules including duplicates
+    all_modules = await db.training_modules.find({}).sort("order", 1).to_list(500)
+    
+    seen_ids = set()
+    duplicates_removed = 0
+    kept_modules = []
+    
+    for module in all_modules:
+        module_id = module.get("id")
+        if module_id in seen_ids:
+            # This is a duplicate - delete it
+            await db.training_modules.delete_one({"_id": module["_id"]})
+            duplicates_removed += 1
+        else:
+            seen_ids.add(module_id)
+            kept_modules.append(module_id)
+    
+    return {
+        "success": True,
+        "message": f"Cleaned up {duplicates_removed} duplicate module(s)",
+        "duplicates_removed": duplicates_removed,
+        "modules_kept": len(kept_modules),
+        "module_ids": kept_modules
+    }
