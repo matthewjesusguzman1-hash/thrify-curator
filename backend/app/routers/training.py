@@ -250,9 +250,12 @@ async def generate_video_task(module_id: str, prompt: str):
         
         output_path = os.path.join(VIDEOS_DIR, f"{module_id}.mp4")
         
-        # Generate 12-second video in landscape format (max supported duration)
+        # Add animation style instruction to the prompt
+        animated_prompt = f"Create an animated, cartoon-style training video. Use bright colors, smooth animations, and a friendly professional aesthetic. {prompt}"
+        
+        # Generate 12-second animated video in landscape format (max supported duration)
         video_bytes = video_gen.text_to_video(
-            prompt=prompt,
+            prompt=animated_prompt,
             model="sora-2",
             size="1280x720",
             duration=12,
