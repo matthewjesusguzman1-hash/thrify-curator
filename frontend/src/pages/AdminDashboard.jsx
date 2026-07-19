@@ -56,7 +56,8 @@ import {
   Play,
   Pause,
   Square,
-  Car
+  Car,
+  GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,6 +86,7 @@ import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
 import RejectionHistorySection from "@/components/admin/sections/RejectionHistorySection";
 import EmailLogsSection from "@/components/admin/sections/EmailLogsSection";
+import TrainingSection from "@/components/admin/sections/TrainingSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
@@ -3564,6 +3566,22 @@ export default function AdminDashboard() {
               {/* Email Logs Section */}
               <div data-testid="email-logs-section">
                 <EmailLogsSection getAuthHeader={getAuthHeader} />
+              </div>
+              
+              {/* Employee Training Section - Video generation & progress tracking */}
+              <div data-testid="training-management-section">
+                <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                  <div className="p-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
+                    <h3 className="text-lg font-bold flex items-center gap-2">
+                      <GraduationCap className="w-5 h-5" />
+                      Training Management
+                    </h3>
+                    <p className="text-purple-100 text-sm">Generate videos & track employee progress</p>
+                  </div>
+                  <div className="p-4">
+                    <TrainingSection getAuthHeader={getAuthHeader} isAdmin={true} />
+                  </div>
+                </div>
               </div>
             </DashboardGroup>
 
