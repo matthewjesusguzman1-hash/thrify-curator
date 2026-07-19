@@ -250,8 +250,8 @@ async def generate_video_task(module_id: str, prompt: str):
         
         output_path = os.path.join(VIDEOS_DIR, f"{module_id}.mp4")
         
-        # Add animation style instruction to the prompt
-        animated_prompt = f"Create an animated, cartoon-style training video. Use bright colors, smooth animations, and a friendly professional aesthetic. {prompt}"
+        # Add animation style instruction to the prompt - be very explicit about full animation
+        animated_prompt = f"Create a fully animated 2D cartoon video, similar to explainer videos or Pixar-style animation. NO live action footage, NO real people, NO realistic video. Use cartoon characters, illustrated backgrounds, and smooth 2D/3D animation throughout. The content should show: {prompt}"
         
         # Generate 12-second animated video in landscape format (max supported duration)
         video_bytes = video_gen.text_to_video(
