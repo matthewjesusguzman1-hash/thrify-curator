@@ -1,10 +1,11 @@
 """
 Employee Training Module
 Handles training video generation and progress tracking
+Fully editable from admin interface
 """
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
@@ -20,13 +21,14 @@ router = APIRouter(prefix="/training", tags=["Training"])
 VIDEOS_DIR = "/app/backend/uploads/training_videos"
 os.makedirs(VIDEOS_DIR, exist_ok=True)
 
-# Training modules based on the resale instructions
-TRAINING_MODULES = [
+# Default training modules (used to seed DB if empty)
+DEFAULT_TRAINING_MODULES = [
     {
         "id": "prep-item",
         "title": "Step 1: Prep Item",
         "description": "Learn how to prepare items for photography",
-        "duration": "~30 seconds",
+        "category": "Photo Training",
+        "order": 1,
         "points": [
             "Put item on hanger",
             "Check carefully for flaws (holes, stains, snags)",
@@ -39,7 +41,8 @@ TRAINING_MODULES = [
         "id": "photos",
         "title": "Step 2: Photos (Square Mode)",
         "description": "Master the 6-photo sequence for listings",
-        "duration": "~30 seconds",
+        "category": "Photo Training",
+        "order": 2,
         "points": [
             "1. Front view",
             "2. Close-up (details/flaws)",
@@ -55,7 +58,8 @@ TRAINING_MODULES = [
         "id": "measurements",
         "title": "Step 3: Measurements",
         "description": "Using Vendoo to record accurate measurements",
-        "duration": "~30 seconds",
+        "category": "Photo Training",
+        "order": 3,
         "points": [
             "Open Vendoo app",
             "Tap + ITEM → Start with Template",
@@ -68,7 +72,8 @@ TRAINING_MODULES = [
         "id": "photos-description",
         "title": "Step 4: Add Photos & Description",
         "description": "Upload photos and document everything",
-        "duration": "~30 seconds",
+        "category": "Photo Training",
+        "order": 4,
         "points": [
             "Upload all 6 photos in order",
             "Add measurements to description",
@@ -81,7 +86,8 @@ TRAINING_MODULES = [
         "id": "sku-cost",
         "title": "Step 5: SKU + Cost",
         "description": "Assign SKU numbers and record costs",
-        "duration": "~30 seconds",
+        "category": "Photo Training",
+        "order": 5,
         "points": [
             "Add next SKU number in sequence",
             "Cost of goods rules:",
@@ -94,7 +100,8 @@ TRAINING_MODULES = [
         "id": "bag-store",
         "title": "Step 6: Bag & Store",
         "description": "Proper storage for inventory",
-        "duration": "~30 seconds",
+        "category": "Photo Training",
+        "order": 6,
         "points": [
             "Fold neatly",
             "Place in poly mailer (fill bag as much as possible)",
@@ -121,30 +128,61 @@ class UpdatePromptRequest(BaseModel):
     prompt: str
 
 
+class CreateModuleRequest(BaseModel):
+    title: str
+    description: str
+    category: str = "General"
+    points: List[str] = []
+    video_prompt: str = ""
+
+
+class UpdateModuleRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    points: Optional[List[str]] = None
+    video_prompt: Optional[str] = None
+    order: Optional[int] = None
+
+
+async def get_all_modules() -> List[dict]:
+    """Get all training modules from DB, seeding defaults if empty"""
+    modules = await db.training_modules.find({}, {"_id": 0}).sort("order", 1).to_list(100)
+    
+    # If no modules in DB, seed with defaults
+    if not modules:
+        for module in DEFAULT_TRAINING_MODULES:
+            module_data = {
+                **module,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "is_default": True
+            }
+            await db.training_modules.insert_one(module_data)
+        modules = await db.training_modules.find({}, {"_id": 0}).sort("order", 1).to_list(100)
+    
+    return modules
+
+
+async def get_module_by_id(module_id: str) -> Optional[dict]:
+    """Get a specific module by ID"""
+    return await db.training_modules.find_one({"id": module_id}, {"_id": 0})
+
+
 async def get_module_prompt(module_id: str) -> str:
-    """Get the prompt for a module - checks DB for custom prompt first, falls back to default"""
-    # Check for custom prompt in DB
-    custom = await db.training_custom_prompts.find_one(
-        {"module_id": module_id},
-        {"_id": 0}
-    )
-    if custom and custom.get("prompt"):
-        return custom["prompt"]
-    
-    # Fall back to default prompt
-    for module in TRAINING_MODULES:
-        if module["id"] == module_id:
-            return module["video_prompt"]
-    
+    """Get the prompt for a module from DB"""
+    module = await get_module_by_id(module_id)
+    if module:
+        return module.get("video_prompt", "")
     return ""
 
 
 @router.get("/modules")
 async def get_training_modules(user: dict = Depends(get_current_user)):
     """Get all training modules with their video status"""
+    modules = await get_all_modules()
     modules_with_status = []
     
-    for module in TRAINING_MODULES:
+    for module in modules:
         video_path = os.path.join(VIDEOS_DIR, f"{module['id']}.mp4")
         video_exists = os.path.exists(video_path)
         
@@ -154,19 +192,8 @@ async def get_training_modules(user: dict = Depends(get_current_user)):
             {"_id": 0}
         )
         
-        # Check for custom prompt
-        custom_prompt = await db.training_custom_prompts.find_one(
-            {"module_id": module["id"]},
-            {"_id": 0}
-        )
-        
-        current_prompt = custom_prompt.get("prompt") if custom_prompt else module["video_prompt"]
-        
         modules_with_status.append({
             **module,
-            "video_prompt": current_prompt,  # Use custom if exists
-            "default_prompt": module["video_prompt"],  # Always include default
-            "has_custom_prompt": custom_prompt is not None,
             "video_url": f"/api/training/video/{module['id']}" if video_exists else None,
             "video_exists": video_exists,
             "generation_status": status_doc.get("status") if status_doc else None,
@@ -257,8 +284,8 @@ async def generate_training_video(
     admin: dict = Depends(get_admin_user)
 ):
     """Start generating a training video (admin only)"""
-    # Find the module
-    module = next((m for m in TRAINING_MODULES if m["id"] == request.module_id), None)
+    # Find the module in DB
+    module = await get_module_by_id(request.module_id)
     if not module:
         raise HTTPException(status_code=404, detail="Module not found")
     
@@ -267,8 +294,10 @@ async def generate_training_video(
     if status_doc and status_doc.get("status") == "generating":
         raise HTTPException(status_code=400, detail="Video is already being generated")
     
-    # Get the prompt (custom or default)
-    prompt = await get_module_prompt(request.module_id)
+    # Get the prompt from module
+    prompt = module.get("video_prompt", "")
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Module has no video prompt")
     
     # Start background generation
     background_tasks.add_task(generate_video_task, request.module_id, prompt)
@@ -286,10 +315,11 @@ async def generate_all_videos(
     admin: dict = Depends(get_admin_user)
 ):
     """Generate all training videos (admin only)"""
+    modules = await get_all_modules()
     started = []
     skipped = []
     
-    for module in TRAINING_MODULES:
+    for module in modules:
         video_path = os.path.join(VIDEOS_DIR, f"{module['id']}.mp4")
         
         # Skip if video already exists
@@ -321,18 +351,20 @@ async def get_user_progress(
     admin: dict = Depends(get_admin_user)
 ):
     """Get training progress for a specific user (admin only)"""
+    modules = await get_all_modules()
     progress = await db.training_progress.find(
         {"user_id": user_id},
         {"_id": 0}
     ).to_list(100)
     
     completed_modules = [p["module_id"] for p in progress if p.get("completed")]
+    total_modules = len(modules)
     
     return {
         "user_id": user_id,
         "completed_modules": completed_modules,
-        "total_modules": len(TRAINING_MODULES),
-        "completion_percentage": round(len(completed_modules) / len(TRAINING_MODULES) * 100, 1)
+        "total_modules": total_modules,
+        "completion_percentage": round(len(completed_modules) / total_modules * 100, 1) if total_modules > 0 else 0
     }
 
 
@@ -340,6 +372,7 @@ async def get_user_progress(
 async def get_my_progress(user: dict = Depends(get_current_user)):
     """Get current user's training progress"""
     user_id = user.get("id") or user.get("email")
+    modules = await get_all_modules()
     
     progress = await db.training_progress.find(
         {"user_id": user_id},
@@ -347,12 +380,13 @@ async def get_my_progress(user: dict = Depends(get_current_user)):
     ).to_list(100)
     
     completed_modules = [p["module_id"] for p in progress if p.get("completed")]
+    total_modules = len(modules)
     
     return {
         "completed_modules": completed_modules,
-        "total_modules": len(TRAINING_MODULES),
-        "completion_percentage": round(len(completed_modules) / len(TRAINING_MODULES) * 100, 1),
-        "is_complete": len(completed_modules) >= len(TRAINING_MODULES)
+        "total_modules": total_modules,
+        "completion_percentage": round(len(completed_modules) / total_modules * 100, 1) if total_modules > 0 else 0,
+        "is_complete": len(completed_modules) >= total_modules
     }
 
 
@@ -379,12 +413,13 @@ async def mark_module_complete(
 @router.get("/generation-status")
 async def get_generation_status(admin: dict = Depends(get_admin_user)):
     """Get status of all video generations (admin only)"""
+    modules = await get_all_modules()
     statuses = await db.training_video_status.find({}, {"_id": 0}).to_list(100)
     
     status_map = {s["module_id"]: s for s in statuses}
     
     result = []
-    for module in TRAINING_MODULES:
+    for module in modules:
         video_path = os.path.join(VIDEOS_DIR, f"{module['id']}.mp4")
         status = status_map.get(module["id"], {})
         
@@ -409,7 +444,7 @@ async def delete_training_video(
 ):
     """Delete a training video (admin only)"""
     # Verify module exists
-    module = next((m for m in TRAINING_MODULES if m["id"] == module_id), None)
+    module = await get_module_by_id(module_id)
     if not module:
         raise HTTPException(status_code=404, detail="Module not found")
     
@@ -438,21 +473,20 @@ async def update_module_prompt(
 ):
     """Update the video prompt for a module (admin only)"""
     # Verify module exists
-    module = next((m for m in TRAINING_MODULES if m["id"] == module_id), None)
+    module = await get_module_by_id(module_id)
     if not module:
         raise HTTPException(status_code=404, detail="Module not found")
     
     if not request.prompt or not request.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
     
-    # Save custom prompt to DB
-    await db.training_custom_prompts.update_one(
-        {"module_id": module_id},
+    # Update prompt directly in the module
+    await db.training_modules.update_one(
+        {"id": module_id},
         {"$set": {
-            "prompt": request.prompt.strip(),
+            "video_prompt": request.prompt.strip(),
             "updated_at": datetime.now(timezone.utc).isoformat()
-        }},
-        upsert=True
+        }}
     )
     
     return {
@@ -462,22 +496,133 @@ async def update_module_prompt(
     }
 
 
-@router.delete("/prompt/{module_id}")
-async def reset_module_prompt(
-    module_id: str,
+# ============ MODULE CRUD OPERATIONS ============
+
+@router.post("/module")
+async def create_module(
+    request: CreateModuleRequest,
     admin: dict = Depends(get_admin_user)
 ):
-    """Reset a module's prompt back to default (admin only)"""
-    # Verify module exists
-    module = next((m for m in TRAINING_MODULES if m["id"] == module_id), None)
-    if not module:
-        raise HTTPException(status_code=404, detail="Module not found")
+    """Create a new training module (admin only)"""
+    # Generate unique ID
+    module_id = str(uuid.uuid4())[:8]
     
-    # Delete custom prompt from DB
-    await db.training_custom_prompts.delete_one({"module_id": module_id})
+    # Get current max order
+    modules = await get_all_modules()
+    max_order = max([m.get("order", 0) for m in modules], default=0)
+    
+    new_module = {
+        "id": module_id,
+        "title": request.title,
+        "description": request.description,
+        "category": request.category,
+        "order": max_order + 1,
+        "points": request.points,
+        "video_prompt": request.video_prompt,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "is_default": False
+    }
+    
+    await db.training_modules.insert_one(new_module)
     
     return {
         "success": True,
-        "message": f"Reset prompt for '{module['title']}' to default",
-        "prompt": module["video_prompt"]
+        "message": f"Created module '{request.title}'",
+        "module": {k: v for k, v in new_module.items() if k != "_id"}
     }
+
+
+@router.put("/module/{module_id}")
+async def update_module(
+    module_id: str,
+    request: UpdateModuleRequest,
+    admin: dict = Depends(get_admin_user)
+):
+    """Update an existing training module (admin only)"""
+    module = await get_module_by_id(module_id)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    
+    # Build update dict with only provided fields
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if request.title is not None:
+        update_data["title"] = request.title
+    if request.description is not None:
+        update_data["description"] = request.description
+    if request.category is not None:
+        update_data["category"] = request.category
+    if request.points is not None:
+        update_data["points"] = request.points
+    if request.video_prompt is not None:
+        update_data["video_prompt"] = request.video_prompt
+    if request.order is not None:
+        update_data["order"] = request.order
+    
+    await db.training_modules.update_one(
+        {"id": module_id},
+        {"$set": update_data}
+    )
+    
+    return {
+        "success": True,
+        "message": f"Updated module '{module['title']}'"
+    }
+
+
+@router.delete("/module/{module_id}")
+async def delete_module(
+    module_id: str,
+    admin: dict = Depends(get_admin_user)
+):
+    """Delete a training module (admin only)"""
+    module = await get_module_by_id(module_id)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    
+    # Delete the module
+    await db.training_modules.delete_one({"id": module_id})
+    
+    # Also delete its video if exists
+    video_path = os.path.join(VIDEOS_DIR, f"{module_id}.mp4")
+    if os.path.exists(video_path):
+        os.remove(video_path)
+    
+    # Clean up related data
+    await db.training_video_status.delete_one({"module_id": module_id})
+    await db.training_progress.delete_many({"module_id": module_id})
+    
+    return {
+        "success": True,
+        "message": f"Deleted module '{module['title']}'"
+    }
+
+
+@router.post("/module/{module_id}/reorder")
+async def reorder_module(
+    module_id: str,
+    new_order: int,
+    admin: dict = Depends(get_admin_user)
+):
+    """Change the order of a module (admin only)"""
+    module = await get_module_by_id(module_id)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    
+    await db.training_modules.update_one(
+        {"id": module_id},
+        {"$set": {"order": new_order}}
+    )
+    
+    return {
+        "success": True,
+        "message": f"Reordered module to position {new_order}"
+    }
+
+
+@router.get("/categories")
+async def get_categories(admin: dict = Depends(get_admin_user)):
+    """Get all unique categories (admin only)"""
+    modules = await get_all_modules()
+    categories = list(set(m.get("category", "General") for m in modules))
+    return {"categories": sorted(categories)}

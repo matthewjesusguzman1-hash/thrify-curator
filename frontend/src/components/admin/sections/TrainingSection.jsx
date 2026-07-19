@@ -25,7 +25,10 @@ import {
   Edit3,
   RotateCcw,
   Save,
-  X
+  X,
+  Plus,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -54,6 +57,16 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
   const [promptText, setPromptText] = useState("");
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [deletingVideo, setDeletingVideo] = useState({});
+  const [showAddModule, setShowAddModule] = useState(false);
+  const [newModule, setNewModule] = useState({
+    title: "",
+    description: "",
+    category: "General",
+    points: [""],
+    video_prompt: ""
+  });
+  const [editingModule, setEditingModule] = useState(null); // Full module edit
+  const [deletingModule, setDeletingModule] = useState({});
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -195,6 +208,112 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
     }
   };
 
+  // Create new module
+  const createModule = async () => {
+    if (!newModule.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/training/module`, {
+        title: newModule.title,
+        description: newModule.description,
+        category: newModule.category,
+        points: newModule.points.filter(p => p.trim()),
+        video_prompt: newModule.video_prompt
+      }, getAuthHeader());
+      
+      toast.success("Module created!");
+      setShowAddModule(false);
+      setNewModule({ title: "", description: "", category: "General", points: [""], video_prompt: "" });
+      fetchData();
+    } catch (error) {
+      console.error("Failed to create module:", error);
+      toast.error(error.response?.data?.detail || "Failed to create module");
+    }
+  };
+
+  // Delete module
+  const deleteModule = async (moduleId, moduleTitle) => {
+    if (!window.confirm(`Delete "${moduleTitle}"? This will also delete its video and cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      setDeletingModule(prev => ({ ...prev, [moduleId]: true }));
+      await axios.delete(`${API}/training/module/${moduleId}`, getAuthHeader());
+      toast.success("Module deleted");
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete module:", error);
+      toast.error(error.response?.data?.detail || "Failed to delete module");
+    } finally {
+      setDeletingModule(prev => ({ ...prev, [moduleId]: false }));
+    }
+  };
+
+  // Update module
+  const updateModule = async (moduleId) => {
+    if (!editingModule) return;
+    
+    try {
+      await axios.put(`${API}/training/module/${moduleId}`, {
+        title: editingModule.title,
+        description: editingModule.description,
+        category: editingModule.category,
+        points: editingModule.points?.filter(p => p.trim()) || [],
+        video_prompt: editingModule.video_prompt
+      }, getAuthHeader());
+      
+      toast.success("Module updated!");
+      setEditingModule(null);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to update module:", error);
+      toast.error(error.response?.data?.detail || "Failed to update module");
+    }
+  };
+
+  // Add point to list
+  const addPoint = (isNew = false) => {
+    if (isNew) {
+      setNewModule(prev => ({ ...prev, points: [...prev.points, ""] }));
+    } else if (editingModule) {
+      setEditingModule(prev => ({ ...prev, points: [...(prev.points || []), ""] }));
+    }
+  };
+
+  // Update point in list
+  const updatePoint = (index, value, isNew = false) => {
+    if (isNew) {
+      setNewModule(prev => ({
+        ...prev,
+        points: prev.points.map((p, i) => i === index ? value : p)
+      }));
+    } else if (editingModule) {
+      setEditingModule(prev => ({
+        ...prev,
+        points: prev.points.map((p, i) => i === index ? value : p)
+      }));
+    }
+  };
+
+  // Remove point from list
+  const removePoint = (index, isNew = false) => {
+    if (isNew) {
+      setNewModule(prev => ({
+        ...prev,
+        points: prev.points.filter((_, i) => i !== index)
+      }));
+    } else if (editingModule) {
+      setEditingModule(prev => ({
+        ...prev,
+        points: prev.points.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
   // Handle video end
   const handleVideoEnd = () => {
     setIsPlaying(false);
@@ -237,17 +356,116 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
         
         {/* Admin: Generate All Button */}
         {isAdmin && (
-          <Button 
-            onClick={generateAllVideos}
-            variant="secondary"
-            size="sm"
-            className="mt-4"
-          >
-            <Video className="w-4 h-4 mr-2" />
-            Generate All Videos
-          </Button>
+          <div className="flex gap-2 mt-4">
+            <Button 
+              onClick={generateAllVideos}
+              variant="secondary"
+              size="sm"
+            >
+              <Video className="w-4 h-4 mr-2" />
+              Generate All Videos
+            </Button>
+            <Button 
+              onClick={() => setShowAddModule(true)}
+              variant="secondary"
+              size="sm"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Module
+            </Button>
+          </div>
         )}
       </div>
+
+      {/* Add Module Modal */}
+      {isAdmin && showAddModule && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold">Add Training Module</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowAddModule(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                <input
+                  type="text"
+                  value={newModule.title}
+                  onChange={(e) => setNewModule(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="e.g., Welcome Video"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={newModule.description}
+                  onChange={(e) => setNewModule(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="Brief description of the module"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <input
+                  type="text"
+                  value={newModule.category}
+                  onChange={(e) => setNewModule(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="e.g., Onboarding, Photo Training"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Key Points</label>
+                {newModule.points.map((point, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={point}
+                      onChange={(e) => updatePoint(i, e.target.value, true)}
+                      className="flex-1 p-2 border rounded-lg"
+                      placeholder={`Point ${i + 1}`}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePoint(i, true)}
+                      className="text-red-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => addPoint(true)}>
+                  <Plus className="w-4 h-4 mr-1" /> Add Point
+                </Button>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Video Prompt</label>
+                <textarea
+                  value={newModule.video_prompt}
+                  onChange={(e) => setNewModule(prev => ({ ...prev, video_prompt: e.target.value }))}
+                  className="w-full p-2 border rounded-lg h-32 resize-none"
+                  placeholder="Describe the video you want AI to generate..."
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAddModule(false)}>Cancel</Button>
+              <Button onClick={createModule}>Create Module</Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Module List */}
       <div className="space-y-3">
@@ -321,6 +539,41 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                     <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
                       selectedModule?.id === module.id ? "rotate-90" : ""
                     }`} />
+                    
+                    {/* Admin: Edit/Delete Module */}
+                    {isAdmin && (
+                      <div className="flex gap-1 ml-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingModule({ ...module });
+                          }}
+                          title="Edit Module"
+                        >
+                          <Edit3 className="w-4 h-4 text-gray-500" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteModule(module.id, module.title);
+                          }}
+                          disabled={deletingModule[module.id]}
+                          title="Delete Module"
+                        >
+                          {deletingModule[module.id] ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -500,6 +753,93 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
             You&apos;ve completed all training modules. You&apos;re ready to start processing items!
           </p>
         </motion.div>
+      )}
+
+      {/* Edit Module Modal */}
+      {isAdmin && editingModule && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold">Edit Module: {editingModule.title}</h3>
+                <Button variant="ghost" size="sm" onClick={() => setEditingModule(null)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={editingModule.title}
+                  onChange={(e) => setEditingModule(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={editingModule.description}
+                  onChange={(e) => setEditingModule(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <input
+                  type="text"
+                  value={editingModule.category || "General"}
+                  onChange={(e) => setEditingModule(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Key Points</label>
+                {(editingModule.points || []).map((point, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={point}
+                      onChange={(e) => updatePoint(i, e.target.value, false)}
+                      className="flex-1 p-2 border rounded-lg"
+                      placeholder={`Point ${i + 1}`}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePoint(i, false)}
+                      className="text-red-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => addPoint(false)}>
+                  <Plus className="w-4 h-4 mr-1" /> Add Point
+                </Button>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Video Prompt</label>
+                <textarea
+                  value={editingModule.video_prompt || ""}
+                  onChange={(e) => setEditingModule(prev => ({ ...prev, video_prompt: e.target.value }))}
+                  className="w-full p-2 border rounded-lg h-32 resize-none"
+                  placeholder="Describe the video you want AI to generate..."
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingModule(null)}>Cancel</Button>
+              <Button onClick={() => updateModule(editingModule.id)}>Save Changes</Button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );
