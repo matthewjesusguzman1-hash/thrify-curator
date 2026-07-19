@@ -20,7 +20,12 @@ import {
   Package,
   Tag,
   FileText,
-  FolderOpen
+  FolderOpen,
+  Trash2,
+  Edit3,
+  RotateCcw,
+  Save,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -45,6 +50,10 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
   const [loading, setLoading] = useState(true);
   const [selectedModule, setSelectedModule] = useState(null);
   const [generatingVideos, setGeneratingVideos] = useState({});
+  const [editingPrompt, setEditingPrompt] = useState(null); // module_id being edited
+  const [promptText, setPromptText] = useState("");
+  const [savingPrompt, setSavingPrompt] = useState(false);
+  const [deletingVideo, setDeletingVideo] = useState({});
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -122,6 +131,67 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
     } catch (error) {
       console.error("Failed to generate videos:", error);
       toast.error("Failed to start video generation");
+    }
+  };
+
+  // Delete video (admin only)
+  const deleteVideo = async (moduleId) => {
+    if (!window.confirm("Are you sure you want to delete this video? You'll need to regenerate it.")) {
+      return;
+    }
+    
+    try {
+      setDeletingVideo(prev => ({ ...prev, [moduleId]: true }));
+      await axios.delete(`${API}/training/video/${moduleId}`, getAuthHeader());
+      toast.success("Video deleted successfully");
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete video:", error);
+      toast.error(error.response?.data?.detail || "Failed to delete video");
+    } finally {
+      setDeletingVideo(prev => ({ ...prev, [moduleId]: false }));
+    }
+  };
+
+  // Start editing prompt
+  const startEditingPrompt = (module) => {
+    setEditingPrompt(module.id);
+    setPromptText(module.video_prompt);
+  };
+
+  // Save edited prompt
+  const savePrompt = async (moduleId) => {
+    try {
+      setSavingPrompt(true);
+      await axios.put(`${API}/training/prompt/${moduleId}`, {
+        module_id: moduleId,
+        prompt: promptText
+      }, getAuthHeader());
+      toast.success("Prompt updated! Regenerate video to see changes.");
+      setEditingPrompt(null);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to save prompt:", error);
+      toast.error(error.response?.data?.detail || "Failed to save prompt");
+    } finally {
+      setSavingPrompt(false);
+    }
+  };
+
+  // Reset prompt to default
+  const resetPrompt = async (moduleId) => {
+    if (!window.confirm("Reset this prompt to the default? Your custom prompt will be lost.")) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/training/prompt/${moduleId}`, getAuthHeader());
+      toast.success("Prompt reset to default");
+      setEditingPrompt(null);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to reset prompt:", error);
+      toast.error("Failed to reset prompt");
     }
   };
 
@@ -277,6 +347,25 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                             onPlay={() => setIsPlaying(true)}
                             onPause={() => setIsPlaying(false)}
                           />
+                          {/* Admin: Delete Video Button */}
+                          {isAdmin && (
+                            <div className="flex justify-end mt-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                                onClick={() => deleteVideo(module.id)}
+                                disabled={deletingVideo[module.id]}
+                              >
+                                {deletingVideo[module.id] ? (
+                                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4 mr-1" />
+                                )}
+                                Delete Video
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="bg-gray-100 rounded-lg p-8 text-center mb-4">
@@ -284,6 +373,82 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                           <p className="text-gray-500">
                             {isGenerating ? "Video is being generated..." : "Video not yet available"}
                           </p>
+                        </div>
+                      )}
+                      
+                      {/* Admin: Edit Prompt Section */}
+                      {isAdmin && (
+                        <div className="mb-4 bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                              <Edit3 className="w-4 h-4" />
+                              Video Prompt
+                            </h4>
+                            {editingPrompt !== module.id ? (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => startEditingPrompt(module)}
+                                >
+                                  <Edit3 className="w-3 h-3 mr-1" />
+                                  Edit
+                                </Button>
+                                {module.has_custom_prompt && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => resetPrompt(module.id)}
+                                    className="text-amber-600"
+                                  >
+                                    <RotateCcw className="w-3 h-3 mr-1" />
+                                    Reset
+                                  </Button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingPrompt(null)}
+                                >
+                                  <X className="w-3 h-3 mr-1" />
+                                  Cancel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => savePrompt(module.id)}
+                                  disabled={savingPrompt}
+                                >
+                                  {savingPrompt ? (
+                                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Save className="w-3 h-3 mr-1" />
+                                  )}
+                                  Save
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {editingPrompt === module.id ? (
+                            <textarea
+                              value={promptText}
+                              onChange={(e) => setPromptText(e.target.value)}
+                              className="w-full h-32 p-3 text-sm border rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              placeholder="Enter video prompt..."
+                            />
+                          ) : (
+                            <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                              {module.video_prompt}
+                              {module.has_custom_prompt && (
+                                <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                                  Custom
+                                </span>
+                              )}
+                            </p>
+                          )}
                         </div>
                       )}
                       

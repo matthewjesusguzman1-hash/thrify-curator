@@ -116,6 +116,29 @@ class TrainingProgress(BaseModel):
     completed: bool
 
 
+class UpdatePromptRequest(BaseModel):
+    module_id: str
+    prompt: str
+
+
+async def get_module_prompt(module_id: str) -> str:
+    """Get the prompt for a module - checks DB for custom prompt first, falls back to default"""
+    # Check for custom prompt in DB
+    custom = await db.training_custom_prompts.find_one(
+        {"module_id": module_id},
+        {"_id": 0}
+    )
+    if custom and custom.get("prompt"):
+        return custom["prompt"]
+    
+    # Fall back to default prompt
+    for module in TRAINING_MODULES:
+        if module["id"] == module_id:
+            return module["video_prompt"]
+    
+    return ""
+
+
 @router.get("/modules")
 async def get_training_modules(user: dict = Depends(get_current_user)):
     """Get all training modules with their video status"""
@@ -131,8 +154,19 @@ async def get_training_modules(user: dict = Depends(get_current_user)):
             {"_id": 0}
         )
         
+        # Check for custom prompt
+        custom_prompt = await db.training_custom_prompts.find_one(
+            {"module_id": module["id"]},
+            {"_id": 0}
+        )
+        
+        current_prompt = custom_prompt.get("prompt") if custom_prompt else module["video_prompt"]
+        
         modules_with_status.append({
             **module,
+            "video_prompt": current_prompt,  # Use custom if exists
+            "default_prompt": module["video_prompt"],  # Always include default
+            "has_custom_prompt": custom_prompt is not None,
             "video_url": f"/api/training/video/{module['id']}" if video_exists else None,
             "video_exists": video_exists,
             "generation_status": status_doc.get("status") if status_doc else None,
@@ -233,8 +267,11 @@ async def generate_training_video(
     if status_doc and status_doc.get("status") == "generating":
         raise HTTPException(status_code=400, detail="Video is already being generated")
     
+    # Get the prompt (custom or default)
+    prompt = await get_module_prompt(request.module_id)
+    
     # Start background generation
-    background_tasks.add_task(generate_video_task, request.module_id, module["video_prompt"])
+    background_tasks.add_task(generate_video_task, request.module_id, prompt)
     
     return {
         "success": True,
@@ -362,3 +399,85 @@ async def get_generation_status(admin: dict = Depends(get_admin_user)):
         })
     
     return {"statuses": result}
+
+
+
+@router.delete("/video/{module_id}")
+async def delete_training_video(
+    module_id: str,
+    admin: dict = Depends(get_admin_user)
+):
+    """Delete a training video (admin only)"""
+    # Verify module exists
+    module = next((m for m in TRAINING_MODULES if m["id"] == module_id), None)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    
+    video_path = os.path.join(VIDEOS_DIR, f"{module_id}.mp4")
+    
+    if not os.path.exists(video_path):
+        raise HTTPException(status_code=404, detail="Video does not exist")
+    
+    # Delete the video file
+    os.remove(video_path)
+    
+    # Clear the generation status
+    await db.training_video_status.delete_one({"module_id": module_id})
+    
+    return {
+        "success": True,
+        "message": f"Deleted video for '{module['title']}'"
+    }
+
+
+@router.put("/prompt/{module_id}")
+async def update_module_prompt(
+    module_id: str,
+    request: UpdatePromptRequest,
+    admin: dict = Depends(get_admin_user)
+):
+    """Update the video prompt for a module (admin only)"""
+    # Verify module exists
+    module = next((m for m in TRAINING_MODULES if m["id"] == module_id), None)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    
+    if not request.prompt or not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+    
+    # Save custom prompt to DB
+    await db.training_custom_prompts.update_one(
+        {"module_id": module_id},
+        {"$set": {
+            "prompt": request.prompt.strip(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    return {
+        "success": True,
+        "message": f"Updated prompt for '{module['title']}'",
+        "prompt": request.prompt.strip()
+    }
+
+
+@router.delete("/prompt/{module_id}")
+async def reset_module_prompt(
+    module_id: str,
+    admin: dict = Depends(get_admin_user)
+):
+    """Reset a module's prompt back to default (admin only)"""
+    # Verify module exists
+    module = next((m for m in TRAINING_MODULES if m["id"] == module_id), None)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    
+    # Delete custom prompt from DB
+    await db.training_custom_prompts.delete_one({"module_id": module_id})
+    
+    return {
+        "success": True,
+        "message": f"Reset prompt for '{module['title']}' to default",
+        "prompt": module["video_prompt"]
+    }
