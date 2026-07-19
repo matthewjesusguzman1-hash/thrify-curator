@@ -3,6 +3,7 @@
  * Displays training videos and tracks completion progress
  */
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Play,
@@ -551,21 +552,30 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
         </div>
       )}
 
-      {/* Add Module Modal */}
-      {isAdmin && showAddModule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+      {/* Add Module Modal - Using Portal for proper z-index and click handling */}
+      {isAdmin && showAddModule && createPortal(
+        <div 
+          className="fixed inset-0 flex items-start justify-center pt-10 z-[9999]"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowAddModule(false);
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto mx-4"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold">Add Training Module</h3>
-                <Button variant="ghost" size="sm" onClick={() => setShowAddModule(false)}>
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
+            <div className="sticky top-0 bg-white p-4 border-b flex items-center justify-between z-10">
+              <h3 className="text-lg font-bold">Add Training Module</h3>
+              <button 
+                type="button"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => setShowAddModule(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -609,19 +619,22 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                       className="flex-1 p-2 border rounded-lg"
                       placeholder={`Point ${i + 1}`}
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    <button
+                      type="button"
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
                       onClick={() => removePoint(i, true)}
-                      className="text-red-500"
                     >
                       <X className="w-4 h-4" />
-                    </Button>
+                    </button>
                   </div>
                 ))}
-                <Button variant="outline" size="sm" onClick={() => addPoint(true)}>
-                  <Plus className="w-4 h-4 mr-1" /> Add Point
-                </Button>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
+                  onClick={() => addPoint(true)}
+                >
+                  <Plus className="w-4 h-4" /> Add Point
+                </button>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Video Prompt</label>
@@ -633,12 +646,25 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                 />
               </div>
             </div>
-            <div className="p-6 border-t flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowAddModule(false)}>Cancel</Button>
-              <Button onClick={createModule}>Create Module</Button>
+            <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end gap-2">
+              <button
+                type="button"
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                onClick={() => setShowAddModule(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                onClick={createModule}
+              >
+                Create Module
+              </button>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Module List */}
@@ -944,21 +970,30 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
         </motion.div>
       )}
 
-      {/* Edit Module Modal */}
-      {isAdmin && editingModule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+      {/* Edit Module Modal - Using Portal for proper z-index and click handling */}
+      {isAdmin && editingModule && createPortal(
+        <div 
+          className="fixed inset-0 flex items-start justify-center pt-10 z-[9999]"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setEditingModule(null);
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto mx-4"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold">Edit Module: {editingModule.title}</h3>
-                <Button variant="ghost" size="sm" onClick={() => setEditingModule(null)}>
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
+            <div className="sticky top-0 bg-white p-4 border-b flex items-center justify-between z-10">
+              <h3 className="text-lg font-bold">Edit Module: {editingModule.title}</h3>
+              <button 
+                type="button"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => setEditingModule(null)}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -999,19 +1034,22 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                       className="flex-1 p-2 border rounded-lg"
                       placeholder={`Point ${i + 1}`}
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    <button
+                      type="button"
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
                       onClick={() => removePoint(i, false)}
-                      className="text-red-500"
                     >
                       <X className="w-4 h-4" />
-                    </Button>
+                    </button>
                   </div>
                 ))}
-                <Button variant="outline" size="sm" onClick={() => addPoint(false)}>
-                  <Plus className="w-4 h-4 mr-1" /> Add Point
-                </Button>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
+                  onClick={() => addPoint(false)}
+                >
+                  <Plus className="w-4 h-4" /> Add Point
+                </button>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Video Prompt</label>
@@ -1023,12 +1061,25 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                 />
               </div>
             </div>
-            <div className="p-6 border-t flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditingModule(null)}>Cancel</Button>
-              <Button onClick={() => updateModule(editingModule.id)}>Save Changes</Button>
+            <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end gap-2">
+              <button
+                type="button"
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                onClick={() => setEditingModule(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                onClick={() => updateModule(editingModule.id)}
+              >
+                Save Changes
+              </button>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
