@@ -626,3 +626,84 @@ async def get_categories(admin: dict = Depends(get_admin_user)):
     modules = await get_all_modules()
     categories = list(set(m.get("category", "General") for m in modules))
     return {"categories": sorted(categories)}
+
+
+
+class PushTrainingRequest(BaseModel):
+    employee_ids: List[str]
+    reset_progress: bool = True  # If true, resets their progress so they must redo training
+    module_ids: Optional[List[str]] = None  # If None, resets all modules
+
+
+@router.post("/push-updates")
+async def push_training_updates(
+    request: PushTrainingRequest,
+    admin: dict = Depends(get_admin_user)
+):
+    """Push training updates to selected employees - resets their progress (admin only)"""
+    if not request.employee_ids:
+        raise HTTPException(status_code=400, detail="No employees selected")
+    
+    modules = await get_all_modules()
+    module_ids = request.module_ids or [m["id"] for m in modules]
+    
+    updated_count = 0
+    
+    for employee_id in request.employee_ids:
+        if request.reset_progress:
+            # Reset progress for specified modules
+            for module_id in module_ids:
+                await db.training_progress.update_one(
+                    {"user_id": employee_id, "module_id": module_id},
+                    {"$set": {
+                        "completed": False,
+                        "reset_at": datetime.now(timezone.utc).isoformat(),
+                        "reset_by": admin.get("email", "admin")
+                    }},
+                    upsert=True
+                )
+            updated_count += 1
+    
+    return {
+        "success": True,
+        "message": f"Training updates pushed to {updated_count} employee(s)",
+        "employees_updated": updated_count,
+        "modules_reset": len(module_ids)
+    }
+
+
+@router.get("/all-employee-progress")
+async def get_all_employee_progress(admin: dict = Depends(get_admin_user)):
+    """Get training progress for all employees (admin only)"""
+    # Get all employees
+    employees = await db.users.find(
+        {"role": "employee"},
+        {"_id": 0, "id": 1, "name": 1, "email": 1}
+    ).to_list(500)
+    
+    modules = await get_all_modules()
+    total_modules = len(modules)
+    
+    result = []
+    for emp in employees:
+        emp_id = emp.get("id") or emp.get("email")
+        
+        # Get their progress
+        progress = await db.training_progress.find(
+            {"user_id": emp_id, "completed": True},
+            {"_id": 0}
+        ).to_list(100)
+        
+        completed_count = len(progress)
+        
+        result.append({
+            "id": emp_id,
+            "name": emp.get("name", "Unknown"),
+            "email": emp.get("email", ""),
+            "completed_modules": completed_count,
+            "total_modules": total_modules,
+            "completion_percentage": round(completed_count / total_modules * 100, 1) if total_modules > 0 else 0,
+            "is_complete": completed_count >= total_modules
+        })
+    
+    return {"employees": result, "total_modules": total_modules}

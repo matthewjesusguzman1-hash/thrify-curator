@@ -28,7 +28,8 @@ import {
   X,
   Plus,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -67,6 +68,10 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
   });
   const [editingModule, setEditingModule] = useState(null); // Full module edit
   const [deletingModule, setDeletingModule] = useState({});
+  const [showPushUpdates, setShowPushUpdates] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
+  const [pushingUpdates, setPushingUpdates] = useState(false);
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -87,11 +92,22 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
     }
   };
 
+  // Fetch employee progress (admin only)
+  const fetchEmployeeProgress = async () => {
+    try {
+      const res = await axios.get(`${API}/training/all-employee-progress`, getAuthHeader());
+      setEmployees(res.data.employees);
+    } catch (error) {
+      console.error("Failed to fetch employee progress:", error);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     
     // Poll for video generation status if admin
     if (isAdmin) {
+      fetchEmployeeProgress();
       const interval = setInterval(fetchData, 10000); // Every 10 seconds
       return () => clearInterval(interval);
     }
@@ -314,6 +330,50 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
     }
   };
 
+  // Push training updates to selected employees
+  const pushTrainingUpdates = async () => {
+    if (selectedEmployees.length === 0) {
+      toast.error("Please select at least one employee");
+      return;
+    }
+    
+    try {
+      setPushingUpdates(true);
+      await axios.post(`${API}/training/push-updates`, {
+        employee_ids: selectedEmployees,
+        reset_progress: true
+      }, getAuthHeader());
+      
+      toast.success(`Training reset for ${selectedEmployees.length} employee(s). They will need to complete training again.`);
+      setShowPushUpdates(false);
+      setSelectedEmployees([]);
+      fetchEmployeeProgress();
+    } catch (error) {
+      console.error("Failed to push updates:", error);
+      toast.error(error.response?.data?.detail || "Failed to push training updates");
+    } finally {
+      setPushingUpdates(false);
+    }
+  };
+
+  // Toggle employee selection
+  const toggleEmployee = (empId) => {
+    setSelectedEmployees(prev => 
+      prev.includes(empId) 
+        ? prev.filter(id => id !== empId)
+        : [...prev, empId]
+    );
+  };
+
+  // Select/deselect all employees
+  const toggleAllEmployees = () => {
+    if (selectedEmployees.length === employees.length) {
+      setSelectedEmployees([]);
+    } else {
+      setSelectedEmployees(employees.map(e => e.id));
+    }
+  };
+
   // Handle video end
   const handleVideoEnd = () => {
     setIsPlaying(false);
@@ -356,7 +416,7 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
         
         {/* Admin: Generate All Button */}
         {isAdmin && (
-          <div className="flex gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-4">
             <Button 
               onClick={generateAllVideos}
               variant="secondary"
@@ -373,9 +433,111 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
               <Plus className="w-4 h-4 mr-2" />
               Add Module
             </Button>
+            <Button 
+              onClick={() => {
+                fetchEmployeeProgress();
+                setShowPushUpdates(true);
+              }}
+              variant="secondary"
+              size="sm"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Push Updates to Employees
+            </Button>
           </div>
         )}
       </div>
+
+      {/* Push Training Updates Modal */}
+      {isAdmin && showPushUpdates && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold">Push Training Updates</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowPushUpdates(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Select employees who need to complete updated training. Their progress will be reset.
+              </p>
+            </div>
+            <div className="p-6">
+              {employees.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No employees found</p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedEmployees.length === employees.length}
+                        onChange={toggleAllEmployees}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="text-sm font-medium">Select All ({employees.length})</span>
+                    </label>
+                    <span className="text-sm text-gray-500">
+                      {selectedEmployees.length} selected
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {employees.map(emp => (
+                      <label
+                        key={emp.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedEmployees.includes(emp.id) 
+                            ? "border-purple-500 bg-purple-50" 
+                            : "border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedEmployees.includes(emp.id)}
+                          onChange={() => toggleEmployee(emp.id)}
+                          className="w-4 h-4 rounded border-gray-300"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-800">{emp.name}</p>
+                          <p className="text-xs text-gray-500">{emp.email}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-sm font-medium ${emp.is_complete ? "text-green-600" : "text-amber-600"}`}>
+                            {emp.completion_percentage}%
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {emp.completed_modules}/{emp.total_modules} done
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="p-6 border-t flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowPushUpdates(false)}>Cancel</Button>
+              <Button 
+                onClick={pushTrainingUpdates}
+                disabled={selectedEmployees.length === 0 || pushingUpdates}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {pushingUpdates ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                Reset Training for {selectedEmployees.length} Employee{selectedEmployees.length !== 1 ? "s" : ""}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Add Module Modal */}
       {isAdmin && showAddModule && (
@@ -721,8 +883,8 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                         </ul>
                       </div>
                       
-                      {/* Mark Complete Button */}
-                      {!isCompleted && (
+                      {/* Mark Complete Button - Only for employees, not admins */}
+                      {!isAdmin && !isCompleted && (
                         <Button
                           onClick={() => markComplete(module.id)}
                           className="w-full mt-4 bg-green-600 hover:bg-green-700"
