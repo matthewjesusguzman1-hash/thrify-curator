@@ -250,12 +250,12 @@ async def generate_video_task(module_id: str, prompt: str):
         
         output_path = os.path.join(VIDEOS_DIR, f"{module_id}.mp4")
         
-        # Generate 20-second video in landscape format for proper training content
+        # Generate 12-second video in landscape format (max supported duration)
         video_bytes = video_gen.text_to_video(
             prompt=prompt,
             model="sora-2",
             size="1280x720",
-            duration=20,
+            duration=12,
             max_wait_time=900
         )
         
