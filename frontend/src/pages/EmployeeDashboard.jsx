@@ -28,7 +28,8 @@ import {
   Lock,
   Key,
   Shield,
-  Fingerprint
+  Fingerprint,
+  GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ import LiveActivityService from "@/services/LiveActivityService";
 import MessagingSection from "@/components/MessagingSection";
 import OnboardingModal from "@/components/OnboardingModal";
 import PullToRefresh from "@/components/PullToRefresh";
+import TrainingSection from "@/components/admin/sections/TrainingSection";
 
 // Check if running in Capacitor native app
 const isNativePlatform = () => {
@@ -1739,6 +1741,16 @@ export default function EmployeeDashboard() {
               </div>
             </motion.div>
           )}
+          
+          {/* Training Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-xl overflow-hidden"
+            data-testid="training-section"
+          >
+            <TrainingSection getAuthHeader={getAuthHeader} isAdmin={false} />
+          </motion.div>
         </motion.div>
       </main>
       </PullToRefresh>

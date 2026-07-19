@@ -72,6 +72,13 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Speed-based validation to catch GPS jumps
   - GPS quality indicator in UI (Excellent/Good/Fair/Poor)
   - Backend improvements with multi-pass filtering
+- **Employee Training Section (2026-06-12)**:
+  - 6-module training system based on resale photo instructions
+  - AI video generation via Sora 2 (admin can generate videos)
+  - Progress tracking per employee
+  - Key points summary for each module
+  - Videos auto-mark completion when watched
+  - Available in Employee Dashboard
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)
