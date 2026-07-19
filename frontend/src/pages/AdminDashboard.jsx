@@ -3567,21 +3567,19 @@ export default function AdminDashboard() {
               <div data-testid="email-logs-section">
                 <EmailLogsSection getAuthHeader={getAuthHeader} />
               </div>
-              
-              {/* Employee Training Section - Video generation & progress tracking */}
+            </DashboardGroup>
+            
+            {/* TRAINING SECTION - Standalone Group for visibility */}
+            <DashboardGroup
+              title="Employee Training"
+              icon={GraduationCap}
+              gradient="from-[#8B5CF6] to-[#6366F1]"
+              defaultOpen={true}
+              badge="Photo & processing guides"
+              testId="group-training"
+            >
               <div data-testid="training-management-section">
-                <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                  <div className="p-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                      <GraduationCap className="w-5 h-5" />
-                      Training Management
-                    </h3>
-                    <p className="text-purple-100 text-sm">Generate videos & track employee progress</p>
-                  </div>
-                  <div className="p-4">
-                    <TrainingSection getAuthHeader={getAuthHeader} isAdmin={true} />
-                  </div>
-                </div>
+                <TrainingSection getAuthHeader={getAuthHeader} isAdmin={true} />
               </div>
             </DashboardGroup>
 
