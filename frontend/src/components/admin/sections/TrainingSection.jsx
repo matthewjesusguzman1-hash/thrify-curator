@@ -785,22 +785,40 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                       </div>
                     ) : module.generation_status === "failed" ? (
                       <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-red-600 text-sm">
+                        <span 
+                          className="flex items-center gap-1 text-red-600 text-sm cursor-help"
+                          title={module.generation_error || "Unknown error"}
+                        >
                           <AlertCircle className="w-4 h-4" />
                           Failed
                         </span>
                         {isAdmin && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 px-2 text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              generateVideo(module.id);
-                            }}
-                          >
-                            Retry
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-2 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                generateVideo(module.id);
+                              }}
+                            >
+                              Retry
+                            </Button>
+                            {module.generation_error && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-xs text-gray-500"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toast.error(module.generation_error, { duration: 10000 });
+                                }}
+                              >
+                                View Error
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     ) : module.video_exists ? (
