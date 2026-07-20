@@ -56,8 +56,7 @@ import {
   Play,
   Pause,
   Square,
-  Car,
-  GraduationCap
+  Car
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,7 +85,6 @@ import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
 import RejectionHistorySection from "@/components/admin/sections/RejectionHistorySection";
 import EmailLogsSection from "@/components/admin/sections/EmailLogsSection";
-import TrainingSection from "@/components/admin/sections/TrainingSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
@@ -3566,20 +3564,6 @@ export default function AdminDashboard() {
               {/* Email Logs Section */}
               <div data-testid="email-logs-section">
                 <EmailLogsSection getAuthHeader={getAuthHeader} />
-              </div>
-            </DashboardGroup>
-            
-            {/* TRAINING SECTION - Standalone Group for visibility */}
-            <DashboardGroup
-              title="Employee Training"
-              icon={GraduationCap}
-              gradient="from-[#8B5CF6] to-[#6366F1]"
-              defaultOpen={true}
-              badge="Photo & processing guides"
-              testId="group-training"
-            >
-              <div data-testid="training-management-section">
-                <TrainingSection getAuthHeader={getAuthHeader} isAdmin={true} />
               </div>
             </DashboardGroup>
 
