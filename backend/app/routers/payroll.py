@@ -145,17 +145,20 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     
     check_records = await db.payroll_check_records.find(
         {"payment_type": {"$in": ["employee", None]}},
-        {"_id": 0, "amount": 1, "check_date": 1, "pay_periods": 1}
+        {"_id": 0, "amount": 1, "check_date": 1, "pay_periods": 1, "description": 1, "employee_name": 1}
     ).to_list(1000)
     
     month_total = 0
     year_total = 0
     prev_period_paid = 0
     
+    import re
+    
     for record in check_records:
         amount = record.get("amount", 0) or 0
         check_date_str = record.get("check_date", "")
         pay_periods = record.get("pay_periods", [])
+        description = record.get("description", "") or ""
         
         if not check_date_str:
             continue
@@ -166,13 +169,60 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             if check_date >= month_start:
                 month_total += amount
             
+            # Check if this payment covers the previous period
+            period_matched = False
+            
+            # Method 1: Check structured pay_periods array
             for pp in pay_periods:
                 pp_start_str = pp.get("start", "")
                 if pp_start_str:
                     pp_start = datetime.strptime(pp_start_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
                     if pp_start.date() == prev_period_start.date():
                         prev_period_paid += amount
+                        period_matched = True
                         break
+            
+            # Method 2: If no pay_periods, try to parse dates from description
+            # Look for patterns like "7/20/26-8/2/26" or "2026-07-20" etc.
+            if not period_matched and description:
+                # Try to find date patterns in description
+                date_patterns = [
+                    r'(\d{1,2})/(\d{1,2})/(\d{2,4})',  # M/D/YY or M/D/YYYY
+                    r'(\d{4})-(\d{2})-(\d{2})',  # YYYY-MM-DD
+                ]
+                for pattern in date_patterns:
+                    matches = re.findall(pattern, description)
+                    if matches:
+                        for match in matches:
+                            try:
+                                if len(match[0]) == 4:  # YYYY-MM-DD format
+                                    desc_year = int(match[0])
+                                    desc_month = int(match[1])
+                                    desc_day = int(match[2])
+                                else:  # M/D/YY format
+                                    desc_month = int(match[0])
+                                    desc_day = int(match[1])
+                                    desc_year = int(match[2])
+                                    if desc_year < 100:
+                                        desc_year += 2000
+                                
+                                desc_date = datetime(desc_year, desc_month, desc_day, tzinfo=timezone.utc)
+                                # Check if this date is within or near the previous period
+                                if prev_period_start <= desc_date <= prev_period_end:
+                                    prev_period_paid += amount
+                                    period_matched = True
+                                    break
+                            except:
+                                continue
+                    if period_matched:
+                        break
+            
+            # Method 3: If payment was made after prev period ended, assume it covers that period
+            if not period_matched and check_date > prev_period_end and check_date <= period_end:
+                # Payment made between end of prev period and end of current period
+                # likely covers the previous period
+                prev_period_paid += amount
+                
         except:
             continue
     
