@@ -175,6 +175,7 @@ export default function EmployeeDashboard() {
   // Collapsible tax form sections state
   const [w9Expanded, setW9Expanded] = useState(false);
   const [w8benExpanded, setW8benExpanded] = useState(false);
+  const [nec1099Expanded, setNec1099Expanded] = useState(false);
   
   // 1099 documents state
   const [my1099s, setMy1099s] = useState({ documents: [], count: 0 });
@@ -1904,94 +1905,102 @@ export default function EmployeeDashboard() {
             </div>
           </Collapsible>
           
-          {/* 1099s Received Section */}
+          {/* 1099-NEC Forms Section - Collapsible */}
           {my1099s.count > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-2xl p-6 shadow-xl border border-[#00D4FF]/20"
-              data-testid="my-1099s-section"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-playfair font-bold text-white flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-[#00D4FF]" />
-                  1099-NEC Forms
-                </h2>
-                <span className="bg-[#00D4FF]/20 text-[#00D4FF] px-3 py-1 rounded-full text-sm font-medium">
-                  {my1099s.count} form(s)
-                </span>
-              </div>
-              
-              <div className="space-y-3">
-                {my1099s.documents.map((doc) => (
-                  <div 
-                    key={doc.id}
-                    className="p-4 rounded-xl bg-[#00D4FF]/10 border border-[#00D4FF]/30"
-                    data-testid={`1099-doc-${doc.id}`}
+            <Collapsible open={nec1099Expanded} onOpenChange={setNec1099Expanded}>
+              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="my-1099s-section">
+                <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493]" />
+                <CollapsibleTrigger asChild>
+                  <button 
+                    className="w-full p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
+                    data-testid="1099-collapse-trigger"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-[#00D4FF]" />
-                        <span className="font-medium text-white">1099-NEC - Tax Year {doc.year}</span>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-[#00D4FF]" />
+                      <h2 className="font-poppins text-lg font-semibold text-white">
+                        1099-NEC Forms
+                      </h2>
+                      <span className="bg-[#00D4FF]/30 text-[#00D4FF] px-2 py-0.5 rounded-full text-xs font-medium">
+                        {my1099s.count}
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-5 h-5 text-white/60 transition-transform duration-200 ${nec1099Expanded ? 'rotate-180' : ''}`} />
+                  </button>
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent>
+                  <div className="px-6 pb-6 pt-2 space-y-3">
+                    {my1099s.documents.map((doc) => (
+                      <div 
+                        key={doc.id}
+                        className="p-4 rounded-xl bg-[#00D4FF]/10 border border-[#00D4FF]/30"
+                        data-testid={`1099-doc-${doc.id}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-[#00D4FF]" />
+                            <span className="font-medium text-white">1099-NEC - Tax Year {doc.year}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            doc.status === 'filed' 
+                              ? 'bg-green-500/20 text-green-400' 
+                              : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
+                          }`}>
+                            {doc.status === 'filed' ? 'Filed' : 'Draft'}
+                          </span>
+                        </div>
+                        
+                        <div className="text-sm text-white/60 mb-3">
+                          <span>Amount: </span>
+                          <span className="text-[#00D4FF] font-semibold">
+                            ${(doc.amount_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        
+                        <div className="text-xs text-white/40 mb-3">
+                          From: {doc.contractor_name || 'Thrifty Curator'}
+                          {doc.created_at && ` • Issued ${new Date(doc.created_at).toLocaleDateString()}`}
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+                              const response = await axios.get(
+                                `${API}/financials/my-1099s/${doc.id}/download?user_id=${storedUser.id}`,
+                                { ...getAuthHeader(), responseType: 'blob' }
+                              );
+                              const contentType = response.headers['content-type'] || 'application/pdf';
+                              const blob = new Blob([response.data], { type: contentType });
+                              const url = window.URL.createObjectURL(blob);
+                              setViewing1099({
+                                url,
+                                contentType,
+                                docId: doc.id,
+                                filename: `1099_NEC_${doc.year}.${contentType.includes('pdf') ? 'pdf' : contentType.includes('image') ? 'jpg' : 'file'}`,
+                                year: doc.year,
+                                amount: doc.amount_paid,
+                                status: doc.status
+                              });
+                            } catch (error) {
+                              console.error('Error loading 1099:', error);
+                              toast.error("Failed to load 1099 document");
+                            }
+                          }}
+                          className="w-full text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
+                          data-testid={`view-1099-${doc.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Preview
+                        </Button>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        doc.status === 'filed' 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-[#8B5CF6]/20 text-[#8B5CF6]'
-                      }`}>
-                        {doc.status === 'filed' ? 'Filed' : 'Draft'}
-                      </span>
-                    </div>
-                    
-                    <div className="text-sm text-white/60 mb-3">
-                      <span>Amount: </span>
-                      <span className="text-[#00D4FF] font-semibold">
-                        ${(doc.amount_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    
-                    <div className="text-xs text-white/40 mb-3">
-                      From: {doc.contractor_name || 'Thrifty Curator'}
-                      {doc.created_at && ` • Issued ${new Date(doc.created_at).toLocaleDateString()}`}
-                    </div>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        try {
-                          const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-                          const response = await axios.get(
-                            `${API}/financials/my-1099s/${doc.id}/download?user_id=${storedUser.id}`,
-                            { ...getAuthHeader(), responseType: 'blob' }
-                          );
-                          const contentType = response.headers['content-type'] || 'application/pdf';
-                          const blob = new Blob([response.data], { type: contentType });
-                          const url = window.URL.createObjectURL(blob);
-                          setViewing1099({
-                            url,
-                            contentType,
-                            docId: doc.id,
-                            filename: `1099_NEC_${doc.year}.${contentType.includes('pdf') ? 'pdf' : contentType.includes('image') ? 'jpg' : 'file'}`,
-                            year: doc.year,
-                            amount: doc.amount_paid,
-                            status: doc.status
-                          });
-                        } catch (error) {
-                          console.error('Error loading 1099:', error);
-                          toast.error("Failed to load 1099 document");
-                        }
-                      }}
-                      className="w-full text-white/80 border-white/20 hover:bg-white/10 bg-transparent"
-                      data-testid={`view-1099-${doc.id}`}
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      Preview
-                    </Button>
+                    ))}
                   </div>
-                ))}
+                </CollapsibleContent>
               </div>
-            </motion.div>
+            </Collapsible>
           )}
           
         </motion.div>
