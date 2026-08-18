@@ -74,21 +74,22 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-[#333] flex items-center gap-2">
-            <ClipboardList className="w-6 h-6 text-[#8B5CF6]" />
-            Applicant Skills Tests
+    <div className="space-y-4">
+      {/* Header - responsive layout */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold text-[#333] flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B5CF6] flex-shrink-0" />
+            <span className="truncate">Applicant Skills Tests</span>
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
             Create listing tests to evaluate job applicants
           </p>
         </div>
         <Button
           onClick={() => setShowCreateModal(true)}
-          className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white"
+          className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white w-full sm:w-auto text-sm"
+          data-testid="create-test-btn"
         >
           <Plus className="w-4 h-4 mr-2" />
           Create Test
@@ -179,37 +180,42 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
 // Test Card Component
 function TestCard({ test, onDelete, onInvite, onViewSubmissions, getAuthHeader }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h3 className="font-semibold text-[#333] flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[#8B5CF6]" />
-            {test.name}
+    <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      {/* Card content - stacks on mobile, side-by-side on larger screens */}
+      <div className="flex flex-col gap-3">
+        {/* Test info section */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-[#333] flex items-center gap-2 text-sm sm:text-base">
+            <FileText className="w-4 h-4 text-[#8B5CF6] flex-shrink-0" />
+            <span className="truncate">{test.name}</span>
           </h3>
           {test.description && (
-            <p className="text-sm text-gray-500 mt-1">{test.description}</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2">{test.description}</p>
           )}
-          <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+          <div className="flex flex-wrap items-center gap-3 mt-2 text-xs sm:text-sm text-gray-500">
             <span className="flex items-center gap-1">
-              <ImageIcon className="w-4 h-4" />
+              <ImageIcon className="w-3.5 h-3.5" />
               {test.photos?.length || 0} photos
             </span>
             <span className="flex items-center gap-1">
-              <Mail className="w-4 h-4" />
+              <Mail className="w-3.5 h-3.5" />
               {test.invites_sent || 0} invites
             </span>
             <span className="flex items-center gap-1">
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle className="w-3.5 h-3.5" />
               {test.submissions_count || 0} submissions
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        
+        {/* Action buttons - always visible, full width on mobile */}
+        <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
           <Button
             variant="outline"
             size="sm"
             onClick={onViewSubmissions}
-            className="text-[#8B5CF6] border-[#8B5CF6]/30"
+            className="flex-1 sm:flex-none text-[#8B5CF6] border-[#8B5CF6]/30 text-xs sm:text-sm h-9"
+            data-testid="test-card-view-btn"
           >
             <Eye className="w-4 h-4 mr-1" />
             View
@@ -218,7 +224,8 @@ function TestCard({ test, onDelete, onInvite, onViewSubmissions, getAuthHeader }
             variant="outline"
             size="sm"
             onClick={onInvite}
-            className="text-[#00D4FF] border-[#00D4FF]/30"
+            className="flex-1 sm:flex-none text-[#00D4FF] border-[#00D4FF]/30 text-xs sm:text-sm h-9"
+            data-testid="test-card-invite-btn"
           >
             <Send className="w-4 h-4 mr-1" />
             Invite
@@ -227,7 +234,8 @@ function TestCard({ test, onDelete, onInvite, onViewSubmissions, getAuthHeader }
             variant="outline"
             size="sm"
             onClick={onDelete}
-            className="text-red-500 border-red-300 hover:bg-red-50"
+            className="text-red-500 border-red-300 hover:bg-red-50 h-9 px-3"
+            data-testid="test-card-delete-btn"
           >
             <Trash2 className="w-4 h-4" />
           </Button>
