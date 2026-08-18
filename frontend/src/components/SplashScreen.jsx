@@ -48,125 +48,40 @@ export default function SplashScreen({ onComplete }) {
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]"
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden"
+          style={{ 
+            background: 'linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%)',
+            backfaceVisibility: 'hidden'
+          }}
           data-testid="splash-screen"
         >
-          {/* Animated smoke/cloud background elements */}
-          <div className="absolute inset-0 overflow-hidden" style={{ willChange: 'transform' }}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ 
-                opacity: [0, 0.4, 0.3, 0.4], 
-                scale: [0.8, 1.1, 1, 1.05],
-                x: [-50, 30, 0, 20],
-                y: [0, -20, 10, -5]
-              }}
-              transition={{ 
-                duration: 6, 
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatType: "reverse"
-              }}
-              className="absolute top-1/4 left-1/4 w-[250px] h-[250px] sm:w-[400px] sm:h-[400px] rounded-full"
+          {/* Optimized background blobs - using CSS animations for GPU acceleration */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Blob 1 - Cyan */}
+            <div 
+              className="absolute top-1/4 left-1/4 w-[200px] h-[200px] sm:w-[300px] sm:h-[300px] rounded-full animate-blob-1"
               style={{ 
-                background: '#00D4FF',
-                filter: 'blur(60px)',
-                transform: 'translateZ(0)',
-                willChange: 'transform, opacity'
+                background: 'radial-gradient(circle, rgba(0,212,255,0.4) 0%, rgba(0,212,255,0) 70%)',
+                transform: 'translate3d(0,0,0)'
               }}
             />
             
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ 
-                opacity: [0, 0.4, 0.3, 0.4], 
-                scale: [0.8, 1.15, 0.95, 1.1],
-                x: [50, -30, 15, -15],
-                y: [0, 30, -15, 20]
-              }}
-              transition={{ 
-                duration: 7, 
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatType: "reverse",
-                delay: 0.3
-              }}
-              className="absolute bottom-1/4 right-1/4 w-[250px] h-[250px] sm:w-[400px] sm:h-[400px] rounded-full"
+            {/* Blob 2 - Pink */}
+            <div 
+              className="absolute bottom-1/4 right-1/4 w-[200px] h-[200px] sm:w-[300px] sm:h-[300px] rounded-full animate-blob-2"
               style={{ 
-                background: '#FF1493',
-                filter: 'blur(60px)',
-                transform: 'translateZ(0)',
-                willChange: 'transform, opacity'
+                background: 'radial-gradient(circle, rgba(255,20,147,0.4) 0%, rgba(255,20,147,0) 70%)',
+                transform: 'translate3d(0,0,0)'
               }}
             />
             
-            <motion.div
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ 
-                opacity: [0, 0.35, 0.25, 0.35], 
-                scale: [0.6, 1.2, 1, 1.15]
-              }}
-              transition={{ 
-                duration: 8, 
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatType: "reverse",
-                delay: 0.5
-              }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] sm:w-[350px] sm:h-[350px] rounded-full"
+            {/* Blob 3 - Purple (center) */}
+            <div 
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180px] h-[180px] sm:w-[280px] sm:h-[280px] rounded-full animate-blob-3"
               style={{ 
-                background: '#8B5CF6',
-                filter: 'blur(50px)',
-                transform: 'translateZ(0)',
-                willChange: 'transform, opacity'
-              }}
-            />
-            
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ 
-                opacity: [0, 0.5, 0.25, 0.5],
-                scale: [0.9, 1.3, 1, 1.2],
-                x: [0, 50, -25, 40],
-                y: [0, -40, 25, -20]
-              }}
-              transition={{ 
-                duration: 5, 
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatType: "reverse"
-              }}
-              className="absolute top-1/3 right-1/3 w-[150px] h-[150px] sm:w-[200px] sm:h-[200px] rounded-full"
-              style={{ 
-                background: '#00D4FF',
-                filter: 'blur(40px)',
-                transform: 'translateZ(0)',
-                willChange: 'transform, opacity'
-              }}
-            />
-            
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ 
-                opacity: [0, 0.45, 0.2, 0.45],
-                scale: [0.85, 1.25, 0.95, 1.15],
-                x: [0, -45, 30, -25],
-                y: [0, 35, -20, 25]
-              }}
-              transition={{ 
-                duration: 5.5, 
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatType: "reverse",
-                delay: 0.8
-              }}
-              className="absolute bottom-1/3 left-1/3 w-[160px] h-[160px] sm:w-[220px] sm:h-[220px] rounded-full"
-              style={{ 
-                background: '#FF1493',
-                filter: 'blur(45px)',
-                transform: 'translateZ(0)',
-                willChange: 'transform, opacity'
+                background: 'radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(139,92,246,0) 70%)',
+                transform: 'translate3d(-50%,-50%,0)'
               }}
             />
           </div>
@@ -174,61 +89,124 @@ export default function SplashScreen({ onComplete }) {
           {/* Logo and text */}
           <div className="relative z-10 flex flex-col items-center">
             <motion.div
-              initial={{ opacity: 0, scale: 0.5, y: 20 }}
+              initial={{ opacity: 0, scale: 0.8, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
+              transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
               className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden shadow-2xl ring-4 ring-white/20 mb-8"
+              style={{ transform: 'translate3d(0,0,0)' }}
             >
               <img 
                 src={LOGO_URL} 
                 alt="Thrifty Curator" 
                 className="w-full h-full object-cover"
+                loading="eager"
               />
             </motion.div>
 
             <motion.h1
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+              transition={{ duration: 0.5, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
               className="font-poppins text-3xl sm:text-4xl font-bold text-white mb-2 text-center"
             >
               Thrifty Curator
             </motion.h1>
 
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
+              transition={{ duration: 0.5, delay: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
               className="text-white/60 text-sm sm:text-base tracking-widest uppercase"
             >
               Curated Resale Finds
             </motion.p>
 
+            {/* Loading dots */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1 }}
+              transition={{ delay: 0.5 }}
               className="mt-10"
             >
               <div className="flex gap-2">
                 {[0, 1, 2].map((i) => (
-                  <motion.div
+                  <div
                     key={i}
-                    className="w-2 h-2 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full"
-                    animate={{
-                      scale: [1, 1.5, 1],
-                      opacity: [0.5, 1, 0.5],
-                    }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      delay: i * 0.2,
+                    className="w-2 h-2 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full animate-pulse-dot"
+                    style={{ 
+                      animationDelay: `${i * 0.15}s`,
+                      transform: 'translate3d(0,0,0)'
                     }}
                   />
                 ))}
               </div>
             </motion.div>
           </div>
+
+          {/* CSS Animations - GPU accelerated */}
+          <style>{`
+            @keyframes blob-1 {
+              0%, 100% { 
+                transform: translate3d(0, 0, 0) scale(1); 
+                opacity: 0.4;
+              }
+              50% { 
+                transform: translate3d(30px, -20px, 0) scale(1.1); 
+                opacity: 0.3;
+              }
+            }
+            
+            @keyframes blob-2 {
+              0%, 100% { 
+                transform: translate3d(0, 0, 0) scale(1); 
+                opacity: 0.4;
+              }
+              50% { 
+                transform: translate3d(-25px, 25px, 0) scale(1.15); 
+                opacity: 0.3;
+              }
+            }
+            
+            @keyframes blob-3 {
+              0%, 100% { 
+                transform: translate3d(-50%, -50%, 0) scale(1); 
+                opacity: 0.35;
+              }
+              50% { 
+                transform: translate3d(-50%, -50%, 0) scale(1.2); 
+                opacity: 0.25;
+              }
+            }
+            
+            @keyframes pulse-dot {
+              0%, 100% { 
+                transform: translate3d(0, 0, 0) scale(1); 
+                opacity: 0.5;
+              }
+              50% { 
+                transform: translate3d(0, 0, 0) scale(1.4); 
+                opacity: 1;
+              }
+            }
+            
+            .animate-blob-1 {
+              animation: blob-1 4s ease-in-out infinite;
+            }
+            
+            .animate-blob-2 {
+              animation: blob-2 5s ease-in-out infinite;
+              animation-delay: 0.5s;
+            }
+            
+            .animate-blob-3 {
+              animation: blob-3 6s ease-in-out infinite;
+              animation-delay: 1s;
+            }
+            
+            .animate-pulse-dot {
+              animation: pulse-dot 1s ease-in-out infinite;
+            }
+          `}</style>
         </motion.div>
       )}
     </AnimatePresence>

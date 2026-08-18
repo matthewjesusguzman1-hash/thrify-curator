@@ -427,6 +427,39 @@ export default function EditEmployeeModal({
                 </div>
               </div>
 
+              {/* W-8BEN Section - For Foreign Employees */}
+              <div className="form-group">
+                <div className="bg-gradient-to-br from-[#2D1B4E] via-[#1E3A5F] to-[#1A3D3D] rounded-xl overflow-hidden border border-yellow-500/20">
+                  <div className="h-1.5 bg-gradient-to-r from-[#FFE66D] via-[#FF6B6B] to-[#4ECDC4]" />
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-[#FFE66D] to-[#FF6B6B] rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-gray-900" />
+                        </div>
+                        <div>
+                          <span className="text-white font-medium">W-8BEN (Foreign Workers)</span>
+                          <p className="text-xs text-white/50">
+                            For employees outside the United States
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          window.open(`${process.env.REACT_APP_BACKEND_URL}/api/admin/employees/${editingEmployee?.id}/w8ben`, '_blank');
+                        }}
+                        className="bg-gradient-to-r from-[#FFE66D] to-[#FF6B6B] hover:from-[#FF6B6B] hover:to-[#FFE66D] text-gray-900"
+                        data-testid="view-w8ben-btn"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View W-8BEN
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Password Management Section - Only for employees (not admins) */}
               {editEmployeeData.role !== 'admin' && (
                 <div className="form-group">

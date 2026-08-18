@@ -5,6 +5,7 @@ This module was refactored from a single 1900+ line file into focused modules:
 - admin_employees: Employee CRUD operations
 - admin_time_entries: Time entry management  
 - admin_w9: W-9 document management
+- admin_w8ben: W-8BEN document management (foreign employees)
 - admin_reports: Report generation (shifts, mileage, W-9)
 - admin_legacy: Legacy PDF endpoint for backward compatibility
 """
@@ -14,6 +15,8 @@ from fastapi import APIRouter
 from app.routers.admin_employees import router as employees_router
 from app.routers.admin_time_entries import router as time_entries_router
 from app.routers.admin_w9 import router as w9_router
+from app.routers.admin_w8ben import router as w8ben_router
+from app.routers.admin_w8ben import employee_router as w8ben_employee_router
 from app.routers.admin_reports import router as reports_router
 from app.routers.admin_legacy import router as legacy_router
 
@@ -24,5 +27,9 @@ router = APIRouter()
 router.include_router(employees_router)
 router.include_router(time_entries_router)
 router.include_router(w9_router)
+router.include_router(w8ben_router)
 router.include_router(reports_router)
 router.include_router(legacy_router)
+
+# Also export the employee W-8BEN router for time_tracking integration
+__all__ = ["router", "w8ben_employee_router"]

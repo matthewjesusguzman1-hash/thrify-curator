@@ -163,6 +163,13 @@ export default function EmployeeDashboard() {
   const [w9FormData, setW9FormData] = useState({ file: null, notes: '' });
   const w9InputRef = useRef(null);
   
+  // W-8BEN state (for foreign employees)
+  const [w8benStatus, setW8benStatus] = useState(null);
+  const [uploadingW8ben, setUploadingW8ben] = useState(false);
+  const [showW8benSubmitForm, setShowW8benSubmitForm] = useState(false);
+  const [w8benFormData, setW8benFormData] = useState({ file: null });
+  const w8benInputRef = useRef(null);
+  
   // 1099 documents state
   const [my1099s, setMy1099s] = useState({ documents: [], count: 0 });
   const [loading1099s, setLoading1099s] = useState(false);
@@ -521,11 +528,12 @@ export default function EmployeeDashboard() {
       // Get user info for 1099 fetch
       const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
       
-      const [statusRes, entriesRes, summaryRes, w9Res] = await Promise.all([
+      const [statusRes, entriesRes, summaryRes, w9Res, w8benRes] = await Promise.all([
         axios.get(`${API}/time/status`, getAuthHeader()),
         axios.get(`${API}/time/entries`, getAuthHeader()),
         axios.get(`${API}/time/summary`, getAuthHeader()),
-        axios.get(`${API}/time/w9/status`, getAuthHeader())
+        axios.get(`${API}/time/w9/status`, getAuthHeader()),
+        axios.get(`${API}/time-tracking/w8ben/status`, getAuthHeader()).catch(() => ({ data: { status: 'not_applicable' } }))
       ]);
       
       // Fetch 1099s separately (for current and previous tax years)
@@ -555,6 +563,7 @@ export default function EmployeeDashboard() {
       setEntries(entriesRes.data);
       setSummary(summaryRes.data);
       setW9Status(w9Res.data);
+      setW8benStatus(w8benRes.data);
       
       // Start Live Activity ONCE when clocked in (avoid restarting on every fetchData)
       if (isNowClocked && !liveActivityStartedRef.current && statusRes.data.entry?.clock_in) {
@@ -646,6 +655,45 @@ export default function EmployeeDashboard() {
     } catch (error) {
       toast.error("Failed to view W-9");
     }
+  };
+
+  // W-8BEN handlers (for foreign employees)
+  const handleW8benSubmit = async () => {
+    if (!w8benFormData.file) {
+      toast.error("Please select a W-8BEN file to submit");
+      return;
+    }
+    
+    setUploadingW8ben(true);
+    const formData = new FormData();
+    formData.append('file', w8benFormData.file);
+    
+    try {
+      await axios.post(`${API}/time-tracking/w8ben/upload`, formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      toast.success("W-8BEN submitted for review!");
+      setW8benFormData({ file: null });
+      setShowW8benSubmitForm(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to submit W-8BEN");
+    } finally {
+      setUploadingW8ben(false);
+    }
+  };
+
+  const handleDownloadBlankW8ben = () => {
+    const link = document.createElement('a');
+    link.href = "https://www.irs.gov/pub/irs-pdf/fw8ben.pdf";
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Check if user is within range of work location
@@ -1648,6 +1696,165 @@ export default function EmployeeDashboard() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* W-8BEN Tax Form Section - For Foreign Employees */}
+          <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10">
+            <div className="h-1.5 bg-gradient-to-r from-[#FF6B6B] via-[#FFE66D] to-[#4ECDC4]" />
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-poppins text-lg font-semibold text-white flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#FFE66D]" />
+                  W-8BEN (Foreign Employees)
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm("Download the IRS W-8BEN form for foreign individuals?")) {
+                      handleDownloadBlankW8ben();
+                    }
+                  }}
+                  className="text-[#FFE66D] border-[#FFE66D]/50 hover:bg-[#FFE66D]/10 bg-transparent"
+                  data-testid="get-w8ben-form-btn"
+                >
+                  <FileText className="w-4 h-4 mr-1" />
+                  Get W-8BEN Form
+                </Button>
+              </div>
+
+              <p className="text-sm text-white/60 mb-4">
+                If you are a foreign individual working for this company, submit your W-8BEN form here to certify your foreign status for U.S. tax purposes.
+              </p>
+
+              {/* Submit W-8BEN Button */}
+              {!showW8benSubmitForm && (
+                <Button
+                  onClick={() => setShowW8benSubmitForm(true)}
+                  className="w-full mb-4 bg-gradient-to-r from-[#FFE66D] to-[#FF6B6B] hover:from-[#FF6B6B] hover:to-[#FFE66D] text-gray-900 font-semibold"
+                  data-testid="submit-w8ben-btn"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Submit W-8BEN to Admin
+                </Button>
+              )}
+
+              {/* W-8BEN Submit Form */}
+              {showW8benSubmitForm && (
+                <div className="mb-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-medium text-white">Submit W-8BEN</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowW8benSubmitForm(false);
+                        setW8benFormData({ file: null });
+                      }}
+                      className="text-white/60 hover:text-white"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                  
+                  {/* File Upload */}
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-white/80 mb-1">
+                      W-8BEN Document *
+                    </label>
+                    <div 
+                      className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                        w8benFormData.file 
+                          ? 'border-[#FFE66D] bg-[#FFE66D]/10' 
+                          : 'border-white/20 hover:border-[#FFE66D]/50'
+                      }`}
+                      onClick={() => w8benInputRef.current?.click()}
+                    >
+                      <input
+                        type="file"
+                        ref={w8benInputRef}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => setW8benFormData({ ...w8benFormData, file: e.target.files[0] })}
+                      />
+                      {w8benFormData.file ? (
+                        <div className="flex items-center justify-center gap-2 text-[#FFE66D]">
+                          <CheckCircle className="w-5 h-5" />
+                          <span className="font-medium">{w8benFormData.file.name}</span>
+                        </div>
+                      ) : (
+                        <div className="text-white/60">
+                          <Upload className="w-6 h-6 mx-auto mb-1" />
+                          <p className="text-sm">Click to select W-8BEN file</p>
+                          <p className="text-xs text-white/40">PDF, JPG, or PNG</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    onClick={handleW8benSubmit}
+                    disabled={!w8benFormData.file || uploadingW8ben}
+                    className="w-full bg-gradient-to-r from-[#FFE66D] to-[#FF6B6B] hover:from-[#FF6B6B] hover:to-[#FFE66D] text-gray-900 font-semibold"
+                    data-testid="submit-w8ben-form-btn"
+                  >
+                    {uploadingW8ben ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    {uploadingW8ben ? "Submitting..." : "Submit W-8BEN"}
+                  </Button>
+                </div>
+              )}
+
+              {/* W-8BEN Status Display */}
+              {w8benStatus?.has_w8ben && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-white/80 flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-[#FFE66D]" />
+                      Your W-8BEN Submissions
+                    </h3>
+                    <span className="bg-[#FFE66D]/30 text-[#FFE66D] px-2 py-0.5 rounded-full text-xs font-medium">
+                      {w8benStatus.total_documents} document(s)
+                    </span>
+                  </div>
+
+                  {w8benStatus.w8ben_documents?.map((doc) => (
+                    <div key={doc.id} className="p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-[#FFE66D]" />
+                          <span className="text-sm text-white">{doc.filename}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          doc.status === 'approved' 
+                            ? 'bg-green-500/20 text-green-400'
+                            : doc.status === 'rejected'
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-[#FFE66D]/20 text-[#FFE66D]'
+                        }`}>
+                          {doc.status?.charAt(0).toUpperCase() + doc.status?.slice(1) || 'Submitted'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/40 mt-1">
+                        Submitted: {new Date(doc.uploaded_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!w8benStatus?.has_w8ben && !showW8benSubmitForm && (
+                <div className="text-center py-4 bg-white/5 rounded-xl border border-white/10">
+                  <FileText className="w-8 h-8 mx-auto mb-2 text-white/20" />
+                  <p className="text-sm text-white/60">No W-8BEN submitted</p>
+                  <p className="text-xs text-white/40 mt-1">Foreign employees should submit W-8BEN above</p>
+                </div>
+              )}
             </div>
           </div>
           
