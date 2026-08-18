@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   User,
   X,
@@ -13,7 +14,8 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  Download
+  Download,
+  ChevronDown
 } from "lucide-react";
 
 export default function EmployeePortalViewModal({
@@ -35,6 +37,11 @@ export default function EmployeePortalViewModal({
   portalElapsedTime
 }) {
   const [showClockConfirm, setShowClockConfirm] = useState(null);
+  
+  // Collapsible state for tax form sections
+  const [w9Expanded, setW9Expanded] = useState(false);
+  const [w8benExpanded, setW8benExpanded] = useState(false);
+  const [nec1099Expanded, setNec1099Expanded] = useState(false);
 
   if (!isOpen || !employee) return null;
 
@@ -367,183 +374,253 @@ export default function EmployeePortalViewModal({
                 </div>
               </div>
 
-              {/* W-9 Tax Form Section */}
-              <div className="bg-white rounded-2xl overflow-hidden">
-                <div className="h-1 bg-gradient-to-r from-[#f97316] to-[#ea580c]" />
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-[#f97316]" />
-                      <h3 className="font-playfair text-lg font-semibold text-[#333]">W-9 Tax Form</h3>
-                    </div>
-                    {portalData.w9Status?.has_w9 && (
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        portalData.w9Status.status === 'approved' 
-                          ? 'bg-green-100 text-green-700' 
-                          : portalData.w9Status.status === 'pending_review'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : portalData.w9Status.status === 'needs_correction'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {portalData.w9Status.status === 'approved' 
-                          ? 'Approved' 
-                          : portalData.w9Status.status === 'pending_review'
-                          ? 'Pending'
-                          : portalData.w9Status.status === 'needs_correction'
-                          ? 'Denied'
-                          : 'Submitted'}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* W-9 Documents List - Matching Employee Dashboard Style */}
-                  {portalData.w9Status?.w9_documents && portalData.w9Status.w9_documents.filter(doc => doc && doc.id).length > 0 ? (
-                    <div className="space-y-3">
-                      {portalData.w9Status.w9_documents.filter(doc => doc && doc.id).map((doc, index) => {
-                        // Use pre-computed status styles for better performance
-                        const statusStyles = {
-                          approved: {
-                            bg: 'bg-green-50 border-green-200',
-                            icon: 'bg-green-100',
-                            iconColor: 'text-green-600',
-                            badge: 'bg-green-100 text-green-700',
-                            text: 'Approved'
-                          },
-                          needs_correction: {
-                            bg: 'bg-red-50 border-red-200',
-                            icon: 'bg-red-100',
-                            iconColor: 'text-red-600',
-                            badge: 'bg-red-100 text-red-700',
-                            text: 'Denied'
-                          },
-                          default: {
-                            bg: 'bg-yellow-50 border-yellow-200',
-                            icon: 'bg-yellow-100',
-                            iconColor: 'text-yellow-600',
-                            badge: 'bg-yellow-100 text-yellow-700',
-                            text: 'Pending'
-                          }
-                        };
-                        const statusStyle = statusStyles[doc.status] || statusStyles.default;
-                        
-                        return (
-                          <div
-                            key={doc.id}
-                            className={`p-4 rounded-xl border ${statusStyle.bg}`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${statusStyle.icon}`}>
-                                  {doc.status === 'approved' ? (
-                                    <CheckCircle className={`w-5 h-5 ${statusStyle.iconColor}`} />
-                                  ) : doc.status === 'needs_correction' ? (
-                                    <XCircle className={`w-5 h-5 ${statusStyle.iconColor}`} />
-                                  ) : (
-                                    <Clock className={`w-5 h-5 ${statusStyle.iconColor}`} />
-                                  )}
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-medium text-[#333]">
-                                      {doc.filename || `W-9 #${index + 1}`}
-                                    </p>
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusStyle.badge}`}>
-                                      {statusStyle.text}
-                                    </span>
-                                  </div>
-                                  {doc.uploaded_at && (
-                                    <p className="text-xs text-[#888]">
-                                      Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => onOpenW9Modal(employee.id, employee.name)}
-                                className="text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10"
-                              >
-                                <Eye className="w-4 h-4 mr-1" />
-                                View
-                              </Button>
-                            </div>
-                            
-                            {/* Show rejection reason if denied */}
-                            {doc.status === 'needs_correction' && doc.rejection_reason && (
-                              <div className="mt-3 p-3 bg-red-100 border border-red-200 rounded-lg">
-                                <p className="text-xs text-red-600 font-medium mb-1 flex items-center gap-1">
-                                  <XCircle className="w-3 h-3" />
-                                  Action Required
-                                </p>
-                                <p className="text-sm text-red-800">{doc.rejection_reason}</p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-gray-400" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-600">No W-9 Submitted</p>
-                          <p className="text-xs text-[#888]">Employee has not submitted a W-9 form yet</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Blank W-9 Download */}
-                  <div className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl mt-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Download className="w-4 h-4 text-gray-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-[#333]">IRS W-9 Form</p>
-                        <p className="text-xs text-[#888]">Download blank form</p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDownloadBlankW9();
-                      }}
-                      className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
+              {/* W-9 Tax Form Section - Collapsible */}
+              <Collapsible open={w9Expanded} onOpenChange={setW9Expanded}>
+                <div className="bg-white rounded-2xl overflow-hidden" data-testid="portal-w9-section">
+                  <div className="h-1 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493]" />
+                  <CollapsibleTrigger asChild>
+                    <button 
+                      className="w-full p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                      data-testid="portal-w9-collapse-trigger"
                     >
-                      <FileText className="w-4 h-4 mr-1" />
-                      Get Form
-                    </Button>
-                  </div>
-                  
-                  {/* 1099s Received Section */}
-                  {portalData?.my1099s?.count > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-[#333] flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-green-600" />
-                          1099-NEC Forms Received
-                        </h4>
-                        <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                          {portalData.my1099s.count} form(s)
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-[#00D4FF]" />
+                        <h3 className="font-playfair text-lg font-semibold text-[#333]">W-9 Tax Form</h3>
+                        {portalData.w9Status?.total_documents > 0 && (
+                          <span className="bg-[#8B5CF6]/20 text-[#8B5CF6] px-2 py-0.5 rounded-full text-xs font-medium">
+                            {portalData.w9Status.total_documents}
+                          </span>
+                        )}
                       </div>
-                      <div className="space-y-2">
+                      <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${w9Expanded ? 'rotate-180' : ''}`} />
+                    </button>
+                  </CollapsibleTrigger>
+                  
+                  <CollapsibleContent>
+                    <div className="px-6 pb-6">
+                      {/* W-9 Documents List */}
+                      {portalData.w9Status?.w9_documents && portalData.w9Status.w9_documents.filter(doc => doc && doc.id).length > 0 ? (
+                        <div className="space-y-3">
+                          {portalData.w9Status.w9_documents.filter(doc => doc && doc.id).map((doc, index) => {
+                            const statusStyles = {
+                              approved: {
+                                bg: 'bg-green-50 border-green-200',
+                                icon: 'bg-green-100',
+                                iconColor: 'text-green-600',
+                                badge: 'bg-green-100 text-green-700',
+                                text: 'Approved'
+                              },
+                              needs_correction: {
+                                bg: 'bg-red-50 border-red-200',
+                                icon: 'bg-red-100',
+                                iconColor: 'text-red-600',
+                                badge: 'bg-red-100 text-red-700',
+                                text: 'Denied'
+                              },
+                              default: {
+                                bg: 'bg-yellow-50 border-yellow-200',
+                                icon: 'bg-yellow-100',
+                                iconColor: 'text-yellow-600',
+                                badge: 'bg-yellow-100 text-yellow-700',
+                                text: 'Pending'
+                              }
+                            };
+                            const statusStyle = statusStyles[doc.status] || statusStyles.default;
+                            
+                            return (
+                              <div
+                                key={doc.id}
+                                className={`p-4 rounded-xl border ${statusStyle.bg}`}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${statusStyle.icon}`}>
+                                      {doc.status === 'approved' ? (
+                                        <CheckCircle className={`w-5 h-5 ${statusStyle.iconColor}`} />
+                                      ) : doc.status === 'needs_correction' ? (
+                                        <XCircle className={`w-5 h-5 ${statusStyle.iconColor}`} />
+                                      ) : (
+                                        <Clock className={`w-5 h-5 ${statusStyle.iconColor}`} />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-medium text-[#333]">
+                                          {doc.filename || `W-9 #${index + 1}`}
+                                        </p>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusStyle.badge}`}>
+                                          {statusStyle.text}
+                                        </span>
+                                      </div>
+                                      {doc.uploaded_at && (
+                                        <p className="text-xs text-[#888]">
+                                          Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => onOpenW9Modal(employee.id, employee.name)}
+                                    className="text-[#00D4FF] border-[#00D4FF]/30 hover:bg-[#00D4FF]/10"
+                                  >
+                                    <Eye className="w-4 h-4 mr-1" />
+                                    View
+                                  </Button>
+                                </div>
+                                
+                                {doc.status === 'needs_correction' && doc.rejection_reason && (
+                                  <div className="mt-3 p-3 bg-red-100 border border-red-200 rounded-lg">
+                                    <p className="text-xs text-red-600 font-medium mb-1 flex items-center gap-1">
+                                      <XCircle className="w-3 h-3" />
+                                      Action Required
+                                    </p>
+                                    <p className="text-sm text-red-800">{doc.rejection_reason}</p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <FileText className="w-5 h-5 text-gray-400" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-600">No W-9 Submitted</p>
+                              <p className="text-xs text-[#888]">Employee has not submitted a W-9 form yet</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Blank W-9 Download */}
+                      <div className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl mt-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <Download className="w-4 h-4 text-gray-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-[#333]">IRS W-9 Form</p>
+                            <p className="text-xs text-[#888]">Download blank form</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDownloadBlankW9();
+                          }}
+                          className="text-[#C5A065] border-[#C5A065] hover:bg-[#C5A065]/10"
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          Get Form
+                        </Button>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+
+              {/* W-8BEN Tax Form Section - Collapsible */}
+              <Collapsible open={w8benExpanded} onOpenChange={setW8benExpanded}>
+                <div className="bg-white rounded-2xl overflow-hidden" data-testid="portal-w8ben-section">
+                  <div className="h-1 bg-gradient-to-r from-[#FF6B6B] via-[#FFE66D] to-[#4ECDC4]" />
+                  <CollapsibleTrigger asChild>
+                    <button 
+                      className="w-full p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                      data-testid="portal-w8ben-collapse-trigger"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-[#FFE66D]" />
+                        <h3 className="font-playfair text-lg font-semibold text-[#333]">W-8BEN Tax Form</h3>
+                        {portalData.w8benStatus?.total_documents > 0 && (
+                          <span className="bg-[#FFE66D]/30 text-[#B8860B] px-2 py-0.5 rounded-full text-xs font-medium">
+                            {portalData.w8benStatus.total_documents}
+                          </span>
+                        )}
+                      </div>
+                      <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${w8benExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                  </CollapsibleTrigger>
+                  
+                  <CollapsibleContent>
+                    <div className="px-6 pb-6">
+                      <p className="text-sm text-gray-500 mb-4">
+                        For foreign individuals to certify their foreign status for U.S. tax purposes.
+                      </p>
+
+                      {portalData.w8benStatus?.w8ben_documents && portalData.w8benStatus.w8ben_documents.length > 0 ? (
+                        <div className="space-y-3">
+                          {portalData.w8benStatus.w8ben_documents.map((doc) => (
+                            <div key={doc.id} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-[#FFE66D]" />
+                                  <span className="text-sm text-[#333]">{doc.filename}</span>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  doc.status === 'approved' 
+                                    ? 'bg-green-100 text-green-700'
+                                    : doc.status === 'rejected'
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-yellow-100 text-yellow-700'
+                                }`}>
+                                  {doc.status?.charAt(0).toUpperCase() + doc.status?.slice(1) || 'Submitted'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-400 mt-1">
+                                Submitted: {new Date(doc.uploaded_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 bg-gray-50 rounded-xl border border-gray-200">
+                          <FileText className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                          <p className="text-sm text-gray-500">No W-8BEN submitted</p>
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+
+              {/* 1099-NEC Forms Section - Collapsible */}
+              {portalData?.my1099s?.count > 0 && (
+                <Collapsible open={nec1099Expanded} onOpenChange={setNec1099Expanded}>
+                  <div className="bg-white rounded-2xl overflow-hidden" data-testid="portal-1099-section">
+                    <div className="h-1 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493]" />
+                    <CollapsibleTrigger asChild>
+                      <button 
+                        className="w-full p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                        data-testid="portal-1099-collapse-trigger"
+                      >
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="w-5 h-5 text-[#00D4FF]" />
+                          <h3 className="font-playfair text-lg font-semibold text-[#333]">1099-NEC Forms</h3>
+                          <span className="bg-[#00D4FF]/20 text-[#00D4FF] px-2 py-0.5 rounded-full text-xs font-medium">
+                            {portalData.my1099s.count}
+                          </span>
+                        </div>
+                        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${nec1099Expanded ? 'rotate-180' : ''}`} />
+                      </button>
+                    </CollapsibleTrigger>
+                    
+                    <CollapsibleContent>
+                      <div className="px-6 pb-6 space-y-3">
                         {portalData.my1099s.documents.map((doc) => (
                           <div 
                             key={doc.id}
-                            className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-xl"
+                            className="flex items-center justify-between p-3 bg-[#00D4FF]/5 border border-[#00D4FF]/20 rounded-xl"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                <FileText className="w-4 h-4 text-green-600" />
+                              <div className="w-8 h-8 bg-[#00D4FF]/10 rounded-lg flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-[#00D4FF]" />
                               </div>
                               <div>
                                 <p className="text-sm font-medium text-[#333]">
@@ -574,10 +651,10 @@ export default function EmployeePortalViewModal({
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              )}
             </div>
           ) : (
             <p className="text-center text-white/60 py-12">No data available</p>
