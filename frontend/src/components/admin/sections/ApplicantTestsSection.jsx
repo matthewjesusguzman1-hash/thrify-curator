@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -309,12 +310,13 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
     }
   };
 
-  return (
+  return ReactDOM.createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
       onClick={onClose}
     >
       <motion.div
@@ -324,9 +326,9 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
         className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-bold text-[#333]">Create Skills Test</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -334,23 +336,24 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Test Name */}
           <div>
-            <Label className="text-base font-medium">Test Name *</Label>
-            <Input
+            <Label className="text-base font-medium block mb-2">Test Name *</Label>
+            <input
+              type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g., Listing Skills Assessment"
-              className="mt-2 h-12 text-base"
+              className="w-full h-12 px-4 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
             />
           </div>
 
           {/* Description */}
           <div>
-            <Label className="text-base font-medium">Description (optional)</Label>
+            <Label className="text-base font-medium block mb-2">Description (optional)</Label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Brief description of the test..."
-              className="mt-2 w-full px-4 py-3 border border-gray-300 rounded-lg resize-none text-base"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none text-base focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
               rows={2}
             />
           </div>
@@ -466,7 +469,8 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
           </Button>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
@@ -532,12 +536,13 @@ function InviteModal({ test, onClose, getAuthHeader }) {
     }
   };
 
-  return (
+  return ReactDOM.createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
       onClick={onClose}
     >
       <motion.div
@@ -552,7 +557,7 @@ function InviteModal({ test, onClose, getAuthHeader }) {
             <h2 className="text-xl font-bold text-[#333]">Send Invite</h2>
             <p className="text-sm text-gray-500">{test.name}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -561,28 +566,29 @@ function InviteModal({ test, onClose, getAuthHeader }) {
           {/* Send New Invite */}
           <div className="space-y-4">
             <div>
-              <Label>Applicant Name *</Label>
-              <Input
+              <Label className="block mb-2">Applicant Name *</Label>
+              <input
+                type="text"
                 value={applicantName}
                 onChange={e => setApplicantName(e.target.value)}
                 placeholder="John Doe"
-                className="mt-1"
+                className="w-full h-12 px-4 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
               />
             </div>
             <div>
-              <Label>Applicant Email *</Label>
-              <Input
+              <Label className="block mb-2">Applicant Email *</Label>
+              <input
                 type="email"
                 value={applicantEmail}
                 onChange={e => setApplicantEmail(e.target.value)}
                 placeholder="john@example.com"
-                className="mt-1"
+                className="w-full h-12 px-4 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
               />
             </div>
             <Button
               onClick={handleSendInvite}
               disabled={sending}
-              className="w-full bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white"
+              className="w-full bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white h-12"
             >
               <Send className="w-4 h-4 mr-2" />
               {sending ? "Sending..." : "Send Invite"}
@@ -622,7 +628,8 @@ function InviteModal({ test, onClose, getAuthHeader }) {
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
@@ -646,12 +653,13 @@ function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
     }
   };
 
-  return (
+  return ReactDOM.createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
       onClick={onClose}
     >
       <motion.div
@@ -666,7 +674,7 @@ function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
             <h2 className="text-xl font-bold text-[#333]">Submissions</h2>
             <p className="text-sm text-gray-500">{test.name}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -709,7 +717,8 @@ function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
           )}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
@@ -761,12 +770,13 @@ function SubmissionDetailModal({ submission, onClose, getAuthHeader }) {
     }
   };
 
-  return (
+  return ReactDOM.createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
       onClick={onClose}
     >
       <motion.div
@@ -781,7 +791,7 @@ function SubmissionDetailModal({ submission, onClose, getAuthHeader }) {
             <h2 className="text-xl font-bold text-[#333]">{submission.applicant_name}'s Submission</h2>
             <p className="text-sm text-gray-500">{submission.applicant_email}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -833,13 +843,13 @@ function SubmissionDetailModal({ submission, onClose, getAuthHeader }) {
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   placeholder="Add your notes about this applicant..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none text-base focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
                   rows={4}
                 />
                 <Button
                   onClick={handleSaveNotes}
                   disabled={savingNotes}
-                  className="mt-3 bg-[#8B5CF6] text-white"
+                  className="mt-3 bg-[#8B5CF6] text-white h-12"
                 >
                   {savingNotes ? "Saving..." : "Save Notes"}
                 </Button>
@@ -848,6 +858,7 @@ function SubmissionDetailModal({ submission, onClose, getAuthHeader }) {
           ) : null}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
