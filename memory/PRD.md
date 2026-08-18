@@ -79,9 +79,13 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Key points summary for each module
   - Videos auto-mark completion when watched
   - Available in Employee Dashboard
+- **W-8BEN Tax Form Support**: Added W-8BEN form upload/management for foreign employees in both Employee Dashboard and Admin EditEmployeeModal
+- **Collapsible Tax Forms (2026-08-18)**: W-9 and W-8BEN sections in Employee Dashboard now collapse/expand with chevron animation to save vertical space
+- **Splash Screen Optimization (2026-08-18)**: Restored original animated blob design with GPU optimization hints (willChange, translateZ, backfaceVisibility) for smoother performance
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)
+- AI Training Video Generation (removed 2026-08 per user request - results were unsatisfactory)
 
 ## Technical Debt / Refactoring Needed
 1. **CRITICAL**: `frontend/src/pages/ConsignmentAgreementForm.jsx` (~3850 lines) - Must be broken into smaller components
