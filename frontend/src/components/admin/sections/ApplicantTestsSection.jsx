@@ -243,11 +243,12 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
   const [fields, setFields] = useState(defaultFields.map(f => ({ ...f, enabled: true })));
   const [photos, setPhotos] = useState([]);
   const [creating, setCreating] = useState(false);
-  const fileInputRef = useRef(null);
 
   const handlePhotoSelect = (e) => {
     const files = Array.from(e.target.files);
     setPhotos(prev => [...prev, ...files]);
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
   };
 
   const removePhoto = (index) => {
@@ -356,28 +357,27 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
 
           {/* Photos */}
           <div>
-            <Label className="flex items-center justify-between">
+            <Label className="flex items-center justify-between text-base font-medium">
               <span>Product Photos *</span>
-              <span className="text-sm text-gray-500">{photos.length} selected</span>
+              <span className="text-sm text-gray-500 font-normal">{photos.length} selected</span>
             </Label>
-            <div 
-              className="mt-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#8B5CF6] hover:bg-[#8B5CF6]/5 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
+            
+            {/* File input - visible as a label */}
+            <label className="mt-3 block border-2 border-dashed border-gray-300 rounded-xl p-8 cursor-pointer hover:border-[#8B5CF6] hover:bg-[#8B5CF6]/5 transition-colors active:bg-[#8B5CF6]/10">
               <input
                 type="file"
-                ref={fileInputRef}
                 onChange={handlePhotoSelect}
                 accept="image/*"
                 multiple
-                className="hidden"
+                className="sr-only"
               />
-              <div className="text-center pointer-events-none">
-                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                <p className="text-base font-medium text-gray-600 mb-1">Tap to select photos</p>
-                <p className="text-sm text-gray-400">JPG, PNG up to 10MB each</p>
+              <div className="text-center">
+                <Upload className="w-12 h-12 text-[#8B5CF6] mx-auto mb-4" />
+                <p className="text-lg font-semibold text-[#333] mb-2">Tap here to select photos</p>
+                <p className="text-sm text-gray-500">JPG, PNG up to 10MB each</p>
               </div>
-            </div>
+            </label>
+            
             {photos.length > 0 && (
               <div className="mt-4 grid grid-cols-3 gap-3">
                 {photos.map((photo, index) => (
