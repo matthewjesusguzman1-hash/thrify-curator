@@ -1535,11 +1535,12 @@ export default function AdminDashboard() {
     setShowClockConfirm(null);
     
     try {
-      // Fetch employee's time entries, summary, W-9 status, and clock status
-      const [entriesRes, summaryRes, w9Res, clockRes] = await Promise.all([
+      // Fetch employee's time entries, summary, W-9 status, W-8BEN status, and clock status
+      const [entriesRes, summaryRes, w9Res, w8benRes, clockRes] = await Promise.all([
         axios.get(`${API}/admin/employee/${employee.id}/entries`, getAuthHeader()),
         axios.get(`${API}/admin/employee/${employee.id}/summary`, getAuthHeader()),
         axios.get(`${API}/admin/employees/${employee.id}/w9/status`, getAuthHeader()).catch(() => ({ data: { has_w9: false, status: 'not_submitted' } })),
+        axios.get(`${API}/admin/employees/${employee.id}/w8ben/status`, getAuthHeader()).catch(() => ({ data: { has_w8ben: false, w8ben_documents: [] } })),
         axios.get(`${API}/admin/employee/${employee.id}/clock-status`, getAuthHeader()).catch(() => ({ data: { is_clocked_in: false } }))
       ]);
       
@@ -1567,6 +1568,7 @@ export default function AdminDashboard() {
         entries: entriesRes.data,
         summary: summaryRes.data,
         w9Status: w9Res.data,
+        w8benStatus: w8benRes.data,
         my1099s: employee1099s
       });
       setEmployeeClockStatus(clockRes.data);
@@ -1589,7 +1591,9 @@ export default function AdminDashboard() {
           hourly_rate: employee.hourly_rate || payrollSettings.default_hourly_rate || 15,
           estimated_pay: employeeStats.hours * (employee.hourly_rate || payrollSettings.default_hourly_rate || 15)
         },
-        w9Status: { has_w9: false, status: 'not_submitted' }
+        w9Status: { has_w9: false, status: 'not_submitted' },
+        w8benStatus: { has_w8ben: false, w8ben_documents: [] },
+        my1099s: { documents: [], count: 0 }
       });
       setEmployeeClockStatus({ is_clocked_in: false });
     } finally {
@@ -3623,24 +3627,13 @@ export default function AdminDashboard() {
             />
           )}
 
-          {/* Employee Portal View Modal - Extracted Component */}
+          {/* Employee Portal View Modal - Shows exact same view as employee sees */}
           <EmployeePortalViewModal
             isOpen={showEmployeePortal}
             onClose={() => setShowEmployeePortal(false)}
             employee={viewingEmployee}
             portalData={employeePortalData}
             clockStatus={employeeClockStatus}
-            loading={loadingPortal}
-            onClockInOut={handleAdminClockEmployee}
-            clockingEmployee={clockingEmployee}
-            onOpenW9Modal={handleOpenPortalW9Modal}
-            onDownloadBlankW9={handleDownloadBlankW9}
-            formatHoursToHMS={formatHoursToHMS}
-            roundHoursToMinute={roundHoursToMinute}
-            formatDateTime={formatDateTime}
-            calculateBiweeklyPeriod={calculateBiweeklyPeriod}
-            formatPortalTime={formatPortalTime}
-            portalElapsedTime={portalElapsedTime}
           />
 
           {/* Consignor Portal View Modal */}

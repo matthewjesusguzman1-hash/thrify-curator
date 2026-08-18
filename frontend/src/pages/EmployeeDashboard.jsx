@@ -126,13 +126,17 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-export default function EmployeeDashboard() {
+export default function EmployeeDashboard({ 
+  adminViewEmployee = null, 
+  isAdminView = false,
+  initialData = null  // Pre-fetched data from admin dashboard
+}) {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [clockedIn, setClockedIn] = useState(false);
-  const [currentEntry, setCurrentEntry] = useState(null);
-  const [entries, setEntries] = useState([]);
-  const [summary, setSummary] = useState({ 
+  const [clockedIn, setClockedIn] = useState(initialData?.clockStatus?.is_clocked_in || false);
+  const [currentEntry, setCurrentEntry] = useState(initialData?.clockStatus?.current_entry || null);
+  const [entries, setEntries] = useState(initialData?.entries || []);
+  const [summary, setSummary] = useState(initialData?.summary || { 
     total_hours: 0, 
     week_hours: 0, 
     total_shifts: 0,
@@ -158,7 +162,7 @@ export default function EmployeeDashboard() {
   const { heavyPress, buttonPress, lightTap, successFeedback, errorFeedback, warningFeedback } = useHaptics();
   
   // W-9 state
-  const [w9Status, setW9Status] = useState(null);
+  const [w9Status, setW9Status] = useState(initialData?.w9Status || null);
   const [uploadingW9, setUploadingW9] = useState(false);
   const [viewingW9, setViewingW9] = useState(null);
   const [showW9SubmitForm, setShowW9SubmitForm] = useState(false);
@@ -166,7 +170,7 @@ export default function EmployeeDashboard() {
   const w9InputRef = useRef(null);
   
   // W-8BEN state (for foreign employees)
-  const [w8benStatus, setW8benStatus] = useState(null);
+  const [w8benStatus, setW8benStatus] = useState(initialData?.w8benStatus || null);
   const [uploadingW8ben, setUploadingW8ben] = useState(false);
   const [showW8benSubmitForm, setShowW8benSubmitForm] = useState(false);
   const [w8benFormData, setW8benFormData] = useState({ file: null });
@@ -178,7 +182,7 @@ export default function EmployeeDashboard() {
   const [nec1099Expanded, setNec1099Expanded] = useState(false);
   
   // 1099 documents state
-  const [my1099s, setMy1099s] = useState({ documents: [], count: 0 });
+  const [my1099s, setMy1099s] = useState(initialData?.my1099s || { documents: [], count: 0 });
   const [loading1099s, setLoading1099s] = useState(false);
   const [viewing1099, setViewing1099] = useState(null);
 
@@ -224,6 +228,21 @@ export default function EmployeeDashboard() {
   };
 
   useEffect(() => {
+    // If in admin view mode, use the provided employee data
+    if (isAdminView && adminViewEmployee) {
+      setUser({
+        id: adminViewEmployee.id,
+        email: adminViewEmployee.email,
+        name: adminViewEmployee.name,
+        role: 'employee'
+      });
+      // Only fetch data if not provided as initial data
+      if (!initialData) {
+        fetchData();
+      }
+      return;
+    }
+    
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
     
@@ -514,10 +533,19 @@ export default function EmployeeDashboard() {
   const getAuthHeader = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
   });
+  
+  // Get user ID for API calls - use adminViewEmployee when in admin view mode
+  const getEffectiveUserId = () => {
+    if (isAdminView && adminViewEmployee) {
+      return adminViewEmployee.id;
+    }
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    return storedUser.id;
+  };
 
   // Pull-to-refresh handler
   const handleRefresh = async () => {
-    if (isRefreshing) return;
+    if (isRefreshing || isAdminView) return; // Disable refresh in admin view
     setIsRefreshing(true);
     lightTap();
     try {
@@ -532,23 +560,38 @@ export default function EmployeeDashboard() {
 
   const fetchData = async () => {
     try {
-      // Get user info for 1099 fetch
-      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      // Get user info for API calls - use adminViewEmployee in admin view mode
+      const effectiveUserId = getEffectiveUserId();
       
-      const [statusRes, entriesRes, summaryRes, w9Res, w8benRes] = await Promise.all([
-        axios.get(`${API}/time/status`, getAuthHeader()),
-        axios.get(`${API}/time/entries`, getAuthHeader()),
-        axios.get(`${API}/time/summary`, getAuthHeader()),
-        axios.get(`${API}/time/w9/status`, getAuthHeader()),
-        axios.get(`${API}/time-tracking/w8ben/status`, getAuthHeader()).catch(() => ({ data: { status: 'not_applicable' } }))
-      ]);
+      // In admin view mode, use admin endpoints to fetch employee-specific data
+      let statusRes, entriesRes, summaryRes, w9Res, w8benRes;
+      
+      if (isAdminView && adminViewEmployee) {
+        // Admin viewing employee portal - fetch employee-specific data using admin endpoints
+        [statusRes, entriesRes, summaryRes, w9Res, w8benRes] = await Promise.all([
+          axios.get(`${API}/time/employees/${adminViewEmployee.id}/status`, getAuthHeader()),
+          axios.get(`${API}/time/employees/${adminViewEmployee.id}/entries`, getAuthHeader()),
+          axios.get(`${API}/time/employees/${adminViewEmployee.id}/summary`, getAuthHeader()),
+          axios.get(`${API}/time/w9/admin/employee/${adminViewEmployee.id}/status`, getAuthHeader()).catch(() => ({ data: { has_w9: false, w9_documents: [] } })),
+          axios.get(`${API}/time-tracking/w8ben/admin/employee/${adminViewEmployee.id}/status`, getAuthHeader()).catch(() => ({ data: { status: 'not_applicable' } }))
+        ]);
+      } else {
+        // Normal employee view
+        [statusRes, entriesRes, summaryRes, w9Res, w8benRes] = await Promise.all([
+          axios.get(`${API}/time/status`, getAuthHeader()),
+          axios.get(`${API}/time/entries`, getAuthHeader()),
+          axios.get(`${API}/time/summary`, getAuthHeader()),
+          axios.get(`${API}/time/w9/status`, getAuthHeader()),
+          axios.get(`${API}/time-tracking/w8ben/status`, getAuthHeader()).catch(() => ({ data: { status: 'not_applicable' } }))
+        ]);
+      }
       
       // Fetch 1099s separately (for current and previous tax years)
       const currentYear = new Date().getFullYear();
       try {
         const [current1099s, previous1099s] = await Promise.all([
-          axios.get(`${API}/financials/my-1099s/${currentYear - 1}?user_id=${storedUser.id}`, getAuthHeader()),
-          axios.get(`${API}/financials/my-1099s/${currentYear - 2}?user_id=${storedUser.id}`, getAuthHeader())
+          axios.get(`${API}/financials/my-1099s/${currentYear - 1}?user_id=${effectiveUserId}`, getAuthHeader()),
+          axios.get(`${API}/financials/my-1099s/${currentYear - 2}?user_id=${effectiveUserId}`, getAuthHeader())
         ]);
         const allDocs = [
           ...(current1099s.data.documents || []),
@@ -572,8 +615,8 @@ export default function EmployeeDashboard() {
       setW9Status(w9Res.data);
       setW8benStatus(w8benRes.data);
       
-      // Start Live Activity ONCE when clocked in (avoid restarting on every fetchData)
-      if (isNowClocked && !liveActivityStartedRef.current && statusRes.data.entry?.clock_in) {
+      // Start Live Activity ONCE when clocked in (avoid restarting on every fetchData) - skip in admin view
+      if (!isAdminView && isNowClocked && !liveActivityStartedRef.current && statusRes.data.entry?.clock_in) {
         const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
         console.log('Starting Live Activity for clocked-in employee');
         liveActivityStartedRef.current = true;
@@ -587,7 +630,7 @@ export default function EmployeeDashboard() {
         liveActivityStartedRef.current = false;
       }
     } catch (error) {
-      if (error.response?.status === 401) {
+      if (error.response?.status === 401 && !isAdminView) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         navigate("/login");
@@ -1038,32 +1081,37 @@ export default function EmployeeDashboard() {
               <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
               {isRefreshing ? '...' : 'Refresh'}
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                lightTap();
-                setShowPasswordModal(true);
-              }}
-              className="text-white/70 hover:text-white hover:bg-white/10 px-2"
-              data-testid="security-btn"
-            >
-              <Lock className="w-4 h-4 mr-1" />
-              Security
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                lightTap(); // Haptic on logout
-                handleLogout();
-              }}
-              className="text-white/70 hover:text-white hover:bg-white/10 px-2"
-              data-testid="logout-btn"
-            >
-              <LogOut className="w-4 h-4 mr-1" />
-              Logout
-            </Button>
+            {/* Hide Security and Logout in admin view */}
+            {!isAdminView && (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    lightTap();
+                    setShowPasswordModal(true);
+                  }}
+                  className="text-white/70 hover:text-white hover:bg-white/10 px-2"
+                  data-testid="security-btn"
+                >
+                  <Lock className="w-4 h-4 mr-1" />
+                  Security
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    lightTap(); // Haptic on logout
+                    handleLogout();
+                  }}
+                  className="text-white/70 hover:text-white hover:bg-white/10 px-2"
+                  data-testid="logout-btn"
+                >
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Logout
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -1187,46 +1235,58 @@ export default function EmployeeDashboard() {
                 </div>
               )}
 
-              <button
-                onClick={() => {
-                  buttonPress(); // Haptic on button press
-                  handleClock(clockedIn ? "out" : "in");
-                }}
-                disabled={loading || locationStatus.checking}
-                className={`w-full max-w-xs mx-auto py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-                  clockedIn 
-                    ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl' 
-                    : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white shadow-lg hover:shadow-xl'
-                } disabled:opacity-50`}
-                data-testid="clock-action-btn"
-              >
-                {loading || locationStatus.checking ? (
-                  locationStatus.checking ? "Checking location..." : "Processing..."
-                ) : clockedIn ? (
-                  <>
-                    <StopCircle className="w-6 h-6" />
-                    Clock Out
-                  </>
-                ) : (
-                  <>
-                    <PlayCircle className="w-6 h-6" />
-                    Clock In
-                  </>
-                )}
-              </button>
+              {/* Clock In/Out button - Hide in admin view */}
+              {!isAdminView && (
+                <button
+                  onClick={() => {
+                    buttonPress(); // Haptic on button press
+                    handleClock(clockedIn ? "out" : "in");
+                  }}
+                  disabled={loading || locationStatus.checking}
+                  className={`w-full max-w-xs mx-auto py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+                    clockedIn 
+                      ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl' 
+                      : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white shadow-lg hover:shadow-xl'
+                  } disabled:opacity-50`}
+                  data-testid="clock-action-btn"
+                >
+                  {loading || locationStatus.checking ? (
+                    locationStatus.checking ? "Checking location..." : "Processing..."
+                  ) : clockedIn ? (
+                    <>
+                      <StopCircle className="w-6 h-6" />
+                      Clock Out
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="w-6 h-6" />
+                      Clock In
+                    </>
+                  )}
+                </button>
+              )}
+              
+              {/* Admin view indicator */}
+              {isAdminView && (
+                <div className="text-center text-gray-500 text-sm py-2">
+                  Viewing as admin (read-only)
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Messages - Quick Access */}
-          <MessagingSection
-            userType="employee"
-            userId={user?.id || user?.email}
-            userName={user?.name || user?.email}
-            userEmail={user?.email}
-            getAuthHeader={() => ({
-              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-            })}
-          />
+          {/* Messages - Quick Access - Hide in admin view */}
+          {!isAdminView && (
+            <MessagingSection
+              userType="employee"
+              userId={user?.id || user?.email}
+              userName={user?.name || user?.email}
+              userEmail={user?.email}
+              getAuthHeader={() => ({
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+              })}
+            />
+          )}
 
           {/* Pay Period Summary Card */}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
