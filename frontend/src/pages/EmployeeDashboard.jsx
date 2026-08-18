@@ -1737,7 +1737,7 @@ export default function EmployeeDashboard() {
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-[#FFE66D]" />
                     <h2 className="font-poppins text-lg font-semibold text-white">
-                      W-8BEN (Foreign Employees)
+                      W-8BEN Tax Form
                     </h2>
                     {w8benStatus?.total_documents > 0 && (
                       <span className="bg-[#FFE66D]/30 text-[#FFE66D] px-2 py-0.5 rounded-full text-xs font-medium">
