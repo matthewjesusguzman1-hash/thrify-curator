@@ -24,6 +24,7 @@ import Issued1099sPage from "@/pages/Issued1099sPage";
 import ScheduleInterviewPage from "@/pages/ScheduleInterviewPage";
 import ManageInterviewPage from "@/pages/ManageInterviewPage";
 import ApplicationResponsePage from "@/pages/ApplicationResponsePage";
+import ApplicantTestPage from "@/pages/ApplicantTestPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
@@ -262,6 +263,11 @@ function AnimatedRoutes() {
         <Route path="/application-response/:token" element={
           <PageTransition>
             <ApplicationResponsePage />
+          </PageTransition>
+        } />
+        <Route path="/applicant-test/:token" element={
+          <PageTransition>
+            <ApplicantTestPage />
           </PageTransition>
         } />
         </Routes>

@@ -10,6 +10,11 @@ from app.database import db
 security = HTTPBearer()
 
 
+async def get_db():
+    """Dependency to get database instance"""
+    return db
+
+
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 

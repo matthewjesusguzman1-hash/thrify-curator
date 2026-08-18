@@ -31,6 +31,7 @@ from app.routers.interview_scheduler import router as interview_scheduler_router
 from app.routers.email_logs import router as email_logs_router
 from app.routers.training import router as training_router
 from app.routers.admin_w8ben import employee_router as w8ben_employee_router
+from app.routers.applicant_tests import router as applicant_tests_router, public_router as applicant_tests_public_router
 
 # Configure logging
 logging.basicConfig(
@@ -159,6 +160,8 @@ app.include_router(interview_scheduler_router, prefix="/api")
 app.include_router(email_logs_router, prefix="/api")
 app.include_router(training_router, prefix="/api")
 app.include_router(w8ben_employee_router, prefix="/api")
+app.include_router(applicant_tests_router)  # Already has /api prefix
+app.include_router(applicant_tests_public_router)  # Public routes, already has /api prefix
 
 
 @app.get("/api/")
