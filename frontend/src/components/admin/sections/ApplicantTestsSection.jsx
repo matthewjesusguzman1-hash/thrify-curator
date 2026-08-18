@@ -333,23 +333,23 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Test Name */}
           <div>
-            <Label>Test Name *</Label>
+            <Label className="text-base font-medium">Test Name *</Label>
             <Input
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g., Listing Skills Assessment"
-              className="mt-1"
+              className="mt-2 h-12 text-base"
             />
           </div>
 
           {/* Description */}
           <div>
-            <Label>Description (optional)</Label>
+            <Label className="text-base font-medium">Description (optional)</Label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Brief description of the test..."
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg resize-none"
+              className="mt-2 w-full px-4 py-3 border border-gray-300 rounded-lg resize-none text-base"
               rows={2}
             />
           </div>
@@ -360,7 +360,10 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
               <span>Product Photos *</span>
               <span className="text-sm text-gray-500">{photos.length} selected</span>
             </Label>
-            <div className="mt-2 border-2 border-dashed border-gray-300 rounded-xl p-4">
+            <div 
+              className="mt-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#8B5CF6] hover:bg-[#8B5CF6]/5 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <input
                 type="file"
                 ref={fileInputRef}
@@ -369,33 +372,34 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
                 multiple
                 className="hidden"
               />
-              <div className="text-center">
-                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Select Photos
-                </Button>
-                <p className="text-xs text-gray-400 mt-2">JPG, PNG up to 10MB each</p>
+              <div className="text-center pointer-events-none">
+                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                <p className="text-base font-medium text-gray-600 mb-1">Tap to select photos</p>
+                <p className="text-sm text-gray-400">JPG, PNG up to 10MB each</p>
               </div>
             </div>
             {photos.length > 0 && (
-              <div className="mt-3 grid grid-cols-4 gap-2">
+              <div className="mt-4 grid grid-cols-3 gap-3">
                 {photos.map((photo, index) => (
-                  <div key={index} className="relative group">
+                  <div key={index} className="relative">
                     <img
                       src={URL.createObjectURL(photo)}
                       alt={`Photo ${index + 1}`}
-                      className="w-full h-20 object-cover rounded-lg"
+                      className="w-full h-24 object-cover rounded-lg border border-gray-200"
                     />
                     <button
-                      onClick={() => removePhoto(index)}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePhoto(index);
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </button>
+                    <span className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-2 py-0.5 rounded">
+                      #{index + 1}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -405,36 +409,43 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
           {/* Fields Configuration */}
           <div>
             <Label>Listing Fields</Label>
-            <p className="text-xs text-gray-500 mb-2">Select which fields applicants should fill out</p>
-            <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+            <p className="text-sm text-gray-500 mb-3">Tap to enable/disable fields. Toggle "Required" for mandatory fields.</p>
+            <div className="space-y-2 max-h-72 overflow-y-auto border border-gray-200 rounded-lg p-2">
               {fields.map(field => (
                 <div
                   key={field.id}
-                  className={`flex items-center justify-between p-2 rounded-lg ${
-                    field.enabled ? "bg-[#8B5CF6]/5 border border-[#8B5CF6]/20" : "bg-gray-50"
+                  className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all ${
+                    field.enabled 
+                      ? "bg-[#8B5CF6]/10 border-2 border-[#8B5CF6]/30" 
+                      : "bg-gray-50 border-2 border-transparent hover:border-gray-200"
                   }`}
+                  onClick={() => toggleField(field.id)}
                 >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={field.enabled}
-                      onChange={() => toggleField(field.id)}
-                      className="w-4 h-4 rounded text-[#8B5CF6]"
-                    />
-                    <span className={field.enabled ? "text-[#333]" : "text-gray-400"}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center ${
+                      field.enabled ? "bg-[#8B5CF6] text-white" : "bg-gray-200"
+                    }`}>
+                      {field.enabled && <CheckCircle className="w-4 h-4" />}
+                    </div>
+                    <span className={`text-base font-medium ${field.enabled ? "text-[#333]" : "text-gray-400"}`}>
                       {field.name}
                     </span>
                   </div>
                   {field.enabled && (
-                    <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={field.required}
-                        onChange={() => toggleFieldRequired(field.id)}
-                        className="w-3 h-3 rounded"
-                      />
-                      Required
-                    </label>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFieldRequired(field.id);
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        field.required 
+                          ? "bg-[#8B5CF6] text-white" 
+                          : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                      }`}
+                    >
+                      {field.required ? "Required" : "Optional"}
+                    </button>
                   )}
                 </div>
               ))}
