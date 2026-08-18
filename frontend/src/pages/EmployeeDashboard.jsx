@@ -805,6 +805,36 @@ export default function EmployeeDashboard({
     
     setLoading(true);
     
+    // Admin viewing employee portal - use admin endpoint to clock them in/out
+    if (isAdminView && adminViewEmployee) {
+      try {
+        await axios.post(
+          `${API}/admin/employee/${adminViewEmployee.id}/clock`,
+          { action },
+          getAuthHeader()
+        );
+        heavyPress();
+        successFeedback();
+        toast.success(action === "in" ? `${adminViewEmployee.name} clocked in!` : `${adminViewEmployee.name} clocked out!`);
+        
+        // Update local state
+        setClockedIn(action === "in");
+        if (action === "out") {
+          setCurrentEntry(null);
+        }
+        
+        // Refresh data
+        fetchData();
+        setElapsedTime(0);
+      } catch (error) {
+        errorFeedback();
+        toast.error(error.response?.data?.detail || `Failed to clock ${action}`);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    
     // Only check location for clock IN - allow clock out from anywhere
     // Admins bypass location check entirely
     if (action === "in" && user?.role !== 'admin') {
@@ -1136,8 +1166,8 @@ export default function EmployeeDashboard({
                 {clockedIn ? 'Currently Working' : 'Not Clocked In'}
               </div>
 
-              {/* Location Status Indicator - Only show when there's a status to display */}
-              {locationStatus.denied ? (
+              {/* Location Status Indicator - Only show when there's a status to display, hide in admin view */}
+              {!isAdminView && locationStatus.denied ? (
                 <div className="mb-4 p-4 bg-[#1A1A2E]/10 border border-[#8B5CF6]/30 rounded-xl">
                   <div className="flex items-center justify-center gap-2 text-[#8B5CF6] mb-3">
                     <MapPin className="w-5 h-5" />
@@ -1214,12 +1244,12 @@ export default function EmployeeDashboard({
                     Cancel
                   </button>
                 </div>
-              ) : locationStatus.withinRange === true ? (
+              ) : !isAdminView && locationStatus.withinRange === true ? (
                 <div className="flex items-center justify-center gap-2 mb-4 text-sm">
                   <MapPin className="w-4 h-4 text-green-500" />
                   <span className="text-green-600">Location verified</span>
                 </div>
-              ) : locationStatus.withinRange === false && !locationStatus.denied ? (
+              ) : !isAdminView && locationStatus.withinRange === false && !locationStatus.denied ? (
                 <div className="flex items-center justify-center gap-2 mb-4 text-sm">
                   <MapPin className="w-4 h-4 text-red-500" />
                   <span className="text-red-600">Too far ({locationStatus.distance} miles away)</span>
@@ -1235,43 +1265,34 @@ export default function EmployeeDashboard({
                 </div>
               )}
 
-              {/* Clock In/Out button - Hide in admin view */}
-              {!isAdminView && (
-                <button
-                  onClick={() => {
-                    buttonPress(); // Haptic on button press
-                    handleClock(clockedIn ? "out" : "in");
-                  }}
-                  disabled={loading || locationStatus.checking}
-                  className={`w-full max-w-xs mx-auto py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-                    clockedIn 
-                      ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl' 
-                      : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white shadow-lg hover:shadow-xl'
-                  } disabled:opacity-50`}
-                  data-testid="clock-action-btn"
-                >
-                  {loading || locationStatus.checking ? (
-                    locationStatus.checking ? "Checking location..." : "Processing..."
-                  ) : clockedIn ? (
-                    <>
-                      <StopCircle className="w-6 h-6" />
-                      Clock Out
-                    </>
-                  ) : (
-                    <>
-                      <PlayCircle className="w-6 h-6" />
-                      Clock In
-                    </>
-                  )}
-                </button>
-              )}
-              
-              {/* Admin view indicator */}
-              {isAdminView && (
-                <div className="text-center text-gray-500 text-sm py-2">
-                  Viewing as admin (read-only)
-                </div>
-              )}
+              {/* Clock In/Out button */}
+              <button
+                onClick={() => {
+                  buttonPress(); // Haptic on button press
+                  handleClock(clockedIn ? "out" : "in");
+                }}
+                disabled={loading || locationStatus.checking}
+                className={`w-full max-w-xs mx-auto py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+                  clockedIn 
+                    ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl' 
+                    : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white shadow-lg hover:shadow-xl'
+                } disabled:opacity-50`}
+                data-testid="clock-action-btn"
+              >
+                {loading || locationStatus.checking ? (
+                  locationStatus.checking ? "Checking location..." : "Processing..."
+                ) : clockedIn ? (
+                  <>
+                    <StopCircle className="w-6 h-6" />
+                    Clock Out
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="w-6 h-6" />
+                    Clock In
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
