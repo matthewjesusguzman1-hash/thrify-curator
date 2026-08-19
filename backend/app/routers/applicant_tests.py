@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/applicant-tests", tags=["applicant-tests"])
 from ..dependencies import get_db, get_admin_user, get_current_user
 
 # Default listing fields that can be used in tests
-# Based on Vendoo-style listing fields
+# Based on Vendoo-style listing fields for clothing and shoes
 DEFAULT_LISTING_FIELDS = [
     {"id": "title", "name": "Title", "type": "text", "required": True, "placeholder": "Enter item title"},
     {"id": "description", "name": "Description", "type": "textarea", "required": True, "placeholder": "Describe the item in detail"},
@@ -25,7 +25,79 @@ DEFAULT_LISTING_FIELDS = [
     {"id": "primary_color", "name": "Primary Color", "type": "text", "required": False, "placeholder": "e.g., Black, Navy Blue"},
     {"id": "secondary_color", "name": "Secondary Color", "type": "text", "required": False, "placeholder": "e.g., White, Gold"},
     {"id": "tags", "name": "Tags", "type": "text", "required": False, "placeholder": "Comma-separated tags for search"},
-    {"id": "category", "name": "Category", "type": "select", "required": False, "options": ["Women's Clothing", "Men's Clothing", "Kids & Baby", "Shoes", "Bags & Purses", "Jewelry & Watches", "Accessories", "Home & Living", "Electronics", "Sports & Outdoors", "Beauty", "Other"]},
+    {
+        "id": "category", 
+        "name": "Category", 
+        "type": "select", 
+        "required": False, 
+        "options": [
+            # Women's Clothing
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Activewear",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Coats, Jackets & Vests",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Dresses",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Intimates & Sleepwear",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Jeans",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Jumpsuits & Rompers",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Leggings",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Maternity",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Pants",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Shorts",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Skirts",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Suits & Blazers",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Sweaters",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Swimwear",
+            "Clothing, Shoes & Accessories > Women > Women's Clothing > Tops & Blouses",
+            # Women's Shoes
+            "Clothing, Shoes & Accessories > Women > Women's Shoes > Athletic Shoes",
+            "Clothing, Shoes & Accessories > Women > Women's Shoes > Boots",
+            "Clothing, Shoes & Accessories > Women > Women's Shoes > Flats",
+            "Clothing, Shoes & Accessories > Women > Women's Shoes > Heels",
+            "Clothing, Shoes & Accessories > Women > Women's Shoes > Sandals",
+            "Clothing, Shoes & Accessories > Women > Women's Shoes > Slippers",
+            "Clothing, Shoes & Accessories > Women > Women's Shoes > Sneakers",
+            # Men's Clothing
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Activewear",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Coats & Jackets",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Dress Shirts",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Jeans",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Pants",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Shirts",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Shorts",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Suits & Blazers",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Sweaters",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Swimwear",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > T-Shirts",
+            "Clothing, Shoes & Accessories > Men > Men's Clothing > Underwear & Socks",
+            # Men's Shoes
+            "Clothing, Shoes & Accessories > Men > Men's Shoes > Athletic Shoes",
+            "Clothing, Shoes & Accessories > Men > Men's Shoes > Boots",
+            "Clothing, Shoes & Accessories > Men > Men's Shoes > Casual Shoes",
+            "Clothing, Shoes & Accessories > Men > Men's Shoes > Dress Shoes",
+            "Clothing, Shoes & Accessories > Men > Men's Shoes > Sandals & Flip Flops",
+            "Clothing, Shoes & Accessories > Men > Men's Shoes > Sneakers",
+            # Kids
+            "Clothing, Shoes & Accessories > Kids > Boys > Clothing",
+            "Clothing, Shoes & Accessories > Kids > Boys > Shoes",
+            "Clothing, Shoes & Accessories > Kids > Girls > Clothing",
+            "Clothing, Shoes & Accessories > Kids > Girls > Shoes",
+            "Clothing, Shoes & Accessories > Kids > Baby > Clothing",
+            "Clothing, Shoes & Accessories > Kids > Baby > Shoes",
+            # Accessories
+            "Clothing, Shoes & Accessories > Women > Women's Accessories > Bags & Purses",
+            "Clothing, Shoes & Accessories > Women > Women's Accessories > Belts",
+            "Clothing, Shoes & Accessories > Women > Women's Accessories > Hats",
+            "Clothing, Shoes & Accessories > Women > Women's Accessories > Jewelry",
+            "Clothing, Shoes & Accessories > Women > Women's Accessories > Scarves & Wraps",
+            "Clothing, Shoes & Accessories > Women > Women's Accessories > Sunglasses",
+            "Clothing, Shoes & Accessories > Women > Women's Accessories > Watches",
+            "Clothing, Shoes & Accessories > Men > Men's Accessories > Bags",
+            "Clothing, Shoes & Accessories > Men > Men's Accessories > Belts",
+            "Clothing, Shoes & Accessories > Men > Men's Accessories > Hats",
+            "Clothing, Shoes & Accessories > Men > Men's Accessories > Sunglasses",
+            "Clothing, Shoes & Accessories > Men > Men's Accessories > Ties",
+            "Clothing, Shoes & Accessories > Men > Men's Accessories > Watches"
+        ]
+    },
     {"id": "us_size", "name": "US Size", "type": "text", "required": False, "placeholder": "e.g., S, M, L, 8, 10, One Size"}
 ]
 
