@@ -29,6 +29,8 @@ const getNotificationStyle = (type) => {
       return { icon: RefreshCw, bg: "bg-amber-100", color: "text-amber-600" };
     case "applicant_test_submission":
       return { icon: ClipboardCheck, bg: "bg-teal-100", color: "text-teal-600" };
+    case "interview_response":
+      return { icon: Calendar, bg: "bg-emerald-100", color: "text-emerald-600" };
     default:
       return { icon: Bell, bg: "bg-gray-100", color: "text-gray-600" };
   }

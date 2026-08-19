@@ -90,7 +90,8 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 
 ## Technical Debt / Refactoring Needed
 1. **CRITICAL**: `frontend/src/pages/ConsignmentAgreementForm.jsx` (~3850 lines) - Must be broken into smaller components
-2. **HIGH**: `frontend/src/components/admin/modals/FormSubmissionModal.jsx` (~1200 lines) - Needs refactoring
+2. **CRITICAL**: `frontend/src/components/admin/sections/ApplicantTestsSection.jsx` (~2500 lines) - Needs decomposition into smaller components
+3. **HIGH**: `frontend/src/components/admin/modals/FormSubmissionModal.jsx` (~1200 lines) - Needs refactoring
 
 ## Pending Verification
 - GPS Tracking reliability on live devices
@@ -121,6 +122,26 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - **Web Push (Safari PWA)** - NEW: VAPID-based push notifications for iOS home screen web apps (iOS 16.4+)
 
 ## Recent Updates (2026-08-19)
+
+### Employee Terminations Section (NEW)
+- Added dedicated "Employee Terminations" section in Team Management group of Admin Dashboard
+- Features:
+  - Active Employees list with "Terminate" buttons
+  - Termination History with reason, date, and details
+  - Termination reasons: Resignation, Performance, Misconduct, Layoff, Other
+  - Confirmation flow requiring name entry to prevent accidents
+  - Admin notes and final pay date tracking
+  - Rehire capability (removes termination record, restores employee)
+  - Terminated employees hidden from main employee list but preserved in database for payroll/tax purposes
+- Backend: `/app/backend/app/routers/employee_terminations.py`
+- Frontend: `/app/frontend/src/components/admin/sections/EmployeeTerminationsSection.jsx`
+
+### Interview In-App Response Workflow (COMPLETED)
+- Fixed API route ordering bug - `/interview-inbox` routes now before `/{test_id}` wildcard
+- Applicants can submit availability via web form link instead of email reply
+- Admin sees responses in "Interview Inbox" modal
+- Admin can send meeting confirmation with Google Meet link and CT/PHT timezone
+- Interview Response page: `/app/frontend/src/pages/InterviewResponsePage.jsx`
 
 ### Safari Web Push Notifications
 - Implemented VAPID-based Web Push for Safari PWA (home screen bookmarked web app)

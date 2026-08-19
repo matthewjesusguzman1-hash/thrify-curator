@@ -91,15 +91,19 @@ async def create_employee(employee_data: CreateEmployee, background_tasks: Backg
 
 @router.get("/employees", response_model=List[UserResponse])
 async def get_all_employees(admin: dict = Depends(get_admin_user)):
-    """Get all employees with W-9 status (excludes business owners)."""
+    """Get all employees with W-9 status (excludes business owners and terminated employees)."""
     # Exclude business owners (Matthew and Eunice) but include other admins
     OWNER_EMAILS = [
         "matthewjesusguzman1@gmail.com",
         "euniceguzman@thriftycurator.com"
     ]
     
+    # Also exclude terminated employees by checking for status != "terminated"
     users = await db.users.find(
-        {"email": {"$nin": OWNER_EMAILS}}, 
+        {
+            "email": {"$nin": OWNER_EMAILS},
+            "status": {"$ne": "terminated"}
+        }, 
         {"_id": 0, "password_hash": 0}
     ).sort("created_at", -1).to_list(500)
     

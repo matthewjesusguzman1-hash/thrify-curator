@@ -3,6 +3,7 @@ Applicant Skills Test Router
 Handles creating tests, sending invites, and reviewing submissions
 """
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone
 from bson import ObjectId
@@ -284,6 +285,164 @@ async def list_tests(
     
     return {"tests": tests}
 
+
+# ============================================
+# INTERVIEW INBOX ROUTES (Must be before /{test_id})
+# ============================================
+
+class SendMeetingLinkRequest(BaseModel):
+    confirmed_datetime: str
+    meeting_link: str
+    additional_message: str = ""
+
+
+@router.get("/interview-inbox")
+async def get_interview_inbox(
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Get all interview requests and responses for admin inbox"""
+    requests = await db.interview_requests.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return {"requests": requests}
+
+
+@router.get("/interview-inbox/{request_id}")
+async def get_interview_request_detail(
+    request_id: str,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Get details of a specific interview request"""
+    request = await db.interview_requests.find_one(
+        {"id": request_id},
+        {"_id": 0}
+    )
+    
+    if not request:
+        raise HTTPException(status_code=404, detail="Interview request not found")
+    
+    return request
+
+
+@router.post("/interview-inbox/{request_id}/send-meeting-link")
+async def send_meeting_link(
+    request_id: str,
+    request_data: SendMeetingLinkRequest,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Send meeting link confirmation to applicant"""
+    import resend
+    
+    interview_request = await db.interview_requests.find_one({"id": request_id})
+    
+    if not interview_request:
+        raise HTTPException(status_code=404, detail="Interview request not found")
+    
+    applicant_email = interview_request.get("applicant_email")
+    applicant_name = interview_request.get("applicant_name")
+    test_name = interview_request.get("test_name")
+    admin_name = admin.get("name", "Thrifty Curator Team")
+    
+    # Build confirmation email
+    email_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Interview Confirmed!</h1>
+                <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">Thrifty Curator</p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 30px;">
+                <p style="color: #333; font-size: 16px; line-height: 1.6;">
+                    Hi {applicant_name},
+                </p>
+                
+                <p style="color: #333; font-size: 16px; line-height: 1.6;">
+                    Great news! Your interview has been confirmed.
+                </p>
+                
+                <!-- Date/Time Box -->
+                <div style="background-color: #ecfdf5; border-radius: 8px; padding: 20px; margin: 25px 0; border-left: 4px solid #10B981;">
+                    <p style="margin: 0; color: #065f46; font-size: 18px; font-weight: 600;">
+                        {request_data.confirmed_datetime}
+                    </p>
+                </div>
+                
+                {f'<p style="color: #333; font-size: 16px; line-height: 1.6;">{request_data.additional_message}</p>' if request_data.additional_message else ''}
+                
+                <!-- Meeting Link Button -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{request_data.meeting_link}" style="display: inline-block; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 18px;">
+                        Join Google Meet
+                    </a>
+                </div>
+                
+                <p style="color: #666; font-size: 14px; text-align: center;">
+                    Meeting Link: <a href="{request_data.meeting_link}" style="color: #059669;">{request_data.meeting_link}</a>
+                </p>
+                
+                <div style="background-color: #fef3c7; border-radius: 8px; padding: 15px; margin-top: 25px;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px;">
+                        <strong>Tips:</strong> Please join the meeting 2-3 minutes early. Make sure your camera and microphone are working.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                <p style="color: #666; font-size: 12px; margin: 0;">
+                    Questions? Reply to this email.<br>
+                    &copy; 2026 Thrifty Curator
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        emails_client = resend.Emails()
+        emails_client.send({
+            "from": f"{admin_name} <noreply@thrifty-curator.com>",
+            "to": applicant_email,
+            "reply_to": admin.get("email", "admin@thrifty-curator.com"),
+            "subject": f"Interview Confirmed - {test_name}",
+            "html": email_html
+        })
+        
+        # Update interview request status
+        await db.interview_requests.update_one(
+            {"id": request_id},
+            {"$set": {
+                "status": "confirmed",
+                "confirmed_datetime": request_data.confirmed_datetime,
+                "meeting_link": request_data.meeting_link,
+                "confirmed_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {"message": "Meeting confirmation sent successfully!"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
+# ============================================
+# TEST CRUD ROUTES (with /{test_id} wildcard)
+# ============================================
 
 @router.get("/{test_id}")
 async def get_test(
@@ -843,6 +1002,9 @@ async def send_interview_followup(
     admin_email = admin.get("email", "admin@thrifty-curator.com")
     admin_name = admin.get("name", "Thrifty Curator Team")
     
+    # Get frontend URL for response links
+    frontend_url = os.environ.get("FRONTEND_URL", "https://reseller-dashboard-11.emergent.host")
+    
     sent_count = 0
     errors = []
     
@@ -854,6 +1016,33 @@ async def send_interview_followup(
         })
         
         applicant_name = submission.get("applicant_name", "Applicant") if submission else "Applicant"
+        
+        # Create a unique response token for this interview request
+        response_token = str(uuid.uuid4())
+        
+        # Create interview request record
+        interview_request_doc = {
+            "id": str(uuid.uuid4()),
+            "response_token": response_token,
+            "test_id": test_id,
+            "test_name": test.get("name"),
+            "applicant_email": email,
+            "applicant_name": applicant_name,
+            "subject": request.subject,
+            "message": request.message,
+            "date_range_start": request.date_range_start,
+            "date_range_end": request.date_range_end,
+            "timezone": request.timezone,
+            "meeting_link": request.meeting_link,
+            "sent_by": admin_email,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "pending",
+            "applicant_response": None
+        }
+        await db.interview_requests.insert_one(interview_request_doc)
+        
+        # Response URL for applicant
+        response_url = f"{frontend_url}/interview-response/{response_token}"
         
         # Build the email HTML with brighter, more readable colors
         email_html = f"""
@@ -894,21 +1083,22 @@ async def send_interview_followup(
                         </p>
                     </div>
                     
-                    <!-- Meeting Link -->
-                    {f'''<div style="text-align: center; margin: 30px 0;">
-                        <a href="{request.meeting_link}" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                            Join Interview Meeting
+                    <!-- Response Button -->
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{response_url}" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                            Submit Your Availability
                         </a>
-                        <p style="color: #666; font-size: 12px; margin-top: 10px;">
-                            Meeting Link: {request.meeting_link}
-                        </p>
-                    </div>''' if request.meeting_link else ''}
+                    </div>
+                    
+                    <p style="color: #666; font-size: 13px; text-align: center; margin-top: 15px;">
+                        Click the button above to let us know your available times.
+                    </p>
                     
                     <!-- Reply Instructions -->
                     <div style="background-color: #e8f4fd; border-radius: 8px; padding: 20px; margin-top: 25px;">
                         <p style="margin: 0; color: #333; font-size: 14px;">
-                            <strong>To confirm your interview:</strong><br>
-                            Simply reply to this email with your preferred date and time from the availability window above.
+                            <strong>How to respond:</strong><br>
+                            Click the button above to submit your availability through our portal.
                         </p>
                     </div>
                 </div>
@@ -935,10 +1125,10 @@ AVAILABILITY WINDOW:
 {request.date_range_start} - {request.date_range_end}
 Timezone: {request.timezone}
 
-{"MEETING LINK: " + request.meeting_link if request.meeting_link else ""}
+SUBMIT YOUR AVAILABILITY:
+{response_url}
 
-TO CONFIRM YOUR INTERVIEW:
-Simply reply to this email with your preferred date and time from the availability window above.
+Click the link above to let us know your available times.
 
 Questions? Reply directly to this email.
 
@@ -997,3 +1187,88 @@ async def get_followup_history(
     ).sort("sent_at", -1).to_list(100)
     
     return {"history": logs}
+
+
+
+# ============================================
+# IN-APP INTERVIEW MESSAGING SYSTEM
+# ============================================
+
+class ApplicantAvailabilityResponse(BaseModel):
+    availability_text: str  # Their available times
+    additional_notes: str = ""
+
+
+@public_router.get("/interview-response/{response_token}")
+async def get_interview_response_page(
+    response_token: str,
+    db = Depends(get_db)
+):
+    """Get interview request details for applicant response page"""
+    # Find the interview request by token
+    interview_request = await db.interview_requests.find_one(
+        {"response_token": response_token},
+        {"_id": 0}
+    )
+    
+    if not interview_request:
+        raise HTTPException(status_code=404, detail="Interview request not found or expired")
+    
+    return {
+        "applicant_name": interview_request.get("applicant_name"),
+        "applicant_email": interview_request.get("applicant_email"),
+        "test_name": interview_request.get("test_name"),
+        "date_range_start": interview_request.get("date_range_start"),
+        "date_range_end": interview_request.get("date_range_end"),
+        "timezone": interview_request.get("timezone"),
+        "message": interview_request.get("message"),
+        "already_responded": interview_request.get("applicant_response") is not None
+    }
+
+
+@public_router.post("/interview-response/{response_token}")
+async def submit_interview_availability(
+    response_token: str,
+    response: ApplicantAvailabilityResponse,
+    db = Depends(get_db)
+):
+    """Applicant submits their availability"""
+    # Find and update the interview request
+    interview_request = await db.interview_requests.find_one(
+        {"response_token": response_token}
+    )
+    
+    if not interview_request:
+        raise HTTPException(status_code=404, detail="Interview request not found")
+    
+    # Update with applicant's response
+    await db.interview_requests.update_one(
+        {"response_token": response_token},
+        {"$set": {
+            "applicant_response": {
+                "availability": response.availability_text,
+                "notes": response.additional_notes,
+                "responded_at": datetime.now(timezone.utc).isoformat()
+            },
+            "status": "responded"
+        }}
+    )
+    
+    # Create notification for admin
+    from app.services.notification_helper import create_notification_with_push
+    await create_notification_with_push(
+        notification_type="interview_response",
+        entity_id=interview_request.get("id"),
+        entity_name=interview_request.get("applicant_name"),
+        message=f"{interview_request.get('applicant_name')} responded with their availability",
+        details={
+            "email": interview_request.get("applicant_email"),
+            "test_name": interview_request.get("test_name")
+        },
+        push_title="Interview Response",
+        push_body=f"{interview_request.get('applicant_name')} sent their availability",
+        push_url="/admin#applicant-tests"
+    )
+    
+    return {"message": "Availability submitted successfully! You will receive a confirmation email with the meeting details."}
+

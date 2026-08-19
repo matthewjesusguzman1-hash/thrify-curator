@@ -96,7 +96,8 @@ def get_push_title(notification_type: str, entity_name: str) -> str:
         "payment_method_change": "Payment Method Updated",
         "consignment_items_added": "Items Added",
         "new_message": "New Message",
-        "applicant_test_submission": "Skills Test Submitted"
+        "applicant_test_submission": "Skills Test Submitted",
+        "interview_response": "Interview Availability Received"
     }
     return titles.get(notification_type, "Thrifty Curator Alert")
 

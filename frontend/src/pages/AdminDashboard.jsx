@@ -87,6 +87,7 @@ import InterviewSchedulerSection from "@/components/admin/sections/InterviewSche
 import ApplicantTestsSection from "@/components/admin/sections/ApplicantTestsSection";
 import RejectionHistorySection from "@/components/admin/sections/RejectionHistorySection";
 import EmailLogsSection from "@/components/admin/sections/EmailLogsSection";
+import EmployeeTerminationsSection from "@/components/admin/sections/EmployeeTerminationsSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import WebPushSettings from "@/components/WebPushSettings";
@@ -3447,6 +3448,15 @@ export default function AdminDashboard() {
 
               {/* Password Management for Employees */}
               <PasswordManagementSection token={localStorage.getItem("token")} />
+
+              {/* Employee Terminations Section */}
+              <div data-testid="terminations-section">
+                <EmployeeTerminationsSection
+                  employees={employees}
+                  getAuthHeader={getAuthHeader}
+                  onEmployeeTerminated={fetchData}
+                />
+              </div>
             </DashboardGroup>
 
             {/* GROUP 2: Payroll & Payments */}

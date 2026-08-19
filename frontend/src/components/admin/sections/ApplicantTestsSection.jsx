@@ -30,7 +30,10 @@ import {
   Pencil,
   Calendar,
   Link,
-  Video
+  Video,
+  Inbox,
+  MessageSquare,
+  ExternalLink
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL || "";
@@ -44,6 +47,7 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
   const [showSubmissionDetail, setShowSubmissionDetail] = useState(null);
   const [showPreviewModal, setShowPreviewModal] = useState(null);
   const [showEditModal, setShowEditModal] = useState(null);
+  const [showInterviewInbox, setShowInterviewInbox] = useState(false);
   const [defaultFields, setDefaultFields] = useState([]);
 
   useEffect(() => {
@@ -96,14 +100,25 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
             Create listing tests to evaluate job applicants
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white w-full sm:w-auto text-sm"
-          data-testid="create-test-btn"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Create Test
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowInterviewInbox(true)}
+            variant="outline"
+            className="border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6]/10 text-sm"
+            data-testid="interview-inbox-btn"
+          >
+            <Inbox className="w-4 h-4 mr-2" />
+            Interview Inbox
+          </Button>
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white w-full sm:w-auto text-sm"
+            data-testid="create-test-btn"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Test
+          </Button>
+        </div>
       </div>
 
       {/* Tests List */}
@@ -206,6 +221,16 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
               setShowEditModal(null);
               fetchTests();
             }}
+            getAuthHeader={getAuthHeader}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Interview Inbox Modal */}
+      <AnimatePresence>
+        {showInterviewInbox && (
+          <InterviewInboxModal
+            onClose={() => setShowInterviewInbox(false)}
             getAuthHeader={getAuthHeader}
           />
         )}
@@ -2096,6 +2121,375 @@ function EditTestModal({ test, onClose, onUpdated, getAuthHeader }) {
             className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white"
           >
             {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body
+  );
+}
+
+
+// Interview Inbox Modal
+function InterviewInboxModal({ onClose, getAuthHeader }) {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showSendLinkModal, setShowSendLinkModal] = useState(null);
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const response = await axios.get(`${API}/api/applicant-tests/interview-inbox`, getAuthHeader());
+      setRequests(response.data.requests || []);
+    } catch (error) {
+      console.error("Failed to fetch interview requests:", error);
+      toast.error("Failed to load interview inbox");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case "responded":
+        return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Responded</span>;
+      case "confirmed":
+        return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Confirmed</span>;
+      default:
+        return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">Pending</span>;
+    }
+  };
+
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-[#8B5CF6]/10 to-[#00D4FF]/10">
+          <div>
+            <h2 className="text-xl font-bold text-[#333] flex items-center gap-2">
+              <Inbox className="w-5 h-5 text-[#8B5CF6]" />
+              Interview Inbox
+            </h2>
+            <p className="text-sm text-gray-500">View and respond to applicant availability</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-hidden flex">
+          {/* Request List */}
+          <div className={`${selectedRequest ? 'hidden md:block md:w-1/3' : 'w-full'} border-r border-gray-200 overflow-y-auto`}>
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B5CF6] mx-auto" />
+              </div>
+            ) : requests.length === 0 ? (
+              <div className="text-center py-12">
+                <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No interview requests yet</p>
+                <p className="text-sm text-gray-400 mt-1">Send a scheduling email to get started</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {requests.map(req => (
+                  <div
+                    key={req.id}
+                    onClick={() => setSelectedRequest(req)}
+                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedRequest?.id === req.id ? 'bg-[#8B5CF6]/5 border-l-4 border-[#8B5CF6]' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-[#333] truncate">{req.applicant_name}</p>
+                        <p className="text-sm text-gray-500 truncate">{req.applicant_email}</p>
+                        <p className="text-xs text-gray-400 mt-1">{req.test_name}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {getStatusBadge(req.status)}
+                        {req.applicant_response && (
+                          <span className="text-xs text-green-600">
+                            <MessageSquare className="w-3 h-3 inline mr-1" />
+                            Reply
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Request Detail */}
+          {selectedRequest && (
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6">
+                {/* Back button for mobile */}
+                <button 
+                  onClick={() => setSelectedRequest(null)}
+                  className="md:hidden mb-4 text-[#8B5CF6] text-sm flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Back to list
+                </button>
+
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-[#333]">{selectedRequest.applicant_name}</h3>
+                    <p className="text-sm text-gray-500">{selectedRequest.applicant_email}</p>
+                  </div>
+                  {getStatusBadge(selectedRequest.status)}
+                </div>
+
+                {/* Interview Details */}
+                <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                  <h4 className="font-medium text-[#333] mb-3">Interview Request Details</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Test:</span>
+                      <span className="text-[#333]">{selectedRequest.test_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Date Range:</span>
+                      <span className="text-[#333]">{selectedRequest.date_range_start} - {selectedRequest.date_range_end}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Timezone:</span>
+                      <span className="text-[#333]">{selectedRequest.timezone}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Sent:</span>
+                      <span className="text-[#333]">{new Date(selectedRequest.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Applicant Response */}
+                {selectedRequest.applicant_response ? (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+                    <h4 className="font-medium text-green-800 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Applicant's Availability
+                    </h4>
+                    <div className="bg-white rounded-lg p-3 mb-3">
+                      <p className="text-[#333] whitespace-pre-wrap">{selectedRequest.applicant_response.availability}</p>
+                    </div>
+                    {selectedRequest.applicant_response.notes && (
+                      <div className="text-sm text-gray-600">
+                        <p className="font-medium">Additional Notes:</p>
+                        <p>{selectedRequest.applicant_response.notes}</p>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Responded: {new Date(selectedRequest.applicant_response.responded_at).toLocaleString()}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                    <p className="text-yellow-800 text-sm">
+                      <Clock className="w-4 h-4 inline mr-2" />
+                      Waiting for applicant to respond with their availability
+                    </p>
+                  </div>
+                )}
+
+                {/* Confirmed Meeting Info */}
+                {selectedRequest.status === "confirmed" && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                    <h4 className="font-medium text-blue-800 mb-2">Meeting Confirmed</h4>
+                    <p className="text-blue-700">{selectedRequest.confirmed_datetime}</p>
+                    <a 
+                      href={selectedRequest.meeting_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 text-sm flex items-center gap-1 mt-2 hover:underline"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      {selectedRequest.meeting_link}
+                    </a>
+                  </div>
+                )}
+
+                {/* Actions */}
+                {selectedRequest.applicant_response && selectedRequest.status !== "confirmed" && (
+                  <Button
+                    onClick={() => setShowSendLinkModal(selectedRequest)}
+                    className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] text-white"
+                  >
+                    <Video className="w-4 h-4 mr-2" />
+                    Send Meeting Link
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Send Meeting Link Modal */}
+      {showSendLinkModal && (
+        <SendMeetingLinkModal
+          request={showSendLinkModal}
+          onClose={() => setShowSendLinkModal(null)}
+          onSent={() => {
+            setShowSendLinkModal(null);
+            fetchRequests();
+            setSelectedRequest(null);
+          }}
+          getAuthHeader={getAuthHeader}
+        />
+      )}
+    </motion.div>,
+    document.body
+  );
+}
+
+// Send Meeting Link Modal
+function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
+  const [sending, setSending] = useState(false);
+  const [confirmedDateTime, setConfirmedDateTime] = useState("");
+  const [meetingLink, setMeetingLink] = useState("");
+  const [additionalMessage, setAdditionalMessage] = useState("");
+
+  const handleSend = async () => {
+    if (!confirmedDateTime.trim()) {
+      toast.error("Please enter the confirmed date and time");
+      return;
+    }
+    if (!meetingLink.trim()) {
+      toast.error("Please enter the Google Meet link");
+      return;
+    }
+
+    setSending(true);
+    try {
+      await axios.post(
+        `${API}/api/applicant-tests/interview-inbox/${request.id}/send-meeting-link`,
+        {
+          confirmed_datetime: confirmedDateTime,
+          meeting_link: meetingLink,
+          additional_message: additionalMessage
+        },
+        getAuthHeader()
+      );
+
+      toast.success("Meeting confirmation sent!");
+      onSent();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to send confirmation");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 10001 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white rounded-2xl w-full max-w-lg overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10">
+          <h2 className="text-lg font-bold text-[#333] flex items-center gap-2">
+            <Video className="w-5 h-5 text-[#10B981]" />
+            Send Meeting Confirmation
+          </h2>
+          <p className="text-sm text-gray-500">to {request.applicant_name}</p>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* Applicant's availability for reference */}
+          <div className="bg-gray-50 rounded-lg p-3 text-sm">
+            <p className="font-medium text-gray-700 mb-1">Applicant's Availability:</p>
+            <p className="text-gray-600 whitespace-pre-wrap">{request.applicant_response?.availability}</p>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              Confirmed Date & Time *
+            </Label>
+            <Input
+              type="text"
+              value={confirmedDateTime}
+              onChange={e => setConfirmedDateTime(e.target.value)}
+              placeholder="e.g., Tuesday, January 21, 2026 at 9:00 AM PHT"
+              className="border-gray-300"
+            />
+            <p className="text-xs text-gray-500 mt-1">Enter in the applicant's timezone (Philippine Time)</p>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              Google Meet Link *
+            </Label>
+            <Input
+              type="url"
+              value={meetingLink}
+              onChange={e => setMeetingLink(e.target.value)}
+              placeholder="https://meet.google.com/xxx-xxxx-xxx"
+              className="border-gray-300"
+            />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              Additional Message (Optional)
+            </Label>
+            <textarea
+              value={additionalMessage}
+              onChange={e => setAdditionalMessage(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#10B981] focus:border-transparent resize-none text-sm"
+              placeholder="Any additional instructions or notes..."
+            />
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose} disabled={sending}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSend}
+            disabled={sending || !confirmedDateTime || !meetingLink}
+            className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white"
+          >
+            {sending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Send Confirmation
+              </>
+            )}
           </Button>
         </div>
       </motion.div>
