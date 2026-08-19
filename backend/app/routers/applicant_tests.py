@@ -819,8 +819,9 @@ class InterviewFollowUpRequest(BaseModel):
     subject: str
     message: str
     meeting_link: str
-    date_range_start: str  # ISO date string
-    date_range_end: str    # ISO date string
+    date_range_start: str  # Already formatted date string
+    date_range_end: str    # Already formatted date string
+    timezone: str = "Pacific Time (PT)"  # Timezone for clarity
 
 
 @router.post("/{test_id}/send-interview-followup")
@@ -854,7 +855,7 @@ async def send_interview_followup(
         
         applicant_name = submission.get("applicant_name", "Applicant") if submission else "Applicant"
         
-        # Build the email HTML
+        # Build the email HTML with brighter, more readable colors
         email_html = f"""
         <!DOCTYPE html>
         <html>
@@ -864,10 +865,10 @@ async def send_interview_followup(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <!-- Header -->
-                <div style="background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%); padding: 30px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Thrifty Curator</h1>
-                    <p style="color: #C5A065; margin: 10px 0 0 0; font-size: 14px;">Interview Invitation</p>
+                <!-- Header - Brighter colors -->
+                <div style="background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); padding: 30px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Thrifty Curator</h1>
+                    <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; font-weight: 500;">Interview Invitation</p>
                 </div>
                 
                 <!-- Content -->
@@ -880,11 +881,16 @@ async def send_interview_followup(
 {request.message}
                     </div>
                     
-                    <!-- Date Range Box -->
-                    <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #8B5CF6;">
-                        <p style="margin: 0; color: #666; font-size: 14px;">
-                            <strong>Availability Window:</strong><br>
+                    <!-- Date Range Box with Timezone -->
+                    <div style="background-color: #f0f9ff; border-radius: 8px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #8B5CF6;">
+                        <p style="margin: 0; color: #1e40af; font-size: 15px; font-weight: 600;">
+                            Availability Window
+                        </p>
+                        <p style="margin: 8px 0 0 0; color: #333; font-size: 16px;">
                             {request.date_range_start} - {request.date_range_end}
+                        </p>
+                        <p style="margin: 8px 0 0 0; color: #666; font-size: 13px;">
+                            Timezone: {request.timezone}
                         </p>
                     </div>
                     
@@ -927,6 +933,7 @@ Hi {applicant_name},
 
 AVAILABILITY WINDOW:
 {request.date_range_start} - {request.date_range_end}
+Timezone: {request.timezone}
 
 {"MEETING LINK: " + request.meeting_link if request.meeting_link else ""}
 
@@ -962,7 +969,8 @@ Thrifty Curator
                 "sent_at": datetime.now(timezone.utc).isoformat(),
                 "meeting_link": request.meeting_link,
                 "date_range_start": request.date_range_start,
-                "date_range_end": request.date_range_end
+                "date_range_end": request.date_range_end,
+                "timezone": request.timezone
             })
             
         except Exception as e:

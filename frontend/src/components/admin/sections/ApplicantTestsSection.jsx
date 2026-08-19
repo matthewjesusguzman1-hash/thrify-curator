@@ -1202,24 +1202,52 @@ function ScheduleInterviewModal({ test, selectedEmails, submissions, onClose, ge
   const [meetingLink, setMeetingLink] = useState("");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
+  const [timezone, setTimezone] = useState("Pacific Time (PT)");
   const [subject, setSubject] = useState(`Interview Scheduling - ${test.name}`);
-  const [message, setMessage] = useState(
-`Thank you for completing our skills assessment! We were impressed with your work and would like to schedule a video interview with you.
+  
+  // Default message with timezone reference
+  const getDefaultMessage = () => `Thank you for completing our skills assessment! We were impressed with your work and would like to schedule a video interview with you.
 
 Please reply to this email with your availability within the date range below. Let us know 2-3 time slots that work best for you.
 
-We look forward to speaking with you!`
-  );
+When replying, please provide times in Pacific Time (PT). For reference:
+• PT to ET (Eastern): Add 3 hours (e.g., 10am PT = 1pm ET)
+• PT to CT (Central): Add 2 hours (e.g., 10am PT = 12pm CT)
+• PT to MT (Mountain): Add 1 hour (e.g., 10am PT = 11am MT)
 
-  // Set default date range (next 7 days)
+We look forward to speaking with you!`;
+
+  const [message, setMessage] = useState(getDefaultMessage());
+
+  // Set default date range (next 7 days) - use local dates to avoid timezone shift
   useEffect(() => {
     const today = new Date();
     const nextWeek = new Date(today);
     nextWeek.setDate(nextWeek.getDate() + 7);
     
-    setDateStart(today.toISOString().split('T')[0]);
-    setDateEnd(nextWeek.toISOString().split('T')[0]);
+    // Format as YYYY-MM-DD without timezone conversion
+    const formatLocalDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    setDateStart(formatLocalDate(today));
+    setDateEnd(formatLocalDate(nextWeek));
   }, []);
+
+  // Format date for display without timezone issues
+  const formatDateForEmail = (dateStr) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
 
   const handleSend = async () => {
     if (!dateStart || !dateEnd) {
@@ -1236,8 +1264,9 @@ We look forward to speaking with you!`
           subject,
           message,
           meeting_link: meetingLink,
-          date_range_start: new Date(dateStart).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
-          date_range_end: new Date(dateEnd).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+          date_range_start: formatDateForEmail(dateStart),
+          date_range_end: formatDateForEmail(dateEnd),
+          timezone
         },
         getAuthHeader()
       );
@@ -1326,6 +1355,24 @@ We look forward to speaking with you!`
             </div>
           </div>
 
+          {/* Timezone */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              <Clock className="w-4 h-4 inline mr-1" />
+              Timezone
+            </Label>
+            <select
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent bg-white"
+            >
+              <option value="Pacific Time (PT)">Pacific Time (PT)</option>
+              <option value="Mountain Time (MT)">Mountain Time (MT)</option>
+              <option value="Central Time (CT)">Central Time (CT)</option>
+              <option value="Eastern Time (ET)">Eastern Time (ET)</option>
+            </select>
+          </div>
+
           {/* Meeting Link */}
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -1360,14 +1407,23 @@ We look forward to speaking with you!`
 
           {/* Message */}
           <div>
-            <Label className="text-sm font-medium text-gray-700 mb-2 block">
-              Message
-            </Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Message
+              </Label>
+              <button
+                type="button"
+                onClick={() => setMessage(getDefaultMessage())}
+                className="text-xs text-[#8B5CF6] hover:underline"
+              >
+                Reset to Default
+              </button>
+            </div>
             <textarea
               value={message}
               onChange={e => setMessage(e.target.value)}
-              rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent resize-none"
+              rows={10}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent resize-none text-sm"
               placeholder="Enter your message..."
             />
             <p className="text-xs text-gray-500 mt-1">
