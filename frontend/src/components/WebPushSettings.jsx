@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Bell, BellOff, Loader2, CheckCircle, AlertCircle, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -189,138 +188,96 @@ export default function WebPushSettings() {
 
   if (loading) {
     return (
-      <Card className="bg-gray-50 border-gray-200">
-        <CardContent className="p-6 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-        </CardContent>
-      </Card>
+      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex items-center justify-center">
+        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+      </div>
     );
   }
 
   // Show instructions if not running as PWA
   if (!isStandalone && isSupported) {
     return (
-      <Card className="bg-gradient-to-br from-[#00D4FF]/10 to-[#8B5CF6]/10 border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-[#1A1A2E] flex items-center gap-2 text-base">
-            <Smartphone className="w-5 h-5 text-[#00D4FF]" />
-            Enable Push Notifications
-          </CardTitle>
-          <CardDescription className="text-gray-600">
-            Add this app to your home screen to receive push notifications
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-gray-100 rounded-lg p-4">
-            <h4 className="text-[#1A1A2E] font-medium mb-2 text-sm">How to add to Home Screen:</h4>
-            <ol className="text-gray-700 text-sm space-y-2 list-decimal list-inside">
-              <li>Tap the <strong>Share</strong> button in Safari</li>
-              <li>Scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong></li>
-              <li>Tap <strong>&quot;Add&quot;</strong> to confirm</li>
-              <li>Open the app from your home screen</li>
-              <li>Return here to enable notifications</li>
-            </ol>
+      <div className="bg-gradient-to-r from-[#00D4FF]/10 to-[#8B5CF6]/10 rounded-lg p-3 border border-gray-200">
+        <div className="flex items-start gap-3">
+          <Smartphone className="w-5 h-5 text-[#00D4FF] flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[#1A1A2E] font-medium text-sm">Enable Push Notifications</p>
+            <p className="text-gray-500 text-xs mt-0.5">Add to Home Screen first (Share → Add to Home Screen)</p>
           </div>
-          <p className="text-gray-500 text-xs">
-            Push notifications only work when the app is added to your home screen (iOS 16.4+)
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   // Not supported message
   if (!isSupported) {
     return (
-      <Card className="bg-gray-50 border-gray-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-3 text-gray-600">
-            <AlertCircle className="w-5 h-5" />
-            <p className="text-sm">Push notifications are not supported on this device/browser.</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+        <div className="flex items-center gap-2 text-gray-500">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <p className="text-xs">Push notifications not supported on this device.</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="bg-gradient-to-br from-[#00D4FF]/10 to-[#8B5CF6]/10 border-gray-200">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-[#1A1A2E] flex items-center gap-2 text-base">
-          <Bell className="w-5 h-5 text-[#00D4FF]" />
-          Push Notifications
-        </CardTitle>
-        <CardDescription className="text-gray-600">
-          {subscription 
-            ? "You'll receive push notifications for important updates"
-            : "Enable push notifications to stay updated"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {error && (
-          <div className="bg-red-100 border border-red-300 rounded-lg p-3 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-            <p className="text-red-700 text-sm">{error}</p>
-          </div>
-        )}
-        
-        {success && (
-          <div className="bg-green-100 border border-green-300 rounded-lg p-3 flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-            <p className="text-green-700 text-sm">{success}</p>
-          </div>
-        )}
+    <div className="bg-gradient-to-r from-[#00D4FF]/10 to-[#8B5CF6]/10 rounded-lg p-3 border border-gray-200">
+      {error && (
+        <div className="bg-red-100 rounded p-2 mb-2 flex items-center gap-2">
+          <AlertCircle className="w-3 h-3 text-red-600 flex-shrink-0" />
+          <p className="text-red-700 text-xs">{error}</p>
+        </div>
+      )}
+      
+      {success && (
+        <div className="bg-green-100 rounded p-2 mb-2 flex items-center gap-2">
+          <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
+          <p className="text-green-700 text-xs">{success}</p>
+        </div>
+      )}
 
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Bell className="w-4 h-4 text-[#00D4FF] flex-shrink-0" />
+          <span className="text-[#1A1A2E] font-medium text-sm truncate">
+            {subscription ? "Push Enabled" : "Push Notifications"}
+          </span>
+        </div>
+        
+        <div className="flex gap-2 flex-shrink-0">
           {subscription ? (
             <>
               <Button
                 onClick={disableNotifications}
                 disabled={actionLoading}
-                variant="outline"
-                className="flex-1 border-gray-300 hover:bg-gray-100"
-                style={{ backgroundColor: '#f3f4f6', color: '#374151' }}
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-gray-600 hover:bg-gray-100"
               >
-                {actionLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <BellOff className="w-4 h-4 mr-2" />
-                )}
-                Disable Notifications
+                {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Disable"}
               </Button>
               <Button
                 onClick={sendTestNotification}
                 disabled={actionLoading}
-                className="flex-1 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white hover:opacity-90"
+                size="sm"
+                className="h-7 px-2 text-xs bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white hover:opacity-90"
               >
-                {actionLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Bell className="w-4 h-4 mr-2" />
-                )}
-                Send Test
+                {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Test"}
               </Button>
             </>
           ) : (
             <Button
               onClick={enableNotifications}
               disabled={actionLoading}
-              className="w-full bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white hover:opacity-90"
+              size="sm"
+              className="h-7 px-3 text-xs bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white hover:opacity-90"
             >
-              {actionLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Bell className="w-4 h-4 mr-2" />
-              )}
-              Enable Push Notifications
+              {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Enable"}
             </Button>
           )}
         </div>
-
-        <p className="text-gray-500 text-xs text-center">
-          Notifications include: employee clock in/out, form submissions, messages, and test completions
-        </p>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
