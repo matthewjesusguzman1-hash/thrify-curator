@@ -11,14 +11,10 @@ from functools import partial
 
 from pywebpush import webpush, WebPushException
 
-# VAPID configuration
-VAPID_PRIVATE_KEY = """-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgoiJbkZW/hDMez8oc
-UfB9WWoEdycJEgecxmmRmZ019jShRANCAASc92OwxekFCrIYKR56f7MvkB7MZyB+
-jKU5lubHpwWjFLPYkV0MP9dGytTZfcobYMkj2CobnnaB3SyM8ACZZVt4
------END PRIVATE KEY-----"""
+# VAPID configuration - keys in base64 URL-safe raw format (32 bytes)
+VAPID_PRIVATE_KEY = "ZDugNJ_5gYRabw0J2cd6agJwGzzsF_9zFRWxzwc7szY="
 
-VAPID_PUBLIC_KEY = "BJz3Y7DF6QUKshgpHnp_sy-QHsxnIH6MpTmW5senBaMUs9iRXQw_10bK1Nl9yhtgySPYKhuedoHdLIzwAJllW3g"
+VAPID_PUBLIC_KEY = "BFrg5DxxnOyrnUIEEdzjyq3hl-lVhKaoN1kS0WAy89-tmuBA_YtSf4ZKmDfOvnXMK5Bwgho7V-_iBNH1Q9zKKMw"
 
 # VAPID claims - email for contact
 VAPID_CLAIMS = {
