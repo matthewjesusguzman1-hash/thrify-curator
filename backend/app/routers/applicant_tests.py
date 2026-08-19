@@ -257,6 +257,9 @@ async def send_invite(
                         Start Assessment
                     </a>
                 </div>
+                <p style="font-size: 14px; color: #666; text-align: center;">
+                    Or copy this link: <a href="{test_url}" style="color: #8B5CF6;">{test_url}</a>
+                </p>
                 <p style="font-size: 14px; color: #666;">
                     This link is unique to you. Please do not share it with anyone else.
                 </p>
