@@ -138,8 +138,8 @@ async def create_test(
     if not items_data or len(items_data) == 0:
         raise HTTPException(status_code=400, detail="At least one item is required")
     
-    # Create uploads directory if it doesn't exist
-    upload_dir = "/app/backend/uploads/applicant_tests"
+    # Use the shared uploads directory that's mounted as persistent storage
+    upload_dir = "/app/uploads/applicant_tests"
     os.makedirs(upload_dir, exist_ok=True)
     
     # Save all photos first
@@ -239,8 +239,8 @@ async def delete_test(
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
     
-    # Delete photo files
-    upload_dir = "/app/backend/uploads/applicant_tests"
+    # Delete photo files from persistent storage
+    upload_dir = "/app/uploads/applicant_tests"
     for photo in test.get("photos", []):
         filepath = os.path.join(upload_dir, photo["filename"])
         if os.path.exists(filepath):
@@ -543,7 +543,7 @@ async def get_test_photo(
     """Serve test photos (public endpoint)"""
     from fastapi.responses import FileResponse
     
-    filepath = f"/app/backend/uploads/applicant_tests/{filename}"
+    filepath = f"/app/uploads/applicant_tests/{filename}"
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Photo not found")
     
