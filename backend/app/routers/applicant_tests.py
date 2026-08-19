@@ -138,9 +138,13 @@ async def create_test(
     if not items_data or len(items_data) == 0:
         raise HTTPException(status_code=400, detail="At least one item is required")
     
-    # Use the shared uploads directory that's mounted as persistent storage
+    # Use the shared uploads directory - try to create both paths for compatibility
     upload_dir = "/app/uploads/applicant_tests"
     os.makedirs(upload_dir, exist_ok=True)
+    
+    # Also create the old path for backward compatibility
+    old_upload_dir = "/app/backend/uploads/applicant_tests"
+    os.makedirs(old_upload_dir, exist_ok=True)
     
     # Save all photos first
     test_id = str(uuid.uuid4())
@@ -542,12 +546,21 @@ async def get_test_photo(
 ):
     """Serve test photos (public endpoint)"""
     from fastapi.responses import FileResponse
+    import logging
     
-    filepath = f"/app/uploads/applicant_tests/{filename}"
-    if not os.path.exists(filepath):
-        raise HTTPException(status_code=404, detail="Photo not found")
+    # Try multiple possible paths
+    possible_paths = [
+        f"/app/uploads/applicant_tests/{filename}",
+        f"/app/backend/uploads/applicant_tests/{filename}",
+    ]
     
-    return FileResponse(filepath)
+    for filepath in possible_paths:
+        if os.path.exists(filepath):
+            return FileResponse(filepath)
+    
+    # Log which paths were tried
+    logging.error(f"Photo not found. Tried paths: {possible_paths}")
+    raise HTTPException(status_code=404, detail=f"Photo not found: {filename}")
 
 
 @public_router.post("/submit/{token}")
