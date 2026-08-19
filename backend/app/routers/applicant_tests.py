@@ -41,11 +41,12 @@ async def create_test(
     name: str = Form(...),
     description: str = Form(None),
     fields: str = Form(...),  # JSON string of field configurations
+    items_config: str = Form(...),  # JSON string with item definitions: [{photos: [indices]}]
     photos: List[UploadFile] = File(...),
     admin: dict = Depends(get_admin_user),
     db = Depends(get_db)
 ):
-    """Create a new applicant skills test with photos and custom fields"""
+    """Create a new applicant skills test with multiple items, each having multiple photos"""
     
     # Parse fields JSON
     try:
@@ -53,16 +54,25 @@ async def create_test(
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid fields JSON")
     
+    # Parse items config - maps which photos belong to which item
+    try:
+        items_data = json.loads(items_config)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid items config JSON")
+    
     if not photos or len(photos) == 0:
         raise HTTPException(status_code=400, detail="At least one photo is required")
+    
+    if not items_data or len(items_data) == 0:
+        raise HTTPException(status_code=400, detail="At least one item is required")
     
     # Create uploads directory if it doesn't exist
     upload_dir = "/app/backend/uploads/applicant_tests"
     os.makedirs(upload_dir, exist_ok=True)
     
-    # Save photos and create photo records
+    # Save all photos first
     test_id = str(uuid.uuid4())
-    photo_records = []
+    all_photo_records = []
     
     for i, photo in enumerate(photos):
         # Generate unique filename
@@ -75,20 +85,33 @@ async def create_test(
         with open(filepath, "wb") as f:
             f.write(content)
         
-        photo_records.append({
+        all_photo_records.append({
             "id": str(uuid.uuid4()),
             "filename": filename,
             "original_name": photo.filename,
-            "order": i
+            "index": i
         })
     
-    # Create test document
+    # Build items with their associated photos
+    items = []
+    for item_idx, item_data in enumerate(items_data):
+        photo_indices = item_data.get("photo_indices", [])
+        item_photos = [all_photo_records[idx] for idx in photo_indices if idx < len(all_photo_records)]
+        
+        items.append({
+            "id": str(uuid.uuid4()),
+            "order": item_idx,
+            "photos": item_photos
+        })
+    
+    # Create test document with new items structure
     test_doc = {
         "id": test_id,
         "name": name,
         "description": description,
         "fields": field_config,
-        "photos": photo_records,
+        "items": items,  # New: items array with photos grouped
+        "photos": all_photo_records,  # Keep flat list for backward compatibility
         "created_by": admin["email"],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "status": "active",
@@ -98,7 +121,12 @@ async def create_test(
     
     await db.applicant_tests.insert_one(test_doc)
     
-    return {"message": "Test created successfully", "test_id": test_id, "photo_count": len(photo_records)}
+    return {
+        "message": "Test created successfully", 
+        "test_id": test_id, 
+        "item_count": len(items),
+        "photo_count": len(all_photo_records)
+    }
 
 
 @router.get("/list")
@@ -407,13 +435,23 @@ async def get_test_by_token(
             }
         )
     
+    # Build items list - support both old and new structure
+    items = test.get("items", [])
+    if not items and test.get("photos"):
+        # Legacy: convert flat photos to single-photo items for backward compatibility
+        items = [
+            {"id": photo["id"], "order": i, "photos": [photo]}
+            for i, photo in enumerate(test["photos"])
+        ]
+    
     return {
         "test": {
             "id": test["id"],
             "name": test["name"],
             "description": test.get("description"),
             "fields": test["fields"],
-            "photos": test["photos"]
+            "items": items,  # New structure with items containing photos
+            "photos": test.get("photos", [])  # Keep for backward compatibility
         },
         "applicant": {
             "name": invite["applicant_name"],

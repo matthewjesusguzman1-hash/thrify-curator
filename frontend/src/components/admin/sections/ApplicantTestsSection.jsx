@@ -251,17 +251,56 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState(defaultFields.map(f => ({ ...f, enabled: true })));
   const [photos, setPhotos] = useState([]);
+  const [items, setItems] = useState([{ id: 1, photoIndices: [] }]); // Items with assigned photos
   const [creating, setCreating] = useState(false);
+  const [activeItemId, setActiveItemId] = useState(1); // Which item is selected for assigning photos
 
   const handlePhotoSelect = (e) => {
     const files = Array.from(e.target.files);
     setPhotos(prev => [...prev, ...files]);
-    // Reset the input so the same file can be selected again
     e.target.value = '';
   };
 
   const removePhoto = (index) => {
+    // Remove photo and update items that reference it
     setPhotos(prev => prev.filter((_, i) => i !== index));
+    setItems(prev => prev.map(item => ({
+      ...item,
+      photoIndices: item.photoIndices
+        .filter(idx => idx !== index)
+        .map(idx => idx > index ? idx - 1 : idx) // Adjust indices
+    })));
+  };
+
+  const togglePhotoInItem = (photoIndex) => {
+    setItems(prev => prev.map(item => {
+      if (item.id !== activeItemId) return item;
+      
+      const hasPhoto = item.photoIndices.includes(photoIndex);
+      return {
+        ...item,
+        photoIndices: hasPhoto
+          ? item.photoIndices.filter(idx => idx !== photoIndex)
+          : [...item.photoIndices, photoIndex]
+      };
+    }));
+  };
+
+  const addItem = () => {
+    const newId = Math.max(...items.map(i => i.id)) + 1;
+    setItems(prev => [...prev, { id: newId, photoIndices: [] }]);
+    setActiveItemId(newId);
+  };
+
+  const removeItem = (itemId) => {
+    if (items.length <= 1) {
+      toast.error("You need at least one item");
+      return;
+    }
+    setItems(prev => prev.filter(i => i.id !== itemId));
+    if (activeItemId === itemId) {
+      setActiveItemId(items.find(i => i.id !== itemId)?.id || 1);
+    }
   };
 
   const toggleField = (fieldId) => {
@@ -285,6 +324,13 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
       toast.error("Please add at least one photo");
       return;
     }
+    
+    // Check all items have at least one photo
+    const itemsWithPhotos = items.filter(i => i.photoIndices.length > 0);
+    if (itemsWithPhotos.length === 0) {
+      toast.error("Please assign photos to at least one item");
+      return;
+    }
 
     const enabledFields = fields.filter(f => f.enabled);
     if (enabledFields.length === 0) {
@@ -298,6 +344,13 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
       formData.append("name", name.trim());
       formData.append("description", description.trim());
       formData.append("fields", JSON.stringify(enabledFields));
+      
+      // Send items config - which photo indices belong to which item
+      const itemsConfig = itemsWithPhotos.map(item => ({
+        photo_indices: item.photoIndices
+      }));
+      formData.append("items_config", JSON.stringify(itemsConfig));
+      
       photos.forEach(photo => {
         formData.append("photos", photo);
       });
@@ -318,6 +371,8 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
     }
   };
 
+  const activeItem = items.find(i => i.id === activeItemId);
+
   return ReactDOM.createPortal(
     <motion.div
       initial={{ opacity: 0 }}
@@ -331,50 +386,49 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
         exit={{ scale: 0.95 }}
-        className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-xl font-bold text-[#333]">Create Skills Test</h2>
+        <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+          <h2 className="text-lg sm:text-xl font-bold text-[#333]">Create Skills Test</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {/* Test Name */}
           <div>
-            <Label className="text-base font-medium block mb-2">Test Name *</Label>
+            <Label className="text-sm sm:text-base font-medium block mb-2">Test Name *</Label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g., Listing Skills Assessment"
-              className="w-full h-12 px-4 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
+              className="w-full h-11 sm:h-12 px-4 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
             />
           </div>
 
           {/* Description */}
           <div>
-            <Label className="text-base font-medium block mb-2">Description (optional)</Label>
+            <Label className="text-sm sm:text-base font-medium block mb-2">Description (optional)</Label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Brief description of the test..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none text-base focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
               rows={2}
             />
           </div>
 
-          {/* Photos */}
+          {/* Photos Upload */}
           <div>
-            <Label className="flex items-center justify-between text-base font-medium">
-              <span>Product Photos *</span>
-              <span className="text-sm text-gray-500 font-normal">{photos.length} selected</span>
+            <Label className="flex items-center justify-between text-sm sm:text-base font-medium">
+              <span>Upload All Photos *</span>
+              <span className="text-xs sm:text-sm text-gray-500 font-normal">{photos.length} uploaded</span>
             </Label>
             
-            {/* File input - visible as a label */}
-            <label className="mt-3 block border-2 border-dashed border-gray-300 rounded-xl p-8 cursor-pointer hover:border-[#8B5CF6] hover:bg-[#8B5CF6]/5 transition-colors active:bg-[#8B5CF6]/10">
+            <label className="mt-3 block border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#8B5CF6] hover:bg-[#8B5CF6]/5 transition-colors">
               <input
                 type="file"
                 onChange={handlePhotoSelect}
@@ -383,32 +437,29 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
                 className="sr-only"
               />
               <div className="text-center">
-                <Upload className="w-12 h-12 text-[#8B5CF6] mx-auto mb-4" />
-                <p className="text-lg font-semibold text-[#333] mb-2">Tap here to select photos</p>
-                <p className="text-sm text-gray-500">JPG, PNG up to 10MB each</p>
+                <Upload className="w-10 h-10 text-[#8B5CF6] mx-auto mb-3" />
+                <p className="text-sm sm:text-base font-semibold text-[#333] mb-1">Tap to upload photos</p>
+                <p className="text-xs sm:text-sm text-gray-500">Then assign them to items below</p>
               </div>
             </label>
             
             {photos.length > 0 && (
-              <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {photos.map((photo, index) => (
-                  <div key={index} className="relative">
+                  <div key={index} className="relative group">
                     <img
                       src={URL.createObjectURL(photo)}
                       alt={`Photo ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                      className="w-16 h-16 object-cover rounded-lg border border-gray-200"
                     />
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removePhoto(index);
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg"
+                      onClick={() => removePhoto(index)}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3 h-3" />
                     </button>
-                    <span className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-2 py-0.5 rounded">
+                    <span className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[10px] px-1.5 rounded">
                       #{index + 1}
                     </span>
                   </div>
@@ -417,28 +468,128 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
             )}
           </div>
 
+          {/* Items Configuration */}
+          {photos.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-sm sm:text-base font-medium">
+                  Assign Photos to Items
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addItem}
+                  className="text-xs"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Item
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Each item represents a product. Select which photos belong to each item.
+              </p>
+              
+              {/* Item Tabs */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {items.map((item, idx) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveItemId(item.id)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                      activeItemId === item.id
+                        ? "bg-[#8B5CF6] text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    Item {idx + 1}
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${
+                      activeItemId === item.id ? "bg-white/20" : "bg-gray-200"
+                    }`}>
+                      {item.photoIndices.length}
+                    </span>
+                    {items.length > 1 && (
+                      <X
+                        className="w-3 h-3 ml-1 hover:text-red-300"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeItem(item.id);
+                        }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Photo Selection for Active Item */}
+              <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                <p className="text-xs text-gray-600 mb-2">
+                  Tap photos to assign them to <strong>Item {items.findIndex(i => i.id === activeItemId) + 1}</strong>:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {photos.map((photo, index) => {
+                    const isSelected = activeItem?.photoIndices.includes(index);
+                    const usedByOther = items.some(i => i.id !== activeItemId && i.photoIndices.includes(index));
+                    
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => togglePhotoInItem(index)}
+                        className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                          isSelected
+                            ? "border-[#8B5CF6] ring-2 ring-[#8B5CF6]/30"
+                            : usedByOther
+                            ? "border-orange-300 opacity-50"
+                            : "border-gray-200 hover:border-gray-400"
+                        }`}
+                      >
+                        <img
+                          src={URL.createObjectURL(photo)}
+                          alt={`Photo ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        {isSelected && (
+                          <div className="absolute inset-0 bg-[#8B5CF6]/30 flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-white" />
+                          </div>
+                        )}
+                        {usedByOther && !isSelected && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-orange-500 text-white text-[8px] text-center">
+                            Used
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Fields Configuration */}
           <div>
-            <Label>Listing Fields</Label>
-            <p className="text-sm text-gray-500 mb-3">Tap to enable/disable fields. Toggle "Required" for mandatory fields.</p>
-            <div className="space-y-2 max-h-72 overflow-y-auto border border-gray-200 rounded-lg p-2">
+            <Label className="text-sm sm:text-base font-medium">Listing Fields</Label>
+            <p className="text-xs text-gray-500 mb-3">Tap to enable/disable. These are the fields applicants will fill out for each item.</p>
+            <div className="space-y-2 max-h-52 overflow-y-auto border border-gray-200 rounded-lg p-2">
               {fields.map(field => (
                 <div
                   key={field.id}
-                  className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all ${
+                  className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
                     field.enabled 
                       ? "bg-[#8B5CF6]/10 border-2 border-[#8B5CF6]/30" 
                       : "bg-gray-50 border-2 border-transparent hover:border-gray-200"
                   }`}
                   onClick={() => toggleField(field.id)}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-6 h-6 rounded-md flex items-center justify-center ${
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center ${
                       field.enabled ? "bg-[#8B5CF6] text-white" : "bg-gray-200"
                     }`}>
-                      {field.enabled && <CheckCircle className="w-4 h-4" />}
+                      {field.enabled && <CheckCircle className="w-3 h-3" />}
                     </div>
-                    <span className={`text-base font-medium ${field.enabled ? "text-[#333]" : "text-gray-400"}`}>
+                    <span className={`text-sm font-medium ${field.enabled ? "text-[#333]" : "text-gray-400"}`}>
                       {field.name}
                     </span>
                   </div>
@@ -449,7 +600,7 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
                         e.stopPropagation();
                         toggleFieldRequired(field.id);
                       }}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                         field.required 
                           ? "bg-[#8B5CF6] text-white" 
                           : "bg-gray-200 text-gray-600 hover:bg-gray-300"
@@ -464,7 +615,7 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
           </div>
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+        <div className="p-4 sm:p-6 border-t border-gray-200 flex justify-end gap-3">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
